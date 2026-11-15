@@ -1,31 +1,50 @@
 ---
-title: Jobs
-description: Inspect and control long-running Chronicle Kernel operations such as replays and rebuilds.
+title: "Cratis Chronicle jobs: inspect and control"
+description: Use Cratis Chronicle's jobs API to inspect background operations, check job and step progress, and request stop, resume, or removal.
 ---
 
-Jobs represent long-running operations the Chronicle Kernel performs in the background — replaying a projection, rebuilding a read model, and similar work that runs in steps over time rather than completing instantly. Use the jobs API to see what's running, check progress, and stop, resume, or delete a job.
+Cratis Chronicle jobs track long-running Kernel operations, such as replaying an observer or retrying a failed partition. Use the jobs API to find out whether that work is progressing before deciding to stop, resume, or request its deletion. An observer is the component that processes events for a projection, reducer, or reactor.
+
+The examples use the .NET client and a connected `IEventStore`; follow the [.NET connection guide](../clients/dotnet/getting-started.md) if you need one. Jobs are scoped to that event store and namespace, so check both when a job you expect is missing. Stop, resume, and delete require authorization for administrator operations.
 
 ## List all jobs
 
+Start by listing jobs in the selected scope. Use each job's `Type` and `Details` to identify the operation, then keep its `Id` for subsequent requests.
+
 <ChronicleClientTabs snippet="jobs/index/list-all" />
+
+Read `Status` alongside `Progress`: the progress includes total, successful, failed, and stopped step counts. `CompletedSuccessfully` and `CompletedWithFailures` describe different outcomes; a job that has finished may still need investigation.
 
 ## Get a single job
 
+Fetch the job again when you need its current state:
+
 <ChronicleClientTabs snippet="jobs/index/get-one" />
 
-A missing job resolves to nothing rather than an error — check for that before using the result.
+`GetJob` returns `null` when the job is absent from the selected scope. Check for that before reading its properties or fetching its steps.
 
 ## Get the steps for a job
 
-A job is made up of one or more steps. Get them to see fine-grained progress:
+When the overall status does not explain where work has stopped, inspect the individual steps. Each step has a `Status`, status-change history, and `Progress` with a percentage and message.
 
 <ChronicleClientTabs snippet="jobs/index/get-steps" />
 
+Compare successive reads to see whether progress changes. A single response describes the state at that moment; it does not keep updating as the job runs.
+
 ## Stop, resume, and delete
+
+Stop pauses a running job so it can be resumed later. Resolve the cause of a failure before requesting more processing. Delete requests removal of the job and its associated steps; completed and failed jobs cannot be removed through this operation.
+
+The following methods show the three separate requests, not a sequence to run against the same job:
 
 <ChronicleClientTabs snippet="jobs/index/stop-resume-delete" />
 
+The wrappers above discard the results of `Stop` and `Resume`. In application code, inspect the returned `JobCommandResult`: `Accepted` tells you whether the request was taken, and `Refusal` explains why it was not. Awaiting the call alone does not establish that the job stopped or resumed.
+
+Fetch the job and its steps again to check the resulting state. After a resume, follow progress through to the final status and check the affected read model or handler output. After a delete request, list jobs again to confirm removal.
+
 ## Related topics
 
-- [Webhooks](../webhooks/) — pushing observed events to external HTTP endpoints, the other kernel-managed background concern.
-- [Operating Chronicle](../operations/) — diagnosing and recovering failed observers and partitions.
+For a failed observer or partition, continue with [Operating Chronicle](../operations/) to diagnose the cause and choose a recovery. [Recovering from failures](../operations/recovering-from-failures.md) explains when to retry existing state and when to replay history, including the risk of repeating external effects.
+
+For event delivery to an external HTTP endpoint, see [Webhooks](../webhooks/).

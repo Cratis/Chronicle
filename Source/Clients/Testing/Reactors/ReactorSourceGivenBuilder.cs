@@ -54,7 +54,8 @@ public class ReactorSourceGivenBuilder<TReactor>(ReactorScenario<TReactor> scena
     /// </summary>
     /// <remarks>
     /// A fresh instance of <typeparamref name="TReactor"/> is activated from the service provider and
-    /// each event is passed to the reactor in order. Side-effects are observable through mocks or
+    /// each event is passed to the reactor in order. A batch method receives the events of one call that it observes as one
+    /// live page, before the per-event methods receive the rest. Side-effects are observable through mocks or
     /// other test doubles registered in the service provider.
     /// </remarks>
     /// <param name="events">The event instances to provide to the reactor, in order.</param>

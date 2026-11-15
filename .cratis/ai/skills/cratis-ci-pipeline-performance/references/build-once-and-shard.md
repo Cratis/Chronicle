@@ -76,15 +76,19 @@ jobs:
         with:
           name: build-output
       - run: tar --zstd -xf build-output.tar.zst
+      # Example assumes each xUnit v3 mtp-off AssemblyName matches its directory.
+      # Use evaluated TargetPath for custom outputs; TUnit/native runners need their own report flags.
+      # Only VSTest uses dotnet test <project> --no-build --configuration Release with --logger/--results-directory.
       - name: Test the shard's projects
         env:
           PROJECTS: ${{ matrix.projects }}
         run: |
           failed=0
           for project in $PROJECTS; do
-            dotnet test "$project" --no-build --configuration Release \
-              --logger "trx;LogFileName=$(basename "$project").trx" \
-              --results-directory "$RUNNER_TEMP/test-results" || failed=1
+            mkdir -p "$RUNNER_TEMP/test-results"
+            # xUnit v3 mtp-off example: resolve each project's actual AssemblyName/TFM.
+            "$project/bin/Release/net10.0/$(basename "$project")" \
+              -trx "$RUNNER_TEMP/test-results/$(basename "$project").trx" || failed=1
           done
           exit "$failed"
       - name: Verify every project ran tests
@@ -116,7 +120,8 @@ adding a project cannot leave it unassigned; review the list when a project is a
 
 To balance, read each shard job's median duration from the slowest-jobs table of
 `ci-timings.sh`, move a project from the longest shard to the shortest, and
-re-measure; stop when the spread is within the job start cost.
+re-measure; stop when the spread is within the job start cost. Balance by
+measured wall time, and confirm the new split on one real CI run before merging it.
 
 ## Decisions
 

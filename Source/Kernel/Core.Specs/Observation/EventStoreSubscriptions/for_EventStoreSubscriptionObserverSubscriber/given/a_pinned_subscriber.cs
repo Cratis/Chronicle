@@ -24,7 +24,7 @@ public class a_pinned_subscriber : a_subscriber_with_events
 
     void Establish()
     {
-        _schema = JsonSchema.FromJson("{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}");
+        _schema = JsonSchema.FromJson("""{"type":"object","properties":{"message":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""");
         _definition = new("subscription", "Admin", [new EventType("event-type-1", 1)]) { GenerationDelivery = EventGenerationDelivery.Pinned };
         _storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [_definition]);
         RegisterGenerations("Admin", 1, 2);
@@ -56,7 +56,7 @@ public class a_pinned_subscriber : a_subscriber_with_events
         var converter = new ExpandoObjectConverter(Substitute.For<ITypeFormats>());
         var migrations = Substitute.For<IEventTypeMigrations>();
         migrations.MigrateToAllGenerations(Arg.Any<EventTypeDefinition>(), Arg.Any<EventType>(), Arg.Any<JsonObject>(), Arg.Any<ExpandoObject>()).Returns(call => new Dictionary<EventTypeGeneration, ExpandoObject> { [1] = call.ArgAt<ExpandoObject>(3) });
-        return new EventGenerationRelease(_storage, new EventCompliance(_metadata, converter), migrations, _metadata, converter);
+        return new EventGenerationRelease(_storage, new EventCompliance(_metadata, converter, new OwnGenerationSchemaCache()), migrations, _metadata, converter, new OwnGenerationSchemaCache());
     }
 
     protected EventType ForwardedType() => (EventType)_inboxSequence.ReceivedCalls().Last(call => call.GetMethodInfo().Name == "Append").GetArguments()[4]!;

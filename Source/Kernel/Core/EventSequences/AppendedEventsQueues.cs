@@ -100,6 +100,15 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
         await Parallel.ForEachAsync(_queues, async (queue, _) => await queue.SpillToCatchup());
 
     /// <inheritdoc/>
+    public async Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents)
+    {
+        if (_isResetting) return;
+        var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToArray();
+        if (batch.Count == 0) return;
+        await Parallel.ForEachAsync(GetTargetQueues(batch), async (queue, _) => await queue.SpillMatchingToCatchup(batch));
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> IsSubscribed(ObserverKey observerKey)
     {
         var subscriptions = await _queues[_router.GetQueueIndexFor(observerKey)].GetSubscriptions();

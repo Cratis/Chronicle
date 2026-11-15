@@ -1,6 +1,6 @@
 ---
 title: Library guidance
-description: How Microsoft's .NET library, options, and logging guidance applies to Chronicle contributions, with bounded evidence and the repository's exception-naming convention.
+description: Review Cratis Chronicle contributions against Microsoft's .NET library, options and logging guidance using a scoped checklist.
 ---
 
 Use this checklist when reviewing a Chronicle library contribution. It connects Microsoft's guidance to specific .NET client and kernel surfaces; it is not a claim that every Chronicle package, API, or platform conforms. Source paths below are relative to the repository root.
@@ -22,7 +22,7 @@ Use the general library guidance in the official references for the broader goal
 
 | Guidance | Status and applicability | Chronicle evidence or gap |
 | --- | --- | --- |
-| Inclusive platform reach | Partial: configured .NET targets | `Directory.Build.props` selects `net10.0` for ordinary builds and `net8.0;net9.0;net10.0` for packaging. These settings do not prove every package works on every target or platform. |
+| Inclusive platform reach | Partial: configured .NET targets | `Directory.Build.props` selects `net11.0` for ordinary builds and `net10.0;net11.0` for packaging. These settings do not prove every package works on every target or platform. |
 | Stability and evolution | Partial: kernel wire contracts | `.cratis/ai/rules/project/grain-interfaces-only-grow-within-a-major.md` defines additive grain-interface and payload evolution within a major. `Documentation/contributing/kernel/grain-interfaces.mdx` explains this policy. Other public .NET APIs and released packages are not assessed here; the existence of compatibility gates is not a passing gate result. |
 | Debuggability | Partial: build properties | `Directory.Build.props` configures `EmbedUntrackedSources`, `IncludeSource`, `IncludeSymbols`, and `SymbolPackageFormat` (`snupkg`). Published symbols, Source Link, and stepping through a consumed package are not assessed. |
 | Trust | Not assessed | Signing, deterministic or reproducible packages, supply-chain assurance, and dependency and security recommendations require separate evidence. |

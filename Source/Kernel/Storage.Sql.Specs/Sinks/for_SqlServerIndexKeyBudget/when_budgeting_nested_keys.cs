@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_SqlServerIndexKeyBudget;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_budgeting_nested_keys : Specification
 {
     JsonSchema _schema;

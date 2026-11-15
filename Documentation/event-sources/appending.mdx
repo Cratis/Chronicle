@@ -1,17 +1,17 @@
 ---
-title: Append through a definition
-description: Append one event, several events, or events for several event sources through an event source definition, and what Chronicle rejects.
+title: Append events through Cratis Chronicle event sources
+description: Append events through a Cratis Chronicle event source definition, route them to declared streams, and handle routing errors or rejected writes.
 ---
 
-Use this page to write events through a definition. If you have not declared one yet, read [Define an event source](./defining.mdx).
+Append through an event source definition in Cratis Chronicle when you want the client to resolve routing and default concurrency settings from one declaration. The .NET examples below write to an account's streams and show how to handle a rejected append. First [define an event source](./defining.mdx) if you have not registered one.
 
 ## Append to a stream
 
-`Append<TSource>` takes the event source id and the event as usual. The stream name and the stream id are optional.
+Call `Append<TSource>` with the definition type, the instance's event source id and the event. Select a declared stream by name, and supply a stream id when the stream has multiple instances. Here the month identifies one account's transaction stream:
 
 <ChronicleClientTabs snippet="event-sources/appending/append-to-stream" variants="csharp" />
 
-Chronicle fills in the routing from the definition:
+`AccountEventSource` supplies the source name, while the call selects `Transactions` and supplies the month. The client validates the stream against the definition before sending the event, then records these routing values:
 
 | Value on the event | Taken from |
 |---|---|
@@ -28,7 +28,7 @@ A stream is optional. An event appended without one carries the event source typ
 
 <ChronicleClientTabs snippet="event-sources/appending/append-without-stream" variants="csharp" />
 
-The concurrency guard then comes from the event source's own dimensions, because no stream supplies others.
+Without a stream declaration to override them, the event source's own dimensions determine the default concurrency guard. If the source declares no dimensions either, the client uses its ordinary default scope.
 
 ## Append several events
 
@@ -44,7 +44,7 @@ To write events for several event sources in one atomic append, give each `Event
 
 Every event has exactly one event source. The append is all or nothing: if either event fails a constraint or a concurrency check, neither is written. Events in one batch can go through different definitions, and some can skip definitions altogether.
 
-An event source id may have several concurrency scopes in one batch. The .NET client keeps one guard per distinct route and requires kernel support for scope conjunctions; older kernels are refused before any guard can be dropped. See [Concurrency](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
+One event source id can need several guards, for example when a batch writes to two months. The .NET client retains each distinct condition and requires a kernel that supports scope conjunctions, meaning it can check all the conditions together. Without that support, the client refuses the batch before sending it. See [Concurrency](./concurrency.mdx#a-batch-that-needs-two-guards-for-one-event-source-id).
 
 ## Other overloads
 
@@ -68,11 +68,8 @@ The unit of work's `Transactional` sequence has no typed overloads. To stage an 
 
 <ChronicleClientTabs snippet="event-sources/appending/errors" variants="csharp" />
 
-Read the result. A constraint violation or a concurrency violation does not throw.
+The example catches routing mistakes separately from a kernel rejection. Inspect `IsSuccess` and the result's violations after awaiting the append: constraint and concurrency violations are returned, not thrown. For a concurrency conflict, read the state again and reconsider the decision before retrying.
 
 ## Next steps
 
-- [Concurrency](./concurrency.mdx): choose what an append conflicts with.
-- [Scenarios](./scenarios.mdx): complete examples.
-- [Dynamic Consistency Boundary](./dcb.mdx): a guarded decision that appends through a definition. The wider picture is in [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).
-- [Appending events](../events/appending.mdx)
+Choose which competing writes matter in [Concurrency](./concurrency.mdx). If the append depends on state you read earlier, follow the guarded withdrawal in [Dynamic Consistency Boundary](./dcb.mdx), then [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) for the wider model. [Scenarios](./scenarios.mdx) combines the pieces in complete examples; [Appending events](../events/appending.mdx) covers the general append APIs.

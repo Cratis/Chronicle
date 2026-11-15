@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-query-paging
-description: Add server-side paging and sorting to a Cratis Arc read-model query — which return shapes Arc pages, what a query author must not write (Skip, Take, OrderBy), how MongoDB pages and sorts without LINQ, the exact query-string keys, sorting pitfalls per storage provider, and the paged frontend hooks. Use when a list query can grow large enough that returning every row is wasteful, or needs server-side sorting, or a paged query fails with `Expression not supported`. Do not use for general query creation or as a performance review.
+description: Use when an existing Arc list query needs server-side paging or sorting, or a paged query fails with `Expression not supported`. Not for general query creation or a broad performance review.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-query-paging/SKILL.md -->
@@ -57,10 +57,12 @@ Sources: `Arc.Core/Queries/QueryStringQueryRequestReader.cs`,
 
 ## Which return shapes page
 
-A query is an eligible public or internal static method on the `[ReadModel]`
-type, discovered by its return type. Internal visibility does not hide an
-endpoint; keep helpers outside that type. Read **cratis-chronicle-read-model**'s
-query reference for explicit `[Query]` discovery and older-version limits.
+A query is an eligible public static method on the `[ReadModel]` type,
+discovered by its return type.
+Requires Arc 22.121.0 for non-public statics to be
+excluded even with `[Query]` (ARC0029 warns); older Arc exposes internal methods
+as endpoints too. Read **cratis-chronicle-read-model**'s query reference for
+explicit `[Query]` discovery and older-version limits.
 
 | Return | Paged? | How |
 | --- | --- | --- |
@@ -175,6 +177,11 @@ For composed MongoDB/EF observations, pass `ignoreQueryContext: true` to
 auxiliary sources so only the primary consumes client paging/sorting and writes
 totals. Single-instance observations emit `default` when absent, deleted or
 outside the filter; guard `hasData`/`isReady` in React.
+Requires Arc 22.117.1 for
+`ObserveSingle`/`ObserveById` never to page or count; their retained
+`ignoreQueryContext` argument has no effect. Use collection results for paging.
+Read [live query processing](references/live-query-processing.md) for shared
+MongoDB watches, emitted-value interception and calendar-bound answers.
 Source: [MongoDB observations](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/mongodb/observing-collections.md).
 
 ## Consume it from the frontend

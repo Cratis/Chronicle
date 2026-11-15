@@ -203,7 +203,7 @@ if ($testProjects.Count -eq 0) {
 Write-Host "TEST_OUTPUT_ROOT:$testOutputRoot"
 ```
 
-- If `ENTRY_TYPE:NotFound` and SDK-style test projects were found → use the test projects directly as `dotnet test` entry points.
+- If `ENTRY_TYPE:NotFound` and SDK-style test projects were found → pass the selected projects to `run-tests` discovery: supported executable suites use their built runners; only VSTest uses `dotnet test <project> --no-build`.
 - If `ENTRY_TYPE:NotFound` and classic test projects were found → use only the repository's documented coverage command; do not infer `dotnet test`.
 - If `ENTRY_TYPE:NotFound` and no test projects found → stop: `No .sln, .slnx, or test projects found under <path>. Provide the path to your .NET solution, filter, or project.`
 - A missing/unreadable requested path, failed lookup, or ambiguous entry point is a discovery blocker, not measured zero coverage or evidence of an empty suite. Do not continue collection after a discovery error.

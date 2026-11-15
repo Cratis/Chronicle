@@ -12,7 +12,7 @@ public class and_the_stored_event_is_of_a_later_generation_than_the_projection :
 
     void Because() => ResolveJoinOfEventStoredAt(second_generation, first_generation);
 
-    [Fact] void should_not_release_with_the_schema_the_projection_was_built_with() => _eventCompliance.DidNotReceive().Release(Arg.Any<AppendedEvent>(), _projectionSchema);
-    [Fact] void should_not_release_when_the_stored_generation_has_no_compliance_metadata() => _eventCompliance.DidNotReceive().Release(Arg.Any<AppendedEvent>(), Arg.Any<JsonSchema>());
-    [Fact] void should_still_use_the_stored_event_as_the_resolved_join_source() => _results.Single().Event.ShouldEqual(_storedEvent);
+    [Fact] void should_use_the_retained_schema_only_as_a_hint_for_current_effective_protection() => _eventCompliance.Received(1).Release(_storedEvent, _projectionSchema);
+    [Fact] void should_not_treat_the_retained_stored_schema_as_effective_protection() => _eventCompliance.DidNotReceive().Release(Arg.Any<AppendedEvent>(), _storedSchema);
+    [Fact] void should_use_the_event_returned_by_the_release_boundary() => _results.Single().Event.ShouldEqual(_releasedEvent);
 }

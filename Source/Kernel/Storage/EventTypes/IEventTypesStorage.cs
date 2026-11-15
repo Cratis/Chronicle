@@ -14,6 +14,15 @@ namespace Cratis.Chronicle.Storage.EventTypes;
 public interface IEventTypesStorage
 {
     /// <summary>
+    /// Replaces only the schema of an existing generation, preserving all other event type data.
+    /// </summary>
+    /// <param name="eventTypeId">The event type identifier.</param>
+    /// <param name="generation">The existing generation.</param>
+    /// <param name="schema">The replacement schema.</param>
+    /// <returns>Whether an existing schema changed. Missing types or generations are not created.</returns>
+    Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema);
+
+    /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to register for.</param>

@@ -11,8 +11,7 @@ public class DecRemoveWithJoinGroupMembershipProjection : IProjectionFor<DecRemo
                 .UsingParentKey(e => e.UserId)
                 .UsingKey(e => e.GroupId)
                 .Set(m => m.JoinedAt).ToEventContextProperty(c => c.Occurred))
-            .Join<DecRemoveWithJoinGroupCreated>(_ => _
-                .On(m => m.GroupId))
+            .Join<DecRemoveWithJoinGroupCreated>()
             .RemovedWith<DecRemoveWithJoinUserLeftGroup>(_ => _
                 .UsingParentKey(e => e.UserId)
                 .UsingKey(e => e.GroupId))

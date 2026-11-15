@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Jobs;
 
@@ -35,7 +35,7 @@ internal static class JobStepSummaryConverters
     /// </summary>
     /// <param name="sc">The stored status change.</param>
     /// <returns>The status change.</returns>
-    internal static JobStepStatusChanged ToStatusChanged(Cratis.Orleans.Jobs.JobStepStatusChanged sc) =>
+    internal static JobStepStatusChanged ToStatusChanged(Cratis.Choreography.Jobs.JobStepStatusChanged sc) =>
         new()
         {
             Status = (JobStepStatus)(int)sc.Status,
@@ -49,7 +49,7 @@ internal static class JobStepSummaryConverters
     /// </summary>
     /// <param name="p">The stored progress.</param>
     /// <returns>The progress.</returns>
-    internal static JobStepProgress ToProgress(Cratis.Orleans.Jobs.JobStepProgress p) =>
+    internal static JobStepProgress ToProgress(Cratis.Choreography.Jobs.JobStepProgress p) =>
         new()
         {
             Percentage = (int)p.Percentage,

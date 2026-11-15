@@ -27,6 +27,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 /// <param name="database">The <see cref="IDatabase"/> to use for operations.</param>
 public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueConstraintsStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public async Task<(long PerEventSource, long PerValue)> RemoveUnhashedValues(CancellationToken cancellationToken = default)
     {
@@ -192,7 +194,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
                 throw new DuplicateUniqueConstraintValue(definition.Name, eventSourceId);
             }
 
-            SqlStorageTelemetry.RecoveredCollision("unique-constraint-value");
+            _telemetry.RecoveredCollision("unique-constraint-value");
         }
     }
 
@@ -327,7 +329,7 @@ public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNames
                 throw;
             }
 
-            SqlStorageTelemetry.RecoveredCollision("unique-constraint-source");
+            _telemetry.RecoveredCollision("unique-constraint-source");
         }
     }
 

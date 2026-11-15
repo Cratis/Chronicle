@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Properties;
@@ -38,11 +39,12 @@ public class a_projections_manager_grain : Specification
     protected IProjectionFactory _projectionFactory;
     protected Engine.IProjection _engineProjection;
     protected AdvancingClock _clock;
+    protected ISubscriptionAdmission _throttle;
     protected IReadModelsManager _readModelsManager;
     protected Observation.IObserver _observerGrain;
     protected readonly Dictionary<string, Observation.IObserver> _observersByKey = [];
     protected INamespaces _namespaces;
-    protected Orleans.Jobs.IJobsManager _jobsManager;
+    protected Choreography.Jobs.IJobsManager _jobsManager;
     protected Recommendations.IRecommendationsManager _recommendationsManager;
     protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected Storage.IEventStoreStorage _eventStoreStorage;
@@ -57,6 +59,8 @@ public class a_projections_manager_grain : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _throttle = CreateThrottle();
+        _silo.AddService(_throttle);
         _logger = Substitute.For<ILogger<ProjectionsManager>>();
         _logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
         _silo.AddService(_logger);
@@ -123,8 +127,8 @@ public class a_projections_manager_grain : Specification
         _observerGrain.GetState().Returns(new ObserverState());
         _silo.AddProbe(key => _observersByKey.TryGetValue(key.ToString(), out var observer) ? observer : _observerGrain);
 
-        _jobsManager = Substitute.For<Orleans.Jobs.IJobsManager>();
-        _jobsManager.GetAllJobs().Returns(ImmutableList<Orleans.Storage.Jobs.JobState>.Empty);
+        _jobsManager = Substitute.For<Choreography.Jobs.IJobsManager>();
+        _jobsManager.GetAllJobs().Returns(ImmutableList<Choreography.Storage.Jobs.JobState>.Empty);
         _silo.AddProbe(_ => _jobsManager);
 
         _recommendationsManager = Substitute.For<Recommendations.IRecommendationsManager>();
@@ -175,6 +179,12 @@ public class a_projections_manager_grain : Specification
         SinkDefinition.None,
         new Dictionary<ReadModelGeneration, JsonSchema>(),
         []);
+
+    /// <summary>
+    /// Creates admission for this independent fixture.
+    /// </summary>
+    /// <returns>The activation's host admission gate.</returns>
+    protected virtual ISubscriptionAdmission CreateThrottle() => new SubscriptionAdmission(8, Environment.ProcessorCount);
 
     void AddClusterMembership()
     {

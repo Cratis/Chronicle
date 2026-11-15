@@ -29,6 +29,86 @@ public static class DiagnosticIds
     public const string SelfReducerMethodWillNotBeDiscovered = "CHR0065";
 
     /// <summary>
+    /// A node or an edge in a graph has a property that is an object.
+    /// </summary>
+    public const string GraphElementPropertyMustBePrimitive = "CHR0066";
+
+    /// <summary>
+    /// A node does not have exactly one key, or an edge has more than one.
+    /// </summary>
+    public const string GraphElementKeyMustBeDeclaredOnce = "CHR0067";
+
+    /// <summary>
+    /// A type is both a node or an edge in a graph and a read model.
+    /// </summary>
+    public const string GraphElementCannotBeReadModel = "CHR0068";
+
+    /// <summary>
+    /// A passive read model names a sink, but a passive read model has no sink.
+    /// </summary>
+    public const string SinkCannotBeCombinedWithPassive = "CHR0069";
+
+    /// <summary>
+    /// An Observes attribute is on a method that does not take an EventBatch.
+    /// </summary>
+    public const string ObservesOnlyOnBatchMethods = "CHR0070";
+
+    /// <summary>
+    /// A batch method declares no Observes attribute.
+    /// </summary>
+    public const string BatchMethodMustObserveEventTypes = "CHR0071";
+
+    /// <summary>
+    /// An event type reaches more than one method of a reactor.
+    /// </summary>
+    public const string EventTypeMustReachOneMethod = "CHR0072";
+
+    /// <summary>
+    /// A per-event method takes a BatchContext.
+    /// </summary>
+    public const string BatchContextOnlyOnBatchMethods = "CHR0073";
+
+    /// <summary>
+    /// A reactor batch method returns something other than Task or void.
+    /// </summary>
+    public const string ReactorBatchMethodMustReturnTaskOrVoid = "CHR0074";
+
+    /// <summary>
+    /// A reducer has more than one batch method, or a batch method and per-event methods.
+    /// </summary>
+    public const string ReducerBatchMethodMustBeItsOnlyMethod = "CHR0075";
+
+    /// <summary>
+    /// A batch method has a signature Chronicle cannot call.
+    /// </summary>
+    public const string BatchMethodSignatureMustMatchAllowed = "CHR0076";
+
+    /// <summary>
+    /// A batch method matches on an event type it does not observe.
+    /// </summary>
+    public const string BatchMethodMatchesUnobservedEventType = "CHR0077";
+
+    /// <summary>
+    /// A graph view is anchored at a type that is not a node.
+    /// </summary>
+    public const string GraphViewRootMustBeNode = "CHR0078";
+
+    /// <summary>
+    /// A relation of a graph view follows a type that is not an edge.
+    /// </summary>
+    public const string GraphViewRelationMustFollowEdge = "CHR0079";
+
+    /// <summary>
+    /// A relation of a graph view leads to a type that is not a view.
+    /// </summary>
+    public const string GraphViewRelationTargetMustBeView = "CHR0080";
+
+    /// <summary>
+    /// A graph view is also a node or an edge.
+    /// </summary>
+    public const string GraphViewCannotBeNodeOrEdge = "CHR0081";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";

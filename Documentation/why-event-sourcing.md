@@ -1,23 +1,17 @@
 ---
-description: Event sourcing optimizes for understanding change by storing what happened and why, and Cratis treats it as the default architecture for information systems.
+title: Why use event sourcing with Cratis Chronicle?
+description: Event sourcing records meaningful changes instead of only current state. Cratis Chronicle stores those events and projects queryable read models.
 ---
-# Why Event Sourcing
 
-Event sourcing optimizes for understanding change, not just storing the latest value. Instead of asking "what does the row look like now?", you ask "what happened, in what order, and why?"
+Event sourcing records meaningful changes as events rather than keeping only the latest state. Cratis Chronicle stores those events and derives queryable read models through projections. This preserves the changes your application records, so you can inspect how state evolved instead of trying to reconstruct it from the current row.
 
-At Cratis, we see event sourcing as the default architecture for information systems. Not because every table deserves an event stream, but because most real systems are driven by processes, decisions, and handoffs over time — and those facts become more valuable the longer the system lives. Chronicle models those changes as [events](./concepts/event.md) in an [event store](./concepts/event-store.md), grouped by [event source](./concepts/event-source.md), and then turns them into queryable views through [projections](./concepts/projection.md).
+Consider an order marked as shipped. The current row tells you its status, but not necessarily which changes led there or what happened before payment completed. If those questions matter, the history belongs in the model rather than in a separate collection of diagnostic logs.
 
-This page explains why we choose event sourcing as the starting point for information systems and how Chronicle supports both classic aggregate-root thinking and Dynamic Consistency Boundary.
+That is why Cratis recommends event sourcing as the starting point for information systems. Chronicle groups [events](./concepts/event.md) by [event source](./concepts/event-source.md), such as an order, in an [event store](./concepts/event-store.md). Its [projections](./concepts/projection.md) derive the views your application queries. The sections below explain the trade-off and how to choose the boundary around a business decision.
 
 ## CRUD focuses on state, event sourcing focuses on change
 
-CRUD systems center on the current shape of data:
-
-- Create a record
-- Update a few fields
-- Delete a row
-
-That works well when the current state is all you care about. The trade-off is that the path that led to that state often disappears unless you add separate audit infrastructure.
+CRUD means create, read, update, and delete. You store a record, read it, and update or delete it as the application changes. That works well when current state is all you need. Unless you also keep history, an update replaces the previous values and loses the path that led to the current state.
 
 Event sourcing starts from a different question: what meaningful state changes happened?
 
@@ -26,7 +20,7 @@ Event sourcing starts from a different question: what meaningful state changes h
 - `PaymentCaptured`
 - `OrderShipped`
 
-Those events tell a story. You do not just know that a field changed. You know what changed in domain terms, when it changed, and how the process moved forward.
+Each name says what changed in business terms. `PaymentCaptured` records a different fact from `OrderShipped`, even if both would otherwise appear as updates to an order row. What you can later explain depends on which facts you chose to record and the information they carry.
 
 ```mermaid
 flowchart LR
@@ -47,25 +41,11 @@ flowchart LR
 
 With CRUD, an `UPDATE Customers SET Address = ...` statement tells you very little about the business meaning. Did the customer move? Did support correct a typo? Was this part of a larger onboarding step?
 
-With event sourcing, the event itself communicates intent. That makes the system easier to understand for developers, operators, auditors, and downstream consumers.
-
-This is one of the biggest practical differences:
-
-- CRUD records the latest shape of data
-- Event sourcing records meaningful transitions in the business
-
-When the record of change is meaningful, your system becomes more transparent. You can reason about what is going on without reverse-engineering it from final state alone.
+You can make that distinction explicit with separate events for a move and a correction. A developer investigating a bug or an operator answering a support question can then follow the recorded changes instead of guessing from the latest address. The event names and payloads carry the explanation; event sourcing does not infer an intent you never recorded.
 
 ## Events help you think in processes
 
-Most business problems are not really about changing isolated fields. They are about moving through a process:
-
-- a person registers
-- an order is approved
-- a shipment is dispatched
-- an invoice is paid
-
-CRUD tends to pull your thinking toward tables and columns. Event sourcing pulls your thinking toward workflows and decisions. That usually leads to better names, clearer boundaries, and models that match the business more closely.
+An order moves through approval, payment, and shipment. Modeling those changes as events gives each step a name and makes its relationship to the next step visible. You can discuss when to capture payment or confirm an order without starting from which columns to update.
 
 ```mermaid
 sequenceDiagram
@@ -82,7 +62,7 @@ sequenceDiagram
     Projection-->>App: Updated read model
 ```
 
-When you later need [constraints](./concepts/constraints.md), approval logic, compensating actions, or integration with external systems, the process is already visible in the event stream.
+In Chronicle, a [reactor](./reactors/index.mdx) can respond to one of these events by calling an external system or sending a notification. A [constraint](./concepts/constraints.md) serves a different purpose: it enforces an integrity rule when events are appended. Keep that distinction when adding approval logic or compensating actions; reacting after an append is not the same as preventing it.
 
 ## CRUD loses information unless you bolt it back on
 
@@ -94,42 +74,26 @@ A CRUD model usually keeps only the current representation of an entity. If a va
 - history tables
 - operational logs
 
-That usually means the system starts simple and grows extra tracking features later because the need for history inevitably shows up.
+Those are valid ways to retain history, but they are extra features to design and maintain alongside the current-state model. With event sourcing, the events are the source of truth. You can inspect their sequence when debugging and build another read model from the same recorded facts. Historical questions remain limited by the information those events contain.
 
-Event sourcing starts with that history. The full sequence of events is already the source of truth, so:
-
-- auditability is built in
-- debugging is easier because you can inspect the actual sequence of decisions
-- temporal questions become answerable
-- rebuilding new read models is possible without guessing past intent
-
-If compliance or traceability matters, event sourcing treats it as a foundation instead of an afterthought.
+Retaining history does not remove your responsibility to handle personal data. Chronicle's [compliance mechanisms](./compliance/index.md) include encryption for fields marked as personally identifiable information (PII) and erasure of the key tied to the person the data concerns. Plan that protection before writing personal data, and review [regulatory responsibilities](./compliance/regulatory-responsibilities.md) for obligations beyond the event store.
 
 ## Full event history creates opportunities beyond auditing
 
-A complete stream of events is not only useful for audits. It is also valuable training data.
+An event stream can provide historical inputs for analytics or model-training workflows, rather than only a current-state snapshot:
 
-Machine learning and other model-driven features work better when you have the full context of what happened over time:
+- the order of recorded changes
+- timestamps for those changes
+- actions recorded before an outcome
+- business transitions represented by the event types
 
-- the order of changes
-- the gaps between decisions
-- the actions users took before an outcome
-- the exact business transitions that led to success or failure
-
-In a CRUD-only system, you often have to reconstruct that context from scattered logs, snapshots, and heuristics. With event sourcing, the context is already present in the event stream.
-
-That makes it easier to build features such as:
-
-- fraud or anomaly detection
-- recommendation or prediction models
-- operational insights based on process behavior
-- assistants that understand what stage a workflow is in
+In a CRUD-only system, you may need to reconstruct that history from separate logs or snapshots. With event sourcing, the recorded changes are already in the event stream. Whether those inputs are useful for a model depends on the task and on what your application actually recorded; keeping history does not by itself establish better model results.
 
 ## Event sourcing is not just aggregate roots
 
-Event sourcing is often introduced together with aggregate roots, and that can be useful. Chronicle supports that approach through [aggregate roots support](/arc/backend/csharp/chronicle/aggregates/).
+Keeping events does not dictate how you make a business decision. You still need to decide which facts must stay consistent while concurrent writers act.
 
-An aggregate root gives you a fixed consistency boundary around a model. You load the aggregate, make a decision, and append new events from that boundary.
+An **aggregate root** gives you a fixed consistency boundary around a model: you load its history, make a decision, and append new events from that boundary. If you use domain-driven design (DDD), this may be familiar. Cratis Arc provides [aggregate-root support on top of Chronicle](/arc/backend/csharp/chronicle/aggregates/).
 
 ### Aggregate roots
 
@@ -147,7 +111,7 @@ An aggregate root gives you a fixed consistency boundary around a model. You loa
 
 ### Dynamic Consistency Boundary
 
-Chronicle also supports [Dynamic Consistency Boundary](./dynamic-consistency-boundary/index.md), where the consistency scope is based on the facts a decision actually needs at runtime rather than on a predeclared aggregate.
+[Dynamic Consistency Boundary](./dynamic-consistency-boundary/index.md) bases the consistency scope on the facts a decision actually needs at runtime rather than on a predeclared aggregate. Chronicle supports DCB-style decision models and append conditions within its event-source model, but it is not a DCB event store: each event has one event source ID, and custom tags do not participate in concurrency checks.
 
 If you want Chronicle-specific guidance, read [Dynamic Consistency Boundary in Chronicle](./dynamic-consistency-boundary/chronicle.md).
 
@@ -162,11 +126,13 @@ If you want Chronicle-specific guidance, read [Dynamic Consistency Boundary in C
 - less familiar if your team expects aggregate-centric design
 - requires you to think carefully about the facts and constraints involved in each decision
 
-The key point is that event sourcing does not require aggregate roots. Aggregate roots are one way to structure decisions. Dynamic Consistency Boundary is another. Chronicle supports both, so you can choose the model that fits the problem instead of forcing every problem into the same shape.
+:::note[Choose the consistency boundary]
+The key point is that event sourcing does not require aggregate roots. Aggregate roots are one way to structure decisions. DCB-style decision models are another, within Chronicle's event-source and concurrency-scope limits. Choose the model that fits the problem instead of forcing every problem into the same shape.
+:::
 
 ## Why we use it by default
 
-Event sourcing is almost always worth it for systems that carry real business information, because those systems tend to grow questions that current state cannot answer. It is a strong fit when you care about:
+We start with event sourcing when an application needs to explain business changes over time. That history can serve several distinct needs:
 
 - transparency of business behavior
 - auditability and compliance
@@ -175,4 +141,8 @@ Event sourcing is almost always worth it for systems that carry real business in
 - integration through events
 - analytics or model training on full historical context
 
-If your problem is truly just "store the latest state and move on", CRUD can still be a perfectly reasonable choice for that bounded slice. But information systems usually grow toward history, traceability, replayability, integration, or better process insight. Event sourcing starts there instead of retrofitting it later.
+If a bounded part of your application only needs the latest state, CRUD can be the better fit. Event sourcing asks you to model meaningful facts, evolve their schemas, and account for when derived views catch up. Choose it where retaining and using history justifies that work.
+
+## Evaluate the fit, then try it
+
+Use [when to use event sourcing](./concepts/when-to-use-event-sourcing.md) to weigh those benefits against the modeling, schema evolution, and consistency work. If the trade-off fits your application, [get started with Chronicle](./get-started/index.mdx) to run a local kernel and choose a client setup guide.

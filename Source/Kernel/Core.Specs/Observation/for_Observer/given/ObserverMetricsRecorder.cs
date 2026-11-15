@@ -11,10 +11,8 @@ namespace Cratis.Chronicle.Observation.for_Observer.given;
 /// Records the measurements an observer reports on its meter, for the one observer the recorder was created for.
 /// </summary>
 /// <remarks>
-/// The generated metrics keep their instruments in static fields, bound to the first meter they are used with.
-/// All recorders therefore share one <see cref="Meter"/> that is never disposed, and tell the observers they listen
-/// to apart by the observer id each of them is given - which is also what keeps specs running in parallel from
-/// seeing each other's measurements.
+/// All recorders share one <see cref="Meter"/> that is never disposed, and distinguish observers by their ids
+/// so specs running in parallel do not see each other's measurements.
 /// </remarks>
 public sealed class ObserverMetricsRecorder : IDisposable
 {
@@ -36,7 +34,7 @@ public sealed class ObserverMetricsRecorder : IDisposable
 
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (ReferenceEquals(instrument.Meter, SharedMeter))
+            if (instrument.Meter.Name == SharedMeter.Name && !instrument.Name.StartsWith("cratis.chronicle.", StringComparison.Ordinal))
             {
                 _instruments[instrument.Name] = instrument;
                 listener.EnableMeasurementEvents(instrument);

@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <TargetFrameworks></TargetFrameworks>
         <AssemblyName>Cratis.Chronicle.Testing</AssemblyName>
         <RootNamespace>Cratis.Chronicle.Testing</RootNamespace>
         <Description>Testing helpers for Cratis Chronicle - the open-source (MIT) event-sourcing database and runtime. In-process kernel and in-memory storage for testing event-sourced applications.</Description>
@@ -59,14 +57,16 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <!-- The embedded kernel's job system now comes from these packages; without the reference the
              Arc-generated module initializer cannot bind them and every scenario fails at startup. -->
-        <PackageReference Include="Cratis.Orleans" />
-        <PackageReference Include="Cratis.Orleans.Storage" />
-        <PackageReference Include="Cratis.Orleans.Storage.MongoDB" />
+        <PackageReference Include="Cratis.Choreography" />
+        <PackageReference Include="Cratis.Choreography.Storage" />
+        <PackageReference Include="Cratis.Choreography.Storage.MongoDB" />
         <!-- Embedded kernel assemblies are compiled against these packages. Declare them directly so
              consumers cannot resolve lower transitive versions than those assemblies require. -->
+        <PackageReference Include="BouncyCastle.Cryptography" />
         <PackageReference Include="Cratis.Metrics.Roslyn" />
         <PackageReference Include="DnsClient" />
         <PackageReference Include="FluentValidation" />
+        <PackageReference Include="Grpc.AspNetCore.Server" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
@@ -91,6 +91,7 @@
         <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="protobuf-net" />
         <PackageReference Include="protobuf-net.Grpc" />
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <PackageReference Include="protobuf-net.Grpc.Reflection" />
         <PackageReference Include="protobuf-net.Reflection" />
         <PackageReference Include="System.Reactive" />

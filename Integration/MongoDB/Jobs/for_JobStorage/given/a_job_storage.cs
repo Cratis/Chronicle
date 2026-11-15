@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
+using Cratis.Choreography.Storage.MongoDB.Jobs;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
-using Cratis.Orleans.Storage.MongoDB.Jobs;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 

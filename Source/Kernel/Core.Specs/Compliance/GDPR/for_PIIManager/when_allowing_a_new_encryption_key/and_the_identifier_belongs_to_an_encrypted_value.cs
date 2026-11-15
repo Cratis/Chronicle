@@ -18,6 +18,6 @@ public class and_the_identifier_belongs_to_an_encrypted_value : given.a_pii_mana
     async Task Because() => _error = await Catch.Exception(() => _manager.AllowNewEncryptionKeyFor(_encryptedValueIdentifier));
 
     [Fact] void should_throw_encryption_key_is_not_erasable() => _error.ShouldBeOfExactType<EncryptionKeyIsNotErasable>();
-    [Fact] void should_not_authorize_a_new_key() => _keyStore.DidNotReceive().AllowNewKeyFor(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier);
+    [Fact] void should_not_authorize_a_new_key() => _keyStore.DidNotReceive().AuthorizeConfirmedSuccessorFor(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier);
     [Fact] void should_not_evict_any_cache() => _cacheClient.DidNotReceive().Evict(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier);
 }

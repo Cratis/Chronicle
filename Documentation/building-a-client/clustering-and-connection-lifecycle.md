@@ -1,8 +1,7 @@
 ---
+title: Clustering and connection lifecycle in Cratis Chronicle
 description: "What a new Chronicle client must implement for multi-server use: server discovery, load balancing, the wire-compatibility handshake and staying connected."
 ---
-# Clustering and the connection lifecycle
-
 [Connection Strings → Server support](../connection-strings/server.md) is the canonical reference
 for the connection string format, the load-balancer strategies, and DNS SRV lookup, written for
 someone configuring an existing client. This page covers the same ground from the other side: what
@@ -105,6 +104,22 @@ keep-alive stream and a client-side watchdog:
 - The reconnect path is the *same* connect path described above: re-resolve addresses (DNS may have
   changed), re-run load-balancer selection (the server that dropped isn't guaranteed to be the one
   to reconnect to), and re-run the compatibility check.
+
+## Several silos behind a load balancer
+
+The session stream (`Connect`), observer streams (`Observe`), projection registrations and
+keep-alive RPCs may reach different silos, whether through per-RPC balancing or a dedicated
+session channel. The kernel verifies across the cluster that each request comes from the identity
+that opened the connection. Clients do not need sticky routing.
+
+`PermissionDenied` is a definitive refusal: the connection belongs to another identity or is no
+longer held. Reconnect rather than retrying that registration unchanged. `Unavailable` with
+"The connection could not be verified." is transient; retry with the capped
+exponential backoff described above. Projection declaration recording is best-effort: when ownership
+cannot be verified, the kernel logs a warning and still registers the projection definitions. If the
+silo holding the reservation grain fails, the grain starts empty until the session holder next renews
+its lease (normally within two seconds); a
+registration in that interval can be refused and must reconnect.
 
 ## What a new client needs to implement
 

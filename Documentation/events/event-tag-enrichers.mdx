@@ -1,0 +1,35 @@
+---
+uid: event-tag-enrichers
+description: Add named tags to every appended event from one place with IEventTagEnricher and ambient tag scopes, instead of at each append call.
+---
+
+# Tag Enrichers
+
+[Named tags](./appending-with-tags.mdx) can be given at every append call, but some tags belong to the surroundings of the append rather than to the code that does it. Chronicle resolves the tags of every event in one step, used by every append path: single appends, `AppendMany`, and units of work.
+
+## Order
+
+For each event the tags are resolved in this order and merged without duplicates:
+
+1. The static `[Tag]` tags of the event type.
+2. The tags already on the event, including those given at the call site.
+3. The built-in enrichers: the ambient scope and `[Audience]` properties.
+4. Your own `IEventTagEnricher` implementations.
+
+For a unit of work this happens when the event is added, not when the unit commits.
+
+## Writing an enricher
+
+Implement `IEventTagEnricher`. Enrichers are discovered automatically, resolved through dependency injection, and all of them run for every event. They must be pure, synchronous and additive: they can add tags, never remove or change them.
+
+<ChronicleClientTabs snippet="events/event-tag-enrichers/enricher" />
+
+The `EventTagContext` gives you the event store name, the event sequence, the event source id, the event type, the event itself and the tags it already has.
+
+## Ambient scopes
+
+`EventTags.Scope(name, value)` stamps a tag on every event appended inside the scope, without the appending code having to know. The scope flows with the async execution context and is closed by disposing it.
+
+<ChronicleClientTabs snippet="events/event-tag-enrichers/ambient-scope" />
+
+Nested scopes add up. `EventTags.Audience(value)` is the same with the `audience` name; see [Audiences](./audiences.mdx) for where it applies.

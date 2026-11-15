@@ -20,6 +20,8 @@ public class and_then_registering_again_with_updated_definitions : given.a_proje
 
         _manager.TryGet(_eventStore, _namespace, _firstDefinition.Identifier, out _firstProjectionFirstTime);
         _manager.TryGet(_eventStore, _namespace, _secondDefinition.Identifier, out _secondProjectionFirstTime);
+        _firstDefinition = _firstDefinition with { IsRewindable = !_firstDefinition.IsRewindable };
+        _secondDefinition = _secondDefinition with { IsRewindable = !_secondDefinition.IsRewindable };
 
         await _manager.Register(
             _eventStore,

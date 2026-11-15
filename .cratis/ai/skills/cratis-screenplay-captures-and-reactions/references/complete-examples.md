@@ -290,8 +290,8 @@ module Collections
         when trigger PaymentFileArrived
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
           amount = 120
-        then InvoiceClosed
-          for "9c858901-8a57-4791-81fe-4c455b099bc9"
+        then invokes CloseInvoice
+          invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
           reason = "paid"
       specification IssuingTheWeeklyDigest
         given clock "2026-10-05T07:00:00Z"

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -9,7 +10,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -31,6 +31,18 @@ public partial class Observer
         Guid? deferralId = null,
         WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry) =>
         RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, new(failurePolicy));
+
+    /// <inheritdoc/>
+    public Task PartitionFailed(
+        Key partition,
+        EventSequenceNumber sequenceNumber,
+        IEnumerable<string> exceptionMessages,
+        string exceptionStackTrace,
+        FailureKind kind,
+        FailedPartitionId? episodeId,
+        Guid? deferralId,
+        PartitionFailureContext context) =>
+        RecordPartitionFailure(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind, episodeId, deferralId, context);
 
     /// <inheritdoc/>
     public Task PartitionFailedWithDeliveryFence(
@@ -259,7 +271,7 @@ public partial class Observer
         ForgetRecoveryStart(partition);
         var startAttempted = false;
         var jobId = await StartRecoverJobForFailedPartition(failure, () => startAttempted = true);
-        if (jobId == Cratis.Orleans.Jobs.JobId.NotSet)
+        if (jobId == Cratis.Choreography.Jobs.JobId.NotSet)
         {
             return (PartitionRecoveryOutcome.Started, ReportJobNotStarted());
         }
@@ -309,6 +321,9 @@ public partial class Observer
             _metrics?.PartitionFailed();
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
             var failure = failures.State.RegisterAttempt(partition, sequenceNumber, exceptionMessages, exceptionStackTrace, kind);
+
+            // The epoch is an identity tag: a failure from a non-replay delivery never clears it.
+            if (context.ReplayEpoch is { } replayEpoch) failure.ReplayEpoch = replayEpoch;
             if (partitionWasAlreadyFailed)
             {
                 logger.PartitionFailedAgain(partition, sequenceNumber, failure.AttemptsInCurrentBudget);
@@ -324,7 +339,7 @@ public partial class Observer
                 State = State with { FailedPartitionCount = State.FailedPartitionCount + 1 };
             }
 
-            _metrics?.PartitionRetryAttempt();
+            _metrics?.LegacyPartitionRetryAttempt();
             var webhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
             if (webhook) SetWebhookFailureMetadata(failure, context.Policy, sequenceNumber);
 
@@ -498,6 +513,8 @@ public partial class Observer
         failure.ObserverId = _observerId;
         var onlyThisPartition = new FailedPartitions { Partitions = [failure] };
         await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).FailedPartitions.Save(_observerId, onlyThisPartition);
+        Failures.MarkPersisted(onlyThisPartition);
+        PublishFailedPartitionsGauge();
     }
 
     async Task RegisterRetryReminder(FailedPartition failure)
@@ -578,13 +595,13 @@ public partial class Observer
         }
     }
 
-    async Task<Cratis.Orleans.Jobs.JobId> StartRecoverJobForFailedPartition(FailedPartition failedPartition, Action? onStartAttempted = null)
+    async Task<Cratis.Choreography.Jobs.JobId> StartRecoverJobForFailedPartition(FailedPartition failedPartition, Action? onStartAttempted = null)
     {
-        if (IsRetired || _removed) return Cratis.Orleans.Jobs.JobId.NotSet;
+        if (IsRetired || _removed) return Cratis.Choreography.Jobs.JobId.NotSet;
         if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
-            return Cratis.Orleans.Jobs.JobId.NotSet;
+            return Cratis.Choreography.Jobs.JobId.NotSet;
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
@@ -592,7 +609,7 @@ public partial class Observer
             await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||
             !await IsDeferralDue(failedPartition))
         {
-            return Cratis.Orleans.Jobs.JobId.NotSet;
+            return Cratis.Choreography.Jobs.JobId.NotSet;
         }
 
         var usesDeferrals = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType);
@@ -617,7 +634,8 @@ public partial class Observer
         {
             ReaderScope = ReaderScope,
             EpisodeId = usesDeferrals ? failedPartition.Id : null,
-            DeferralId = failedPartition.Deferral?.Id
+            DeferralId = failedPartition.Deferral?.Id,
+            ReplayEpoch = failedPartition.ReplayEpoch
         };
 
     async Task<JobId> StartRecoveryJob(FailedPartition failedPartition, RetryFailedPartitionRequest request, Action? onStartAttempted = null)

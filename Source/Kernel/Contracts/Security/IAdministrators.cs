@@ -28,6 +28,14 @@ public interface IAdministrators
     [Operation]
     Task<CommandResult> GrantAdministrator(GrantAdministratorRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the GrantEventStoreAccess command.
+    /// </summary>
+    /// <param name = "request">The GrantEventStoreAccess request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> GrantEventStoreAccess(GrantEventStoreAccessRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the RevokeAdministrator command.
     /// </summary>
     /// <param name = "request">The RevokeAdministrator request.</param>
@@ -36,12 +44,34 @@ public interface IAdministrators
     [Operation]
     Task<CommandResult> RevokeAdministrator(RevokeAdministratorRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RevokeEventStoreAccess command.
+    /// </summary>
+    /// <param name = "request">The RevokeEventStoreAccess request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<bool>> RevokeEventStoreAccess(RevokeEventStoreAccessRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AllAdministrators query.
     /// </summary>
     /// <param name = "callContext">The gRPC call context.</param>
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<AdministratorResponse>>> AllAdministrators(CallContext callContext = default);
+    /// <summary>
+    /// Executes the All query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<EventStoreAccessGrantsResponse>>> All(CallContext callContext = default);
+    /// <summary>
+    /// Executes the Uncovered query.
+    /// </summary>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<EventStoreAccessPreflightResponse>>> Uncovered(CallContext callContext = default);
 }
 
 /// <summary>
@@ -55,6 +85,43 @@ public class GrantAdministratorRequest
     /// </summary>
     [ProtoMember(1)]
     public Guid UserId { get; set; } = new();
+}
+
+/// <summary>
+/// Represents the GrantEventStoreAccessRequest message.
+/// </summary>
+[ProtoContract]
+public class GrantEventStoreAccessRequest
+{
+    /// <summary>
+    /// Gets or sets the Holder.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder Holder { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AllEventStores.
+    /// </summary>
+    [ProtoMember(8)]
+    public bool AllEventStores { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Access.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Security.StoreAccess Access { get; set; }
 }
 
 /// <summary>
@@ -77,6 +144,37 @@ public class RevokeAdministratorRequest
 }
 
 /// <summary>
+/// Represents the RevokeEventStoreAccessRequest message.
+/// </summary>
+[ProtoContract]
+public class RevokeEventStoreAccessRequest
+{
+    /// <summary>
+    /// Gets or sets the Holder.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder Holder { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AllEventStores.
+    /// </summary>
+    [ProtoMember(7)]
+    public bool AllEventStores { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? Namespace { get; set; }
+}
+
+/// <summary>
 /// Represents the AdministratorResponse message.
 /// </summary>
 [ProtoContract]
@@ -93,4 +191,90 @@ public class AdministratorResponse
     /// </summary>
     [ProtoMember(2)]
     public string Username { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the EventStoreAccessGrantsResponse message.
+/// </summary>
+[ProtoContract]
+public class EventStoreAccessGrantsResponse
+{
+    /// <summary>
+    /// Gets or sets the Holder.
+    /// </summary>
+    [ProtoMember(8)]
+    public global::Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder Holder { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(4)]
+    public string? EventStore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Access.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Security.StoreAccess Access { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Source.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::Cratis.Chronicle.Contracts.Security.EventStoreAccessGrantSource Source { get; set; }
+}
+
+/// <summary>
+/// Represents the EventStoreAccessPreflightResponse message.
+/// </summary>
+[ProtoContract]
+public class EventStoreAccessPreflightResponse
+{
+    /// <summary>
+    /// Gets or sets the Holder.
+    /// </summary>
+    [ProtoMember(10)]
+    public global::Cratis.Chronicle.Contracts.Security.EventStoreAccessHolder Holder { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(5)]
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Access.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Security.StoreAccess Access { get; set; }
+
+    /// <summary>
+    /// Gets or sets the FirstSeen.
+    /// </summary>
+    [ProtoMember(7)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset FirstSeen { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the LastSeen.
+    /// </summary>
+    [ProtoMember(8)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset LastSeen { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Count.
+    /// </summary>
+    [ProtoMember(9)]
+    public long Count { get; set; }
 }

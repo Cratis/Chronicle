@@ -15,12 +15,11 @@
   </ItemGroup>
 
   <!-- The employee/customer domain is shared with the SimpleConsole test app - same events,
-       read models, projections, reducers, constraints, PII types and seeding. -->
+       read models, projections, reducers, constraints, PII types. -->
   <ItemGroup>
     <Compile Include="..\SimpleConsole\Employee.cs" Link="Domain\Employee.cs" />
     <Compile Include="..\SimpleConsole\EmployeeData.cs" Link="Domain\EmployeeData.cs" />
     <Compile Include="..\SimpleConsole\Constraints.cs" Link="Domain\Constraints.cs" />
-    <Compile Include="..\SimpleConsole\EmployeeSeeding.cs" Link="Domain\EmployeeSeeding.cs" />
     <Compile Include="..\SimpleConsole\Projections.cs" Link="Domain\Projections.cs" />
     <Compile Include="..\SimpleConsole\Compliance.cs" Link="Domain\Compliance.cs" />
   </ItemGroup>

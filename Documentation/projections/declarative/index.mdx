@@ -1,49 +1,39 @@
 ---
-title: "Declarative Projections"
-description: "Define projections in code with the fluent IProjectionFor<T> builder."
+title: "Chronicle declarative projections with fluent mappings"
+description: "Define Chronicle read models with a fluent projection builder. Map events, choose keys, join streams, and manage child collections or optional nested objects."
 ---
 
-Declarative projections let you define read models with a fluent, code-first projection builder. They are ideal when you need explicit mapping, joins, or hierarchical projections that go beyond simple attribute mapping.
+Cratis Chronicle declarative projections turn events into read models through a fluent definition kept separate from the model type. Use them when you need to control property mappings, choose keys, or combine related data without putting projection attributes on the read model.
 
 ## Overview
 
-Declarative projections implement `IProjectionFor<TReadModel>` and use an `IProjectionBuilderFor<TReadModel>` to define how events map to read model properties. The builder gives you control over mapping, relationships, and event context while keeping the projection definition separate from the read model type.
+In .NET, implement `IProjectionFor<TReadModel>` and use the `IProjectionBuilderFor<TReadModel>` passed to `Define` to declare the events and mappings. Chronicle executes the resulting definition as events are processed and stores the derived state for queries. You describe how a view changes rather than writing code to save it after each event.
 
 ## Basic Example
 
+Start by declaring the event types that contribute to the read model. The client tabs show the corresponding definition syntax:
+
 <ChronicleClientTabs snippet="projections/declarative/index/basic" />
 
-Auto-mapping is enabled by default at the top level, so matching properties are mapped automatically. When you need explicit mappings, you can use `.Set()`, `.Add()`, `.Subtract()`, and other builder operations.
+Auto-mapping copies event properties to read model properties with matching names. It is enabled by default unless the model or scope disables it. Use `.Set()` when names differ, or `.Add()` and `.Subtract()` when an event contributes a change to a running total rather than a replacement value.
 
 ## Discovery
 
-Projection types are discovered by implementing `IProjectionFor<TReadModel>`. The events must be
-registered in the owning client's event-type registry, normally through `[EventType]`; .NET also
-supports [explicit event nominations](../../clients/dotnet/explicit-artifacts.md).
+In .NET, implementing `IProjectionFor<TReadModel>` makes a projection type discoverable. Register its events in the event-type registry, normally through `[EventType]` or [explicit event nominations](../../clients/dotnet/explicit-artifacts.md). Other clients use their own registration conventions, as shown in the examples.
 
 In .NET, a projection class must target only one read model. Implementing two closed `IProjectionFor<TReadModel>` interfaces, including through inheritance, throws `TypeImplementsMultipleProjectionInterfaces` during default artifact discovery. Split the class into one projection per read model. [CHR0057](../../code-analysis/CHR0057) reports this before runtime.
 
 ## Key Features
 
-- **Auto mapping by default** with the option to turn it off or override per event
-- **Explicit property mappings** for custom transformations
-- **Hierarchies** with child collections and nested projections
-- **Joins** across streams for richer read models
-- **FromEvery** for applying mappings to all events
-- **Event context** access for timestamps, sequence numbers, and IDs
-- **Event sequence selection** for sourcing from non-default sequences
-- **Passive and not rewindable projections** for specialized observation behavior
-- **Variants** for mutually exclusive read model shapes of the same logical entity
+Choose the relationship according to the view you need to read. [Children](children) manages several identified items within one parent; [Nested](nested) manages one optional object. [Joins](joins) brings facts from independent event streams into the same read model.
+
+For fields shared across event types, [FromEvery](from-every) applies mappings to events the projection already handles. It does not subscribe to all event types; [FromAll](from-all) does. Both can use event metadata, such as occurrence times, without repeating the same mapping in each event declaration.
 
 ## When to Use
 
-Start with model-bound attributes; use fluent mappings when keys, joins, hierarchy, or keeping the
-model attribute-free makes a separate definition clearer. Use reducer code when the logic reads better
-as state transitions, with a self-reducing model as the default for new reducers. Follow
-[Choose how to build a read model](../choosing-a-read-model-style.mdx) for scenarios and limits.
+For a view that mainly copies named event properties, start with model-bound attributes. Choose a fluent definition when relationships, keys, or an attribute-free model make the mapping easier to follow. If the logic is clearer as state-transition code, consider a self-reducing model instead. [Choose how to build a read model](../choosing-a-read-model-style.mdx) compares those options and their limits.
 
-`Define` emits a kernel-executed definition. Dependencies can help build it, but the builder lambdas
-are not arbitrary per-event handlers with dependency injection.
+`Define` builds a kernel-executed definition, not a per-event handler. Dependencies can help construct that definition, but the builder lambdas do not run arbitrary injected logic for each event.
 
 ## Projection recipes
 
@@ -54,8 +44,9 @@ are not arbitrary per-event handlers with dependency injection.
 | [Passive](passive) | In-memory projections for on-demand lookups |
 | [Set properties](set-properties) | Explicit property mapping and transformations |
 | [Children](children) | Hierarchical data models with child collections |
+| [Nested](nested) | Populate and clear one optional object within a parent |
 | [Joins](joins) | Cross-stream projections using joins |
-| [Functions](functions) | Arithmetic and other functions |
+| [Functions](functions) | Maintain counters and running totals |
 | [Composite keys](composite-keys) | Multi-property key identification |
 | [Event context](event-context) | Using event metadata in projections |
 | [FromEvery](from-every) | Setting properties for all events in a projection |
@@ -68,7 +59,7 @@ are not arbitrary per-event handlers with dependency injection.
 
 ## Reading Your Declarative Projections
 
-Once you've defined a declarative projection, you can retrieve and observe the resulting read models using the `IReadModels` API:
+Once events have populated the projection, use the .NET `IReadModels` API to read the stored view. Choose the operation your application needs:
 
 - [Getting a Single Instance](../../read-models/getting-single-instance) - Retrieve a specific instance by key
 - [Getting a Collection of Instances](../../read-models/getting-collection-instances) - Retrieve all instances for reporting and analysis
@@ -80,29 +71,21 @@ Once you've defined a declarative projection, you can retrieve and observe the r
 
 ### Auto-mapping vs explicit mapping
 
-- **Auto-mapping**: Automatically maps properties with matching names between events and read models
-  - Enabled by default in fluent projections; call `.AutoMap()` only to re-enable it in a scope that disabled it
-  - Use `[FromEvent<TEvent>]` in model-bound projections for the same functionality
-- **Explicit mapping**: Gives you full control over property transformations and mappings
-  - Use `.Set()`, `.Add()`, etc. in fluent projections
-  - Use `[SetFrom<TEvent>]`, `[AddFrom<TEvent>]`, etc. in model-bound projections
+Use auto-mapping when an event property and its read model target have the same name. Fluent projections enable it by default; call `.AutoMap()` to re-enable it in a scope that disabled it. In model-bound projections, `[FromEvent<TEvent>]` supplies name-based mapping.
+
+Use explicit mappings when a name differs or the operation is not assignment. In fluent projections, `.Set()` copies a value and `.Add()` accumulates one. Model-bound projections express those operations with attributes such as `[SetFrom<TEvent>]` and `[AddFrom<TEvent>]`. See [AutoMap](auto-map) for inheritance and overrides.
 
 ### Event handling
 
-- Projections can handle multiple event types
-- Each event type can have its own property mappings
-- Properties are updated incrementally as events are processed
+A projection can handle multiple event types, each with its own mappings. Events update the properties they map; they do not replace the entire read model. Use [Initial values](initial-values) for properties that need a meaningful starting value before an event assigns them.
 
 ### Keys and identification
 
-- **EventSourceId** is used as the default key for both read models and parent identification in child collections
-- **Child identifiers**: Use `.IdentifiedBy()` to specify how child items are uniquely identified within collections
-- **Parent key resolution**:
-  - By default, the EventSourceId is used to identify the parent when adding children
-  - Use `.UsingParentKey(e => e.Property)` when the parent identifier is in the event content
-  - Use `.UsingParentKeyFromContext(ctx => ctx.EventSourceId)` to explicitly document default behavior
-- **Child key specification**: Use `.UsingKey(e => e.Property)` to extract the child identifier from event content
-- **Joins**: Use keys to link data from different event streams using `.On(m => m.Property)`
+The event source ID is the default key for the read model and the default parent key for child events. When an event carries a different parent identifier in its payload, use `.UsingParentKey(e => e.Property)`. `.UsingParentKeyFromContext(ctx => ctx.EventSourceId)` makes the default parent choice explicit.
+
+A child collection also needs an item identity. Declare the target with `.IdentifiedBy()`, and use `.UsingKey(e => e.Property)` when the child's identifier comes from event content. The [Children](children) recipe shows how parent and child keys work together.
+
+A root join selects a relationship through `.On(m => m.Property)`. That property identifies the related stream, not the read model's own key. Follow [Joins](joins) before combining sources that have different event source IDs.
 
 ### Container name
 
@@ -114,6 +97,4 @@ Cratis Arc's MongoDB integration resolves `IMongoCollection<T>` and `IMongoDatab
 
 ### Performance
 
-- Projections are automatically maintained as events are appended
-- The system handles indexing and query optimization
-- Consider join complexity and update frequency when designing projections
+Shape the read model around the query it should answer. A joined event can affect many instances, so consider how many read models share its key and how often that data changes. For a first implementation, start with the [simple projection](simple-projection) recipe, then add only the relationships and calculations the view needs.

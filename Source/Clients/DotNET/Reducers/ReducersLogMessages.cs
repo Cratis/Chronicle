@@ -54,4 +54,7 @@ internal static partial class ReducersLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to activate Reducer '{ReducerId}' for replay notification '{ReplayState}'")]
     internal static partial void FailedActivatingReducerForReplayNotification(this ILogger<Reducers> logger, Exception ex, ReducerId reducerId, ReplayState replayState);
+
+    [LoggerMessage(LogLevel.Error, "Failed to enter the delivery scope for Reducer {ReducerId} and replay notification {ReplayState}")]
+    internal static partial void FailedEnteringDeliveryScopeForReducerReplayNotification(this ILogger<Reducers> logger, Exception ex, ReducerId reducerId, ReplayState replayState);
 }

@@ -1,8 +1,7 @@
 ---
-description: Limit parallel job steps in Chronicle Server with the MaxParallelSteps option to prevent excessive CPU usage.
+title: Configure job throttling in Cratis Chronicle Server
+description: Configure Cratis Chronicle Server job throttling with MaxParallelSteps to limit concurrent job steps during replays and catch-up work.
 ---
-# Job Throttling
-
 Chronicle Server's job system can be configured to limit the number of parallel job steps to prevent excessive CPU usage.
 
 ## Configuration
@@ -26,6 +25,11 @@ The maximum number of parallel job steps can be configured using the `MaxParalle
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | MaxParallelSteps | number | Environment.ProcessorCount - 1 | Maximum number of parallel job steps (minimum 1) |
+| MaxActiveStepsPerJob | number | 4 × the effective maximum parallel steps, at least 32 | Maximum number of steps a single job keeps active at once (minimum 1) |
+| DeadJobThreshold | timespan | `01:00:00` | Age after which a job that is still preparing and has no steps is treated as dead and becomes a candidate for cleanup. Lower it if failed starts leave jobs behind that you want removed sooner |
+| CleanupCadence | timespan | `01:00:00` | How often the scavenger checks for and removes dead jobs |
+| StepCheckpointBatchInterval | number | 100 | Number of handled batches after which a replay or catch-up step makes its progress checkpoint durable. A larger value means fewer writes and a longer re-scan after a crash. See [Step checkpoints](#step-checkpoints) |
+| StepCheckpointFlushInterval | timespan | `00:00:05` | Longest time a step holds an unpersisted checkpoint, however few batches it has reported. Zero or less turns the timed flush off |
 
 The limit that applies is the smaller of `Jobs:MaxParallelSteps` and `Observers:MaxConcurrentPartitions` (default 32, see [Observers](observers.md)). With the defaults, `Jobs:MaxParallelSteps` only has an effect below 32, so raising it above 32 needs `Observers:MaxConcurrentPartitions` raised as well.
 
@@ -33,6 +37,24 @@ Alternatively, you can use environment variables:
 
 ```bash
 Cratis__Chronicle__Jobs__MaxParallelSteps=4
+```
+
+## Step checkpoints
+
+A replay or catch-up step reports progress after every batch it hands off. Writing the whole step document each time is costly, so the write is debounced: the checkpoint becomes durable after `StepCheckpointBatchInterval` batches, after `StepCheckpointFlushInterval` of idle time, and on any other state write such as completion, failure or stop. A step resumes from its last durable checkpoint, so a crash between writes re-delivers the batches handled since then.
+
+That re-delivery is harmless for read models keyed by event source id, because `readModels.guardSinkWritesOnWatermark` (default `true`, see [Read models](read-models.md)) makes the repeated writes no-ops. A projection that collapses several event sources onto one document checkpoints after every batch instead. Keep the defaults unless a replay is write-bound and you accept a longer re-scan after a crash.
+
+## Active steps per job
+
+A job with thousands of steps, such as the catch-up of an observer with thousands of partitions, does not activate a
+grain for every step at once. It keeps `Jobs:MaxActiveStepsPerJob` steps active and starts the next one each time a
+step reaches an outcome; the steps not yet started stay in storage. Only `MaxParallelSteps` of the active steps run at
+a time, so the limit only needs to keep those slots fed. Lower it to hold less memory during a large catch-up, or
+raise it if steps are short and the slots sit idle between them.
+
+```bash
+Cratis__Chronicle__Jobs__MaxActiveStepsPerJob=64
 ```
 
 ## Default Behavior

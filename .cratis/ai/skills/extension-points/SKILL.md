@@ -1,6 +1,6 @@
 ---
 name: extension-points
-description: 'Owns MSBuild import and hook discovery: CustomBefore and CustomAfter hooks, ordered wildcard and NuGet auto-imports, control properties, build and buildTransitive packed layout, package ID and file-name matching, per-TFM forwarders, and tracing why assets or hooks are missing, broken, or replaced. Use when imports or hooks do not run, run in the wrong order, or are overwritten. Not for a verdict on whether one Import needs an Exists guard (use the msbuild skill''s antipatterns reference), target Inputs/Outputs or incremental skipping (use target-authoring), or props-versus-targets placement (use directory-build-organization).'
+description: Use when MSBuild imports or hooks are missing, ordered incorrectly or overwritten, including NuGet build assets. Not for a single Import guard, target incrementality or props-versus-targets placement.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/extension-points/SKILL.md -->

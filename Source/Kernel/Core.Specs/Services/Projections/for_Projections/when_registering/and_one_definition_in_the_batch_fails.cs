@@ -18,7 +18,7 @@ public class and_one_definition_in_the_batch_fails : Specification
         var grainFactory = Substitute.For<IGrainFactory>();
         var projectionsManager = Substitute.For<Chronicle.Projections.IProjectionsManager>();
         grainFactory.GetGrain<Chronicle.Projections.IProjectionsManager>(Arg.Any<string>()).Returns(projectionsManager);
-        projectionsManager.Register(Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>())
+        projectionsManager.RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>())
             .Returns(Task.FromException(new ProjectionDefinitionRegistrationFailed(
                 "SecondProjection",
                 new InvalidOperationException("Failed to compile projection definition"))));
@@ -30,7 +30,10 @@ public class and_one_definition_in_the_batch_fails : Specification
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
             Substitute.For<ILocalSiloDetails>(),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance);
+            AllowingConnectionOwnership.Create(),
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
+            NamespaceCasingContext.Create());
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _service.Register(new RegisterRequest

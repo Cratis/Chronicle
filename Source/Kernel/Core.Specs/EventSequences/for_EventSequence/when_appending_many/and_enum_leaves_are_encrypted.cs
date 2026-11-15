@@ -52,7 +52,7 @@ public class and_enum_leaves_are_encrypted : given.an_event_sequence_with_a_comp
             Identity.System,
             new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
 
-        var compliance = new EventCompliance(_realComplianceManager, _realConverter);
+        var compliance = new EventCompliance(_realComplianceManager, _realConverter, new OwnGenerationSchemaCache());
         _releasedFirstEvent = await compliance.Release(
             new AppendedEvent(
                 EventContext.From(

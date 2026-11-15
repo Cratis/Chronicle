@@ -140,6 +140,11 @@ For each enforced or recorded rule write three short scenarios:
   checks uniqueness before the commit and updates the index after it; index update failures
   are logged, not rolled back (Screenplay `constraints.md`, Chronicle#4123, open). Do not call it an
   atomic index-and-append guarantee.
+  When a command's protected read changed and its uniqueness constraint is violated in the same
+  commit, the observable refusal is the constraint refusal, not the concurrency conflict: assert
+  the constraint's message in the `then` expectation.
+  Requires Screenplay 4.245.0 (`screenplay --version`);
+  older reference evaluators report the concurrency conflict.
 - **retry** (same request and operation identity, after a lost reply) -> must not record a
   second occurrence, without blocking a different legitimate operation. A once-only fact uses
   `unique event`; a repeatable operation needs an operation identity and target-side

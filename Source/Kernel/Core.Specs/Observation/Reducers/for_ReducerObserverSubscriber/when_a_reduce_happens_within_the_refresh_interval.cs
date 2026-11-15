@@ -22,6 +22,6 @@ public class when_a_reduce_happens_within_the_refresh_interval : given.a_subscri
     async Task Because() => await _subscriber.OnNext("the-partition", [_event], new ObserverSubscriberContext(new Cratis.Chronicle.Concepts.Clients.ConnectedClient()));
 
     [Fact] void should_not_rebuild_the_pipeline() => _pipelineFactory.DidNotReceive().Create(_key.EventStore, _key.Namespace, Arg.Any<Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition>());
-    [Fact] void should_deliver_through_the_pipeline_built_at_activation() => _ = _firstPipeline.Received(1).Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>());
-    [Fact] void should_not_deliver_through_a_different_pipeline() => _ = _secondPipeline.DidNotReceive().Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>());
+    [Fact] void should_deliver_through_the_pipeline_built_at_activation() => _ = _firstPipeline.Received(1).Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>());
+    [Fact] void should_not_deliver_through_a_different_pipeline() => _ = _secondPipeline.DidNotReceive().Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>());
 }

@@ -7,7 +7,9 @@ using System.Security.Cryptography.X509Certificates;
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry;
+using Cratis.Chronicle.Federation;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Server;
 using Cratis.Chronicle.Server.Authentication;
@@ -26,6 +28,7 @@ using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
 ILogger<Kernel>? logger = null;
+ServiceProvider? loggingServices = null;
 
 // Route process-level unhandled exceptions through the logging pipeline so they reach the
 // configured ILogger sinks and the OpenTelemetry exporter - not just the console. Until the
@@ -36,12 +39,41 @@ AppDomain.CurrentDomain.UnhandledException += (_, args) =>
     {
         LogCrash(log => log.UnhandledException(exception, args.IsTerminating), exception);
     }
+    else
+    {
+        Console.WriteLine(args.ExceptionObject);
+    }
+
+    if (args.IsTerminating)
+    {
+        // Leave an exit code that says what happened, instead of the runtime's abort code (reported as 139).
+        ReleaseLogging();
+        Console.Out.Flush();
+        Environment.Exit(BackgroundFaults.UnhandledExceptionExitCode);
+    }
 };
 
+var unobservedFailures = new RepeatedFailureLog(RepeatedFailureLog.DefaultWindow, 1, TimeProvider.System);
+await using var unobservedFailuresReport = new Timer(_ => ReportUnobservedFailures(false), null, RepeatedFailureLog.DefaultWindow, RepeatedFailureLog.DefaultWindow);
 TaskScheduler.UnobservedTaskException += (_, args) =>
 {
-    LogCrash(log => log.UnobservedTaskException(args.Exception), args.Exception);
     args.SetObserved();
+    var owner = BackgroundFaults.DescribeOwner(args.Exception);
+
+    // One entry per owner in each window: thousands of the same unobserved failure are one fact.
+    if (!unobservedFailures.ShouldWrite(owner, LogLevel.Error, args.Exception))
+    {
+        return;
+    }
+
+    if (BackgroundFaults.IsTransient(args.Exception))
+    {
+        LogCrash(log => log.UnobservedTransientTaskException(args.Exception, owner), args.Exception);
+    }
+    else
+    {
+        LogCrash(log => log.UnobservedTaskException(args.Exception, owner), args.Exception);
+    }
 };
 
 // Force invariant culture for the Kernel
@@ -51,9 +83,20 @@ CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 SchemaCommand schemaCommand;
+EncryptionKeyCommand encryptionKeyCommand;
 try
 {
     schemaCommand = SchemaCommand.Parse(args);
+    encryptionKeyCommand = EncryptionKeyCommand.Parse(schemaCommand.RemainingArgs);
+    if (encryptionKeyCommand.Verify && schemaCommand.Action != SchemaAction.None)
+    {
+        throw new ArgumentException($"{EncryptionKeyCommand.VerifyFlag} cannot be combined with schema actions.");
+    }
+
+    if (encryptionKeyCommand.Migrate && schemaCommand.Action != SchemaAction.None)
+    {
+        throw new ArgumentException($"{EncryptionKeyCommand.MigrateFlag} cannot be combined with schema actions.");
+    }
 }
 catch (ArgumentException exception)
 {
@@ -61,21 +104,30 @@ catch (ArgumentException exception)
     return 4;
 }
 
-var builder = WebApplication.CreateBuilder(schemaCommand.RemainingArgs);
+var builder = WebApplication.CreateBuilder(encryptionKeyCommand.RemainingArgs);
 
 #pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
-logger = builder.Logging.Services
-    .BuildServiceProvider()
+loggingServices = builder.Logging.Services.BuildServiceProvider();
+#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
+logger = loggingServices
     .GetRequiredService<ILoggerFactory>()
     .CreateLogger<Kernel>();
-#pragma warning restore ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
 builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
 var assembly = Assembly.GetExecutingAssembly();
 logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
 
 var env = Environment.GetEnvironmentVariables();
 
-ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
+try
+{
+    ChronicleOptions.AddConfiguration(builder.Services, builder.Configuration);
+}
+catch (InvalidConnectionFile exception)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
 ChronicleOptions chronicleOptions;
 SchemaAction schemaAction;
 try
@@ -94,9 +146,21 @@ try
     }
 
     chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+    if (string.IsNullOrWhiteSpace(chronicleOptions.Storage.Type) && StorageTypeInference.Infer(chronicleOptions.Storage.ConnectionDetails) is { } inferredStorageType)
+    {
+        builder.Configuration[$"{ChronicleOptions.SectionPath}:Storage:Type"] = inferredStorageType;
+        chronicleOptions = builder.Configuration.GetSection(ChronicleOptions.SectionPath).Get<ChronicleOptions>() ?? new ChronicleOptions();
+        logger.StorageTypeInferred(inferredStorageType);
+    }
+
     if (!Enum.IsDefined(chronicleOptions.Storage.SchemaMode))
     {
         throw new ArgumentException("Storage.SchemaMode is invalid.");
+    }
+
+    if (!Enum.IsDefined(chronicleOptions.Compliance.Encryption.LegacyKeyHandling))
+    {
+        throw new ArgumentException("Compliance.Encryption.LegacyKeyHandling is invalid.");
     }
 }
 catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
@@ -116,8 +180,19 @@ if (chronicleOptions.Storage.SchemaMode == SchemaMode.Verify && string.Equals(ch
 }
 
 ClusteringStorageValidation.Validate(chronicleOptions);
+try
+{
+    chronicleOptions.Sinks.Validate();
+}
+catch (InvalidSinkConfiguration exception)
+{
+    await Console.Error.WriteLineAsync(exception.Message);
+    return 4;
+}
+
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportSubscriberTimeout(chronicleOptions, logger);
+KernelStartupDiagnostics.ReportGrainDirectory(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
@@ -125,6 +200,9 @@ var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqli
 var isInMemoryStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.InMemory, StringComparison.OrdinalIgnoreCase);
 var localhostGuard = LocalhostClusteringGuard.Decide(chronicleOptions);
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IFederationCaller, HttpFederationCaller>();
+builder.Services.AddSingleton<FederationListenerCertificate>();
+builder.Services.AddHostedService<FederationEnrollmentWorker>();
 builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup");
 
 if (chronicleOptions.Features.Api)
@@ -138,17 +216,23 @@ const bool developmentBuild = true;
 const bool developmentBuild = false;
 #endif
 
+KernelStartupDiagnostics.ReportIgnoredDevelopmentOnlySettings(builder.Configuration, logger, developmentBuild);
+
 // Kestrel keeps the selected certificate alive for every TLS handshake until process shutdown.
 var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, developmentBuild);
 
 var listeners = new List<(int Port, HttpProtocols Protocols, X509Certificate2? Certificate)>();
 KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocols, listenerCertificate) =>
     listeners.Add((port, protocols, listenerCertificate)));
+var federationCertificate = FederationListener.LoadCertificate(chronicleOptions);
+var federationListeners = new List<(int Port, X509Certificate2? Certificate)>();
+FederationListener.Configure(chronicleOptions, federationCertificate, (port, listenerCertificate) =>
+    federationListeners.Add((port, listenerCertificate)));
 logger.ServerListening(chronicleOptions.Port);
 
 // Bind the listener ports before the host is built: building and starting it opens outgoing connections
 // (MongoDB among them), and one of those can be given a listener port as its ephemeral source port. (#5399)
-using var reservedListenSockets = ReservedListenSockets.Reserve(listeners.Select(_ => _.Port));
+using var reservedListenSockets = ReservedListenSockets.Reserve(listeners.Select(_ => _.Port).Concat(federationListeners.Select(_ => _.Port)));
 
 builder.Services.AddOptions<SocketTransportOptions>().Configure<IHostApplicationLifetime>((options, lifetime) =>
     options.CreateBoundListenSocket = endpoint => reservedListenSockets.Take(endpoint)
@@ -165,6 +249,58 @@ builder.WebHost.UseKestrel(options =>
             {
                 listenOptions.UseHttps(listener.Certificate);
             }
+        });
+    }
+
+    // The federation listener is HTTP/2 only and TLS 1.3 only. Every route requires a client certificate (the middleware
+    // below enforces it per route) except redeeming an enrollment, which is how a peer without a certificate gets one,
+    // so the handshake asks for a certificate but accepts a connection without one. Identity is decided per route: by
+    // pin for the pull service, and by chain and registry for renewal.
+    foreach (var federation in federationListeners)
+    {
+        options.ListenAnyIP(federation.Port, listenOptions =>
+        {
+            listenOptions.Protocols = HttpProtocols.Http2;
+            if (federation.Certificate is null)
+            {
+                // Hosted federation issues the listener certificate from its own authority, which only exists once the
+                // kernel is running, so it is selected per handshake. Until it exists handshakes are refused.
+                listenOptions.UseHttps(new Microsoft.AspNetCore.Server.Kestrel.Https.TlsHandshakeCallbackOptions
+                {
+                    OnConnection = context =>
+                    {
+                        var certificateContext = options.ApplicationServices.GetRequiredService<FederationListenerCertificate>().Current;
+                        if (certificateContext is null)
+                        {
+                            context.Connection.Abort();
+                        }
+
+                        return ValueTask.FromResult(new System.Net.Security.SslServerAuthenticationOptions
+                        {
+                            ServerCertificateContext = certificateContext,
+#pragma warning disable CA5398 // Federation deliberately accepts TLS 1.3 only (decision 0027), never what the OS happens to choose.
+                            EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13,
+#pragma warning restore CA5398
+                            ClientCertificateRequired = true,
+#pragma warning disable CA5359 // Identity is decided per route (pin, or chain and registry), and a connection without a certificate is allowed for enrollment.
+                            RemoteCertificateValidationCallback = static (_, _, _, _) => true,
+#pragma warning restore CA5359
+                            ApplicationProtocols = [System.Net.Security.SslApplicationProtocol.Http2]
+                        });
+                    }
+                });
+                return;
+            }
+
+            listenOptions.UseHttps(https =>
+            {
+                https.ServerCertificate = federation.Certificate;
+#pragma warning disable CA5398 // Federation deliberately accepts TLS 1.3 only (decision 0027), never what the OS happens to choose.
+                https.SslProtocols = System.Security.Authentication.SslProtocols.Tls13;
+#pragma warning restore CA5398
+                https.ClientCertificateMode = Microsoft.AspNetCore.Server.Kestrel.Https.ClientCertificateMode.AllowCertificate;
+                https.AllowAnyClientCertificate();
+            });
         });
     }
 
@@ -227,6 +363,11 @@ hostBuilder
        else if (localhostGuard == LocalhostClusteringGuardAction.Warn)
        {
            logger.LocalhostClusteringAgainstSharedStorage();
+       }
+
+       if (chronicleOptions.Clustering.SingleWriterLease.Standby && localhostGuard != LocalhostClusteringGuardAction.Lease)
+       {
+           logger.StandbyWithoutSingleWriterLease();
        }
 
        ClusterEndpointConfiguration.Configure(_, clustering);
@@ -322,13 +463,31 @@ hostBuilder
            services.Remove(descriptor);
 
        services.UseDeferredSiloStart();
+       services.AddStorageAuthorizationHealthCheck();
    });
 
+// A repeated failure is written a few times and then counted, see RepeatedFailureLog.
+Cratis.Chronicle.Diagnostics.RepeatedFailureLoggerProvider.ThrottleRepeatedFailures(builder.Services);
 var app = builder.Build();
 _ = app.Services.GetRequiredService<IShutdownDrainBudget>();
 
 logger = app.Services.GetRequiredService<ILogger<Kernel>>();
 logger.ServerConfigured();
+
+// Look for encryption keys stored under earlier names before anything starts. A layout that cannot be used, or
+// --verify-encryption-keys, --migrate-encryption-keys, or keys still needing the upgrade while the configured handling
+// refuses them, ends the process here; otherwise the counts are logged and startup continues.
+var encryptionKeyExit = await EncryptionKeyCommandRunner.Run(
+    app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreUpgradeCheck>(),
+    logger,
+    encryptionKeyCommand,
+    Console.Out,
+    app.Services.GetService<Cratis.Chronicle.Storage.Compliance.IEncryptionKeyStoreMigrator>(),
+    chronicleOptions.Compliance.Encryption.LegacyKeyHandling);
+if (encryptionKeyExit is { } exitCode)
+{
+    return exitCode;
+}
 
 // State the certificate ring at every boot. A rotation is carried out by restarting nodes with a changed
 // ring, so this is the record of what each node actually loaded - the thing that has to match across the
@@ -372,6 +531,29 @@ app.Use(async (context, next) =>
     if (HealthOnlyPortPolicy.ShouldReject(chronicleOptions, context.Connection.LocalPort, context.Request.Path.Value))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next(context);
+});
+
+// The federation port serves the federation service and nothing else. (#5734)
+app.Use(async (context, next) =>
+{
+    if (FederationPortPolicy.ShouldReject(chronicleOptions, context.Connection.LocalPort, context.Request.Path.Value))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    // The handshake accepts a connection without a certificate so that an enrollment can be redeemed, so a certificate is
+    // required here, per route. Identity is decided by pin in the pull service and by chain and registry in the authority,
+    // so this only checks that a certificate was presented.
+    if (FederationPortPolicy.IsFederationPort(chronicleOptions, context.Connection.LocalPort)
+        && FederationPortPolicy.RequiresClientCertificate(context.Request.Path.Value)
+        && context.Connection.ClientCertificate is null)
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
     }
 
@@ -461,6 +643,7 @@ if (chronicleOptions.Features.Api || chronicleOptions.Features.OAuthAuthority)
 
 app.UseMiddleware<UserIdentityMiddleware>();
 app.MapGrpcServices();
+app.MapFederationEnrollment();
 app.MapCodeFirstGrpcReflectionService();
 app.MapKernelHealthChecks(chronicleOptions.HealthCheckEndpoint);
 
@@ -500,7 +683,7 @@ if (serveWorkbench)
 using var cancellationToken = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
 {
-    logger.ServerShuttingDown();
+    logger?.ServerShuttingDown();
     Console.WriteLine("******* SHUTTING DOWN CHRONICLE SERVER *******");
     cancellationToken.Cancel();
     eventArgs.Cancel = true;
@@ -511,21 +694,85 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 // fixtures and orchestrators that gate on this line would then connect to a socket that did not exist yet.
 app.Lifetime.ApplicationStarted.Register(() => logger.ServerStarted(chronicleOptions.Port));
 
-try
+// Report what is still being counted while the logging pipeline is still there, so the counts are not lost at shutdown.
+app.Lifetime.ApplicationStopped.Register(() => ReportUnobservedFailures(true));
+
+// A failure to start is rethrown and reaches the unhandled exception handler above. Everything else is how the run
+// ended, decided from the phase that failed and from whether the stop used up the host shutdown timeout. A shutdown
+// signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is still binding, or an
+// ILifecycleParticipant is still running - is an orderly, requested stop (#3936).
+var run = await KernelRun.RunAsync(app, cancellationToken.Token);
+var processExitCode = KernelExit.CodeFor(run.Outcome, Environment.ExitCode);
+switch (run.Outcome)
 {
-    await app.RunAsync(cancellationToken.Token);
-}
-catch (OperationCanceledException)
-{
-    // A shutdown signal (SIGTERM, Ctrl+C) that arrives while the host is still starting - e.g. Kestrel is
-    // still binding, or an ILifecycleParticipant is still running - cancels the host's own lifetime token
-    // and surfaces as an OperationCanceledException out of RunAsync instead of RunAsync completing
-    // normally. Left uncaught, that reaches AppDomain.CurrentDomain.UnhandledException and the process
-    // exits as an unhandled crash for what is actually an orderly, requested stop. (#3936)
-    logger.ServerShutdownDuringStartup();
+    case KernelRunOutcome.StopTimedOut:
+        logger.ServerStopTimedOut(run.Failure, run.ShutdownTimeout, run.StopDuration, processExitCode);
+        break;
+    case KernelRunOutcome.StopFailed:
+        logger.ServerStopFailed(run.Failure, processExitCode);
+        break;
+    case KernelRunOutcome.DisposeFailed:
+        logger.ServerDisposeFailed(run.Failure, processExitCode);
+        break;
+    default:
+        if (run.Outcome == KernelRunOutcome.StoppedDuringStartup)
+        {
+            logger.ServerShutdownDuringStartup();
+        }
+
+        if (processExitCode == 0)
+        {
+            logger.ServerStopped(processExitCode);
+        }
+        else
+        {
+            logger.ServerStoppedWithRequestedExitCode(processExitCode);
+        }
+
+        break;
 }
 
-return 0;
+// The console logger writes from a queue on a background thread; releasing the provider drains it, so the line
+// above is not lost when the process ends. Anything logged after this falls back to the console.
+logger = null;
+await loggingServices.DisposeAsync();
+
+return processExitCode;
+
+void ReportUnobservedFailures(bool includeRunningWindows)
+{
+    var seconds = (int)unobservedFailures.Window.TotalSeconds;
+    foreach (var failures in unobservedFailures.TakeEnded(includeRunningWindows))
+    {
+        if (logger is not null)
+        {
+            try
+            {
+                logger.UnobservedTaskExceptionsSuppressed(failures.Level, failures.Suppressed, failures.Exception.Name, failures.Category, seconds);
+                continue;
+            }
+            catch (Exception loggingFailure)
+            {
+                Console.WriteLine(loggingFailure);
+            }
+        }
+
+        Console.WriteLine($"{failures.Suppressed} more unobserved {failures.Exception.Name} task exceptions were counted but not written; owner: {failures.Category}");
+    }
+}
+
+void ReleaseLogging()
+{
+    // Drains the queued log entries before the process ends. A failure here must not hide the crash being reported.
+    try
+    {
+        loggingServices?.Dispose();
+    }
+    catch (Exception releaseFailure)
+    {
+        Console.WriteLine(releaseFailure);
+    }
+}
 
 void LogCrash(Action<ILogger<Kernel>> log, Exception exception)
 {

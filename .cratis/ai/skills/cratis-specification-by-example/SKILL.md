@@ -1,6 +1,6 @@
 ---
 name: cratis-specification-by-example
-description: Structure and name executable specifications the Cratis way — one behavior per specification, a for_/when_/and_ path that reads as an English sentence, layered given/ contexts, and an explicit decision about what is not worth specifying. Use when deciding how to organize, name, or scope specifications in any language. Do not use for language mechanics; route to the C# or TypeScript specification skill for those.
+description: Use when deciding how to name, organize or scope Cratis executable specifications in any language. Not for C# or TypeScript fixture and assertion mechanics; use the language-specific sibling.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-specification-by-example/SKILL.md -->

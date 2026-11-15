@@ -1,5 +1,15 @@
 ---
-applyTo: "**/*"
+applyTo: "**/*.cs,**/*.ts,**/*.tsx,**/*.go,**/*.kt,**/*.kts,**/*.java,**/*.ex,**/*.exs"
+paths:
+  - "**/*.cs"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.go"
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.java"
+  - "**/*.ex"
+  - "**/*.exs"
 ---
 <!-- cratis-ai-managed: harnesses/copilot/instructions/code-quality.instructions.md -->
 <!-- cratis-ai: generated Copilot instructions. Do not edit; rules/ is the source. -->

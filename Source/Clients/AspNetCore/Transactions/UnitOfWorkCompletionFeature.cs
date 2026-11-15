@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.AspNetCore.Transactions;
 /// <param name="owner">The middleware's owner capability, if supported.</param>
 internal sealed class UnitOfWorkCompletionFeature(IUnitOfWork unitOfWork, DecisionReadCommitOwner? owner) : IUnitOfWorkCompletionFeature, IUnitOfWorkCompletionOwnershipFeature
 {
-    readonly object _claimLock = new();
+    readonly Lock _claimLock = new();
     Task _completionTail = Task.CompletedTask;
     UnitOfWorkCompletionClaim? _claim;
     UnitOfWorkCompletionResult? _result;

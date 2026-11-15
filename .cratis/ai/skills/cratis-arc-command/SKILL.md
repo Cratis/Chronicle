@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command
-description: Define a Cratis Arc command — the [Command] record, its Handle() method and return shape, the optional Provide() step, and the generated TypeScript proxy. Use when adding a command, choosing what Handle() should return, deciding which values may reach the causation chain (including API keys and other credentials passed to a command, which need [NotAudited] and, when retained, [Encrypted]), or wiring a form or button to an Arc backend. Do not use for a validation-only change or merely to execute an existing command.
+description: Use when defining a C# Arc command, choosing its handler return shape or audit exposure (such as API keys or other credentials passed to it), or wiring its generated proxy to a form or button. Not for validation-only changes or executing an existing command.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command/SKILL.md -->
@@ -274,6 +274,14 @@ Components guidance, not to this skill.
 - Choosing the concept or identity type for a value: `cratis-fundamentals-concept`.
 
 ## Verify
+
+Keep `Handle` a pure function of the command, its read-model parameters and
+provided values: that makes it specifiable by a plain call. Start `Handle()` and
+validator decisions with direct calls and supplied read-model state. Add the
+pipeline scenario plus a negative proof per authorization policy, validator
+rejection and `Provide()` short-circuit, and a constraint scenario; never
+read-protection plumbing or simulated concurrency. Follow the
+[decision table](../../rules/specs.scenarios.csharp.md).
 
 - The command is a `record`, carries `[Command]`, and declares a public instance
   `Handle`.

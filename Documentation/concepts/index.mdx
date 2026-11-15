@@ -1,0 +1,73 @@
+---
+title: Cratis Chronicle event-sourcing concepts
+description: Cratis Chronicle groups changes as events and uses observers to derive state or trigger actions. Learn how event sources, read models, and consistency fit.
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Cratis Chronicle keeps application changes as **events**, then uses **observers** to turn those facts into queryable state or actions. A projection builds a view, a reducer computes state in application code, and a reactor performs work in response to a change. Use this overview to understand which part of your application belongs in each role.
+
+For example, an order's `OrderPlaced` and `OrderShipped` events share an **event source**, the identity that groups its history. A **read model** might show the order's current status. That view is derived from the events; it is not a replacement for the history.
+
+## Read in order
+
+Start with how facts are recorded, then how you consume them. Read about consistency before using a derived value to make a business decision.
+
+<CardGrid>
+  <Card title="1. Events, event sources, and the event store">
+
+Read [events](./event.md), [event sources](./event-source.md), and the [event store](./event-store.md) to decide what a fact should contain and which history it belongs to.
+
+  </Card>
+  <Card title="2. Projections, reducers, and reactors">
+
+Compare [projections, reducers, and reactors](./observer-patterns.md) to choose between declaring a view, calculating state in code, and acting on an event.
+
+  </Card>
+  <Card title="3. Consistency">
+
+Use [consistency](./consistency.md) to decide when a query may return a view that has not yet processed the latest append, and what a decision can safely rely on.
+
+  </Card>
+</CardGrid>
+
+To put the concepts into practice, follow [Get started](/chronicle/get-started/). Use the full topic table below when you need a particular definition.
+
+## Topic definitions
+
+| Topic | Description |
+| ------- | ----------- |
+| [Event](./event.md) | What constitutes an event |
+| [Event Type](./event-type.md) | What is an event type |
+| [Modeling events well](./modeling-events) | How to design events that are clear today and still make sense in five years |
+| [Event Type Migrations](./event-type-migrations) | How event schemas evolve without breaking existing events |
+| [Event Source](./event-source.md) | What is an event source |
+| [Subject](./subject) | The identity an event is *about* — used to key compliance concerns |
+| [Event Store](./event-store.md) | Where your events live — durably persisted in a database |
+| [Namespaces](./namespaces.md) | What are namespaces within an event store |
+| [Event Sequence](./event-sequence.md) | What is an event sequence |
+| [Effect receipts](./effect-receipts.md) | Recover the first committed outcome of retryable occurrence work |
+| [Observer](./observers.mdx) | What is an observer |
+| [Projections, reducers, and reactors](./observer-patterns.md) | The three observer patterns side by side — deriving state from events vs causing side effects |
+| [Projection](./projection.md) | How a projection declaratively maps events onto a read model instance |
+| [Designing read models](./designing-read-models) | Specialize each read model for the query it serves, not for reuse |
+| [Deep dive: consistency](./consistency.md) | Immediate vs eventual consistency, and how to choose |
+| [Constraints](./constraints.md) | What are constraints |
+| [Event Metadata Tags](./event-metadata-tags.md) | Metadata tags attached to events |
+| [Tagging](./tagging) | How to tag events for organization and filtering |
+| [Tagging Reactors](./tagging-reactors) | How to use tags with reactors |
+| [Geospatial Types](./geospatial) | Built-in geospatial types for events and read models |
+| [When to use event sourcing](./when-to-use-event-sourcing.md) | Weigh the value of history against modeling and operational work |
+| [Glossary](./glossary.md) | One definition for each core Chronicle term |
+
+:::note[Database choice]
+Where these pages say *database*, you have a choice: Chronicle can persist the
+[event store](./event-store.md) and its read models in MongoDB, PostgreSQL,
+Microsoft SQL Server, or SQLite.
+:::
+
+## Read model consistency
+
+A **materialized** read model is stored in a database and updated as its observer processes events. Reads are served from that stored view, which can lag behind a new append. A **passive** read model instead computes state on demand from the relevant event-source history. [Projections and reducers](./observer-patterns.md) can supply these views for queries, validation rules, command handlers, or [aggregate roots in Arc](/arc/backend/csharp/chronicle/aggregates/defining-an-aggregate-root/).
+
+Reading fresh state does not protect a later append from another writer. If a business rule must still hold when writers race, use a [decision-consistent read](../read-models/decision-reads.mdx), which guards the append against relevant changes, or a [constraint](./constraints.md) enforced by the kernel. Follow those guides before treating a query result as a concurrency guarantee.

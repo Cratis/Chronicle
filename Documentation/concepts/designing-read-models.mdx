@@ -1,29 +1,31 @@
 ---
-title: Designing read models
-description: Read models are cheap, disposable, and meant to be specialized — design them for the query, not for reuse.
+title: Designing read models in Cratis Chronicle
+description: Design Cratis Chronicle read models around the queries they serve. Choose a projection, a consistency model, and a retrieval path for each use case.
 ---
 
-If [modeling events well](./modeling-events) is about capturing truth, designing read models is about *presenting* it. The events are your single source of truth; a read model is just one view of them, built for one job. That reframing changes how you design.
+A read model in Cratis Chronicle is a view derived from events and shaped for a query. Design it around what a screen or report needs to read, then choose how it is built and how fresh the answer must be.
 
-The guiding principle: **specialize, don't share.** Build a focused read model per use case rather than one model stretched across conflicting screens.
+[Modeling events](./modeling-events) preserves business facts. Read-model design gives those same facts different useful shapes, without making the stored events depend on a particular screen.
 
 ## Read models are derived and disposable
 
-A read model holds no truth of its own — it's computed from events by a [projection](./projection.md). That has a liberating consequence: you can create, change, and throw away read models freely. Got the shape wrong? Change the projection and [rebuild](../scenarios/rebuild-a-read-model.md). There's no precious state to migrate, because the events are the state.
+A read model is computed from events by a [projection](./projection.md) or reducer. When its shape no longer fits, change the mapping and [rebuild](../scenarios/rebuild-a-read-model.md) it from the relevant history rather than treating the old document as the source of truth.
+
+Rebuilding still has an operational cost: it takes work to replay events, write the new state, and coordinate the change with readers. Keep the model derived entirely from events so that a rebuild does not lose manually added data.
 
 ## Shape it for the query, not the domain
 
-A normalized, one-size-fits-all model is a relational-database habit. Here, design each read model around *how it will be read*:
+Start with the query rather than copying the write-side domain model:
 
 - A list screen wants a flat, denormalized row per item.
 - A detail screen wants one rich document with its children embedded.
 - A dashboard wants pre-aggregated counts.
 
-These can all be **separate read models built from the same events**. Denormalize without guilt — there's no update anomaly to fear, because you never update a read model by hand; the projection rebuilds it from the facts.
+These can be separate read models built from the same events. Denormalizing avoids joins or calculations on the read path, at the cost of more stored data and projection work. Keep updates in the projection or reducer, not in ad hoc writes to the resulting documents.
 
 ## Specialize over reuse
 
-It's tempting to make one `Customer` read model serve every screen. Resist it. The moment two screens want conflicting shapes, a shared model becomes a compromise that serves neither well and breaks one when you change it for the other. A dedicated model per use case is easier to reason about, faster to query, and safe to change in isolation.
+Split a shared `Customer` read model when its consumers need conflicting shapes or change independently. A dedicated model lets you change the billing view without also reshaping the customer list. If several queries genuinely need the same fields and consistency, sharing a model can be simpler; duplicating it adds storage and maintenance without changing the answer.
 
 ```text
 ❌ One CustomerReadModel feeding the list, the detail page, and the billing report
@@ -32,49 +34,45 @@ It's tempting to make one `Customer` read model serve every screen. Resist it. T
 
 ## Reach for the declarative path first
 
-You rarely write code that *updates* a read model — you declare how events map onto it and let Chronicle do the folding. Start with [model-bound projections](../projections/model-bound/), where attributes on the read model record describe the mapping. When the mapping needs logic the attributes can't express cleanly, step up to the fluent [declarative projection builder](../projections/declarative/) (`IProjectionFor<T>`), and only reach for a [reducer](../reducers/) when the model is genuinely easier to express as code folding over previous state.
+Start with [model-bound projections](../projections/model-bound/), where attributes describe how event properties map onto the read model. Use the fluent [declarative projection builder](../projections/declarative/) (`IProjectionFor<T>`) when the mapping needs more explicit configuration. Choose a [reducer](../reducers/) when code that combines an event with previous state expresses the calculation more clearly. Both approaches derive state; neither should perform external side effects.
 
 ## The constructor may not run
 
-Sooner or later you'll want to put a small piece of logic in the read model record itself — a normalizer that turns a `null` collection into an empty one, a computed default, a guard that rejects a value that should never arrive:
+Do not rely on a read model's constructor or property initializer to normalize stored data. This C# record tries to turn a `null` collection into an empty one:
 
 <ChronicleClientTabs snippet="concepts/designing-read-models/constructor-may-not-run" />
 
-Whether that line runs is not yours to decide. A read model instance is *materialized* by a deserializer, and a document deserializer is free to build the record without running either a constructor or the initializer. The MongoDB driver does exactly that, and it is not conditional: for a record with a primary constructor it builds no creator map at all, so it creates the instance uninitialized and assigns the members by reflection. That happens on every document — a complete one just as much as one missing a field. Read a read model through `IMongoCollection<T>` and your normalizer never runs, ever.
+Chronicle's .NET reader deserializes read models with `System.Text.Json`. Reading the same document through `IMongoCollection<T>` uses the MongoDB driver's serializer and its configured class maps instead. Those paths need not construct or populate a record in the same way. Even when an initializer runs, assigning the stored property value can replace its result.
 
-That makes the blast radius wider than a `null` collection. Any logic you put in the record body — a default, a clamp, a trim, a validation — is dead on that path, silently.
-
-Chronicle's own reader *does* construct the record, which makes this worse rather than better: the same line can work when you read through `IReadModels` and quietly fail when something reads that document with `IMongoCollection<T>`. And even where the constructor runs, a property declared in the record body gets its stored value assigned after construction, on top of whatever its initializer produced.
-
-So a guard written in a read model record is not a guard. Put the intent somewhere that always runs:
+Put defaults in the projected state so readers see stored values, rather than relying on construction-time logic. Validate business rules before appending events, not while reading the facts back:
 
 | You want | Where it belongs |
 | --- | --- |
-| A collection that is never `null` | The declaration. A non-nullable collection property materializes as empty — see [Empty child collections](../read-models/empty-child-collections). |
+| An empty collection rather than `null` | A supported non-nullable collection declaration when using Chronicle's reader. See [Empty child collections](../read-models/empty-child-collections) for supported types and other readers. |
 | A meaningful default before any event assigns the property | The projection — [SetValue](../projections/model-bound/set-value) or [initial values](../projections/declarative/initial-values) — so the default is part of the projected state every reader sees. |
 | A rule that rejects bad data | The write side, before the event is appended. A read model is derived from facts that already happened; refusing them here is too late to help. |
 
 ## Design for eventual consistency
 
-A *materialized* read model updates *after* the event is appended, so what's stored is [eventually consistent](../read-models/consistency.md). Design with that in mind: don't read a stored model back inside a command or reactor to make a decision (use a [constraint](../constraints/) for invariants instead), and prefer [observable queries](../scenarios/real-time-query) so the UI reflects changes the moment the projection catches up.
+A materialized read model is stored by an observer after events are appended, so it is [eventually consistent](../read-models/consistency.md): a successful append does not mean the view has caught up. Use [observable queries](../scenarios/real-time-query) when the UI should receive updated results as that happens.
 
-Eventual is the default, though — not a law. Mark the read model `[Passive]` and nothing materializes it, so `IReadModels` computes it from its events on every read — a strongly consistent read that includes an event you appended a millisecond ago:
+If a read must include the appended history without waiting for materialization, mark the model `[Passive]`. `IReadModels` then computes it from events on demand rather than reading an asynchronously updated view. That trades replay work on the read path for freshness:
 
 <ChronicleClientTabs snippet="concepts/designing-read-models/strongly-consistent" />
 
-The call site is the same either way; the read model's own declaration decides where the answer comes from. [Deep dive: consistency](./consistency.md) covers when each model is the right call.
+The call site is the same; the model's declaration changes where the answer comes from. A fresh read alone does not prevent another writer from changing state before your append. Use a [constraint](../constraints/) for uniqueness or a [decision read](../read-models/decision-reads.mdx) to guard a supported state-based decision against concurrent changes. [Deep dive: consistency](./consistency.md) explains the choices.
 
 ## Query it
 
-When it's time to read, Chronicle gives you a ladder — trade consistency for cost as you descend:
+Choose retrieval by result size and query needs. The following snippet shows the .NET collection APIs:
 
 <ChronicleClientTabs snippet="concepts/designing-read-models/query-ladder" />
 
-- **`GetInstances<T>()`** returns every instance in one call — read from the materialized store, or rebuilt from the event log when the read model is `[Passive]`. You can force a bounded replay with an event count (`GetInstances<T>(eventCount)`), but a capped replay may return incomplete results. Good for [reporting and small populations](../read-models/getting-collection-instances), not for your production list view.
-- **`Materialized.GetInstances<T>(skip, take)`** reads what projections have already stored, with paging — cheap and fast, a moment behind. See [Materialized read models](../read-models/materialized-pagination).
-- **Need filtering, sorting, or aggregation?** Go to the sink's native query tools — `IMongoCollection<T>` or your `DbContext` — because a materialized read model is just data in a [database](../sinks/), shaped for exactly this.
+- `GetInstances<T>()` returns all instances from the materialized store, or computes them from events for a passive model. An event count (`GetInstances<T>(eventCount)`) requests a bounded replay and can produce incomplete state. Use it for [reporting and small populations](../read-models/getting-collection-instances), not an unbounded list screen.
+- `Materialized.GetInstances<T>(skip, take)` pages the stored view. It does not wait for projection catch-up. See [Materialized read models](../read-models/materialized-pagination).
+- A sink's native query tools, such as `IMongoCollection<T>` or a `DbContext`, provide filtering, sorting, and aggregation over the materialized data in that [database](../sinks/).
 
-Kotlin and Java have the same ladder: `getInstances`, and `materialized.getInstances(skip, take)` for paging, as the tabs show.
+The choice between all instances and a page is not a consistency setting. Decide freshness first, then choose an API that bounds the data and work your query needs.
 
 ## Keep the read side ignorant of the write side
 

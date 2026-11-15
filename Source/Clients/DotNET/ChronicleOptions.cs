@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics;
@@ -11,6 +12,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Serverless;
 using Cratis.Chronicle.Sinks;
 using Cratis.Chronicle.Transactions;
 
@@ -36,6 +38,11 @@ public class ChronicleOptions(
     bool autoDiscoverAndRegister = true,
     int connectTimeout = 5) : IValidatableObject
 {
+    /// <summary>
+    /// The default program identifier used when none is configured.
+    /// </summary>
+    internal const string DefaultProgramIdentifier = "[N/A]";
+
     ReactorOptions _reactors = new();
     ReducerOptions _reducers = new();
 
@@ -96,7 +103,7 @@ public class ChronicleOptions(
     /// <summary>
     /// Gets or sets the program identifier.
     /// </summary>
-    public string ProgramIdentifier { get; set; } = "[N/A]";
+    public string ProgramIdentifier { get; set; } = DefaultProgramIdentifier;
 
     /// <summary>
     /// Gets or sets the <see cref="ILoadBalancerStrategy"/> to use when the connection string holds
@@ -198,6 +205,15 @@ public class ChronicleOptions(
     /// Only has an effect when <see cref="AutoDiscoverAndRegister"/> is enabled.
     /// </remarks>
     public RegistrationMode RegistrationMode { get; set; } = RegistrationMode.Inline;
+
+    /// <summary>
+    /// Gets or sets the serverless mode settings.
+    /// </summary>
+    /// <remarks>
+    /// Bound from <c language="json">Cratis:Chronicle:Serverless</c>. See <see cref="UseServerless"/> for a preset.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public ChronicleServerlessOptions Serverless { get; set; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether to skip the server compatibility check on connect.
@@ -312,6 +328,25 @@ public class ChronicleOptions(
     public SinkTypeId DefaultSinkTypeId { get; set; } = WellKnownSinkTypes.MongoDB;
 
     /// <summary>
+    /// Gets or sets the default <see cref="SinkTypeId"/> used when registering graph projections, which project events onto a property graph.
+    /// When not explicitly configured, defaults to <see cref="WellKnownSinkTypes.Neo4j"/>.
+    /// Set to <see cref="WellKnownSinkTypes.InMemoryGraph"/> for development and tests.
+    /// </summary>
+    public SinkTypeId DefaultGraphSinkTypeId { get; set; } = WellKnownSinkTypes.Neo4j;
+
+    /// <summary>
+    /// Gets or sets the name of the sink configuration read models store to when they have no <see cref="SinkAttribute"/>.
+    /// Empty, the default, leaves the choice to the kernel: its configured default for read models, or its own storage.
+    /// </summary>
+    public string DefaultSinkName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the name of the sink configuration graphs store to when they have no <see cref="SinkAttribute"/>.
+    /// Empty, the default, leaves the choice to the kernel: its configured default for graphs, or its Neo4j server.
+    /// </summary>
+    public string DefaultGraphSinkName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Create a <see cref="ChronicleOptions"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">Connection string to create from.</param>
@@ -366,6 +401,34 @@ public class ChronicleOptions(
         FromConnectionString(connectionString).UseShortLivedProcess(registration);
 
     /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> for a serverless host, such as a function.
+    /// </summary>
+    /// <param name="connectionString">Connection string to create from.</param>
+    /// <param name="programIdentifier">The stable name of the program.</param>
+    /// <param name="receiverUrl">Optional absolute URL the kernel uses to reach the receiver of HTTP deliveries.</param>
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    /// <remarks>
+    /// See <see cref="UseServerless"/> for what this configures.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public static ChronicleOptions ForServerless(string connectionString, string programIdentifier, Uri? receiverUrl = null) =>
+        ForServerless(new ChronicleConnectionString(connectionString), programIdentifier, receiverUrl);
+
+    /// <summary>
+    /// Create a <see cref="ChronicleOptions"/> for a serverless host, such as a function.
+    /// </summary>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to create from.</param>
+    /// <param name="programIdentifier">The stable name of the program.</param>
+    /// <param name="receiverUrl">Optional absolute URL the kernel uses to reach the receiver of HTTP deliveries.</param>
+    /// <returns>A new <see cref="ChronicleOptions"/>.</returns>
+    /// <remarks>
+    /// See <see cref="UseServerless"/> for what this configures.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public static ChronicleOptions ForServerless(ChronicleConnectionString connectionString, string programIdentifier, Uri? receiverUrl = null) =>
+        FromConnectionString(connectionString).UseServerless(programIdentifier, receiverUrl);
+
+    /// <summary>
     /// Configure the options for a short-lived process, such as a command line tool, function or job.
     /// </summary>
     /// <param name="registration">The <see cref="RegistrationMode"/> to use. Defaults to <see cref="RegistrationMode.Inline"/>.</param>
@@ -383,6 +446,25 @@ public class ChronicleOptions(
         return this;
     }
 
+    /// <summary>
+    /// Configure the options for a serverless host, such as a function.
+    /// </summary>
+    /// <param name="programIdentifier">The stable name of the program.</param>
+    /// <param name="receiverUrl">Optional absolute URL the kernel uses to reach the receiver of HTTP deliveries.</param>
+    /// <returns>The same <see cref="ChronicleOptions"/> for chaining.</returns>
+    /// <remarks>
+    /// Turns serverless mode on, sets <see cref="ProgramIdentifier"/> and the receiver URL, and applies the
+    /// short-lived process behavior with registration at deployment.
+    /// </remarks>
+    [Experimental("CHRX0001", UrlFormat = "https://www.cratis.io/docs/chronicle/clients/dotnet/serverless-mode")]
+    public ChronicleOptions UseServerless(string programIdentifier, Uri? receiverUrl = null)
+    {
+        Serverless.Mode = ServerlessMode.Serverless;
+        ProgramIdentifier = programIdentifier;
+        Serverless.ReceiverUrl = receiverUrl;
+        return UseShortLivedProcess(RegistrationMode.AtDeployment);
+    }
+
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -392,6 +474,50 @@ public class ChronicleOptions(
             yield return new ValidationResult(
                 "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
+
+        foreach (var result in ValidateAuthentication())
+        {
+            yield return result;
+        }
+    }
+
+    IEnumerable<ValidationResult> ValidateAuthentication()
+    {
+        const string httpsMessage = "must be an absolute https URL without user info";
+        var hasAuthority = !string.IsNullOrWhiteSpace(Authentication.Authority);
+        var hasTokenEndpoint = !string.IsNullOrWhiteSpace(Authentication.TokenEndpoint);
+
+        if (hasAuthority && !ExternalTokenEndpoints.TryParse(Authentication.Authority, out _))
+        {
+            yield return new ValidationResult($"Authentication:Authority {httpsMessage}", [$"{nameof(Authentication)}.{nameof(Authentication.Authority)}"]);
+        }
+
+        if (hasTokenEndpoint && !ExternalTokenEndpoints.TryParse(Authentication.TokenEndpoint, out _))
+        {
+            yield return new ValidationResult($"Authentication:TokenEndpoint {httpsMessage}", [$"{nameof(Authentication)}.{nameof(Authentication.TokenEndpoint)}"]);
+        }
+
+        if (!hasAuthority && !hasTokenEndpoint)
+        {
+            if (!string.IsNullOrWhiteSpace(Authentication.Scope))
+            {
+                yield return new ValidationResult(
+                    "Authentication:Scope requires Authentication:TokenEndpoint or Authentication:Authority",
+                    [$"{nameof(Authentication)}.{nameof(Authentication.Scope)}"]);
+            }
+
+            yield break;
+        }
+
+        // Reading the mode is only safe when it cannot throw: no API key, and no half-specified credentials.
+        if (string.IsNullOrEmpty(ConnectionString.ApiKey) &&
+            TokenProviderFactory.LacksExplicitCredentials(ConnectionString) &&
+            ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            yield return new ValidationResult(
+                "An external token authority requires client credentials (username and password) in the connection string; the development credentials are never sent to it",
+                [$"{nameof(Authentication)}.{nameof(Authentication.TokenEndpoint)}"]);
         }
     }
 }

@@ -64,6 +64,7 @@ public class EventConverter(
             {
                 NamedTags = (@event.NamedTags ?? []).Select(tag => new NamedTag(new TagName(tag.Name), tag.Value)).ToArray(),
                 EventSource = @event.EventSource ?? EventSourceName.NotSet,
+                CompensationFor = @event.CompensationFor,
                 AppendedGeneration = @event.AppendedGeneration is { } appended ? new EventTypeGeneration(appended) : null
             },
             resolvedContent)

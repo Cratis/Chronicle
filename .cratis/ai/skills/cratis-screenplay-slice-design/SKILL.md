@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-slice-design
-description: "Shape Screenplay slices from a discovered timeline: commands with reachable, authorized origins and traced inputs, rules placed by layer, a per-command refusal inventory, events-vs-views decisions, read models per screen component with queries that follow the business view, Level-1 screens, field lineage, state-transition tables, slice dependencies and the next slice. Use when designing slices after discovery, adding a capability or deciding command inputs, rule placement, read-model shape or screen data. Not for: stream boundaries or invariants across streams (use `cratis-screenplay-streams-and-consistency`), reactions and captures (use `cratis-screenplay-automations-and-translations`), which scenarios to write (use `cratis-screenplay-scenario-coverage`), or auditing a finished model (use `cratis-screenplay-model-review`)."
+description: Use when turning a discovered Screenplay timeline into commands, views and screens, or deciding inputs, refusal rules and field lineage. Not for stream identity, automation guarantees, scenario coverage or a finished-model audit.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-slice-design/SKILL.md -->
@@ -121,7 +121,7 @@ Ask the batch below only for what the request leaves open: (1) origin of each ac
 
 - At most one `identifier` per command; never on an event property or read-model property (use `key`). At most one builder per read model (`PLAY0191`). Read `references/read-model-design.md` ("Identifier and key contract") for the exact rules.
 
-- A query's `by` goes on its own body line; `from`, single-result filters, scope and a list-query `by` block remain `PLAY0268` (a `performer` query is an opaque read left out of the executable model, [version gate](../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does)); equality filters on collections bind as ESM v14. Read `references/read-model-design.md` ("Query binding") for the binding rules.
+- A query's `by` goes on its own body line; `from`, single-result filters, scope and a list-query `by` block remain `PLAY0268` (a `performer` query is an opaque read left out of the executable model, while Stage renders its verified C# body: [performer bodies](../cratis-screenplay-read-surface/SKILL.md#performer-bodies-are-rendered); [version gate](../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does)); equality filters on collections bind as ESM v14. Read `references/read-model-design.md` ("Query binding") for the binding rules.
 
 - A `unique` constraint names a property the event declares directly; the constraint name is
   its identity (renaming starts an empty index).

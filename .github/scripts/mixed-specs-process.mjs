@@ -6,7 +6,8 @@ import { constants } from 'node:os';
 
 function killProcessGroup(pid) {
     if (!pid) return;
-    try { process.kill(-pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+    // A group whose members already exited: Linux reports ESRCH, macOS EPERM.
+    try { process.kill(-pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH' && error.code !== 'EPERM') throw error; }
 }
 
 // Own one child group and its complete deadline/signal/output lifecycle. No shell,

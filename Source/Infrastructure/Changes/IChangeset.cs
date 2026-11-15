@@ -77,7 +77,8 @@ public interface IChangeset<TSource, TTarget>
     /// </summary>
     /// <param name="childrenProperty"><see cref="PropertyPath"/> for accessing the children collection.</param>
     /// <param name="child">Child to add.</param>
-    void AddChild(PropertyPath childrenProperty, object child);
+    /// <param name="ordering">Optional <see cref="ChildrenOrdering"/> deciding where the child is inserted. Appended when not given.</param>
+    void AddChild(PropertyPath childrenProperty, object child, ChildrenOrdering? ordering = default);
 
     /// <summary>
     /// Applies properties to the child in the model to the <see cref="IChangeset{TSource, TTarget}"/>.
@@ -89,8 +90,9 @@ public interface IChangeset<TSource, TTarget>
     /// <param name="propertyMappers">Collection of <see cref="PropertyMapper{TSource, TTarget}">property mappers</see> that will manipulate properties on the target.</param>
     /// <param name="arrayIndexers">All <see cref="ArrayIndexer">array indexers</see>.</param>
     /// <param name="childInitialState">Optional initial state template for the new child item. When provided, cloned as the starting state so nested collections are pre-initialized.</param>
+    /// <param name="ordering">Optional <see cref="ChildrenOrdering"/> deciding where a new child is inserted. Appended when not given.</param>
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown when children property is not enumerable.</exception>
-    void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers, TTarget? childInitialState = default)
+    void AddChild<TChild>(PropertyPath childrenProperty, PropertyPath identifiedByProperty, object key, IEnumerable<PropertyMapper<TSource, TTarget>> propertyMappers, ArrayIndexers arrayIndexers, TTarget? childInitialState = default, ChildrenOrdering? ordering = default)
         where TChild : new();
 
     /// <summary>

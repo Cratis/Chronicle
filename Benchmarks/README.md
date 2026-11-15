@@ -49,6 +49,14 @@ Measures the performance of bulk appending events to the event log.
 Parameters:
 - EventCount: 10, 100, 1000 events per batch
 
+### ImportBenchmark
+
+Measures importing a large history through an import session: the client streams the events, the kernel stages and
+validates them, and a job commits them. It prints the staging and the commit throughput separately.
+
+Parameters:
+- EventCount: 300000 events per import
+
 ### StronglyConsistentPerKeyReadBenchmark
 
 Measures a strongly consistent read of one key as its stream grows, for a passive projection (folded in the Kernel
@@ -389,6 +397,13 @@ above and the `CATCHUP_PATTERNS_WAIT_SECONDS` bound. `PatternsElapsedMillisecond
 confirmation delay. Unacknowledged appends, observer or patterns timeouts, and snapshot mismatches fail
 the run with a non-zero exit.
 
+## Container hosting profile
+
+The opt-in `--container-profile` mode compares constrained kernel containers without
+changing production defaults. Its `plan` subcommand starts no processes. See the
+[container-profile harness guide](Chronicle.Benchmarks/ContainerProfile/README.md) for
+safe builds, the core/full matrices, measurement commands and metric definitions.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
@@ -406,7 +421,7 @@ Run the clustering executable directly (not BenchmarkDotNet):
 
 ```sh
 dotnet build Benchmarks/Chronicle.Benchmarks.Clustering -c Release
-REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net10.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
+REBUILD_SIZE=small REBUILD_MODE=live dotnet Benchmarks/Chronicle.Benchmarks.Clustering/bin/Release/net11.0/Chronicle.Benchmarks.Clustering.dll --rebuild S3
 ```
 
 The existing `--rebuild-live` and `--replay-shape` diagnostics remain separate and unchanged.
@@ -438,7 +453,7 @@ The JSON `Environment` block records the topology name and each silo's role
 assignment (`Jobs` is null when the kernel has no separate Jobs role).
 
 One JSON record reports the commit (`GITHUB_SHA`, `COMMIT_SHA`, or Git; otherwise
-`unknown`), kernel and Cratis.Orleans informational versions, OS, CPU count and
+`unknown`), kernel and Cratis.Choreography informational versions, OS, CPU count and
 memory available to the process (subject to container limits), and the exact settings.
 `StartupFence` is the acknowledged tail before requesting rebuild; `F` is the tail
 after stopping producers and awaiting their in-flight acknowledgements.

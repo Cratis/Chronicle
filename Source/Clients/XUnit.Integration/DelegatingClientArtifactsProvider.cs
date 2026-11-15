@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <param name="initial">The initial <see cref="IClientArtifactsProvider"/> to delegate to.</param>
 internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initial) : IClientArtifactsProvider
 {
-    static readonly object _lock = new();
+    static readonly Lock _lock = new();
     volatile IClientArtifactsProvider _current = initial;
 
     /// <inheritdoc/>
@@ -21,6 +21,15 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
 
     /// <inheritdoc/>
     public IEnumerable<Type> ModelBoundProjections => _current.ModelBoundProjections;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphElements => _current.GraphElements;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphProjections => _current.GraphProjections;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphViews => _current.GraphViews;
 
     /// <inheritdoc/>
     public IEnumerable<Type> Reactors => _current.Reactors;

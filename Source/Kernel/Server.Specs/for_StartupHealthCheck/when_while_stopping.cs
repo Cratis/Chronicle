@@ -19,7 +19,7 @@ public class when_while_stopping : Specification
         lifetime.ApplicationStopping.Returns(stopping.Token);
         await started.CancelAsync();
         await stopping.CancelAsync();
-        _result = await new StartupHealthCheck(lifetime).CheckHealthAsync(new HealthCheckContext());
+        _result = await new StartupHealthCheck(given.startup_state.For(lifetime)).CheckHealthAsync(new HealthCheckContext());
     }
 
     [Fact] void should_report_unhealthy() => _result.Status.ShouldEqual(HealthStatus.Unhealthy);

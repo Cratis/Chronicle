@@ -21,6 +21,7 @@ public class and_automatic_reconciliation_after_restart_is_ready_while_quarantin
     {
         var namespaces = Substitute.For<INamespaces>();
         namespaces.GetAll().Returns([_observerKey.Namespace]);
+        _managerSilo.AddNamespaceCasing();
         _managerSilo.AddService(Substitute.For<ILocalSiloDetails>());
         _managerSilo.AddProbe(_ => namespaces);
         _managerSilo.AddProbe<IObserver>(_ => _observer);

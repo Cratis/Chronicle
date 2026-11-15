@@ -81,7 +81,9 @@ public class WebhookObserverSubscriber(
 
         if (!onNextResult.IsSuccess)
         {
-            return HandleError(onNextResult.Error!) with { LastSuccessfulObservation = onNextResult.LastHandled, FailurePolicy = onNextResult.FailurePolicy };
+            var diagnostic = WebhookDiagnostics.Describe(target, onNextResult.Error!);
+            logger.DeliveryFailed(_key, diagnostic);
+            return new(ObserverSubscriberState.Failed, onNextResult.LastHandled, [diagnostic], string.Empty) { FailurePolicy = onNextResult.FailurePolicy };
         }
 
         logger.SuccessfullyHandledAllEvents(_key);
@@ -89,7 +91,7 @@ public class WebhookObserverSubscriber(
 
         ObserverSubscriberResult HandleError(Exception error)
         {
-            logger.ErrorHandling(error, _key);
+            logger.DeliveryFailed(_key, WebhookDiagnostics.Describe(State.Target, error));
             return new ObserverSubscriberResult(
                 ObserverSubscriberState.Failed,
                 EventSequenceNumber.Unavailable,

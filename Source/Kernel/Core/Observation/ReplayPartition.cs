@@ -19,6 +19,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="Partition">The partition identifier to replay.</param>
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Security.DestructiveOperation]
 [BelongsTo(WellKnownServices.Observers)]
 public record ReplayPartition(string EventStore, string Namespace, string ObserverId, string EventSequenceId, string Partition)
 {

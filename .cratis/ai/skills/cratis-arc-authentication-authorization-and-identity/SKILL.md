@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-authentication-authorization-and-identity
-description: Wire authentication, authorization and identity in a Cratis Arc application — IProvideIdentityDetails and the /.cratis/me endpoint, Arc's [Authorize]/[Roles]/[AllowAnonymous] attributes and named policies, fallback baselines, observable-query emission guards, IAuthenticationHandler, the Microsoft Identity Platform header contract and its ingress requirements, discovery and introspection exposure, tenant resolution, and the React identity hooks. Use for Arc identity providers, endpoint protection, roles, policies, or frontend identity integration. Do not use for isolated command validation, and do not use for Chronicle tenant namespaces alone.
+description: Use when configuring C# Arc authentication, endpoint authorization, identity providers or React identity integration. Not for command validation or Chronicle tenant namespaces alone.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-authentication-authorization-and-identity/SKILL.md -->
@@ -49,7 +49,7 @@ ingress above, otherwise configure a credential-validating scheme. The old
 same host-wide flag. See [authentication](references/authentication.md).
 Source: [secure defaults](https://github.com/Cratis/Arc/blob/main/Documentation/upgrading/secure-defaults.mdx).
 
-Cratis AuthProxy is the ingress that meets these obligations for Cratis applications. Read [AuthProxy](references/authproxy.md) when the application is deployed behind it (header contract, `/.cratis/me` fail-closed verification, tenant headers).
+Cratis AuthProxy is the ingress that meets these obligations for Cratis applications. Read [AuthProxy](references/authproxy.md) when the application is deployed behind it (header contract, `/.cratis/me` fail-closed verification, tenant headers, and starting it from a Screenplay model's provider list and a Cratis environment).
 
 ## Identity details — what the frontend is told
 
@@ -180,6 +180,14 @@ filters, and system-execution.
 `Task<AuthenticationResult> HandleAuthentication(IHttpRequestContext context)`.
 Implement it and it is discovered — there is **no** `IArcBuilder` extension and
 **no** options type for authentication.
+Requires Arc 22.139.0 for handlers to opt out of anonymous endpoints through
+`AppliesToAnonymousEndpoints => false`. The default is `true`: existing handlers
+keep running and may establish an identity even when no credential is required.
+Opt out when a handler only rejects credentials and contributes no identity on
+those endpoints. A handler that still runs can inspect the endpoint's anonymous
+metadata and return `AuthenticationResult.Anonymous` instead of rejecting a
+credential the endpoint never required. Specify anonymous and protected requests;
+anonymous access does not bypass other authorization boundaries.
 
 Arc ships `MicrosoftIdentityPlatformAuthenticationHandler` in `Arc.Core`, which
 reads the forwarded principal. See

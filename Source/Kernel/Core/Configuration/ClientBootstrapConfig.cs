@@ -10,6 +10,9 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class ClientBootstrapConfig
 {
+    /// <summary>Gets the client's explicitly configured ordinary-store grants.</summary>
+    public IEnumerable<ConfiguredEventStoreAccess> EventStores { get; init; } = [];
+
     /// <summary>
     /// Gets or inits the client identifier.
     /// </summary>

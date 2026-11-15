@@ -4,7 +4,7 @@
         <RootNamespace>Cratis.Chronicle</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
-        <NoWarn>$(NoWarn);MA0182</NoWarn>
+        <NoWarn>$(NoWarn);MA0182;CHRX0001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -31,9 +31,20 @@
         <PackageReference Include="SSH.NET" />
     </ItemGroup>
 
+    <!-- Keep the client diagnostics convention specification independent of the runtime checkout location. -->
+    <ItemGroup>
+        <EmbeddedResource Include="../Connections/**/*.cs" Exclude="../Connections/obj/**;../Connections/bin/**" LogicalName="ClientDiagnostics.Connections.%(RecursiveDir)%(Filename)%(Extension)" />
+        <EmbeddedResource Include="../DotNET/TokenProviderFactory*.cs" LogicalName="ClientDiagnostics.DotNET.%(Filename)%(Extension)" />
+    </ItemGroup>
+
     <!-- Keep the projection-path architecture specification independent of the runtime checkout location. -->
     <ItemGroup>
         <EmbeddedResource Include="../DotNET/Projections/**/*.cs" LogicalName="ProjectionPaths.%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <!-- The shared graph view conformance fixture, copied byte for byte from the cross-client specification. -->
+    <ItemGroup>
+        <None Update="Graphs/for_GraphViewReader/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <!-- Reuse the exact CoreDNS zone the Composition sample serves, so the +srv integration

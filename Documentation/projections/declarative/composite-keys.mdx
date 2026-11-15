@@ -1,19 +1,20 @@
 ---
-description: Identify a Chronicle projection instance with a composite key made of several values when one event property is not enough.
+title: "Cratis Chronicle projections: use composite keys"
+description: "Use composite keys in Cratis Chronicle projections to identify a read model or child item with several values from event content or event context."
 ---
-# Projection with composite keys
+<a id="projection-with-composite-keys"></a>
 
-When a single property isn't sufficient to uniquely identify a projection instance, you can use composite keys made up of multiple values. This is useful for multi-tenant scenarios, hierarchical data, or when you need complex keys.
+A composite key in Cratis Chronicle identifies a read model instance with several values instead of one. Use it when an order number, for example, is unique only within a customer: the customer ID and order number together select the order to update.
 
 ## Defining a composite key
 
-Define a key made up of multiple properties when one event value is not enough to identify the read model instance:
+Use `UsingCompositeKey<T>()` to map each part of the key. Configure the same parts for every event that updates the same order; both creation and shipping events must resolve to that order's key.
 
 <ChronicleClientTabs snippet="projections/declarative/composite-keys/basic" />
 
 ## Composite key type
 
-Define a record or class to represent your composite key:
+Define a record or class with one property for each key component:
 
 <ChronicleClientTabs snippet="projections/declarative/composite-keys/key-type" />
 
@@ -25,7 +26,7 @@ The read model's `Id` property should match your composite key type:
 
 ## Composite keys with event context
 
-You can combine event properties with event context properties in composite keys:
+A key can combine event content with metadata from event context. This example pairs the event's user ID with its occurrence timestamp to identify an audit entry:
 
 <ChronicleClientTabs snippet="projections/declarative/composite-keys/context-key" />
 
@@ -45,40 +46,42 @@ Model-bound context mappings accept the same paths: `[SetFromContext<WeeklyActiv
 
 ## Composite keys in child collections
 
-Composite keys work with child collections too:
+For a child collection, resolve the parent key and child key separately. Here, customer and order number select the parent order; product and variant select an item inside it:
 
 <ChronicleClientTabs snippet="projections/declarative/composite-keys/child-collection" />
 
 ## Joins with composite keys
 
-Composite keys can be used in join scenarios:
+For a join, map the event's key parts to the composite value stored in the property selected by `On`. Product ID and variant together identify the product whose name should update the order line:
 
 <ChronicleClientTabs snippet="projections/declarative/composite-keys/join" />
 
 ## Event definitions
 
+Events that update the same order carry both key components:
+
 <ChronicleClientTabs snippet="projections/declarative/composite-keys/events" />
 
 ## Key composition rules
 
-1. **Consistent structure**: All events that target the same projection must use the same composite key structure
-2. **Immutable parts**: Key components should not change during the lifetime of a projection instance
-3. **Uniqueness**: The combination of all key parts must uniquely identify each projection instance
-4. **Type safety**: Key components are strongly typed and validated at compile time
+Use the same key structure for events targeting the same read model instance. Each part must retain its meaning across those events: if a key value changes, the event targets a different instance rather than renaming the existing one.
+
+The combined values must distinguish the instances you want to keep separate. A typed key makes the mapped properties explicit, but it does not establish business uniqueness for you.
 
 ## Kernel compatibility
 
-Projection declarations that specify a composite key type require Chronicle kernel v19.8.1 or later. Older kernels reject the type name when projecting events. Upgrade the kernel before deploying those declarations. Existing fluent .NET projections continue to emit untyped composite-key expressions so a newer client can still target an older kernel; the updated kernel also reads those stored expressions without migration. The connection-time compatibility check covers wire versions, not this projection-expression behavior.
+Projection declarations that specify a composite key type require Chronicle kernel v19.8.1 or later. Older kernels reject the type name when projecting events, so upgrade the kernel before deploying those declarations.
+
+Fluent .NET projections emit untyped composite-key expressions, which remain compatible with older kernels. The updated kernel also reads those stored expressions without migration. The connection-time compatibility check covers wire versions, not this projection-expression behavior.
 
 ## Generating declarations from stored projections
 
-When generating a declaration from an untyped fluent composite-key expression, Chronicle infers the type from the read model's `Id` property (including nullable object types) or the child item's `Id` for a child collection. The .NET client now includes the CLR key type name in the generated schema, so declarations generated from these fluent projections can be compiled again. Fluent expressions remain untyped for compatibility with older kernels. For a manually supplied schema without a key type name, generation still uses `CompositeKey` as a best-effort placeholder; that declaration cannot recompile unless the schema defines a `CompositeKey` object with the mapped properties.
+When generating a declaration from an untyped fluent composite-key expression, Chronicle infers the type from the read model's `Id` property, or the child item's `Id` for a child collection. Nullable object types are supported. The .NET client includes the .NET key type name in the generated schema so the resulting declaration can be compiled again; the stored fluent expression remains untyped.
+
+For a manually supplied schema without a key type name, generation uses `CompositeKey` as a placeholder. That declaration cannot recompile unless the schema defines a `CompositeKey` object with the mapped properties.
 
 ## Performance considerations
 
-- **Index efficiency**: Composite keys create complex indexes in the underlying storage
-- **Query patterns**: Consider how you'll query the data when designing key structure
-- **Key size**: Larger composite keys use more storage and may impact performance
-- **Sort order**: The order of properties in the composite key affects index efficiency
+Choose key parts for identity, not as a promise about query performance. Check query and index behavior against the storage provider you use; a composite projection key does not by itself establish an efficient query plan.
 
-Composite keys provide powerful flexibility for complex identification scenarios while maintaining type safety and performance.
+If every event should update one shared instance instead, use a [constant key](./constant-key). To map metadata into values as well as keys, continue with [event context](./event-context).

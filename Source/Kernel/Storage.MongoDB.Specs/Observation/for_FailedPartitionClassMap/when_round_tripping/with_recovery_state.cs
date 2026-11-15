@@ -30,7 +30,8 @@ public class with_recovery_state : Specification
             AttemptsBeforeBudgetReset = 1,
             IsQuarantined = true,
             WebhookDisposition = WebhookFailureDisposition.Configuration,
-            WebhookRecoveryId = Guid.Parse("d41d0b25-f1e7-4da1-97eb-e64d3fa6b104")
+            WebhookRecoveryId = Guid.Parse("d41d0b25-f1e7-4da1-97eb-e64d3fa6b104"),
+            ReplayEpoch = Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000b")
         }).ToArray();
     }
 
@@ -45,5 +46,6 @@ public class with_recovery_state : Specification
     [Fact] void should_keep_quarantine() => _restored.All(partition => partition.IsQuarantined).ShouldBeTrue();
     [Fact] void should_keep_the_last_attempt() => _restored.Select(partition => partition.LastAttempt.SequenceNumber.Value).ShouldEqual([50UL, 50UL, 50UL]);
     [Fact] void should_keep_failure_kinds() => _restored.All(partition => partition.LastAttempt.Kind == FailureKind.Handling).ShouldBeTrue();
+    [Fact] void should_keep_the_replay_epoch() => _restored.Select(partition => partition.ReplayEpoch).All(epoch => epoch == new ReplayEpoch(Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000b"))).ShouldBeTrue();
     [Fact] void should_keep_explicit_webhook_policy() => _restored.All(partition => partition.WebhookDisposition == WebhookFailureDisposition.Configuration).ShouldBeTrue();
 }

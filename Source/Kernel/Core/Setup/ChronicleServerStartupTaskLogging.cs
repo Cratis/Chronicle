@@ -13,6 +13,9 @@ namespace Orleans.Hosting;
 /// </summary>
 internal static partial class ChronicleServerStartupTaskLogging
 {
+    [LoggerMessage(LogLevel.Error, "Kernel projection registration for event store '{EventStore}' exhausted {MaxAttempts} startup attempts. The silo will start and keep retrying in the background; registration health stays degraded until it succeeds.")]
+    internal static partial void DeferringKernelProjectionRegistration(this ILogger<ChronicleServerStartupTask> logger, EventStoreName eventStore, int maxAttempts);
+
     [LoggerMessage(LogLevel.Warning, "Failed rehydrating occurrences for {EventStore}/{Namespace}. Startup will continue; existing queue reminders can wake the work later")]
     internal static partial void FailedRehydratingOccurrences(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName? @namespace);
 
@@ -25,14 +28,41 @@ internal static partial class ChronicleServerStartupTaskLogging
     [LoggerMessage(LogLevel.Warning, "Skipping persisted projection definition '{Identifier}' during startup because the current engine rejected it. Chronicle will continue starting so a client can re-register the projection with its current definition")]
     internal static partial void FailedRegisteringPersistedProjectionDefinition(this ILogger<ChronicleServerStartupTask> logger, Exception exception, ProjectionId identifier);
 
-    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' could not reach a sibling silo on attempt {Attempt} of {MaxAttempts} - retrying in {Delay}. A cluster that is still forming answers late, which is not a failure of the step itself")]
+    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' failed on attempt {Attempt} of {MaxAttempts} - retrying in {Delay}. A cluster that is still forming, or storage under contention, fails calls for a while, which is not a failure of the step itself")]
     internal static partial void RetryingStartupStep(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int attempt, int maxAttempts, TimeSpan delay);
 
-    [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' still could not reach a sibling silo after {MaxAttempts} attempts. The cluster has had longer than membership normally takes to settle, so this is a real failure rather than a forming cluster")]
-    internal static partial void StartupStepExhaustedRetries(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts);
+    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' still did not complete after {MaxAttempts} attempts. The silo stays running and not ready, and tries the step again in {Delay} (round {Round} of {MaxRounds}). The calls did not reach a silo the cluster reports as active, or storage did not answer")]
+    internal static partial void StartupStepStillFailing(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts, TimeSpan delay, int round, int maxRounds);
+
+    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' timed out calling this silo itself ({Silo}), which is busy catching up - no sibling is involved. The silo stays running and not ready, and tries again in {Delay} (wait {Waits}, waiting {Waited} so far); this does not count as a failed attempt")]
+    internal static partial void StartupStepWaitingForThisSilo(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' is still timing out calling this silo itself ({Silo}) after {Waits} waits ({Waited}). The silo keeps running and not ready rather than restarting into the same backlog, and tries again in {Delay}. A silo that never catches up is either kept saturated or holds a grain that never answers (deadlock, storage hang)")]
+    internal static partial void StartupStepStillWaitingForThisSilo(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Warning, "Startup step '{Step}' timed out calling sibling silo {Silo}, which the cluster reports as active and is therefore busy rather than gone. This silo stays running and not ready, and tries again in {Delay} (wait {Waits}, waiting {Waited} so far); this does not count as a failed attempt")]
+    internal static partial void StartupStepWaitingForBusySibling(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Error, "Startup step '{Step}' is still timing out calling sibling silo {Silo}, which the cluster reports as active, after {Waits} waits ({Waited}). This silo keeps running and not ready rather than restarting and moving more work onto the busy sibling, and tries again in {Delay}. A sibling that never catches up is either kept saturated or holds a grain that never answers (deadlock, storage hang)")]
+    internal static partial void StartupStepStillWaitingForBusySibling(this ILogger<ChronicleServerStartupTask> logger, Exception? exception, string step, string silo, TimeSpan delay, int waits, TimeSpan waited);
+
+    [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' gave up waiting for silo {Silo} after {Waits} waits ({Waited}), past the busy-silo wait limit of {Limit}. A silo that does not answer for that long is not just catching up - look for a grain that never answers (deadlock, storage hang) - so this is a real failure")]
+    internal static partial void StartupStepGaveUpWaitingForBusySilo(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, string silo, int waits, TimeSpan waited, TimeSpan limit);
+
+    [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' still did not complete after {MaxRounds} rounds of {MaxAttempts} attempts. It is not waiting for a forming cluster or a busy silo any longer, so this is a real failure")]
+    internal static partial void StartupStepExhaustedRetries(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, int maxAttempts, int maxRounds);
 
     [LoggerMessage(LogLevel.Critical, "Startup step '{Step}' failed because a silo in this cluster most likely runs a Chronicle release this one cannot exchange grain calls with. Retrying cannot help while both releases share the cluster. Upgrade by stopping every silo and then starting this release, rather than replacing silos one at a time. See https://cratis.io/chronicle/hosting/rolling-deploy/ Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
     internal static partial void StartupStepReachedIncompatibleSilo(this ILogger<ChronicleServerStartupTask> logger, Exception exception, string step, string localRelease, string clusterReleases);
+
+    [LoggerMessage(LogLevel.Critical, "This silo cannot join the cluster: it holds a Chronicle release from before the serializers were renamed to Cratis.Choreography (19.123.1), and releases on either side of that cannot exchange grain calls. Upgrade by stopping every silo and then starting this release, for example with the Recreate strategy in Kubernetes. See https://cratis.io/chronicle/hosting/rolling-deploy/ Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
+    internal static partial void StartupRefusedBecauseOfIncompatibleRelease(this ILogger<ChronicleServerStartupTask> logger, string localRelease, string clusterReleases);
+
+    [LoggerMessage(LogLevel.Critical, "Startup refused: {Description}")]
+    internal static partial void StartupRefusedBecauseSystemDataIsMisplaced(this ILogger<ChronicleServerStartupTask> logger, string description);
+
+    [LoggerMessage(LogLevel.Warning, "{Description}")]
+    internal static partial void LegacySystemDataRetained(this ILogger<ChronicleServerStartupTask> logger, string description);
 
     [LoggerMessage(LogLevel.Critical, "Patch manager could not relocate to a kernel at least as new as the caller. Local release: {LocalRelease}; cluster releases: {ClusterReleases}")]
     internal static partial void PatchManagerCouldNotRelocate(this ILogger<ChronicleServerStartupTask> logger, string localRelease, string clusterReleases);

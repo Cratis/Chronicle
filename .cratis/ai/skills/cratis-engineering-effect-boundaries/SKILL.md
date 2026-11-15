@@ -1,6 +1,6 @@
 ---
 name: cratis-engineering-effect-boundaries
-description: Apply the Cratis effect-boundary contract when writing or reviewing code that publishes, persists, generates, propagates, or releases. On those boundaries partial success is failure - no catch-and-continue, no defaulting to success on an unknown outcome. Use when a degraded run could still report success; defer style questions and specification authoring to their own workflows.
+description: Use when publication, persistence, generation or propagation could partially fail while reporting success. Not for ordinary style questions or specification authoring.
 license: LICENSE
 ---
 <!-- cratis-ai-managed: skills/cratis-engineering-effect-boundaries/SKILL.md -->

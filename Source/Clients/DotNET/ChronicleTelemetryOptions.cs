@@ -7,10 +7,15 @@ using Cratis.Chronicle.Diagnostics;
 namespace Cratis.Chronicle;
 
 /// <summary>
-/// Controls event source ids in Chronicle client traces.
+/// Controls Chronicle client traces.
 /// </summary>
 public class ChronicleTelemetryOptions
 {
+    /// <summary>
+    /// Gets or sets the span naming convention. Defaults to the existing legacy operation and display names.
+    /// </summary>
+    public ClientSpanNames SpanNames { get; set; } = ClientSpanNames.Legacy;
+
     /// <summary>
     /// Gets or sets how event source ids are included in spans. The default is Raw.
     /// </summary>

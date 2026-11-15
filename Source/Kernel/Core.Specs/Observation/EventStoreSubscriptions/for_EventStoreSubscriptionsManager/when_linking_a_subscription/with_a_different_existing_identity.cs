@@ -23,6 +23,7 @@ public class with_a_different_existing_identity : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
+        silo.AddNamespaceCasing();
         silo.AddService(Substitute.For<ILocalSiloDetails>());
         var namespaces = Substitute.For<INamespaces>();
         namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);

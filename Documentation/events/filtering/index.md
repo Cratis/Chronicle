@@ -1,9 +1,8 @@
 ---
-description: Filter Chronicle reducers and reactors by the event source type, event stream type or tags appended with an event, before they handle it.
+title: Filter Chronicle reducers and reactors by event metadata
+description: Filter Chronicle reducers and reactors using appended event metadata so handlers receive only events that match their tags, source type or stream type.
 ---
-# Filter observers by appended event metadata
-
-Chronicle can filter reducers and reactors before they handle an appended event. You do this by putting filter attributes on the observer and appending matching metadata with the event.
+Chronicle filters let a reducer or reactor handle only events with matching tags, event source type or event stream type. Put filter attributes on the observer, then supply the corresponding metadata when appending. For example, a `priority` tag can select orders for one reducer without changing the order event's payload.
 
 ## How filters correlate to append operations
 
@@ -15,16 +14,19 @@ Chronicle can filter reducers and reactors before they handle an appended event.
 
 ## Important distinctions
 
-- `[Tag]` and `[Tags]` on a reactor, reducer, or projection **label the observer itself**. They do not filter incoming events.
-- `[FilterEventsByTag]`, `[EventSourceType]`, and `[EventStreamType]` on a reducer or reactor **filter which appended events are dispatched**.
-- If you combine filter types, Chronicle applies them together. The event must satisfy every configured filter category.
-- Multiple `[FilterEventsByTag]` attributes are additive. An event is dispatched when it matches any configured filter tag.
+Use `[FilterEventsByTag]`, `[EventSourceType]` or `[EventStreamType]` to control delivery to a reducer or reactor. `[Tag]` and `[Tags]` on an observer, including a projection, only label that observer; they do not filter incoming events.
+
+Multiple `[FilterEventsByTag]` attributes accept an event with any one of the configured tags. Different filter categories work together: if you set a tag and an event source type, both categories must match. A named tag is separate from a plain string tag and is not matched by `[FilterEventsByTag]`.
 
 ## Scope
 
-Reducers and reactors use these filters during subscription. Projections still describe what they observe through event types, joins, and event sequence selection.
+These filters select events for reducers and reactors. Projections describe what they observe through event types, joins and event sequence selection; these observer filter attributes do not narrow projection input.
+
+Filtering delivery does not guard a write against concurrent changes. Use a [concurrency scope](../concurrency.mdx) for that.
 
 ## Guides
+
+If the metadata is not on your events yet, start with [Appending with Tags](../appending-with-tags.mdx). Then choose the filter that matches how you categorize events:
 
 - [Filter reducers and reactors by tag](by-tag)
 - [Filter reducers and reactors by event source type](by-event-source-type)

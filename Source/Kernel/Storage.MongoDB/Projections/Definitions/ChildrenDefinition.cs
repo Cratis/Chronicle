@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Cratis.Chronicle.Storage.MongoDB.Projections.Definitions;
 
 /// <summary>
@@ -62,4 +64,10 @@ public class ChildrenDefinition
     /// Gets or sets the properties on the child that are excluded from auto-mapping.
     /// </summary>
     public IList<string> NoAutoMapProperties { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the optional ordering for where new children are inserted. Not stored for the default append ordering.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public ChildrenOrderingDefinition? Ordering { get; set; }
 }

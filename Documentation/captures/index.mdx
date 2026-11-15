@@ -1,18 +1,14 @@
 ---
-title: "Captures"
-description: "Turn changes in external data into Chronicle events with captures, and what the capturing engine supports today."
+title: "Cratis Chronicle captures: turn changes into events"
+description: "Cratis Chronicle captures turn API data changes and incoming public events into local events. Choose an authoring approach and check execution limits."
 ---
 
-Captures let you describe Change Data Capture (CDC) pipelines that turn external data changes into Chronicle events.
+Cratis Chronicle captures turn changes in external data into events in your event store. Use a capture to detect changes in API data or translate another event store's public events into your own private events, without writing that detection or translation loop yourself.
 
-:::caution[The capturing engine runs a subset of the language]
-Captures parse and compile everything described here, but as of Chronicle 19.6 the engine that runs them supports only part of it:
+:::caution[Execution limits]
+The engine runs API-polling captures and events captures with root-level `append` rules. It does not run webhook or message-topic sources, `map` transformations, `nested`/`children` scopes, or expression-based `when` conditions. Validation reports these constructs as unsupported and prevents the capture from starting.
 
-- Only `api` sources are read. A capture with a `webhook` or `message` source never produces events.
-- Only root-level `append` rules run. `map` operations, `nested` scopes, and `children` scopes are accepted but not applied.
-- An assignment can take a property of the item (`$.path`) or a quoted literal. `$context`, `$env`, and template expressions are rejected at run time, and so are expression-based `when` conditions.
-
-A cycle that hits an unsupported construct fails as a whole and is logged; no event is appended for it.
+Field assignments support item properties and literals. Events captures also support `$context.<property>` and `$eventSourceId`; API captures do not. See the [CDL execution limits](capture-declaration-language/index.md#execution-scope-and-limitations) before choosing constructs for any authoring approach.
 :::
 
 ## HTTP source destinations
@@ -26,36 +22,29 @@ for modes, private-network approvals, metadata protection, configuration, and up
 
 ## Overview
 
-A capture definition describes:
+For API data, a capture polls a configured service and compares each observation with the previous one. An identity key, such as an invoice ID, tells Chronicle which items to compare. Append rules select the event to emit when an item is added, removed, or changed, and field assignments build its payload. This is change data capture (CDC): the events describe changes in the source data rather than commands sent to your application.
 
-- **Source**: where data comes from (`api`, `webhook`, `message`)
-- **Identity key**: the property used to detect changes per entity
-- **Mapping**: optional transformations before append logic
-- **Append rules**: which event to append and when to append it
-- **Scopes**: root, nested objects, and child collections
+An events capture reads public events delivered through an inbox, the event sequence that receives events from another event store. It merges their payloads into state for each key, then applies append rules to produce local private events. Use this when your event store needs its own interpretation of another store's public contract.
 
-Chronicle supports four authoring approaches. The first is language-neutral — the others are client features, documented alongside the rest of each client:
-
-- **Capture Declaration Language (CDL)** for text-based definitions
-- **Declarative API** (.NET) for fluent definitions in code
-- **Model-bound API** (.NET) for attribute-based definitions
-- **Capture DSL** (Elixir) for definitions in code that compile to CDL
+Capture Declaration Language (CDL) is the language-neutral text format parsed by the kernel. If you prefer definitions alongside application code, .NET offers a declarative API with fluent C# builders and a model-bound API with attributes. The Elixir capture DSL compiles module definitions to CDL. Choose the authoring page under [Topics](#topics) for the approach you want to use.
 
 ## Define and manage a capture in your client
 
-In Elixir, a module with `use Chronicle.Captures.Capture` declares the source, the identity key, and the append rules; the DSL compiles to CDL at build time.
+In Elixir, define a module with `use Chronicle.Captures.Capture` to keep the source, identity key, and append rules together. The DSL compiles to CDL at build time.
 
 <ChronicleClientTabs snippet="captures/index/define" />
 
-The mapping, `nested`, and `children` constructs of the language are available in the DSL too, and are subject to the engine limits described above.
+The DSL also lets you express mapping, `nested`, and `children` constructs. The following snippet shows that authoring syntax, not an executable capture: the engine rejects those constructs during validation.
 
 <ChronicleClientTabs snippet="captures/index/dsl-features" />
 
-Registering, starting, stopping, listing, validating, and deleting captures, and reading recently captured events, are operations on the client:
+Use the client to validate a declaration, register and start a capture, or inspect recently captured events. You can also list, stop, and delete captures:
 
 <ChronicleClientTabs snippet="captures/index/manage" />
 
 ## Topics
+
+Start with CDL to write a text definition or look up syntax. Choose a client-specific page to define the capture in application code.
 
 | Topic | Description |
 | ----- | ----------- |

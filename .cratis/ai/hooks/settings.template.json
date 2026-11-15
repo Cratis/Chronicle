@@ -24,6 +24,10 @@
           },
           {
             "type": "command",
+            "command": "bash \u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-guard-shell-writes.sh"
+          },
+          {
+            "type": "command",
             "command": "bash \u0022$CLAUDE_PROJECT_DIR\u0022/.cratis/ai/hooks/scripts/cratis-guard-pr-body.sh"
           }
         ]

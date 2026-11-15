@@ -3,8 +3,9 @@ set -e
 
 # Only start the embedded MongoDB when the kernel is actually going to use it as its own
 # storage. Cratis.Chronicle.XUnit.Integration's ChronicleOutOfProcessFixture relies on exactly
-# this embedded instance (it never sets Cratis__Chronicle__Storage__ConnectionDetails, so the
-# kernel falls back to localhost:27017). Cratis.Chronicle.Integration's ChronicleConfigurableFixture
+# this embedded instance (it never sets Cratis__Chronicle__Storage__ConnectionDetails, so this
+# entrypoint points the kernel at localhost:27017 unless a connection details file or a chronicle.json
+# already names the storage). Cratis.Chronicle.Integration's ChronicleConfigurableFixture
 # never does that - even for MongoDB it always starts a dedicated, separate MongoDB container and
 # points ConnectionDetails at that container's hostname - so this embedded mongod would be entirely
 # redundant there. Redundant is not harmless: this mongod is a lone-member replica set that can
@@ -20,6 +21,15 @@ mongod_pid=""
 if [ "${STORAGE_TYPE,,}" = "mongodb" ] && { [ -z "$CONNECTION_DETAILS" ] || [[ "$CONNECTION_DETAILS" == *"localhost"* || "$CONNECTION_DETAILS" == *"127.0.0.1"* ]]; }; then
   /usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
   mongod_pid=$!
+
+  # The kernel requires explicit storage connection details. Point it at the embedded instance, but only as
+  # the lowest-priority default: never when the environment, a connection details file, or a chronicle.json
+  # in the working directory already supplies the connection (an environment variable would outrank the file).
+  if [ -z "$CONNECTION_DETAILS" ] \
+    && [ -z "${Cratis__Chronicle__Storage__ConnectionDetailsFile:-}" ] \
+    && ! { [ -f ./chronicle.json ] && grep -qi '"connectionDetails' ./chronicle.json; }; then
+    export Cratis__Chronicle__Storage__ConnectionDetails="mongodb://localhost:27017"
+  fi
 
   # Wait for MongoDB to start
   until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do

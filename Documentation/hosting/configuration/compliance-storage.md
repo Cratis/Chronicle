@@ -1,8 +1,7 @@
 ---
+title: Configure compliance storage in Cratis Chronicle
 description: Store Chronicle's encryption keys in a separate, independently secured compliance storage instead of alongside application data.
 ---
-# Compliance Storage
-
 Chronicle stores encryption keys alongside the rest of your application data by default. When you configure a dedicated compliance storage, those keys are stored in a separate, independently secured backend — such as HashiCorp Vault — so that key material never resides in the same database as the encrypted events.
 
 If no compliance storage is explicitly configured, Chronicle uses the general [storage](storage) backend for encryption keys.
@@ -62,12 +61,41 @@ The setting has no effect unless `storage` is configured. Without a dedicated st
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
 | migrateFromDefaultStorage | bool | No | Keep the general storage backend serving encryption keys alongside `storage`, moving each key into `storage` as it is read. Defaults to `false` |
+| revocationGrace | time span | No | Grace allowed for a release that already holds key material before an erasure is confirmed. Defaults to `00:00:05`. Raise it if erasures are confirmed while a slow release still uses the key |
+| fenceTimeout | time span | No | Longest a single encryption key fence read or write may wait for the key store. Defaults to `00:00:03`. An erasure that cannot be served in this time fails with `EncryptionKeyFenceUnavailable` |
 
 As an environment variable:
 
 ```shell
 export Cratis__Chronicle__Compliance__Encryption__MigrateFromDefaultStorage=true
 ```
+
+## Encryption key identifiers on SQL Server
+
+When the keys live in SQL Server, identifiers are compared exactly: letter case, character width, accents and trailing spaces are all significant, so `Alice` and `alice` name two different keys. Identifiers can be up to 256 characters long.
+
+The upgrade that introduces this behavior keeps every stored row and records each stored spelling in the `EncryptionKeyIdentifierReviews` table, together with the collation the column had before. While a spelling differs from a stored one only in case, width, accents or trailing spaces, Chronicle refuses to read, create, delete or erase a key for it and throws `EncryptionKeyIdentifierUnderReview`. The message never contains the identifier. One warning with the number of rows awaiting review is logged for every SQL Server namespace database when its schema has been migrated, including with `--migrate-only`, and the `chronicle-sql-encryption-key-identifiers-refused` counter (`sql.encryption_key.refused_identifiers` under the convention names, see [Telemetry names](telemetry-names.md)) increases for every refused operation.
+
+List the spellings that need a decision:
+
+```sql
+SELECT r.[Identifier], r.[LegacyIdentifier]
+FROM [EncryptionKeyIdentifierReviews] r
+WHERE EXISTS (
+    SELECT 1 FROM [EncryptionKeyIdentifierReviews] o
+    WHERE o.[LegacyIdentifier] = r.[LegacyIdentifier] AND o.[Identifier] <> r.[Identifier])
+ORDER BY r.[LegacyIdentifier], r.[Identifier];
+```
+
+To look at one identifier, filter on `[LegacyIdentifier] = N'<identifier>'`. The comparison uses the collation the column had before the upgrade, so it finds the spellings that used to be treated as one.
+
+Resolve each group in one of two ways:
+
+- The spellings belong to different subjects. Delete that group's rows from `EncryptionKeyIdentifierReviews`. Values written earlier for the other spelling stay bound to the key of the spelling that was stored.
+- The spellings belong to the same subject. Make the application use the stored spelling and leave the rows in place.
+
+> [!WARNING]
+> Do not copy key rows between spellings. A copy is not removed when the other spelling's key is erased.
 
 ## Backup and restore ordering
 
@@ -136,10 +164,30 @@ Chronicle uses the `secret` KV v2 mount point by default. Encryption keys are or
 Encryption keys are stored at:
 
 ```text
-secret/<event-store>/<namespace>/<identifier>/<revision>
+secret/k1/<event-store>/<namespace>/<identifier>/<revision>
 ```
 
+Every path written by this version starts with the root `k1`, so it can never be the same as a path written by an earlier version. Chronicle first verifies that the mount is KV v2 by reading `sys/mounts/secret` (substitute your mount name). KV v1, other engine types, and unreadable configuration fail closed with exit code 4, before any marker or migration write. Before the root is used for the first time, Chronicle checks that nothing from an earlier version sits there and writes a small marker secret, `secret/~layout`, that records the layout in use. If something from an earlier version occupies the root, or the marker cannot be written or read, the server does not start and says so in the log.
+
 Each revision is an independent secret, which means individual revisions can be deleted without affecting others (for example, when rotating keys or when the full key history is required for a limited time).
+
+Each of `<event-store>`, `<namespace>` and `<identifier>` is a single path segment. Letters, digits and `- _ . @ + = , : $` are kept as they are. Every other character, including `/`, `~` and every non-ASCII character, is written as `~XX` for each of its UTF-8 bytes in uppercase hexadecimal, and so is a trailing `.`. Ordinary identifiers such as GUIDs are therefore unchanged. A segment must not be empty and is at most 1,024 bytes of UTF-8.
+
+Keys stored by earlier versions, at `secret/<event-store>/<namespace>/<identifier>/<revision>`, are still read, and removed together with the key, when each of the three parts is made of the characters that are kept as they are, `~`, and letters, marks and digits outside ASCII, and does not end in `.`. A path of that kind has exactly three segments, so it belongs to one address only. For any other address, an earlier key is not read: see [Upgrading keys stored under earlier names](#upgrading-keys-stored-under-earlier-names). New keys are always written under `k1`.
+
+### Vault policy
+
+The token needs these capabilities on the mount:
+
+```hcl
+path "sys/mounts/secret"    { capabilities = ["read"] }
+path "secret/data/k1/*"     { capabilities = ["create", "read", "update"] }
+path "secret/metadata/k1/*" { capabilities = ["read", "list", "delete"] }
+path "secret/data/~layout"  { capabilities = ["create", "read"] }
+path "secret/metadata/"     { capabilities = ["list"] }
+```
+
+Reading keys stored by earlier versions, and the check described below, also need read, list and delete on the earlier paths.
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -185,9 +233,127 @@ Encryption keys are stored as individual secrets. Secret names follow this patte
 chronicle--{event-store}--{namespace}--{identifier}--{revision}
 ```
 
-Each component is sanitized to lowercase alphanumeric characters with single hyphens replacing any other character sequences. Double hyphens (`--`) serve as unambiguous separators between components.
+The names are derived from the address in this way:
+
+```text
+chronicle-k1--{hash}--{revision}
+```
+
+`{hash}` is the lowercase hexadecimal SHA-256 of the event store, namespace and identifier, each taken with its length. Every address has its own names, whatever characters it contains, and the names do not contain the identifiers.
+
+Keys stored under the earlier `chronicle--{event-store}--{namespace}--{identifier}--{revision}` names are still read, and erasing such a key also removes the earlier secret, for identifiers made of lowercase letters, digits and single hyphens, and for the identifiers Chronicle builds for encrypted values. New keys are always written under the `chronicle-k1--` names. Keys under the earlier names for any other identifier are not read: see [Upgrading keys stored under earlier names](#upgrading-keys-stored-under-earlier-names).
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
 | type | string | Yes | Must be `azure-key-vault` |
 | connectionDetails | string | Yes | The Azure Key Vault URI, for example `https://my-vault.vault.azure.net` |
+
+## Upgrading keys stored under earlier names
+
+When the key store is HashiCorp Vault or Azure Key Vault, an earlier version may have stored keys under names that this version does not use for the same address. For most addresses nothing changes. For an address whose earlier name cannot be tied to that address alone, Chronicle does not guess:
+
+- Reading, provisioning, saving and rotating keys for that address throws `EncryptionKeyNeedsUpgrade`, and does not create a new key. Recording or repeating an erasure is never refused.
+- Each refusal is counted by the metric `chronicle-encryption-key-upgrade-refused` and written to the log as one warning that carries no identifier, event store or namespace.
+- At startup Chronicle logs one line with the number of keys and erasure records stored under earlier names, and carries on. The count at startup is a lower bound.
+
+To see the full picture without starting the server, run it with `--verify-encryption-keys`. It prints the counts and exits:
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Nothing is stored under earlier names |
+| 1 | The key store could not be inspected |
+| 2 | Keys stored under earlier names need the upgrade |
+| 4 | The key layout conflicts with earlier material, or could not be verified |
+
+The option cannot be combined with the schema options. Keys that the migration below has already copied, and that are kept under their earlier names, are counted separately and do not need the upgrade.
+
+### Refusing to start while keys need the upgrade
+
+By default the server logs the counts and starts. Set `legacyKeyHandling` to `Refuse` to make it inspect the whole key store at startup and refuse to start, with exit code 2, while any key stored under an earlier name still needs the upgrade:
+
+```json
+{
+  "compliance": {
+    "encryption": {
+      "legacyKeyHandling": "Refuse"
+    }
+  }
+}
+```
+
+The environment variable is `Cratis__Chronicle__Compliance__Encryption__LegacyKeyHandling`. The values are `Warn`, the default, and `Refuse`. With `Refuse`, startup reads every entry stored under earlier names, so it takes longer on a large key store. An entry that cannot be tied to one address keeps the server from starting until an operator has dealt with it.
+
+### Migrating Vault keys to their new names
+
+For HashiCorp Vault, run the server with `--migrate-encryption-keys` to copy keys stored under earlier names to their paths under `k1`. It prints counts and exits; it never prints or logs a path, an identifier or key material.
+
+**Offline operation is required: stop every node, of every version, and all other key/erasure writers before upgrading and before running the migration, including deletion. Start them again only after `--verify-encryption-keys` exits 0.** Erasure-fence checks are snapshots; neither fence checks nor ownership-check/delete is atomic with writers. Detected fence changes or replacements skip deletion and are reported as conflicts; undetected online writes are not safe.
+
+A writing migration takes exclusive ownership of the mount with a CAS-0 secret at `secret/data/k1/~migration-lock`, carrying a random owner ID. A second writing migration refuses with exit code 6 and an operator-recovery message. The owner releases it in `finally`, including on failure or cancellation. A crash or failed release leaves the lock in place; locks never expire and are never automatically stolen. Dry runs remain read-only.
+
+For a stale lock, **first stop every migrator and confirm none can resume**, as well as keeping all writers stopped. Inspect `vault kv get -mount=secret 'k1/~migration-lock'`, then explicitly remove its metadata with `vault kv metadata delete -mount=secret 'k1/~migration-lock'` and rerun. Substitute the configured mount name. Never remove an active owner's lock. Soft deletion is insufficient because CAS-0 requires absent metadata.
+
+The migration:
+
+- copies each key as it is, keeping its revision, and only where nothing exists yet. It never overwrites anything under `k1`. If something different is already there, it is kept and counted as a conflict for review.
+- copies the erasure record of an address before its keys, and never copies a key that an erasure under either name covers.
+- reads every copy back and compares it with the key under the earlier name.
+- keeps the keys under their earlier names, so an earlier version still works after it. Add `--remove-migrated-legacy-keys` to remove them once their copies are verified. It removes only the observed version, after checking for replacement and changed erasure fences; it never destroys key metadata or all history. This soft deletion is not key erasure. Nothing is removed when any copy failed or conflicts.
+- copies the key value only. Per-key Vault metadata that an operator set by hand (a deletion schedule, a version limit, custom metadata) is not copied to the new address; settings on the mount itself apply to the copy as usual.
+- never touches an entry that cannot be tied to one address. Such entries are counted; find them with Vault tooling and decide on them yourself.
+- is safe to run again. A run that stops part way resumes where it left off, and keys already copied are counted as already migrated.
+
+Add `--dry-run` to only count what would be copied; nothing is written or removed, not even the layout marker. `--dry-run` and `--remove-migrated-legacy-keys` can only be used with `--migrate-encryption-keys`, not together, and the migration cannot be combined with `--verify-encryption-keys` or the schema options.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Nothing is left to migrate: every key is copied and verified |
+| 2 | Entries are left for review, or a dry run would copy something |
+| 4 | The key layout conflicts with earlier material, or could not be verified; nothing was done |
+| 5 | A copy failed or did not verify, or the run stopped before it finished; run it again |
+| 6 | Another migration owns the mount, or a stale lock needs explicit operator removal |
+
+Besides the policy above, the token needs read and list on the earlier paths, and create on `secret/data/k1/*`. It needs delete on `secret/metadata/k1/~migration-lock` to release ownership, and update on `secret/delete/k1/*` for version-scoped rollback. With `--remove-migrated-legacy-keys`, it also needs update on `secret/delete/` for the earlier paths.
+
+Chronicle connects to Vault at the `connectionDetails` address as given. Use an `https://` address to protect keys in transit; there is no further TLS configuration for Vault in this version.
+
+### Migrating Azure Key Vault keys to their new names
+
+The startup inventory reports unresolved entries when earlier names are malformed, fall outside the configured `legacyKeyScopes`, or match more than one scope. This count is a subset of the earlier key and erasure counts, not an additional total. Reports contain counts only, never secret names or values.
+
+For Azure Key Vault, the same `--migrate-encryption-keys`, `--dry-run` and `--remove-migrated-legacy-keys` options copy keys stored under earlier names to their current names, with the same exit codes. Earlier names are lowercased and reduced to letters, digits and hyphens, so the event store and namespace cannot be read off them. List them under `compliance.encryption.legacyKeyScopes`, each with the exact `eventStore` and `namespace`:
+
+```json
+{
+  "compliance": {
+    "encryption": {
+      "legacyKeyScopes": [
+        { "eventStore": "MyStore", "namespace": "Default" }
+      ]
+    }
+  }
+}
+```
+
+- The list is required. Without it nothing is migrated and the command fails.
+- A listed scope with no entries under earlier names is an error. Chronicle compares the list with the event stores and namespaces it knows of and reports the ones that are missing; it never adds them.
+- A name is migrated only when exactly one address built from the listed scopes produces it. Other names are left alone and counted for review.
+- An entry with an expiry, a not-before time, a content type, tags, a disabled version or more than one version is not copied or removed. It is counted and left for review.
+- Nothing is written over an existing secret or over a name held by a deleted secret that can still be recovered.
+- Key Vault has no conditional write, so stop every node before migrating. Removed earlier secrets are purged when the vault allows it; the report counts the ones it still holds as recoverable.
+
+The identity needs get, list, set and delete on secrets, and purge when `--remove-migrated-legacy-keys` is used. `legacyKeyHandling` set to `refuse` stops a normal start while keys under earlier names remain, as for Vault.
+
+### Proving the migration on a staging copy
+
+Before migrating production, prove the migration on a copy. None of these steps prints key material.
+
+1. Restore a snapshot of the production Vault into a separate staging Vault, for example with `vault operator raft snapshot save` and `restore`, with a token that has the same policy.
+2. Run the new version against staging with `--verify-encryption-keys`. Expect exit code 2 and the counts.
+3. Run `--migrate-encryption-keys --dry-run`. Expect the counts and no writes: the current version of a sample of secrets is unchanged, and the Vault audit log shows no `create` or `update`.
+4. Run `--migrate-encryption-keys`. Expect exit code 0, then `--verify-encryption-keys` exits 0.
+5. Start a staging node over a staging copy of the event store and read a sample of events encrypted before the upgrade. Expect the same plaintext as before.
+6. Run `--migrate-encryption-keys` again. Expect every key counted as already migrated.
+7. The keys under earlier names are untouched, so the earlier version still works on staging. That holds until `--remove-migrated-legacy-keys` is used.
+
+If any step does not give the expected result, do not migrate production.

@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Arc.Validation;
+using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Security;
 
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Security;
 /// Commands from other assemblies are ignored. The restriction of the System event store to administrators is in
 /// <see cref="SystemStoreAuthorizationCommandFilter"/>. This filter never grants anything: it only refuses.
 /// </remarks>
+[Singleton]
 public class SystemStoreCommandFilter : ICommandFilter
 {
     static readonly Task<CommandResult> _noVerdict = Task.FromResult<CommandResult>(null!);

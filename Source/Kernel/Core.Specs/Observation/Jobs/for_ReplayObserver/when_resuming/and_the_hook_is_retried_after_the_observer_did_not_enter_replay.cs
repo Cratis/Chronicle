@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserver.when_resuming;
 
 /// <summary>
-/// Cratis.Orleans 1.31.0 holds step dispatch when the resume hook fails and re-runs the hook from the job watchdog, so the
+/// Cratis.Choreography 1.31.0 holds step dispatch when the resume hook fails and re-runs the hook from the job watchdog, so the
 /// hook has to leave the sinks alone when it fails and complete when the observer has entered replay (Cratis/Chronicle#5401).
 /// </summary>
 public class and_the_hook_is_retried_after_the_observer_did_not_enter_replay : given.a_replay_observer_job

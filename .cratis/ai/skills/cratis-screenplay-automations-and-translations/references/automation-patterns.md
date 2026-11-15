@@ -14,7 +14,7 @@
 - 9. Fan-out
 - 10. Long-running process shapes
 
-Complete compiled example: `todo-list-example.md` (binds as ESM v6; the list query
+Complete compiled example: `todo-list-example.md` (binds as ESM v34 for `then invokes`; the list query
 excerpt binds too, and the retry sweep that needs code is shown as a marked excerpt).
 
 ## 1. Deciding whether it is an automation

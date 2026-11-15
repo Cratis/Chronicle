@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Occurrences;
 
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="LeaseSeconds">The duration, zero for 60 seconds, capped at 600.</param>
 /// <param name="Max">The requested claim count.</param>
 /// <param name="ApplicationScope">Selects event-store application storage.</param>
+[StoreAccess(StoreAccess.Read)]
 [Command]
 [BelongsTo(WellKnownServices.Occurrences)]
 public record ClaimOccurrences(EventStoreName EventStore, string? Namespace, string Trigger, string WorkerId, int LeaseSeconds = 0, int Max = 1, bool ApplicationScope = false)

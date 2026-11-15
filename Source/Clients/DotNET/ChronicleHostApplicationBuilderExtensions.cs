@@ -35,6 +35,31 @@ public static class ChronicleHostApplicationBuilderExtensions
     /// <summary>
     /// Configures the Chronicle client using a named connection string as the fallback endpoint.
     /// </summary>
+    /// <remarks>
+    /// This is a convenience for callers that only need to name the connection string; it is a separate method so that
+    /// existing <c language="csharp">AddCratisChronicle</c> calls keep binding to the same overloads.
+    /// </remarks>
+    /// <param name="builder"><see cref="IHostApplicationBuilder"/> to configure Chronicle on.</param>
+    /// <param name="connectionStringName">Name under <c language="csharp">ConnectionStrings</c>, typically the Aspire resource name. Cannot be null, empty or whitespace.</param>
+    /// <param name="configureOptions">Optional callback whose connection string overrides configuration.</param>
+    /// <param name="configSection">Optional configuration section path override. Defaults to <c language="csharp">Cratis:Chronicle</c>.</param>
+    /// <param name="configure">Optional callback for configuring structural dependencies via <see cref="IChronicleBuilder"/>.</param>
+    /// <returns>The same <see cref="IHostApplicationBuilder"/> for continuation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="connectionStringName"/> is null, empty or whitespace.</exception>
+    public static IHostApplicationBuilder AddCratisChronicleUsingConnectionString(
+        this IHostApplicationBuilder builder,
+        string connectionStringName,
+        Action<ChronicleClientOptions>? configureOptions = default,
+        string? configSection = default,
+        Action<IChronicleBuilder>? configure = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionStringName);
+        return builder.AddCratisChronicle(configureOptions, configSection, configure, connectionStringName);
+    }
+
+    /// <summary>
+    /// Configures the Chronicle client using a named connection string as the fallback endpoint.
+    /// </summary>
     /// <param name="builder"><see cref="IHostApplicationBuilder"/> to configure Chronicle on.</param>
     /// <param name="configureOptions">Optional callback whose connection string overrides configuration.</param>
     /// <param name="configSection">Optional configuration section path override. Defaults to <c language="csharp">Cratis:Chronicle</c>.</param>
@@ -74,6 +99,7 @@ public static class ChronicleHostApplicationBuilderExtensions
             .AddOptions<ChronicleClientOptions>()
             .WithChronicleConfiguration(configSectionPath, connectionStringName)
             .Configure(options => configure?.Invoke(options))
+            .WithDefaultEventStore()
             .ValidateDataAnnotations()
             .ValidateOnStart();
     }

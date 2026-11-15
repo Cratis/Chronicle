@@ -3,11 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Services.Jobs.for_Jobs.given;
 
@@ -51,6 +51,6 @@ public class all_dependencies : Specification
         Catch<IImmutableList<JobStepState>> failedSteps = _exception;
         _jobStepStorage.GetForJob(Arg.Any<JobId>(), Arg.Any<JobStepStatus[]>()).Returns(Task.FromResult(failedSteps));
 
-        _service = new Jobs(_commandPipeline, _storage, _grainFactory, _logger);
+        _service = new Jobs(_commandPipeline, _storage, _grainFactory, NamespaceCasingContext.Create(), _logger);
     }
 }

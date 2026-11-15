@@ -88,7 +88,7 @@ public class and_event_has_nested_compliant_enum_values : Specification
         };
 
         _encrypted = await manager.Apply("Ada", "Default", _schema, Identifier, plaintext);
-        var compliance = new EventCompliance(manager, converter);
+        var compliance = new EventCompliance(manager, converter, new OwnGenerationSchemaCache());
         var storedEvent = CreateEvent(converter.ToExpandoObject(_encrypted, _schema));
         _released = await compliance.Release(storedEvent, _schema);
         await keyStorage.DeleteFor("Ada", "Default", Identifier);

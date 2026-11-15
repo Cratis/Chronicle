@@ -28,4 +28,7 @@ internal static partial class CompositeEncryptionKeyStorageLogMessages
 
     [LoggerMessage(LogLevel.Error, "One of the composed key stores has the encryption key for '{Identifier}' recorded as erased while another still holds it. The key is not served and not healed across - the erasure did not reach every store, so repeat it until it does")]
     internal static partial void ErasedKeySurvivedInAnotherStore(this ILogger<CompositeEncryptionKeyStorage> logger, EncryptionKeyIdentifier identifier);
+
+    [LoggerMessage(LogLevel.Warning, "One of the composed key stores refused an encryption key operation because its identifier is under review. See the compliance storage documentation")]
+    internal static partial void InnerStoreRefusedIdentifier(this ILogger<CompositeEncryptionKeyStorage> logger);
 }

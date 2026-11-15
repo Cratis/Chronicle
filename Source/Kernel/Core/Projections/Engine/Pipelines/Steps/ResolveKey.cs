@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -53,8 +53,14 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
         return context with { Key = key, JoinKey = resolvedKey.JoinKey ?? key.Value };
     }
 
-    Key EnsureCorrectTypeForArrayIndexersOnKey(IProjection projection, Key key) =>
-        key with
+    Key EnsureCorrectTypeForArrayIndexersOnKey(IProjection projection, Key key)
+    {
+        if (key.ArrayIndexers.IsEmpty)
+        {
+            return key;
+        }
+
+        return key with
         {
             ArrayIndexers = new ArrayIndexers(
                 key.ArrayIndexers.All.Select(arrayIndexer =>
@@ -67,8 +73,9 @@ public class ResolveKey(IEventSequenceStorage eventSequenceStorage, ISink sink, 
 
                     return arrayIndexer with
                     {
-                        Identifier = TypeConversion.Convert(targetType, arrayIndexer.Identifier)
+                        Identifier = DecimalValues.ConvertTo(targetType, arrayIndexer.Identifier)
                     };
                 }))
         };
+    }
 }

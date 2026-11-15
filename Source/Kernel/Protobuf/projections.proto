@@ -20,6 +20,17 @@ message ChildrenDefinition {
    AutoMap AutoMap = 9;
    map<string,ChildrenDefinition> Nested = 10;
    repeated string NoAutoMapProperties = 11;
+   ChildrenOrderingDefinition Ordering = 12;
+}
+message ChildrenOrderingDefinition {
+   ChildrenPlacement Placement = 1;
+   string SortBy = 2;
+   SortDirection Direction = 3;
+}
+enum ChildrenPlacement {
+   Append = 0;
+   Prepend = 1;
+   Sorted = 2;
 }
 message DraftReadModelDefinition {
    string ContainerName = 1;
@@ -65,6 +76,42 @@ message GetAllDeclarationsRequest {
 }
 message GetAllDefinitionsRequest {
    string EventStore = 1;
+}
+message GraphEdgeFromDefinition {
+   string SourceKey = 1;
+   string TargetKey = 2;
+   string Identity = 3;
+   map<string,string> Properties = 4;
+   string ForEach = 5;
+}
+message GraphEdgeProjectionDefinition {
+   map<string,GraphEdgeFromDefinition> From = 1;
+   map<string,GraphEdgeRemovedWithDefinition> RemovedWith = 2;
+}
+message GraphEdgeRemovedWithDefinition {
+   string SourceKey = 1;
+   string TargetKey = 2;
+   string Identity = 3;
+   string ForEach = 4;
+}
+message GraphNodeFromDefinition {
+   string Key = 1;
+   map<string,string> Properties = 2;
+   bool UpdateOnly = 3;
+   string ForEach = 4;
+}
+message GraphNodeProjectionDefinition {
+   map<string,GraphNodeFromDefinition> From = 1;
+   map<string,GraphNodeRemovedWithDefinition> RemovedWith = 2;
+}
+message GraphNodeRemovedWithDefinition {
+   string Key = 1;
+   bool Detach = 2;
+   string ForEach = 3;
+}
+message GraphProjectionDefinition {
+   map<string,GraphNodeProjectionDefinition> Nodes = 1;
+   map<string,GraphEdgeProjectionDefinition> Edges = 2;
 }
 message IEnumerable_ProjectionDefinition {
    repeated ProjectionDefinition items = 1;
@@ -143,6 +190,7 @@ message ProjectionDefinition {
    bool SubscribesToAllEvents = 19;
    repeated string NoAutoMapProperties = 20;
    EventGenerationDelivery GenerationDelivery = 21;
+   GraphProjectionDefinition Graph = 22;
 }
 enum ProjectionOwner {
    PROJECTION_OWNER_None = 0;
@@ -226,6 +274,11 @@ message SinkDefinition {
    .bcl.Guid ConfigurationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    string TypeId = 2;
    EventSequenceSinkConfiguration EventSequence = 3;
+   string Name = 4;
+}
+enum SortDirection {
+   Ascending = 0;
+   Descending = 1;
 }
 service Projections {
    rpc GetAllDeclarations (GetAllDeclarationsRequest) returns (IEnumerable_ProjectionWithDeclaration);

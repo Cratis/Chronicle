@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation.Reactors;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Observation.Reactors.Clients;
 
 /// <summary>
 /// Defines a client observer.
 /// </summary>
+[Version(1)]
 public interface IReactor : IGrainWithStringKey
 {
     /// <summary>
@@ -41,4 +43,18 @@ public interface IReactor : IGrainWithStringKey
     /// <param name="definition">The <see cref="ReactorDefinition"/> the connection registered with.</param>
     /// <returns>Awaitable task.</returns>
     Task KeepSubscription(ReactorDefinition definition);
+
+    /// <summary>
+    /// Checks, without the definition, that the subscription is intact.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="KeepSubscription"/> is called for every observer of every connection every couple of seconds, and its
+    /// definition - every event type, filter and delivery option - is copied through the JSON serializer on each call.
+    /// With hundreds of observers per client that copying was a large part of the kernel's CPU, enough to starve
+    /// connects and leave observers disconnected. This is the call that is made on every tick: it answers
+    /// <see langword="true"/> when the client is known to the observer and nothing is pending, and only when it answers
+    /// <see langword="false"/> does the connection send the definition with <see cref="KeepSubscription"/>.
+    /// </remarks>
+    /// <returns><see langword="true"/> when there is nothing to restore; otherwise <see langword="false"/>.</returns>
+    Task<bool> IsSubscriptionIntact();
 }

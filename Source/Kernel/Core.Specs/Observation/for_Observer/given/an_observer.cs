@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -18,10 +20,9 @@ using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Metrics;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -72,6 +73,7 @@ public class an_observer : Specification
     protected IEventStoreNamespaceStorage _eventStoreNamespaceStorage;
     protected IJobStorage _jobStorage;
     protected IInFlightEventsStorage _inFlightEventsStorage;
+    protected IRecommendationStorage _recommendationStorage;
     protected IObserverHandledCountsStorage _observerHandledCountsStorage;
     protected IEventTypesStorage _eventTypesStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -100,6 +102,7 @@ public class an_observer : Specification
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
         silo.AddService(_eventGenerationRelease);
+        silo.AddService<ISubscriptionAdmission>(new SubscriptionAdmission(1000, Environment.ProcessorCount));
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
         silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
@@ -111,6 +114,14 @@ public class an_observer : Specification
             silo.AddKeyedService(WellKnown.MeterName, _meter);
         }
 
+        if (CreateObserverGauges() is { } observerGauges)
+        {
+            silo.AddService(observerGauges);
+        }
+
+        var management = Substitute.For<IManagementGrain>();
+        management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus>());
+        silo.AddProbe(_ => management);
         silo.AddProbe(_ => _observerAlerts);
         silo.AddProbe(_ => _subscriber);
         silo.AddProbe(_ => _jobsManager);
@@ -123,6 +134,12 @@ public class an_observer : Specification
     /// </summary>
     /// <returns>The <see cref="IMeter{T}"/> to register, or null for none.</returns>
     protected virtual IMeter<Observer>? CreateMeter() => null;
+
+    /// <summary>
+    /// Creates the gauges the observer reports its current state to. By default there are none.
+    /// </summary>
+    /// <returns>The <see cref="IObserverGauges"/> to register, or null for none.</returns>
+    protected virtual IObserverGauges? CreateObserverGauges() => null;
 
     /// <summary>
     /// Creates the logger the observer logs to. By default it is a logger that discards everything.
@@ -174,6 +191,9 @@ public class an_observer : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_eventStoreNamespaceStorage);
+        _recommendationStorage = Substitute.For<IRecommendationStorage>();
+        _eventStoreNamespaceStorage.Recommendations.Returns(_recommendationStorage);
+        _recommendationStorage.GetAll().Returns(ImmutableList<RecommendationState>.Empty);
         _eventStoreNamespaceStorage.InFlightEvents.Returns(_inFlightEventsStorage);
         _inFlightEventsStorage.GetFor(Arg.Any<ObserverId>()).Returns([]);
         _eventStoreNamespaceStorage.ObserverHandledCounts.Returns(_observerHandledCountsStorage);
@@ -254,7 +274,7 @@ public class an_observer : Specification
 
     void ConfigureDefaultJobStorage()
     {
-        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Orleans.Storage.Jobs.JobError>>(new JobState
+        _jobStorage.GetJob(Arg.Any<JobId>()).Returns(call => Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobState
         {
             Id = call.Arg<JobId>(),
             Status = JobStatus.Running

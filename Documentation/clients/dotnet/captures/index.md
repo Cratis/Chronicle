@@ -1,14 +1,16 @@
 ---
-title: Authoring captures in .NET
-description: The two .NET-only ways to author Chronicle captures in code, model-bound attributes and the fluent builder, plus the language-neutral CDL.
+title: Cratis Chronicle capture authoring in .NET
+description: Choose C# builders or attributes to describe Cratis Chronicle captures, and understand where CDL text is required to manage a capture.
 ---
 
-[Captures](/chronicle/captures/) turn external data changes into Chronicle events. Chronicle supports three ways to author a capture, and only one of them is language-neutral:
+Cratis Chronicle [captures](/chronicle/captures/) turn external data changes into events. In .NET, you can describe a capture with fluent C# builders or model-bound attributes.
 
-| Approach | Language | Where it's documented |
+| Approach | Use it to | Where it's documented |
 | --- | --- | --- |
-| Capture Declaration Language (CDL) | Text-based, any client | [Capture Declaration Language](/chronicle/captures/capture-declaration-language/) |
-| Declarative API | C# fluent builder | [Declarative Captures](declarative.md) |
-| Model-bound API | C# attributes | [Model-Bound Captures](model-bound.md) |
+| Capture Declaration Language (CDL) | Write language-neutral text that the kernel parses and validates | [Capture Declaration Language](/chronicle/captures/capture-declaration-language/) |
+| Declarative API | Construct a `CaptureDefinition` with a C# fluent builder | [Declarative Captures](declarative.md) |
+| Model-bound API | Describe capture intent with C# attributes beside your types | [Model-Bound Captures](model-bound.md) |
 
-The declarative and model-bound APIs are .NET client features — they compile to the same `CaptureDefinition` a CDL text file would, but the authoring surface itself is C#-specific.
+`CaptureBuilder.Build()` produces a `CaptureDefinition`. The model-bound attributes expose metadata, but the .NET client does not provide a builder that converts them into a definition. Neither approach registers or starts a capture, and `IEventStore` does not expose capture management. The kernel's management contract takes CDL text.
+
+If you need a capture the engine can run, start with CDL. Its execution limits apply regardless of authoring style: API polling and events captures can run root-level append rules, while webhook and message-topic sources, map operations, and nested or children scopes are rejected during validation.

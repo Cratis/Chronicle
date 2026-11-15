@@ -14,7 +14,8 @@ public class SqlStorageErrorClassifier : IStorageErrorClassifier
 {
     /// <inheritdoc/>
     public bool IsTransient(Exception exception) =>
-        exception is OperationCanceledException or TimeoutException or DbException { IsTransient: true } ||
+        exception is OperationCanceledException or TimeoutException or DbException { IsTransient: true }
+            or DatabaseSchemaLockNotAcquired { Outcome: DatabaseSchemaLockOutcome.Timeout or DatabaseSchemaLockOutcome.Deadlock } ||
         (exception is SqlException sql && sql.Errors.Cast<SqlError>().Any(error => IsTransientSqlServerNumber(error.Number))) ||
         exception is SqliteException { SqliteErrorCode: 5 or 6 } ||
         (exception is AggregateException aggregate

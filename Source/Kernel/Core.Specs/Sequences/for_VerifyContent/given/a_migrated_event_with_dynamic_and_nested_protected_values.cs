@@ -29,6 +29,7 @@ public class a_migrated_event_with_dynamic_and_nested_protected_values : a_store
         var key = encryption.GenerateKey();
         var keys = Substitute.For<IEncryptionKeyStorage>();
         keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
+        keys.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         var provisioner = Substitute.For<IManagedEncryptionKeyProvisioner>();
         provisioner.EnsureKeyWithRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
@@ -47,8 +48,8 @@ public class a_migrated_event_with_dynamic_and_nested_protected_values : a_store
         eventTypes.HasFor("event", 2U).Returns(true);
         eventTypes.GetFor("event", 1U).Returns(new EventTypeSchema(new("event", 1), EventTypeOwner.Client, EventTypeSource.Code, _first));
         eventTypes.GetFor("event", 2U).Returns(new EventTypeSchema(new("event", 2), EventTypeOwner.Client, EventTypeSource.Code, _second));
-        eventTypes.Configure().GetDefinition("event").Returns(new EventTypeDefinition("event", EventTypeOwner.Client, false, [new(1, _first), new(2, _second)], [new(1, 2, [], JsonNode.Parse(upcast)!.AsObject(), new JsonObject())]));
-        var plaintext = JsonNode.Parse(_command.Content)!.AsObject();
+        eventTypes.Configure().GetDefinition("event").Returns(new EventTypeDefinition("event", EventTypeOwner.Client, false, [new(1, _first), new(2, _second)], [new(1, 2, [], JsonNode.Parse(upcast).AsObject(), new JsonObject())]));
+        var plaintext = JsonNode.Parse(_command.Content).AsObject();
         var protectedSource = await _manager.Apply("store", "tenant", _first, "source", plaintext);
         var migrations = new ProtectedEventTypeMigrations(eventTypes, new EventTypeMigrations(_storage, _converter), _manager, _converter);
         var generations = await migrations.MigratePlaintext("store", "tenant", new("event", 1), plaintext, _converter.ToExpandoObject(protectedSource, _first), "source");

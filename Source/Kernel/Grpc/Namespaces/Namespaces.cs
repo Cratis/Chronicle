@@ -35,7 +35,7 @@ internal sealed class Namespaces(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>> AllNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Namespaces.NamespaceNames.AllNamespaces(request.EventStore, storage);
@@ -47,7 +47,7 @@ internal sealed class Namespaces(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>> ObserveNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.ObserveNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             () => global::Cratis.Chronicle.Namespaces.NamespaceNames.ObserveNamespaces(request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>)_.Select(ToNamespaceNamesResponse).ToList()),

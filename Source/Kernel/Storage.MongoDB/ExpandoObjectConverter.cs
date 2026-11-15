@@ -22,7 +22,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     public BsonDocument ToBsonDocument(ExpandoObject expandoObject, JsonSchema schema)
     {
         var document = new BsonDocument();
-        var schemaPropertiesByName = schema.GetFlattenedProperties().ToDictionary(_ => _.Name);
+        var schemaPropertiesByName = schema.GetFlattenedPropertiesByExactName();
         foreach (var keyValue in expandoObject as IDictionary<string, object?>)
         {
             BsonValue value;
@@ -54,7 +54,7 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
     {
         var expandoObject = new ExpandoObject();
         var expandoObjectAsDictionary = expandoObject as IDictionary<string, object?>;
-        var schemaPropertiesByName = schema.GetFlattenedProperties().ToDictionary(_ => _.Name);
+        var schemaPropertiesByName = schema.GetFlattenedPropertiesByExactName();
 
         foreach (var element in document.Elements)
         {
@@ -89,8 +89,15 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         return expandoObject;
     }
 
+    /// <summary>
+    /// Gets whether the schema marks its value as protected. Asked for every string value converted, so the
+    /// memoized recursive answer is consulted first: when it is no, there is nothing at this level either.
+    /// </summary>
+    /// <param name="schema">The <see cref="JsonSchema"/> of the value.</param>
+    /// <returns>True when the value is protected.</returns>
     static bool HasProtectedValueMetadata(JsonSchema schema) =>
-        schema.GetComplianceMetadata().Any() || schema.GetSecurityMetadata().Any();
+        (schema.HasComplianceMetadata() && schema.GetComplianceMetadata().Any()) ||
+        (schema.HasSecurityMetadata() && schema.GetSecurityMetadata().Any());
 
     BsonValue ConvertToBsonValue(object? value, JsonSchema schemaProperty)
     {
@@ -177,7 +184,13 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (bsonValue is BsonArray array)
         {
-            return array.Select(_ => ConvertFromBsonValue(_, schemaProperty)).ToArray();
+            var items = new object?[array.Count];
+            for (var i = 0; i < items.Length; i++)
+            {
+                items[i] = ConvertFromBsonValue(array[i], schemaProperty);
+            }
+
+            return items;
         }
 
         if (typeFormats.IsKnown(schemaProperty.Format!))
@@ -255,7 +268,13 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
         if (value is BsonArray array)
         {
-            return array.Select(ConvertUnknownSchemaTypeToClrType).ToArray();
+            var items = new object?[array.Count];
+            for (var i = 0; i < items.Length; i++)
+            {
+                items[i] = ConvertUnknownSchemaTypeToClrType(array[i]);
+            }
+
+            return items;
         }
 
         switch (value.BsonType)

@@ -33,6 +33,7 @@ public class and_target_store_already_has_encryption_key : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
         _silo.AddService(Substitute.For<IStorage>());
         _silo.AddService(Substitute.For<IEventGenerationRelease>());
         _silo.AddService(new JsonSerializerOptions());

@@ -1,6 +1,6 @@
 ---
 title: "Running Integration Tests"
-description: "Run Chronicle's client integration tests in-process or out-of-process against each supported database."
+description: "Cratis Chronicle client integration tests run in-process or against a container, with selectable databases and reusable xUnit fixtures."
 ---
 
 Integration tests run from the `Integration/Client` project and can execute in either in-process or out-of-process mode. They require Docker to be running on your machine.
@@ -16,11 +16,19 @@ When you provide no runtime arguments, the suite defaults to:
 
 Pull-request pushes affecting the [build paths](https://github.com/Cratis/Chronicle/blob/main/.github/build-affecting-paths.txt) run the Release build, specs, and a local Docker image build from Release binaries without pushing it, **not** the Docker integration suites. Run the relevant integration namespace locally before requesting CI integration. The [hot-core gate](https://github.com/Cratis/Chronicle/blob/main/.github/hot-core-paths.txt) fails on hot-core PRs until Requested Integration passes for the current head commit; its ordinary PR check does not run the matrix. Hot core includes the kernel Core, Concepts, Storage, Storage.InMemory, Storage.MongoDB and Storage.Sql runtime trees, plus Infrastructure/Changes; spec trees are excluded.
 
-Apply the `run-integration` label to a pull request to start the separate Requested Integration workflow, even for a documentation-only PR. It builds the commit and runs specs, API and MongoDB integration, and one client integration matrix: MongoDB and SQLite normally, every backend when the PR touches the hot core. The separately named requested hot-core gate requires that full matrix to pass. The ordinary `hot-core-gate` check turns green automatically when that requested run passes, without a new push. While the label remains applied, each new push or reopening automatically starts integration for the current head commit and cancels any older requested run for that PR. A push invalidates the previous commit’s evidence; there is no need to remove and re-add the label. Other labels do not start integration or replace the ordinary PR check results.
+Apply the `run-integration` label to a pull request to start the separate Requested Integration workflow, even for a documentation-only PR. It builds the commit and runs specs, API and MongoDB integration, and one client integration matrix: MongoDB and SQLite normally, every backend when the PR touches the hot core. The separately named requested hot-core gate requires that full matrix to pass. The ordinary `hot-core-gate` check turns green automatically when that requested run passes, without a new push; for pushes to a PR that already carries the label, the requested run is part of the same Hot Core Gate run, so the check reports its verdict directly. While the label remains applied, each new push or reopening automatically starts integration for the current head commit and cancels any older requested run for that PR. A push invalidates the previous commit’s evidence; there is no need to remove and re-add the label. Other labels do not start integration or replace the ordinary PR check results.
 
 The existing nightly schedule on `main` and manual `workflow_dispatch` run the full client backend matrix. Main-branch pushes do not run integration; nightly coverage handles main. A fork PR cannot push the integration image with its read-only token; labeling it fails the requested gate with an "unavailable" notice instead of running integration, so a fork PR can never satisfy that gate. The ordinary hot-core gate also fails closed for forks. Ask a maintainer to dispatch Hot Core Gate on a trusted branch containing those changes and merge with bypass.
 
 For a labeled event, the image-push guard checks `github.actor`—the account that applied the label, not the PR author. A maintainer-labeled Dependabot PR therefore attempts the image push; if GitHub supplies a read-only token, the requested run fails rather than silently skipping the client matrix.
+
+## How the CI run is shaped
+
+A full run starts about 130 client shards and several other lanes, and the wall clock of that run is what a reviewer waits for. Three things keep it short and its concurrency bounded:
+
+- **Concurrency caps.** Each matrix sets `max-parallel` so a run holds a bounded number of runner slots: 34 for the client shards, 2 for the kernel shards, and 1 each for clustering, SQL clustering, the SQL RollingUpgrade lane and the Neo4j lanes. The MongoDB and API integration jobs are single jobs. `test-sparse-integration-workflows.py` pins the values. The caps are a per-run bound, not a guarantee about other work in the organization.
+- **Longest shards first.** GitHub starts matrix jobs in the order of the generated matrix, so `generate-integration-matrix.py` orders the client matrix by the measured job time in `.github/scripts/integration-shard-order.json`, slowest first. The order never changes which shards run, so a stale table only costs wall time. Refresh it from a recent all-provider run when shard times move; a shard the table does not list starts after the listed ones. `for_ReadModels` and `for_EventStoreSubscriptions` run as two shards each because one job of each was the longest in a run.
+- **Parallel coverage merge.** Merging the Cobertura files of one run in a single job took about nine minutes after the last lane finished. The `coverage-partial` job merges them in six groups at once (client MongoDB in-process, client MongoDB out-of-process, SQLite, PostgreSQL and SQL Server shards, and everything else), and `coverage-merge-and-cache` merges the six results. The groups together match every `coverage-results-*` artifact exactly once, which a spec checks; an artifact no group names would drop that lane from coverage without failing the run. A group with no artifacts, such as the PostgreSQL group on a pull request run, is skipped. Both jobs still require every spec and lane to succeed.
 
 ## Prerequisites
 
@@ -53,7 +61,48 @@ Also remove `cratis/chronicle:latest` if you ever ran `dockerize.sh`.
 | Suite | Project | Description |
 | ----- | ------- | ----------- |
 | Client | `Integration/Client` | Runs the shared .NET integration specifications in either `inprocess` or `outofprocess` mode, with runtime storage selected through command-line arguments. |
+| Graph projections | `Integration/Client/GraphProjections` | Projects events onto a real Neo4j server and reads the graph back with Cypher. See [Graph projection specifications](#graph-projection-specifications). |
+| Neo4j storage | `Integration/Neo4j` | Exercises the Neo4j graph sink, connections and database creation directly against a Neo4j container, with no kernel or silo, the way `Integration/MongoDB` exercises MongoDB storage. See [Neo4j storage specifications](#neo4j-storage-specifications). |
 | API (out-of-process) | `Integration/Api` | Runs a full Chronicle server via Docker and tests the HTTP/gRPC client against it. |
+
+## Graph projection specifications
+
+The `GraphProjections` namespace of the Client suite starts `neo4j:5-community` beside the other containers, with a password generated for every run, and connects the silo of the client to it through `Cratis:Chronicle:Neo4j`. Every specification starts on an empty graph and reads the result back from Neo4j with Cypher of its own, never through the sink under test.
+
+The Community edition has one user database, so the sink runs in single database mode and stamps the namespace on every node and edge. Set `CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace` and `CHRONICLE_NEO4J_IMAGE` to run the same specifications against a server with multiple databases. In that mode the sink creates one database per event store and namespace, and every specification starts by clearing all of them.
+
+Multiple databases need the Enterprise edition, so CI runs one extra in-process lane against MongoDB with `CHRONICLE_NEO4J_IMAGE=neo4j:5-enterprise` and `PerNamespace`. When the image name contains `enterprise`, the fixture starts the container with `NEO4J_ACCEPT_LICENSE_AGREEMENT=eval`, which accepts the Neo4j Evaluation Agreement. This is temporary; the license follow-up is tracked in [Cratis/Chronicle#5739](https://github.com/Cratis/Chronicle/issues/5739). Every other lane stays on `neo4j:5-community` in single database mode.
+
+The same organization is declared with model-bound attributes, with the fluent builder and in the projection declaration language, and each declaration must leave the same graph behind. CI runs the namespace in process against MongoDB and out of process against every other storage backend the run selects.
+
+## Neo4j storage specifications
+
+`Integration/Neo4j` is the storage level of the graph integration specifications. It starts one Neo4j container for the run and uses `Neo4jGraphSink`, `Neo4jGraphSinkFactory` and `Neo4jConnections` the way the kernel does, with no kernel, no silo and no client. Every specification gets a namespace of its own, writes through the sink, and reads the result back with Cypher through a driver that is not the one under test. What it leaves behind is removed again: the nodes of its namespaces in single database mode, the databases of its namespaces otherwise.
+
+The two levels answer different questions:
+
+| Level | Project | Proves |
+| ----- | ------- | ------ |
+| Storage | `Integration/Neo4j` | What the sink does on a real server: upserts, the watermark that makes writes idempotent, deletes with and without detach, edge identity, replay mark and sweep, namespace isolation, the constraints, database creation and naming, value round trips. |
+| Client projection | `Integration/Client/GraphProjections` | That events projected by the kernel end up as the graph a declaration describes, whichever of model-bound attributes, the fluent builder or the projection declaration language declares it. |
+
+The server and its generated password are shared with the Client suite through `Integration/Shared/Neo4jGraphServer.cs`. The password is never committed or put in a command line the container tooling logs. Run the suite locally with Docker running:
+
+```bash
+dotnet build Integration/Neo4j/Neo4j.csproj -p:DisableDockerBuild=true
+dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+```
+
+It runs against `neo4j:5-community` in single database mode, where every namespace shares one database and is stamped on every node and edge. To run it with a database per namespace, point it at an Enterprise image, which accepts the Neo4j Evaluation Agreement for now (see [Cratis/Chronicle#5739](https://github.com/Cratis/Chronicle/issues/5739)):
+
+```bash
+CHRONICLE_NEO4J_IMAGE=neo4j:5-enterprise CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace \
+    dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+```
+
+Asking for `PerNamespace` on an image with one database fails the fixture with a message naming the image. Specifications whose outcome depends on the mode assert the outcome of the mode they run in, so both lanes run the same specifications.
+
+CI runs the project as the `neo4j` job of the build workflow, once per lane: `neo4j:5-community` with `Single`, and `neo4j:5-enterprise` with `PerNamespace`. Like the MongoDB integration job, it needs no kernel image.
 
 ## Checking packed test-package startup
 
@@ -77,7 +126,7 @@ Run the suite with `dotnet test` from the repository root. `--configuration Rele
 dotnet test Integration/Client/Client.csproj \
     --logger "console;verbosity=normal" \
     --configuration Release \
-    --framework net10.0 \
+    --framework net11.0 \
     -- inprocess mongodb
 ```
 
@@ -144,6 +193,18 @@ The external service must support the MongoDB features used by the Storage specs
 
 Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` to return to the default container-backed Storage spec fixtures. `CHRONICLE_SPECS_MONGODB_IMAGE` applies only when these fixtures start MongoDB themselves.
 
+#### Checking a MongoDB-compatible service
+
+Use a non-production endpoint you control and set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to the service's connection string, as above. Run only the MongoDB storage project:
+
+```bash
+dotnet test Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj --configuration Release
+```
+
+Only `Storage.MongoDB.Specs` supports external mode. The service identity needs the database, index, and read/write permissions described above. Record passes and failures per feature rather than treating successful appends as proof of compatibility. Failures caused by missing change-stream or collation support mean the service is unsupported; see [storage compatibility](../hosting/storage-compatibility.md) for the measured DocumentDB results and startup checks.
+
+The managed Azure DocumentDB service remains unverified. Someone with access must run this check manually against their own endpoint; CI does not test that service. Keep connection strings and credentials out of committed files, logs, and shared results. Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` when finished.
+
 ### Running a single test
 
 Use `--filter` with the fully qualified type name or a substring of it:
@@ -169,7 +230,7 @@ You can run the same configurations from VS Code by creating a dedicated test la
     "test",
     "${workspaceFolder}/Integration/Client/Client.csproj",
     "--framework",
-    "net10.0",
+    "net11.0",
     "--configuration",
     "Debug",
     "--",
@@ -215,10 +276,10 @@ CHRONICLE_BACKUP_ENABLED=true dotnet test Integration/Client/Client.csproj \
 
 ### Where backups are stored
 
-Backups are written to a `backups/` directory that sits alongside the compiled test binary. For a Debug build targeting `net10.0`, that path is:
+Backups are written to a `backups/` directory that sits alongside the compiled test binary. For a Debug build targeting `net11.0`, that path is:
 
 ```bash
-Integration/Client/bin/Debug/net10.0/backups/
+Integration/Client/bin/Debug/net11.0/backups/
 ```
 
 The directory is created automatically during fixture initialization — you do not need to create it yourself.

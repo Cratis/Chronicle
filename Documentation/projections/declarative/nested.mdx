@@ -1,31 +1,32 @@
 ---
-description: Populate a single nullable child object on a read model with Nested() in a declarative Chronicle projection, and clear it with ClearWith.
+title: Chronicle projections for optional nested objects
+description: Use Nested in a Chronicle projection to update one optional object, such as an active contract. ClearWith sets the object to null when it ends.
 ---
-# Projection with a Nested Object
-
-Projections can populate a single nullable child object on a read model using the `Nested()` method. Unlike [children collections](children), which manage an array of items identified by a key, `Nested()` targets a scalar nullable property that is set from an event and cleared (set to null) by another event.
+Use `Nested()` in a Cratis Chronicle projection when a read model has one optional object, such as an employee's active contract or a task's current assignee. Events update properties inside that object, and `ClearWith<TEvent>()` sets it to `null` when the relationship ends. Use [children collections](children) instead when the parent owns several items identified by keys.
 
 ## Defining a nested object projection
 
-Use the `Nested()` method with `ClearWith<TEvent>()` to define the nested relationship:
+Select the parent's nullable property with `Nested()`, then declare the events that populate and clear it. In this example, a slice can have a command; setting or clearing that command changes the `Command` object without replacing the slice:
 
 <ChronicleClientTabs snippet="projections/declarative/nested/basic" />
 
 ## Read model with a nested property
 
-The nested property must be nullable on the read model:
+Declare the nested property as nullable so the model can represent both states: an object with values, or no object after a clear event:
 
 <ChronicleClientTabs snippet="projections/declarative/nested/read-model" />
 
 ## Event definitions
 
+Use a set event to carry the nested values and a separate clear event to record that the object is no longer present:
+
 <ChronicleClientTabs snippet="projections/declarative/nested/events" />
 
 ## How nested objects work
 
-1. When `CommandSetForSlice` is appended the `Command` property is populated on the parent
-2. Subsequent `CommandSetForSlice` events replace the nested object with new values
-3. When `CommandClearedForSlice` is appended the `Command` property is set to `null`
+The set event populates `Command` on the parent. Later matching events update only the nested properties they map, leaving other properties unchanged. They do not replace the whole object.
+
+The clear event sets `Command` to `null`. A later set event can populate it again. This lets the read model distinguish an absent command from a command whose properties happen to have default values.
 
 ## Multiple from events
 
@@ -33,29 +34,31 @@ Call `From<TEvent>()` multiple times to update the nested object from several ev
 
 <ChronicleClientTabs snippet="projections/declarative/nested/multiple-from-events" />
 
-Each `From<TEvent>()` call updates only the properties it explicitly maps or auto-maps — it does not replace the entire nested object.
+The rename event updates `Name`, while the schema-update event updates `Schema`. Keeping those mappings separate preserves the other value when either event arrives.
 
 ## AutoMap on nested objects
 
-AutoMap is enabled on the nested builder and inherits from the parent. Properties on the nested read model that share a name with properties on the event are mapped automatically:
+The nested builder inherits the parent's AutoMap setting. With AutoMap enabled, event properties map to matching properties on the nested object. Here an event carrying only `Schema` updates that property without clearing `Name`:
 
 <ChronicleClientTabs snippet="projections/declarative/nested/automap" />
 
 ## Multiple nested objects
 
-A single projection can have multiple independent nested properties:
+Declare a separate `Nested()` block for each optional object. Each block has its own event mappings and clear event:
 
 <ChronicleClientTabs snippet="projections/declarative/nested/multiple-nested" />
 
 ## Nested within children
 
-You can call `Nested()` from within a `Children()` builder to define a nested object on each child item:
+Call `Nested()` inside a `Children()` builder when each child has its own optional object. Here each task has an optional assignee; the task key selects which child's nested object to update:
 
 <ChronicleClientTabs snippet="projections/declarative/nested/nested-in-children" />
 
 ## Examples
 
 ### Employee with optional active contract
+
+Keep the employee in the read model when the contract ends. The contract's clear event removes only the optional contract object:
 
 <ChronicleClientTabs snippet="projections/declarative/nested/employee-contract" />
 
@@ -65,10 +68,10 @@ Events:
 
 ### Product with optional promotion
 
+When a promotion-removed event arrives, clear the promotion without removing the product. A `ValidUntil` value alone does not trigger `ClearWith`; the declared clear event does:
+
 <ChronicleClientTabs snippet="projections/declarative/nested/product-promotion" />
 
 ## See Also
 
-- [Children](children) — collections of items managed independently within a parent
-- [Simple projection](simple-projection) — getting started with projections
-- [AutoMap](auto-map) — automatic property mapping
+Use [Children](children) to manage several independently identified items within a parent. For control over which nested properties map by name, continue with [AutoMap](auto-map). If you have not defined a projection yet, start with a [simple projection](simple-projection).

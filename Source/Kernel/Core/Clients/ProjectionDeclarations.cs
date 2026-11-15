@@ -57,20 +57,6 @@ public static class ProjectionDeclarations
         if (clients is not null) await clients.RecordDeclaredProjectionVersions(connectionId!, eventStore, projections, registeredVersion);
     }
 
-    static async Task<IConnectedClients?> FindConnection(IGrainFactory grainFactory, SiloAddress localSilo, ConnectionId? connectionId)
-    {
-        if (connectionId is null || connectionId == ConnectionId.NotSet) return null;
-
-        var local = grainFactory.GetConnectedClients(localSilo);
-        if (await local.IsConnected(connectionId)) return local;
-
-        var hosts = await grainFactory.GetGrain<IManagementGrain>(0).GetHosts(onlyActive: true);
-        foreach (var silo in hosts.Keys.Where(silo => !silo.Equals(localSilo)))
-        {
-            var clients = grainFactory.GetConnectedClients(silo);
-            if (await clients.IsConnected(connectionId)) return clients;
-        }
-
-        return null;
-    }
+    static Task<IConnectedClients?> FindConnection(IGrainFactory grainFactory, SiloAddress localSilo, ConnectionId? connectionId) =>
+        connectionId is null ? Task.FromResult<IConnectedClients?>(null) : ConnectedClientsLocator.Find(grainFactory, localSilo, connectionId);
 }

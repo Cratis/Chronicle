@@ -1,33 +1,41 @@
 ---
-description: Use the SetValue attribute in a model-bound Chronicle projection to set a property to a constant whenever an event of a given type occurs.
+title: Set constant values in Cratis Chronicle model-bound projections
+description: Use SetValue in a Cratis Chronicle model-bound projection to assign a fixed value when an event occurs, without reading the value from its payload.
 ---
-# Setting Constant Values
 
-The `SetValue` attribute sets a property to a compile-time constant whenever an event of a specified type occurs. Use it when a property should take a fixed value in response to an event — for example, setting a status flag, assigning a default category, or recording a fixed version number.
+<a id="setting-constant-values"></a>
+
+`SetValue` assigns a fixed value to a property when a Cratis Chronicle model-bound projection handles an event of the specified type. Use it when the event itself determines the value, such as an order-canceled event setting an order's status to `"canceled"`, even if the payload has no status property.
 
 ## Basic Usage
 
+In C#, apply `SetValue<TEvent>(value)` to the property that should change:
+
 <ChronicleClientTabs snippet="projections/model-bound/set-value/order" />
 
-When an `OrderPlaced` event occurs, `Status` is set to `"active"`. When an `OrderCanceled` event occurs, `Status` is set to `"canceled"`.
+The two attributes on `Status` select a value by event type. The order-placed event writes `"active"`; the order-canceled event writes `"canceled"`. Neither value needs to be stored in the event payload.
 
 ## Supported Value Types
 
-`SetValue` accepts any compile-time constant: strings, integers, longs, doubles, booleans, and enum values.
+The attribute value must be valid as a compile-time attribute argument. You can use strings, integers, longs, doubles, booleans, and enum values:
 
 <ChronicleClientTabs snippet="projections/model-bound/set-value/thing" />
 
+The example assigns a string, an integer, a boolean, and a double from one event. Choose a value that matches the target property's type.
+
 ## Multiple Events
 
-Apply the attribute more than once to respond to multiple event types:
+Apply the attribute more than once when several event types set the same property:
 
 <ChronicleClientTabs snippet="projections/model-bound/set-value/subscription" />
 
+The subscription example sets `State` to `"active"`, `"paused"`, or `"canceled"`. Each event writes its declared value whenever it is processed.
+
 ## Clearing a Value
 
-Passing `null` clears the member instead of setting it — the projection writes it back to no value every time the event occurs. `ClearWith` says the same thing and reads better (as does the fluent `Clear`); all of them are covered in [Clearing Values](clearing).
+Passing `null` clears the member every time the event occurs. Use `ClearWith` when you want the declaration to state that intent directly; it has the same clearing behavior. The member must be nullable. A non-nullable member raises [CHR0048](../../code-analysis/CHR0048), and Chronicle refuses to build the projection because a type default is not the same as an absent value.
 
-The member has to be nullable. Clearing a non-nullable member raises [CHR0048](../../code-analysis/CHR0048) and is refused when the projection is built, because the only value that could be written is the type default, which is a different fact from "not set".
+For nullable-member examples and the fluent `Clear` equivalent, see [Clearing Values](clearing).
 
 ## SetValue vs SetFrom vs ClearWith
 
@@ -37,6 +45,8 @@ The member has to be nullable. Clearing a non-nullable member raises [CHR0048](.
 | `SetFrom<TEvent>(property)` | Event property | The value comes from a property on the event |
 | `ClearWith<TEvent>` | No value | The event takes the value away without putting one in its place |
 
-Combine both on the same read model when different properties come from different sources:
+Use `SetValue` and `SetFrom` together when the event payload supplies some values and the event type determines others:
 
 <ChronicleClientTabs snippet="projections/model-bound/set-value/invoice" />
+
+The invoice-issued event supplies `Amount` through `SetFrom` while setting `Status` to `"issued"` through `SetValue`. The invoice-paid event changes only the status to `"paid"`. For payload mapping options, continue with [Basic mapping](basic-mapping.mdx).

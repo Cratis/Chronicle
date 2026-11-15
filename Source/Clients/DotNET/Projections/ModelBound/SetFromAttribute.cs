@@ -18,4 +18,10 @@ public sealed class SetFromAttribute<TEvent>(string? eventPropertyName = default
     /// Gets the name of the property on the event.
     /// </summary>
     public string? EventPropertyName { get; } = eventPropertyName;
+
+    /// <summary>
+    /// Gets a value indicating whether the property is only assigned when it has no value yet. The first
+    /// <typeparamref name="TEvent"/> that carries a value wins; later events leave the property as it is.
+    /// </summary>
+    public bool SetOnce { get; init; }
 }

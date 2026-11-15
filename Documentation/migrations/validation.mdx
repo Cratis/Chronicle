@@ -1,7 +1,7 @@
 ---
+title: Event generation validation in Cratis Chronicle
 description: The rules Chronicle's kernel enforces on event type generations and their migration chains to keep event history consistent and prevent data loss.
 ---
-# Generation validation
 
 Chronicle enforces rules about how event type generations and their migration chains must be structured. These rules exist to keep your event history consistent and to prevent silent data loss caused by incomplete migration definitions.
 
@@ -59,7 +59,7 @@ When a new generation adds a property that did not exist in older events, declar
 
 ## Schema immutability
 
-Once a generation's schema is registered with the Kernel, it cannot be changed. If you modify an event record without bumping its generation, Chronicle detects that the schema no longer matches what was originally stored and throws:
+Once a generation's schema is registered with the Kernel, changes must remain compatible with the stored schema. Incompatible structural changes require a new generation. If you make such a change without bumping the generation, Chronicle throws:
 
 ```text
 Cratis.Chronicle.Services.Events.EventTypeSchemaChanged:
@@ -67,7 +67,13 @@ Cratis.Chronicle.Services.Events.EventTypeSchemaChanged:
   Schema changes are not allowed without creating a new generation.
 ```
 
-The fix is always to introduce a new generation and a corresponding migrator rather than silently mutating an existing one.
+For incompatible structural changes, introduce a new generation and a corresponding migrator rather than silently mutating an existing one.
+
+Compatible refinements do not require a new generation:
+
+- Changes to schema titles, free-text `details` in protection metadata, or nullable `?` markers on format declarations.
+- Refining an existing default-only property declaration with type information while retaining the same default. Older clients can still submit the default-only representation during rolling upgrades; Chronicle retains the more precise declaration.
+- Adding compliance or security metadata. Existing protection declarations cannot be removed or changed, apart from their free-text `details`; their type and scope must remain intact.
 
 ### What an enum may still do
 
@@ -83,7 +89,7 @@ Two changes remain breaking, because both leave already stored values denoting s
 
 For those two, cut a new generation and declare a [value map](../concepts/event-type-migrations#value-map) in the migration saying what the old values became. Chronicle applies it forward when upcasting and inverted when downcasting.
 
-Everything outside enums — a property added, removed, retyped, or renamed — is unchanged: still a schema change, still needing a new generation.
+Outside these compatible refinements and enum changes, structural changes — adding, removing, retyping, or renaming a property — still require a new generation.
 
 ## Relaxing validation for development
 
@@ -126,4 +132,4 @@ Validation runs on the Kernel during `Register()`, which is called when the clie
 | `MissingFirstGenerationForEventType` | No migrator covering the path from generation 1 exists |
 | `MissingMigrationForEventTypeGeneration` | A specific step in the chain (N → N+1) is missing |
 | `InvalidMigrationPropertyForEventType` | A migration references a property that does not exist in the expected generation's schema |
-| `EventTypeSchemaChanged` | An existing generation's schema has changed; create a new generation instead |
+| `EventTypeSchemaChanged` | An existing generation's schema has an incompatible change; structural changes require a new generation, and existing protection metadata must be retained |

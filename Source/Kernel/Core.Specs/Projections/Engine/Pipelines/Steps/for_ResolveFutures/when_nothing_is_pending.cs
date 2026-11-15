@@ -14,4 +14,5 @@ public class when_nothing_is_pending : given.a_resolve_futures_step
     [Fact] void should_not_call_the_futures_grain() => _projectionFutures.DidNotReceive().GetFutures();
     [Fact] void should_leave_the_tracker_not_pending() => _tracker.HasPending.ShouldBeFalse();
     [Fact] void should_return_the_same_context() => _result.ShouldEqual(_context);
+    [Fact] async Task should_not_protect_any_future_changeset() => await _futureProtection.DidNotReceiveWithAnyArgs().ProtectFutureChangeset(default!, default!);
 }

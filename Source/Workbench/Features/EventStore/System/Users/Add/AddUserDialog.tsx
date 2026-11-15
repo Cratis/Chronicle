@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import { randomUuid } from '../../../../../Utils/randomUuid';
 import { AddUser } from 'Features/Security';
 import { Button } from '@cratis/components/Common';
 import { useState } from 'react';
@@ -45,7 +46,7 @@ const PasswordActions = ({ showPassword, onToggleShow }: PasswordActionsProps) =
 };
 
 export const AddUserDialog = () => {
-    const [userId] = useState(Guid.parse(crypto.randomUUID()));
+    const [userId] = useState(Guid.parse(randomUuid()));
     const [showPassword, setShowPassword] = useState(false);
     const { closeDialog } = useDialogContext<object>();
 

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -11,13 +13,10 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
-
 using ReadModelsConfiguration = Cratis.Chronicle.Configuration.ReadModels;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.given;
@@ -148,7 +147,7 @@ public class a_performing_job_step : Specification
 
         _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForObserverState>(
             nameof(JobStepState),
-            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+            Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
 
         _performState = new HandleEventsForObserverState
         {

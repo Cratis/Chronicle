@@ -33,9 +33,31 @@ public interface ILanguageService
         EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility);
 
     /// <summary>
+    /// Gets whether a declaration holds a graph projection, 'projection ... => graph ...'.
+    /// </summary>
+    /// <param name="definition">The declaration text.</param>
+    /// <returns>True if the declaration builds a graph.</returns>
+    bool IsGraphDeclaration(string definition);
+
+    /// <summary>
+    /// Compiles a graph declaration, the 'graph' and the graph projection that builds it, into the projection
+    /// definition and the read model that holds the graph.
+    /// </summary>
+    /// <param name="definition">The declaration text.</param>
+    /// <param name="owner">The <see cref="ProjectionOwner"/> of the projection.</param>
+    /// <param name="eventTypeSchemas">The event type schemas used to resolve events and map properties by name.</param>
+    /// <param name="generationDelivery">The <see cref="EventGenerationDelivery"/>.</param>
+    /// <returns>The <see cref="CompiledGraph"/>, or the compiler errors.</returns>
+    Result<CompiledGraph, CompilerErrors> CompileGraph(
+        string definition,
+        ProjectionOwner owner,
+        IEnumerable<EventTypeSchema> eventTypeSchemas,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility);
+
+    /// <summary>
     /// Generates a language definition string from a ProjectionDefinition.
     /// </summary>
-    /// <param name="definition">The ProjectionDefinition to generate from.</param>
+    /// <param name="definition">The ProjectionDefinition to generate from; a graph projection generates the graph and its projection.</param>
     /// <param name="readModelDefinition">The read model definition the projection targets.</param>
     /// <returns>The generated language definition string.</returns>
     string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition);

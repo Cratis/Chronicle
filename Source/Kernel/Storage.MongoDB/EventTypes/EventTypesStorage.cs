@@ -51,6 +51,8 @@ public partial class EventTypesStorage(
     /// of registered event types.
     /// </summary>
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
+    readonly object _definitionInvalidation = new();
+    long _definitionRevision;
 
     /// <inheritdoc/>
     public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
@@ -66,7 +68,7 @@ public partial class EventTypesStorage(
             existing.Owner == owner && existing.Source == source && existing.Tombstone == type.Tombstone &&
             existing.Visibility == visibility && (existing.Origin ?? string.Empty) == origin &&
             existing.Schemas.TryGetValue(generationKey, out var storedSchema) &&
-            JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema.ToJson(), schemaDocument.ToJson()))
+            JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(storedSchema.ToJson(), schemaDocument.ToJson()))
         {
             return false;
         }
@@ -88,6 +90,16 @@ public partial class EventTypesStorage(
             new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
 
         return InvalidateIfMutated(type.Id, result.ModifiedCount > 0 || result.UpsertedId is not null);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema)
+    {
+        var path = $"{nameof(EventType.Schemas).ToCamelCase()}.{generation}";
+        var filter = Builders<EventType>.Filter.Eq(_ => _.Id, eventTypeId) & Builders<EventType>.Filter.Exists(path);
+        var update = Builders<EventType>.Update.Set(path, BsonDocument.Parse(schema.ToJson()));
+        var result = await GetCollection().UpdateOneAsync(filter, update).ConfigureAwait(false);
+        return InvalidateIfMutated(eventTypeId, result.ModifiedCount > 0);
     }
 
     /// <inheritdoc/>
@@ -262,21 +274,39 @@ public partial class EventTypesStorage(
             return cached;
         }
 
-        var filter = GetFilterForSpecificEventType(eventTypeId);
-        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-        var eventType = await result.FirstOrDefaultAsync();
-        if (eventType is null)
+        while (true)
         {
-            var schema = await GetFor(eventTypeId);
-            return new EventTypeDefinition(
-                eventTypeId,
-                EventTypeOwner.None,
-                false,
-                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
-                []);
-        }
+            long revision;
+            lock (_definitionInvalidation)
+            {
+                revision = _definitionRevision;
+            }
 
-        return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+            var filter = GetFilterForSpecificEventType(eventTypeId);
+            using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+            var eventType = await result.FirstOrDefaultAsync();
+            if (eventType is null)
+            {
+                var schema = await GetFor(eventTypeId);
+                return new EventTypeDefinition(
+                    eventTypeId,
+                    EventTypeOwner.None,
+                    false,
+                    [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                    []);
+            }
+
+            lock (_definitionInvalidation)
+            {
+                // A read started before invalidation cannot repopulate the definition cache.
+                if (revision != _definitionRevision)
+                {
+                    continue;
+                }
+
+                return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -333,7 +363,12 @@ public partial class EventTypesStorage(
     /// <inheritdoc/>
     public void Invalidate(EventTypeId eventTypeId)
     {
-        _definitionsByType.TryRemove(eventTypeId, out _);
+        lock (_definitionInvalidation)
+        {
+            _definitionRevision++;
+            _definitionsByType.TryRemove(eventTypeId, out _);
+        }
+
         foreach (var key in _schemasByTypeAndGeneration.Keys)
         {
             if (key.Id == eventTypeId)
@@ -354,7 +389,7 @@ public partial class EventTypesStorage(
     {
         var schemas = new Dictionary<string, BsonDocument>(stored);
         foreach (var (generation, schema) in incoming.Where(_ => !stored.TryGetValue(_.Key, out var previous) ||
-            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(previous.ToJson(), _.Value.ToJson())))
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(previous.ToJson(), _.Value.ToJson())))
         {
             schemas[generation] = schema;
         }
@@ -402,7 +437,7 @@ public partial class EventTypesStorage(
         }
 
         if (effective.Schemas.Any(_ => !existing.Schemas.TryGetValue(_.Key, out var storedSchema) ||
-            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema.ToJson(), _.Value.ToJson())))
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(storedSchema.ToJson(), _.Value.ToJson())))
         {
             return true;
         }
@@ -424,7 +459,7 @@ public partial class EventTypesStorage(
 
         update = effective.Schemas.Where(schema => existing is null ||
                 !existing.Schemas.TryGetValue(schema.Key, out var stored) ||
-                !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(stored.ToJson(), schema.Value.ToJson()))
+                !JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(stored.ToJson(), schema.Value.ToJson()))
             .Aggregate(update, (current, schema) => current.Set($"{nameof(EventType.Schemas).ToCamelCase()}.{schema.Key}", schema.Value));
 
         if (!MigrationsEqual(existing?.Migrations ?? [], effective.Migrations ?? []))

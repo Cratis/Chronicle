@@ -16,7 +16,8 @@ internal static class GenerationProtectionSchemas
     static readonly ConditionalWeakTable<EventTypeDefinition, IReadOnlyDictionary<EventTypeGeneration, JsonSchema>> _definitions = new();
 
     /// <summary>
-    /// Resolves a generation's protection from a definition snapshot.
+    /// Resolves a generation's protection from a definition snapshot. This inspects schemas only; it
+    /// does not read keys or content and does not migrate events or change generation delivery.
     /// </summary>
     /// <param name="definition">The definition containing registered generation schemas.</param>
     /// <param name="generation">The generation to protect or release.</param>
@@ -119,12 +120,17 @@ internal static class GenerationProtectionSchemas
 
     static IEnumerable<(JsonSchema Target, JsonSchema Higher)> MatchingItemProperties(JsonSchema? target, JsonSchema? higher, HashSet<(JsonSchema Target, JsonSchema Higher)> visited)
     {
-        if (target?.Type.HasFlag(JsonObjectType.Object) != true || higher?.Type.HasFlag(JsonObjectType.Object) != true)
+        if (target is null || higher is null)
         {
-            return [];
+            yield break;
         }
 
-        return MatchingProperties(target, higher, visited);
+        // Primitive items are boundaries too; CanInherit retains the plain-string policy.
+        yield return (target, higher);
+        foreach (var pair in MatchingProperties(target, higher, visited))
+        {
+            yield return pair;
+        }
     }
 
     sealed record Entry(JsonSchema[] Higher, JsonSchema Effective);

@@ -1,16 +1,27 @@
 <!-- cratis-ai-managed: skills/cratis-documentation-writing/references/cratis-site.md -->
 # Cratis site specifics
 
-Facts about the Cratis documentation platform that change how a page should be
-written. They describe the site as of September 2026; confirm against the
-Documentation repository (`web/src/components`, `web/scripts/sync-content.mjs`,
-`web/variant-docs.yml`) before relying on a detail.
+## Contents
+
+- Teaching components
+- Preserve the text and citation path
+- Maturity
+- Cross-product compatibility
+- Prompter as a documentation signal
+- Bridges and comparisons
+- Structure and publishing
 
 ## Teaching components
 
-Product pages that import components must be `.mdx`. Every component costs
-machine readability: the raw Markdown mirror behind "Copy Markdown" keeps its
-imports and JSX. Use one where it clearly teaches better than plain Markdown.
+Confirm presentation against the owning Documentation repository's
+`web/src/components`, installed Starlight exports, `web/astro.config.mjs`,
+`web/scripts/sync-content.mjs` and `web/variant-docs.yml` before using it.
+
+Choose a component because it helps the reader act, understand or recover,
+not because every page needs decoration. Product `.md` pages support native
+aside directives such as `:::note`, `:::tip` and `:::caution`. Imports and JSX
+require `.mdx` and an owning pipeline that supports the component; do not copy
+raw site imports into ordinary Markdown or convert whole chapters by default.
 
 | Need | Use |
 | --- | --- |
@@ -18,7 +29,12 @@ imports and JSX. Use one where it clearly teaches better than plain Markdown.
 | Close a tutorial chapter | `import Recap from '@components/Recap.astro'`; optional `title` |
 | Ordered procedure | `import { Steps } from '@astrojs/starlight/components'` around an ordered list |
 | One example in every client language | `<ChronicleClientTabs snippet="…" />` or `<ArcBackendTabs snippet="…" />`, expanded at sync time from client-owned snippet files |
-| Two independently readable alternatives (C# and TypeScript) | `import FullStackTabs from '@components/FullStackTabs.astro'`, named `csharp` and `typescript` slots |
+| Genuinely independent variants | Import Starlight `Tabs` and `TabItem`; give each variant a descriptive label and complete prerequisites |
+| Backend and frontend roles in a full-stack example | `import FullStackTabs from '@components/FullStackTabs.astro'`, named `csharp` and `typescript` slots; these roles are not interchangeable alternatives |
+| Consequential prerequisite, risk or limitation | Native aside directive, or Starlight `Aside` in supported MDX; state the boundary before its first consequence |
+| Peer task choices and destinations | Starlight `Card`, `CardGrid` or `LinkCard`; use meaningful link text, not a compulsory card for every section |
+| Relationships or state transitions | A Mermaid fence; the site is configured for prerendering with client fallback, not guaranteed rendering or accessibility; essential relationships also need readable text |
+| A reader needs to locate code or a change | Language-tagged fences; use configured Expressive Code filename/highlight features only after confirming their exact syntax |
 
 - The client-tab macros take `snippet`, and optionally `syncKey` and a
   `variants="java,kotlin"` subset. There is no `clients` property: a tab
@@ -38,6 +54,31 @@ imports and JSX. Use one where it clearly teaches better than plain Markdown.
   direct single-language backend fences are ratcheted.
 - `TopicHero` declares `title` (required), `icon` and `eyebrow`. Don't copy
   props from a page that passes others; they are ignored.
+
+Keep required backend-to-frontend actions sequential rather than hiding one
+half as an optional tab. For Markdown children inside supported components,
+retain blank lines and semantic heading/list order. Inspect relevant keyboard
+navigation, focus, text alternatives and small-screen/light/dark presentation;
+a component's availability is not accessibility evidence.
+
+## Preserve the text and citation path
+
+The Copy Markdown pipeline strips MDX imports/wrappers while retaining supported
+static labels and children. It flattens syntax; it does not execute arbitrary
+components or prove that every prop survives. Keep essential meaning in
+prose/children and inspect the bounded emitted Markdown, not just the MDX source.
+For example, a `LinkCard` destination can survive while its `description` prop
+is lost; an `Aside` can retain a title but lose its type or computed default
+heading; `FullStackTabs` can lose computed backend/frontend role labels.
+Put the choice, warning and role in readable content as well. Preserve both
+variants, code, links and a causal reading order.
+
+Retain the canonical URL and heading/source context needed to cite the page.
+Check relevant Markdown/LLM exports for lost boundaries or duplicate/misleading
+labels. Rendering success does not establish export correctness, citation
+resolution, runtime behavior or assistant answer quality. Use
+[reader review](reader-review.md) for an uncoached task attempt, and the
+**cratis-llm-friendly-documentation** skill for bounded retrieval/citation work.
 
 ## Maturity
 

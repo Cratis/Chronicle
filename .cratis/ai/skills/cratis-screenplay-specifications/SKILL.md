@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-specifications
-description: Pin behavior in a Cratis Screenplay `.play` model with given/when/then `specification` blocks — prior events and read-model state, the caller, the command or appended event under test, expected events, read-model state, query results, rejections and denials, plus what the reference execution actually runs. Use when writing acceptance criteria for a slice, specifying a rejection or an authorization denial, or deciding whether a rule belongs in a specification or in the type system. Do not use for C# or TypeScript test code.
+description: Use when writing Screenplay specification syntax or checking fixture, outcome-comparison, rejection and denial semantics. Not for choosing scenario coverage or writing C# and TypeScript tests.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-specifications/SKILL.md -->
@@ -16,8 +16,8 @@ concrete data.
 ## Locate the model
 
 Look first for the project's existing `.play` files: their folder is the model.
-For a new model, check `Source/` or `src/`, else use `Screenplay/` at the repository
-root. Never put a model under `.cratis/` or hand-copy it between repositories.
+Reuse existing model/workspace roots; code-only `Source/` or `src/` does not
+qualify. Otherwise use repository-root `Screenplay/` ([discovery/version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)). Never put a model under `.cratis/` or hand-copy it between repositories.
 `cratis ai install` manages `.cratis/ai/`, never model files. Keep explanatory
 Markdown in project documentation; `.play` is the single flow model.
 
@@ -142,6 +142,8 @@ Rules the binder enforces:
   needs one of them, `then denied` or a sole validation `then error` (`PLAY0465`). Each argument is a `by` or
   `filter` parameter of the query (`PLAY0468`).
 - **A clock instant is ISO 8601 with an offset or `Z`** (PLAY0461); one `given clock` maximum.
+- **`given time zone "<id>"` is parsed, not runnable.** Executable binding refuses it with PLAY0268;
+  a repeated or malformed line is PLAY0814. Do not author it into an executable model.
 - **`then` contains either events or an error — never both.** A rejection
   specification has exactly one rejection and no success outcome.
 - **`then denied` stands alone**: not with events, errors or state assertions
@@ -185,8 +187,10 @@ Read [references/actions-beyond-commands.md](references/actions-beyond-commands.
 
 ## Reactions and cascades (ESM v6)
 
-From ESM v6 every action sets reactions off and `then` events compare every new fact, the action's and the reactions'. A specification whose action is a command goes in the slice that declares the command. A false `PLAY0285` on a cascade under a compiler that stops before ESM v6 is tool skew, not a modeling error: never delete the `then` line to silence it.
-Read [references/reactions-and-cascades.md](references/reactions-and-cascades.md) when a specification's expected events include what a reaction appends, when a cascade, clock tick or invoked command is involved, or when `cratis` reports `PLAY0285` on a model that `screenplay` accepts (it holds the "Version skew: cascades and the false `PLAY0285`" section).
+From ESM v6 every action sets reactions off. A specification runs only the slice that declares it: only that slice's reactions, captures and publications run, and `then` events compare the new facts of that slice. A specification whose action is a command goes in the slice that declares the command and states the command's own events. Another slice's event is `PLAY0285` (unreachable): state it in the slice that produces it. An automation states a command it invokes in another slice with `then invokes <Command>` (ESM v34).
+Read [references/reactions-and-cascades.md](references/reactions-and-cascades.md) when a specification's expected events include what a reaction appends, when a cascade, clock tick or invoked command is involved, or when a compiler reports `PLAY0285` (it holds the "Version skew and `PLAY0285`" section).
+
+A `statemachine` or `workflow` (ESM v36) carries its own specifications with `then is`, `then sends`, `then starts`, `outcome`, `then completes`, `then fails at` and `then waits at`. Read automations-and-translations [state machines and workflows](../cratis-screenplay-automations-and-translations/references/statemachines-and-workflows.md) when specifying either.
 
 ## Published-event specifications (released ESM v9)
 
@@ -278,11 +282,20 @@ For view specifications:
 - [ ] Queries cover out-of-rule concept arguments with `then error`; a valid
       absent key uses `then no result`. Projections still cannot reject events.
 
+## Run the specs before calling the work done
+
+Symptom: a model delivered with specifications that were never run. `screenplay test <root>` runs the
+reference evaluator; after rendering and building in Debug, run `dotnet test <destination>/<Project>.csproj -c Debug --no-build`
+for the generated specification classes (Stage-rendered apps use VSTest). Run a built spec executable only where spec projects are executables
+(see [specs.csharp](../../rules/specs.csharp.md)). Report both results separately (`cratis-screenplay-toolchain` V4 and V5.tests); a
+build that succeeds is not a test run, and `unbound`/`unsupported` is not a pass.
+
 ## Verify
 
 - [ ] Validate the complete root with warnings as errors, naming tool/version.
       Standalone tool version: `cratis-screenplay-toolchain/SKILL.md`. Run specification examples through
       `screenplay test`; expected unadmitted syntax reports unbound, not passed.
+- [ ] `screenplay test` and, after a Debug render and build, the `dotnet test` above were run and their counts reported.
 - [ ] Executable diagnostics are clean too: `PLAY0350`, `PLAY0352`, `PLAY0388`,
       `PLAY0389` and `PLAY0273` are only reported at binding.
 - [ ] Every slice has at least one boundary specification.

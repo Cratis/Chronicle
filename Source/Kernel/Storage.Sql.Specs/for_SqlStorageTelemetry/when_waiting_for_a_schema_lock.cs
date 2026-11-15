@@ -34,7 +34,7 @@ public class when_waiting_for_a_schema_lock : Specification
 
     async Task Because()
     {
-        var waiting = SqlStorageTelemetry.WaitForSchemaLock(() => _release.Task, _provider);
+        var waiting = SqlStorageTelemetry.Legacy.WaitForSchemaLock(() => _release.Task, _provider);
         _whileWaiting = _values.Count;
         _release.SetResult();
         await waiting;

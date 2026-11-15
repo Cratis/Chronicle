@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
-using Cratis.Orleans.Jobs;
+using Cratis.Choreography.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_ReplayObserverPartition;
@@ -39,6 +39,14 @@ public class TestableReplayObserverPartition(
     /// <param name="request">The replay request.</param>
     /// <returns>The prepared steps.</returns>
     public Task<IImmutableList<JobStepDetails>> PrepareStepsForTesting(ReplayObserverPartitionRequest request) => PrepareSteps(request);
+
+    /// <summary>
+    /// Records a step's result as the job does when the step completes or stops.
+    /// </summary>
+    /// <param name="stepId">The step that completed.</param>
+    /// <param name="result">Its result.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
 
     /// <summary>
     /// Revalidates persisted replay admission before resuming job steps.

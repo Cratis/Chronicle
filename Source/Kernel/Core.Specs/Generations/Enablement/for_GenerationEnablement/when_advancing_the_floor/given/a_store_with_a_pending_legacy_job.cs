@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Generations.Admission;
 using Cratis.Chronicle.Generations.Enablement.for_GenerationInitializer.given;
@@ -11,9 +12,8 @@ using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Monads;
-using Cratis.Orleans.Storage.Jobs;
 
-using JobStatus = Cratis.Orleans.Jobs.JobStatus;
+using JobStatus = Cratis.Choreography.Jobs.JobStatus;
 
 namespace Cratis.Chronicle.Generations.Enablement.for_GenerationEnablement.when_advancing_the_floor.given;
 

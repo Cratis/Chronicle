@@ -36,8 +36,8 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// <para>
 /// Recording an erasure invalidates exactly like a deletion does, and for the same reason: the fence is written
 /// before the key material is destroyed, so between those two steps the backing store still holds a key this cache
-/// would otherwise keep serving. Erasure state itself is never cached - it is read on the provisioning path only,
-/// which happens once per subject, and a stale "not erased" is the one answer that must never be given.
+/// would otherwise keep serving. Erasure state itself is never cached - release and provisioning must read the
+/// backing store because a stale "not erased" is the one answer that must never be given.
 /// </para>
 /// <para>
 /// This makes the decorator self-sufficient for the store it wraps. It says nothing about caches on other silos -
@@ -58,13 +58,83 @@ public class CacheEncryptionKeyStorage(
     /// </summary>
     public static readonly TimeSpan DefaultNegativeCacheTimeToLive = TimeSpan.FromSeconds(5);
 
-    readonly Dictionary<Key, EncryptionKey> _keys = [];
-    readonly Dictionary<KeyScope, EncryptionKeyAtRevision> _latestPairs = [];
-    readonly Dictionary<Key, DateTimeOffset> _absentKeys = [];
+    /// <summary>
+    /// Each material, pair, absence and generation map retains at most 10,000 entries. Revision entries count
+    /// separately so a single identifier with many revisions cannot bypass the bound. Material is evicted oldest-first.
+    /// </summary>
+    internal const int CacheCapacity = 10_000;
+
+    /// <summary>
+    /// Sweep expired absences every 256 cache operations, including hits for unrelated identifiers.
+    /// </summary>
+    internal const int SweepInterval = 256;
+
+    readonly BoundedEncryptionKeyCache<Key, EncryptionKey> _keys = new(CacheCapacity);
+    readonly BoundedEncryptionKeyCache<KeyScope, EncryptionKeyAtRevision> _latestPairs = new(CacheCapacity);
+    readonly BoundedEncryptionKeyCache<Key, EncryptionKeyAtRevision> _revisionPairs = new(CacheCapacity);
+    readonly BoundedEncryptionKeyCache<Key, DateTimeOffset> _absentKeys = new(CacheCapacity);
     readonly Dictionary<KeyScope, long> _generations = [];
     readonly Lock _lock = new();
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly TimeSpan _negativeCacheTimeToLive = negativeCacheTimeToLive ?? DefaultNegativeCacheTimeToLive;
+    long _generationClock;
+    long _generationFloor;
+    int _operationsSinceSweep;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => actualKeyStore.Capabilities;
+
+    /// <inheritdoc/>
+    public bool KeepsInternalSecretsOutsideTheEventStoreDatabases => actualKeyStore.KeepsInternalSecretsOutsideTheEventStoreDatabases;
+
+    /// <inheritdoc/>
+    public EncryptionKeyFenceGuarantees FenceGuarantees => actualKeyStore.FenceGuarantees;
+
+    /// <summary>
+    /// Gets a consistent snapshot of the retained entry counts.
+    /// </summary>
+    internal (int Keys, int LatestPairs, int RevisionPairs, int AbsentKeys, int Generations) Counts
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return (_keys.Count, _latestPairs.Count, _revisionPairs.Count, _absentKeys.Count, _generations.Count);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasureRequest?> GetErasureRequestFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        actualKeyStore.GetErasureRequestFor(eventStore, eventStoreNamespace, identifier, requestId);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetFenceFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        actualKeyStore.GetFenceFor(eventStore, eventStoreNamespace, identifier);
+
+    /// <inheritdoc/>
+    public Task AuthorizeConfirmedSuccessorFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.AuthorizeConfirmedSuccessorFor(eventStore, eventStoreNamespace, identifier));
+
+    /// <inheritdoc/>
+    public Task CompactErasureRequestsFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int retain = 32) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.CompactErasureRequestsFor(eventStore, eventStoreNamespace, identifier, retain));
+
+    /// <inheritdoc/>
+    public Task RecordErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyErasureRequest request) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.RecordErasureFor(eventStore, eventStoreNamespace, identifier, request));
+
+    /// <inheritdoc/>
+    public Task DeleteThroughFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.DeleteThroughFor(eventStore, eventStoreNamespace, identifier, requestId));
+
+    /// <inheritdoc/>
+    public Task ConfirmErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, string requestId) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.ConfirmErasureFor(eventStore, eventStoreNamespace, identifier, requestId));
+
+    /// <inheritdoc/>
+    public Task AllowNewKeyFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, ulong observedVersion, uint observedLifecycle) =>
+        Mutate(eventStore, eventStoreNamespace, identifier, () => actualKeyStore.AllowNewKeyFor(eventStore, eventStoreNamespace, identifier, observedVersion, observedLifecycle));
 
     /// <inheritdoc/>
     public async Task DeleteFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision? revision = null)
@@ -90,6 +160,10 @@ public class CacheEncryptionKeyStorage(
     /// <inheritdoc/>
     public void EvictFromCache(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
         Invalidate(new KeyScope(eventStore, eventStoreNamespace, identifier), revision: null);
+
+    /// <inheritdoc/>
+    public Task<EncryptionKeyErasure?> GetErasureForRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        actualKeyStore.GetErasureForRelease(eventStore, eventStoreNamespace, identifier);
 
     /// <inheritdoc/>
     public Task<EncryptionKeyErasure?> GetErasureFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
@@ -126,6 +200,11 @@ public class CacheEncryptionKeyStorage(
     }
 
     /// <inheritdoc/>
+    /// <remarks>Internal secrets are not cached here; the callers that use them keep their own derived state.</remarks>
+    public Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate) =>
+        actualKeyStore.GetOrAddInternalSecretFor(eventStore, purpose, candidate);
+
+    /// <inheritdoc/>
     public async Task<EncryptionKey> GetOrAddFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key)
     {
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
@@ -134,6 +213,7 @@ public class CacheEncryptionKeyStorage(
 
         lock (_lock)
         {
+            Maintain();
             if (_keys.TryGetValue(cacheKey, out var cached))
             {
                 return cached;
@@ -145,14 +225,14 @@ public class CacheEncryptionKeyStorage(
         var provisioned = await actualKeyStore.GetOrAddFor(eventStore, eventStoreNamespace, identifier, key);
         lock (_lock)
         {
-            if (generation == GenerationFor(scope))
+            if (CanPublishProvision(scope, generation))
             {
-                _keys[cacheKey] = provisioned;
+                _keys.Set(cacheKey, provisioned);
                 _absentKeys.Remove(cacheKey);
             }
         }
 
-        return provisioned;
+        return generation == GenerationForRead(scope) ? provisioned : await GetFor(eventStore, eventStoreNamespace, identifier);
     }
 
     /// <inheritdoc/>
@@ -163,6 +243,7 @@ public class CacheEncryptionKeyStorage(
         long generation;
         lock (_lock)
         {
+            Maintain();
             if (_latestPairs.TryGetValue(scope, out var cached))
             {
                 return cached;
@@ -192,7 +273,35 @@ public class CacheEncryptionKeyStorage(
             }
         }
 
-        return pair;
+        return generation == GenerationForRead(scope) ? pair : await TryGetLatestFor(eventStore, eventStoreNamespace, identifier);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EncryptionKeyAtRevision?> TryGetAtRevisionFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKeyRevision revision)
+    {
+        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        var cacheKey = new Key(scope, revision);
+        long generation;
+        lock (_lock)
+        {
+            Maintain();
+            if (_revisionPairs.TryGetValue(cacheKey, out var cached)) return cached;
+            if (_latestPairs.TryGetValue(scope, out var latest) && latest.Revision == revision) return latest;
+            if (IsRememberedAbsent(cacheKey)) return null;
+            generation = GenerationFor(scope);
+        }
+
+        var pair = await actualKeyStore.TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision);
+        lock (_lock)
+        {
+            if (generation == GenerationFor(scope))
+            {
+                if (pair is not null) _revisionPairs.Set(cacheKey, pair);
+                else RememberAbsent(cacheKey);
+            }
+        }
+
+        return generation == GenerationForRead(scope) ? pair : await TryGetAtRevisionFor(eventStore, eventStoreNamespace, identifier, revision);
     }
 
     /// <inheritdoc/>
@@ -202,6 +311,7 @@ public class CacheEncryptionKeyStorage(
         long generation;
         lock (_lock)
         {
+            Maintain();
             if (_latestPairs.TryGetValue(scope, out var cached))
             {
                 return cached;
@@ -213,16 +323,17 @@ public class CacheEncryptionKeyStorage(
         var pair = await actualKeyStore.GetOrAddWithRevisionFor(eventStore, eventStoreNamespace, identifier, key);
         lock (_lock)
         {
-            if (generation == GenerationFor(scope))
+            if (CanPublishProvision(scope, generation))
             {
                 CachePair(scope, pair);
                 var cacheKey = new Key(scope, pair.Revision);
-                _keys[cacheKey] = pair.Key;
+                _keys.Set(cacheKey, pair.Key);
                 _absentKeys.Remove(cacheKey);
             }
         }
 
-        return pair;
+        return generation == GenerationForRead(scope) ? pair :
+            await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) ?? throw new MissingEncryptionKey(identifier);
     }
 
     /// <inheritdoc/>
@@ -234,6 +345,7 @@ public class CacheEncryptionKeyStorage(
 
         lock (_lock)
         {
+            Maintain();
             if (_keys.TryGetValue(cacheKey, out var encryptionKey))
             {
                 return encryptionKey;
@@ -250,23 +362,18 @@ public class CacheEncryptionKeyStorage(
         var key = await actualKeyStore.TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
         lock (_lock)
         {
-            if (generation != GenerationFor(scope))
+            if (generation == GenerationFor(scope) && key is not null)
             {
-                return key;
-            }
-
-            if (key is not null)
-            {
-                _keys[cacheKey] = key;
+                _keys.Set(cacheKey, key);
                 _absentKeys.Remove(cacheKey);
             }
-            else
+            else if (generation == GenerationFor(scope))
             {
                 RememberAbsent(cacheKey);
             }
         }
 
-        return key;
+        return generation == GenerationForRead(scope) ? key : await TryGetFor(eventStore, eventStoreNamespace, identifier, revision);
     }
 
     /// <inheritdoc/>
@@ -282,6 +389,7 @@ public class CacheEncryptionKeyStorage(
 
         lock (_lock)
         {
+            Maintain();
             if (_keys.ContainsKey(cacheKey))
             {
                 return true;
@@ -314,57 +422,37 @@ public class CacheEncryptionKeyStorage(
     public async Task SaveFor(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, EncryptionKey key, EncryptionKeyRevision? revision = null)
     {
         var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        long generation;
         lock (_lock)
         {
-            // A save mutates the cache exactly like a deletion or an eviction does, so it has to move the generation
-            // too - otherwise a read that captured the previous generation writes the key it found before the save
-            // back over the one just written, and the cache serves the superseded key until something evicts it.
-            // The save's own writes happen below under this same lock, so they are not fenced by their own advance.
-            AdvanceGeneration(scope);
-            _latestPairs.Remove(scope);
+            Invalidate(scope, revision);
+            generation = GenerationFor(scope);
+        }
 
-            var latest = new Key(scope, EncryptionKeyRevision.Latest);
-            _keys.Remove(latest);
+        await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
+        lock (_lock)
+        {
+            var canPublish = generation == GenerationFor(scope);
 
-            if (revision is not null && revision != EncryptionKeyRevision.Latest)
+            // A pruned generation may mismatch without a mutation of this subject. Always invalidate
+            // reads cached while the save was in flight, even when publishing the saved value is unsafe.
+            Invalidate(scope, revision);
+            if (!canPublish)
             {
-                var specific = new Key(scope, revision);
-                _keys[specific] = key;
-                _absentKeys.Remove(specific);
+                return;
             }
 
-            _keys[latest] = key;
-            _absentKeys.Remove(latest);
-        }
-
-        try
-        {
-            await actualKeyStore.SaveFor(eventStore, eventStoreNamespace, identifier, key, revision);
-        }
-        catch
-        {
-            // The backing store can refuse a save outright - an erased subject's key material is refused however it
-            // is offered back. Leaving what it refused in a cache that has no time-to-live would serve the erased
-            // key for the lifetime of the process, from the one place the fence cannot reach. A transient failure
-            // gets the same treatment: a key that was never persisted must not be served as though it had been.
-            Invalidate(scope, revision);
-            throw;
-        }
-        finally
-        {
-            lock (_lock)
+            _keys.Set(new Key(scope, EncryptionKeyRevision.Latest), key);
+            if (!IsLatest(revision))
             {
-                // A pair read may have reached storage before the save became durable.
-                AdvanceGeneration(scope);
-                _latestPairs.Remove(scope);
-                _absentKeys.Remove(new Key(scope, EncryptionKeyRevision.Latest));
+                _keys.Set(new Key(scope, revision!), key);
             }
         }
     }
 
     static bool IsLatest(EncryptionKeyRevision? revision) => revision is null || revision == EncryptionKeyRevision.Latest;
 
-    static void RemoveAllFor<TValue>(Dictionary<Key, TValue> map, KeyScope scope)
+    static void RemoveAllFor<TValue>(BoundedEncryptionKeyCache<Key, TValue> map, KeyScope scope)
     {
         foreach (var key in map.Keys.Where(_ => _.Scope == scope).ToList())
         {
@@ -372,16 +460,32 @@ public class CacheEncryptionKeyStorage(
         }
     }
 
+    async Task Mutate(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, Func<Task> mutation)
+    {
+        var scope = new KeyScope(eventStore, eventStoreNamespace, identifier);
+        Invalidate(scope, revision: null);
+        try
+        {
+            await mutation();
+        }
+        finally
+        {
+            Invalidate(scope, revision: null);
+        }
+    }
+
     void Invalidate(KeyScope scope, EncryptionKeyRevision? revision)
     {
         lock (_lock)
         {
+            Maintain();
             AdvanceGeneration(scope);
             _latestPairs.Remove(scope);
 
             if (IsLatest(revision))
             {
                 RemoveAllFor(_keys, scope);
+                RemoveAllFor(_revisionPairs, scope);
                 RemoveAllFor(_absentKeys, scope);
                 return;
             }
@@ -389,22 +493,69 @@ public class CacheEncryptionKeyStorage(
             var specific = new Key(scope, revision!);
             var latest = new Key(scope, EncryptionKeyRevision.Latest);
             _keys.Remove(specific);
+            _revisionPairs.Remove(specific);
             _keys.Remove(latest);
             _absentKeys.Remove(specific);
             _absentKeys.Remove(latest);
         }
     }
 
+    bool CanPublishProvision(KeyScope scope, long generation)
+    {
+        if (generation == GenerationFor(scope))
+        {
+            return true;
+        }
+
+        // Provisioning can write to storage. A mismatch prevents publication, not completion invalidation.
+        Invalidate(scope, revision: null);
+        return false;
+    }
+
     void CachePair(KeyScope scope, EncryptionKeyAtRevision pair)
     {
         var latest = new Key(scope, EncryptionKeyRevision.Latest);
-        _latestPairs[scope] = pair;
+        _latestPairs.Set(scope, pair);
         _absentKeys.Remove(latest);
     }
 
-    long GenerationFor(KeyScope scope) => _generations.GetValueOrDefault(scope);
+    long GenerationForRead(KeyScope scope)
+    {
+        lock (_lock)
+        {
+            return GenerationFor(scope);
+        }
+    }
 
-    void AdvanceGeneration(KeyScope scope) => _generations[scope] = GenerationFor(scope) + 1;
+    long GenerationFor(KeyScope scope) => _generations.GetValueOrDefault(scope, _generationFloor);
+
+    void AdvanceGeneration(KeyScope scope)
+    {
+        if (_generations.Count == CacheCapacity)
+        {
+            // Never reset a pruned scope to a generation an in-flight operation could have captured. Clearing
+            // all entries after raising the floor only causes safe, spurious mismatches for unrelated operations.
+            _generationFloor = ++_generationClock;
+            _generations.Clear();
+        }
+
+        _generations[scope] = ++_generationClock;
+    }
+
+    void Maintain()
+    {
+        if (++_operationsSinceSweep < SweepInterval)
+        {
+            return;
+        }
+
+        _operationsSinceSweep = 0;
+        var now = _timeProvider.GetUtcNow();
+        foreach (var key in _absentKeys.Keys.Where(key => _absentKeys.TryGetValue(key, out var expiresAt) && expiresAt <= now).ToList())
+        {
+            _absentKeys.Remove(key);
+        }
+    }
 
     bool IsRememberedAbsent(Key cacheKey)
     {
@@ -421,7 +572,7 @@ public class CacheEncryptionKeyStorage(
         return false;
     }
 
-    void RememberAbsent(Key cacheKey) => _absentKeys[cacheKey] = _timeProvider.GetUtcNow() + _negativeCacheTimeToLive;
+    void RememberAbsent(Key cacheKey) => _absentKeys.Set(cacheKey, _timeProvider.GetUtcNow() + _negativeCacheTimeToLive);
 
     sealed record KeyScope(EventStoreName EventStore, EventStoreNamespaceName EventStoreNamespace, EncryptionKeyIdentifier Identifier);
 

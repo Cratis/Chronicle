@@ -1,11 +1,15 @@
 ---
-title: Empty Child Collections
-description: Why a child collection with no children is stored as an absent field, what Chronicle materializes it as, and how to say whether absent means empty.
+title: Chronicle read models with empty child collections
+description: Chronicle omits child paths during root initialization; removing the last child can leave an empty array. Choose .NET declarations for missing and empty fields.
 ---
 
-A read model with a `[ChildrenFrom<T>]` collection — or a declarative `.Children(...)` projection — has no children until a child event arrives. That is not an edge case. It is the state every instance is in the moment its root event creates it, so it is the first read of every new instance. This page covers what Chronicle stores then, what you read back, and how to say which answer you want.
+During root initialization, Chronicle omits child collection fields rather than writing `[]`. A previously populated collection can remain stored as `[]` after its last child is removed. When the .NET client reads a model with a missing field, a supported non-nullable collection becomes empty; a nullable collection preserves the distinction between missing (`null`) and stored empty (`[]`). Choose the declaration that matches what your application needs to know.
 
-## A child collection with no children is not stored
+This applies to collections declared with `[ChildrenFrom<T>]` or a declarative `.Children(...)` projection. A newly created order, for example, can have no line items yet even though the order itself is ready to read.
+
+<a id="a-child-collection-with-no-children-is-not-stored"></a>
+
+## Root initialization leaves child collections untouched
 
 Chronicle never writes a children collection on behalf of the root event. A children path is owned exclusively by the child add and remove operations for the whole lifetime of the read model, and the root projection's initial state is applied with every children path removed.
 
@@ -21,36 +25,34 @@ sequenceDiagram
     Note over Root,Sink: lines is held back from this write,<br/>so the child already added survives
 ```
 
-So absence is the encoding: a child collection with no children is a field that is **not there**, not a field holding `[]`. The exclusion is specific to children collections; the rest of the initial state is applied as written.
+Omitting the field lets the root write leave children untouched. This exclusion applies only to children collections; Chronicle applies the rest of the initial state as written.
 
 ## What you read back
 
-When Chronicle materializes a read model for you, a collection property the stored data carries no value for is filled in according to how you declared it:
+When the .NET client materializes a read model, it fills a missing collection property according to its declaration:
 
 | Declared as | No value stored | A value stored |
 | --- | --- | --- |
 | `IEnumerable<LineItem> Lines` | An empty collection | Exactly that value, including `[]` |
 | `IEnumerable<LineItem>? Lines` | `null` | Exactly that value, including `[]` |
 
-A non-nullable declaration is a promise, and Chronicle keeps it — you can enumerate the property without a guard, on an instance that has never had a child. A nullable declaration says you want to tell "no children yet" apart from "an empty list", so Chronicle leaves it alone.
+With a supported non-nullable declaration, you can enumerate `Lines` without a null guard even before the first child arrives. A nullable declaration preserves the difference between an absent field and a stored empty list.
 
-Two things stay out of scope. A `string` is left alone even though it is an `IEnumerable`, and so is a dictionary — whether a missing dictionary means an empty one is a different question with a different answer. A collection type Chronicle cannot construct, such as a custom collection with no parameterless constructor, is also left as it was rather than guessed at.
+Strings and dictionaries are not normalized. Neither are collection types the reader cannot construct, such as an unsupported custom collection. Use a supported collection type when you rely on this behavior.
 
 ## Say which answer you want
 
-The declaration is the decision point. There is no option to set and nothing to register:
+Declare `Lines` as non-nullable if missing should mean empty, or nullable if absence matters to your application. No additional option or registration is needed:
 
 <ChronicleClientTabs snippet="read-models/empty-child-collections/declaring" />
 
 The rule is applied when the instance is materialized, not when it is stored, so changing a declaration takes effect for instances that were written long before you changed it. Nothing needs replaying.
 
-:::caution
-A normalizer in the record — `IEnumerable<LineItem> Lines { get; init; } = Lines ?? [];` — looks like the obvious in-language fix, and it is not one. The MongoDB driver materializes a record without running its constructor whenever the stored document omits a member, which is exactly this case, so the normalizer never runs. [Designing read models](../concepts/designing-read-models#the-constructor-may-not-run) explains why the record body is the wrong place for it.
-:::
+A record-body normalizer such as `IEnumerable<LineItem> Lines { get; init; } = Lines ?? [];` does not cover every read path. Direct MongoDB reads can bypass the constructor, as explained under [Where these semantics apply](#where-these-semantics-apply) below and in [Designing read models](../concepts/designing-read-models#the-constructor-may-not-run).
 
 ## Initial values do not reach a child collection
 
-[Initial values](../projections/declarative/initial-values) look like the place to say "this collection starts empty", and for a children collection they do nothing. The initial state is applied with every children path removed — the same exclusion, for the same replay reason — so an initial `Lines = []` is dropped before it reaches the sink.
+Setting `Lines = []` through [initial values](../projections/declarative/initial-values) does not change this storage behavior. Chronicle removes every children path before applying the root's initial state, so that value never reaches the sink.
 
 Use the declaration instead. Initial values remain the right tool for business defaults, sentinel values, and properties that are not children collections.
 
@@ -58,12 +60,12 @@ Use the declaration instead. Initial values remain the right tool for business d
 
 These rules belong to Chronicle's reader, not to the stored document. They apply wherever Chronicle materializes the read model for you — [reading a single instance](getting-single-instance), [reading a collection](getting-collection-instances), [materialized instances and paging](materialized-pagination), [snapshots](getting-snapshots), [watching a read model](watching-read-models), and [read model reactors](reacting-to-changes) — and to anything layered on those APIs. The [read model testing scenarios](/chronicle/testing/read-models/scenario/) materialize through the same code, so a spec and a running system answer this question identically.
 
-They do **not** apply when something else deserializes the same stored document. If you query the read model's MongoDB collection directly with `IMongoCollection<T>`, as [Get started](/chronicle/get-started/) shows for reporting and ad-hoc reads, the MongoDB driver builds the instance — and the driver has never heard of this page. Left alone, it hands you `null` for a field the document does not carry.
+A direct MongoDB query with `IMongoCollection<T>` uses the MongoDB driver's deserializer instead of Chronicle's reader. [Get started](/chronicle/get-started/) uses this path for reporting and ad-hoc reads. Without a matching convention, a missing collection field can become `null` even when you declared it non-nullable.
 
-If you are on [Cratis Arc](/arc/backend/csharp/mongodb/convention-packs/), you already have the answer: Arc registers a convention pack that materializes a non-nullable collection on a `[ReadModel]` type as empty, for both an absent field and a stored `null`. It makes the driver agree with this page rather than differ from it. Without Arc, configure the equivalent on the driver yourself, or read through Chronicle.
+[Cratis Arc's MongoDB convention pack](/arc/backend/csharp/mongodb/convention-packs/) fills a supported non-nullable collection on a `[ReadModel]` type with an empty collection for both an absent field and a stored `null`. Without Arc, configure equivalent driver behavior or read through Chronicle.
 
 :::caution
-The driver does not run your record's constructor. A read model with a primary constructor gets no creator map at all, so the driver materializes it uninitialized and assigns members directly — on every document, not only an incomplete one. A normalizer written in the record body (`Lines = Lines ?? []`) therefore never executes on this path, and neither does any other default, clamp or guard you put there. See [The constructor may not run](../concepts/designing-read-models#the-constructor-may-not-run).
+Do not rely on a record constructor to normalize direct MongoDB reads. Without a creator map, the driver creates the instance uninitialized and assigns members directly. Record-body defaults and guards, including `Lines = Lines ?? []`, then do not run, even for a complete document. See [The constructor may not run](../concepts/designing-read-models#the-constructor-may-not-run) before relying on constructor logic.
 :::
 
 :::note[Client coverage]

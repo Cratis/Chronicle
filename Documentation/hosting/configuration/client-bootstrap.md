@@ -1,8 +1,7 @@
 ---
+title: Bootstrap clients in Cratis Chronicle Server
 description: Define Chronicle clients, as clientId and clientSecret pairs, at startup through configuration or secrets management instead of the API.
 ---
-# Client Bootstrap Configuration
-
 Chronicle supports declarative client configuration, allowing clients (clientId/clientSecret pairs) to be defined at startup via configuration or secrets management, rather than exclusively through the Workbench UI.
 
 ## Configuration
@@ -39,6 +38,9 @@ Cratis__Chronicle__Clients__1__ClientSecret=another-secret-value
 | --- | --- | --- | --- |
 | clientId | string | Yes | The client identifier used for authentication |
 | clientSecret | string | Yes | The client secret in plaintext. Hashed internally on load |
+| eventStores | array | No | Explicit event store grants for this client. Empty by default. Each entry has `eventStore` (the store name), `allEventStores` (`true` to cover every ordinary store instead of one), `namespace` (omit for every namespace) and `access` (the access flags to grant) |
+
+When `allEventStores` is `false` and `eventStore` is omitted, the entry does not name a store, so set one or the other. Subjects configured under external event store access carry `isClient` (default `false`): set it to `true` when the subject is a client identifier rather than a token subject.
 
 ## How it works
 

@@ -32,6 +32,7 @@ public class and_a_subscription_is_active_with_a_newly_introduced_event_type : S
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);

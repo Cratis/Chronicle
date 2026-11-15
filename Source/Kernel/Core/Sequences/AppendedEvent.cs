@@ -231,8 +231,8 @@ public record AppendedEvent(
 
         var appendedEvents = new List<Concepts.Events.AppendedEvent>();
         using (var cursor = paging.IsPaged
-            ? await eventSequence.GetRange(from, from + (ulong)(paging.Size - 1), resolvedEventSourceId)
-            : await eventSequence.GetFromSequenceNumber(from, resolvedEventSourceId))
+            ? await eventSequence.GetRangeWithHistory(from, from + (ulong)(paging.Size - 1), resolvedEventSourceId)
+            : await eventSequence.GetFromSequenceNumberWithHistory(from, resolvedEventSourceId))
         {
             while (await cursor.MoveNext())
             {

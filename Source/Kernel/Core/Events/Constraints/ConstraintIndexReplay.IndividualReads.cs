@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.Events.Constraints;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -17,12 +16,7 @@ public partial class ConstraintIndexReplay
     EventSequenceNumber? _individualReadFailureEnd;
     EventSequenceNumber? _knownBadReadEnd;
 
-    EventType[] ReplayEventTypes() => _scopes.SelectMany(scope => scope.Definition switch
-    {
-        UniqueConstraintDefinition unique => unique.EventDefinitions.Select(item => item.EventTypeId).Concat(unique.RemovedWith),
-        ClosesStreamConstraintDefinition closing => closing.EventTypeIds.Concat(closing.ReopenedBy).Append(GlobalEventTypes.Redaction),
-        _ => []
-    }).Distinct().Select(id => new EventType(id, EventTypeGeneration.First)).ToArray();
+    EventType[] ReplayEventTypes() => ConstraintEventTypes.For(_scopes.Select(scope => scope.Definition));
 
     async Task<(bool Finished, int Count)> ReadIndividualEvents(EventType[] types, int limit, CancellationToken cancellationToken)
     {

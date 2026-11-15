@@ -34,16 +34,68 @@ from collections import defaultdict
 CLIENT_ROOT = "Integration/Client"
 NAMESPACE_PREFIX = "Cratis.Chronicle.Integration."
 
+# The three suites the integration workflow fans out. Client namespaces are the directories that contain
+# [Fact] tests and run against infrastructure configurations. Kernel and Clustering run every directory
+# once, and match a namespace with a trailing dot so "Events" does not also run "EventSequences".
+SUITES = {
+    "client": {"root": CLIENT_ROOT, "prefix": NAMESPACE_PREFIX},
+    "kernel": {"root": "Integration/Kernel", "prefix": "Cratis.Chronicle.Kernel.Integration."},
+    "clustering": {"root": "Integration/Clustering", "prefix": "Cratis.Chronicle.Integration.Clustering."},
+}
+
+# Namespaces whose runs are too short to justify a job of their own share one job. The batches are static
+# and reviewable: a namespace that is not listed runs alone, so a new namespace never joins a batch silently.
+# Each batch stays under about 240 s of p50 test time, below the previous slowest solo shard
+# (for_EventSequence with 2 shards: 339 s p50 test, 441 s p50 job). EventSequence now uses 4 shards
+# (#5864); recheck the critical path with hosted timings after the split.
+# Client p50 test seconds: for_ReadModelReactors 66, for_ContextStorageIsolation 68, for_ExplicitArtifacts 68
+# (202 s); for_ShortLivedProcess 69, for_PIIManager 85, for_PublicClientApis 86 (240 s).
+# Every member keeps its own zero-test guard (the assert-tests-ran action's prefixes input).
+# To take a namespace out of its batch, delete it from its line here.
+BATCHES = {
+    "client": [
+        ["for_ReadModelReactors", "for_ContextStorageIsolation", "for_ExplicitArtifacts"],
+        ["for_ShortLivedProcess", "for_PIIManager", "for_PublicClientApis"],
+    ],
+    "kernel": [
+        ["Jobs", "EventStores", "Patches", "Alerts", "Projections"],
+        ["Patterns", "EventRouting", "EventSequences", "for_JobsManager"],
+        ["Events", "for_DataProtection"],
+    ],
+    "clustering": [
+        ["for_ScaledOutClients", "for_DataProtection", "for_Clustering"],
+    ],
+}
+
+# Namespaces that run in a restricted set of configurations, or not at all in this matrix.
+CONFIG_RESTRICTED = (
+    "SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_PerProcessActivation",
+    "for_OccurrenceProcessRecovery", "for_ContainerStartup", "GraphProjections",
+)
+
+# The Neo4j lane of GraphProjections that runs with a database per namespace: Neo4j Enterprise, under its Evaluation Agreement (Cratis/Chronicle#5739).
+GRAPH_ENTERPRISE_SHARD = "enterprise"
+GRAPH_ENTERPRISE_IMAGE = "neo4j:5-enterprise"
+
 # Number of parallel shards per namespace. Any namespace not listed here runs as
 # a single job. Tuned from observed CI wall-clock: Projections (617 facts) was
 # the critical path of the whole run, and the others have a slow out-of-process
 # SQLite configuration whose contention eases when fewer tests share one job.
 SHARD_COUNTS = {
-    "Projections": 4,
-    "for_EventSequence": 2,
+    # Five shards each: the measured slowest quarters ran 565-657 s, so the larger count shortens them again (#5875).
+    "Projections": 5,
+    "for_EventSequence": 5,
+    "for_Imports": 2,
     "for_Reactors": 2,
     "for_Reducers": 2,
+    # One class carries most of the time in each, so two shards roughly halve the longest solo jobs (#5875).
+    "for_ReadModels": 2,
+    "for_EventStoreSubscriptions": 2,
 }
+
+# Start order of the client matrix. GitHub starts matrix jobs in include order, so alphabetical order starts the
+# slowest shards last and they become the tail of the run (#5875). The file maps '<namespace>|<shard>' to seconds.
+SHARD_ORDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "integration-shard-order.json")
 
 # mode | database | needs-docker. Out-of-process exercises every storage backend
 # through the real Chronicle container; in-process covers MongoDB.
@@ -191,6 +243,11 @@ def _databases(value):
     return selected
 
 
+def _names(value):
+    """Parse a comma-separated namespace list; an explicitly empty list is a valid selection of nothing."""
+    return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
 def selected_databases(args):
     """Resolve which storage backends the matrix covers, widest selection first."""
     if args.all_providers:
@@ -200,8 +257,151 @@ def selected_databases(args):
     return PULL_REQUEST_DATABASES
 
 
-def main():
+def _directories(root):
+    """Every top-level directory under a suite root, excluding build output."""
+    return [entry for entry in sorted(os.listdir(root))
+            if os.path.isdir(os.path.join(root, entry)) and entry not in ("bin", "obj")]
+
+
+def _solo_units(suite):
+    """Map each namespace the suite runs to its list of (shard_label, test_filter)."""
+    spec = SUITES[suite]
+    if suite == "client":
+        # The injected startup specs need neither a runtime configuration nor Docker.
+        return {name: _shards_for(name) for name in _namespaces_with_facts() if name != "for_ContainerStartup"}
+    return {name: [("all", f"FullyQualifiedName~{spec['prefix']}{name}.")] for name in _directories(spec["root"])}
+
+
+def _check_member_can_be_batched(suite, name, units):
+    """Raise unless the namespace runs once, everywhere, under a plain namespace filter."""
+    # SHARD_COUNTS and CONFIG_RESTRICTED name client namespaces; Kernel and Clustering run each directory once.
+    if suite == "client" and (name in SHARD_COUNTS or name in CONFIG_RESTRICTED):
+        raise ValueError(f"{suite}: {name} is sharded or configuration-restricted and cannot be batched")
+    plain = f"FullyQualifiedName~{SUITES[suite]['prefix']}{name}" + ("" if suite == "client" else ".")
+    if units[name] != [("all", plain)]:
+        raise ValueError(f"{suite}: {name} has no plain namespace filter and cannot be batched")
+
+
+def _validated_batches(suite, units, batches):
+    """Check every batch member can share a job without changing what runs or where."""
+    seen = set()
+    for name in (member for batch in batches.get(suite, []) for member in batch):
+        if name not in units:
+            raise ValueError(f"{suite}: batch member {name} is not a namespace this suite runs")
+        if name in seen:
+            raise ValueError(f"{suite}: {name} is in more than one batch")
+        seen.add(name)
+        _check_member_can_be_batched(suite, name, units)
+    return seen
+
+
+def _restrict(suite, units, batches, namespaces):
+    """Narrow the units, and the batches that group them, to the selected namespaces.
+
+    An unknown name is an error, never an empty matrix: a selection that silently ran nothing would read
+    as a pass. A batch keeps only its selected members, so a selected namespace never drags its batch
+    partners along; a batch left with one member simply runs that namespace on its own.
+    """
+    unknown = sorted(set(namespaces) - set(units))
+    if unknown:
+        raise ValueError(f"{suite}: unknown namespace(s) {', '.join(unknown)}. Known: {', '.join(units)}")
+    kept = {name: shards for name, shards in units.items() if name in namespaces}
+    narrowed = {suite: [members for members in ([m for m in batch if m in namespaces] for batch in batches.get(suite, []))
+                        if len(members) > 1]}
+    return kept, narrowed
+
+
+def _suite_units(suite, batches, namespaces=None):
+    """Return (namespace_label, shard_label, test_filter, members, short_name) per job unit."""
+    prefix = SUITES[suite]["prefix"]
+    units = _solo_units(suite)
+    if namespaces is not None:
+        units, batches = _restrict(suite, units, batches, namespaces)
+    batched = _validated_batches(suite, units, batches)
+    result = []
+    for name, shards in units.items():
+        if name in batched:
+            continue
+        for shard_label, test_filter in shards:
+            result.append((prefix + name, shard_label, test_filter, "", name))
+    for batch in batches.get(suite, []):
+        result.append((
+            prefix + "+".join(batch), "all", "|".join(units[name][0][1] for name in batch),
+            ",".join(prefix + name for name in batch), None))
+    return result
+
+
+def _load_shard_seconds():
+    """Read the measured seconds per '<namespace>|<shard>'."""
+    with open(SHARD_ORDER_PATH, encoding="utf-8") as handle:
+        return json.load(handle)["seconds"]
+
+
+def order_longest_first(include, seconds):
+    """Order entries longest first; unlisted entries follow in their original order.
+
+    The sort is stable and never adds, drops or edits an entry, so a stale table only changes start order.
+    """
+    def duration(entry):
+        name = entry["namespace"].removeprefix(NAMESPACE_PREFIX).split("+")[0]
+        return seconds.get(f"{name}|{entry['shard']}", 0)
+
+    return sorted(include, key=lambda entry: -duration(entry))
+
+
+# Namespaces that run in fewer lanes than every backend: name -> predicate over (mode, database, needs_docker).
+CONFIG_FILTERS = {
+    # This family exercises a provider directly, not the configurable Chronicle runtime.
+    # Run it once in the SQL Server lane instead of starting SQL Server in every backend lane.
+    "SqlServerAlertIncidents": lambda mode, database, _: database == "mssql",
+    # Kernel TLS lifecycle specs own an out-of-process MongoDB kernel container;
+    # PerProcess activation specs need its gRPC listener and cover client identity once.
+    "for_KernelTlsLifecycle": lambda mode, database, _: mode == "outofprocess" and database == "mongodb",
+    "for_PerProcessActivation": lambda mode, database, _: mode == "outofprocess" and database == "mongodb",
+    # Graph projections run on the silo of the client and write to a Neo4j server the fixture starts, so the storage backend of the kernel
+    # is not what they exercise. In-process covers MongoDB without building the kernel image; every other backend is covered out of process,
+    # which also proves a graph is projected the same way whatever stores the event log.
+    "GraphProjections": lambda mode, database, _: mode == "inprocess" or database != "mongodb",
+    # Process recovery owns a PostgreSQL database and an external kernel regardless of lane settings.
+    # Schedule it only once, in the lane matching the infrastructure it actually exercises.
+    "for_OccurrenceProcessRecovery": lambda mode, database, _: mode == "outofprocess" and database == "postgresql",
+}
+
+
+def _client_entries(entry, name, configs):
+    """The client matrix entries of one unit: one per lane the namespace runs in, plus the Neo4j Enterprise lane."""
+    keep = CONFIG_FILTERS.get(name, lambda *_: True)
+    entries = [{**entry, "mode": mode, "database": database, "needs-docker": needs_docker}
+               for mode, database, needs_docker in configs if keep(mode, database, needs_docker)]
+    if name == "GraphProjections":
+        # Database per namespace needs a Neo4j with multiple databases, which only the Enterprise edition has. One extra in-process lane runs the
+        # suite on it. It accepts the Neo4j Evaluation Agreement for now (Cratis/Chronicle#5739); the workflow reads the two fields below.
+        entries.append({**entry, "shard": GRAPH_ENTERPRISE_SHARD, "mode": "inprocess", "database": "mongodb", "needs-docker": True,
+                        "neo4j-image": GRAPH_ENTERPRISE_IMAGE, "neo4j-database-mode": "PerNamespace"})
+    return entries
+
+
+def build_include(suite, databases, batches, namespaces=None):
+    """Build the matrix entries for a suite, optionally restricted to the named namespaces.
+
+    A batch shares one job and keeps a per-member guard.
+    """
+    configs = [config for config in INFRA_CONFIGS if config[1] in databases]
+    include = []
+    for namespace, shard_label, test_filter, members, name in _suite_units(suite, batches, namespaces):
+        entry = {"namespace": namespace, "shard": shard_label, "filter": test_filter, "members": members}
+        include += _client_entries(entry, name, configs) if suite == "client" else [entry]
+    return order_longest_first(include, _load_shard_seconds()) if suite == "client" else include
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--suite",
+        choices=sorted(SUITES),
+        default="client",
+        help="Which integration project to generate the matrix for. Defaults to client.",
+    )
     parser.add_argument(
         "--all-providers",
         action="store_true",
@@ -215,38 +415,18 @@ def main():
         "Without it the backends in PULL_REQUEST_DATABASES are covered, which is "
         "what pull requests run.",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--namespaces",
+        type=_names,
+        help="Comma-separated namespaces (directory names under the suite's root) to restrict the matrix to. "
+        "Without it every namespace runs. An unknown name is an error, and an empty list is an empty matrix.",
+    )
+    args = parser.parse_args(argv)
 
-    databases = selected_databases(args)
-    configs = [config for config in INFRA_CONFIGS if config[1] in databases]
-
-    include = []
-    for namespace in _namespaces_with_facts():
-        # The injected startup specs need neither a runtime configuration nor Docker.
-        if namespace == "for_ContainerStartup":
-            continue
-        # This family exercises a provider directly, not the configurable Chronicle runtime.
-        # Run it once in the SQL Server lane instead of starting SQL Server in every backend lane.
-        namespace_configs = configs
-        if namespace == "SqlServerAlertIncidents":
-            namespace_configs = [config for config in configs if config[1] == "mssql"]
-        # The kernel TLS lifecycle specs own the out-of-process MongoDB kernel container they start and kill,
-        # and assert that configuration; any other lane has no such container to own.
-        if namespace == "for_KernelTlsLifecycle":
-            namespace_configs = [config for config in configs if config[0] == "outofprocess" and config[1] == "mongodb"]
-        fully_qualified = NAMESPACE_PREFIX + namespace
-        for shard_label, test_filter in _shards_for(namespace):
-            for mode, database, needs_docker in namespace_configs:
-                include.append(
-                    {
-                        "namespace": fully_qualified,
-                        "shard": shard_label,
-                        "filter": test_filter,
-                        "mode": mode,
-                        "database": database,
-                        "needs-docker": needs_docker,
-                    }
-                )
+    try:
+        include = build_include(args.suite, selected_databases(args), BATCHES, args.namespaces)
+    except ValueError as error:
+        parser.error(str(error))
     print(json.dumps({"include": include}))
 
 

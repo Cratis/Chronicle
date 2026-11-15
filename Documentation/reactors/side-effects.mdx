@@ -1,25 +1,25 @@
 ---
-title: "Returning Side Effects from Reactor Handler Methods"
-description: "Return events from a reactor handler and let Chronicle append them, and why such handlers are marked [OnceOnly]."
+title: "Reactor side effects by returning events"
+description: "Return events from a Cratis Chronicle reactor for the client to append. In C#, derived keys protect supported appends, not external calls or handler execution."
 ---
 
-Reactor handler methods can return side-effect events directly instead of taking a dependency on `IEventLog`. The framework automatically appends the returned events to the correct sequence after the handler completes.
+A Cratis Chronicle reactor can return follow-up events instead of calling `IEventLog` itself. The client appends those events after the handler completes, so the handler can focus on deciding what happened next. Returned-event appends and external calls have different duplicate-protection requirements, described below.
 
 :::note[Client coverage]
-C#, Kotlin, Java and Elixir append a reactor handler's return value. Kotlin and Java accept a single event, an `EventForEventSourceId`, or a `List` of either; from `io.cratis:chronicle` 6.5.0 a returned list is appended as one transaction, as in C#, and earlier versions appended its events one at a time. Elixir's `handle/2` returns `:ok`, `{:error, reason}`, or `{:ok, event_or_events}`; the events (a single event, a list appended atomically, or `EventForEventSourceId` entries for other event sources) are appended for you. TypeScript's dispatch doesn't inspect what the handler returns. In TypeScript, appending a follow-up event from a reactor means calling the append API explicitly inside the handler — see [Getting started with reactors](getting-started) and [Event Processing](event-processing) for what each client's handler can and can't do.
+C#, TypeScript, Kotlin, Java and Elixir support returned-event appends, but their return contracts differ. TypeScript accepts an event, an `EventForEventSourceId`, or an array mixing the two, and submits the events through `appendMany`. Kotlin and Java (`io.cratis:chronicle`) accept a single event, an `EventForEventSourceId`, or a `List` of either. Elixir's `handle/2` returns `:ok`, `{:error, reason}`, or `{:ok, event_or_events}`; the last form appends an event or list, including `EventForEventSourceId` entries targeting other sources. The metadata, derived-key and custom-handler sections below describe the C# APIs. See [Getting started with reactors](getting-started) and [Event Processing](event-processing) for client-specific handler setup.
 :::
 
-> **Important**: Side-effect appends are not fire-and-forget. If a returned event fails to append — a constraint violation, a concurrency conflict, or an error — the reactor's partition fails with the failure details and is retried per the observer's retry policy. Failures never pass silently. See [Error handling](#error-handling).
+A returned-event append is part of handling the triggering event. If that append fails, the reactor partition fails with the append details and recovery follows the observer's retry policy. This includes constraint violations, concurrency conflicts and append errors. See [Error handling](#error-handling).
 
 ## Basic Usage
 
-Return a single event directly from a handler method — synchronously or as a `Task<T>`:
+In C#, return a single event directly from a handler method, synchronously or as a `Task<T>`:
 
 <ChronicleClientTabs snippet="reactors/side-effects/basic" />
 
-The returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. No `IEventLog` injection required.
+By default, the returned event is appended to the event log using the `EventSourceId` from the incoming `EventContext`. You do not need to inject `IEventLog`.
 
-The handlers are marked [`[OnceOnly]`](once-only) because a returned event is a new fact: without it, replaying the reactor appends the same follow-up event again. Analyzer [CHR0022](../code-analysis/CHR0022) reports an event-returning handler that is not marked. `[OnceOnly]` does not cover a retry after the handler failed; see [Delivery identity](delivery-identity).
+The examples use [`[OnceOnly]`](once-only) so replay skips these handlers. Analyzer [CHR0022](../code-analysis/CHR0022) reports an event-returning handler without that marker. Derived keys can protect the returned-event append on supported kernels, but they do not stop the handler from running. `[OnceOnly]` does not suppress ordinary retries after failure; see [Delivery identity](delivery-identity).
 
 ## Multiple Side Effects
 
@@ -29,35 +29,35 @@ In C#, return a sequence of known events — `IEnumerable<TEvent>`, `TEvent[]`, 
 
 ## Targeting a Specific Event Source Id
 
-Everything above lands the returned event on the *triggering* event's `EventSourceId` — optionally redirected once for the whole reactor via [`ICanProvideEventSourceId`](#icanprovideeventsourceid). That covers most reactors. But automation and translation reactors often need to write to a *different* entity than the one that triggered them — or to several at once.
+A bare event uses the triggering event's `EventSourceId`, unless the C# reactor redirects it through [`ICanProvideEventSourceId`](#icanprovideeventsourceid). When the follow-up fact belongs to a different entity, return an explicit target instead.
 
-Picture a library. A member reserves a book, and that reservation is a fact about the *book*:
+For example, a member's book reservation is recorded against the book:
 
 <ChronicleClientTabs snippet="reactors/side-effects/source-event" />
 
-When it happens you want to record activity on the *member* — a different event source altogether. Return an `EventForEventSourceId` and pick the target `EventSourceId` yourself:
+To record the resulting activity against the member, return an `EventForEventSourceId` naming the member's `EventSourceId`:
 
 <ChronicleClientTabs snippet="reactors/side-effects/specific-event-source" />
 
-`MemberActivityRecorded` is appended to `@event.MemberId`, **not** to the book that triggered the reactor — so it shows up on the member's stream, ready for a member-activity projection to pick up.
+`MemberActivityRecorded` is appended to `@event.MemberId`, not to the book's event source, so a member-activity projection can observe it there.
 
-A single reservation usually ripples to more than one entity: the member gains activity, and the book loses stock. In C#, return `IEnumerable<EventForEventSourceId>`, `EventForEventSourceId[]`, `List<EventForEventSourceId>`, or `IReadOnlyList<EventForEventSourceId>` to fan out to several event source ids in one go — they are appended together as a single transaction:
+To record both member activity and a stock change, return events for both targets. In C#, `IEnumerable<EventForEventSourceId>`, `EventForEventSourceId[]`, `List<EventForEventSourceId>` and `IReadOnlyList<EventForEventSourceId>` append the events together as a single transaction:
 
 <ChronicleClientTabs snippet="reactors/side-effects/fan-out" />
 
-Each `EventForEventSourceId` is self-describing: alongside the source id it carries the event stream type and id, source type, subject, occurred time, tags and causation. Set only the ones you need — the rest fall back to sensible defaults:
+Each `EventForEventSourceId` can carry its own event stream type and id, source type, subject, occurred time, tags and causation alongside the source id:
 
 <ChronicleClientTabs snippet="reactors/side-effects/explicit-metadata" />
 
-> **Two modes**: a **bare event** uses the reactor's resolved metadata — its `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces. An **`EventForEventSourceId`** is the *explicit* mode: it is self-describing and uses only the values on it, so the reactor's metadata does **not** apply (an unset field takes the append default such as `EventStreamType.All`, and an omitted `Subject` is resolved from the event). Reach for a bare event when you want "use my reactor's config", and an `EventForEventSourceId` when you want "I'll specify exactly where and how".
+In C#, a bare event uses the reactor's resolved metadata from its `[EventStreamType]`/`[EventSourceType]` attributes and `ICanProvide*` interfaces. An `EventForEventSourceId` uses its own values instead; reactor metadata does not fill its unset fields. Those fields take append defaults, such as `EventStreamType.All`, and an omitted `Subject` is resolved from the event.
 
-In C#, you can also **mix** the two in a single `IEnumerable<object>`, `object[]`, `List<object>`, or `IReadOnlyList<object>` return — each bare event uses the reactor's resolved metadata and the triggering event source id, while each `EventForEventSourceId` keeps its own. They are appended together as one transaction:
+In C#, mix both forms in an `IEnumerable<object>`, `object[]`, `List<object>` or `IReadOnlyList<object>`. Each bare event uses the reactor's resolved metadata, including its event source id, while each `EventForEventSourceId` keeps its own. They append together as one transaction:
 
 <ChronicleClientTabs snippet="reactors/side-effects/mixed" />
 
 ## Add concurrency scopes to returned events
 
-Returning events is convenient, but sometimes the decision is only valid against the exact event-log state the reactor read. Return `EventsWithConcurrencyScopes` to submit an ordered list of `EventForEventSourceId` values and its concurrency scopes through one `AppendMany` call:
+If your decision is valid only against the event-log state the reactor read, use concurrency scopes to reject an append when that state has changed. In C#, return `EventsWithConcurrencyScopes` to submit an ordered list of `EventForEventSourceId` values and its scopes through one `AppendMany` call:
 
 <ChronicleClientTabs snippet="reactors/side-effects/with-concurrency-scopes" />
 
@@ -69,19 +69,21 @@ The event list preserves the order you supplied to the append operation. That do
 
 ## Duplicate protection for returned events
 
-In C#, the built-in result handlers append each returned event with an [idempotency key](../events/appending) that Chronicle derives from the [delivery identity](delivery-identity), the reactor's effect epoch and the event's position in the returned value. When the same delivery comes back, the kernel recognizes the keys and does not append the events a second time. This covers redelivery after a failed partition recovers, catch-up and replay: a returned event lands once per delivery.
+In C#, the built-in result handlers derive an [idempotency key](../events/appending) from the [delivery identity](delivery-identity), the reactor's effect epoch and each returned event's position. On a kernel that supports idempotent appends, repeating those keys with the same output does not append another copy. This applies when recovery, catch-up or replay repeats the same delivery identity; it does not guarantee a single handler invocation.
 
-What this does not cover is anything outside the event log. A payment call, an email or a webhook made inside the handler still runs again on every redelivery. Guard those with a receipt keyed by `ReactorDelivery`, as described in [Delivery identity](delivery-identity#keys-for-returned-events).
+If an `EventForEventSourceId` already has an `IdempotencyKey`, Chronicle keeps it and derives keys only for events without one. Use `delivery.IdempotencyKeyFor("name")` for a named effect. Keep the order of returned events stable because their positions are part of the derived keys.
 
-- **A key you set yourself is kept.** If an `EventForEventSourceId` already carries an `IdempotencyKey`, Chronicle leaves it alone and keys only the events that have none. Use `delivery.IdempotencyKeyFor("name")` to derive a stable key for a named effect.
-- **Older kernels append unkeyed.** Against a kernel that does not advertise idempotent appends, returned events are appended without keys and Chronicle logs one warning per reactor. A key you set yourself on such a kernel throws `IdempotentAppendsNotSupported`, because silently dropping it would remove the protection you asked for.
-- **The in-process testing package advertises the capability.** `ReactorScenario` records returned events by default instead of appending them. When you give it the real side-effect handlers, `Cratis.Chronicle.Testing` appends them with keys, like a current kernel does, so redelivering an occurrence does not append the events again.
-- **Changed output is refused, not overwritten.** If the handler returns something different for a delivery that was already appended, the kernel reports a conflict and the partition fails. The failure message names the remedy: raise the [effect epoch](delivery-identity#when-to-bump-the-effect-epoch) or mark the handler [`[OnceOnly]`](once-only).
-- **Build returned events from stable inputs.** Derive the returned events from the triggering event and from state that does not change between deliveries. A payload carrying a fresh `Guid`, the current time or the result of a lookup that has since changed counts as changed output when the delivery comes back, so the partition fails instead of appending a duplicate. Take such values from the triggering event, or derive them from the delivery identity.
+A kernel that does not advertise idempotent appends receives returned events without derived keys, and Chronicle logs one warning per reactor. A key you set yourself instead throws `IdempotentAppendsNotSupported`; it is not silently dropped. Automatic duplicate protection therefore depends on the kernel capability.
+
+Changed content under an existing key causes a conflict and fails the partition. Derive output from the triggering event and stable state: a fresh `Guid`, the current time or a changed lookup result can cause unintended conflicts. If changed output is intentional, review the [effect epoch](delivery-identity#when-to-bump-the-effect-epoch) before allowing new appends. Use [`[OnceOnly]`](once-only) if replay should skip the handler; it does not repair an ordinary failed delivery.
+
+A payment, email or webhook inside the handler is outside this protection and can run again. Use a receiver's idempotency support or an application-owned receipt, with the transaction and failure-window handling in [Delivery identity](delivery-identity#keys-for-returned-events).
+
+To exercise returned-event appends in `Cratis.Chronicle.Testing`, supply the real side-effect handlers to `ReactorScenario`. By default, the scenario records returned events instead of appending them.
 
 ## Reactor-Level Metadata Resolution
 
-Set metadata once on the reactor type so every returned event inherits it automatically.
+In C#, set metadata on the reactor type for bare returned events. An `EventForEventSourceId` keeps its own metadata instead of inheriting these values.
 
 ### `ICanProvideEventSourceId`
 
@@ -119,7 +121,7 @@ Apply these attributes to the reactor class for a compile-time stream or source 
 
 ## Custom Return Type Handlers
 
-Extend the pipeline by registering a custom `IReactorSideEffectHandler`:
+In C#, register a custom `IReactorSideEffectHandler` to process a return type beyond the built-in event forms:
 
 <ChronicleClientTabs snippet="reactors/side-effects/custom-handler" />
 
@@ -151,4 +153,4 @@ In C#, the `IEnumerable<T>` entries below also accept `T[]`, `List<T>`, and othe
 
 ## Error handling
 
-If a side-effect append fails, Chronicle marks the reactor partition as failed. A non-null return value that no side-effect handler claims also fails the partition instead of being discarded and acknowledged. Register a handler for the returned type (or return a supported event), then retry or rewind the observer to continue processing.
+If a returned-event append fails, Chronicle marks the reactor partition as failed. In C#, a non-null return value that no side-effect handler claims also fails the partition instead of being discarded and acknowledged. Register a handler for that type, or return a supported event, before recovering the partition. Check [Delivery identity](delivery-identity) first if the handler also makes an external call: recovery can invoke it again.

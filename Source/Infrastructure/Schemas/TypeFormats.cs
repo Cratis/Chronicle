@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.DependencyInjection;
 using Cratis.Geospatial;
 
 namespace Cratis.Chronicle.Schemas;
@@ -8,6 +9,7 @@ namespace Cratis.Chronicle.Schemas;
 /// <summary>
 /// Represents an implementation of <see cref="ITypeFormats"/>.
 /// </summary>
+[Singleton]
 public class TypeFormats : ITypeFormats
 {
     /// <summary>

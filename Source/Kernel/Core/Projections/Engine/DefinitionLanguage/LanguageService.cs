@@ -45,6 +45,13 @@ public class LanguageService(
         IEnumerable<EventTypeSchema> eventTypeSchemas,
         EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
     {
+        if (GraphDeclarationLanguage.IsGraphDeclaration(definition))
+        {
+            return CompileGraph(definition, owner, eventTypeSchemas, generationDelivery).Match<Result<ProjectionDefinition, CompilerErrors>>(
+                graph => graph.Projection,
+                errors => errors);
+        }
+
         var result = _compiler.CompileProjection(definition);
         var syntax = result.Value;
         var hasDirectiveEquivalents = syntax is not null && (syntax.AutoMap != AutoMapMode.Inherit || syntax.Sequence is not null);
@@ -80,12 +87,31 @@ public class LanguageService(
     }
 
     /// <inheritdoc/>
+    public bool IsGraphDeclaration(string definition) => GraphDeclarationLanguage.IsGraphDeclaration(definition);
+
+    /// <inheritdoc/>
+    public Result<CompiledGraph, CompilerErrors> CompileGraph(
+        string definition,
+        ProjectionOwner owner,
+        IEnumerable<EventTypeSchema> eventTypeSchemas,
+        EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
+    {
+        var (graph, errors) = GraphDeclarationLanguage.Compile(definition, owner, eventTypeSchemas, generationDelivery);
+        return graph is null || errors.HasErrors ? errors : graph;
+    }
+
+    /// <inheritdoc/>
     public string Generate(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
         generator.Generate(definition, readModelDefinition);
 
     /// <inheritdoc/>
     public Result<ReadModelIdentifier, CompilerErrors> GetReadModelIdentifier(string definition)
     {
+        if (GraphDeclarationLanguage.GraphNameOf(definition) is { } graphName)
+        {
+            return new ReadModelIdentifier(graphName);
+        }
+
         var result = _compiler.CompileProjection(definition);
         var syntax = result.Value;
 

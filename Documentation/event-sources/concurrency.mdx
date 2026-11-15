@@ -1,13 +1,13 @@
 ---
-title: Concurrency per event source and stream
-description: How the concurrency dimensions of an event source and its streams decide what an append conflicts with, how to build an explicit scope, and the batch rule.
+title: Set concurrency boundaries for Cratis Chronicle event sources
+description: Choose which appends conflict in Cratis Chronicle with event source and stream dimensions, explicit concurrency scopes, and atomic batch guards.
 ---
 
-Use this page to decide which appends should conflict. The general model of concurrency scopes is in [Concurrency](../events/concurrency.mdx). This page covers what a definition adds to it.
+Concurrency dimensions on a Cratis Chronicle event source definition decide which competing appends can reject a write. Choose an account-wide boundary when every change matters, or a stream boundary when different parts of the history can progress independently. These .NET examples build on the general [concurrency scope model](../events/concurrency.mdx).
 
 ## What an append is guarded by
 
-When you append without passing a `ConcurrencyScope`, the client reads the tail of the event sequence and sends it as the position you expect. The kernel rejects the append if an event that matches the scope was appended after that position. A definition decides what "matches" means.
+When you append without passing a `ConcurrencyScope`, the client captures the tail, the latest matching event position, and sends it as the expected position. The kernel rejects the append if a matching event arrived after that position. The definition's dimensions choose which routing values must match:
 
 | The append goes through | The scope narrows to |
 |---|---|
@@ -17,7 +17,9 @@ When you append without passing a `ConcurrencyScope`, the client reads the tail 
 
 The four values are the routing values of an event. What each one means is in [Event source](../concepts/event-source.md), and how they build a scope is in [Concurrency](../events/concurrency.mdx#formalized-metadata-tags-for-concurrency). The client reads the tail with exactly the narrowing it sends, so the position and the check ask the same question. A dimension that is not declared is left out, not set to a default.
 
-A nonempty `Concurrency` declaration without `EventSourceId` applies across event sources. [CHR0062](../code-analysis/CHR0062.mdx) reports this at Info severity and offers a code fix to include `EventSourceId`. Keep a cross-source declaration only when that is intentional: it is an independent condition, not protection for the state you read. Reserve declared concurrency for stream-wide rules such as ledgers, numbering and approvals; use [decision reads](../read-models/decision-reads.mdx) for state dependencies. How declared dimensions mix with a decision read is in [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#declared-routing-on-a-definition).
+Leaving `EventSourceId` out of a nonempty declaration makes the condition apply across source ids. For example, a scope narrowed only to stream type and month sees matching events for every account. [CHR0062](../code-analysis/CHR0062.mdx) reports this at Info severity and offers a fix to include `EventSourceId`.
+
+Keep a cross-source condition only when the rule needs it. A default scope captured during append does not protect state you read before that capture. Use [decision reads](../read-models/decision-reads.mdx) for decisions based on earlier state, and declared dimensions for stream-wide conditions such as shared numbering. [How guards are derived](../dynamic-consistency-boundary/how-guards-are-derived.mdx#declared-routing-on-a-definition) explains how those conditions combine.
 
 ## Which dimensions apply
 
@@ -39,11 +41,13 @@ With that definition, the scopes are:
 | `Transactions` stream, month `2026-04` | the stream's: `EventSourceId`, `EventStreamType`, `EventStreamId` | Events of this account in `Transactions` with stream id `2026-04` |
 | No stream | the event source's: `EventSourceId` | Every event of this account |
 
-No scope names event types, so any event type in the narrowed range counts. That makes a definition-derived guard coarse: it protects a whole event source or a whole stream, as an aggregate does. It is the right guard when the stream is the consistency boundary. When a rule needs a narrower, event-type-filtered append condition, use a [decision read](../read-models/decision-reads.mdx) or an explicit scope with `WithEventType`. The check is asymmetric: a `Transactions` deposit does not look at `Onboarding` events, but an `Onboarding` append sees every event of the account, including deposits.
+These scopes do not filter by event type, so any event in the selected range counts. That suits a rule for which every change to the source or stream matters. When only particular event types affect the decision, use a [decision read](../read-models/decision-reads.mdx) or an explicit scope with `WithEventType`.
+
+The check can be asymmetric. A `Transactions` deposit does not check `Onboarding` events, but an `Onboarding` append checks every event of the account, including deposits.
 
 ## What conflicts
 
-Two writers read the tail, then both append. The second append is rejected when the first one's event is inside the second one's scope.
+Assume matching history already exists, and both writers capture their expected positions before either appends. The second append is rejected if the first event falls inside the second writer's scope:
 
 | First writer appends to | Second writer appends to | Conflict? |
 |---|---|---|
@@ -69,11 +73,13 @@ An append that passes its own `ConcurrencyScope` skips the dimension logic. This
 
 <ChronicleClientTabs snippet="event-sources/concurrency/explicit-scope" variants="csharp" />
 
-`ForEventSource<TSource>(stream, streamId)` copies the event source type, and the stream type and stream id when you give them, from the definition. It does not read the dimension flags. It does not set the event source id or the sequence number either: you add `WithEventSourceId` and `WithSequenceNumber`. The builder checks that the stream is declared and throws `EventStreamDoesNotBelongToEventSource` if it is not. The scope retains its definition link, including through `with` copies. Passing a scope for `T.Onboarding` to a single-route append through `T.Transactions` throws `ConcurrencyScopeStreamDoesNotMatchAppend` before any append RPC. This applies to `AppendThroughEventSource`, `AppendManyThroughEventSource` and `AppendPreparedThroughEventSource`, including their typed extension methods. [CHR0063](../code-analysis/CHR0063.mdx) warns when the mismatch is statically visible.
+`ForEventSource<TSource>(stream, streamId)` resolves the source type and any supplied stream name from the definition, then uses the stream id you provide. It does not read the dimension flags. Add `WithEventSourceId` and `WithSequenceNumber` yourself to select the instance and expected position. An undeclared stream throws `EventStreamDoesNotBelongToEventSource`.
 
-Labelled `AppendMany` conditions remain the typed independent-guard escape: they can intentionally guard one stream while writing another. Ordinary `AppendPrepared` has no definition route in its prepared content and stays independent too. A scope without a definition link, a scope for another definition or one without stream narrowing is not refused by this check. `ConcurrencyOptions.AllowRouteScopeStreamMismatch = true` restores legacy acceptance for single-route APIs.
+The scope retains a link to its definition, even through `with` copies. That lets the client catch a scope for `T.Onboarding` passed to an append through `T.Transactions`: it throws `ConcurrencyScopeStreamDoesNotMatchAppend` before sending the append. This check applies to `AppendThroughEventSource`, `AppendManyThroughEventSource` and `AppendPreparedThroughEventSource`, including their typed extension methods. [CHR0063](../code-analysis/CHR0063.mdx) warns when the mismatch is visible in source.
 
-The tail from `GetTailSequenceNumber` is `Unavailable` when the stream has no events. A narrowed caller-supplied scope now treats that value as "no matching event yet" on every append path. An empty builder or wildcard-only scope does not become a whole-log expectation. `ConcurrencyOptions.SkipIncompleteExplicitScopes = true` restores legacy skipping. Converting to `EventSequenceNumber.BeforeFirst` explicitly, as the example does, states the same expectation without depending on that switch.
+To intentionally guard one stream while writing another, use labelled `AppendMany` conditions. Ordinary `AppendPrepared` also stays independent because its prepared content has no definition route. The mismatch check does not refuse a scope without a definition link, one for another definition, or one without stream narrowing. `ConcurrencyOptions.AllowRouteScopeStreamMismatch = true` restores legacy acceptance for single-route APIs.
+
+For an empty stream, `GetTailSequenceNumber` returns `Unavailable`. A narrowed caller-supplied scope treats that as an expectation that no matching event exists. An empty builder or wildcard-only scope does not become a whole-log expectation. Set `ConcurrencyOptions.SkipIncompleteExplicitScopes = true` only if you need the legacy behavior that skips incomplete scopes. The example explicitly converts to `EventSequenceNumber.BeforeFirst` to state the empty-stream expectation without depending on that switch.
 
 A [decision read](../read-models/decision-reads.mdx) does the capture-then-read sequence for you. See [Dynamic Consistency Boundary](./dcb.mdx).
 
@@ -81,7 +87,7 @@ A [decision read](../read-models/decision-reads.mdx) does the capture-then-read 
 
 An `AppendMany` can require several guards for the same event source id. Every guard must hold against the state before the batch; if one fails, none of the events are appended.
 
-When you pass no explicit scope for an id, the .NET client resolves every distinct route, including routes without definitions. Equal predicates share the earliest expected position. Different stream ids, stream types, source types or event-type filters retain separate guards; Chronicle does not widen them into a whole-source check. An unchecked entry never hides a later guarded entry.
+When you pass no explicit scope for an id, the .NET client resolves every distinct route, including routes without definitions. Identical matching conditions, called predicates, share the earliest expected position. Different stream ids, stream types, source types or event-type filters retain separate guards; Chronicle does not widen them into a whole-source check. An unchecked entry never hides a later guarded entry.
 
 For explicit guards, pass an ordered `IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>>` to `AppendMany(events, correlationId, tags, concurrencyScopes)`. Labels may repeat for different predicates. This also supports writing just one event while guarding several streams. `AppendManyWithNamedTags` accepts the same list after its correlation id and tags parameters.
 
@@ -99,12 +105,10 @@ If broader conflicts are acceptable, an older kernel can use one explicit scope 
 
 ## History mutations
 
-Revisions and redactions do not advance the append boundary and are outside concurrency scopes, decision reads and constraints. Pause affected producers and drain in-flight decisions before changing history, then resume with fresh reads. See [Revisions and redactions are outside append conditions](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions).
+Revisions and redactions do not advance the append position. Supported .NET decision reads also capture a mutation epoch, a version that changes when stored history is revised or redacted. The kernel checks it with the append position, so a changed epoch rejects the guarded append even when no new event arrived.
+
+A scope containing only an append position does not gain that protection. For mutation paths or clients that do not carry the epoch, pause affected producers and drain in-flight decisions before changing history, then resume with fresh reads. See [history mutations and append conditions](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions).
 
 ## Next steps
 
-- [Scenarios](./scenarios.mdx): the dimensions in worked examples.
-- [How it works](./how-it-works.mdx#how-a-scope-is-produced): the code path from definition to scope.
-- [Dynamic Consistency Boundary](./dcb.mdx): scopes as append conditions. See also [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).
-- [Decision reads](../read-models/decision-reads.mdx)
-- [Read protection](../read-models/read-protection.mdx): refuse unguarded reads and immediate appends in an invocation
+Apply these dimensions in [Scenarios](./scenarios.mdx), or trace scope creation in [How it works](./how-it-works.mdx#how-a-scope-is-produced). To protect a decision based on a read, continue with [Dynamic Consistency Boundary](./dcb.mdx) and [decision reads](../read-models/decision-reads.mdx). [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) explains the model; [read protection](../read-models/read-protection.mdx) can refuse unguarded reads and immediate appends in an invocation.

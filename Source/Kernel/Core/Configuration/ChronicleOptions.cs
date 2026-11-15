@@ -86,6 +86,11 @@ public class ChronicleOptions : IValidatableObject
     public Shutdown Shutdown { get; init; } = new();
 
     /// <summary>
+    /// Gets the startup configuration.
+    /// </summary>
+    public Startup Startup { get; init; } = new();
+
+    /// <summary>
     /// Feature toggles for Chronicle.
     /// </summary>
     public Features Features { get; init; } = new Features();
@@ -101,6 +106,11 @@ public class ChronicleOptions : IValidatableObject
     public Sql Sql { get; init; } = new Sql();
 
     /// <summary>
+    /// Gets or inits the Neo4j graph sink configuration.
+    /// </summary>
+    public Neo4jOptions Neo4j { get; init; } = new Neo4jOptions();
+
+    /// <summary>
     /// Gets or inits the compliance configuration.
     /// When <see cref="Encryption.Storage"/> is not set, the general <see cref="Storage"/> is used for compliance data.
     /// </summary>
@@ -110,6 +120,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the telemetry configuration.
     /// </summary>
     public Telemetry Telemetry { get; init; } = new();
+
+    /// <summary>
+    /// Gets the memory management configuration.
+    /// </summary>
+    public MemoryManagement Memory { get; init; } = new MemoryManagement();
 
     /// <summary>
     /// Gets the observers configuration.
@@ -134,6 +149,11 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the durable occurrence delivery configuration.
     /// </summary>
     public Occurrences Occurrences { get; init; } = new();
+
+    /// <summary>
+    /// Gets the configuration for bulk event import sessions.
+    /// </summary>
+    public Imports Imports { get; init; } = new();
 
     /// <summary>
     /// Gets the alerts configuration.
@@ -176,6 +196,11 @@ public class ChronicleOptions : IValidatableObject
     public ReadModels ReadModels { get; init; } = new ReadModels();
 
     /// <summary>
+    /// Gets the named sinks read models and graphs store to, and which of them are the defaults.
+    /// </summary>
+    public SinksOptions Sinks { get; init; } = new SinksOptions();
+
+    /// <summary>
     /// Gets or inits the trusted reverse proxies used for forwarded headers.
     /// </summary>
     public ForwardedHeaders ForwardedHeaders { get; init; } = new ForwardedHeaders();
@@ -212,6 +237,11 @@ public class ChronicleOptions : IValidatableObject
     public Tls Tls { get; init; } = new Tls();
 
     /// <summary>
+    /// Gets or inits the dedicated federation listener configuration. Federation is off by default.
+    /// </summary>
+    public Federation Federation { get; init; } = new Federation();
+
+    /// <summary>
     /// Gets or inits the bootstrap client configurations.
     /// Clients defined here are registered on startup with hashed secrets.
     /// </summary>
@@ -222,6 +252,7 @@ public class ChronicleOptions : IValidatableObject
     /// </summary>
     /// <param name="services">Service collection to add to.</param>
     /// <param name="configuration">Application configuration.</param>
+    /// <exception cref="InvalidConnectionFile">Thrown when a connection setting that names a file cannot be resolved.</exception>
     public static void AddConfiguration(IServiceCollection services, IConfiguration configuration)
     {
         // Load chronicle.json at the root level and bind it to the Cratis:Chronicle section
@@ -236,6 +267,8 @@ public class ChronicleOptions : IValidatableObject
             configuration[$"{SectionPath}:{kvp.Key}"] = kvp.Value;
         }
 
+        ConnectionFiles.Resolve(configuration);
+
         services
             .AddOptions<ChronicleOptions>()
             .BindConfiguration(SectionPath)
@@ -246,12 +279,21 @@ public class ChronicleOptions : IValidatableObject
     /// <inheritdoc/>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Telemetry.EventSourceIdTracing == EventSourceIdTracing.Hashed &&
+        if (Telemetry.RequiresHashKey &&
             (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
         {
             yield return new ValidationResult(
                 "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
+        }
+
+        foreach (var error in StorageValidation.Validate(Storage)) yield return error;
+
+        if (Federation.Enabled && (Federation.Port == Port || Federation.Port == DedicatedHealthPort))
+        {
+            yield return new ValidationResult(
+                "Federation:Port must differ from the main port and the dedicated health port; federation is served on its own listener.",
+                [$"{nameof(Federation)}.{nameof(Federation.Port)}"]);
         }
 
         if (ReadModels.MaxBatchSize <= 0)
@@ -269,9 +311,27 @@ public class ChronicleOptions : IValidatableObject
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
         foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
         foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
+        if (ValidateSinks() is { } sinksError) yield return sinksError;
+        if (Startup.BusySiloWaitLimit < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Startup.BusySiloWaitLimit must be non-negative.", [$"{nameof(Startup)}.{nameof(Configuration.Startup.BusySiloWaitLimit)}"]);
+        }
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    ValidationResult? ValidateSinks()
+    {
+        try
+        {
+            Sinks.Validate();
+            return null;
+        }
+        catch (InvalidSinkConfiguration exception)
+        {
+            return new ValidationResult(exception.Message, [nameof(Sinks)]);
         }
     }
 
@@ -285,6 +345,11 @@ public class ChronicleOptions : IValidatableObject
         if (Clustering.SingleWriterLease.AcquireTimeout < TimeSpan.Zero)
         {
             yield return new ValidationResult("Clustering.SingleWriterLease.AcquireTimeout must be non-negative.", ["Clustering.SingleWriterLease.AcquireTimeout"]);
+        }
+
+        if (Clustering.SingleWriterLease.StandbyStartupTimeout < TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Clustering.SingleWriterLease.StandbyStartupTimeout must be non-negative.", ["Clustering.SingleWriterLease.StandbyStartupTimeout"]);
         }
     }
 }

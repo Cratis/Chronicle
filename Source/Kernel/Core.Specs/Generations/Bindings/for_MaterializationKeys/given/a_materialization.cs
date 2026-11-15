@@ -29,7 +29,10 @@ public class a_materialization : Specification
         _storage.GetEventStore(_name).Returns(_store);
         _store.GenerationFloor.Get().Returns(_floor);
         _store.Projections.Get(_projection).Returns(new ProjectionDefinition(ProjectionOwner.Client, new("event-log"), _projection, new("model"), true, true, new(), new Dictionary<Cratis.Chronicle.Concepts.Events.EventType, FromDefinition>(), new Dictionary<Cratis.Chronicle.Concepts.Events.EventType, JoinDefinition>(), new Dictionary<Cratis.Chronicle.Properties.PropertyPath, ChildrenDefinition>(), [], new(new Dictionary<Cratis.Chronicle.Properties.PropertyPath, string>(), false), new Dictionary<Cratis.Chronicle.Concepts.Events.EventType, RemovedWithDefinition>(), new Dictionary<Cratis.Chronicle.Concepts.Events.EventType, RemovedWithJoinDefinition>()));
-        _store.ReadModels.Get(new("model")).Returns(new ReadModelDefinition(new("model"), new("models"), new("Models"), ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, new("projection"), _sink, new Dictionary<ReadModelGeneration, Cratis.Chronicle.Schemas.JsonSchema>(), []));
+        UseSink(_sink);
         _keys = new(_storage);
     }
+
+    protected void UseSink(SinkDefinition sink) =>
+        _store.ReadModels.Get(new("model")).Returns(new ReadModelDefinition(new("model"), new("models"), new("Models"), ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, new("projection"), sink, new Dictionary<ReadModelGeneration, Cratis.Chronicle.Schemas.JsonSchema>(), []));
 }

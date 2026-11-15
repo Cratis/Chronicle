@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
@@ -53,7 +53,7 @@ public class the_job_step : Specification
 
         _stateStorage = _silo.AddPersistentStateStorage<MigrateExistingEventsForTypeStepState>(
             nameof(MigrateExistingEventsForTypeStepState),
-            Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+            Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
 
         _jobStep = await _silo.CreateGrainAsync<MigrateExistingEventsForTypeStep>(_jobStepId, _jobStepKey);
     }

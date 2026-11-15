@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 using ApplicationId = Cratis.Chronicle.Concepts.Security.ApplicationId;
 
@@ -97,21 +98,21 @@ public class SqlAuthorizationStorage(IDatabase database, JsonSerializerOptions j
     public async Task<IEnumerable<Authorization>> FindBySubject(Subject subject, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Authorizations.Where(a => a.Subject == subject.Value).ToListAsync(cancellationToken)).Select(ToAuthorization).ToArray();
+        return (await scope.DbContext.Authorizations.WhereExact(scope.DbContext, a => a.Subject, subject.Value).ToListAsync(cancellationToken)).Select(ToAuthorization).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Authorization>> FindByApplicationIdAndSubject(ApplicationId applicationId, Subject subject, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Authorizations.Where(a => a.ApplicationId == applicationId.Value && a.Subject == subject.Value).ToListAsync(cancellationToken)).Select(ToAuthorization).ToArray();
+        return (await scope.DbContext.Authorizations.Where(a => a.ApplicationId == applicationId.Value).WhereExact(scope.DbContext, a => a.Subject, subject.Value).ToListAsync(cancellationToken)).Select(ToAuthorization).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Authorization>> FindByApplicationIdSubjectAndStatus(ApplicationId applicationId, Subject subject, AuthorizationStatus status, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Authorizations.Where(a => a.ApplicationId == applicationId.Value && a.Subject == subject.Value && a.Status == status.Value).ToListAsync(cancellationToken)).Select(ToAuthorization).ToArray();
+        return (await scope.DbContext.Authorizations.Where(a => a.ApplicationId == applicationId.Value).WhereExact(scope.DbContext, a => a.Subject, subject.Value).WhereExact(scope.DbContext, a => a.Status, status.Value).ToListAsync(cancellationToken)).Select(ToAuthorization).ToArray();
     }
 
     /// <inheritdoc/>

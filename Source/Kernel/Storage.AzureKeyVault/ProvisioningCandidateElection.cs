@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// <remarks>
 /// <para>
 /// Every write to a secret adds a version and Key Vault keeps them all, so no racer's material is lost - the race is
-/// only about which version everyone uses. The winner is the oldest enabled candidate by creation time, tie-broken
+/// only about which version everyone uses. The winner is the oldest candidate by creation time, tie-broken
 /// ordinally on the version identifier, which every caller computes the same way from the same versions.
 /// </para>
 /// <para>
@@ -28,7 +28,8 @@ namespace Cratis.Chronicle.Storage.AzureKeyVault;
 /// <param name="secretClient">The <see cref="SecretClient"/> to read versions through.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> elections are settled against.</param>
 /// <param name="deserialize">Turns a secret value into the <see cref="EncryptionKey"/> it holds.</param>
-internal sealed class ProvisioningCandidateElection(SecretClient secretClient, TimeProvider timeProvider, Func<string, EncryptionKey?> deserialize)
+/// <param name="eligibleVersion">Optional filter for versions allowed to participate in legacy reads.</param>
+internal sealed class ProvisioningCandidateElection(SecretClient secretClient, TimeProvider timeProvider, Func<string, EncryptionKey?> deserialize, Func<SecretProperties, bool>? eligibleVersion = null)
 {
     /// <summary>
     /// The tag marking a secret version as a provisioning candidate that takes part in the election.
@@ -72,6 +73,7 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
     /// </summary>
     /// <param name="name">The name of the secret.</param>
     /// <returns>The elected <see cref="EncryptionKey"/>, or <see langword="null"/> when no candidate can be read.</returns>
+    /// <exception cref="EncryptionKeyUnavailable">A version of the secret is disabled.</exception>
     public async Task<EncryptionKey?> Elect(string name)
     {
         for (var round = 0; ; round++)
@@ -81,6 +83,13 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
             if (elected is null)
             {
                 return null;
+            }
+
+            if (elected.Enabled == false)
+            {
+                // Never fall through to a later candidate: the key that sorts first is the key everyone agrees on.
+                EncryptionKeyUpgradeMetrics.Unavailable();
+                throw new EncryptionKeyUnavailable();
             }
 
             var settledAt = (elected.CreatedOn ?? DateTimeOffset.MinValue) + SettleTime;
@@ -117,7 +126,8 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
         {
             await foreach (var version in secretClient.GetPropertiesOfSecretVersionsAsync(name))
             {
-                if (version.Enabled == true && IsCandidate(version) && (elected is null || SortsBefore(version, elected)))
+                if (!ParticipatesInElection(version)) continue;
+                if (elected is null || SortsBefore(version, elected))
                 {
                     elected = version;
                 }
@@ -131,11 +141,25 @@ internal sealed class ProvisioningCandidateElection(SecretClient secretClient, T
         return elected;
     }
 
+    bool ParticipatesInElection(SecretProperties version)
+    {
+        if (eligibleVersion?.Invoke(version) == false) return false;
+        if (version.Enabled == false)
+        {
+            // Any eligible disabled version, candidate or not, ends the election: it may be the key everyone agrees on.
+            EncryptionKeyUpgradeMetrics.Unavailable();
+            throw new EncryptionKeyUnavailable();
+        }
+
+        return IsCandidate(version);
+    }
+
     async Task<EncryptionKey?> ReadVersion(string name, string version)
     {
         try
         {
-            return deserialize((await secretClient.GetSecretAsync(name, version)).Value.Value);
+            var secret = (await secretClient.GetSecretAsync(name, version)).Value;
+            return eligibleVersion?.Invoke(secret.Properties) == false ? null : deserialize(secret.Value);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {

@@ -1,18 +1,18 @@
 ---
-title: Getting a Single Instance
-description: Read one read model instance by key, and understand whether the answer comes from the materialized store or from replaying events.
+title: Read one Cratis Chronicle read model by key
+description: Read one Cratis Chronicle read model by key, handle a missing instance, and choose between stored state, event replay, and a guarded decision.
 ---
 
-When you need one read model and you have its key, ask Chronicle for it by key. You always call the same operation; what differs is where the answer comes from.
+Read a single Cratis Chronicle read model by key when you already know which instance the caller needs. An ordinary key lookup returns stored state for a materialized model and rebuilds a passive model from events. The model's definition determines the path, so the same call can have different freshness and processing costs.
 
-Chronicle knows whether the read model is **materialized** — whether an observer writes its state to a sink. If it is, the kernel reads the stored instance and releases any PII before returning it. If it is not — a passive read model has no observer and therefore no sink — the kernel rebuilds the instance from the events that feed it. You do not choose between the two at the call site; the read model's own definition decides.
+A materialized model has an observer that writes state to a sink, its storage destination. A passive model is computed on demand instead. Neither plain read protects a later append; use a [decision-consistent read](decision-reads.mdx) when a command must detect competing writes.
 
 ## How it works
 
 The client sends the read model type and key to the kernel. The kernel resolves the read model's definition and takes one of two paths:
 
-- **Materialized read model** — the kernel looks the instance up in the sink by key, releases compliance-protected values, and returns it. The lookup cost does not grow with the event history. The instance is as current as the observer that wrote it, so it is eventually consistent.
-- **Passive read model** — the kernel replays the relevant events through the projection or reducer that owns the read model and returns the result. The instance reflects every event appended up to that call, so it is strongly consistent. The cost grows with the length of the history.
+- For a materialized read model, the kernel looks up the stored instance and releases compliance-protected values before returning it. There is no event-history replay, but the instance is only as current as its observer.
+- For a passive read model, the read processes the relevant events through the projection or reducer that owns it. It does not wait for materialization, but the work grows with the history being processed.
 
 The materialized path is also the only one that sees the whole picture for a projection that joins across event sources or resolves keys from other events. Replay walks one event source, so it cannot reconstruct state that was built from events belonging to a different key.
 
@@ -30,15 +30,19 @@ The read model type must already be registered by the client, either as a model-
 
 <ChronicleClientTabs snippet="read-models/getting-single-instance/basic" />
 
-Each client names the operation in its own idiom, but the inputs are the same: the read model type and the read model key.
+Use the read model's key, not an arbitrary field value. If the caller needs to search by another field, see [Querying Read Models](querying.md) before reading a collection and filtering it.
 
 ## Read one stream instance
 
-A model declaring `[EventStream<TSource>(stream)]` must be read with `GetInstanceById<T>(EventSourceId, EventStreamId)`. It keeps the source ID as its model key and folds only that source's declared stream and requested ID. The declaration supplies the event source type as well; events written without that source type are not included. This implies passive and supplies no append guard. A key-only read refuses with `ReadModelRequiresStreamScope` rather than mixing streams. See [Read models scoped to one event stream](per-stream.mdx) for the monthly-limit example and query call.
+For a model declaring `[EventStream<TSource>(stream)]`, use the .NET overload `GetInstanceById<T>(EventSourceId, EventStreamId)`. The model remains keyed by source ID; the second argument selects the stream instance, such as one account's month of transactions. The declaration makes the model passive and supplies the event source type and stream type.
+
+Events written without that source type are not included. A key-only read refuses with `ReadModelRequiresStreamScope` rather than mixing streams. This is still a plain read, with no append guard. See [Read models scoped to one event stream](per-stream.mdx) for the monthly-limit example and the meaning of the default stream ID.
 
 ## Missing instances
 
-If no instance exists for that key, clients return their normal "not found" shape: `null`, `nil`, or an empty result depending on the language. Treat that as "no state exists yet," not as a projection failure. For a materialized read model this covers both a key that was never created and one that has been removed — the observer is authoritative, so Chronicle does not fall back to a replay that would resurrect it.
+Handle the client's not-found result before using the instance. In .NET this is `null`. A missing instance is not, by itself, a projection failure, nor does it prove that the source has no events: a materialized model may not have caught up yet.
+
+For a materialized model, a missing key can also mean that no instance was created or that one was removed. Chronicle does not fall back to replay when the stored lookup finds nothing, which would risk recreating a removed instance.
 
 If the read model type itself is unknown, that is a configuration error, not a missing instance. The kernel rejects the lookup with an error naming the requested read model identifier. Use the registered identifier rather than its container name, and register the projection, reducer, or read model before querying it.
 
@@ -55,10 +59,12 @@ Leave the read model materialized — the default — when:
 
 Mark the read model passive when:
 
-- A command needs the exact current state before making a decision.
+- A caller needs state computed from the source's events rather than an observer's stored result.
 - You append an event and immediately need to read the state it creates.
 - The event history for each key stays short.
 - The read model is queried rarely relative to how often its events are appended.
+
+If the state determines whether an append is allowed, choosing passive is only the freshness decision. Use [decision-consistent reads](decision-reads.mdx) to guard the append, or a [constraint](../constraints/index.md) for a rule the kernel checks on every append. For stored reads that must include your own write, see [Read model consistency](consistency.md).
 
 ## Related topics
 

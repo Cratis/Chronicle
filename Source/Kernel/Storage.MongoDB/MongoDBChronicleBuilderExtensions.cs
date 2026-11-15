@@ -2,20 +2,23 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Connections;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.MongoDB;
+using Cratis.Choreography.Storage.MongoDB.Jobs;
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Schema;
 using Cratis.Chronicle.Storage.MongoDB.Sinks;
 using Cratis.Chronicle.Storage.SingleWriter;
 using Cratis.Compliance.MongoDB;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.MongoDB;
-using Cratis.Orleans.Storage.MongoDB.Jobs;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Orleans.Providers.MongoDB.Configuration;
@@ -46,7 +49,9 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution);
             services.AddSingleton<MongoDBIndexProvisioner>();
             services.AddSingleton<IMongoDBIndexProvisioner>(provider => provider.GetRequiredService<MongoDBIndexProvisioner>());
+            services.AddSingleton<IMongoDBCapabilityProbe, MongoDBCapabilityProbe>();
         });
+        builder.SiloBuilder.AddStartupTask<VerifyMongoDBCapabilities>(ServiceLifecycleStage.First);
         builder.SiloBuilder.AddStartupTask<VerifyMongoDBIndexes>(ServiceLifecycleStage.First);
         return builder;
     }
@@ -115,25 +120,36 @@ public static class MongoDBChronicleBuilderExtensions
             // the host having run convention binding; convention binding leaves an already registered service alone.
             services.TryAddSingleton<IReadModelChangeStreams, ReadModelChangeStreams>();
             services.AddSingleton<IMongoDBClientManager, MongoDBClientManager>();
+            services.TryAddSingleton<IMongoDBTopology, MongoDBTopology>();
             services.AddSingleton<EncryptionKeyStorage>();
+            services.AddSingleton<IEncryptionKeyFence>(sp => sp.GetRequiredService<EncryptionKeyStorage>());
             services.AddSingleton<IEncryptionKeyStorage>(sp => new CacheEncryptionKeyStorage(sp.GetRequiredService<EncryptionKeyStorage>()));
             services.AddSingleton<IClusterStorage, ClusterStorage>();
             services.AddSingleton<ISingleWriterLeaseStorage, MongoDBSingleWriterLeaseStorage>();
             services.AddSingleton<ISystemStorage, SystemStorage>();
             services.AddSingleton<ISystemEventStoreRelocation, SystemEventStoreRelocation>();
 
-            // The Cratis.Orleans job system storage: the same MongoDB client, databases named exactly where
+            // The Cratis.Choreography job system storage: the same MongoDB client, databases named exactly where
             // the kernel has always kept its job state, resolved per event store and namespace. Registered
             // as IJobsStorage - that is the type the package's JobsManager grain and the kernel's storage
             // trees inject; a registration keyed only on the concrete type leaves IJobsStorage unresolved.
-            services.AddSingleton<Orleans.Storage.IJobsStorage>(sp => new MongoDBJobsStorage(
-                sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings),
-                sp.GetRequiredService<IJobTypes>(),
-                sp.GetRequiredService<ICustomSerializers>(),
-                Options.Create(new MongoDBJobsStorageOptions
-                {
-                    DatabaseNameResolver = (scope, @namespace) => Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName)
-                })));
+            // The names are matched to the casing a database already has on the server, as every other database is.
+            services.AddSingleton<Choreography.Storage.IJobsStorage>(sp =>
+            {
+                var jobsClient = sp.GetRequiredService<IMongoDBClientManager>().GetClientFor(settings);
+                var logger = sp.GetService<ILoggerFactory>()?.CreateLogger<MongoDBJobsStorage>();
+                return new MongoDBJobsStorage(
+                    jobsClient,
+                    sp.GetRequiredService<IJobTypes>(),
+                    sp.GetRequiredService<ICustomSerializers>(),
+                    Options.Create(new MongoDBJobsStorageOptions
+                    {
+                        DatabaseNameResolver = (scope, @namespace) => DatabaseNameCasing.Resolve(
+                            jobsClient,
+                            Storage.MongoDB.DatabaseNames.ForEventStoreNamespace(scope, @namespace, databaseNamePrefix, systemDatabaseName),
+                            logger)
+                    }));
+            });
             services.AddSingleton<ICustomSerializers, CustomSerializers>();
 
             // Auto-registration only considers the assemblies named here, and the package names its own. The
@@ -146,6 +162,7 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddSingleton<JobStateSerializer>();
             services.AddSingleton<IStorage, Storage.Storage>();
             services.AddSingleton<IStorageErrorClassifier, MongoDBStorageErrorClassifier>();
+            services.AddSingleton<IReservedEventSequenceIds, MongoDBReservedEventSequenceIds>();
             services.AddSingleton<Storage.Generations.Bindings.IMaterializationBindingStorage, Storage.MongoDB.Generations.Bindings.MongoDBMaterializationBindingStorage>();
             services.AddGenerationCatalog();
             services.AddSingleton<Storage.MongoDB.Generations.Gates.IGenerationGateWrites, Storage.MongoDB.Generations.Gates.MongoDBGenerationGateWrites>();

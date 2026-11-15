@@ -17,7 +17,7 @@ public class when_before_startup_completes : Specification
         var lifetime = Substitute.For<IHostApplicationLifetime>();
         lifetime.ApplicationStarted.Returns(started.Token);
         lifetime.ApplicationStopping.Returns(stopping.Token);
-        _result = await new StartupHealthCheck(lifetime).CheckHealthAsync(new HealthCheckContext());
+        _result = await new StartupHealthCheck(given.startup_state.For(lifetime)).CheckHealthAsync(new HealthCheckContext());
     }
 
     [Fact] void should_report_unhealthy() => _result.Status.ShouldEqual(HealthStatus.Unhealthy);

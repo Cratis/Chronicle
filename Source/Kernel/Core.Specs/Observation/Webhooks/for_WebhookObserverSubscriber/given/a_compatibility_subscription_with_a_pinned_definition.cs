@@ -21,6 +21,6 @@ public class a_compatibility_subscription_with_a_pinned_definition : a_webhook_d
         {
             [new(_pin.Id, 1)] = new(new(_pin.Id, 1), EventTypeOwner.Client, EventTypeSource.Code, _firstSchema)
         };
-        _events = (await new EventCompliance(_metadata, _converter).Release(_events, schemas)).ToArray();
+        _events = (await new EventCompliance(_metadata, _converter, new OwnGenerationSchemaCache()).Release(_events, schemas)).ToArray();
     }
 }

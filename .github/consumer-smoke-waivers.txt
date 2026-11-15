@@ -1,0 +1,4 @@
+# Releases whose packages are knowingly allowed not to start beside the already-published Arc packages.
+# One version per line, then a reason after a space. A waiver applies to that exact version only.
+# The standalone Testing scenario is never waived.
+19.123.1 Arc.Chronicle.Testing is compiled against Chronicle 19.117.1, which used Cratis.Orleans; it can only be rebuilt against Choreography once this release is on nuget.org.

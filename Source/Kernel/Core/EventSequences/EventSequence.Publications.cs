@@ -18,8 +18,10 @@ public partial class EventSequence
         EventToAppend @event,
         CorrelationId correlationId,
         IEnumerable<Causation> causation,
-        Identity causedBy) =>
-        AppendValidated(
+        Identity causedBy)
+    {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
+        return AppendValidated(
             @event.EventSourceType,
             @event.EventSourceId,
             @event.eventStreamType,
@@ -36,6 +38,7 @@ public partial class EventSequence
             @event.NamedTags,
             @event.EventSource,
             new EventPublication(publicationId, intentFingerprint));
+    }
 
     async Task<Result<Concepts.Events.AppendedEvent, DuplicateEventSequenceNumber>> AppendPublicationToStorage(EventPublication publication, EventToAppendToStorage @event)
     {

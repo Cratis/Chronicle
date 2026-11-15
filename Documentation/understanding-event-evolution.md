@@ -1,15 +1,15 @@
 ---
-title: Understanding event evolution
-description: Chronicle event generations translate old immutable events into the current shape, so you can rename or split a field without editing history.
+title: Evolving event schemas with Cratis Chronicle generations
+description: Cratis Chronicle generations let old and new event schemas coexist. Define translations between versions and understand background backfill limits.
 ---
 
-Here's the question that makes immutability sound like a trap: **"Events are immutable — so what happens when I need to rename or split a field a year from now?"** You can't go back and edit history. If you wrote `Name` two years ago and now want `FirstName` and `LastName`, you can't rewrite two years of events.
+Cratis Chronicle event generations let readers use different versions of an event schema without replacing the stored representation. When `Name` becomes `FirstName` and `LastName`, you define how the kernel translates between the two shapes. New code can read the new generation while older code continues to read the one it understands.
 
-Chronicle's answer is **generations**. This page is the mental model; the full API and the recipe are linked at the end.
+Use generations for a schema change to the same business fact. The migration defines the translation; it cannot infer information the original event did not record. For example, splitting a person's name requires a deliberate rule for names that do not fit a first-name/last-name pattern.
 
 ## Translate, never edit
 
-Each version of an event type is a generation, and you describe how to move between adjacent generations in *both* directions — **upcast** (old → new, e.g. split `Name`) and **downcast** (new → old, e.g. recombine). You never edit the old events; you teach the kernel how to *translate* them.
+Each schema version of an event type is a generation. You define translations between adjacent generations in both directions: an upcast turns an older shape into a newer one, and a downcast turns the newer shape back into the older one. These mappings determine what each reader receives; do not assume that an automatically reversible transformation exists for every change.
 
 ```mermaid
 flowchart LR
@@ -19,23 +19,24 @@ flowchart LR
     E2 -->|stored| S
 ```
 
-What that buys you is unusual, and worth sitting with:
+With a registered 1→2 migration, appending a generation-1 event stores both generation 1 and the upcasted generation 2. Appending generation 2 also produces generation 1 through the downcast. The kernel stores the configured generations, so a consumer does not need to perform the translation on each read.
 
-- **Current backfills preserve stored generations.** They add missing representations without overwriting what is there. Earlier backfills may already have changed historical content, and SQL revisions replace content in place; upgrading cannot recover those originals.
-- **The kernel stores every generation.** Append a gen-1 event with a 1→2 migration and the kernel keeps both gen 1 and the upcasted gen 2.
-- **Two versions of your software can share one store.** Service A on the new code reads gen 2; Service B on the old code reads gen 1 — the same physical event, each getting the generation it understands, with no upgrade coordination between them.
-- **Backfilling is automatic, with a defined scope.** Register a new generation and Chronicle starts a background job for that event type in the default namespace's event log only. Other namespaces and sequences are not covered.
+That lets two application versions use the same stored event: a newer service reads generation 2 while an older service reads generation 1. Their deployments need not happen together for this schema change, provided the mappings supply the data each version expects. Kernel upgrades have a separate rollout requirement, described below.
 
-Backfill starts from the known appended generation's base content, not a separate revision. For legacy events whose appended generation is unknown, it uses the highest stored base generation and leaves the appended generation unknown. Each added representation records its source and the migration-definition version that produced it, alongside its content and hash. A concurrent revision or redaction prevents a stale write: the job re-reads and retries once, then logs and skips if the conflict persists. Existing representations do not change when you change a migration alone.
+For events already stored, registering a new generation starts a background backfill job for that event type in the default namespace's event log only. It does not backfill other namespaces or event sequences. The job adds missing representations and leaves existing ones unchanged. Changing a migration definition alone neither replaces those representations nor starts another backfill.
 
-Register new generations only after **every kernel silo has been upgraded**. During a rolling upgrade, old workers can still run destructive replace-all backfills.
+The backfill uses revised content when a separate revision is present. Otherwise, it uses the known appended generation's base content. If the appended generation is unknown or its content is missing, it falls back to the highest stored base generation; an unknown appended generation remains unknown. Each addition records its source and migration-definition version alongside its content and hash. A concurrent revision, redaction, or competing backfill can prevent the write: the job re-reads and retries once, then logs and skips the event if the conflict persists.
+
+Add-only backfill preserves what is currently stored, not content already lost. Earlier backfills may have overwritten generations, and SQL revisions replace generation content in place; upgrading cannot recover those originals.
+
+Register new generations only after every kernel silo has been upgraded. A silo is an Orleans server instance. During a rolling upgrade, workers on the older release can still run replace-all backfills and overwrite content.
 
 ## Why the kernel owns this
 
-Migrations run inside the **kernel** — the server — not in your application. That matters more than it first appears: once a migrator is registered, it applies to every event that passes through, whether it came from a .NET client, a REST call, or an integration written long after the migration shipped. Clients that are offline or still running older code are unaffected; they keep reading the generation they understand.
+The kernel applies registered migration definitions during append, independently of the client that sent the event. Application code declares the mapping, but the server performs the translation and stores the resulting generations. An older client does not need new migration code merely to keep reading its registered generation.
 
-This is the same principle that answers the other question that makes people nervous about event sourcing — enforcing uniqueness without a unique index. The hard part lives in the kernel, is declared close to the event, and applies to every client with no coordination. See [Understanding constraints](./understanding-constraints) for that half of the story.
+Server-side enforcement also matters when different writers must obey the same uniqueness rule. [Understanding constraints](./understanding-constraints) explains that related decision: which rules belong in the append path rather than in an application's read-before-write check.
 
 ## Where to go next
 
-The full story — declaring migrators, the C# API, and generation validation — is in [Migrations](/chronicle/migrations/); the step-by-step recipe is [Evolve an event](/chronicle/scenarios/evolve-an-event/). Once the translate-don't-edit model clicks, schema change stops being the obstacle it first appears to be.
+Use [Migrations](/chronicle/migrations/) to check declaration, registration, and validation details for your client. Then follow [Evolve an event](/chronicle/scenarios/evolve-an-event/) to define a generation change. Before deploying it, decide how both mappings handle missing information and confirm that the backfill scope covers the history your readers need.

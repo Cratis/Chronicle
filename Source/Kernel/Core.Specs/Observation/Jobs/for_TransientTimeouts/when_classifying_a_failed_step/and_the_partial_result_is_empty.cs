@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Orleans.Jobs;
+using Cratis.Choreography.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_TransientTimeouts.when_classifying_a_failed_step;
 

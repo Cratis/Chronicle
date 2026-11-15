@@ -122,6 +122,61 @@ static class ChildrenDefinitionExtensions
         }
     }
 
+    static void ApplyOrdering(ChildrenDefinition childrenDef, Attribute attr, Type? childType, string memberName, INamingPolicy namingPolicy)
+    {
+        if (attr is not IChildrenFromAttribute childrenFrom)
+        {
+            return;
+        }
+
+        var declared = new List<ChildrenOrderingDefinition>();
+        if (childrenFrom.Prepend)
+        {
+            declared.Add(new() { Placement = ChildrenPlacement.Prepend });
+        }
+
+        if (!string.IsNullOrEmpty(childrenFrom.OrderBy))
+        {
+            declared.Add(Sorted(childrenFrom.OrderBy, SortDirection.Ascending));
+        }
+
+        if (!string.IsNullOrEmpty(childrenFrom.OrderByDescending))
+        {
+            declared.Add(Sorted(childrenFrom.OrderByDescending, SortDirection.Descending));
+        }
+
+        if (declared.Count == 0)
+        {
+            return;
+        }
+
+        var ordering = declared.Count == 1 ? declared[0] : throw new ConflictingChildrenOrdering(memberName);
+        if (childrenDef.Ordering is not null && !IsSameOrdering(childrenDef.Ordering, ordering))
+        {
+            throw new ConflictingChildrenOrdering(memberName);
+        }
+
+        childrenDef.Ordering = ordering;
+
+        ChildrenOrderingDefinition Sorted(string propertyName, SortDirection direction)
+        {
+            if (childType is not null)
+            {
+                PropertyValidator.ValidatePropertyExists(childType, propertyName);
+            }
+
+            return new()
+            {
+                Placement = ChildrenPlacement.Sorted,
+                SortBy = (string)ProjectionPropertyPaths.Resolve(propertyName, namingPolicy, ProjectionPathRole.Target),
+                Direction = direction
+            };
+        }
+
+        static bool IsSameOrdering(ChildrenOrderingDefinition left, ChildrenOrderingDefinition right) =>
+            left.Placement == right.Placement && left.SortBy == right.SortBy && left.Direction == right.Direction;
+    }
+
     static ChildrenDefinition ProcessChildrenFromAttributeCore(
         IDictionary<string, ChildrenDefinition> targetChildren,
         Func<Type, EventType> getOrCreateEventType,
@@ -185,6 +240,8 @@ static class ChildrenDefinitionExtensions
             targetChildren[propertyName] = childrenDef;
         }
 
+        ApplyOrdering(childrenDef, attr, childType, memberName, namingPolicy);
+
         var keyExpression = key == WellKnownExpressions.EventSourceId ? key : (string)ProjectionPropertyPaths.Resolve(key, namingPolicy, ProjectionPathRole.Source);
         var parentKeyExpression = parentKey == WellKnownExpressions.EventSourceId ? parentKey : (string)ProjectionPropertyPaths.Resolve(parentKey, namingPolicy, ProjectionPathRole.Source);
 
@@ -226,7 +283,7 @@ static class ChildrenDefinitionExtensions
                         var contextPropertyNameProperty = setFromContextAttr.GetType().GetProperty(nameof(SetFromContextAttribute<object>.ContextPropertyName));
                         var contextPropertyName = contextPropertyNameProperty?.GetValue(setFromContextAttr) as string;
                         var propertyToUse = contextPropertyName ?? parameter.Name!;
-                        childrenDef.From.AddContextPropertyMapping(getOrCreateEventType, namingPolicy, setFromContextEventType, paramPropertyName, propertyToUse);
+                        childrenDef.From.AddContextPropertyMapping(getOrCreateEventType, namingPolicy, setFromContextEventType, paramPropertyName, propertyToUse, setFromContextAttr is ISetFromContextAttribute { SetOnce: true });
                     }
 
                     // Process SetValue attributes on constructor parameters
@@ -257,7 +314,7 @@ static class ChildrenDefinitionExtensions
                         var eventPropertyNameProperty = setFromAttr.GetType().GetProperty(nameof(SetFromAttribute<object>.EventPropertyName));
                         var eventPropertyName = eventPropertyNameProperty?.GetValue(setFromAttr) as string;
                         var propertyToUse = eventPropertyName ?? parameter.Name!;
-                        childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, setFromEventType, paramPropertyName, propertyToUse);
+                        childrenDef.From.AddSetMapping(getOrCreateEventType, namingPolicy, setFromEventType, paramPropertyName, propertyToUse, setFromAttr is ISetFromAttribute { SetOnce: true });
                     }
 
                     // Process AddFrom attributes on constructor parameters

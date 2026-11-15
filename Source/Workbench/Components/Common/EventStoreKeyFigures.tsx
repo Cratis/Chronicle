@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { ImDatabase, ImFolder, ImPriceTags } from 'react-icons/im';
+import { AllStorageAuthorizationDiagnostics } from 'Features/Diagnostics';
 import { StatisticsForEventStore } from 'Features/Statistics';
+import { describeStorageAuthorizationFailure, unauthorizedDatabases } from './storageAuthorization';
 import strings from 'Strings';
 import './EventStoreKeyFigures.css';
 
@@ -24,11 +26,7 @@ export const EventStoreKeyFigures = ({ eventStore }: IEventStoreKeyFigures) => {
     // across the board, which is exactly what it holds. Only an actually failed query says nothing. Until the
     // query has answered, the result holds an empty placeholder rather than figures, so nothing is read from it.
     if (result.isReady && !result.isSuccess) {
-        return (
-            <div className='workbench-event-store-key-figures workbench-event-store-key-figures--unavailable'>
-                {strings.home.keyFigures.unavailable}
-            </div>
-        );
+        return <StatisticsUnavailable />;
     }
 
     const data = result.isReady ? result.data : undefined;
@@ -47,6 +45,32 @@ export const EventStoreKeyFigures = ({ eventStore }: IEventStoreKeyFigures) => {
                     <span className='workbench-event-store-key-figures__label'>{figure.label}</span>
                 </span>
             ))}
+        </div>
+    );
+};
+
+/**
+ * Explains why the key figures are missing. The diagnostics are only queried here, once statistics have failed, so
+ * a healthy store issues no extra request. A recorded authorization failure is named; anything else stays generic.
+ */
+const StatisticsUnavailable = () => {
+    const [diagnostics] = AllStorageAuthorizationDiagnostics.use();
+    const failures = diagnostics.isReady && diagnostics.isSuccess ? diagnostics.data : [];
+    const databases = unauthorizedDatabases(failures);
+
+    if (databases.length === 0) {
+        return (
+            <div className='workbench-event-store-key-figures workbench-event-store-key-figures--unavailable'>
+                {strings.home.keyFigures.unavailable}
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className='workbench-event-store-key-figures workbench-event-store-key-figures--unavailable workbench-event-store-key-figures--unauthorized'
+            title={failures.map(_ => describeStorageAuthorizationFailure(_, strings.components.storageAuthorization.failure)).join('\n')}>
+            {strings.home.keyFigures.notAuthorized.replace('{databases}', databases.join(', '))}
         </div>
     );
 };

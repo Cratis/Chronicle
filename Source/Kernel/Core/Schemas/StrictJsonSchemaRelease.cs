@@ -26,10 +26,28 @@ internal static class StrictJsonSchemaRelease
     internal static async Task<JsonNode?> ReleaseValue(JsonSchema schema, IJsonSchemaMetadataValueHandler handler, EventStoreName eventStore, EventStoreNamespaceName @namespace, string identifier, JsonNode node)
     {
         var released = await handler.TryRelease(eventStore, @namespace, identifier, node);
+        return released is null ? null : TryRestore(schema, released);
+    }
+
+    /// <summary>
+    /// Attempts to restore the original JSON kind of an already released value.
+    /// </summary>
+    /// <param name="schema">The protected boundary's schema.</param>
+    /// <param name="released">The released value, which is text for non-string protected types.</param>
+    /// <returns>The original value, or null if it cannot be restored without loss.</returns>
+    internal static JsonNode? TryRestore(JsonSchema schema, JsonNode released)
+    {
         var type = ProtectedType(schema);
-        if (type != JsonObjectType.String && released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
+        try
         {
-            released = JsonNode.Parse(text);
+            if (type != JsonObjectType.String && released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
+            {
+                released = JsonNode.Parse(text)!;
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
         }
 
         var valid = type switch

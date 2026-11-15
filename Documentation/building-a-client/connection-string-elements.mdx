@@ -1,6 +1,6 @@
 ---
 title: "Connection string elements"
-description: "The Chronicle connection string grammar a client must implement: scheme, hosts, credentials, and every query parameter."
+description: "Design typed connection strings, builders, authentication validation, and credential redaction for a new Cratis Chronicle client, using .NET as the reference."
 ---
 
 [Connection Strings → Server support](../connection-strings/server.md) is the grammar reference —
@@ -28,6 +28,7 @@ exposes:
 | `SkipTlsValidation` | the `skipTlsValidation` parameter |
 | `DisableTls` | the `disableTls` parameter: cleartext HTTP/2 (h2c), and no development-credential fallback |
 | `CertificatePath` / `CertificatePassword` | client certificate options |
+| `CaCertificatePath` | the `caCertificatePath` parameter: certificate authorities the server certificate must chain to |
 
 `AuthenticationMode` being computed rather than stored is worth copying deliberately: it means
 there's exactly one place that can get the "both credentials and API key present" or "neither

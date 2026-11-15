@@ -62,12 +62,13 @@ key where that service supports it; otherwise an external effect can repeat.
 Return events from the command, or use transactional appends. Do not complete a
 stream or commit an aggregate early inside the executor's command.
 
-An immediate append can commit **before** the executor detects it and reports
-`OccurrenceCommandAppendedImmediately`. No receipt is recorded for that failed
-attempt, so retry can duplicate the escaped append. The executor does not
-implicitly provide Chronicle's `RefuseImmediateAppends()` guard. Read
-**cratis-chronicle-client-dotnet**'s immediate-append refusal reference when
-building a custom boundary that needs prevention before transport.
+Requires Arc 22.118.0 for the keyed executor to refuse immediate appends
+**before transport**, with neither appended events nor an effect receipt. Arc
+22.117.x detected `OccurrenceCommandAppendedImmediately` only after an append
+could escape; upgrade rather than treating that detection as retry safety.
+Use `.Transactional` or returned events, and assert that a forbidden direct
+append writes nothing. For a custom non-executor boundary, read
+**cratis-chronicle-client-dotnet**'s immediate-append refusal reference.
 
 ## Verify
 
@@ -76,4 +77,4 @@ append behavior. Deliver the same occurrence twice under the same effect name:
 assert one committed effect and a recorded result on the second delivery. Cover
 a terminal refusal, a retryable concurrency conflict, insufficient capability,
 and commit-then-lost-reply recovery. Run the owning specification project with
-`dotnet test`; passing means those assertions ran, not just that compilation succeeded.
+the owning project's built spec executable (see [specs.csharp](../../../rules/specs.csharp.md)); passing means those assertions ran, not just that compilation succeeded.

@@ -25,6 +25,7 @@ public class with_explicit_scope : Specification
         foreach (var consumer in _consumers)
         {
             var silo = new TestKitSilo();
+            silo.AddNamespaceCasing();
             silo.AddService(Substitute.For<ILocalSiloDetails>());
             var namespaces = Substitute.For<INamespaces>();
             namespaces.GetAll().Returns(_namespaces);

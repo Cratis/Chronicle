@@ -18,15 +18,20 @@ internal sealed class Patterns(
     global::Cratis.Chronicle.Patterns.IFacetSetGenerator facetSetGenerator,
     global::Cratis.Chronicle.Patterns.IPatternMatcher patternMatcher,
     global::Microsoft.Extensions.Options.IOptions<global::Cratis.Chronicle.Configuration.ChronicleOptions> optionsOfChronicleOptions,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Patterns.Patterns> logger) : global::Cratis.Chronicle.Contracts.Patterns.IPatterns
 {
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>> AllPatterns(global::Cratis.Chronicle.Contracts.Patterns.AllPatternsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Patterns.BehaviorPatternDetails.AllPatterns((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
                 return result.Select(ToBehaviorPatternDetailsResponse).ToList();
             },
@@ -36,9 +41,13 @@ internal sealed class Patterns(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>> MatchingPatterns(global::Cratis.Chronicle.Contracts.Patterns.MatchingPatternsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Patterns.BehaviorPatternDetails.MatchingPatterns((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Patterns.PatternGroupingKey)request.GroupingKey, request.Context, storage, facetVocabulary, facetSetGenerator, patternMatcher, optionsOfChronicleOptions, request.MinimumConfidence, request.MaximumResults);
                 return result.Select(ToBehaviorPatternDetailsResponse).ToList();
             },
@@ -48,9 +57,13 @@ internal sealed class Patterns(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>> PatternsForScope(global::Cratis.Chronicle.Contracts.Patterns.PatternsForScopeRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Patterns.BehaviorPatternDetails.PatternsForScope((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Patterns.PatternGroupingKey)request.GroupingKey, storage);
                 return result.Select(ToBehaviorPatternDetailsResponse).ToList();
             },
@@ -60,9 +73,13 @@ internal sealed class Patterns(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>> UsualActions(global::Cratis.Chronicle.Contracts.Patterns.UsualActionsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.BehaviorPatternDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Patterns.BehaviorPatternDetails.UsualActions((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, (global::Cratis.Chronicle.Concepts.Patterns.PatternGroupingKey)request.GroupingKey, request.Context, storage, facetVocabulary, patternMatcher, optionsOfChronicleOptions, request.MinimumConfidence, request.MaximumResults);
                 return result.Select(ToBehaviorPatternDetailsResponse).ToList();
             },
@@ -72,9 +89,13 @@ internal sealed class Patterns(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.PatternScopeResponse>>> AllPatternScopes(global::Cratis.Chronicle.Contracts.Patterns.AllPatternScopesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Patterns.PatternScopeResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Patterns.PatternScope.AllPatternScopes((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
                 return result.Select(ToPatternScopeResponse).ToList();
             },

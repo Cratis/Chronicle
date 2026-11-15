@@ -1,77 +1,94 @@
 ---
-title: Self-reducing read models
-description: Declare static state transitions on a read model without a separate reducer class.
+title: Build self-reducing read models in Cratis Chronicle
+description: Put static Reduce methods on a Cratis Chronicle read model to keep state and transitions together. Register the model, test its fold, and configure reads.
 ---
 
-Keep a read model's transitions beside its state when a separate reducer adds no useful separation.
-Start with model-bound projection attributes, use fluent mappings when the definition needs structure,
-and choose reducer code when state transitions read better; a self-reducing model is the default for
-new reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) shows
-when fold-time dependencies or a shared contract call for a separate `IReducerFor<T>` instead.
+A self-reducing read model in Cratis Chronicle keeps its state and transitions on the same .NET type.
+Declare public static `Reduce` methods when the next state depends on the previous state and a
+separate reducer class adds no useful separation. Each method is a fold: it combines an event with
+current state to produce the next state. Start with this form for new reducer code.
 
-A self reducer uses the same reducer pipeline, storage, filtering, and replay machinery as a classic
-reducer. Only discovery and invocation differ.
+If a fold needs injected services or the model is a shared contract that must stay separate, use
+`IReducerFor<T>` instead. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx)
+compares both forms with projection mappings. Self reducers use the same storage, filtering, and
+replay pipeline as instance reducers; their discovery and invocation differ.
 
 :::caution[Check existing models when upgrading]
-An existing concrete, non-generic model with a complete public static `Reduce(event, nullable current[, EventContext])`
-shape becomes a reducer after upgrading, even if you add no marker. Review existing static helpers and
-remove any competing builder before registering that model. Near misses warn and are skipped by
-implicit discovery; explicit registration rejects them.
+The static method shape is enough for discovery. If an existing concrete, non-generic model already
+has a complete public static `Reduce(event, nullable current[, EventContext])` signature, Chronicle
+recognizes it as a reducer without a marker. Check existing helpers and remove any competing builder
+before registering the model. An almost-correct signature warns and is skipped by automatic discovery;
+explicit registration rejects it.
 :::
 
 ## Declare the transitions
 
-Declare public static `Reduce` methods on the concrete, non-generic read model. You need neither a marker attribute nor a parameterless constructor. Each method receives an event and the nullable current model, and returns the next state.
+Start with the state your caller needs, then declare public static `Reduce` methods on that concrete,
+non-generic model. Each method receives an event and nullable current state and returns the next
+state. No marker attribute or parameterless constructor is required:
 
 <ChronicleClientTabs snippet="reducers/self-reducing-read-models/basic" />
 
-The first matching event for an event source receives `null` current state. Returning a new model creates or updates it; returning `current` ignores the event; returning `null` leaves it absent or deletes an existing instance. A later event can recreate it.
+The balance example adds an amount to the previous balance, starting from zero if no state exists.
+Clearing returns `null`. In any self reducer, returning a new model creates or updates the instance;
+returning `current` ignores the event; returning `null` leaves it absent or removes existing state.
+An event after removal receives `null` and can recreate the model.
 
 | Part | Supported shape |
 | --- | --- |
 | Declaration | Public static, non-generic method named `Reduce` |
 | Parameters | `(event, current)` or `(event, current, EventContext)` |
 | Event | Non-`object` class or interface dispatch target |
-| Current | Exactly the containing model type, nullable or nullable-oblivious |
+| Current | Exactly the containing model type, nullable or declared without nullable annotations |
 | Result | The model or `Task` of the model, including nullable results |
 
-No by-ref, optional, `params`, extra service or reordered arguments are accepted. Plain `Task`, `ValueTask`, and `Task<object>` are not state results. Async results are awaited before the next event. An explicitly non-nullable current parameter is a near miss: Chronicle can pass null even if the compiler annotation promises otherwise.
+Chronicle awaits an asynchronous result before applying the next event. Plain `Task`, `ValueTask`,
+and `Task<object>` are not state results. By-ref, optional, `params`, extra service, and reordered
+arguments are not supported. The current parameter must allow null because state can be absent;
+a non-nullable declaration is an almost-correct signature, not a promise Chronicle can satisfy.
 
 ## Discovery and upgrades
 
-The complete static shape is the discovery signal, not the method name alone. An existing non-`IReducer` class with that shape becomes a self reducer after upgrading. Methods with other shapes remain helpers. A static near miss whose current or result refers to its model logs a discovery warning and is skipped; explicit registration rejects it with `InvalidSelfReducerSignature`.
+A method named `Reduce` is not enough on its own: discovery requires the complete static shape.
+Other shapes remain helpers, except that a static near miss whose current or result refers to its
+model logs a warning and is skipped. Explicit registration rejects that near miss with
+`InvalidSelfReducerSignature`. Fix the signature before relying on the model's transitions.
 
-Once a type has a valid self-reduction method, invalid sibling `Reduce` declarations and malformed replay hooks fail validation. A valid handler matching no event in the owning client's registry creates no observer subscription. Unmarked events can participate when explicitly registered; assembly membership alone is not event membership.
+Once a type has a valid self-reduction method, invalid sibling `Reduce` declarations and malformed
+replay hooks fail validation. A valid method still needs a matching event in that client's registry
+before it creates an observer subscription. A type's presence in an assembly does not register it as
+an event; use `[EventType]` or explicit event registration.
 
 Types implementing `IReducer` or `IReducerFor<T>` always remain classic, even with a self-shaped static helper. Their instance activation, dispatch and plain-`Task` behavior are unchanged.
 
 ### Arc query endpoints
 
 In an Arc application, keep `[ReadModel]`, the static `Reduce` methods, and query methods on the same
-record. Before Arc 22.90.0, use `[ReadModel(RequireQueryAttribute = true)]` and mark intended
-queries `[Query]` to prevent `Reduce` becoming an endpoint. From Arc 22.90.0, Arc's automatic
-query discovery excludes methods taking the read model itself. Chronicle's discovery does not change
-older Arc versions.
+record. Arc's current automatic query discovery excludes methods taking the read model itself, so
+a reducer method is not exposed as a query.
+
+For an older Arc version without that exclusion, use `[ReadModel(RequireQueryAttribute = true)]` and
+mark intended queries `[Query]`. Chronicle's discovery does not change an older Arc version's endpoint
+discovery.
 
 See Arc's [model-bound read models and queries](/arc/backend/csharp/queries/model-bound/) for the query contract.
 
 ## Register the model
 
-Default discovery recognizes the complete static shape in your application's artifact catalog.
-Register the events through `[EventType]` or explicit nominations; assembly membership alone does not
-make a type an event. With manual or explicit artifact registration, nominate the model before
-creating the store, using the existing generic or `Type` `RegisterReducer` APIs:
+Default discovery recognizes a valid self reducer in your application's artifact catalog. With
+manual or explicit artifact registration, nominate the model before creating the store. Use the
+existing generic or `Type` `RegisterReducer` APIs, and include the events it handles:
 
 <ChronicleClientTabs snippet="reducers/self-reducing-read-models/explicit-registration" />
 
-There is no separate self-reducer registration API. Equal explicit and discovered declarations
-coalesce; incompatible identities fail. Store snapshots and reconnect lifetime follow
-[explicit artifact registration](../clients/dotnet/explicit-artifacts.md).
+There is no separate self-reducer registration API. Matching explicit and discovered declarations
+are combined; incompatible identities fail. For when a store captures its artifact catalog and what
+happens on reconnect, follow [explicit artifact registration](../clients/dotnet/explicit-artifacts.md).
 
-In the same client catalog, a self model cannot also be maintained by another reducer, a fluent
-projection, or genuine model-bound projection mappings: `AmbiguousReadModelBuilder` rejects the
-conflict. Shared configuration such as `[Passive]`, `[Reducer]`, sequence selection, and filters does
-not by itself establish projection ownership. Remove the previous builder before switching.
+Remove a previous builder before switching a model to self reduction. In the same client catalog,
+`AmbiguousReadModelBuilder` rejects another reducer, a fluent projection, or model-bound projection
+mappings that also maintain the model. Configuration such as `[Passive]`, `[Reducer]`, sequence
+selection, and filters does not by itself count as a projection builder.
 
 ## Test the transitions
 
@@ -81,8 +98,8 @@ registered self reducer. This example checks accumulation, removal, and creation
 <ChronicleClientTabs snippet="reducers/self-reducing-read-models/testing" />
 
 The model is absent after `SelfBalanceCleared`; the next addition receives null current and starts a
-new balance. Also cover an empty history and each event that can arrive without prior state. Scenarios
-substitute compliance and storage, so they do not prove encryption, erasure, replay, or transport.
+new balance. Also cover an empty history and each event that can arrive without prior state. A
+scenario checks the fold, not the complete running system: it substitutes compliance and storage.
 
 ## Configure observation and reads
 
@@ -110,27 +127,55 @@ The implementation fingerprint includes selected handlers and replay hooks, incl
 
 ## Optional replay hooks
 
-Each hook is independently optional. Global hooks have service arguments only; partition hooks require `Partition` first. All must be public static non-generic methods returning exactly `Task`.
+Use replay hooks for work tied to replay notifications, not for computing each event's next state.
+Each hook is optional and must be public static, non-generic, and return exactly `Task`. Global hooks
+accept service arguments only; partition hooks require `Partition` first:
 
 <ChronicleClientTabs snippet="reducers/self-reducing-read-models/replay-hooks" />
 
-Trailing class/interface services are resolved from the delivered notification's async DI scope. Events, `EventContext`, the model and extra partition arguments are not hook services. Missing registrations fail loudly. Chronicle awaits the hook and scope disposal before later notifications; an absent hook creates no scope and no model is activated.
+Chronicle resolves trailing class or interface service arguments through dependency injection in an
+asynchronous scope for that notification. Events, `EventContext`, the model, and extra partition
+arguments are not hook services. Missing service registrations fail. Chronicle awaits the hook and
+scope disposal before later notifications; an absent hook creates no scope, and hooks do not require
+activating a model instance.
 
 Hooks follow the existing notification stream. A full replay sends global begin/end notifications; do not assume it also sends partition notifications. Failure does not guarantee a later end notification. Replay and delivery are not exactly-once operations.
 
 ## Reads, filters and preserved limits
 
-- `[Passive]` on the model selects on-demand by-id reduction. `[Reducer(isActive: false)]` only disables active observation; it does not turn materialized reads into passive reads. See [passive reducers](passive-reducers).
-- Passive reads and reducer scenarios apply the same tag/source/stream-category matching as active delivery: OR within tags, AND across categories. `Tag`/`Tags` label observers; they do not filter events. There is no stream-id subscription filter.
-- A bounded `GetInstances(eventCount)` takes a prefix of event-type-selected events **before** metadata filtering, not the first N accepted events. All-rejected or empty histories produce absent state.
-- Materialized snapshots are current stored state. `GetSnapshotsById` returns no reducer history today; it is not an arbitrary-date reducer query.
-- `Watch` supports reducers, but `GetWatcherFor` remains projection-only. Failed folds do not notify watchers, even if part of the batch reduced successfully. Successful folds still notify, including removal when the resulting state is null; a notification is not proof of successful persistence.
-- Inbox forwarding preserves append tags and source/stream routes for both classic and self reducers. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
-- Generation delivery, revisions and PII use the shared reducer engine. Passive/history queries retain classic query-generation behavior; they do not acquire pinned observer-delivery guarantees.
-- A self-reducing model can be read as a [decision read](../read-models/decision-reads.mdx#reducers) when its reducer has no filters (tags, event source type or stream type) and handles one generation per event type. A passive or materialized self-reducing read does not guard an append. Container naming follows the existing naming policy; there is no reducer `ContainerName` override.
+Choose [passive reducers](passive-reducers) for on-demand reads, not for historical snapshots.
+`GetSnapshotsById` returns no reducer history; a materialized snapshot is the current stored state.
+A bounded `GetInstances(eventCount)` takes a prefix of event-type-selected events before metadata
+filtering, not the first N accepted events. Empty or all-rejected histories produce no instance.
 
-Use [ReadModelScenario](../testing/read-models/scenario) for transitions and metadata-filter examples. It substitutes compliance and does not prove encryption, erasure, storage, replay or transport behavior; those require real-kernel specifications.
+Passive reads and reducer scenarios use the same filters as active delivery: an event must match any
+configured tag and each configured source/stream category. `Tag`/`Tags` label observers; they do not
+filter events. There is no stream-ID subscription filter. Inbox forwarding preserves append tags and
+source/stream routes for both classic and self reducers, but upgrading does not restore tags dropped
+by an earlier release.
+
+`Watch` supports reducers; `GetWatcherFor` remains projection-only. Failed folds do not notify
+watchers, even if part of the batch succeeded. Successful folds notify them, including removal when
+the result is null, but a notification does not prove that persistence succeeded.
+
+A self reducer can participate in a [decision read](../read-models/decision-reads.mdx#reducers) if it
+meets the admission rules, including observing the event log without metadata filters and handling
+one generation per event type. An ordinary passive or materialized read does not guard a later append.
+Container names follow the existing naming policy; there is no reducer `ContainerName` override.
+
+Generation delivery, revisions, and personally identifiable information (PII) use the shared reducer
+engine. Passive/history queries retain instance reducers' query-generation behavior; they do not gain
+the generation-pinning guarantees of observer delivery. Use
+[ReadModelScenario](../testing/read-models/scenario) for transitions and metadata filters, and
+real-kernel specifications for encryption, erasure, storage, replay, and transport behavior.
 
 ## Diagnostics
 
-`CHR0058` warns about near-miss signatures. [CHR0065](../code-analysis/CHR0065.mdx) warns about event folds on read models that have the wrong name or are not static and therefore will not be discovered. `CHR0059` errors on malformed hooks, and `CHR0060` errors on definite declaration ties. `CHR0061` errors on definite ownership conflicts within one type and warns on possible peer ownership. Registry/plugin/separate-client membership remains runtime authority rather than a compilation error. Model state is not classic mutable reducer-service state.
+If discovery misses a method, check `CHR0058` for an almost-correct signature and
+[CHR0065](../code-analysis/CHR0065.mdx) for event folds with the wrong name or a missing `static`
+declaration. `CHR0059` reports malformed hooks; `CHR0060` reports definite handler ties.
+
+`CHR0061` reports definite builder conflicts within one type and warns about possible conflicts with
+another builder. The runtime client's event registry, plugins, and artifact catalog determine which
+builders and events actually participate; compile-time diagnostics cannot decide that membership.
+The model holds the fold's result, not mutable reducer-service state.

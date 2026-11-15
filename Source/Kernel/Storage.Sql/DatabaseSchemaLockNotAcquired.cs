@@ -9,6 +9,24 @@ namespace Cratis.Chronicle.Storage.Sql;
 /// <param name="database">The database.</param>
 /// <param name="resource">The name of what is locked.</param>
 /// <param name="reason">Why it was not acquired.</param>
+/// <param name="outcome">The structured lock outcome.</param>
 #pragma warning disable CA1064 // Kernel-only provisioning diagnostic, not a public client contract.
-internal sealed class DatabaseSchemaLockNotAcquired(string database, string resource, string reason)
-    : Exception($"DatabaseSchemaLockNotAcquired: the schema lock '{resource}' of database '{database}' was not acquired: {reason}. Another kernel may still be changing its schema.");
+internal sealed class DatabaseSchemaLockNotAcquired(string database, string resource, string reason, DatabaseSchemaLockOutcome outcome)
+    : Exception($"DatabaseSchemaLockNotAcquired: the schema lock '{resource}' of database '{database}' was not acquired: {reason}. Another kernel may still be changing its schema.")
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseSchemaLockNotAcquired"/> class without a known lock outcome.
+    /// </summary>
+    /// <param name="database">The database.</param>
+    /// <param name="resource">The name of what is locked.</param>
+    /// <param name="reason">Why it was not acquired.</param>
+    public DatabaseSchemaLockNotAcquired(string database, string resource, string reason)
+        : this(database, resource, reason, DatabaseSchemaLockOutcome.Unknown)
+    {
+    }
+
+    /// <summary>
+    /// Gets the structured lock outcome, independent of its diagnostic text.
+    /// </summary>
+    internal DatabaseSchemaLockOutcome Outcome { get; } = outcome;
+}

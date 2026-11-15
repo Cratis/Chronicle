@@ -1,11 +1,15 @@
 ---
-description: Run initialization or shutdown work once across instances with Chronicle lifecycle occurrences, using the built-in Startup and Shutdown triggers.
+title: Record Chronicle application lifecycle work
+description: Chronicle lifecycle occurrences deduplicate startup and shutdown recording across instances, with at-least-once delivery for handlers.
 ---
-# Run work at application activation boundaries
 
-Use lifecycle occurrences for initialization or shutdown work that must be deduplicated across instances. `Startup` and `Shutdown` are built-in trigger records in `Cratis.Chronicle.Occurrences`. Implement `IOccurrenceHandler<Startup>` or `IOccurrenceHandler<Shutdown>` as you would an [application trigger handler](triggers-and-handlers.mdx).
+<a id="run-work-at-application-activation-boundaries"></a>
 
-Lifecycle delivery requires a kernel that supports lifecycle recording on the Occurrences service. It is at least once: use [effect receipts](effect-receipts.mdx) for Chronicle writes and stable effect keys for external endpoints.
+Lifecycle occurrences in Cratis Chronicle record initialization or shutdown work for an application activation, such as a rollout shared by several instances. Recording is deduplicated across those instances; handler delivery is at least once, so a single recorded occurrence can still run more than once.
+
+`Startup` and `Shutdown` are built-in trigger records in `Cratis.Chronicle.Occurrences`. Implement `IOccurrenceHandler<Startup>` or `IOccurrenceHandler<Shutdown>` as you would an [application trigger handler](triggers-and-handlers.mdx). Use [effect receipts](effect-receipts.mdx) for repeatable Chronicle writes and stable effect keys for external endpoints that honor idempotency.
+
+The kernel must support lifecycle recording on the Occurrences service. Lifecycle recording requires the advertised `occurrences` capability; receipt-backed effects also require `effect-receipts`.
 
 ## Require the kernel at client start
 
@@ -15,22 +19,22 @@ If the kernel cannot be reached before the startup token is canceled, host start
 
 ## Choose the activation identity
 
-Configure the host's Chronicle options before starting it:
+The activation identity determines which starts belong to the same logical application run. Configure the host's Chronicle options before starting it:
 
 - For a logical application activation, set `ActivationId` to a stable rollout or orchestrator identity. Every instance of that activation uses the same value. Keep `ActivationScope.Application`, the default.
 - To treat each process start as a separate activation, explicitly set `ActivationScope.PerProcess`. The client generates one fresh identity for the process and reuses it through startup, reconnect and shutdown.
 
-A host that discovers lifecycle handlers without either policy fails with `ActivationIdRequired`. Chronicle never guesses a logical activation identity from an instance name or connection id.
+A host that discovers lifecycle handlers without a valid identity policy fails with `ActivationIdRequired`. Chronicle never guesses a logical activation identity from an instance name or connection id.
 
 Generic hosts and ASP.NET Core hosts configured through `AddCratisChronicle` include lifecycle recording automatically. `AddChronicleOccurrenceLifecycle()` is also available for custom host registration and is safe to call more than once. Lifecycle recording uses the existing client's event-store options; it does not add an application trigger endpoint.
 
-At host start, after successful artifact registration, Chronicle records `Startup`. Its identity is the length-prefixed SHA-256 of `startup` and the activation id. Starting another instance with the same activation records nothing new. Reconnecting does not create a new activation.
+At host start, after successful artifact registration, Chronicle records `Startup`. For application-scoped delivery, its identity is the length-prefixed SHA-256 of `startup` and the activation id. Starting another instance with the same activation records nothing new. Reconnecting does not create a new activation.
 
 ## Choose application or namespace delivery
 
 `LifecycleScope.Application` is the default: one occurrence lives at event-store scope, independently of the default namespace. Its handler explicitly selects the namespace for each effect. Receipts live with the namespace whose events they protect.
 
-Set `LifecycleScope.AllNamespaces` to record one occurrence for each namespace that exists when the kernel takes the recording snapshot. The kernel first persists an event-store-level fan-out intent, then materializes the namespace occurrences. Each identity is the length-prefixed SHA-256 of the lowercase kind, activation id and namespace.
+Set `LifecycleScope.AllNamespaces` to record one occurrence for each namespace that exists when the kernel takes the recording snapshot. The kernel first persists an event-store-level fan-out intent: a durable record of which namespaces must receive the work. It then creates those namespace occurrences. Each identity is the length-prefixed SHA-256 of the lowercase kind, activation id and namespace.
 
 A retry uses the original snapshot, even if the original acknowledgement was lost. Namespaces added later do not receive that occurrence. Startup recovery and a reconciliation timer finish interrupted intents without duplicating completed namespace writes. Retry or quarantine applies independently to each namespace's occurrence.
 
@@ -44,8 +48,10 @@ A graceful stop of one instance never fires `Shutdown` under logical application
 
 With `ActivationScope.PerProcess`, `ApplicationStopping` records `Shutdown` for that process and tries to observe completed delivery within the host's `HostOptions.ShutdownTimeout`. Honor the handler cancellation token. A deadline or transport failure is logged as incomplete shutdown, not as proof that cleanup finished.
 
-Once shutdown is recorded, any live worker or a later activation can deliver it. If the process dies before recording it, nothing fires: Chronicle does not infer an ungraceful death. Essential cleanup must be durable intent recorded while the application runs, as an application occurrence or a schedule, not work entrusted only to a stopping callback.
+Once shutdown is recorded, a live worker or a worker in a later activation can deliver it if it handles that trigger in the same delivery scope. If the process dies before recording it, nothing fires: Chronicle does not infer an ungraceful death. Record essential cleanup while the application runs, as an application occurrence or a schedule, rather than entrusting it only to a stopping callback.
 
 ## Check the result
 
-Inspect occurrence status in its application or namespace scope. A completed occurrence confirms delivery; pending, leased, retrying or quarantined work is not completed cleanup. A completed effect receipt confirms its Chronicle effect independently of the delivery acknowledgement.
+Inspect occurrence status in its application or namespace scope. A completed occurrence confirms delivery, not that every intended business effect occurred; pending, leased, retrying or quarantined work is not completed cleanup. Inspect each effect receipt's outcome to confirm the Chronicle effect independently of the delivery acknowledgement.
+
+If the work must survive a process dying before shutdown can be recorded, use an [application trigger](triggers-and-handlers.mdx) to record it earlier. For effects that may be retried, follow the [receipt commit and recovery flow](effect-receipts.mdx).

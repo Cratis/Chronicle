@@ -1,27 +1,24 @@
 ---
-description: Chronicle event revision corrects an incorrectly appended event by recording a new version, preserving the immutable audit trail instead of deleting.
+title: Cratis Chronicle event revision for correcting recorded data
+description: Cratis Chronicle revision corrects stored event content, retains the original, and requests replay for affected observers that permit replay.
 ---
-# Event Revision
-
-Event revision lets you correct the content of a previously appended event when you discover it contained incorrect data. Rather than modifying the immutable event log, revision records a new version of the event's content alongside the original, preserving the full audit trail while making the corrected data available to all consumers.
+Event revision in Cratis Chronicle corrects incorrectly recorded content at an event's existing sequence number. It retains the original payload and stores a revision alongside it, so later reads can use the corrected content. Use it to repair a recorded mistake, not to erase data or record a new business decision.
 
 ## Why revision instead of deletion
 
-Events are immutable by design. Deleting or modifying an event would break the audit trail and could leave projections, reactors and reducers in an inconsistent state. Revision solves this by storing a corrected payload for the event while keeping the original intact. All observers that read or replay the event see the revised content.
+Revision keeps the event's position in the sequence while changing the content returned by subsequent event reads. Retaining the original lets you distinguish the recorded data from its later correction; it does not make revision a data-erasure operation. Use [redaction](redaction.mdx) when stored event content must be removed.
+
+After applying a revision, Chronicle requests replay for affected observers marked replayable. Their partitioning determines whether it replays one event-source partition or the whole observer. This can reprocess other events too, so review handlers and external effects before submitting a revision. Non-replayable observers are not automatically rebuilt.
 
 ## When to use revision
 
-Use revision when:
+Use revision when a bug or data-entry error made an event's recorded content incorrect and you need subsequent reads to use the corrected value. The revision must keep the original event type identifier; a different but structurally compatible type is not accepted.
 
-- A field was recorded with incorrect data due to a bug or data entry error.
-- Regulatory or business requirements demand a correction to a specific event's content.
-- You need to fix data without triggering a full rewind of observers.
-
-Do not use revision as a substitute for appending new domain events. If something genuinely happened in the domain — for example a correction being made by a user — model that as a new event instead.
+If a new business action happened, such as cancelling an order or reversing a posted entry, append a new domain event instead. [Compensation](compensation.md) links a new corrective event to the event it offsets without changing the earlier content.
 
 ## Revising events from the Workbench
 
-The Workbench provides a UI for revising events in the event log:
+In the Workbench, locate the event and review the effects of replay before making the correction:
 
 1. Open the **Event Log** view for the event store and namespace you want to manage.
 2. Select the event you want to correct.
@@ -29,15 +26,12 @@ The Workbench provides a UI for revising events in the event log:
 4. In the dialog that appears, change the values you want to correct.
 5. Click **OK** to submit the revision.
 
-The corrected content is stored alongside the original event. All subsequent reads of that event return the revised content. The original payload remains accessible in the full event history.
+Submitting records a revision request in the system event sequence. A built-in reactor applies it asynchronously; accepting the request does not mean the content or dependent read models have already changed. Reopen the event to check the revised content, then inspect affected observers for replay progress and failures. [Observers](../concepts/observers.mdx) explains those states.
 
 ## What gets stored
 
-When you revise an event, Chronicle stores:
+The revision request identifies the event sequence, original sequence number, event type and generation, and corrected JSON content. Chronicle applies compliance protection to the corrected content using the original event's subject before recording the request.
 
-- The sequence number of the original event.
-- The event type of the revised content (which must be the same type or a compatible type).
-- The full JSON payload of the corrected event.
-- The causation and identity of whoever submitted the revision.
+The stored revision includes the corrected content and its hash, generation, revision time, correlation, causation, and submitting identity. The original payload remains stored alongside the revisions. Ordinary event reads select the latest stored revision and its generation.
 
-Revisions are ordered, so if you revise the same event more than once, the latest revision is the one consumers see.
+Public event-sequence browsing includes `OriginalContent` and `Revisions`, including paged and windowed SQL reads. Observer delivery and replay use the current content without requiring history to be loaded. Storage-provider consumers that need history for a range or a starting sequence number can use `IEventSequenceStorage.GetRangeWithHistory()` or `GetFromSequenceNumberWithHistory()`.

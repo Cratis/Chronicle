@@ -1,19 +1,19 @@
 ---
-title: Close a stream of a definition
-description: Close one stream of an event source so the kernel refuses further appends to it, with a closing event or with a call, using the names from the definition.
+title: Close Cratis Chronicle event streams
+description: Close a Cratis Chronicle event source's stream with a domain event or an explicit scope, so the kernel refuses appends to that part of its history.
 ---
 
-Use this page to end one stream of a definition, such as one month of an account, and keep the rest of the event source open. The mechanism, its guarantees and its limits are the general ones in [Closing streams](../closing-streams/index.mdx). This page shows how to aim it at a definition's streams.
+Close a stream in Cratis Chronicle when that part of an event source's history must stop accepting appends. You can close one month's transactions for an account while leaving other months open. Use a closing event when the closure is a domain fact, or `CompleteStream` when it is an explicit operation. [Closing streams](../closing-streams/index.mdx) explains the mechanism and its limits.
 
-A closure is a scope made of up to four values: event source id, event source type, event stream type and event stream id. A definition supplies the names for three of them. The closure refuses an append when every value the closure sets equals the append's value. Closing the `Transactions` stream with id `2026-04` of account `A` refuses only that account's April transactions.
+A closure matches up to four routing values: event source id, event source type, event stream type and event stream id. The definition supplies the source type and declared stream type; your application supplies the instance ids. An append is refused when it matches every value set on the closure. Setting all four lets you close account `A`'s `Account` / `Transactions` / `2026-04` stream without affecting other accounts or months.
 
 ## Close with an event
 
-When a domain fact ends the stream, declare it with `[ClosesStream]` on the event type. The kernel writes the event and the closure together. By default the closed scope is the appended event's event source id, stream type and stream id, so append the closing event through the definition, to the stream it ends:
+When a domain fact ends the stream, declare it with `[ClosesStream]` on the event type. The kernel records the closure after the durable append in the same processing turn. By default the closed scope is the appended event's event source id, stream type and stream id, so append the closing event through the definition, to the stream it ends:
 
 <ChronicleClientTabs snippet="event-sources/closing/closing-event" variants="csharp" />
 
-The closing event is accepted. Every later append to the same account's `2026-04` stream is refused with a `StreamClosed` constraint violation. Other months and other accounts are unaffected. The declaration options, such as `ReopenedBy` and `EventStreamIdFrom`, are in [Closing events](../closing-streams/closing-events.mdx).
+After `MonthClosed` is accepted, the example's next deposit to that account and month is refused with a `StreamClosed` constraint violation. Other months and accounts remain open. The default `[ClosesStream]` scope does not include the event source type, so another definition using the same source id, stream type and stream id also matches. To choose other dimensions, derive the stream id from event content, or declare a reopening event, see `ReopenedBy`, `EventStreamIdFrom` and the other options in [Closing events](../closing-streams/closing-events.mdx).
 
 ## Close with a call
 
@@ -21,17 +21,17 @@ For an ad-hoc close that no domain event represents, build a `ClosedStreamScope`
 
 <ChronicleClientTabs snippet="event-sources/closing/close-stream" variants="csharp" />
 
-`EventSourceType` here is the definition's name. Leave it out to close the stream for every event source type that uses the same stream type and stream id. Add `expectedTailSequenceNumber` to close only if nothing was appended since the last fact you know of, as described in [Scoped closing](../closing-streams/scoped-closing.mdx#close-only-if-nothing-landed).
+`definition.EventSourceType` and `transactions.EventStreamType` provide the stored names for the scope. The account id and month select the instance. The example treats `AlreadyCompleted` as a successful outcome, so a repeated close does not fail its caller.
+
+Leaving `EventSourceType` out broadens this closure to every source type with the same account id, stream type and stream id. To refuse the close if a matching event arrived after your last known position, pass `expectedTailSequenceNumber`. [Scoped closing](../closing-streams/scoped-closing.mdx#close-only-if-nothing-landed) shows that check.
 
 ## Things to know
 
 - There is no typed `CompleteStream<TSource>`. You build the scope from the definition's values.
+- A closing event and its closure index update are not crash-atomic. If a crash interrupts the update, an explicit reindex can repair the missing closure. See [Closing events](../closing-streams/closing-events.mdx).
 - Closing a stream does not touch the definition. A closure is stored by value, so renaming a stream later leaves the old closure on the old name. See [Questions and pitfalls](./faq.mdx#what-happens-when-i-rename-an-event-source-or-a-stream).
 - A scope that is only the default stream, with no event source id, is refused with `DefaultStreamCannotBeCompleted`. Appends without a stream go to the default stream, so close the whole event source by id if you want those closed.
 
 ## Next steps
 
-- [Closing streams](../closing-streams/index.mdx)
-- [Scoped closing](../closing-streams/scoped-closing.mdx)
-- [Scenarios](./scenarios.mdx#a-process-stream): a process that closes its own stream.
-- [Dynamic Consistency Boundary](./dcb.mdx): a closed stream as a boundary that ends. See also [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).
+Use [Scoped closing](../closing-streams/scoped-closing.mdx) to choose the exact range to close, or follow [a process that closes its own stream](./scenarios.mdx#a-process-stream). [Dynamic Consistency Boundary](./dcb.mdx) connects closure to guarded decisions; [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) explains the broader consistency model.

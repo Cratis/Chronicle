@@ -25,4 +25,11 @@ public sealed class SetFromContextAttribute<TEvent>(string? contextPropertyName 
 
     /// <inheritdoc/>
     public string? ContextPropertyName { get; } = contextPropertyName;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Use this to capture a first occurrence - for example <c language="csharp">[SetFromContext&lt;TEvent&gt;(nameof(EventContext.Occurred), SetOnce = true)]</c>
+    /// for when something was created - without a dedicated creation event.
+    /// </remarks>
+    public bool SetOnce { get; init; }
 }

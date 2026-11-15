@@ -1,41 +1,44 @@
 ---
-description: Use builder.Unique<TEventType>() in an IConstraint so Chronicle allows only one event of that type per event source identifier.
+title: Declare Chronicle unique event type constraints
+description: Use Chronicle unique event type constraints to allow a fact once per event source, restart a cycle with a release event, or exclude competing outcomes.
 ---
-# Unique event type constraint
+A unique event type constraint allows a fact to happen once per event source, such as initializing a project once per project id. Unlike a unique property constraint, it checks whether the event has occurred, not whether a value belongs to another source. You can also declare a release event when the rule should reset for a new cycle.
 
-Use `builder.Unique<TEventType>()` inside an `IConstraint` implementation to enforce that **only one event of a specific type** can be appended per event source identifier. Use this when the event itself is a unique fact — for example, initializing a project can only happen once per project.
-
-Chronicle discovers all `IConstraint` implementations automatically — no registration is needed.
+In .NET, declare the rule with `builder.Unique<TEventType>()` inside `IConstraint`. The client's default artifact discovery finds these implementations without separate registration. See [Declarative constraints](index.mdx) for client-specific API differences.
 
 ## Defining a unique event type constraint
 
+This declaration allows one project initialization per event source identifier. A second initialization for the same project violates the rule; another project has its own allowance:
+
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/basic" />
+
+The check stays within one namespace and one event sequence. It does not enforce a single occurrence across namespaces or sequences.
 
 ## Violation message
 
-Provide a static message string:
+Provide a static message to explain why the append was refused:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/violation-message" />
 
-Or use a callback to compose the message dynamically from violation context:
+Use a callback when the message needs information from the violation context:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/violation-message-callback" />
 
 ## Constraint name
 
-An optional name can be provided to identify the constraint. When not provided, Chronicle uses the event type name as the default constraint name:
+Provide a name to identify the constraint explicitly. Without one, the .NET builder uses the event type identifier as the constraint name:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/constraint-name" />
 
 ## Releasing a constraint
 
-Left alone the constraint says "at most one, ever". Most lifecycles repeat — a shift is worked and ended, a loan is taken and returned, a subscription is activated and cancelled — and for those, "ever" refuses the second legitimate cycle and there is nothing the caller can do about it.
+Without a release event, the constraint means "at most one, ever". That fits project initialization, but not an employee who works another shift tomorrow.
 
-Call `.RemovedWith<T>()` to name the event that ends a cycle. A covered event then violates the constraint only when it comes **after** the most recent removal event on that event source, so the next cycle is free to start:
+Call `.RemovedWith<T>()` to name the event that ends a cycle. Only a covered event after the most recent removal blocks the next append. In this example, ending the employee's shift allows another shift to start:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/releasing" />
 
-The removal applies to the constraint declared immediately before it, and it is per event source — one employee ending their shift opens their own next cycle and nobody else's.
+The removal applies to the most recently declared unique event type constraint. It is per event source: one employee ending their shift opens only their own next cycle.
 
 A cycle can end in more than one way, so chain `.RemovedWith<T>()` once for each event that ends it. Every one of them releases the constraint on its own, and the cycle ends at whichever was appended most recently:
 
@@ -47,11 +50,11 @@ The [model-bound form](../model-bound/unique-event-type) expresses the same thin
 
 ## Scoping the constraint
 
-By default the rule is "at most one per event source identifier", wherever the event is appended. Some rules are narrower than that: one open loan per borrower **per branch**, one active session per user **per device type**. Call `PerEventStreamId()`, `PerEventStreamType()` or `PerEventSourceType()` before declaring the constraint and it holds one cycle per value of that dimension instead of one for the event source as a whole:
+Within a namespace and event sequence, the default rule is "at most one per event source identifier". For one open loan per borrower per branch, represent the branch as a stream id and call `PerEventStreamId()` before declaring the constraint. The borrower can then have one open loan at each branch:
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/scoping" />
 
-The dimensions of the event being appended decide which cycle it belongs to:
+Use `PerEventStreamType()` or `PerEventSourceType()` when those dimensions distinguish the cycles instead. The dimensions of the event being appended decide which cycle it belongs to:
 
 | Scope | One cycle per |
 |---|---|
@@ -62,7 +65,7 @@ The dimensions of the event being appended decide which cycle it belongs to:
 
 Chain several of them and every declared dimension has to match for two events to share a cycle — one differing dimension is a different cycle.
 
-Scoping narrows the rule; it never weakens it. Within one scope the constraint behaves exactly as an unscoped one: a second covered event is refused, and only a removal event **in that same scope** opens the next cycle. A removal appended elsewhere — another branch, another stream type — leaves this scope's cycle exactly as it was.
+Within one scope, a second covered event is refused until a removal event in that same scope opens the next cycle. Returning a loan at one branch does not release the borrower's loan at another branch.
 
 ### Custom storage providers
 
@@ -73,24 +76,26 @@ Scoping is enforced by the storage provider, so a provider has to be able to see
 | `IsAllowedWithinScope(definition, eventSourceId, scope)` | the appending event's typed dimension values | every provider |
 | `IsAllowed(definition, eventSourceId, scopeKey)` | a single flattened string key | every provider, for compatibility — it stays abstract on the interface |
 
-The engine only ever calls `IsAllowedWithinScope`. A provider that implements just `IsAllowed` still works: the interface's default implementation flattens the scope into exactly the key that provider already received, so its behavior is carried over unchanged. It is not thereby corrected — a flattened key cannot tell two scopes apart when a dimension value contains the characters the key joins on, and that is the whole reason the typed member exists. **Scoped isolation is guaranteed only for providers that implement `IsAllowedWithinScope`.** If you maintain a custom provider and rely on scoping, implement it. Because `IsAllowed` stays abstract, a new provider still has to supply it too — a small legacy wrapper is enough: an empty or omitted key answers the unscoped lookup through `IsAllowedWithinScope`; a non-empty key has no typed dimensions to reconstruct, so it should fail closed with `NotSupportedException` rather than guess.
+The kernel calls `IsAllowedWithinScope`. If your provider implements only `IsAllowed`, the interface's default implementation flattens the scope into the same string key the provider already received. This preserves compatibility, but not isolation between scopes whose dimension values contain the key's separator characters.
+
+Implement `IsAllowedWithinScope` with a separate comparison for each typed dimension to enforce scoped isolation. You must still supply `IsAllowed` because it remains abstract. A compatibility wrapper can send an empty or omitted key to an unscoped `IsAllowedWithinScope` lookup. For a non-empty key, throw `NotSupportedException` rather than guess at dimensions that cannot be reconstructed.
 
 The providers shipped with Chronicle — MongoDB, SQL and in-memory — implement the typed member and narrow natively per dimension. Calling their `IsAllowed` with a non-empty key throws `NotSupportedException` rather than answering against a scope it cannot reconstruct; an empty or omitted key is an unscoped lookup and is answered as one.
 
 ## Appending several events at once
 
-A constraint is checked against everything the append will produce, not only what is already stored. When you append several events in a single call, each event is checked in order against the events before it in that same call, so two covered events for the same event source (and scope) in one call are refused just as they would be across two separate calls — and a removal event earlier in the call opens the next cycle for a covered event later in it. Either the whole call is appended or none of it is.
+The kernel checks events in call order, including claims made earlier in the same call. Two covered events for the same event source and scope violate the constraint even if neither is stored yet. A removal event earlier in the call opens a new cycle for a covered event later in it. If constraint validation fails, none of the call's events are appended.
 
 ## Mutually exclusive event types
 
-Declare several event types under the **same constraint name** and they become one constraint: at most one event drawn from that set is allowed per event source. Use it when an event source has more than one terminal outcome and the outcomes exclude each other — cancelled *or* completed, merged *or* erased, approved *or* permanently rejected.
+Declare several event types under the same constraint name when only one of them should happen. They become one constraint allowing at most one event from the set per event source. The following rule records one terminal outcome for a person: aliased to another person or erased, but not both.
 
 <ChronicleClientTabs snippet="constraints/declarative/unique-event-type/mutually-exclusive" />
 
 Each event type still cannot occur twice — that is the single-type case of the same rule. What sharing the name adds is that the *first* of them to be appended blocks all of the others.
 
-Because this is enforced at append time it holds under concurrency, which a validator reading prior state cannot guarantee: that check and the append are not atomic, so two competing commands can both observe "no terminal event yet" and both succeed.
+The check runs inside the append, rather than in an application validator that reads first and writes later. A separate read can let competing commands both observe "no terminal event yet"; declaring the constraint gives the kernel the rule to check before storing either outcome.
 
 ## How constraints are enforced
 
-When a constraint is registered, the Chronicle Kernel creates the indexes required to enforce it. Constraints are evaluated server-side during append, ensuring data integrity regardless of the client.
+The Chronicle Kernel evaluates the registered rule during append, regardless of which client writes the event. The rule stays within its namespace, event sequence, and selected scope. See [Constraint or decision read](../index.md#constraint-or-decision-read) for the enforcement limits and for rules that need to count or compare state.

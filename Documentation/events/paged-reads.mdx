@@ -1,21 +1,15 @@
 ---
-title: Read bounded event pages
-description: Read Chronicle events forward or newest first with inclusive keyset continuations and filters applied before the page limit.
+title: Cratis Chronicle bounded event reads for history views
+description: Read bounded pages of Cratis Chronicle events forward or newest first, using sequence-number continuations and filters applied before the page limit.
 ---
 
-Use the .NET `IEventSequence.GetPage` API for bounded history views, resumable reads, and
-endless scrolling. `IEventLog` exposes the same API. Other language clients do not yet
-expose this paged-read API.
+Use bounded event reads in Cratis Chronicle when a history view needs one page at a time rather than the whole sequence. In .NET, `IEventSequence.GetPage` and `IEventLog` use keyset pagination: the next request starts at a sequence number, not a row offset.
 
-Each request returns at most `Count` events and a nullable `Next` sequence number. Events
-are in **read order**: oldest first for `Forward`, newest first for `Backward`. A page
-reads one extra matching event to decide whether another page exists; it does not use
-offsets or count the entire sequence.
+Each request returns at most `Count` events and a nullable `Next` sequence number. Events arrive in read order: oldest first for `Forward`, newest first for `Backward`. Chronicle reads one extra matching event to decide whether another page exists, without counting the entire sequence.
 
 ## Read from the beginning
 
-This function accepts an existing event sequence and a cancellation token. Keep the
-request's direction, stop bound, and filters when advancing to `Next`:
+Pass an existing event sequence and a cancellation token to this function. It follows `Next` while keeping the same direction, stop bound, and filters:
 
 <ChronicleClientTabs snippet="events/getting-events/paged-forward" variants="csharp" />
 
@@ -47,9 +41,7 @@ existing event: sequence numbers and filtered results can have gaps. Use the ret
 value unchanged instead of adding or subtracting `Count`. A full page can still have no
 continuation.
 
-These are independent reads, not a frozen snapshot. To exclude subsequent appends during
-a forward traversal, set `Until` to an initial tail sequence number. Check that the
-sequence is nonempty before using that tail as a bound.
+Each page is an independent read, not a frozen snapshot. To exclude later appends during a forward traversal, capture the [tail sequence number](./getting-state) before starting and set `Until` to that value. Check that the sequence is nonempty before using its tail as a bound. The bound does not freeze event content: a revision or redaction between requests can still change what a later page returns.
 
 ## Filters and limits
 
@@ -65,8 +57,4 @@ content is released for returned events, just as for other event-content reads; 
 is not a metadata-only read. Authorize access to the store, namespace, and event content
 before reading.
 
-Existing `GetFromSequenceNumber` reads remain available and retain their behavior.
-External `IEventSequence` implementations remain source-compatible through default
-interface members, but must implement `GetPage` to support paged reads; otherwise it
-throws `NotSupportedException`. The in-process Testing package uses the same client and
-kernel query path.
+Existing `GetFromSequenceNumber` reads remain available; [Getting events](./getting-events) explains when to use them. If you supply a custom `IEventSequence` implementation, implement `GetPage` before using this API. Its default interface member preserves source compatibility but throws `NotSupportedException` when called. The in-process Testing package uses the same client and kernel query path.

@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Reactive;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
@@ -21,13 +21,10 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
     IMongoCollection<ObserverPartitionCounts> _handledCountsCollection => namespaceDatabase.GetCollection<ObserverPartitionCounts>(WellKnownCollectionNames.ObserverHandledCounts);
 
     /// <inheritdoc/>
-    public ISubject<IEnumerable<Chronicle.Storage.Observation.ObserverState>> ObserveAll()
-    {
-        var collectionSubject = _collection.Observe();
-        return new TransformingSubject<IEnumerable<ObserverState>, IEnumerable<Chronicle.Storage.Observation.ObserverState>>(
-            collectionSubject,
-            observers => observers.ToKernel());
-    }
+    public ISubject<IEnumerable<Chronicle.Storage.Observation.ObserverState>> ObserveAll() =>
+        Subject.Create<IEnumerable<Chronicle.Storage.Observation.ObserverState>>(
+            System.Reactive.Observer.Create<IEnumerable<Chronicle.Storage.Observation.ObserverState>>(_ => { }),
+            Observable.Defer(() => _collection.Observe().Select(observers => observers.ToKernel())));
 
     /// <inheritdoc/>
     public async Task<Chronicle.Storage.Observation.ObserverState> Get(ObserverId observerId)

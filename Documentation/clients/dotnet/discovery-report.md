@@ -1,17 +1,15 @@
 ---
-title: Discovery report and identity drift
-description: Inspect discovered .NET client artifacts and configure diagnostics for likely identity changes before registration.
+title: Cratis Chronicle .NET discovery reports and identity drift
+description: Inspect artifacts found by the Cratis Chronicle .NET client and check likely identity changes before registering them with the kernel.
 ---
 
-Use `IEventStore.Discovery` to inspect what the .NET client found, and `Registration.IdentityDrift` to inspect likely renames before registration. These are diagnostics, not proof that every artifact registered successfully; use the [registration outcome](registration-outcome.md) for that.
+Cratis Chronicle's .NET discovery report shows which artifacts the client found, while identity drift findings flag likely changes to their stored identities. Use `IEventStore.Discovery` when a type seems missing, and `Registration.IdentityDrift` when a rename may change how the kernel treats it. To check what actually registered, read the [registration outcome](registration-outcome.md).
 
 ## Inspect discovered artifacts
 
 `Discovery` is an immutable snapshot of the last completed `DiscoverAll()` pass. Reading it does not start discovery. Before discovery runs, it equals `DiscoveryReport.NotRun`: `HasRun` is false and `Artifacts` is empty.
 
-Each `DiscoveredArtifact` has a `Kind`, string `Id`, and nullable `ClrType`. The kinds are `EventType`, `Constraint`, `Reactor`, `Reducer`, `Projection`, and `ReadModel`. Read model ids are container names. Constraints and delegate reactors may have no CLR type. Failed projection builds do not appear as discovered handlers; their failures belong to `Registration.Artifacts`.
-
-Given an `IEventStore` named `eventStore`:
+Given an `IEventStore` named `eventStore`, select the kind you want to inspect:
 
 ```csharp
 using Cratis.Chronicle.Discovery;
@@ -21,18 +19,22 @@ var reactorCount = report.CountOf(ArtifactKind.Reactor);
 var reactors = report.OfKind(ArtifactKind.Reactor);
 ```
 
-Explicit or runtime registrations added later do not mutate this snapshot. The identity check builds a fresh view for each foreground registration run, including those additions. Background retries reuse that run's findings without repeating snapshots or drift logs. Webhooks, external subscriptions, and read model reactors are outside the report.
+`reactorCount` gives the number of reactors in the snapshot; `reactors` gives their entries. Each `DiscoveredArtifact` has a `Kind`, string `Id`, and nullable `ClrType`. The report covers `EventType`, `Constraint`, `Reactor`, `Reducer`, `Projection`, and `ReadModel`. A read model's id is its container name. Constraints and delegate reactors may have no CLR type. Failed projection builds have no discovered handler entry; look in `Registration.Artifacts` for their failures.
+
+Explicit or runtime registrations added later leave the snapshot unchanged. The identity check builds a fresh view for each foreground registration run so it can include those additions. Background retries reuse findings without repeating snapshots or drift logs while the connection has not changed; reconnecting to a restarted kernel requires a fresh check. Webhooks, external subscriptions, and read model reactors are outside the report.
 
 ## Inspect likely identity changes
 
-Before registering, the client compares its artifacts with the kernel's stored event types and observers for the event store and namespace. Each finding records `Kind`, `PreviousId`, and `CurrentId`:
+Before sending registrations, the client compares its artifacts with the kernel's stored event types and observers for the event store and namespace. Each finding records `Kind`, `PreviousId`, and `CurrentId`. For a manual registration run, read the findings afterwards:
 
 ```csharp
 await eventStore.RegisterAll();
 var findings = eventStore.Registration.IdentityDrift;
 ```
 
-An observer candidate must have the same kind and a matching short name, and be absent from the current declarations of that kind. Reactors and reducers must no longer be subscribed. Projections skip subscription confirmation: the kernel keeps the old projection subscribed until registration retires it. An event type candidate must be client-owned and uniquely match a nonempty coarse schema shape. A current id already stored in the kernel is not reported again on reconnect.
+With automatic registration, read `Registration.IdentityDrift` after the normal connection-driven run instead of calling `RegisterAll()` again just to inspect it.
+
+The check looks for an old observer of the same kind with a matching short name that is absent from the current declarations. Old reactors and reducers must no longer be subscribed. Projections skip that confirmation because the kernel keeps the old projection subscribed until registration retires it. For event types, the old candidate must be client-owned and uniquely match a nonempty coarse schema shape: a normalized view of the event's properties and their types. Once the current id is stored in the kernel, reconnecting does not report it again.
 
 ## Choose a policy
 
@@ -44,9 +46,9 @@ Set `ChronicleOptions.ArtifactIdentityDrift` to a value from `ArtifactIdentityDr
 | `Fail` | Throw `ArtifactIdentityDriftDetected` before registering any artifacts when Warning-level reactor or event type findings exist. Information-level reducer and projection findings never fail registration. `Registration.Failure` records the failure and `IdentityDrift` retains all findings. Bounded and background retries do not retry this failure. |
 | `Ignore` | Skip the identity check and its kernel calls. Discovery reporting still runs. |
 
-Snapshot failures never block registration, even with `Fail`. The client logs the skipped check and returns no findings. A failed subscription confirmation drops that reactor or reducer candidate. Diagnostic calls share a five-second deadline.
+Diagnostic calls share a five-second deadline. If the snapshot cannot be read, the client logs the skipped check and returns no findings, even with `Fail`. A failed subscription confirmation drops that reactor or reducer candidate.
 
-`Fail` is useful in CI or staging, not a guarantee that every rename will be caught. Review each finding before acting: pin the previous reactor id to preserve its position, or deliberately remove an abandoned observer. See [Reactor identity and renaming](../../reactors/identity.mdx) and [the configuration reference](../../configuration/chronicle-options.mdx#artifactidentitydrift).
+Use `Fail` in CI or staging when you want detected reactor or event type changes to stop registration. The heuristic can miss renames, so review each finding: pin the previous reactor id to preserve its position, or deliberately remove an abandoned observer. See [Reactor identity and renaming](../../reactors/identity.mdx) and [the configuration reference](../../configuration/chronicle-options.mdx#artifactidentitydrift).
 
 ## Log levels
 

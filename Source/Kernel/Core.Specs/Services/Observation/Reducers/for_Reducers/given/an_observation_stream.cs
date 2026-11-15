@@ -25,11 +25,18 @@ public class an_observation_stream : Specification
     protected readonly Subject<ReducerMessage> _messages = new();
     protected readonly List<ReduceOperationMessage> _deliveries = [];
     protected ReducerEventsObserver _deliver;
+    protected ReducerReplayObserver _replay;
+    protected ReducerPageObserver _deliverPage;
+    protected readonly TaskCompletionSource _pagesSubscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     IDisposable _subscription;
 
     private protected virtual IActivitySource<Reducers> CreateActivitySource() => new ActivitySource<Reducers>();
 
     protected virtual PageDelivery? PageDelivery => null;
+
+    protected virtual StateCaching? StateCaching => null;
+
+    protected virtual IExpandoObjectConverter CreateExpandoObjectConverter() => Substitute.For<IExpandoObjectConverter>();
 
     async Task Establish()
     {
@@ -37,9 +44,18 @@ public class an_observation_stream : Specification
         var mediator = Substitute.For<IReducerMediator>();
         mediator.Disconnected(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>(), Arg.Any<ReducerReplayObserver>()).Returns(true);
         mediator.When(_ => _.Subscribe(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>()))
+            .Do(call => _deliver = call.Arg<ReducerEventsObserver>());
+        mediator.When(_ => _.SubscribePages(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerPageObserver>(), Arg.Any<Concepts.Observation.PageDeliveryDefinition?>()))
             .Do(call =>
             {
-                _deliver = call.Arg<ReducerEventsObserver>();
+                _deliverPage = call.Arg<ReducerPageObserver>();
+                _pagesSubscribed.TrySetResult();
+            });
+        mediator.When(_ => _.SubscribeReplayNotifications(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerReplayObserver>()))
+            .Do(call =>
+            {
+                // Replay notifications are subscribed after events, so this signals that both observers are captured.
+                _replay = call.Arg<ReducerReplayObserver>();
                 subscribed.TrySetResult();
             });
         var grainFactory = Substitute.For<IGrainFactory>();
@@ -61,12 +77,15 @@ public class an_observation_stream : Specification
         var reducers = new Reducers(
             grainFactory,
             mediator,
-            Substitute.For<IExpandoObjectConverter>(),
+            CreateExpandoObjectConverter(),
             new JsonSerializerOptions(),
             CreateActivitySource(),
             Options.Create(new ChronicleOptions()),
+            AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
-            Substitute.For<IObserverRegistrationGate>());
+            Substitute.For<IObserverRegistrationGate>(),
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReducer
         {
@@ -74,6 +93,7 @@ public class an_observation_stream : Specification
             EventStore = "store",
             Namespace = "namespace",
             PageDelivery = PageDelivery,
+            StateCaching = StateCaching,
             Reducer = new Contracts.Observation.Reducers.ReducerDefinition { ReducerId = "reducer", EventSequenceId = "event-log", ReadModel = "model" }
         })));
         await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));

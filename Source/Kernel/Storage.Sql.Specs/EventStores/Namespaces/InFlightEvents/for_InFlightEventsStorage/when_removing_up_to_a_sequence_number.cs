@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.InFlightEvents.for_InFlightEventsStorage;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_removing_up_to_a_sequence_number : given.an_in_flight_events_storage
 {
     (string Partition, ulong Number)[] _remaining;

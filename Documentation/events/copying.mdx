@@ -1,0 +1,29 @@
+---
+title: Cratis Chronicle event copying to another event source
+description: Copy event history to another event source in Cratis Chronicle with a durable job that appends new events and leaves the source history unchanged.
+---
+Copying in Cratis Chronicle seeds one event source with history from another event source in the same event sequence. Use it to create a variant of an entity under a different identifier without changing the source history.
+
+Each copy is a new event with a new sequence number. Observers process these appends, so review their effects before starting: copying history can trigger application actions as well as build state. The source and target identifiers must differ.
+
+## Copying every event
+
+Pass the source and target event source identifiers to copy all event types for the source:
+
+<ChronicleClientTabs snippet="events/copying/by-event-source" />
+
+## Copying specific event types
+
+Provide an event type filter when the target needs only part of the history. Events of other types remain in the source and are not copied:
+
+<ChronicleClientTabs snippet="events/copying/by-event-source-and-types" />
+
+## How it works
+
+The call starts a durable job and returns its identifier, not a completed copy. The job reads matching source events in sequence order and appends them to the target in batches. Follow progress on the Workbench's Jobs page or through the jobs service.
+
+Each copy uses an idempotency key derived from the job identifier and the source event's sequence number. Resuming that job reuses those keys to avoid duplicate appends. Starting a new copy job creates different keys; it does not deduplicate against an earlier job.
+
+A copy keeps the event type and generation, tags, stream, and original occurred time. Its new audit context identifies the copy operation. Personal data is released from the source and protected again for the target. When the subject was the source event source, the target becomes the subject; an explicitly assigned subject stays unchanged.
+
+Copying is not atomic across the whole history. If a target append fails, for example because of a unique constraint, the job reports the failure and earlier batches remain in the target. Inspect the job and target history before deciding how to recover. Use [Getting events](getting-events.mdx) to read the resulting history.

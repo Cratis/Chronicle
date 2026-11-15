@@ -20,7 +20,7 @@ public class and_the_identifier_belongs_to_an_encrypted_value : given.a_pii_mana
     async Task Because() => _error = await Catch.Exception(() => _manager.DeleteEncryptionKeyFor(_encryptedValueIdentifier));
 
     [Fact] void should_throw_encryption_key_is_not_erasable() => _error.ShouldBeOfExactType<EncryptionKeyIsNotErasable>();
-    [Fact] void should_not_record_an_erasure() => _keyStore.DidNotReceive().RecordErasureFor(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier);
-    [Fact] void should_not_delete_the_key() => _keyStore.DidNotReceive().DeleteFor(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier);
+    [Fact] void should_not_record_an_erasure() => _keyStore.DidNotReceive().RecordErasureFor(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+    [Fact] void should_not_delete_the_key() => _keyStore.DidNotReceive().DeleteThroughFor(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier, Arg.Any<string>());
     [Fact] void should_not_evict_any_cache() => _cacheClient.DidNotReceive().Evict(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), _encryptedValueIdentifier);
 }

@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation;
@@ -96,6 +96,18 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Deferring recovery of {Count} failed partition(s) to a later turn so other calls can reach the observer")]
     internal static partial void DeferringRecoveryOfFailedPartitions(this ILogger<Observer> logger, int count);
 
+    [LoggerMessage(LogLevel.Debug, "Deferring recovery of failed partitions while the silo's subscription admission is fully taken")]
+    internal static partial void DeferringRecoveryOfFailedPartitionsForAdmission(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Could not start recovery of failed partition {Partition}; it is tried again in a later turn")]
+    internal static partial void CouldNotStartRecoveryOfFailedPartition(this ILogger<Observer> logger, Exception exception, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Partition {Partition} is left to the catch-up walking every partition, which delivers its new events")]
+    internal static partial void CatchUpWalkCoversNewEvents(this ILogger<Observer> logger, Key partition);
+
+    [LoggerMessage(LogLevel.Debug, "Waiting for {Count} live deliveries to settle before choosing where catch-up starts")]
+    internal static partial void WaitingForLiveDeliveriesBeforeCatchUp(this ILogger<Observer> logger, int count);
+
     [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
@@ -104,6 +116,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Replay was allowed but the observer did not enter replay")]
     internal static partial void ReplayTransitionDidNotTakeEffect(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Released a refused replay without starting a replay job: {Reason}")]
+    internal static partial void ReleasedRefusedReplayStart(this ILogger<Observer> logger, Exception? exception, string reason);
 
     [LoggerMessage(LogLevel.Debug, "Skipping partition catch-up because observer is replaying")]
     internal static partial void SkippingPartitionCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
@@ -224,6 +239,12 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the replay job is missing while observer is in replaying state. Re-routing observer.")]
     internal static partial void WatchdogReplayJobMissing(this ILogger<Observer> logger);
 
+    [LoggerMessage(LogLevel.Debug, "Delivering a page of {EventCount} events across {PartitionCount} partitions")]
+    internal static partial void DeliveringPage(this ILogger<Observer> logger, int eventCount, int partitionCount);
+
+    [LoggerMessage(LogLevel.Warning, "Replay job restarted {Attempts} times without a live job in between. The next restart is held back for {Delay}.")]
+    internal static partial void WatchdogRestartingReplayWithBackoff(this ILogger<Observer> logger, int attempts, TimeSpan delay);
+
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the catch-up job is missing while observer has catching-up partitions. Re-routing observer.")]
     internal static partial void WatchdogCatchupJobMissing(this ILogger<Observer> logger);
 
@@ -271,6 +292,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Removing observer by operator request - unsubscribing, stopping its jobs and deactivating it")]
     internal static partial void RemovingObserver(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Information, "Pruned {Count} ignored recommendation(s) for the removed observer")]
+    internal static partial void PrunedIgnoredRecommendations(this ILogger<Observer> logger, int count);
 
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
     internal static partial void RetiringObserver(this ILogger<Observer> logger);

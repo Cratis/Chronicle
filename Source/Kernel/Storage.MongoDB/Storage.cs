@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Reactive;
 using Cratis.Types;
@@ -22,19 +23,23 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for conversions.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> the job system resolves through.</param>
+/// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> the job system resolves through.</param>
 /// <param name="options"><see cref="ChronicleOptions"/>.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="systemEventStoreRelocation"><see cref="ISystemEventStoreRelocation"/> for moving the System event store's databases.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+/// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> resolving named sinks; none configured when omitted.</param>
 public class Storage(
     IDatabase database,
     Json.IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
     IInstancesOf<ISinkFactory> sinkFactories,
-    Cratis.Orleans.Storage.IJobsStorage jobsStorage,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
-    ISystemEventStoreRelocation systemEventStoreRelocation) : IStorage
+    ISystemEventStoreRelocation systemEventStoreRelocation,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null,
+    ISinkConfigurations? sinkConfigurations = null) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
@@ -44,6 +49,12 @@ public class Storage(
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
         new ClusterStorage(database, expandoObjectConverter, jsonSerializerOptions, jobsStorage, options, loggerFactory).ReadGenerationFloors();
+
+    /// <inheritdoc/>
+    public Task<string?> FindMisplacedSystemEventStoreData() => systemEventStoreRelocation.FindMisplacedData();
+
+    /// <inheritdoc/>
+    public Task<string?> FindRetainedLegacySystemEventStoreData() => systemEventStoreRelocation.FindRetainedLegacyData();
 
     /// <inheritdoc/>
     public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) => systemEventStoreRelocation.MoveTo(location);
@@ -98,10 +109,11 @@ public class Storage(
             database.GetEventStoreDatabase(eventStore),
             expandoObjectConverter,
             jsonSerializerOptions,
-            @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories),
+            @namespace => new Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories, sinkConfigurations),
             jobsStorage,
             options,
-            loggerFactory);
+            loggerFactory,
+            mutationDigestKeys);
 
         return _eventStores.GetOrAdd(eventStore, created);
     }

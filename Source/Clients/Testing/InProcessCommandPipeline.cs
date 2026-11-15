@@ -46,6 +46,7 @@ internal static class InProcessCommandPipeline
         Action<IServiceCollection>? configure = default)
     {
         var services = new ServiceCollection();
+        services.AddSingleton(new KernelCore::Cratis.Chronicle.Security.InProcessKernelHost());
         services.AddOptions();
         services.AddLogging();
         services.Configure<ArcOptions>(_ => { });
@@ -60,6 +61,7 @@ internal static class InProcessCommandPipeline
         services.AddKernelSideCommandExtensionPoints();
         services.AddSingleton(grainFactory);
         services.AddSingleton(storage);
+        services.AddSingleton<KernelCore::Cratis.Chronicle.Namespaces.INamespaceCasing>(new InProcessNamespaceCasing(storage));
         services.AddSingleton(jsonSerializerOptions);
         services.AddSingleton<IExpandoObjectConverter>(new ExpandoObjectConverter(new TypeFormats()));
 

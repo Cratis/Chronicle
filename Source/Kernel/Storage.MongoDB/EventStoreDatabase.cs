@@ -59,7 +59,7 @@ public class EventStoreDatabase : IEventStoreDatabase
 
         var client = clientManager.GetClientFor(settings);
 
-        _database = client.GetDatabase(databaseName);
+        _database = client.GetDatabaseByExistingCasing(databaseName);
     }
 
     /// <inheritdoc/>

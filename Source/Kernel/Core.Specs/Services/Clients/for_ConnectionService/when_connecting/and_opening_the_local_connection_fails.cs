@@ -35,10 +35,11 @@ public class and_opening_the_local_connection_fails : Specification
         grainFactory.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(silo);
+        AllowingConnectionOwnership.WithActiveSilos(grainFactory, silo);
         var options = Options.Create(new ChronicleOptions());
 
         // An unavailable local tracker fails in Opened, after registration but before any keep-alive.
-        _service = new KernelConnectionService(grainFactory, localSiloDetails, new ConnectedClientsQuery(grainFactory, options), null!, _logger, options);
+        _service = new KernelConnectionService(grainFactory, localSiloDetails, new ConnectedClientsQuery(grainFactory, options), null!, AllowingConnectionOwnership.Create(), Substitute.For<IConnectedClientsVisibility>(), _logger, options);
     }
 
     async Task Because()

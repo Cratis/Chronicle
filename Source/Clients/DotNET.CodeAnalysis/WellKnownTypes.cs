@@ -108,6 +108,21 @@ public static class WellKnownTypes
     public const string EventContextName = "Cratis.Chronicle.Events.EventContext";
 
     /// <summary>
+    /// The full name of the EventBatch type a batch method takes as its first parameter.
+    /// </summary>
+    public const string EventBatchName = "Cratis.Chronicle.Observation.EventBatch";
+
+    /// <summary>
+    /// The full name of the BatchContext type only batch methods may take.
+    /// </summary>
+    public const string BatchContextName = "Cratis.Chronicle.Observation.BatchContext";
+
+    /// <summary>
+    /// The metadata name of the generic Observes attribute a batch method declares its event types with.
+    /// </summary>
+    public const string ObservesAttributeName = "Cratis.Chronicle.Observation.ObservesAttribute`1";
+
+    /// <summary>
     /// The full name of the EventForEventSourceId type.
     /// </summary>
     public const string EventForEventSourceIdName = "Cratis.Chronicle.EventSequences.EventForEventSourceId";
@@ -189,9 +204,34 @@ public static class WellKnownTypes
     public const string PassiveAttributeName = "Cratis.Chronicle.ReadModels.PassiveAttribute";
 
     /// <summary>
+    /// The full name of the Sink attribute, which stores a read model or a graph in a named sink.
+    /// </summary>
+    public const string SinkAttributeName = "Cratis.Chronicle.Sinks.SinkAttribute";
+
+    /// <summary>
     /// The full name of the ReadModel attribute.
     /// </summary>
     public const string ReadModelAttributeName = "Cratis.Arc.Queries.ModelBound.ReadModelAttribute";
+
+    /// <summary>
+    /// The full name of the node attribute.
+    /// </summary>
+    public const string NodeAttributeName = "Cratis.Chronicle.Projections.Graphs.NodeAttribute";
+
+    /// <summary>
+    /// The full name of the edge attribute.
+    /// </summary>
+    public const string EdgeAttributeName = "Cratis.Chronicle.Projections.Graphs.EdgeAttribute";
+
+    /// <summary>
+    /// The open-generic display string of the graph view attribute.
+    /// </summary>
+    public const string ViewOfAttributeName = "Cratis.Chronicle.Graphs.ViewOfAttribute<TNode>";
+
+    /// <summary>
+    /// The open-generic display string of the graph view relation attribute.
+    /// </summary>
+    public const string FollowsAttributeName = "Cratis.Chronicle.Graphs.FollowsAttribute<TEdge>";
 
     /// <summary>
     /// The open-generic display string of the EventTypeMigration&lt;TUpgrade, TPrevious&gt; base class.

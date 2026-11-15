@@ -38,7 +38,7 @@ public partial class EventSequenceStorage(
     readonly Dictionary<EventSequenceNumber, IdentityId[]> _originalCausedByChains = [];
     readonly Dictionary<EventSequenceNumber, StoredEventMetadata> _metadata = [];
     readonly Dictionary<EventSequenceNumber, uint> _appendedGenerations = [];
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     EventSequenceNumber? _constraintIndexWatermark;
     EventSequenceNumber? _constraintIndexCatchUpBelow;
     Concepts.Events.Constraints.ConstraintName[]? _constraintIndexCatchUpRefusing;
@@ -507,6 +507,14 @@ public partial class EventSequenceStorage(
         GetRange(start, end, eventSourceId, eventTypes, tags, null, null, cancellationToken);
 
     /// <inheritdoc/>
+    public Task<IEventCursor> GetRangeWithHistory(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<IEventCursor> GetFromSequenceNumberWithHistory(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
+        GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
+
+    /// <inheritdoc/>
     public Task<IEventCursor> GetRange(
         EventSequenceNumber start,
         EventSequenceNumber end,
@@ -787,7 +795,8 @@ public partial class EventSequenceStorage(
         IDictionary<EventTypeGeneration, EventHash> contentHashes,
         Subject? subject = null,
         IReadOnlyCollection<NamedTag>? namedTags = null,
-        EventSourceName? eventSource = null)
+        EventSourceName? eventSource = null,
+        EventSequenceNumber? compensationFor = null)
     {
         // Default reads use the highest stored generation; append acknowledgments retain the appended one.
         var highestGeneration = content.Keys.MaxBy(_ => _.Value) ?? eventType.Generation;
@@ -810,6 +819,7 @@ public partial class EventSequenceStorage(
         {
             NamedTags = namedTags ?? [],
             EventSource = eventSource ?? EventSourceName.NotSet,
+            CompensationFor = compensationFor,
             AppendedGeneration = eventType.Generation
         };
 
@@ -884,7 +894,8 @@ public partial class EventSequenceStorage(
                     e.ContentHashes,
                     e.Subject,
                     e.NamedTags,
-                    e.EventSource);
+                    e.EventSource,
+                    e.CompensationFor);
 
                 stored.Add(appendedEvent);
                 appended.Add(ToAppendAcknowledgment(appendedEvent, e.EventType, e.GenerationalContent, e.ContentHashes));

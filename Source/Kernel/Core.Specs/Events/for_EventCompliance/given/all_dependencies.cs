@@ -58,6 +58,6 @@ public class all_dependencies : Specification
                 Arg.Any<JsonObject>())
             .Returns(_ => Task.FromResult(new JsonObject { ["name"] = "decrypted-name" }));
 
-        _compliance = new EventCompliance(_complianceManager, _expandoObjectConverter);
+        _compliance = new EventCompliance(_complianceManager, _expandoObjectConverter, new OwnGenerationSchemaCache());
     }
 }

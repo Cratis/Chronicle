@@ -1,49 +1,36 @@
 ---
-description: How a Chronicle reactor behaves when its observer replays history, so work meant to happen once is not repeated for past events.
+title: Reactor replay handlers for historical events
+description: A Replay handler replaces a reactor's regular handler while Cratis Chronicle replays history. Use OnceOnly when replay should skip the handler instead.
 ---
-# Replay
+A `Replay` handler replaces the regular handler for the same event type while Cratis Chronicle replays that reactor's history. Use it when historical events need different work, such as updating an external index without resending the original order confirmation.
 
-A reactor sees the same event twice for different reasons: once as it happens, and again whenever its observer
-is replayed. Those often call for different work — a confirmation that should go out once when an order is
-placed has no business going out again while a read model is being rebuilt.
-
-Mark a second handler for the same event type with the `Replay` attribute and it takes over for the duration
-of the replay.
+In C#, mark the second handler with the `Replay` attribute. Replaying a separate projection does not itself replay the reactor; the replacement applies when this reactor's observer is replaying.
 
 <ChronicleClientTabs snippet="reactors/replay/basic" />
 
-The rules are:
+Handler selection is per event type:
 
-- With a `Replay` handler, **only** it runs during a replay — the regular handler does not also run.
-- Without one, the regular handler runs during a replay exactly as it always has, so adding this to one event
-  type changes nothing for the others.
-- An event type handled **only** by a `Replay` handler is still subscribed to, so the replay it exists for
-  delivers it.
+- During replay, a `Replay` handler takes precedence over the regular handler for that type.
+- Without a `Replay` handler, the regular handler runs unless it is marked `OnceOnly`. Adding a replay handler for one type does not change the others.
+- An event type with only a `Replay` handler is still subscribed to, but that handler does not run for ordinary delivery.
 
 ## Adding event types
 
-Adding event types to an existing subscription recommends replay only when an added type has events before
-that observer's next unread position. Added types with no history, or whose first event is at or after that
-position, can be handled normally without replay. Removing event types or changing their generation retains
-the existing replay recommendation behavior.
+When you add event types to an existing subscription, the kernel recommends replay if an added type has events before the observer's next unread position. If the added types have no history, or their first events are at or after that position, they can be handled normally without replay. This rule applies to additions; it does not change the replay recommendation rules for removals or generation changes.
 
-To be told when a replay starts and ends, rather than to change what a handler does during it, see [Replay notifications](replay-notifications).
+A replay recommendation does not mean a reactor will automatically replay after a definition change. See [Observers](../concepts/observers.mdx) for replay policy and the difference between replay and catch-up.
 
-Reach for [OnceOnly](once-only) instead when the side effect should simply not happen again. Use `Replay` when
-a replay needs to do something *different* rather than nothing. Neither covers the re-delivery that follows a
-failed partition being recovered — for that, see [Delivery identity](delivery-identity).
+For work that should be skipped during replay, use [OnceOnly](once-only). For coordination around the whole replay or a single partition, use [Replay notifications](replay-notifications).
+
+Neither marker prevents ordinary recovery from invoking a handler again after a partition fails. A replay handler can also be retried if its work fails. Use [Delivery identity](delivery-identity) to key duplicate protection for any external effect that must not repeat.
 
 ## Replay one event source from Workbench
 
-On the **Observers** page, select an application-owned observer, enter one **Event-source id**,
-then choose **Replay event source**. Confirm the observer, event-source id, event store and namespace
-before submitting. The id is one opaque value; this does not discover partitions, select multiple
-partitions or support arbitrary projection keys. The existing **Replay** action still replays the
-whole observer.
+On the Workbench's **Observers** page, select an application-owned observer, enter one **Event-source id**, then choose **Replay event source**. Confirm the observer, event-source id, event store and namespace before submitting. Review the reactor's replay handlers and external calls first: this action reprocesses history.
 
-Replay is a mutation requiring authorization, not an inspection-only operation. An accepted request
-means replay was requested, not that it has completed. Failure feedback leaves the input available
-for correction and retry.
+The id is one opaque value. This action does not discover partitions, select multiple partitions or support arbitrary projection keys. The **Replay** action still replays the whole observer.
+
+Replay changes observer state and requires authorization. An accepted request confirms that replay was requested, not that it has completed. If the request fails, the input remains available for correction and retry.
 
 :::note[Client coverage]
 TypeScript supports `@replay()` from `@cratis/chronicle` 6.9.0, with the same meaning as `Replay`. In Elixir, define the optional `handle_replay/2` callback; when present it is called instead of `handle/2` for replayed events, and `context.replaying?` tells a handler whether a replay is running.

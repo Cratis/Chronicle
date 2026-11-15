@@ -1,8 +1,7 @@
 ---
+title: Authentication in Cratis Chronicle Server
 description: Configure Chronicle Server authentication, using its built-in OpenIdDict authority or an external OAuth provider, behind a proxy or turned off.
 ---
-# Authentication
-
 Authentication is enabled by default. When `authority` is not configured, Chronicle uses its built-in OpenIdDict OAuth authority. When `authority` is set to an external OAuth provider URL, Chronicle will use that instead of the internal authority.
 
 The legacy `identityProvider.certificate` option is ignored; see [Identity Provider Certificate](identity-provider-certificate.md) for migration.
@@ -23,9 +22,13 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | --- | --- | --- | --- |
 | enabled | bool | true | Whether authentication is enforced. See [Turning authentication off](#turning-authentication-off) |
 | authority | string | null | External OAuth authority URL |
+| externalAdministratorClaim | object | null | Opt-in claim `type` and `value` that grants administrator privilege to external-authority callers. See [Administrator privilege with an external authority](#administrator-privilege-with-an-external-authority) |
 | audience | string | "chronicle" | Required audience for external-authority access tokens |
 | requireHttpsMetadata | bool | true | Require HTTPS when retrieving external-authority metadata |
-| enforceAdministratorPolicyForOperations | bool | false | Enforce administrator privilege for System-store operational recovery instead of auditing would-be denials |
+| enforceAdministratorPolicyForOperations | bool | false | Opt in to administrator enforcement for System-store operational recovery and kernel-scoped administrator-policy operations instead of auditing would-be denials. The default becomes true in the next major release |
+| enforceDestructiveOperations | bool | false | Opt in to refusing non-administrators destructive operations on the System store or at kernel scope, and compliance key operations beyond the requested event store. The default becomes true in the next major release; independent checks still apply |
+| enforceStoreEntitlements | bool | false | Require explicit event store entitlements for store-scoped capabilities, including compliance operations. When off, decisions are audited only |
+| eventStoreAccess | array | [] | Explicit event store grants for issuer-qualified external principals |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
 | initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
 
@@ -54,32 +57,35 @@ Behind an ingress, configure ASP.NET Core `ForwardedHeaders` with trusted proxie
 Administrator privilege is separate from a user account. The `Administrators` service lets an existing
 administrator grant or revoke that privilege and list active administrators. The last active administrator
 cannot be revoked or removed. These management operations always enforce the `Chronicle.Administrator`
-policy when authentication is enabled; the audit-mode setting below does not weaken them.
+policy when authentication is enabled; audit mode below does not weaken them.
 
 Only authenticated users issued by Chronicle's internal authority can pass that policy. Their principal
 must carry `chronicle_principal=user`, and the authoritative System roster must still grant the privilege
 to an active user. An application or client-credentials token never receives this marker and cannot become
 an administrator, even if its subject happens to match an administrator's user identifier. External-authority
-principals are denied; there is no external role or claim mapping for administrator privilege.
+principals are denied unless `externalAdministratorClaim` is configured; see
+[Administrator privilege with an external authority](#administrator-privilege-with-an-external-authority).
 
 User tokens issued before this marker was introduced must be refreshed or obtained again. Existing cookie
 or Identity bearer sessions without the marker must sign in again. Privilege is checked against the roster
 on each call, not cached in the token or inferred from the administrator read-model projection.
 
-### Audit mode for existing operations
+### Enforcement for existing operations
 
 Existing user/application management commands, job stop/resume/delete operations, observer recovery
 operations, and development-only kernel reset use `Chronicle.Administrator.Operations`.
 System-store reads and operations always require an administrator, regardless of
 `EnforceAdministratorPolicyForOperations`. See [The System event store](../system-event-store.md) for recovery guidance.
-For the remaining administrator-policy operations, by default,
-`EnforceAdministratorPolicyForOperations` is `false`: operations that would fail the administrator check
-log a warning and continue under their existing authentication requirements. Each would-deny warning names
+For the remaining administrator-policy operations, `EnforceAdministratorPolicyForOperations` defaults to
+`false`, preserving audit mode in this minor release: operations that would fail the administrator check
+log a warning and continue under their existing authentication requirements. `EnforceDestructiveOperations`
+also defaults to `false`. When either flag is false, including when unset, Chronicle logs a startup warning
+naming the flag and stating that its default becomes enforcing in the next major release. Set the flags to
+`true` to opt in now. Each would-deny warning names
 the caller kind (`user`, `app`, or `anonymous`) and operation, without token, secret, or command-property
 contents. Audit mode does not grant administrator privilege.
 
-Review those warnings before switching on enforcement. Set `EnforceAdministratorPolicyForOperations=true`
-through the authentication configuration:
+Review those warnings before opting in to enforcement. For example:
 
 ```json
 {
@@ -97,6 +103,39 @@ Self-service password changes and anonymous bootstrap endpoints keep their exist
 
 When authentication is disabled, administrator checks allow all callers and the server logs a startup
 warning. Do not use authentication-off mode on a reachable server.
+
+### Administrator privilege with an external authority
+
+When `authority` is set, you can opt in to granting administrator privilege to callers whose external-authority
+token carries one exact claim. Nothing is mapped by default, so existing deployments are unchanged.
+
+```json
+{
+  "authentication": {
+    "authority": "https://identity.example.com",
+    "externalAdministratorClaim": {
+      "type": "roles",
+      "value": "chronicle-admin"
+    }
+  }
+}
+```
+
+The environment-variable form is `Cratis__Chronicle__Authentication__ExternalAdministratorClaim__Type` and
+`Cratis__Chronicle__Authentication__ExternalAdministratorClaim__Value`.
+
+- Both the claim type and value are matched exactly, case-sensitively, against the whole value.
+- A JWT array claim matches when any element equals the value.
+- Space-delimited `scp` or `scope` strings are not split.
+- Nested claims such as Keycloak `realm_access.roles` do not match. Configure the identity provider to emit a flat claim.
+- The JWT name (for example `roles`) matches even though .NET maps it to the role URI. Configuring the URI matches every claim mapped to it.
+- Only tokens validated against `authority` count. Cookie and Identity sessions never match.
+- The mapping applies to user and application (client-credentials) tokens alike.
+- The claim is evaluated per request from the token, so revocation takes effect when the token expires. Keep token lifetimes short and use an administrator-controlled role claim.
+- Mapped administrators are not roster members: they do not appear in `AllAdministrators`, cannot be granted or revoked there, and do not count for the last-administrator rule.
+- A malformed mapping, or a mapping without `authority`, fails startup, even when authentication is disabled. A valid mapping has no effect while authentication is disabled, and the server logs a warning.
+- A configuration change requires a restart.
+- Workbench browser sessions use Chronicle's cookie login, so they gain administrator privilege only when requests carry the external bearer token, for example through an authenticating reverse proxy.
 
 ## Authentication behind an HTTPS reverse proxy
 

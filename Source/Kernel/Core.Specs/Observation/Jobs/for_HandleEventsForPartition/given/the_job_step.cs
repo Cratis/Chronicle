@@ -1,11 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
@@ -49,7 +49,7 @@ public class the_job_step : Specification
         var loggerFactory = Substitute.For<ILoggerFactory>();
         _silo.AddService(loggerFactory);
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
-        _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForPartitionState>(nameof(JobStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps);
+        _stateStorage = _silo.AddPersistentStateStorage<HandleEventsForPartitionState>(nameof(JobStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps);
         _jobStep = await _silo.CreateGrainAsync<HandleEventsForPartition>(_jobStepId, _jobStepKey);
     }
 }

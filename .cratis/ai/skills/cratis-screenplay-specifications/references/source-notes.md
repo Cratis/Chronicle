@@ -17,7 +17,8 @@ Actions beyond commands (`given clock`, `when clock`, `when trigger`, `given cap
 | Parser, binder and reference execution | Original evidence for the worked example |
 | Inline facts, `optional` and clock spelling | Changed examples compile; the reference runner was not rerun for them |
 | ESM v7 | Generated fixtures and `then returns` (`specifications.md` "Generated fixtures and return expectations"): the excerpt matches the compiled example in `cratis-screenplay-toolchain`, whose specifications run in the reference runner |
-| ESM v6 | Specification actions and reaction cascades, `then no readmodel`, `$strings` rejections, `invokes` caller rule |
+| ESM v34 | `then invokes`; a specification runs its own slice only (Screenplay decision 0115, `Documentation/screenplay/specifications.md`) |
+| ESM v6 | Specification actions and same-slice reactions, `then no readmodel`, `$strings` rejections, `invokes` caller rule |
 
 The inline-facts update followed `commands.md`, `events.md`, `types.md` and
 `specifications.md`. That pass compiled the changed examples; it did not rerun the reference

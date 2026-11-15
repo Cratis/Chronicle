@@ -18,6 +18,7 @@ import argparse
 import importlib.util
 import json
 import os
+from statistics import median
 import subprocess
 import sys
 import unittest
@@ -144,7 +145,10 @@ class for_generating_the_matrix(unittest.TestCase):
             return {
                 (entry["namespace"], entry["shard"], entry["filter"])
                 for entry in include
-                if entry["namespace"] != "Cratis.Chronicle.Integration.SqlServerAlertIncidents"
+                if entry["namespace"] not in {
+                    "Cratis.Chronicle.Integration.SqlServerAlertIncidents",
+                    "Cratis.Chronicle.Integration.for_OccurrenceProcessRecovery",
+                }
             }
 
         self.assertEqual(shards(_run()), shards(_run("--all-providers")))
@@ -152,8 +156,51 @@ class for_generating_the_matrix(unittest.TestCase):
     def test_every_entry_carries_the_fields_the_workflow_reads(self):
         for entry in _run():
             self.assertEqual(
-                {"namespace", "shard", "filter", "mode", "database", "needs-docker"},
-                set(entry))
+                {"namespace", "shard", "filter", "members", "mode", "database", "needs-docker"},
+                set(entry) - {"neo4j-image", "neo4j-database-mode"})
+
+    def test_per_process_activation_runs_only_out_of_process_with_mongodb(self):
+        for arguments in ((), ("--all-providers",)):
+            entries = [entry for entry in _run(*arguments)
+                       if "for_PerProcessActivation" in entry["filter"]]
+            self.assertTrue(entries)
+            for entry in entries:
+                self.assertEqual("outofprocess", entry["mode"])
+                self.assertEqual("mongodb", entry["database"])
+
+    def test_process_recovery_runs_only_out_of_process_with_postgresql(self):
+        entries = [entry for entry in _run()
+                   if "for_OccurrenceProcessRecovery" in entry["filter"]]
+        self.assertEqual([], entries)
+        for arguments in (("--all-providers",), ("--databases", "postgresql")):
+            entries = [entry for entry in _run(*arguments)
+                       if "for_OccurrenceProcessRecovery" in entry["filter"]]
+            self.assertTrue(entries)
+            for entry in entries:
+                self.assertEqual("outofprocess", entry["mode"])
+                self.assertEqual("postgresql", entry["database"])
+
+    def test_graph_projections_run_in_process_and_on_each_other_backend_out_of_process(self):
+        def lanes(*arguments):
+            return {(entry["mode"], entry["database"]) for entry in _run(*arguments)
+                    if entry["namespace"].endswith(".GraphProjections")}
+
+        self.assertEqual({("inprocess", "mongodb"), ("outofprocess", "sqlite")}, lanes())
+        self.assertEqual(
+            {("inprocess", "mongodb"), ("outofprocess", "sqlite"), ("outofprocess", "postgresql"), ("outofprocess", "mssql")},
+            lanes("--all-providers"))
+
+    def test_graph_projections_run_one_extra_lane_on_neo4j_enterprise_with_a_database_per_namespace(self):
+        for arguments in ((), ("--all-providers",)):
+            graph = [entry for entry in _run(*arguments) if entry["namespace"].endswith(".GraphProjections")]
+            enterprise = [entry for entry in graph if "neo4j-image" in entry]
+            self.assertEqual(1, len(enterprise))
+            self.assertEqual("neo4j:5-enterprise", enterprise[0]["neo4j-image"])
+            self.assertEqual("PerNamespace", enterprise[0]["neo4j-database-mode"])
+            self.assertEqual(("inprocess", "mongodb"), (enterprise[0]["mode"], enterprise[0]["database"]))
+            self.assertTrue(enterprise[0]["needs-docker"])
+            # Every other lane stays on the Community edition in single database mode.
+            self.assertEqual(len(graph) - 1, len([entry for entry in graph if "neo4j-database-mode" not in entry]))
 
     def test_an_unknown_backend_fails_the_run(self):
         completed = subprocess.run(
@@ -163,6 +210,287 @@ class for_generating_the_matrix(unittest.TestCase):
             text=True,
             check=False)
         self.assertNotEqual(0, completed.returncode)
+
+
+
+def _directories(root):
+    return sorted(entry for entry in os.listdir(os.path.join(REPOSITORY_ROOT, root))
+                  if os.path.isdir(os.path.join(REPOSITORY_ROOT, root, entry)) and entry not in ("bin", "obj"))
+
+
+def _build(suite, batches=None):
+    """Generate in-process, so a spec can swap the batch table without touching the generator's own."""
+    return matrix.build_include(suite, matrix.PULL_REQUEST_DATABASES, matrix.BATCHES if batches is None else batches)
+
+
+def _members(entry):
+    return [member for member in entry["members"].split(",") if member]
+
+
+class for_batched_namespaces(unittest.TestCase):
+    """Short namespaces share a job; nothing may be dropped, duplicated or silently joined."""
+
+    CONFIG_RESTRICTED = (
+        "SqlServerAlertIncidents", "for_KernelTlsLifecycle", "for_PerProcessActivation",
+        "for_OccurrenceProcessRecovery", "for_ContainerStartup",
+    )
+
+    def test_the_kernel_and_clustering_suites_cover_every_directory_exactly_once(self):
+        for suite, root in (("kernel", "Integration/Kernel"), ("clustering", "Integration/Clustering")):
+            with self.subTest(suite=suite):
+                prefix = matrix.SUITES[suite]["prefix"]
+                covered = []
+                for entry in _run("--suite", suite):
+                    covered += _members(entry) or [entry["namespace"]]
+                self.assertEqual(sorted(prefix + name for name in _directories(root)), sorted(covered))
+
+    def test_the_kernel_and_clustering_suites_have_the_expected_job_counts(self):
+        # The new for_Observer namespace stays solo, alongside Occurrences and Statistics.
+        self.assertEqual(6, len(_run("--suite", "kernel")))
+        self.assertEqual(2, len(_run("--suite", "clustering")))
+
+    def test_kernel_and_clustering_filters_end_with_a_dot_so_a_namespace_is_not_a_prefix(self):
+        for suite in ("kernel", "clustering"):
+            for entry in _run("--suite", suite):
+                for part in entry["filter"].split("|"):
+                    self.assertRegex(part, r"^FullyQualifiedName~[\w.]+\.$")
+
+    def test_batch_members_exist_are_disjoint_and_are_not_sharded_or_config_restricted(self):
+        seen = set()
+        for suite, batches in matrix.BATCHES.items():
+            root = matrix.SUITES[suite]["root"]
+            for batch in batches:
+                self.assertGreater(len(batch), 1)
+                for name in batch:
+                    with self.subTest(suite=suite, member=name):
+                        self.assertTrue(os.path.isdir(os.path.join(REPOSITORY_ROOT, root, name)))
+                        self.assertNotIn((suite, name), seen)
+                        seen.add((suite, name))
+                        if suite == "client":
+                            self.assertNotIn(name, matrix.SHARD_COUNTS)
+                            self.assertNotIn(name, self.CONFIG_RESTRICTED)
+
+    def test_every_client_batch_member_has_a_plain_namespace_filter(self):
+        # The parity-wrapper union path is not a plain namespace filter, so a member there cannot be batched.
+        for entry in _run():
+            if entry["members"]:
+                for member in _members(entry):
+                    self.assertIn(f"FullyQualifiedName~{member}", entry["filter"].split("|"))
+
+    def test_the_filters_in_a_batched_run_equal_the_filters_of_the_unbatched_run(self):
+        for suite in ("client", "kernel", "clustering"):
+            with self.subTest(suite=suite):
+                solo = _build(suite, {})
+                batched = _build(suite)
+                configs = {(e.get("mode"), e.get("database")) for e in solo}
+                self.assertEqual(configs, {(e.get("mode"), e.get("database")) for e in batched})
+                for config in configs:
+                    def union(include):
+                        return {part for e in include if (e.get("mode"), e.get("database")) == config
+                                for part in e["filter"].split("|")}
+                    self.assertEqual(union(solo), union(batched))
+
+    def test_every_entry_has_members_and_labels_are_unique_per_configuration(self):
+        for suite in ("client", "kernel", "clustering"):
+            include = _run("--suite", suite)
+            labels = set()
+            for entry in include:
+                self.assertIn("members", entry)
+                label = (entry["namespace"], entry["shard"], entry.get("mode"), entry.get("database"))
+                self.assertNotIn(label, labels)
+                labels.add(label)
+                if entry["members"]:
+                    self.assertEqual(
+                        matrix.SUITES[suite]["prefix"] + "+".join(m[len(matrix.SUITES[suite]["prefix"]):] for m in _members(entry)),
+                        entry["namespace"])
+                    self.assertEqual("all", entry["shard"])
+
+    def test_batching_removes_twelve_client_jobs_from_a_pull_request_run(self):
+        self.assertEqual(len(_build("client", {})) - 12, len(_build("client")))
+
+    def test_a_namespace_in_a_batch_that_is_sharded_is_rejected(self):
+        with self.assertRaises(ValueError):
+            _build("client", {"client": [["Projections", "for_Reactors"]]})
+
+    def test_configuration_restricted_namespaces_cannot_be_batched(self):
+        for name in self.CONFIG_RESTRICTED:
+            with self.subTest(namespace=name), self.assertRaises(ValueError):
+                _build("client", {"client": [[name, "for_PublicClientApis"]]})
+
+    def test_special_cases_keep_their_solo_lanes_when_all_providers_run(self):
+        include = _run("--all-providers")
+        lanes = {
+            "SqlServerAlertIncidents": ("outofprocess", "mssql"),
+            "for_KernelTlsLifecycle": ("outofprocess", "mongodb"),
+            "for_PerProcessActivation": ("outofprocess", "mongodb"),
+            "for_OccurrenceProcessRecovery": ("outofprocess", "postgresql"),
+        }
+        for name, lane in lanes.items():
+            with self.subTest(namespace=name):
+                entries = [entry for entry in include if entry["namespace"] == matrix.NAMESPACE_PREFIX + name]
+                self.assertEqual(1, len(entries))
+                self.assertEqual(lane, (entries[0]["mode"], entries[0]["database"]))
+                self.assertEqual("", entries[0]["members"])
+                self.assertEqual(matrix._shards_for(name)[0][1], entries[0]["filter"])
+
+
+
+class for_a_namespace_selection(unittest.TestCase):
+    """A pull request that maps to some namespaces runs only those, with nothing else about them changed."""
+
+    def _failing(self, *arguments):
+        return subprocess.run([sys.executable, SCRIPT, *arguments], cwd=REPOSITORY_ROOT,
+                              capture_output=True, text=True, check=False)
+
+    def test_selected_namespaces_keep_the_same_shards_and_configurations_as_the_full_matrix(self):
+        wanted = {"Cratis.Chronicle.Integration.for_Reducers", "Cratis.Chronicle.Integration.Projections"}
+        selected = _run("--namespaces", "for_Reducers,Projections")
+        self.assertEqual(wanted, {entry["namespace"] for entry in selected})
+        for entry in _run():
+            if entry["namespace"] in wanted:
+                self.assertIn(entry, selected)
+
+    def test_a_selected_namespace_does_not_pull_in_the_namespaces_it_is_batched_with(self):
+        batched = matrix.BATCHES["client"][0]
+        alone = _run("--namespaces", batched[0])
+        self.assertEqual([matrix.NAMESPACE_PREFIX + batched[0]], sorted({entry["namespace"] for entry in alone}))
+        self.assertTrue(all(entry["members"] == "" for entry in alone))
+
+    def test_two_selected_batch_partners_still_share_their_job(self):
+        batched = matrix.BATCHES["client"][0]
+        together = _run("--namespaces", ",".join(batched[:2]))
+        self.assertTrue(together)
+        self.assertTrue(all(entry["members"] for entry in together))
+
+    def test_an_empty_selection_is_an_empty_matrix_not_the_whole_one(self):
+        self.assertEqual([], _run("--namespaces", ""))
+
+    def test_an_unknown_namespace_fails_the_run_instead_of_quietly_running_nothing(self):
+        completed = self._failing("--namespaces", "for_Reducers,for_Typo")
+        self.assertNotEqual(0, completed.returncode)
+        self.assertIn("for_Typo", completed.stderr)
+
+
+class for_sharded_namespaces(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.namespaces = {}
+        for namespace, count in matrix.SHARD_COUNTS.items():
+            groups = matrix._group_by_ancestor(
+                matrix._test_class_counts(os.path.join(matrix.CLIENT_ROOT, namespace)))
+            shards = matrix._shards_for(namespace)
+            terms = [test_filter.split("|") for _, test_filter in shards]
+            cls.namespaces[namespace] = (count, groups, shards, terms)
+
+    def test_the_slowest_split_namespaces_have_the_measured_shard_counts(self):
+        self.assertEqual({"for_EventSequence": 5, "Projections": 5, "for_Imports": 2},
+                         {name: matrix.SHARD_COUNTS[name] for name in ("for_EventSequence", "Projections", "for_Imports")})
+
+    def test_the_two_slowest_solo_namespaces_have_two_shards_with_no_empty_shard(self):
+        for namespace in ("for_ReadModels", "for_EventStoreSubscriptions"):
+            with self.subTest(namespace=namespace):
+                self.assertEqual(2, matrix.SHARD_COUNTS[namespace])
+                _, _, shards, terms = self.namespaces[namespace]
+                self.assertEqual(["1of2", "2of2"], [label for label, _ in shards])
+                self.assertTrue(all(terms))
+
+    def test_labels_cover_every_configured_shard(self):
+        for namespace, (count, _, shards, _) in self.namespaces.items():
+            with self.subTest(namespace=namespace):
+                self.assertEqual([f"{index}of{count}" for index in range(1, count + 1)],
+                                 [label for label, _ in shards])
+
+    def test_shards_cover_every_group_exactly_once(self):
+        for namespace, (_, groups, _, terms) in self.namespaces.items():
+            with self.subTest(namespace=namespace):
+                expected = {f"FullyQualifiedName~{name}." for name in groups}
+                self.assertEqual(expected, set().union(*terms))
+                self.assertEqual(len(expected), sum(len(shard) for shard in terms))
+
+    def test_no_filter_owns_a_subtree_in_another_shard(self):
+        for namespace, (_, _, _, terms) in self.namespaces.items():
+            ownership = [(term, index) for index, shard in enumerate(terms) for term in shard]
+            with self.subTest(namespace=namespace):
+                self.assertFalse(any(other.startswith(term) for term, owner in ownership
+                                     for other, sibling in ownership if owner != sibling))
+
+    def test_fact_counts_are_conserved_and_balanced(self):
+        for namespace, (_, groups, _, terms) in self.namespaces.items():
+            counts = {f"FullyQualifiedName~{name}.": facts for name, facts in groups.items()}
+            loads = [sum(counts[term] for term in shard) for shard in terms]
+            with self.subTest(namespace=namespace, loads=loads):
+                total_facts = sum(matrix._test_class_counts(os.path.join(matrix.CLIENT_ROOT, namespace)).values())
+                self.assertEqual(total_facts, sum(loads))
+                self.assertLessEqual(max(loads), 1.5 * median(loads))
+
+    def test_event_sequence_keeps_the_old_two_shard_filter_union(self):
+        _, groups, _, terms = self.namespaces["for_EventSequence"]
+        old_terms = {f"FullyQualifiedName~{name}." for bucket in matrix._pack(groups, 2) for name in bucket}
+        self.assertEqual(old_terms, set().union(*terms))
+
+
+class for_the_client_start_order(unittest.TestCase):
+    """GitHub starts matrix jobs in include order, so the slowest shards must come first (#5875)."""
+
+    @staticmethod
+    def _client(*arguments):
+        return _run(*arguments)
+
+    @staticmethod
+    def _key(entry):
+        return json.dumps(entry, sort_keys=True)
+
+    def test_the_ordering_never_changes_the_set_of_entries(self):
+        ordered = matrix.build_include("client", matrix.ALL_DATABASES, matrix.BATCHES)
+        original = matrix.order_longest_first(ordered, {})
+        self.assertEqual(sorted(map(self._key, original)), sorted(map(self._key, ordered)))
+        self.assertEqual(len(ordered), len(set(map(self._key, ordered))))
+
+    def test_an_empty_table_keeps_the_original_order(self):
+        entries = [{"namespace": f"Cratis.Chronicle.Integration.{name}", "shard": "all"} for name in ("b", "a", "c")]
+        self.assertEqual(entries, matrix.order_longest_first(entries, {}))
+
+    def test_listed_entries_come_longest_first_and_unlisted_ones_follow_in_order(self):
+        prefix = matrix.NAMESPACE_PREFIX
+        entries = [{"namespace": prefix + name, "shard": shard} for name, shard in
+                   (("x", "all"), ("fast", "all"), ("y", "all"), ("slow", "1of2"), ("fast", "all"))]
+        ordered = matrix.order_longest_first(entries, {"slow|1of2": 900, "fast|all": 100})
+        self.assertEqual(["slow", "fast", "fast", "x", "y"], [e["namespace"][len(prefix):] for e in ordered])
+
+    def test_a_batch_is_ordered_by_its_first_member(self):
+        prefix = matrix.NAMESPACE_PREFIX
+        entries = [{"namespace": prefix + "a", "shard": "all"}, {"namespace": prefix + "b+c", "shard": "all"}]
+        ordered = matrix.order_longest_first(entries, {"b|all": 50})
+        self.assertEqual(prefix + "b+c", ordered[0]["namespace"])
+
+    def test_the_generated_client_matrix_starts_listed_shards_longest_first(self):
+        seconds = matrix._load_shard_seconds()
+        include = self._client("--all-providers")
+        durations = [seconds.get(f"{e['namespace'].removeprefix(matrix.NAMESPACE_PREFIX).split('+')[0]}|{e['shard']}", 0)
+                     for e in include]
+        self.assertEqual(sorted(durations, reverse=True), durations)
+        self.assertGreater(durations[0], 0)
+
+    def test_every_shard_the_table_names_is_a_shard_the_generator_emits(self):
+        seconds = matrix._load_shard_seconds()
+        emitted = {f"{e['namespace'].removeprefix(matrix.NAMESPACE_PREFIX)}|{e['shard']}"
+                   for e in self._client("--all-providers")}
+        self.assertEqual([], sorted(set(seconds) - emitted))
+
+    def test_every_client_configuration_is_still_generated_with_the_split(self):
+        # The split changes shards, never the configurations a namespace runs in.
+        include = self._client("--all-providers")
+        for namespace in ("for_ReadModels", "for_EventStoreSubscriptions"):
+            with self.subTest(namespace=namespace):
+                entries = [e for e in include if e["namespace"].endswith("." + namespace)]
+                self.assertEqual(2 * len(matrix.INFRA_CONFIGS), len(entries))
+
+    def test_other_suites_keep_their_declared_order(self):
+        for suite in ("kernel", "clustering"):
+            with self.subTest(suite=suite):
+                names = [e["namespace"] for e in self._client("--suite", suite)]
+                declared = [unit[0] for unit in matrix._suite_units(suite, matrix.BATCHES)]
+                self.assertEqual(declared, names)
 
 
 if __name__ == "__main__":

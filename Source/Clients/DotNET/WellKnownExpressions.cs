@@ -74,6 +74,21 @@ public static class WellKnownExpressions
     public const string CausedBy = "$causedBy";
 
     /// <summary>
+    /// The event content expression, used as a dynamic dictionary key segment resolved from the event payload.
+    /// </summary>
+    public const string EventContent = "$eventContent";
+
+    /// <summary>
+    /// The set once expression - assigns the inner expression only when the target has no value.
+    /// </summary>
+    public const string SetOnce = "$setOnce";
+
+    /// <summary>
+    /// The remove expression - removes a dictionary key addressed by a dynamic key segment.
+    /// </summary>
+    public const string Remove = "$remove";
+
+    /// <summary>
     /// The all expression for subscribing to all event types.
     /// </summary>
     public const string All = "$all";

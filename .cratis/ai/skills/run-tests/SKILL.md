@@ -1,6 +1,6 @@
 ---
 name: run-tests
-description: 'Chooses and runs the repository-compatible .NET test command: classic, VSTest, bridged MTP, or native MTP syntax for MSTest, xUnit, NUnit, and TUnit. Use before running .NET tests or answering with a test command or flags: run the tests, one test, class, category, trait or target framework, combined filters, --filter-query, --no-build, --diag, TRX, coverage collection, crash or hang dumps, filter errors, or unrecognized options. Not for platform identification alone (use platform-detection), writing or debugging test code, interpreting a coverage report (use coverage-analysis), CI investigation, migration, or a persistent hot-reload loop.'
+description: Use before running .NET tests or choosing test commands, flags and filters, including command failures and dump collection. Not for platform identification alone, test authoring or interpreting coverage reports.
 license: MIT
 metadata:
   portability: portable
@@ -13,7 +13,7 @@ metadata:
 
 # Run .NET Tests
 
-Cratis rules in `.cratis/ai/rules/` (including `csharp.md`, `specs.csharp.md`, and `orleans.md`) and the `cratis-*` skills win where they differ. Specification authoring belongs to **cratis-specifications-csharp**; Cratis core repositories run xUnit v2 on VSTest.
+Cratis rules in `.cratis/ai/rules/` (including `csharp.md`, `specs.csharp.md`, and `orleans.md`) and the `cratis-*` skills win where they differ. Specification authoring belongs to **cratis-specifications-csharp**; Cratis spec projects on Specifications 5 and xUnit v3 run as the built executable, not `dotnet test`; see its `references/running-specs.md` for the loop and filter flags. Projects still on xUnit v2 run on VSTest.
 
 Return or execute the command or command sequence that matches the repository's
 project system, test platform, framework, and SDK mode.
@@ -88,6 +88,15 @@ SDK assumption or ask for the SDK version when the syntax cannot otherwise be
 resolved. Route identification-only requests to `platform-detection`.
 
 ## Decision table
+
+For supported Cratis xUnit v3, TUnit and native-runner suites, restore/build once
+and run each project's built executable directly, or `dotnet <TargetPath.dll>`
+when there is no apphost. Use the matching configuration/TFM and runner-specific
+filter/report flags; see [running-specs](../cratis-specifications-csharp/references/running-specs.md).
+Only identified VSTest projects default to `dotnet test <project> --no-build`.
+Mixed suites run per project, never solution-wide `dotnet test`. The command-mode
+forms below remain valid when the user explicitly requires dotnet-test syntax;
+do not switch an executable suite to them as an automatic fallback.
 
 | Detected mode / platform | Command shape | Never use |
 |---|---|---|
@@ -243,14 +252,16 @@ speculative alternative grammars.
 | TRX | SDK-style: `--logger "trx;LogFileName=<name>.trx"` when an exact output file is requested, otherwise `--logger trx`; standalone `vstest.console.exe`: `/Logger:trx`; `MSTest.exe`: repository-documented results option | `--report-trx` |
 | Results directory | `--results-directory <dir>` | `--results-directory <dir>` |
 | Diagnostic log | `--diag <file>` | `--diagnostic --diagnostic-output-directory <dir>` |
-| Crash dump | `--blame-crash` | `--crashdump` |
-| Hang timeout | `--blame-hang --blame-hang-timeout 5min` | `--hangdump --hangdump-timeout 5min` |
+| Crash dump | `--blame-crash --blame-crash-dump-type mini` | `--crashdump --crashdump-type Mini` |
+| Hang timeout | `--blame-hang --blame-hang-timeout 5min --blame-hang-dump-type mini` | `--hangdump --hangdump-timeout 5min --hangdump-type Mini` |
 | Code coverage | `--collect "Code Coverage"` | `--coverage` |
 
 MTP report, dump, and coverage flags require their corresponding registered
 extensions (`TrxReport`, `CrashDump`, `HangDump`, or `CodeCoverage`). Some
 framework SDKs bundle common extensions; if a flag is unrecognized, inspect
 package references before recommending a package change.
+
+Always ask for a mini dump. Read the stack (for example `dotnet-dump analyze <file>` then `clrstack -all`), keep the text output, and delete the `.dmp` file. Use a full dump only for a named investigation that needs heap contents.
 
 `--verbosity diagnostic` increases dotnet/MSBuild output verbosity; it does not
 write a VSTest diagnostic log file.
@@ -265,7 +276,7 @@ dotnet test Tests.csproj --logger "trx;LogFileName=TestResults.trx"
 dotnet test Tests.csproj -- --report-trx
 
 # Native MTP TRX and hang detection
-dotnet test --project Tests.csproj --report-trx --hangdump --hangdump-timeout 5min
+dotnet test --project Tests.csproj --report-trx --hangdump --hangdump-timeout 5min --hangdump-type Mini
 
 # Native MTP diagnostics
 dotnet test --project Tests.csproj --diagnostic --diagnostic-output-directory artifacts/diagnostics

@@ -20,7 +20,7 @@ Lengths are targets, counted in characters including any site suffix.
 | --- | --- |
 | Title | Distinguishing term first. Blog and landing pages 50-60; docs and reference pages 20-60; a README H1 that is the product name is fine |
 | Description | One sentence, 60-160, never over 160; the point comes first |
-| Lead answer passage | 40-60 words, names its subject, one key property, one limit |
+| Lead answer passage | Where useful, name the subject and answer the reader's question; no fixed length or required opener |
 | Heading | Under about 70 characters |
 | `og:image` | 1200x630, under 200 KB, with `og:image:alt` |
 
@@ -29,7 +29,7 @@ Lengths are targets, counted in characters including any site suffix.
 - [ ] One reader job. For docs, one page type: tutorial, how-to, reference or explanation.
 - [ ] Title unique, distinguishing term near the front.
 - [ ] Description written by hand; not the title, not another page's description.
-- [ ] The `description` answers what the page is or achieves in one self-contained sentence; the first paragraph does too on landing, index, glossary and README pages.
+- [ ] The `description` answers what the page is or achieves in one self-contained sentence; the first paragraph does too on landing, glossary and README pages. Product index pages make the product's purpose clear near the beginning.
 - [ ] Canonical names; first mention uses the full "Cratis X" form.
 - [ ] Facts, numbers and comparisons carry a source, and counts also carry a date; nothing beyond the claim gate.
 - [ ] Links have descriptive text. Root-relative inside the docs site, absolute
@@ -40,20 +40,25 @@ Lengths are targets, counted in characters including any site suffix.
 
 ## Docs pages
 
-- Voice and structure follow `writing-cratis-docs`, which wins on any conflict: tutorials,
-  getting-started pages and explanations open with a concrete scenario (pain, then relief). Put the
-  answer-first definition in the frontmatter `description`; one definition sentence may follow the
-  scenario where it reads naturally.
-- Product index page: opens with the one-sentence definition, then the without-versus-with framing.
-- Concept page: scenario first; then why it exists, when to use it, when not to, how it works.
-  H2s such as "What is X" and "When to use X" only where they fit. No H1 in the body.
-- Tutorial: title names the outcome and starts with a verb; the scenario, then what the reader will
-  have running; prerequisites and versions up front; one visible result per step; "Last updated" and the
-  version it applies to.
-- How-to: the task as the title; goal, prerequisites, numbered steps, a done check, the two likely
-  failures; versions stated.
-- Reference: the title is the exact name with its product; first sentence says what it is for;
-  tables and signatures; stable anchors; no intro, no pitch. Merge or enrich near-empty stub pages.
+- Voice and structure follow `writing-cratis-docs`, which wins on any conflict. Let the reader's
+  task and page purpose determine the opening and sequence; a concrete scenario is useful where
+  it helps explain the problem, not a mandatory first paragraph. Keep the self-contained definition
+  or outcome in the frontmatter `description`.
+- Product index page: make the product's purpose clear early; use without-versus-with framing only
+  where it helps the reader choose.
+- Concept page: explain the missing reasoning, choosing the relevant why, when or how rather than
+  requiring every topic in a fixed order. H2s such as "What is X" and "When to use X" only where they
+  fit. No H1 in the body.
+- Tutorial: title names the outcome and starts with a verb; make clear what the reader will
+  have running; necessary prerequisites before the affected steps; one visible result per step.
+  State version or compatibility limits when they change what the reader can run, not an author's
+  verification date or version diary.
+- How-to: the task as the title; goal, necessary prerequisites, numbered steps and a done check.
+  Include relevant failure and recovery guidance without a fixed count, and state version or
+  compatibility limits where they affect the task.
+- Reference: the title is the exact name with its product; state its purpose where needed to use
+  the entry; tables and signatures; stable anchors; no generic intro or pitch. Merge or enrich
+  near-empty stub pages.
 
 ## Blog posts
 

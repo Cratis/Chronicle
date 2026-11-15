@@ -33,7 +33,9 @@ internal sealed class AppendedEventsQueueObserverLane
     readonly Func<AppendedEventsQueueObserverLane, IReadOnlyList<AppendedEvent>, Task> _deliver;
     readonly Action<int> _settled;
     readonly Action<Exception> _failed;
+    readonly Task _after;
     int _pendingBatches;
+    int _pendingEvents;
     volatile bool _isClosed;
 
     /// <summary>
@@ -45,14 +47,17 @@ internal sealed class AppendedEventsQueueObserverLane
     /// <param name="settled">Called with the number of queued batches a delivery (or a discard) has settled.</param>
     /// <param name="failed">Called when a delivery throws; the lane carries on with the next delivery.</param>
     /// <param name="run">Starts the lane's worker.</param>
+    /// <param name="after">Optional work the lane waits for before its first delivery - the retired lane of the same observer, so two lanes never deliver to one observer at the same time.</param>
     public AppendedEventsQueueObserverLane(
         AppendedEventsQueueObserverSubscription subscription,
         IObserver observer,
         Func<AppendedEventsQueueObserverLane, IReadOnlyList<AppendedEvent>, Task> deliver,
         Action<int> settled,
         Action<Exception> failed,
-        Func<Func<Task>, Task> run)
+        Func<Func<Task>, Task> run,
+        Task? after = null)
     {
+        _after = after ?? Task.CompletedTask;
         ObserverKey = subscription.ObserverKey;
         Subscription = subscription;
         Observer = observer;
@@ -89,6 +94,11 @@ internal sealed class AppendedEventsQueueObserverLane
     public int PendingBatches => Volatile.Read(ref _pendingBatches);
 
     /// <summary>
+    /// Gets the number of events routed to the lane and not yet delivered.
+    /// </summary>
+    public int PendingEvents => Volatile.Read(ref _pendingEvents);
+
+    /// <summary>
     /// Gets a value indicating whether the lane has been closed and discards what it still holds.
     /// </summary>
     public bool IsClosed => _isClosed;
@@ -107,12 +117,14 @@ internal sealed class AppendedEventsQueueObserverLane
         }
 
         Interlocked.Add(ref _pendingBatches, batches);
+        Interlocked.Add(ref _pendingEvents, events.Count);
         if (_channel.Writer.TryWrite(new(events, batches)))
         {
             return true;
         }
 
         Interlocked.Add(ref _pendingBatches, -batches);
+        Interlocked.Add(ref _pendingEvents, -events.Count);
         return false;
     }
 
@@ -131,18 +143,56 @@ internal sealed class AppendedEventsQueueObserverLane
         _channel.Writer.TryComplete();
     }
 
+    static bool IsInSequenceOrder(List<AppendedEvent> events)
+    {
+        for (var index = 1; index < events.Count; index++)
+        {
+            if (events[index].Context.SequenceNumber < events[index - 1].Context.SequenceNumber)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     async Task Run()
     {
+        // The retired lane of the same observer may still be inside a delivery; nothing is delivered until it has settled.
+#pragma warning disable RCS1075 // The retired lane reports its own failures; this lane only needs it to have settled
+        try
+        {
+            await _after;
+        }
+        catch (Exception)
+        {
+            // Settled, however it ended.
+        }
+#pragma warning restore RCS1075
+
         var reader = _channel.Reader;
         while (await reader.WaitToReadAsync())
         {
-            var routedEvents = new List<AppendedEvent>();
+            IReadOnlyList<AppendedEvent>? single = null;
+            List<AppendedEvent>? merged = null;
             var batches = 0;
+            var eventCount = 0;
             var drained = 0;
             while (drained < MaxCoalescedBatchesPerDelivery && reader.TryRead(out var routed))
             {
-                routedEvents.AddRange(routed.Events);
+                if (drained == 0)
+                {
+                    // The common case is one routed batch: hand it on as it is, without copying it.
+                    single = routed.Events;
+                }
+                else
+                {
+                    merged ??= [.. single!];
+                    merged.AddRange(routed.Events);
+                }
+
                 batches += routed.Batches;
+                eventCount += routed.Events.Count;
                 drained++;
             }
 
@@ -155,10 +205,16 @@ internal sealed class AppendedEventsQueueObserverLane
             {
                 if (!_isClosed)
                 {
-                    // Each routed batch is in sequence order already; merging several needs a stable re-sort.
-                    IReadOnlyList<AppendedEvent> events = drained > 1
-                        ? [.. routedEvents.OrderBy(@event => @event.Context.SequenceNumber)]
-                        : routedEvents;
+                    var events = single!;
+                    if (merged is not null)
+                    {
+                        // Each routed batch is in sequence order already; merging several only needs a stable re-sort
+                        // when they were routed out of order.
+                        events = IsInSequenceOrder(merged)
+                            ? merged
+                            : [.. merged.OrderBy(@event => @event.Context.SequenceNumber)];
+                    }
+
                     await _deliver(this, events);
                 }
             }
@@ -171,6 +227,7 @@ internal sealed class AppendedEventsQueueObserverLane
             finally
             {
                 Interlocked.Add(ref _pendingBatches, -batches);
+                Interlocked.Add(ref _pendingEvents, -eventCount);
                 _settled(batches);
             }
         }

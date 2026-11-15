@@ -1,40 +1,39 @@
 ---
-title: CRUD, EF Core, and Chronicle
-description: If you build apps with EF Core and think in tables, rows, and SaveChanges, here's how those ideas translate to Chronicle.
+title: Moving from CRUD and EF Core to Cratis Chronicle
+description: Move from updating rows to recording events in Cratis Chronicle. Map EF Core concepts to read models, concurrency checks, and a gradual adoption path.
 ---
 
-If your instinct is to add a table, map an entity, and call `SaveChanges()`, you already have useful muscle memory. This page maps the CRUD/EF Core model onto Chronicle so the differences are explicit.
+Cratis Chronicle records events and derives current state from them, rather than replacing a row whenever something changes. If you use EF Core, the main adoption decision is which changes need that history and which can stay as ordinary CRUD: create, read, update, and delete operations. You can use both approaches in the same application.
 
 ## The mental shift in one sentence
 
-In CRUD you **store the current state and overwrite it**; in Chronicle you **store what happened and derive the current state** from those facts. The current state still exists — it's a [read model](/chronicle/read-models/) — you just build it from events instead of editing it in place.
+In CRUD, you store current state and update it; in Chronicle, you record what happened and derive current state from those facts. That derived state is a [read model](/chronicle/read-models/): data shaped for a query or screen, built from events instead of edited directly.
 
 ## How the pieces map
 
 | You know (CRUD / EF Core) | In Chronicle |
 |---|---|
-| A table / entity | An [event source](/chronicle/concepts/event-source.md) and its stream of events |
+| An entity with an identity | An [event source](/chronicle/concepts/event-source.md): the identity whose changes the events describe |
 | `INSERT` a row | Append a "created" [event](/chronicle/concepts/event.md) |
 | `UPDATE` a column | Append an event describing *what changed* (e.g. `AddressChanged`) |
-| `DELETE` a row | Append a "removed/closed" event — history is never erased |
+| `DELETE` a row | Append a domain event such as `CustomerRemoved`; erasure is a separate compliance operation |
 | `DbContext.SaveChanges()` | `EventLog.Append(...)` |
 | `SELECT` / LINQ query | A query over a [read model](/chronicle/read-models/) built by a [projection](/chronicle/concepts/projection.md) |
 | A computed/denormalized view | A purpose-built read model — make as many as you need |
-| `ALTER TABLE` / EF migration | [Event type migration](/chronicle/concepts/event-type-migrations) + replay the projection |
-| Optimistic concurrency token | Constraints and the event stream's ordering |
+| `ALTER TABLE` / EF migration | Use an [event type migration](/chronicle/concepts/event-type-migrations) when an event's shape changes; rebuild read models when their projection needs it |
+| Optimistic concurrency token | A [concurrency scope](/chronicle/events/concurrency/) or [decision read](/chronicle/read-models/decision-reads/) that guards the append against intervening events |
 
 ## What stays the same
 
-- You still use C# records and dependency injection.
-- You still query data and render it — the read side looks like querying a collection.
-- You can still keep a relational/document database for the genuinely-CRUD parts of your app; Chronicle doesn't demand all-or-nothing.
+In a .NET application, you still use C# records and dependency injection. Your screens still query data and render results; they query read models rather than the event log itself. Keep EF Core and your existing database for data that only needs ordinary updates. Choosing Chronicle for one workflow does not require moving every table.
 
 ## What changes (and why)
 
-- **You model verbs, not just nouns.** Instead of one mutable `Customer` row, you record `CustomerRegistered`, `AddressChanged`, `AccountClosed`. Each is an immutable fact. This is the part that feels new — and it's where the value (audit, history, replay) comes from.
-- **Reads are eventually consistent — by default.** A projection materializes the read model *after* the event is appended, so a stored read immediately after a write may lag by a moment. Usually fine; occasionally something to design around. When read-after-write matters, Chronicle can also compute a read model on demand with strong consistency — see [Read model consistency](/chronicle/read-models/consistency.md).
-- **You don't write update statements.** A projection *declares* how events map onto a read model; Chronicle keeps it current. No `UPDATE`, no merge logic.
-- **You don't delete history.** "Delete" becomes an event. For real erasure obligations (GDPR), see [Compliance](/chronicle/compliance/).
+A customer row tells you the address now. An `AddressChanged` event also records that a move happened, so you can later derive a relocation count or rebuild a view of those changes. Choose events that describe business facts, such as `CustomerRegistered` and `AccountClosed`, rather than recording every column assignment.
+
+A projection defines how those events become a read model. By default, Chronicle materializes that model, meaning it stores the derived result for queries. Processing happens after the append, so a successful write does not mean the stored view already includes it. For read-after-write, you can wait for processing or use a suitable passive read model, computed from events on demand. [Read model consistency](/chronicle/read-models/consistency.md) explains those choices. A fresh read alone does not guard a later write against another request.
+
+Removing a customer from a screen need not remove the customer's history. Your projection can react to a removal event and remove its read-model entry. A closed account also needs an explicit closing rule if later appends must be refused. For obligations that require erasing personal data, use [Compliance](/chronicle/compliance/) rather than treating a removal event as erasure.
 
 ## Side by side
 
@@ -46,27 +45,27 @@ await db.SaveChangesAsync();
 var current = await db.Customers.FindAsync(id);
 ```
 
-Chronicle: the same change is a fact you append and a read side you declare. First, define the verbs as event types:
+With Chronicle, the address change becomes an event to append. The examples below illustrate that write and its read model; client APIs differ, so use your chosen client's setup guide before applying them. First, define the event types:
 
 <ChronicleClientTabs snippet="coming-from-crud/events" />
 
-Then declare the read side. This is the [projection](/chronicle/concepts/projection.md) — and notice it is *not* a 1:1 copy of the CRUD `Customer` entity. It's shaped for the screen that reads it, and it answers something the overwritten row never could:
+Then define a customer card for the screen. The [projection](/chronicle/concepts/projection.md) maps events onto that card and counts address changes. The result need not mirror the old `Customer` entity:
 
 <ChronicleClientTabs snippet="coming-from-crud/read-model" />
 
-`[FromEvent<T>]` (`@fromEvent` in TypeScript) maps event properties onto the record by name — the name arrives with `CustomerRegistered`, and the address is kept current by every `AddressChanged`. The counter tracks the moves. There is no `UPDATE` statement anywhere: Chronicle derives the card from the facts.
+In the .NET example, `[FromEvent<T>]` maps matching event properties onto the read model; TypeScript uses `@fromEvent`. The registration event supplies the name, and address-change events update the address. The count declaration retains something a row holding only the latest address would not tell you: how many changes occurred.
 
 Now the write and the read-back:
 
 <ChronicleClientTabs snippet="coming-from-crud/write-and-read" />
 
-`GetInstanceById` hands back the card Chronicle derives from those events — `TimesRelocated` included, a fact the CRUD row lost the moment `SaveChanges` ran. Chronicle keeps that card up to date as events land, so a read right after an append can be a beat behind; when a read must reflect the append that preceded it, [consistency](/chronicle/read-models/consistency/) shows how.
+`GetInstanceById` retrieves the derived card, including `TimesRelocated`. For a materialized read model, that is the stored result, not a promise to replay the history on this call. Before relying on an immediate read-back, choose the [consistency behavior](/chronicle/read-models/consistency/) that includes your append.
 
 ## Not sure it's worth it?
 
-Read [When to use event sourcing](/chronicle/concepts/when-to-use-event-sourcing/) for an honest take — there are domains where plain CRUD is the right answer, and that's fine.
+Start with a workflow where the sequence of changes answers a question the current row cannot. If you only need the latest value and have no use for replay or history, CRUD may remain the simpler choice. [When to use event sourcing](/chronicle/concepts/when-to-use-event-sourcing/) helps you make that decision before changing the storage model.
 
 ## Next
 
-- [Get started](/chronicle/get-started/) — scaffold and run in minutes.
-- [Tutorial](/chronicle/tutorial/) — build a small system from events up.
+- [Get started](/chronicle/get-started/) to run the kernel and connect your chosen client.
+- Follow the [tutorial](/chronicle/tutorial/) to build an event-driven workflow and its read side.

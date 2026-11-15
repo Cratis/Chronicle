@@ -22,6 +22,7 @@ public class and_subscriptions_are_waiting_for_it : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
@@ -51,7 +52,8 @@ public class and_subscriptions_are_waiting_for_it : Specification
 
     async Task Because() => await _manager.SourceEventStoreAdded(new EventStoreName(SourceEventStore));
 
-    [Fact] void should_subscribe_only_matching_pending_subscriptions() =>
+    [Fact]
+    void should_subscribe_only_matching_pending_subscriptions() =>
         _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
             Arg.Any<IEnumerable<EventType>>(),

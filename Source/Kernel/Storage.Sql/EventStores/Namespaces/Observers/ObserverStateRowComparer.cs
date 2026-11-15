@@ -129,7 +129,8 @@ public sealed class ObserverStateRowComparer : IEqualityComparer<ObserverState>,
         x.IsResolved == y.IsResolved &&
         x.IsQuarantined == y.IsQuarantined &&
         x.WebhookDisposition == y.WebhookDisposition &&
-        x.WebhookRecoveryId == y.WebhookRecoveryId;
+        x.WebhookRecoveryId == y.WebhookRecoveryId &&
+        x.ReplayEpoch == y.ReplayEpoch;
 
     static bool SameFailureRecovery(FailedPartition x, FailedPartition y) =>
         x.AttemptsBeforeBudgetReset == y.AttemptsBeforeBudgetReset &&

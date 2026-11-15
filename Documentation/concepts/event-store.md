@@ -1,17 +1,15 @@
 ---
-title: "Event Store"
-description: "What a Chronicle event store holds, and the databases it can be stored in."
+title: "Cratis Chronicle event stores and storage"
+description: "A Cratis Chronicle event store holds event sequences and their processing definitions. Namespaces separate tenant data within the same event store."
 ---
 
-Chronicle offers what is called an event store which basically means a special purpose database
-for storing events. The events are stored in [event sequences](./event-sequence.md).
+An event store in Cratis Chronicle holds your application's events in [event sequences](./event-sequence.md), together with the definitions and state needed to process them. It is the boundary you select when connecting an application to its event history.
 
-In addition to this, the Chronicle event store also maintains information about things like the
-[event types](./event-type.md), [observers](./observers.mdx), [projections](./projection.md) and more.
+The store also tracks [event types](./event-type.md), which describe the events, and [observers](./observers.mdx), which consume them. [Projections](./projection.md) use those events to build read models that your application can query.
 
-Chronicle stores the event store in a database you provide: [MongoDB](https://mongodb.com), PostgreSQL,
-Microsoft SQL Server, or SQLite — see [Storage configuration](../hosting/configuration/storage.mdx). MongoDB is the
-default. For local development, Chronicle provides a development Docker image that comes with MongoDB bundled inside it.
+An event store is a Chronicle concept, separate from the database engine that persists it. Chronicle supports [MongoDB](https://mongodb.com), PostgreSQL, Microsoft SQL Server and SQLite. MongoDB is the default, and the development Docker image includes it for local use. Choose a provider and connection details in [Storage configuration](../hosting/configuration/storage.mdx).
+
+This example uses MongoDB and separates the event sequences into two namespaces:
 
 ```mermaid
 flowchart TB
@@ -31,7 +29,6 @@ flowchart TB
 
 ## Namespaces
 
-Every event store can have [namespaces](./namespaces.md). The namespaces provides a way to segregate data that is specific for
-a partition. Typically, a namespace can be used for multi-tenancy.
+[Namespaces](./namespaces.md) separate data within an event store. For a multi-tenant application, you can give each tenant its own namespace while sharing the store's event type and projection definitions.
 
-By default, Chronicle will use the **Default** namespace if a namespace is not provided.
+Chronicle uses the `Default` namespace when none is provided. Read [Namespaces](./namespaces.md) before choosing tenant identifiers: the namespace affects where events and read models are stored.

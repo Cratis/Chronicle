@@ -26,7 +26,8 @@ public static class ModelBoundProjectionsExtensions
         // evidence that those types (or an event type) are read models with a projection to register.
         if (typeof(IReactor).IsAssignableFrom(type) ||
             typeof(IReducer).IsAssignableFrom(type) || typeof(IReadModelReactor).IsAssignableFrom(type) ||
-            type.IsDefined(typeof(EventTypeAttribute)) || type.IsDefined(typeof(EventTypeGenerationForAttribute)))
+            type.IsDefined(typeof(EventTypeAttribute)) || type.IsDefined(typeof(EventTypeGenerationForAttribute)) ||
+            type.IsDefined(typeof(Graphs.NodeAttribute)) || type.IsDefined(typeof(Graphs.EdgeAttribute)))
         {
             return false;
         }

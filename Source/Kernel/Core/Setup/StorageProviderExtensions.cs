@@ -7,6 +7,7 @@ using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Orleans.Storage;
 using Polly;
 using Polly.Registry;
@@ -58,18 +59,21 @@ public static class StorageProviderExtensions
 
         builder.ConfigureServices(services =>
         {
+            services.AddSingleton(serviceProvider => new StorageConcurrencyGate(
+                serviceProvider.GetRequiredService<IOptionsMonitor<ResilientStorageOptions>>().Get(ResilientGrainStorage.ResiliencePipelineKey).MaxConcurrentOperations));
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Namespaces, CreateResilientStorageFor<Cratis.Chronicle.Namespaces.NamespacesStateStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventSequences, CreateResilientStorageFor<Cratis.Chronicle.EventSequences.EventSequencesStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ObserverDefinitions, CreateResilientStorageFor<Cratis.Chronicle.Observation.ObserverDefinitionGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ObserverState, CreateResilientStorageFor<Cratis.Chronicle.Observation.ObserverStateGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.FailedPartitions, CreateResilientStorageFor<Cratis.Chronicle.Observation.FailedPartitionGrainStorageProvider>);
-            services.AddKeyedSingleton(Cratis.Orleans.WellKnownGrainStorageProviders.Jobs, CreateResilientStorageFor<Cratis.Orleans.Jobs.JobGrainStorageProvider>);
-            services.AddKeyedSingleton(Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps, CreateResilientStorageFor<Cratis.Orleans.Jobs.JobStepGrainStorageProvider>);
+            services.AddKeyedSingleton(Cratis.Choreography.WellKnownGrainStorageProviders.Jobs, CreateResilientStorageFor<Cratis.Choreography.Jobs.JobGrainStorageProvider>);
+            services.AddKeyedSingleton(Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps, CreateResilientStorageFor<Cratis.Choreography.Jobs.JobStepGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Recommendations, CreateResilientStorageFor<Cratis.Chronicle.Recommendations.RecommendationGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Projections, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionDefinitionStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionsManager, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionsManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Webhooks, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.WebhookDefinitionStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.WebhooksManager, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.WebhooksStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.WebhookSigningKeys, CreateResilientStorageFor<Cratis.Chronicle.Observation.Webhooks.Signing.WebhookSigningKeyRingStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventStoreSubscriptionsManager, CreateResilientStorageFor<Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ProjectionFutures, CreateResilientStorageFor<Cratis.Chronicle.Projections.ProjectionFuturesStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.Reactors, CreateResilientStorageFor<Cratis.Chronicle.Observation.Reactors.ReactorDefinitionStorageProvider>);
@@ -80,8 +84,8 @@ public static class StorageProviderExtensions
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ReadModelsManager, CreateResilientStorageFor<Cratis.Chronicle.ReadModels.ReadModelsManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.ReadModelReplayManager, CreateResilientStorageFor<Cratis.Chronicle.ReadModels.ReadModelReplayManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventSeeding, CreateResilientStorageFor<Cratis.Chronicle.Seeding.EventSeedingGrainStorageProvider>);
+            services.AddKeyedSingleton(WellKnownGrainStorageProviders.Imports, CreateResilientStorageFor<Cratis.Chronicle.Imports.ImportGrainStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.DataProtectionKeys, CreateResilientStorageFor<Cratis.Chronicle.Security.DataProtectionKeysStorageProvider>);
-            services.AddKeyedSingleton(WellKnownGrainStorageProviders.PatchManager, CreateResilientStorageFor<Cratis.Chronicle.Patching.PatchManagerStorageProvider>);
             services.AddKeyedSingleton(WellKnownGrainStorageProviders.System, CreateResilientStorageFor<Cratis.Chronicle.Sys.SystemStorageProvider>);
         });
 
@@ -92,5 +96,5 @@ public static class StorageProviderExtensions
     static IGrainStorage CreateResilientStorageFor<TStorage>(IServiceProvider serviceProvider, object? context)
 #pragma warning restore CA1859
         where TStorage : class, IGrainStorage
-        => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>());
+        => new ResilientGrainStorage(serviceProvider.GetRequiredService<TStorage>(), serviceProvider.GetRequiredService<ResiliencePipelineProvider<string>>(), serviceProvider.GetRequiredService<StorageConcurrencyGate>());
 }

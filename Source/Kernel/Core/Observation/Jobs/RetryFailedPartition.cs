@@ -3,11 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -117,7 +117,7 @@ public class RetryFailedPartition(
     /// <inheritdoc/>
     protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions, Request.ReplayEpoch);
         State.HandleResult(result, jsonSerializerOptions);
     }
 
@@ -138,7 +138,8 @@ public class RetryFailedPartition(
                 {
                     ReaderScope = request.ReaderScope,
                     EpisodeId = request.EpisodeId,
-                    DeferralId = request.DeferralId
+                    DeferralId = request.DeferralId,
+                    ReplayEpoch = request.ReplayEpoch
                 })
         }.ToImmutableList();
 

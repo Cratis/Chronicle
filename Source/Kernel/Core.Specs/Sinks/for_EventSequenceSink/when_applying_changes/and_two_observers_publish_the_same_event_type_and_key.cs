@@ -25,7 +25,8 @@ public class and_two_observers_publish_the_same_event_type_and_key : given.a_sin
             _configuration,
             _destinations.Grains,
             _destinations.Storage,
-            _destinations.Converter);
+            _destinations.Converter,
+            _destinations.ReservedIds);
 
         await _sink.ApplyChanges("customer-1", Fold(new(), 10, 1, 5), 5);
         _secondSees = await second.FindOrDefault("customer-1");

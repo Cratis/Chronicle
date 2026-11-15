@@ -11,7 +11,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
-using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnCoercion;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -93,7 +93,7 @@ public partial class Sink
             }
             else if (values.TryGetValue(column.Name, out var value))
             {
-                replacement[column.Name] = column.IsJson ? SerializeJsonColumn(value, column) : CoerceForColumn(column, value);
+                replacement[column.Name] = column.IsJson ? SerializeJsonColumnReplacement(value, column) : CoerceForColumn(column, value);
             }
         }
         replacement[WellKnownProperties.LastHandledEventSequenceNumber] = watermark;

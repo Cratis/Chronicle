@@ -1,6 +1,6 @@
 ---
 title: Every major version, and what it meant
-description: What each Chronicle major changed, so you can tell what a jump from one version to another actually costs you.
+description: Cratis Chronicle major-version boundaries identify API, wire-contract, configuration, and stored-state changes to plan before upgrading.
 ---
 
 One row per major boundary, oldest recorded first. Read the rows between where you are and
@@ -37,12 +37,14 @@ stored state does not.
 | [16 → 17](#16-to-17) | Wire | Every gRPC service regenerated; method names and envelopes changed |
 | [17 → 18](#17-to-18) | Wire | Append `Content` back to a plain JSON string |
 | [18 → 19](#18-to-19) | Compile-time | One .NET parameter `bool` → `bool?`; rebuild |
+| [19 → 20](#19-to-20) | Cluster | Kernel silos of 19 and 20 cannot share a cluster; upgrade every silo together |
 
 ### Reading the Touches column
 
 - **Compile-time** — it breaks the build and you fix it once, against the version you land on.
 - **Stored state** — it concerns data already written. Ordered: skipping past it does not skip it.
 - **Wire** — kernel and clients must move together across it.
+- **Cluster** — kernel silos of the two majors cannot run side by side, so the whole kernel moves at once.
 - **Config, endpoints** — deployment and configuration change, not your code.
 
 ## The boundaries
@@ -197,6 +199,18 @@ See [Upgrading from 18 to 19](18-to-19.mdx).
 
 **You do:** rebuild.
 
+### 19 to 20
+
+**Cratis Choreography** — released 2026-11-04.
+
+The kernel now builds on `Cratis.Choreography`, the renamed `Cratis.Orleans`. Grain interfaces that take a job or
+job step identifier carry the new types, so their wire identities changed, and silos of 19 and 20 cannot share a cluster.
+Stored job and job step state keeps its identifiers, so existing data still resolves. Clients and their wire contract are
+unaffected.
+
+**You do:** stop every kernel silo of the cluster and start them on 20 together, rather than rolling pods one at a time
+across this boundary.
+
 ## Skipping several majors at once
 
 Nothing prevents jumping from, say, 14 to 19 directly. What that costs is the union of every
@@ -236,6 +250,5 @@ so its version does not follow the kernel's major. What is known about the pairi
   the kernel each time it connects. When the kernel reports an incompatibility, or has no such
   check, the client throws `IncompatibleChronicleServer`, does not retry, and rejects every later
   call. Deploy a compatible kernel and create a new client.
-- **Only one pairing is documented as exercised.** The TypeScript client's guides report running
-  their examples against `cratis/chronicle:19.4.8-development`. No compatibility matrix is
-  published, so treat any other pairing as unverified and test it before you rely on it.
+- **No compatibility matrix is published.** Test the TypeScript client against the kernel version
+  you run before relying on the pairing.

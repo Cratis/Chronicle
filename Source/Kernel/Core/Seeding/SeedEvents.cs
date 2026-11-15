@@ -5,6 +5,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Seeding;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Seeding;
 
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="NamespacedEntries">Seed entries scoped to specific namespaces.</param>
 /// <param name="GlobalSetIsAuthoritative">Whether the global entries replace the owner's declaration and legacy entries.</param>
 /// <param name="GlobalSetOwner">The program identifier supplying the global entries.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSeeding)]
 public record SeedEvents(

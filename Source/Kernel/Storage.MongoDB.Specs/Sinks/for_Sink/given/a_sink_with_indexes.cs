@@ -5,6 +5,9 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.Diagnostics;
+using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
+using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -22,6 +25,7 @@ public class a_sink_with_indexes : Specification
     protected IAsyncCursor<BsonDocument> _indexCursor;
     protected ReadModelDefinition _readModel;
     protected PropertyPath _indexedProperty = "SomeProperty";
+    protected IStorageAuthorizationDiagnostics _authorizationDiagnostics = Substitute.For<IStorageAuthorizationDiagnostics>();
 
     void Establish()
     {
@@ -35,6 +39,7 @@ public class a_sink_with_indexes : Specification
 
         _collections.GetCollection().Returns(_collection);
         _collection.Indexes.Returns(_indexManager);
+        _collection.CollectionNamespace.Returns(new CollectionNamespace("System", "EventTypeStatistics"));
         _indexManager.ListAsync(Arg.Any<CancellationToken>()).Returns(_indexCursor);
 
         _readModel = new ReadModelDefinition(
@@ -58,6 +63,9 @@ public class a_sink_with_indexes : Specification
             _collections,
             _changesetConverter,
             _expandoObjectConverter,
-            Substitute.For<IReadModelChangeStreams>());
+            Substitute.For<IReadModelChangeStreams>(),
+            NullLogger<Sink>.Instance,
+            UnfencedSinkWrites.Instance,
+            _authorizationDiagnostics);
     }
 }

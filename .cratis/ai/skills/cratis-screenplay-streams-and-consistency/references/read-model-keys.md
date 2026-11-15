@@ -40,8 +40,15 @@ composite type only to carry flat parts: both hide the identity the model should
   (PLAY0271, PLAY0781 reason `by-parts`, or PLAY0268 for a producing reaction), so decide on a stream
   the command owns instead, or restructure the read. Do not drop the read to bind.
 - **Limits.** Joins, `children`, `nested`, `every`, `all`, `variant` and reducers on the
-  composite-keyed view are PLAY0268. Stage 4.137.0 admits v27 but the renderer refuses it (STAGE-ESM-048 for several key parts or a projection keyed by parts,
-  STAGE-ESM-047 for a single-instance query by parts), so deliver it through gap-fill with the model as the contract.
+  composite-keyed view are PLAY0268. Stage v4.197.0 renders bounded scoped
+  composite-key projections and equality-filtered lists; unsupported shapes retain
+  STAGE-ESM-048 and single-instance lookup by parts retains STAGE-ESM-047.
+  DateTime parts and decimal parts (a `Decimal` primitive or a concept over
+  `Decimal`) are refused STAGE-ESM-048; a decimal part can split `1.0` and `1.00`
+  into two instances on replay, and the refusal lifts with Stage#847 once
+  Chronicle#5427 lands. Choose a non-decimal key part.
+  Semantic Host support does not imply specification-executor support for
+  multi-part keys. See [Stage key boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md#renderer-support-is-bounded).
 
 Read read-surface `references/named-keys.md` for one complete executable example and the
 projections skill `references/pdl-grammar.md` for the key block syntax.

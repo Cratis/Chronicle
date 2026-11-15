@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-read-model-specifications
-description: Specify declarative projections and reducer wiring with ReadModelScenario from Cratis.Chronicle.Testing — seeding events through Given and asserting on the materialized instance; start with Specification plus a direct call for pure reducer decisions. Use when the behavior under specification is how events become read-model state. Do not use to create a read model and do not use for raw event append behavior.
+description: Use when specifying how Chronicle events become read-model state, including projection or reducer wiring and pure reducer decisions. Not for creating the production model or testing raw event append behavior.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-read-model-specifications/SKILL.md -->
@@ -16,6 +16,14 @@ default, with the event and current state supplied explicitly (for a self model,
 `Model.Reduce(@event, current)`). Add
 `ReadModelScenario<TReadModel>` only where declarative projection behavior,
 event dispatch, filtering, metadata or read-model wiring contribute proof.
+Follow the [scenario selection and cost rule](../../rules/specs.scenarios.csharp.md):
+use one scenario class per read model and per distinct event sequence the
+projection declares (lifecycle, join, children with two keys, removal), with many
+read-only assertions on one shared setup, and keep shared lifecycle enabled. Cover
+each declared sequence; do not create a class per property or mapping attribute.
+Never replace the engine with a substitute store as projection proof. Reducer
+transitions are plain calls; the scenario proves dispatch and filters. Measure scenario cost with TRX durations
+using [running-specs.md](../cratis-specifications-csharp/references/running-specs.md).
 
 For a read-model scenario specification the **`Given` *is* the act**. There
 is no separate `When`: seeding the events is what makes the projection run.
@@ -70,7 +78,8 @@ version.
 
 ## Step 1 — Create the scenario
 
-A new scenario per specification, never shared state.
+Create one scenario for the read model's specification class. Share setup among
+its read-only facts, never across specification classes.
 
 ```csharp
 // Default, empty initial state
@@ -154,6 +163,10 @@ identifier properties populate; when one does not, investigate the projection
 rather than the harness. Skip only on a reproduced harness gap, and put the
 specific reason in the skip message.
 
+For pre-seeding instances, `ProcessAppendedEvents(...)` and schema-generator
+sharing, read [seeded state and appended-event processing](references/seeded-state.md).
+These are setup/processing surfaces, not proof of kernel persistence or replay.
+
 ## Step 4 — Know what the scenario picked
 
 `WithProjection` overrides discovery, including a reducer. Otherwise:
@@ -211,7 +224,11 @@ public class and_two_items_are_priced : Specification
 
 Wrap files in `#if DEBUG … #endif` only when they compile into the application
 assembly, so specification code ships only in Debug. Dedicated spec projects
-need no wrapper. Keep one outcome per `should_` fact.
+need no wrapper. Keep one outcome per `should_` fact, not one scenario class per
+assertion. Apply the event sequence once; capture intermediate states in `Because`
+for create/update/delete assertions so facts remain read-only. Capture values or
+immutable copies if later events mutate the same instance. Multiple event-source
+keys may share this setup for isolation and child-key assertions.
 
 ## Step 6 — Cover the read model, not just one event
 
@@ -221,7 +238,8 @@ One summation example proves one event. Take the inventory from the contract
 (the `.play` read model and its specifications, or the agreed outline); without
 one, derive it from the projection and say so. Then check each line:
 
-- **Every property is asserted** in at least one specification.
+- **Every property is asserted** in a read-only fact in the model's shared
+  scenario class; do not multiply scenario startup for each field.
 - **Every subscribed event has a specification.** Reconcile three lists in both
   directions: the contract's event types, the projection's actual subscriptions,
   and the events your specifications seed. Report any event in one list missing
@@ -266,6 +284,6 @@ Read `references/view-lifecycle-checks.md` when delivering a read model from a c
 
 ## How it is proven
 
-`dotnet build` in Debug and `dotnet test`, both clean. A projection
+`dotnet build` in Debug and the owning project's built spec executable (see [specs.csharp](../../rules/specs.csharp.md)), both clean. A projection
 specification is only meaningful once it has been seen to fail: drop one seeded
 event and confirm the assertion goes red before trusting it green.

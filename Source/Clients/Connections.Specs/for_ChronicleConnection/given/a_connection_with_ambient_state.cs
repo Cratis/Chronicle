@@ -118,7 +118,7 @@ public class a_connection_with_ambient_state : Specification
             Observable.Return(new ConnectionKeepAlive { ConnectionId = request.ConnectionId })
                 .Concat(Observable.Never<ConnectionKeepAlive>());
 
-        public Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive) => Task.CompletedTask;
+        public Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive, CallContext context = default) => Task.CompletedTask;
         public Task<DescriptorSetResponse> GetDescriptorSet() => throw new NotSupportedException();
         public Task<CompatibilityResponse> CheckCompatibility(CompatibilityRequest request) => throw new NotSupportedException();
         public Task<IEnumerable<ConnectedClient>> GetConnectedClients(CallContext context = default) => throw new NotSupportedException();

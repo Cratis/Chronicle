@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences;
 
 public partial class EventSequenceStorage : IEffectReceiptStorage
 {
-    IMongoCollection<BsonDocument> ReceiptCollection => _collection.Database.GetCollection<BsonDocument>("effect-receipts");
+    IMongoCollection<BsonDocument> ReceiptCollection => _collection.Database.GetCollection<BsonDocument>(WellKnownCollectionNames.EffectReceipts);
 
     /// <inheritdoc/>
     public async Task<EffectReceipt?> GetEffectReceipt(string id)

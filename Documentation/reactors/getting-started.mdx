@@ -1,42 +1,47 @@
 ---
-description: Define, register and identify a Chronicle reactor, which observes events to run side effects such as notifications, API calls and workflows.
+title: "Cratis Chronicle reactors: create your first handler"
+description: Create a Cratis Chronicle reactor that handles a recorded event, register it with your client, and keep its observation position stable across renames.
 ---
-# Getting Started with Reactors
+A Cratis Chronicle reactor connects a recorded event to application work, such as sending an order notification. Define the event it handles, add the handler, then register the reactor with your client so Chronicle can deliver events to it.
 
-Reactors observe events and run side effects. Use them for work such as sending notifications, calling an external API, publishing integration messages, or triggering a workflow in another system.
+Start with a running Chronicle kernel and a connected client. If you still need those, follow [Get started with Cratis Chronicle](/chronicle/get-started/) first. The examples below show reactor declarations and registration, not a complete application.
 
-Reactors do not build queryable state. Use a [projection](/chronicle/projections/) or [reducer](/chronicle/reducers/) when the outcome should be a read model.
+Use a [projection](/chronicle/projections/) or [reducer](/chronicle/reducers/) instead when you need queryable state rather than a side effect.
 
 ## Define the event
 
-A reactor handles one or more event types. The event is still a normal Chronicle event: an immutable fact with a stable event type identity.
+Choose the fact that should trigger the work. The order-placed event below carries the information the notification handler needs. It is a normal Chronicle event with its own event type identity, not a special message format for reactors.
 
 <ChronicleClientTabs snippet="reactors/getting-started/event" />
 
 ## Define the reactor
 
-The client SDK decides how a reactor is declared. The common shape is the same: mark a type or module as a reactor, add a handler for the event, and accept event context when the side effect needs metadata such as sequence number, occurrence time, event store, namespace, or correlation.
+Add the handler to a reactor type or module. The client determines how it finds that handler: .NET uses the first parameter's event type, Kotlin and Java use event-typed methods, TypeScript supports event-name conventions, and Elixir uses `@handles` with `handle/2`. Use the event context when the work needs metadata such as the event source ID or sequence number.
 
 <ChronicleClientTabs snippet="reactors/getting-started/reactor" />
 
 ## Register the reactor
 
-Registration is client-specific. Some clients discover reactor types and register them as part of event-store startup. Others register a reactor instance or include the reactor module in client startup options.
+Register the reactor in the application that will run its handler. The .NET host can discover reactors at startup; the examples also show explicit registration. Kotlin and Java register an instance, TypeScript registers discovered reactor classes, and Elixir includes the module in client startup options.
 
 <ChronicleClientTabs snippet="reactors/getting-started/register" />
 
 ## Use a stable reactor ID
 
-By default, clients derive a reactor identifier from the type or module name. Set an explicit ID when the reactor's identity must survive a rename. Changing the ID makes Chronicle treat it as a different observer, with a different observation position.
+Give the reactor an explicit ID before deploying it. Clients otherwise derive the identifier from the type or module name, so a rename can make Chronicle see a different observer. Keeping the ID stable preserves the connection to its stored observation position.
 
 <ChronicleClientTabs snippet="reactors/getting-started/stable-id" />
 
 ## Design for replay
 
-Reactors may see the same event again after replay, recovery, reconnect, or a retry. Make every side effect idempotent. Common patterns are idempotency keys, check-then-act storage, database upserts, or downstream APIs that tolerate duplicate requests.
+A newly registered reactor normally catches up on existing history, so a notification handler can run for old orders as well as new ones. If it should handle only future events, read [Start at the Tail](start-at-tail) before deploying it. Excluding replay alone does not exclude initial catch-up.
+
+The same event can also arrive again during recovery or retry. Make the effect idempotent: repeating the operation must not repeat its business outcome. For an external API, pass an idempotency key that the receiving system enforces; [Delivery Identity](delivery-identity) explains the identity Chronicle supplies.
+
+With the reactor registered, append an event of the type it handles and check the handler's effect. If it does not run, inspect the reactor's state and failed partitions before appending the event again.
 
 ## Next steps
 
-- Learn the shared [reactor event-processing model](event-processing)
-- Compare reactors with [reducers](/chronicle/reducers/) and [projections](/chronicle/projections/)
-- Use [tagging reactors](/chronicle/concepts/tagging-reactors/) when you need to organize observer behavior
+Read [Event Processing](event-processing) when your handler needs context or dependencies, or [Filtering](filtering) when only some events of a handled type should reach it. [Tagging reactors](/chronicle/concepts/tagging-reactors/) labels observers for organization; it does not filter delivery.
+
+For the data-building alternative, compare [reducers](/chronicle/reducers/) and [projections](/chronicle/projections/).

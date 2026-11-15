@@ -4,6 +4,7 @@
 import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Page } from 'Components/Common/Page';
+import { StorageAuthorizationNotice } from 'Components/Common/StorageAuthorizationNotice';
 import { StatisticsForNamespace } from 'Features/Statistics';
 import { AllFailedPartitions, ObserveObservers } from 'Features/Observation';
 import { AllRecommendations } from 'Features/Recommendations';
@@ -91,6 +92,7 @@ export const Dashboard = () => {
                 <ThroughputWidget className='dashboard__wide' eventStore={eventStore} namespaces={namespaces} />
 
                 <ObserversOverTimeWidget observers={health?.observers} scope={`${eventStore}/${namespace}`} />
+                {statistics.isReady && !statistics.isSuccess && <StorageAuthorizationNotice className='dashboard__full' />}
                 <TopEventTypesWidget
                     perEventType={figures.perEventType}
                     failed={figures.failed} />

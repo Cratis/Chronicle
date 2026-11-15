@@ -1,6 +1,6 @@
 ---
 name: cratis-engineering-consolidation-guard
-description: Prove that a consolidation or re-land dropped nothing - compare the result with every original branch or commit, detect lost files that commit pairing cannot see, treat a merge resolution that reverts a file as a finding, ratchet the specification count, and enforce it as a required CI check. Use when folding several pull requests into one branch, re-landing reverted work, restoring commits by cherry-pick, or reviewing such a branch before it merges. Not for an ordinary merge of the base into a feature branch, for pull request descriptions or labels (follow the pull-requests rule), or for general code review (use cratis-code-review).
+description: Use when consolidating branches, re-landing reverted work or checking restored commits for lost changes. Not for ordinary base merges, pull request descriptions or general code review.
 license: LICENSE
 ---
 <!-- cratis-ai-managed: skills/cratis-engineering-consolidation-guard/SKILL.md -->

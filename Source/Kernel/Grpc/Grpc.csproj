@@ -15,6 +15,7 @@
         <InternalsVisibleTo Include="Cratis.Chronicle.Server" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Server.Specs" />
         <InternalsVisibleTo Include="Chronicle.Benchmarks.SystemStoreGuard" />
+        <InternalsVisibleTo Include="Chronicle.Benchmarks.Kernel" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
         <!-- Cratis.Chronicle.Testing's in-process *Scenario helpers wrap these service implementations
              directly, and Cratis.Chronicle.XUnit.Integration constructs ConnectionService directly - both
@@ -25,6 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="protobuf-net.Grpc.AspNetCore" />
         <ProjectReference Include="../Core/Core.csproj" />
         <ProjectReference Include="../Contracts/Contracts.csproj" />
         <!-- Core.csproj marks its own references to these two PrivateAssets="all", so they do not flow
@@ -32,5 +34,9 @@
              ChronicleServerSiloBuilderExtensions) needs both directly. -->
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Clients/Connections/Connections.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Grpc.AspNetCore.Server" />
     </ItemGroup>
 </Project>

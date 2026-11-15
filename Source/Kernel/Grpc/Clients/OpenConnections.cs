@@ -46,6 +46,13 @@ internal sealed class OpenConnections
     public void Closed(ConnectionId connectionId) => _connections.TryRemove(connectionId, out _);
 
     /// <summary>
+    /// Gets whether the connection was opened on this silo.
+    /// </summary>
+    /// <param name="connectionId">The connection to check.</param>
+    /// <returns>True if this silo holds the connection open.</returns>
+    public bool IsOpen(ConnectionId connectionId) => _connections.ContainsKey(connectionId);
+
+    /// <summary>
     /// Check whether a connection has lapsed and must be closed so its client can register again.
     /// </summary>
     /// <param name="connectionId">The <see cref="ConnectionId"/> of the connection.</param>

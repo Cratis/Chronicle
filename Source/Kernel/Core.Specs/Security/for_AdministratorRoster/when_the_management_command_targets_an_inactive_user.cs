@@ -16,7 +16,7 @@ public class when_the_management_command_targets_an_inactive_user : given.an_adm
     }
 
     async Task Because() => _error = await Catch.Exception(() => new GrantAdministrator(_first)
-        .Handle(_grainFactory, Substitute.For<ICurrentPrincipalAccessor>()));
+        .Handle(_grainFactory, Substitute.For<ICurrentPrincipalAccessor>(), Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions())));
 
     [Fact] void should_reject_the_grant() => _error.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_not_append_a_grant() => Recorded<UserGrantedAdministrator>().ShouldBeEmpty();

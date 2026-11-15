@@ -16,6 +16,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Reducers;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Serverless;
 using Cratis.Monads;
 using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
@@ -55,6 +56,9 @@ public class an_event_store_with_buildable_definitions : Specification
         _projections = new(projectionStore, Substitute.For<IEventTypes>(), _clientArtifacts, new DefaultNamingPolicy(), activator, new JsonSerializerOptions(), NullLogger<Projections.Projections>.Instance);
         _projections.Discover().GetAwaiter().GetResult();
         _eventStore = (EventStore)RuntimeHelpers.GetUninitializedObject(typeof(EventStore));
+        var options = new ChronicleOptions();
+        SetField("_chronicleOptions", options);
+        SetAutoProperty(nameof(EventStore.Deliveries), new ObserverDeliveries(options));
         SetField("_eventStoreName", new EventStoreName("Testing"));
         SetField("_servicesAccessor", _servicesAccessor);
         SetField("_clientArtifactsProvider", _clientArtifacts);

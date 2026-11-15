@@ -9,7 +9,7 @@ public class after_the_webhook_leaves : given.a_reactor_waiting_for_a_webhook
 {
     async Task Establish()
     {
-        _stateStorage.State = null!;
+        _stateStorage.State = _storedDefinition with { EventTypes = null! };
         _definitionComparer.Compare(default!, default!, default!).ReturnsForAnyArgs(ReactorDefinitionCompareResult.New);
         await _grain.SetDefinitionAndSubscribe(_connectionDefinition);
         _observer.ClearReceivedCalls();

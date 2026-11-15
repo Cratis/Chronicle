@@ -30,5 +30,5 @@ handler is still subscribed to.
 
 Verify first registration, restart with an existing position, replay and
 failed-partition redelivery separately. Assert the external effect count, not
-only that the handler was invoked. Run `dotnet test` on the owning spec project;
+only that the handler was invoked. Run the owning spec project's built executable (see [specs.csharp](../../../rules/specs.csharp.md));
 server-first compatibility and durable positions also need kernel integration.

@@ -8,7 +8,7 @@ on:
         value: ${{ jobs.discover.outputs.all-providers }}
     inputs:
       build-output-artifact:
-        description: "Name of the DEVELOPMENT-symbol build output artifact"
+        description: "Name of the DEVELOPMENT-symbol build output artifact. The Client, Kernel and Clustering lanes download <name>-client, <name>-kernel and <name>-clustering (see .github/actions/pack-integration-output); the SQL clustering lane downloads <name>-sqlclustering, which also carries the stamped client output."
         required: true
         type: string
       chronicle-image:
@@ -20,6 +20,11 @@ on:
         required: false
         default: false
         type: boolean
+      selection:
+        description: "JSON from .github/scripts/select-integration.py naming the lanes a pull request needs ({client:[...],kernel,clustering,sql}). Empty runs every lane, which is what nightly and manual runs do."
+        required: false
+        default: ""
+        type: string
 
 jobs:
   discover:
@@ -30,6 +35,10 @@ jobs:
       all-providers: ${{ steps.client.outputs.all-providers }}
       kernel-matrix: ${{ steps.kernel.outputs.matrix }}
       clustering-matrix: ${{ steps.clustering.outputs.matrix }}
+      client-run: ${{ steps.lanes.outputs.client }}
+      kernel-run: ${{ steps.lanes.outputs.kernel }}
+      clustering-run: ${{ steps.lanes.outputs.clustering }}
+      sql-run: ${{ steps.lanes.outputs.sql }}
       rolling-upgrade-enabled: ${{ steps.exclusions.outputs.rolling-upgrade-enabled }}
 
     steps:
@@ -41,6 +50,32 @@ jobs:
       # second and run before anything is discovered.
       - name: Verify the integration matrix generator
         run: python3 .github/scripts/test-generate-integration-matrix.py
+
+      # An empty selection runs every lane. A pull request that selected lanes runs only those; a lane
+      # whose job is skipped here is reported in the job summary, never silently dropped.
+      - name: Resolve which lanes run
+        id: lanes
+        env:
+          SELECTION: ${{ inputs.selection }}
+        run: |
+          if [ -z "$SELECTION" ]; then
+            { echo "client=true"; echo "kernel=true"; echo "clustering=true"; echo "sql=true"; echo "client-namespaces="; echo "scoped=false"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -e 'type == "object" and (.client | type == "array")' <<<"$SELECTION" > /dev/null \
+            || { echo "::error::The integration selection is not the expected JSON: $SELECTION"; exit 1; }
+          {
+            echo "client=$(jq -r '(.client | length) > 0' <<<"$SELECTION")"
+            echo "kernel=$(jq -r '.kernel == true' <<<"$SELECTION")"
+            echo "clustering=$(jq -r '.clustering == true' <<<"$SELECTION")"
+            echo "sql=$(jq -r '.sql == true' <<<"$SELECTION")"
+            echo "client-namespaces=$(jq -r '.client | join(",")' <<<"$SELECTION")"
+            echo "scoped=true"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "Selected integration lanes (the rest are skipped by selection):"
+            jq -r '"- client namespaces: " + (if (.client | length) == 0 then "none" else (.client | join(", ")) end) + "\n- kernel: \(.kernel == true)\n- clustering: \(.clustering == true)\n- sql clustering: \(.sql == true)"' <<<"$SELECTION"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report explicitly skipped integration lanes
         id: exclusions
@@ -55,72 +90,65 @@ jobs:
       - name: Discover Client integration namespaces
         id: client
         run: |
-          echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
+          if [ "$SCOPED" = "true" ]; then
+            echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers} --namespaces "$CLIENT_NAMESPACES")" >> "$GITHUB_OUTPUT"
+          else
+            echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py ${ALL_PROVIDERS:+--all-providers})" >> "$GITHUB_OUTPUT"
+          fi
           echo "all-providers=$INPUT_ALL_PROVIDERS" >> "$GITHUB_OUTPUT"
         env:
           ALL_PROVIDERS: ${{ inputs.all-providers && 'true' || '' }}
           INPUT_ALL_PROVIDERS: ${{ inputs.all-providers }}
+          SCOPED: ${{ steps.lanes.outputs.scoped }}
+          CLIENT_NAMESPACES: ${{ steps.lanes.outputs.client-namespaces }}
 
+      # Short Kernel and Clustering namespaces share a job (see BATCHES), and the filters end with a
+      # dot so a namespace is not also a prefix of its neighbours (Events must not rerun EventSequences).
       - name: Discover Kernel integration namespaces
         id: kernel
-        run: |
-          namespaces=$(find Integration/Kernel -mindepth 1 -maxdepth 1 -type d \
-            ! -name 'bin' ! -name 'obj' \
-            -exec basename {} \; | sort)
-
-          matrix='{"include":['
-          for ns in $namespaces; do
-            [ -z "$ns" ] && continue
-            matrix+="{\"namespace\":\"Cratis.Chronicle.Kernel.Integration.${ns}\"},"
-          done
-          matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+        run: echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py --suite kernel)" >> "$GITHUB_OUTPUT"
 
       - name: Discover Clustering integration namespaces
         id: clustering
-        run: |
-          namespaces=$(find Integration/Clustering -mindepth 1 -maxdepth 1 -type d \
-            ! -name 'bin' ! -name 'obj' \
-            -exec basename {} \; | sort)
-
-          matrix='{"include":['
-          for ns in $namespaces; do
-            [ -z "$ns" ] && continue
-            matrix+="{\"namespace\":\"Cratis.Chronicle.Integration.Clustering.${ns}\"},"
-          done
-          matrix="${matrix%,}]}"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+        run: echo "matrix=$(python3 .github/scripts/generate-integration-matrix.py --suite clustering)" >> "$GITHUB_OUTPUT"
 
   client-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.client-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # Slot budget (#5875): a per-run bound, not an org guarantee. The caps pinned by test-sparse-integration-workflows.py are
+    # client 34, kernel 2, clustering 1, sql-clustering 1, rolling-upgrade 1, plus neo4j 1 in dotnet-build.yml, and the
+    # integration-api and mongodb jobs (one each). That is 42 in theory; the singletons never all run beside a full client
+    # window, and a capped run measured a peak of 38 at client cap 36 (#4765) and 52 at cap 40 (#5875). Without a cap the
+    # all-provider matrix (149 shards) peaks far above 60. The matrix starts its longest shards first (integration-shard-order.json), so the cap costs little wall.
     strategy:
       fail-fast: false
+      max-parallel: 34
       matrix: ${{ fromJson(needs.discover.outputs.client-matrix) }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # The integration test projects target net11.0 only (Directory.Build.props),
+      # and these jobs only run already-built net11.0 assemblies, so installing the
+      # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-client
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-client.tar.zst"
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
@@ -130,11 +158,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore Client project
-        run: dotnet restore Integration/Client/Client.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Client project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Client/Client.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       # Pre-pull Docker Hub images once per job so the per-fixture image
       # existence checks in Testcontainers do not race against anonymous
@@ -149,6 +183,9 @@ jobs:
           retry_wait_seconds: 15
           command: |
             docker pull mongo:8.2
+            if [ "${{ matrix.namespace }}" = "Cratis.Chronicle.Integration.GraphProjections" ]; then
+              docker pull "${{ matrix.neo4j-image || 'neo4j:5-community' }}"
+            fi
             if [ "${{ matrix.database }}" = "postgresql" ]; then
               docker pull postgres:16
             fi
@@ -161,6 +198,10 @@ jobs:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ inputs.chronicle-image }}
           CHRONICLE_RUNTIME_MODE: ${{ matrix.mode }}
           CHRONICLE_STORAGE_PROVIDER: ${{ matrix.database }}
+          # Only the Graph projection lane with a database per namespace sets these; empty keeps the Community, single database default.
+          # That lane runs Neo4j Enterprise under the Neo4j Evaluation Agreement, temporary, see Cratis/Chronicle#5739.
+          CHRONICLE_NEO4J_IMAGE: ${{ matrix.neo4j-image }}
+          CHRONICLE_NEO4J_DATABASE_MODE: ${{ matrix.neo4j-database-mode }}
           # A genuine eventual-consistency wait settles in seconds; a wait that
           # runs for minutes is a flake, not slow progress. Cap the non-Mongo
           # backends well below the old 600s so a stuck poll costs ~150s, not 10
@@ -175,6 +216,11 @@ jobs:
           # The retry script owns --results-directory; point it at ./coverage-results so the
           # collected coverage and TRX files land where the upload step reads them.
           TEST_RESULTS_DIR: ./coverage-results
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
         # On failure, only the failed tests are re-run (up to TEST_MAX_ATTEMPTS), so a
         # transient pipeline/container flake does not redden the whole job. A systemic
         # failure (many tests failing, e.g. a fixture/container start error) fails fast
@@ -185,6 +231,7 @@ jobs:
         # it directly instead of recompiling the kernel from source. The restore
         # step above still regenerates project.assets.json for the test host.
         run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
           .github/scripts/run-tests-with-retry.sh \
             Integration/Client/Client.csproj \
             "${{ matrix.filter }}" \
@@ -196,6 +243,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Client integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()
@@ -205,42 +253,60 @@ jobs:
           path: ./coverage-results/
           retention-days: 1
 
+      # always(): the retry script can turn a crashed first attempt into a green job, and the dump is still wanted.
+      - name: Upload crash dumps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-dumps-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
   kernel-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.kernel-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix: ${{ fromJson(needs.discover.outputs.kernel-matrix) }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The integration test projects target net10.0 only (Directory.Build.props),
-      # and these jobs only run already-built net10.0 assemblies, so installing the
-      # 8.0/9.0 SDKs on every matrix shard is pure setup overhead. Multi-targeting
+      # The integration test projects target net11.0 only (Directory.Build.props),
+      # and these jobs only run already-built net11.0 assemblies, so installing the
+      # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-kernel
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-kernel.tar.zst"
 
-      - name: Restore Kernel project
-        run: dotnet restore Integration/Kernel/Kernel.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Kernel project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Kernel/Kernel.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
@@ -263,7 +329,7 @@ jobs:
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
-            "FullyQualifiedName~${{ matrix.namespace }}" \
+            "${{ matrix.filter }}" \
             --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
@@ -272,6 +338,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Kernel integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()
@@ -283,10 +350,12 @@ jobs:
 
   clustering-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.clustering-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix: ${{ fromJson(needs.discover.outputs.clustering-matrix) }}
 
     steps:
@@ -297,23 +366,29 @@ jobs:
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-clustering
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-clustering.tar.zst"
 
-      - name: Restore Clustering project
-        run: dotnet restore Integration/Clustering/Clustering.csproj
-
-      - name: Restore pinned coverage tool
-        run: dotnet tool restore
+      # The project restore and the pinned coverage tool restore are independent, so run them together;
+      # either failing fails the step.
+      - name: Restore Clustering project and pinned coverage tool
+        run: |
+          set -uo pipefail
+          dotnet tool restore & tool=$!
+          dotnet restore Integration/Clustering/Clustering.csproj & proj=$!
+          status=0
+          wait "$tool" || status=1
+          wait "$proj" || status=1
+          exit "$status"
 
       - name: Run Clustering integration tests (${{ matrix.namespace }})
         env:
@@ -326,7 +401,7 @@ jobs:
         run: |
           .github/scripts/run-tests-with-retry.sh \
             Integration/Clustering/Clustering.csproj \
-            "FullyQualifiedName~${{ matrix.namespace }}" \
+            "${{ matrix.filter }}" \
             --coverage
 
       # run-tests-with-retry.sh already writes a TRX per attempt into TEST_RESULTS_DIR.
@@ -335,6 +410,7 @@ jobs:
         with:
           path: ./coverage-results
           name: This Clustering integration shard
+          prefixes: ${{ matrix.members }}
 
       - name: Upload coverage results
         if: always()
@@ -346,10 +422,12 @@ jobs:
 
   sql-clustering-integration-specs:
     needs: [discover]
+    if: needs.discover.outputs.sql-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         provider: [PostgreSql, SqlServer]
 
@@ -388,32 +466,36 @@ jobs:
           echo "Previous release: ${release_tag}; image: cratis/chronicle:${image_tag}"
           echo "CRATIS_CHRONICLE_PREVIOUS_IMAGE=cratis/chronicle:${image_tag}" >> "$GITHUB_ENV"
 
-          # The client under test must report a version above the previous release. The compatibility check
-          # orders the two sides by protocol version, and an unstamped build reports 1.0.0, so it would be
-          # treated as the older side and refused for every additive contract element (#5353).
-          if [[ ! "$release_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::Cannot derive a client version from release tag '${release_tag}'."
-            exit 1
-          fi
-          client_version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
-          echo "Client under test is stamped ${client_version}"
-          echo "CRATIS_CHRONICLE_CLIENT_VERSION=${client_version}" >> "$GITHUB_ENV"
-
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.build-output-artifact }}
+          name: ${{ inputs.build-output-artifact }}-sqlclustering
 
       - name: Extract build output
         env:
           BUILD_OUTPUT_ARTIFACT: ${{ inputs.build-output-artifact }}
-        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}.tar.zst"
+        run: tar -I zstd -xf "${BUILD_OUTPUT_ARTIFACT}-sqlclustering.tar.zst"
+
+      - name: Read the stamped build version
+        if: matrix.provider == 'RollingUpgrade'
+        run: |
+          set -euo pipefail
+          # Read the version the build stamped into the client rather than deriving it again: a release
+          # tagged between the build and this job would change the derived base version.
+          dll=Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll
+          mapfile -t stamped < <(grep -a -o -P "[0-9]+\.[0-9]+\.0-ci-${GITHUB_RUN_NUMBER}(?![0-9])" "$dll" | sort -u)
+          if [ "${#stamped[@]}" -ne 1 ]; then
+            echo "::error::Expected one stamped build version for run ${GITHUB_RUN_NUMBER} in the downloaded client, found ${#stamped[@]}: ${stamped[*]:-none}."
+            exit 1
+          fi
+          echo "Stamped build version ${stamped[0]}"
+          echo "CRATIS_CHRONICLE_BUILD_VERSION=${stamped[0]}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@v3
@@ -425,15 +507,6 @@ jobs:
       - name: Restore SQL clustering project
         run: dotnet restore Integration/SqlClustering/SqlClustering.csproj
 
-      # Only the client side is rebuilt with the stamped version: the new kernel image keeps the shared build, and
-      # the client then compares as newer than both the previous release and this build's kernel.
-      - name: Rebuild the client under test with a version above the previous release
-        if: matrix.provider == 'RollingUpgrade'
-        run: >-
-          dotnet build Integration/SqlClustering/SqlClustering.csproj --no-restore -c Release
-          -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true
-          -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION"
-
       # Only this candidate test shard consumes instrumentation. SDK artifacts layout isolates the
       # entire dependency graph outside the checkout, so shipping bin/obj, packages and images cannot
       # pick up enabled outputs. Keep the ordinary stamped build above for the absence comparison.
@@ -441,17 +514,17 @@ jobs:
         if: matrix.provider == 'RollingUpgrade'
         run: |
           set -euo pipefail
-          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
+          printf 'diagnostic-source=%s client-version=%s artifacts=%s\n' "$(git rev-parse HEAD)" "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics"
           dotnet build .github/scripts/rolling-delivery-il/RollingDeliveryIl.csproj -c Release -warnaserror \
             --artifacts-path "$RUNNER_TEMP/rolling-il-verifier" -o "$RUNNER_TEMP/rolling-il-tool"
           dotnet build Integration/SqlClustering/SqlClustering.csproj -c Release -warnaserror \
             -p:EnableDevelopmentSymbol=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true \
-            -p:Version="$CRATIS_CHRONICLE_CLIENT_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
+            -p:Version="$CRATIS_CHRONICLE_BUILD_VERSION" -p:EnableRollingDeliveryDiagnostics=true \
             --artifacts-path "$RUNNER_TEMP/rolling-delivery-diagnostics"
           dotnet "$RUNNER_TEMP/rolling-il-tool/RollingDeliveryIl.dll" \
-            Source/Clients/DotNET/bin/Release/net10.0/Cratis.Chronicle.dll \
+            Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll \
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
-          grep -a -F -q -- "$CRATIS_CHRONICLE_CLIENT_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
+          grep -a -F -q -- "$CRATIS_CHRONICLE_BUILD_VERSION" "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/DotNET/release/Cratis.Chronicle.dll"
 
       # Evidence only: an explicit FAIL/INCONCLUSIVE must not suppress the rolling-loss run.
       # Both arms execute existing outputs on this same hosted runner; no rebuild or coverage collector.
@@ -461,7 +534,7 @@ jobs:
         continue-on-error: true
         run: |
           node .github/scripts/measure-rolling-delivery-overhead.mjs \
-            --normal Integration/SqlClustering/bin/Release/net10.0/Cratis.Chronicle.Integration.SqlClustering.dll \
+            --normal Integration/SqlClustering/bin/Release/net11.0/Cratis.Chronicle.Integration.SqlClustering.dll \
             --enabled "$RUNNER_TEMP/rolling-delivery-diagnostics/bin/SqlClustering/release/Cratis.Chronicle.Integration.SqlClustering.dll" \
             --output "$RUNNER_TEMP/rolling-delivery-overhead"
 
@@ -537,11 +610,12 @@ jobs:
   sql-clustering-rolling-upgrade:
     name: SQL clustering (RollingUpgrade)
     needs: [discover]
-    if: needs.discover.outputs.rolling-upgrade-enabled == 'true'
+    if: needs.discover.outputs.rolling-upgrade-enabled == 'true' && needs.discover.outputs.sql-run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         # Replace nodes from the latest release one at a time under load on PostgreSQL (#5272).
         provider: [RollingUpgrade]

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -9,7 +10,6 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -28,6 +28,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         _isPreparingCatchup = true;
+        _walkingEveryPartition = false;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         if (await AdoptedPendingCatchUpJob()) return;
@@ -49,6 +50,7 @@ public partial class Observer
         try
         {
             var stampedEpoch = default(ulong?);
+            await LiveDeliveriesSettled();
             jobId = await AcquireCatchUpJob(epoch => stampedEpoch = epoch);
             ClaimCatchUpJob(jobId, stampedEpoch);
         }
@@ -78,6 +80,7 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
+        _walkingEveryPartition = _subscription.DeliversPartitionPages;
 
         // Reached when a brand-new job's steps prepared. Only a job that has partitions to catch up is forward
         // progress; one with none is the zero-work lap and must not reset the consecutive-stranding count the
@@ -510,7 +513,7 @@ public partial class Observer
         {
             var job = await jobStorage.GetJob(jobId);
             var hasFinished =
-                (job.TryGetError(out var error) && error == Cratis.Orleans.Storage.Jobs.JobError.NotFound) ||
+                (job.TryGetError(out var error) && error == Cratis.Choreography.Storage.Jobs.JobError.NotFound) ||
                 (job.TryGetResult(out var state) && state.Status.HasFinished());
             if (hasFinished)
             {

@@ -1,16 +1,18 @@
 ---
-title: Test a slice
-description: Prove a slice works, with the right events appended and read model state, using EventScenario and ReadModelScenario on the real Chronicle engines.
+title: "Cratis Chronicle: test a vertical slice"
+description: Test event appends and derived read model state in Cratis Chronicle without a server, using EventScenario and ReadModelScenario with explicit test boundaries.
 ---
 
-**Goal:** verify a feature actually works — the right events get appended (constraints included) and the read model derived from them comes out right — without standing up a Chronicle server or a database.
+Test a Cratis Chronicle slice by checking the events its command appends and the read model those events produce. A slice is one path through a feature, from an action to its resulting state. In-process scenarios let you check those two parts without starting a Chronicle server or database.
 
 ## Real engines, in-memory storage
 
-The `Cratis.Chronicle.Testing` package gives you two scenario types that wire up the **real client and kernel code paths** — constraint validation, serialization, the projection and reducer engines. Only the storage layer is in-memory, so there's no expensive infrastructure to spin up: the specs are lightweight to run, yet exercise the same engine code that runs in production.
+The C# examples use `Cratis.Chronicle.Testing`. `EventScenario` runs the kernel append path with in-memory storage, including serialization and constraint validation. `ReadModelScenario<TReadModel>` runs the projection or reducer engine against supplied events. These are separate checks: appending through `EventScenario` does not start observers or update a read model for you.
+
+The read-model harness also substitutes infrastructure such as projection storage and compliance services. It is not a running kernel with only its database replaced.
 
 :::note[Client coverage]
-.NET, Kotlin/Java and TypeScript clients provide in-process scenarios in their testing packages (Elixir has none); the package below is the .NET one. See [Testing](../testing/) for what each client provides.
+.NET, Kotlin/Java and TypeScript provide in-process scenarios through their testing packages. Elixir provides `Chronicle.Testing` and `Chronicle.Testing.Case`, using an in-memory kernel and a synchronous dispatcher rather than the gRPC observation stream. The helpers do not have identical coverage; see [Testing](../testing/) before choosing a scenario for another client.
 :::
 
 ```bash
@@ -21,30 +23,32 @@ The examples below use the [Cratis Specifications](/testing-with-cratis/) style 
 
 ## Test the events with EventScenario
 
-`EventScenario` exercises the appending side. Seed pre-existing history with `Given`, append through `EventLog` exactly like production code does, and assert on the `AppendResult`:
+Create an `EventScenario`, seed any pre-existing history with `Given`, and append through its `EventLog`. Assert on the `AppendResult` so the test checks whether the append was accepted, not just whether the call completed:
 
 <ChronicleClientTabs snippet="scenarios/test-a-slice/append-spec" />
 
-Constraints are discovered automatically, the same way the real client discovers them. So given a unique-ISBN constraint (like the one in [Enforce a unique value](./enforce-a-unique-value.md)), seeding a book and appending a duplicate proves the rule fires:
+To test command behavior, pass the scenario's `EventLog` to the command code under test. The direct append above checks the append path; it does not invoke your command for you.
+
+Constraints are discovered from the configured client artifacts. With a unique-ISBN constraint such as the one in [Enforce a unique value](./enforce-a-unique-value.md), seed a book and then append a duplicate. The expected result is a constraint violation:
 
 <ChronicleClientTabs snippet="scenarios/test-a-slice/constraint-spec" />
 
-Beyond `ShouldBeSuccessful`/`ShouldBeFailed` and `ShouldHaveConstraintViolationFor`, there are assertions for concurrency violations and errors — the full family is in [Append result assertions](../testing/events/assertions). Create a fresh `EventScenario` per spec and dispose it; the in-memory log accumulates state across calls on the same instance.
+Use `ShouldBeSuccessful`/`ShouldBeFailed` for the overall outcome and `ShouldHaveConstraintViolationFor` to identify the rejected rule. [Append result assertions](../testing/events/assertions) also covers concurrency violations and errors. Create a fresh `EventScenario` per spec and dispose it; calls on the same instance share its accumulated history.
 
 ## Test the read model with ReadModelScenario
 
-`ReadModelScenario<TReadModel>` exercises the deriving side: feed a history of events through the **real projection or reducer engine** and assert on the resulting instance. It auto-detects how the read model is built — reducer, fluent projection, or model-bound attributes:
+Use `ReadModelScenario<TReadModel>` to check how recorded facts become state. It detects whether a reducer, fluent projection or model-bound attributes build the model, then applies the supplied history through the corresponding engine:
 
 <ChronicleClientTabs snippet="scenarios/test-a-slice/read-model-spec" />
 
-For a read model spec the event history **is** the act — `Given` supplies the input, `Instance` is the output. If the spec fails, your mapping (`[SetFrom<T>]`/`[SetValue<T>]` attributes or reducer logic) is wrong, because the engine applying it is the real one.
+Here `Given` supplies the events and `Instance` exposes the resulting model. The assertion checks that borrowing the book changes its availability. If it fails, inspect the supplied history, read model declaration and mapping, such as `[SetFrom<T>]`/`[SetValue<T>]` attributes or reducer logic. Using the real engine does not rule out a mistake in the test setup.
 
 ## What this does and doesn't cover
 
-Together the two scenarios prove the Chronicle slice: command logic appends the right facts, and the facts fold into the right state. They don't exercise your HTTP surface or UI — that's a concern for your application framework's own testing story.
+Together these checks establish what the exercised code appends and how the supplied facts become state. They do not establish that a deployed observer catches up, that the network connection works, or that a production sink behaves as expected. Use integration tests with a real kernel for those boundaries.
+
+They also do not exercise your HTTP surface or UI. Test those through your application framework rather than treating an append or projection assertion as proof of the whole feature.
 
 ## See also
 
-- [Testing](../testing/) — the full testing model, including `ReactorScenario` for reactor side effects.
-- [EventScenario](../testing/events/scenario) and [ReadModelScenario](../testing/read-models/scenario) — every option, including initial state and dependency injection.
-- [Enforce a unique value](./enforce-a-unique-value.md) — the constraint the duplicate-ISBN spec exercises.
+Continue with [EventScenario](../testing/events/scenario) or [ReadModelScenario](../testing/read-models/scenario) to configure initial state and dependencies. If the slice also reacts to events, [Testing](../testing/) introduces `ReactorScenario` for checking those side effects.

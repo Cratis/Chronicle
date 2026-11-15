@@ -77,7 +77,8 @@ public class and_read_model_is_passive_with_a_pii_property : given.all_dependenc
                     NullLogger<JsonSchemaMetadataManager>.Instance),
                 _expandoObjectConverter),
             _materializedReadModels,
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            NamespaceCasingContext.Create());
     }
 
     async Task Because() => _exception = await Catch.Exception(async () => _result = await _service.GetInstanceByKey(new()

@@ -1,20 +1,23 @@
 ---
 uid: Chronicle.Testing.Events.Scenario
-description: EventScenario is a lightweight in-process Chronicle test utility for code that appends events, running in memory without a server or database.
+title: 'Cratis Chronicle EventScenario: test event appends'
+description: Use Cratis Chronicle EventScenario in .NET to seed event history, append events, and check results in memory without a server, database, or network.
 ---
-# EventScenario
+<a id="eventscenario"></a>
 
-`EventScenario` is a lightweight, in-process test utility for exercising code that appends events to an `IEventLog` or `IEventSequence`. It runs entirely in memory with no Chronicle server, database, or network required.
+Cratis Chronicle's .NET `EventScenario` tests code that appends to `IEventLog` or `IEventSequence` without a server, database, or network. It runs the kernel's append path against in-memory storage, so you can check event content and constraint outcomes before writing an integration test.
 
-In a [Cratis Specification](/testing-with-cratis/), `EventScenario.Given` is the **given** part of the spec, `EventScenario.When` is the **when** — it appends the acted event(s) and returns the `AppendResult` — and the assertions on that result or the event sequence are the **then**. You can still call `EventLog.Append` / `EventSequence.Append` directly when you need the other overload parameters.
+In a [Cratis Specification](/testing-with-cratis/), seed history with `EventScenario.Given`, append the events under test with `EventScenario.When`, then assert on the returned `AppendResult` or the event sequence. Call `EventLog.Append` or `EventSequence.Append` directly when you need other overload parameters.
+
+The API names and kernel-backed behavior below describe .NET. Client tabs show alternatives where supported; other clients do not necessarily run the same kernel code.
 
 ## Why use EventScenario
 
-Chronicle integration tests against a live server are accurate but slow and require infrastructure. `EventScenario` lets you verify that your domain code appends the right events, handles constraint violations correctly, and reacts to pre-seeded state — all in a fast, isolated, and infrastructure-free way.
+Use `EventScenario` when the question is what your code appends or how it handles a rejected append. You can seed the history that makes a constraint relevant, attempt the next event, and inspect the outcome in one isolated spec. Use the [integration fixtures](../index.mdx#choosing-the-right-test-boundary) when the question depends on a kernel connection, observer delivery, or persistent storage.
 
 ## Installation
 
-`EventScenario` is in the `Cratis.Chronicle.Testing` NuGet package:
+For a .NET spec, add `Cratis.Chronicle.Testing` and the Specifications test runner package to your test project:
 
 ```bash
 dotnet add package Cratis.Specifications.XUnit
@@ -25,11 +28,11 @@ dotnet add package Cratis.Chronicle.Testing
 
 <ChronicleClientTabs snippet="testing/events/scenario/basic" />
 
-`EventLog` and `EventSequence` are backed by the same in-memory store. Use `EventLog` for domain tests (it maps to `EventSequenceId.Log`). Use `EventSequence` when you need a generic `IEventSequence` reference.
+`EventLog` and `EventSequence` expose the same selected sequence and share its in-memory storage. The default scenario uses `EventSequenceId.Log`. Pass `EventLog` to code that expects an event log, or `EventSequence` when it expects the generic `IEventSequence` interface.
 
 ## Pre-seeding state with Given
 
-Use the fluent `Given` builder to put the in-memory event log into a known state **before** running the act phase:
+Use `Given` for events that happened before the operation under test. The builder appends them in order, giving your code a known history to work from:
 
 <ChronicleClientTabs snippet="testing/events/scenario/given" />
 
@@ -37,24 +40,19 @@ Chain multiple `ForEventSource` calls to seed events for different event sources
 
 <ChronicleClientTabs snippet="testing/events/scenario/given-multiple-sources" />
 
-**Rules:**
-- Call `Given` before the act phase — seeded events get monotonically increasing sequence numbers.
-- Do not put the act under test inside `Given`; only pre-existing state goes here.
+Seeded events receive increasing sequence numbers and pass through the append path, including constraint checks. If a seed is rejected, `Given` throws `GivenEventAppendFailed` so the spec cannot continue with incomplete setup. Keep the operation you want to test out of `Given`; its result belongs in the act phase.
 
 ## Acting with When
 
-`When` mirrors `Given`: where `Given` seeds pre-existing state, `When` performs the act under test. It appends the event(s) through the same in-memory kernel grain and returns the resulting `AppendResult` — the same "the act returns its result" shape as `CommandScenario.Execute` — so a constraint or append spec reads with `Given` / `When` / `then` symmetry without binding the raw `Append` overload by hand:
+Use `When` to attempt the append you want to assert on. It uses the same in-memory append path as `Given`, but returns an `AppendResult` for your assertions instead of treating rejection as a setup failure:
 
 <ChronicleClientTabs snippet="testing/events/scenario/when-builder" />
 
-The returned value is an `AppendResult`, so every [append assertion](assertions) is available on it. When you supply more than one event to a single `When`, each is appended in order and the result of the final append is returned.
+Use the [append assertions](assertions) to check that result. If you supply several events to one `When`, the builder appends them in order and stops at the first failure, returning that failed result without attempting the remaining events. If all succeed, it returns the final append's result. This is a series of individual appends, not an atomic batch.
 
 ## Reading and observing read models
 
-Use `scenario.ReadModels` to read projections and reducers built from the events you seed with
-`Given`, append with `When`, or append directly through `EventLog`. The read models share the
-scenario's own event storage, including the events needed to resolve child and join keys. Do not
-use `Defaults.Instance.EventStore.ReadModels` for these reads: it belongs to a different store.
+Read the state produced by your events through `scenario.ReadModels`. It builds projection and reducer results from the same storage used by `Given`, `When`, and direct `EventLog` appends, including events needed for child collections and joins. `Defaults.Instance.EventStore.ReadModels` belongs to a different store, so it cannot read this scenario's history.
 
 For example, suppose your discovered `ProjectSummary` projects `ProjectOpened` and `ProjectRenamed`.
 In an existing specification with an `EventScenario scenario` and an `EventSourceId projectId`:
@@ -105,11 +103,11 @@ Within one `AppendMany`, a covered event after a closing event is refused, and c
 
 ## PII compliance
 
-A `[PII]` value on an appended event passes through the kernel's encryption handler before entering in-memory event storage. Reads release that protection using the same scenario-local subject keys. The schema comes from discovered compliance metadata providers and the **stored event generation**, not the latest generation's markings. An undiscovered generation raises `EventSchemaNotDiscovered` rather than silently borrowing another schema. A discovered provider that cannot be activated fails explicitly with its identity and underlying cause.
+Personal data marked with `[PII]` passes through the kernel's encryption handler before entering in-memory event storage. Reads decrypt those values with keys held only by that scenario. The encryption schema follows the stored event generation's markings, using discovered compliance metadata providers. An undiscovered generation raises `EventSchemaNotDiscovered`; a provider that cannot be activated fails with its identity and underlying cause.
 
-Your specs can use the public append-result and event-sequence assertions, or read through `EventLog` and `EventSequence`, to verify successful appends and released values. Chronicle's own harness regressions also inspect the protected in-memory content; that raw-content inspection is internal, **not a public consumer assertion API**. A plaintext round trip alone does not prove encryption at rest.
+Use append-result and event-sequence assertions, or read through `EventLog` and `EventSequence`, to check successful appends and the values returned to readers. A plaintext round trip alone does not prove encryption at rest. Chronicle's own harness regressions inspect the protected content internally, but that raw-content inspection is not a public consumer assertion API.
 
-Keys are held only in memory and are not shared between scenario instances. This exercises event encryption and release, not production database persistence, read-model sink encryption, key-store durability, or subject erasure. **Erasure is unsupported in `EventScenario`** (event [redaction](#redacting-events) is covered below); test it against a running kernel and the intended storage provider.
+The keys stay in memory and are not shared between scenarios. These tests cover event encryption and decryption, not database persistence, read-model sink encryption, or key-store durability. `EventScenario` does not support subject erasure. Test erasure against a running kernel and the intended storage provider; event [redaction](#redacting-events), covered below, is a different operation.
 
 ## Redacting events
 
@@ -123,33 +121,24 @@ Only the two redaction requests are served. Other operations that run through th
 
 ## Per-run artifacts and constraints
 
-For generated event types or constraints, create `new Defaults(artifacts)` with a run-specific
-`IClientArtifactsProvider` and pass it to `new EventScenario(defaults)`. This uses the supplied
-provider for event type discovery, serialization, and automatic constraint discovery. You can
-also pass an explicit `ICanProvideConstraints` as the second argument to replace automatic
-constraint discovery. In the `(Defaults, ICanProvideConstraints?)` overload, passing `null` also
-**discovers constraints from the supplied defaults**; pass an empty provider (one whose `Provide()`
-returns an empty list) to disable constraints. This differs from the older constructors that
-accept a constraint provider, where `null` means no constraints. Existing constructors continue
-using the default shared provider.
+If your spec supplies generated event types or constraints at runtime, give it its own `IClientArtifactsProvider`. Create `new Defaults(artifacts)` and pass those defaults to `new EventScenario(defaults)`. The supplied provider controls event type discovery, serialization, and automatic constraint discovery instead of the process-wide default.
+
+To replace automatic constraint discovery, pass an `ICanProvideConstraints` as the second argument. In the `(Defaults, ICanProvideConstraints?)` overload, `null` still discovers constraints from the supplied defaults. To disable constraints, pass an empty provider whose `Provide()` returns an empty list. In the older explicit-provider constructors, `null` means no constraints; constructors without run-specific defaults still use the shared artifact provider.
 
 To select an identity while keeping automatic discovery, use `new EventScenario(eventSequenceId, eventStoreName, namespaceName)`. For run-specific artifacts, use `new EventScenario(defaults, eventSequenceId, eventStoreName, namespaceName)`. Neither overload takes a constraint provider; the existing explicit-provider overload still treats `null` as no constraints.
 
 ## Event generations
 
-Discovered event migrations run on append. An event appended in an older generation retains its original content and also stores the migrated generations. This does not determine which generation an ordinary read delivers. Migrators use the service provider supplied to `Defaults`, including their constructor dependencies.
+When you append an older event generation, discovered migrations run and store the migrated generations alongside the original content. The generation an ordinary read delivers is a separate choice. If a migrator has constructor dependencies, supply them through the service provider passed to `Defaults`.
 
 ## Isolation
 
-Create a **new `EventScenario` instance per test** to keep tests isolated. The in-memory store accumulates state across calls on the same instance. Each instance starts with an empty event log and sequence number zero. Dispose the scenario after the specification to release its in-memory resources.
+Create a new `EventScenario` for each specification. Each instance starts with an empty sequence at sequence number zero, then accumulates state across calls. Dispose it after the specification to release its in-memory resources.
 
-If your specs supply event types or constraints at runtime, construct `new Defaults(artifactsProvider)`
-and pass it to `new EventScenario(defaults)`. This uses that registry for event serialization and
-constraint discovery instead of the process-wide default. Pass an explicit constraint provider as the
-second argument when you want to override discovery for this scenario.
+Keep runtime-supplied event types and constraints isolated too: use [per-run defaults](#per-run-artifacts-and-constraints) instead of changing the shared artifact provider.
 
 ## Example: full test
 
 <ChronicleClientTabs snippet="testing/events/scenario/full-example" />
 
-For information on asserting the result of an append operation, see [Assertions](assertions).
+Once the spec attempts its append, use the [append assertions](assertions) to check success, violations, or errors. To inspect what was appended and in what order, continue with [event sequence assertions](event-sequence-assertions).

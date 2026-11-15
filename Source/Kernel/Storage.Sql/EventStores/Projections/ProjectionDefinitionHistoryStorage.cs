@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Projections;
@@ -43,7 +44,7 @@ public class ProjectionDefinitionHistoryStorage(EventStoreName eventStore, IData
     public async Task<IEnumerable<ProjectionDefinitionHistoryEntry>> GetFor(ProjectionId projectionId)
     {
         await using var scope = await database.EventStore(eventStore);
-        var rows = await scope.DbContext.ProjectionDefinitionHistory.AsNoTracking().Where(_ => _.ProjectionId == projectionId).ToArrayAsync();
+        var rows = await scope.DbContext.ProjectionDefinitionHistory.AsNoTracking().WhereExact(scope.DbContext, _ => _.ProjectionId, projectionId, projectionId.Value).ToArrayAsync();
         return rows.Select(_ => new ProjectionDefinitionHistoryEntry(
                 _.ProjectionId,
                 _.Digest,

@@ -61,7 +61,7 @@ cat > "$WORK_DIR/TestingOnly/Consumer.csproj" <<PROJECT
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
@@ -74,7 +74,7 @@ cat > "$WORK_DIR/Testing/Consumer.csproj" <<PROJECT
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
@@ -92,7 +92,7 @@ cat > "$WORK_DIR/XUnitIntegration/Consumer.csproj" <<PROJECT
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
@@ -170,6 +170,12 @@ for consumer in Testing XUnitIntegration; do
         tail -1 "$WORK_DIR/$consumer/run.log"
         echo "Chronicle $CHRONICLE_VERSION ($consumer) and the current Arc packages start together."
     else
+        if grep -qE "^${CHRONICLE_VERSION//./\\.} " "$(dirname "$0")/../consumer-smoke-waivers.txt" 2>/dev/null; then
+            echo "::warning::Chronicle $CHRONICLE_VERSION ($consumer) does not start beside the current Arc packages, and is waived in .github/consumer-smoke-waivers.txt. Output follows."
+            echo "--- output ---"
+            tail -30 "$WORK_DIR/$consumer/run.log"
+            continue
+        fi
         echo "::error::Chronicle $CHRONICLE_VERSION ($consumer) and the current Arc packages failed consumer startup. Inspect the exception below before assigning the failure to either package family."
         echo "--- output ---"
         tail -30 "$WORK_DIR/$consumer/run.log"

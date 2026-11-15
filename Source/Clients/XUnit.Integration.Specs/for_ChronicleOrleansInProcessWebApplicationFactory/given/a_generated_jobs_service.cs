@@ -3,15 +3,14 @@
 
 extern alias KernelCore;
 extern alias KernelGrpc;
-
 using System.Collections.Immutable;
 using System.Security.Claims;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;

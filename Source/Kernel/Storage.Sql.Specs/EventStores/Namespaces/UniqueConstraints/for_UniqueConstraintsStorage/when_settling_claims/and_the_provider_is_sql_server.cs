@@ -13,7 +13,7 @@ public class and_the_provider_is_sql_server(SqlServerFixture fixture) : given.a_
     async Task Establish()
     {
         var connectionString = await fixture.CreateDatabase();
-        await CreateStorage(connectionString, true, () => fixture.DropDatabase(connectionString));
+        await CreateStorage(connectionString, true, () => fixture.QueueDatabaseDrop(connectionString));
     }
 
     Task Because() => SettleClaims();

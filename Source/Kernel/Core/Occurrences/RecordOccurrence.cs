@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage.Occurrences;
 
 namespace Cratis.Chronicle.Occurrences;
@@ -18,6 +19,7 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="Payload">The plaintext JSON payload.</param>
 /// <param name="Kind">The ingress kind.</param>
 /// <param name="ApplicationScope">Selects event-store application storage independently of namespace encoding.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.Occurrences)]
 public record RecordOccurrence(EventStoreName EventStore, string? Namespace, string Trigger, string IdempotencyId, string Payload, OccurrenceKind Kind = OccurrenceKind.Application, bool ApplicationScope = false)

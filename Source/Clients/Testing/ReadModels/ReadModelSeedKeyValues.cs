@@ -2,12 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
+using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Concepts;
 using Cratis.Json;
-using Cratis.Types;
 
 namespace Cratis.Chronicle.Testing.ReadModels;
 
@@ -42,11 +43,50 @@ internal sealed class ReadModelSeedKeyValues(Type modelType, PropertyPath proper
 
     static bool IsNumber(Type type) => Type.GetTypeCode(type) is TypeCode.Byte or TypeCode.SByte or TypeCode.Int16 or TypeCode.UInt16 or TypeCode.Int32 or TypeCode.UInt32 or TypeCode.Int64 or TypeCode.UInt64 or TypeCode.Single or TypeCode.Double or TypeCode.Decimal;
 
+    static bool IsLosslessNumber(object input, object converted) => converted switch
+    {
+        float or double => IsLosslessFloatingPoint(input, converted),
+        decimal => DecimalValues.ToDecimal(input) == DecimalValues.ToDecimal(converted),
+        _ => IsLosslessInteger(input, converted)
+    };
+
+    static bool IsFinite(object value) => value switch
+    {
+        double number => double.IsFinite(number),
+        float number => float.IsFinite(number),
+        _ => true
+    };
+
+    static bool IsLosslessInteger(object input, object converted) => input switch
+    {
+        double number => IsSameInteger(number, converted),
+        float number => IsSameInteger(number, converted),
+        decimal number => decimal.Truncate(number) == number && number == DecimalValues.ToDecimal(converted),
+        _ => ToInteger(input) == ToInteger(converted)
+    };
+
+    static bool IsSameInteger(double number, object converted) =>
+        Math.Truncate(number) == number && new BigInteger(number) == ToInteger(converted);
+
+    static bool IsLosslessFloatingPoint(object input, object converted)
+    {
+        var number = System.Convert.ToDouble(converted, CultureInfo.InvariantCulture);
+        return input switch
+        {
+            double original => original == number,
+            float => true,
+            decimal original => original == DecimalValues.ToDecimal(converted),
+            _ => new BigInteger(number) == ToInteger(input)
+        };
+    }
+
+    static BigInteger ToInteger(object value) => new(DecimalValues.ToDecimal(value));
+
     object ConvertScalar(object input)
     {
         try
         {
-            var converted = TypeConversion.Convert(_target!, input);
+            var converted = DecimalValues.ConvertTo(_target!, input);
             if (!IsValidResult(input, converted)) throw Invalid(input);
             return converted;
         }
@@ -60,7 +100,7 @@ internal sealed class ReadModelSeedKeyValues(Type modelType, PropertyPath proper
         converted.GetType() == _target && IsLossless(input, converted) && IsAllowedEnumValue(converted);
 
     bool IsLossless(object input, object converted) =>
-        !IsNumber(_target!) || System.Convert.ToDecimal(input, CultureInfo.InvariantCulture) == System.Convert.ToDecimal(converted, CultureInfo.InvariantCulture);
+        !IsNumber(_target!) || (IsFinite(input) && IsFinite(converted) && IsLosslessNumber(input, converted));
 
     object Unwrap(object input)
     {

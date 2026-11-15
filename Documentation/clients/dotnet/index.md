@@ -1,11 +1,11 @@
 ---
-title: .NET client
-description: Use the .NET client when your Chronicle application runs on C# or another .NET language.
+title: Cratis Chronicle .NET client setup
+description: Use the Cratis Chronicle .NET client to append events, build read models, and connect console apps, ASP.NET Core services, or workers.
 ---
 
-The .NET client is the C#/.NET SDK for Chronicle. It gives .NET applications typed access to event stores, event logs, read models, projections, reducers, reactors, constraints, migrations, namespaces, and hosting integration.
+The Cratis Chronicle .NET client connects your application to an event store so you can record what happened and build read models from that history. Use it directly in a console application or let ASP.NET Core and Worker Service hosting configure the client through dependency injection.
 
-Use this section for .NET-specific setup and APIs. The main Chronicle docs explain the event-sourcing concepts once and use language tabs for examples that apply across clients.
+Start with [the .NET setup guide](./getting-started.md) to connect and append an event. This section covers .NET APIs and hosting; the shared Chronicle guides explain event-sourcing concepts and provide examples for the participating clients.
 
 ## When to use it
 
@@ -13,12 +13,12 @@ Use the .NET client when you are building:
 
 - a console tool or script that talks directly to Chronicle
 - an ASP.NET Core service that appends events from endpoints or Arc commands
-- a Worker Service that runs projections, reducers, reactors, or background append logic
+- a Worker Service that registers projections, hosts reducers or reactors, or appends events in the background
 - a .NET test project that uses Chronicle's in-process testing scenarios
 
 ## Install
 
-Install the .NET packages that match the host style you are building. The templates do this for you, but explicit package references are useful when adding Chronicle to an existing application.
+Add `Cratis.Chronicle` to an existing .NET application. For ASP.NET Core hosting, add `Cratis.Chronicle.AspNetCore` too. Chronicle templates already include the packages for their host style.
 
 ```bash
 dotnet add package Cratis.Chronicle
@@ -27,11 +27,13 @@ dotnet add package Cratis.Chronicle.AspNetCore
 
 ## Event content round trips
 
-Nullable event properties treat `null` and absence identically: both read back as `null`.
-The client can omit nulls when serializing. Non-null nullable values, including `decimal?` or
-`int?` holding `0`, remain values. Missing non-nullable values materialize as their type defaults
-where the schema permits them. Compare appended and stored content through the kernel's
-schema-aware `ContentComparison` / `VerifyContent` path, not raw JSON equality; these are kernel
+When you append and read an event, a nullable property reads back as `null` whether it was stored as
+`null` or omitted. The client can omit nulls during serialization, but a nullable `decimal?` or
+`int?` holding `0` remains a value. Missing non-nullable values become their type defaults where
+the schema permits them.
+
+Raw JSON equality can therefore misrepresent an event-content comparison. The kernel's
+schema-aware `ContentComparison` / `VerifyContent` path accounts for these rules; these are kernel
 verification mechanisms, not .NET client methods. See
 [Null, absent, and default values](/chronicle/events/schema-representation/#null-absent-and-default-values).
 
@@ -50,7 +52,10 @@ verification mechanisms, not .NET client methods. See
 
 - [Health checks](./health-checks.md)
 - [Short-lived processes](./short-lived-processes.md)
+- [Serverless mode](./serverless-mode.md)
 - [Explicit artifact registration](./explicit-artifacts)
+- [Discovery reports and identity drift](./discovery-report.md)
+- [Registration outcomes](./registration-outcome.md)
 - [Console quickstart](/chronicle/get-started/console/)
 - [ASP.NET Core hosting](/chronicle/get-started/aspnetcore/)
 - [Worker Service hosting](/chronicle/get-started/worker/)
@@ -61,4 +66,4 @@ verification mechanisms, not .NET client methods. See
 
 ## Shared examples
 
-When a Chronicle concept applies to every client, keep the prose in the shared Chronicle page and put the C# code in `Chronicle/Documentation/client-snippets/**`. The site renders it beside Kotlin, Elixir, and TypeScript snippets in synchronized language tabs.
+Shared guides show C# examples alongside the other clients available for that task in synchronized language tabs. Their C# source lives in `Chronicle/Documentation/client-snippets/**`; use the .NET-specific pages above for setup and APIs that differ by client.

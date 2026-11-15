@@ -25,6 +25,6 @@ public class and_the_primary_store_is_unreachable : given.two_key_stores
         _secondaryHasKey = await HasKeyIn(_secondary);
     }
 
-    [Fact] void should_fail() => _error.ShouldBeOfExactType<StoreUnreachable>();
+    [Fact] void should_fail() => _error.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
     [Fact] void should_not_provision_on_another_store_instead() => _secondaryHasKey.ShouldBeFalse();
 }

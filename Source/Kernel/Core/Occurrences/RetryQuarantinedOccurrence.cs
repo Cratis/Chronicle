@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Claims;
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Occurrences;
 
@@ -27,11 +29,11 @@ public record RetryQuarantinedOccurrence(EventStoreName EventStore, string? Name
     /// </summary>
     /// <param name="grainFactory">The grain factory.</param>
     /// <param name="principalAccessor">The authenticated principal.</param>
+    /// <param name="options">The server configuration.</param>
     /// <returns>Whether quarantined work was re-armed.</returns>
-    public Task<bool> Handle(IGrainFactory grainFactory, ICurrentPrincipalAccessor principalAccessor)
+    public Task<bool> Handle(IGrainFactory grainFactory, ICurrentPrincipalAccessor principalAccessor, IOptions<ChronicleOptions> options)
     {
-        var principal = principalAccessor.Current;
-        var actor = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? principal?.FindFirst("sub")?.Value ?? principal?.Identity?.Name ?? "anonymous";
+        var actor = PrincipalKey.Actor(principalAccessor.Current, options.Value.Authentication);
         return OccurrenceQueueKey.Resolve(grainFactory, EventStore, ApplicationScope ? null : Namespace, Trigger).Retry(OccurrenceId, actor);
     }
 }

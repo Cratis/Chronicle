@@ -10,6 +10,7 @@
     <ItemGroup>
         <ProjectReference Include="../Storage.AzureKeyVault/Storage.AzureKeyVault.csproj" />
         <ProjectReference Include="../Storage/Storage.csproj" />
+        <ProjectReference Include="../Storage.Specs/Storage.Specs.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
     </ItemGroup>
 

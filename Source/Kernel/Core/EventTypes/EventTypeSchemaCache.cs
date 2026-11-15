@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.EventTypes;
 /// storage lookup instead of one per message; a failed lookup is evicted so it is retried rather than cached.
 /// </remarks>
 /// <param name="storage">The <see cref="IStorage"/> to resolve event type schemas from.</param>
-internal sealed class EventTypeSchemaCache(IStorage storage) : IEventTypeSchemaCache
+internal sealed partial class EventTypeSchemaCache(IStorage storage) : IEventTypeSchemaCache
 {
     readonly ConcurrentDictionary<EventTypeSchemaKey, Lazy<string>> _schemaJsonByEventType = new();
 
@@ -47,9 +47,18 @@ internal sealed class EventTypeSchemaCache(IStorage storage) : IEventTypeSchemaC
     /// <inheritdoc/>
     public void Invalidate(EventStoreName eventStore, EventTypeId eventTypeId)
     {
-        foreach (var key in _schemaJsonByEventType.Keys.Where(_ => _.EventStore == eventStore && _.EventTypeId == eventTypeId))
+        lock (_protectionInvalidation)
         {
-            _schemaJsonByEventType.TryRemove(key, out _);
+            _protectionRevision++;
+            foreach (var key in _protectionSchemas.Keys.Where(_ => _.EventStore == eventStore && _.EventTypeId == eventTypeId))
+            {
+                _protectionSchemas.TryRemove(key, out _);
+            }
+
+            foreach (var key in _schemaJsonByEventType.Keys.Where(_ => _.EventStore == eventStore && _.EventTypeId == eventTypeId))
+            {
+                _schemaJsonByEventType.TryRemove(key, out _);
+            }
         }
     }
 

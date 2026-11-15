@@ -26,6 +26,10 @@ internal sealed class DiscoveredEventTypesStorage(IEventTypesStorage storage, Fu
     public Task<bool> Register(EventTypeDefinition definition) => storage.Register(definition);
 
     /// <inheritdoc/>
+    public Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema) =>
+        storage.ReplaceSchema(eventTypeId, generation, schema);
+
+    /// <inheritdoc/>
     public Task<IEnumerable<EventTypeId>> Register(IEnumerable<EventTypeToRegister> eventTypes) => storage.Register(eventTypes);
 
     /// <inheritdoc/>

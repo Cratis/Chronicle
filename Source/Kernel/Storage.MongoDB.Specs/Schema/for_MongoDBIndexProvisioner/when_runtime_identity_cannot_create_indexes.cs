@@ -3,11 +3,11 @@
 
 using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging;

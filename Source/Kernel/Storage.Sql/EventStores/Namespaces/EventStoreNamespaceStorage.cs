@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
@@ -17,7 +19,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Storage.Jobs;
 using Cratis.Types;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -33,13 +34,23 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// <param name="namespace">The name of the namespace.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 /// <param name="sinkFactories"><see cref="IInstancesOf{T}"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
+/// <param name="jobsStorage">The <see cref="Choreography.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
 /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="eventTypesStorage">The event store's shared event type storage.</param>
 /// <param name="converter">The schema-aware content converter.</param>
-public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, IDatabase database, IInstancesOf<ISinkFactory> sinkFactories, Orleans.Storage.IJobsStorage jobsStorage, JsonSerializerOptions jsonSerializerOptions, Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage, Json.IExpandoObjectConverter converter) : IEventStoreNamespaceStorage
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+public class EventStoreNamespaceStorage(
+    EventStoreName eventStore,
+    EventStoreNamespaceName @namespace,
+    IDatabase database,
+    IInstancesOf<ISinkFactory> sinkFactories,
+    Choreography.Storage.IJobsStorage jobsStorage,
+    JsonSerializerOptions jsonSerializerOptions,
+    Chronicle.Storage.EventTypes.IEventTypesStorage eventTypesStorage,
+    Json.IExpandoObjectConverter converter,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreNamespaceStorage
 {
-    readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace));
+    readonly Sql.EventStores.Occurrences.OccurrencesStorage<NamespaceDbContext> _occurrences = new(() => database.Namespace(eventStore, @namespace), database);
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
@@ -54,6 +65,12 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
     public IIdentityStorage Identities { get; } = new Identities.IdentityStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
+    public IEventSequenceMutationRegistry EventSequenceMutations { get; } = new DigestKeyedEventSequenceMutationRegistry(
+        eventStore,
+        mutationDigestKeys ?? UnavailableEventSequenceMutationDigestKeys.Instance,
+        new EventSequences.Mutations.EventSequenceMutationRegistry(eventStore, @namespace, database));
+
+    /// <inheritdoc/>
     public IJobStorage Jobs => jobsStorage.GetFor(eventStore, @namespace).Jobs;
 
     /// <inheritdoc/>
@@ -64,16 +81,19 @@ public class EventStoreNamespaceStorage(EventStoreName eventStore, EventStoreNam
 
     /// <inheritdoc/>
     public ObserverDefinitionChangeStorage ObserverDefinitionChanges { get; } = new(
-        new Observers.ObserverDefinitionChangeRows<ObserverProgressRecord>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverContinuation>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverRestartPlan>(() => database.Namespace(eventStore, @namespace)),
-        new Observers.ObserverDefinitionChangeRows<ObserverJobInventory>(() => database.Namespace(eventStore, @namespace)));
+        new Observers.ObserverDefinitionChangeRows<ObserverProgressRecord>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverContinuation>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverRestartPlan>(() => database.Namespace(eventStore, @namespace), database),
+        new Observers.ObserverDefinitionChangeRows<ObserverJobInventory>(() => database.Namespace(eventStore, @namespace), database));
 
     /// <inheritdoc/>
     public IAlertIncidentsStorage AlertIncidents { get; } = new Alerts.AlertIncidentsStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IFailedPartitionsStorage FailedPartitions { get; } = new FailedPartitions.FailedPartitionStorage(eventStore, @namespace, database);
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Imports.IImportStorage Imports { get; } = new Imports.ImportStorage(eventStore, @namespace, database);
 
     /// <inheritdoc/>
     public IInFlightEventsStorage InFlightEvents { get; } = new InFlightEvents.InFlightEventsStorage(eventStore, @namespace, database);

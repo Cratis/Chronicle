@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -11,7 +12,6 @@ using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -322,7 +322,7 @@ public partial class Observer
         {
             _metrics?.WebhookProbeAttempt();
             logger.WebhookProbeAttempt(control.Id, failure.Id);
-            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery), cancellation.Token);
+            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery) { ReplayEpoch = failure.ReplayEpoch }, cancellation.Token);
             var result = await _webhookProbeDelivery;
 
             // Even a nominal result cannot release quarantine before the completion barrier.
@@ -479,7 +479,7 @@ public partial class Observer
     async Task ResumeAfterWebhookProbe(WebhookProbeState control, FailedPartition failure)
     {
         if (!CurrentWebhookProbe(control, failure)) return;
-        var jobs = await _jobsManager.GetUnfinishedJobs();
+        var jobs = await _jobsManager.GetUnfinishedJobsOf<Jobs.IRetryFailedPartition>();
         foreach (var job in jobs.Where(IsEligibleWebhookProbeRetryJob))
         {
             if (!CurrentWebhookProbe(control, failure)) return;

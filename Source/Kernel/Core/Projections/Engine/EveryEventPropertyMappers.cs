@@ -5,6 +5,7 @@ using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
+using Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Engine;
@@ -26,6 +27,11 @@ static class EveryEventPropertyMappers
         string expression,
         PropertyMapper<AppendedEvent, ExpandoObject> mapper)
     {
+        if (SetOnceExpressionResolver.TryGetInnerExpression(expression, out var innerExpression))
+        {
+            expression = innerExpression;
+        }
+
         if (!new EventContentExpressionResolver().CanResolve(expression))
         {
             return mapper;

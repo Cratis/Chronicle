@@ -1,14 +1,14 @@
 ---
-title: Appending
-description: Append a single event to a Chronicle event sequence, understand how the kernel handles it, and verify the outcome when it is unknown.
+title: Append a Chronicle event and check the result
+description: Append records one event in a Chronicle event sequence. Check validation and concurrency results, and use an idempotency key to make retries safe.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Appending adds a single event to an event sequence. The event log is the default sequence, but you can also append to any custom sequence your system defines.
+Use `Append` to record one event for an event source, such as an order or an account. Chronicle writes it to an event sequence and returns a result that tells you whether the write succeeded or was rejected. The event log is the default sequence; you can also append to a custom sequence your system defines.
 
 > [!NOTE]
-> With Cratis Arc and the Chronicle extension, you can append events as state changes coming out of a command using a more functional approach. See [Arc Chronicle commands](/arc/backend/csharp/chronicle/commands/).
+> With Cratis Arc and the Chronicle extension, a command handler can return events for Chronicle to append. See [Arc Chronicle commands](/arc/backend/csharp/chronicle/commands/).
 
 ## How it works
 
@@ -20,7 +20,9 @@ Before the event is sent, the .NET client adds any [cross-cutting properties](./
 - Persists the event and metadata atomically
 - Updates the sequence state
 
-The append returns an operation result you can use to detect schema errors, concurrency violations, constraint violations, and other append-time problems. A result that reports a schema, constraint, or concurrency violation means the event was rejected and not appended, so you can correct the problem and append again without duplicating it. A result that reports *errors* is different: an infrastructure failure can happen after the event was stored, so the outcome is unknown — and so is it when the call fails without a result, such as a timeout or a dropped connection. Appending again blindly after an unknown outcome can store the event twice. Make that retry safe with an [expected sequence number](./concurrency) or a [constraint](../constraints/).
+Check the append result before reporting success. A schema, constraint, or concurrency violation means Chronicle rejected the event without appending it. Correct the content or reconsider the decision against fresh state before trying again.
+
+An infrastructure error is different: it can happen after storage accepted the event. A timeout or dropped connection can also leave you without a result. In either case, another unkeyed append can store the same fact twice. Use an [idempotency key](#appending-once) on the original attempt when you need safe retries. An [expected sequence number](./concurrency) or a [constraint](../constraints/) can also reject a duplicate, but you must resolve that rejection rather than assume the earlier write succeeded.
 
 ## When the outcome is unknown
 
@@ -110,7 +112,7 @@ The Kotlin, TypeScript, and Elixir clients do not have a keyed append API yet. S
 
 ## AppendResult
 
-Appending returns an `AppendResult` that describes whether the operation succeeded and includes details about what went wrong when it fails. It can surface schema validation errors, concurrency violations, constraint violations, and other append-time problems. See [Concurrency](./concurrency) and [Constraints](../constraints/) for more on these cases.
+In .NET, `AppendResult.IsSuccess` reports whether there are schema or other constraint violations, concurrency violations, or append errors. Inspect the corresponding collections to decide what to correct. For a keyed append, also check `HasIdempotencyConflicts`: `IsSuccess` alone does not report a refused key. See [Concurrency](./concurrency) and [Constraints](../constraints/) for handling rejected decisions.
 
 ## Schema validation
 
@@ -145,8 +147,10 @@ By default, Chronicle assigns the current server time as the event's `Occurred` 
 
 ## When to use
 
-Appending is lightweight and intended for single domain decisions that produce one event. When your decision spans multiple event sources, use concurrency scopes to enforce the boundary while keeping sequences independent. See [Concurrency](./concurrency) for details.
+Use a single append when the decision produces one event. If it produces several events that must commit together, use [Appending many](./appending-many). When the decision depends on state you read, capture a [concurrency scope](./concurrency) before reading, or use a [decision read](../read-models/decision-reads.mdx) to capture that position for you.
 
 ## Example
+
+Pass the event source id and event content to the event log. Check the returned result before telling the caller the operation succeeded:
 
 <ChronicleClientTabs snippet="events/appending/example" />

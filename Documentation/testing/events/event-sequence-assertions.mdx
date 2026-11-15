@@ -1,8 +1,8 @@
 ---
 uid: Chronicle.Testing.Events.EventSequenceAssertions
+title: Event sequence assertions
 description: Verify what ended up in a Chronicle event sequence after an EventScenario, such as the tail sequence number or an appended event by type.
 ---
-# Event Sequence Assertions
 
 After appending events through an `EventScenario`, you often need to verify what ended up in the event sequence itself — not just the result of the append call. The `Cratis.Chronicle.Testing` package provides `Should*` extension methods on `IEventSequence` and `IEventLog` for these assertions, as well as `Should*` extension methods on `AppendedEventWithResult` for asserting on collected events.
 
@@ -14,10 +14,10 @@ These methods are available on any `IEventSequence` or `IEventLog` instance, inc
 |--------|---------|
 | `ShouldHaveTailSequenceNumber(expected)` | Tail sequence number matches the expected value |
 | `ShouldHaveAppendedEvent<TEvent>()` | At least one event of the given type exists anywhere in the sequence |
-| `ShouldHaveAppendedEvent<TEvent>(validator)` | At least one event of the given type exists and passes the validator |
+| `ShouldHaveAppendedEvent<TEvent>(validator)` | The first event of the given type exists and passes the validator |
 | `ShouldHaveAppendedEvent<TEvent>(predicate)` | At least one event of the given type matches the predicate |
 | `ShouldHaveAppendedEvent<TEvent>(eventSourceId)` | At least one event of the given type exists for the event source |
-| `ShouldHaveAppendedEvent<TEvent>(eventSourceId, validator)` | At least one event of the given type exists for the event source and passes the validator |
+| `ShouldHaveAppendedEvent<TEvent>(eventSourceId, validator)` | The first event of the given type for the event source exists and passes the validator |
 | `ShouldHaveAppendedEvent<TEvent>(eventSourceId, predicate)` | At least one event of the given type matches the predicate for the event source |
 | `ShouldHaveAppendedEvent<TEvent>(sequenceNumber)` | An event of the given type exists at the sequence number |
 | `ShouldHaveAppendedEvent<TEvent>(sequenceNumber, validator)` | An event of the given type exists at the sequence number and passes the validator |
@@ -25,11 +25,11 @@ These methods are available on any `IEventSequence` or `IEventLog` instance, inc
 | `ShouldHaveAppendedEvent<TEvent>(sequenceNumber, eventSourceId, validator)` | An event of the given type exists at the sequence number for the given event source and passes the validator |
 | `ShouldHaveAppendedEvent<TEvent>(sequenceNumber, eventSourceId, predicate)` | An event of the given type at the sequence number for the given event source matches the predicate |
 
-All methods are async and return `Task`. They throw `EventSequenceAssertionException` on failure with a descriptive message.
+All methods are async and return `Task`. Failed assertion checks throw `EventSequenceAssertionException` with a descriptive message. Exceptions thrown by validators or predicates propagate.
 
 ## Verifying the tail sequence number
 
-The tail sequence number is the sequence number of the last event appended to the sequence. Use `ShouldHaveTailSequenceNumber` to verify the expected number of events were appended:
+The tail sequence number is the sequence number of the last event appended to the sequence. `ShouldHaveTailSequenceNumber` compares that position directly; it does not count events:
 
 <ChronicleClientTabs snippet="testing/events/event-sequence-assertions/tail-sequence-number" />
 
@@ -51,7 +51,7 @@ Pass a validator action to inspect the event content. The assertion fails if the
 
 <ChronicleClientTabs snippet="testing/events/event-sequence-assertions/validator" />
 
-Without a sequence number, the validator runs against the first event of the matching type:
+Without a sequence number, the validator runs against the first event of the matching type, not every matching event. With a sequence number, it runs against the event at that position:
 
 <ChronicleClientTabs snippet="testing/events/event-sequence-assertions/validator-no-sequence" />
 
@@ -77,15 +77,15 @@ All [append result assertions](assertions) are available directly on `AppendedEv
 
 | Method | Asserts |
 |--------|---------|
-| `ShouldBeSuccessful()` | Operation succeeded with no violations or errors |
-| `ShouldBeFailed()` | Operation failed (any violation or error) |
-| `ShouldHaveConstraintViolations()` | At least one constraint violation is present |
-| `ShouldNotHaveConstraintViolations()` | No constraint violations are present |
+| `ShouldBeSuccessful()` | `Result.IsSuccess` is `true` |
+| `ShouldBeFailed()` | `Result.IsSuccess` is `false` |
+| `ShouldHaveConstraintViolations()` | `Result.HasConstraintViolations` is `true` |
+| `ShouldNotHaveConstraintViolations()` | `Result.HasConstraintViolations` is `false` |
 | `ShouldHaveConstraintViolationFor(name)` | A violation for the named constraint is present |
-| `ShouldHaveConcurrencyViolations()` | At least one concurrency violation is present |
-| `ShouldNotHaveConcurrencyViolations()` | No concurrency violations are present |
-| `ShouldHaveErrors()` | At least one error is present |
-| `ShouldNotHaveErrors()` | No errors are present |
+| `ShouldHaveConcurrencyViolations()` | `Result.HasConcurrencyViolations` is `true` |
+| `ShouldNotHaveConcurrencyViolations()` | `Result.HasConcurrencyViolations` is `false` |
+| `ShouldHaveErrors()` | `Result.HasErrors` is `true` |
+| `ShouldNotHaveErrors()` | `Result.HasErrors` is `false` |
 
 ### Event assertions
 

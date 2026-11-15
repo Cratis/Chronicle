@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -81,6 +82,7 @@ public class MaterializedReadModelStore(
         ReadModelDefinition definition)
     {
         var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
+        using var scope = ReleaseKeys.BeginScope();
         var schema = definition.GetSchemaForLatestGeneration();
         var instances = new List<ExpandoObject>();
         var skip = 0;
@@ -103,6 +105,6 @@ public class MaterializedReadModelStore(
             }
         }
 
-        return instances;
+        return await ReleaseKeys.Complete<IEnumerable<ExpandoObject>>(() => instances);
     }
 }

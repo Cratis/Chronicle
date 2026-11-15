@@ -23,6 +23,7 @@ public class and_subscription_is_not_subscribed : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
@@ -46,7 +47,8 @@ public class and_subscription_is_not_subscribed : Specification
 
     async Task Because() => await _manager.ReceiveReminder(ReminderName, default);
 
-    [Fact] void should_pass_target_event_store_name_as_subscriber_metadata() =>
+    [Fact]
+    void should_pass_target_event_store_name_as_subscriber_metadata() =>
         _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
             Arg.Any<IEnumerable<EventType>>(),

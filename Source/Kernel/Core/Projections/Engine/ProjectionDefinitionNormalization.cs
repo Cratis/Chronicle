@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Properties;
@@ -39,7 +40,11 @@ internal static class ProjectionDefinitionNormalization
             Nested = definition.Nested is { Count: > 0 } ? NormalizeChildren(definition.Nested, hasLegacyStorageFields) : null,
             NoAutoMapProperties = definition.NoAutoMapProperties ?? []
         };
-        return normalized is ChildrenDefinition child ? child with { All = fromEvery } : normalized;
+
+        // An explicit append ordering is the default ordering - it is not a change from no ordering at all.
+        return normalized is ChildrenDefinition child
+            ? child with { All = fromEvery, Ordering = child.Ordering?.Placement == ChildrenPlacement.Append ? null : child.Ordering }
+            : normalized;
     }
 
     /// <summary>

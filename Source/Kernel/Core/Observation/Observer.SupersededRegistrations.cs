@@ -60,8 +60,7 @@ public partial class Observer
             var candidate = _supersededRegistrations[^1];
             _supersededRegistrations.RemoveAt(_supersededRegistrations.Count - 1);
 
-            var connectedClients = GrainFactory.GetConnectedClients(candidate.SiloAddress);
-            if (!await connectedClients.IsConnected(candidate.ConnectionId))
+            if (await ConnectedClientsLocator.Find(GrainFactory, candidate.SiloAddress, candidate.ConnectionId) is null)
             {
                 logger.SupersededClientDisconnected(candidate.ConnectionId);
                 continue;

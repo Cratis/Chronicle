@@ -4,6 +4,10 @@
         <RootNamespace>Cratis.Chronicle.Server</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
+        <!-- for_GrpcCallerResolution declares a code-first gRPC probe service. PBN3013 asks for a [ProtoModel] the pinned
+             protobuf-net.Grpc runtime cannot express (see Contracts.csproj), and PBN2008 cannot verify IObservable streams,
+             the same suppressions the real contracts carry. -->
+        <NoWarn>$(NoWarn);PBN2008;PBN3013</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

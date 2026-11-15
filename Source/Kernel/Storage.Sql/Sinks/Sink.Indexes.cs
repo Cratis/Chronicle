@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 public partial class Sink
 {
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _indexGates = new();
-    readonly object _indexGate = new();
+    readonly Lock _indexGate = new();
     readonly HashSet<string> _indexedTables = [];
     readonly Dictionary<string, Task> _indexBuilds = [];
 

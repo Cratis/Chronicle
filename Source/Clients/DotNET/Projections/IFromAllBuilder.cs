@@ -73,4 +73,15 @@ public interface IFromAllBuilder<TReadModel>
     /// <param name="dynamicKeyAccessor">Accessor for the <see cref="EventContext"/> property to derive the dictionary key from.</param>
     /// <returns>Builder continuation.</returns>
     IFromAllBuilder<TReadModel> Decrement<TValue>(Expression<Func<TReadModel, IDictionary<string, TValue>>> readModelPropertyAccessor, Expression<Func<EventContext, object>> dynamicKeyAccessor);
+
+    /// <summary>
+    /// Start building a set operation that only assigns the property when it has no value yet.
+    /// </summary>
+    /// <typeparam name="TProperty">Type of the property.</typeparam>
+    /// <param name="readModelPropertyAccessor">Read model property accessor for defining the target property.</param>
+    /// <returns>The <see cref="IAllSetBuilder{TReadModel, TBuilder}"/> to build up the property expressions.</returns>
+    /// <remarks>The first event that produces a value wins - for example the time a read model was first touched.</remarks>
+    /// <exception cref="ProjectionBuilderOperationNotSupported">Thrown when the builder implementation does not support the operation.</exception>
+    IAllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>> SetOnce<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
+        throw new ProjectionBuilderOperationNotSupported(GetType(), nameof(SetOnce));
 }

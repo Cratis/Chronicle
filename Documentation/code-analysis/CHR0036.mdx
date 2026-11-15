@@ -1,8 +1,7 @@
 ---
+title: "CHR0036: Reducer must not have mutable state"
 description: Chronicle analyzer rule CHR0036 reports reducers that hold mutable state or inject storage, because reducers must be pure functions of state and event.
 ---
-# CHR0036: Reducer must not have mutable state
-
 ## Rule Description
 
 A class implementing `IReducerFor<T>` declares mutable instance state — a non-`readonly` field or a settable (non-`init`) property — or injects a storage primitive such as `IMongoCollection<T>` through its constructor. Reducers fold events into read-model state and Chronicle re-creates and replays them, so they must be stateless and deterministic.

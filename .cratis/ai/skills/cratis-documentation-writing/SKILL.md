@@ -1,6 +1,6 @@
 ---
 name: cratis-documentation-writing
-description: Plan, write, and improve user-centered Cratis documentation with a clear reader journey and one primary Diátaxis purpose per page. Use for product docs, tutorials, how-to guides, reference, explanations, and documentation reviews. For executable examples use cratis-technical-examples; for release notes use cratis-release-notes. Do not invent APIs or publish content.
+description: Use when planning a Cratis documentation reader journey, choosing a page's purpose or reviewing its structure. Not for example execution, release notes or publication; use the corresponding specialist.
 license: MIT
 metadata:
   cratis-hint-paths: "**/Documentation/**/*.{md,mdx}"
@@ -15,6 +15,24 @@ would let them know they succeeded? Use [Diátaxis](https://diataxis.fr/)
 as a compass for each page's primary purpose, not a purity test. This skill
 governs content and reader journeys; the owning repository governs page
 placement, navigation, and rendering.
+
+## Use the specialists at their boundary
+
+Read this skill to plan the reader journey, then read
+**cratis-engineering-docs-authoring** to draft from product evidence,
+**cratis-technical-examples** to verify code, commands, configuration and output,
+and **cratis-llm-friendly-documentation** when discovery or exported representations
+are involved. Read **cratis-writing-voice-and-cadence** before revising existing
+prose. Skill availability is not evidence that its instructions were read.
+Before drafting or revising explanations beside examples, read and apply
+[Explaining code](../cratis-engineering-docs-authoring/references/explaining-code.md).
+Use its worked transformations to choose the detail that carries the explanation;
+use its multi-client guidance before choosing shared prose, tabs or separate
+procedures. Read the resulting paragraphs for connected reasoning, not just
+coverage of accuracy questions.
+The [documentation rule](../../rules/documentation.md) owns Platform naming and
+product-claim constraints; do not turn an umbrella label into a dependency on
+all components.
 
 ## Classify before writing
 
@@ -39,13 +57,15 @@ Rules per type:
   path, with no registration or wiring a convention already does, then name
   what the framework did that the reader cannot see.
 - **How-to guide** — assume competence. State the goal, list prerequisites,
-  give the steps, done. No teaching.
+  give the steps and a completion check. Explain necessary concepts, effects,
+  and recovery beside the step; link sustained teaching elsewhere.
 - **Reference** — exhaustive within its declared scope and terse. For each
   public option or API, cover type, required/optional status, default, valid
   values, return behavior, errors and compatibility where applicable. State
   scope and link to a working usage example; do not turn it into a lesson.
-- **Explanation** — no steps. Discuss concepts, trade-offs, and design
-  decisions. Diagrams are welcome here.
+- **Explanation** — discuss concepts, trade-offs, and design decisions. Short
+  steps or examples can make an effect concrete without becoming a full
+  procedure. Diagrams are welcome when they clarify a relationship.
 
 A brief prerequisite or explanation may serve the main journey. If a reader
 also needs an exhaustive lookup, link a reference page rather than burying it
@@ -57,34 +77,41 @@ and neighboring pages; ask only when the alternatives change the outcome.
 1. Find the authored source, neighboring pages, existing user entry points,
    and current product behavior. Do not edit generated site copies. Identify
    whether the reader is new, migrating, troubleshooting, or looking up an API.
-2. Write the question they came with and the success signal in one sentence.
-   Draft a title and first paragraph that make the problem and payoff clear;
-   avoid opening with an abstract product definition or an internal type name.
+2. Identify the question the reader came with and what would answer it.
+   Let the title and opening serve that task: a tutorial can introduce a concrete
+   problem and payoff; a reference entry can state the requested contract directly.
+   Include context when it helps the reader act or understand.
 3. Trace a short route from that page to one clear 'start here' entry,
    targeted recipes, and exact reference. Give different languages or hosts
    their own procedures when a shared path cannot be run as written. A
    'coming from X' bridge should map familiar concepts to the new workflow,
-   not replace it. When a page shows several backends, state how they differ
-   once, in a "how the backends differ" table near the start: identity
-   source, id and response wire types, default authorization, live versus
-   snapshot queries, and unsupported features with their tracking issue.
-   Inside a step, write only what the current tab's reader needs. Across a
-   series, keep backend limitations in one table on the series index and link
-   it; don't repeat an issue-tracked limitation on every page.
+   not replace it. When comparison helps readers choose among backends, use a
+   "how the backends differ" table near the start for relevant distinctions:
+   identity source, id and response wire types, default authorization, live versus
+   snapshot queries, and unsupported features with their tracking issue when
+   available. Across a series, keep backend limitations in one table on the series index
+   and link it, while keeping action-changing differences beside the affected
+   example. Keep essential shared context and warnings outside tabs. Check each
+   client independently: shared concepts do not imply shared setup, semantics or
+   support. Give divergent setup its own coherent procedure.
 4. Link required tools to their canonical installation procedures before the
    first command. For cross-product prerequisites, use a verified public route;
    a named Markdown reference is defined on this same page, not in another
    repository. Do not revive DocFX `xref:` symbols or duplicate another
    product's setup recipe. See the documentation formatting rule for syntax.
-5. Draft in workflow order. For a tutorial, use one working domain throughout,
-   show what to run and what appears, and recap before adding another concept.
-   For a how-to, keep only what the specific task needs. Link out for details.
+5. Draft in workflow order. For a tutorial, use one working domain throughout
+   and show what to run and what appears. Recap only when a longer thread needs
+   reorientation before another concept. For a how-to, keep only what the
+   specific task needs. Link out for details.
    Many Cratis readers are adopting a paradigm (event sourcing, event
    modeling, vertical slices), not only a tool: link the explanation from the
    start route, but let the reader reach a first success before the theory.
 6. Read the rendered page as a newcomer: could they find it, begin without
    hidden prerequisites, recover from a common mistake, and recognize success?
-   Then check claims, examples, accessibility, links, and the owning gates.
+   For a new or materially changed journey, read and use
+   [fresh-context reader review](references/reader-review.md). An author's
+   reread is useful but is not independent reader evidence. Check claims,
+   examples, accessibility, links, and the owning gates separately.
 
 Use support questions and user feedback as evidence: ask what they searched
 for, where they looked, and which step failed. Repair the entry link, wording,
@@ -105,12 +132,13 @@ explaining something to a capable developer, confident but never condescending.
 
 - **Active voice, present tense.** "Chronicle appends the event", not "The
   event is appended by Chronicle."
-- **Second person.** "You configure…", not "One configures…" or "It is
-  possible to configure…".
+- Address the reader when giving an action: "You configure…". In reference
+  and explanation, let the API or component be the subject when that is clearer.
 - **Lead with the reader's problem and payoff.** Explain why a capability
   matters before its configuration, except in a terse how-to or reference.
-- Use headings, lists, and code blocks to organize content; dense paragraphs
-  lose readers.
+- Develop explanations in connected paragraphs. Use headings to locate them,
+  lists for real steps, and tables for comparisons; do not fragment reasoning
+  into a series of labeled boundaries.
 - Focus on public behavior. Explain what happens behind an example when the
   reader needs it to understand the result, without turning the page into an
   internal implementation manual.
@@ -173,6 +201,26 @@ because the site builds: syntax and behavior are different checks.
 A page is done for this change, not finished forever. Expect to revisit its
 wording, structure and examples as readers hit them.
 
+## Guide the next useful action
+
+Give enough context to choose a relevant path, then place each prerequisite
+beside its first use. Distinguish optional integration from required setup.
+For a procedure, show a small meaningful action, its visible result and any
+invisible effect before linking the next task or exact reference. Develop the
+explanation from that action using **Explaining code**, rather than publishing
+a separate list of responsibilities, defaults and limits. Link
+source-backed recovery at likely failure points; do not invent error messages
+or recovery commands. Keep lookup pages concise and explanations purpose-led,
+not a compulsory tutorial template.
+
+For Astro pages, deliberately choose supported presentation from
+[the site guide](references/cratis-site.md) when it helps the task: ordered
+steps, consequential callouts, peer-choice cards, or diagrams and code emphasis.
+A prose-only pass can miss useful aids; uniform decoration can obscure them.
+Preserve semantic order, accessibility and text/AI export meaning. Select the
+relevant perspectives in [reader review](references/reader-review.md),
+proportionately, without requiring a reviewer for every lens.
+
 ## Cratis platform specifics
 
 Read [Cratis site specifics](references/cratis-site.md) before writing a
@@ -191,14 +239,13 @@ feedback signal, and who decides page structure.
 - Do not fabricate URLs or version numbers — link only to resources you can
   verify exist.
 
-## Inspiration, not a template
+## Keep editorial research private
 
-Jeremy Miller describes user-centered journeys, tutorial-to-reference links,
-source-checked snippets, and a quick edit/publish loop in his
-[OSS-community account](https://jeremydmiller.com/2026/07/08/things-that-have-worked-for-our-oss-community/)
-and [documentation essay](https://www.linkedin.com/pulse/effective-oss-documentation-jeremy-miller-bh1ac/).
-His account is experience, not evidence that a site generator or AI model
-causes better documentation: borrow the habits, not Wolverine's structure.
+Keep stylistic influences and editorial research in private working notes,
+not documentation, GitHub issues, pull requests, release notes or other public
+text. Develop each reader journey from Cratis product evidence rather than
+copying another project's structure or claims. This does not remove third-party
+integration names, necessary API identifiers or links readers need to use them.
 
 ## Completion checklist
 
@@ -216,6 +263,9 @@ A page is done when:
   checkable result; longer examples come from compiling sample or spec source.
   Explanations of what happened match the backend the reader built.
 - The entry point, terminology, and next-step links fit the surrounding docs.
+- A new or materially changed journey has fresh-context reader evidence, or
+  explicitly reports that review as unavailable. Missing steps and guessed
+  prerequisites are gaps, not reader success.
 - All internal links resolve; all external links are real.
 - Mermaid blocks are syntactically valid.
 - The file ends with a single trailing newline.

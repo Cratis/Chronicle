@@ -3,11 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -22,12 +22,16 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="jobGauges">The <see cref="IObserverJobGauges"/> the job reports its progress to.</param>
 public class CatchUpObserver(
     IObserverServiceClient catchupServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<CatchUpObserver> logger) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
+    ILogger<CatchUpObserver> logger,
+    IObserverJobGauges? jobGauges = null) : Job<CatchUpObserverRequest, JobStateWithLastHandledEvent>, ICatchUpObserver
 {
+    readonly ObserverJobGaugeReporter _gauge = new(jobGauges, ObserverJobGaugeType.CatchUp);
+
     /// <inheritdoc/>
     /// <remarks>
     /// Catching up is reached through Subscribe, and behind Subscribe sits the client's registration call with a
@@ -37,20 +41,30 @@ public class CatchUpObserver(
     protected override bool StartStepsInBackground => true;
 
     /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _gauge.Release();
+        return base.OnDeactivateAsync(reason, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnBeforeStartingJobSteps()
     {
         await catchupServiceClient.BeginCatchupFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
     protected override async Task OnBeforeResumingJobSteps()
     {
         await catchupServiceClient.ResumeCatchupFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        _gauge.Release();
         using var scope = logger.BeginJobScope(JobId, JobKey);
 
         // A finalization that fails — a final flush whose outcome is unknown — throws and fails the job, so the
@@ -97,6 +111,14 @@ public class CatchUpObserver(
     {
         await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
         State.HandleResult(result, jsonSerializerOptions);
+        _gauge.Update(State.Progress);
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnStopped()
+    {
+        _gauge.Release();
+        return base.OnStopped();
     }
 
     /// <inheritdoc/>
@@ -154,7 +176,7 @@ public class CatchUpObserver(
 
         // The keys are registered whichever shape the steps take: live delivery is held back per partition while
         // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
-        var steps = CreateStepsFor(request, keysToCatchUp);
+        var steps = CreateStepsFor(request, keysToCatchUp, (await observer.GetSubscription()).DeliversPartitionPages);
         if (steps.Count == 0)
         {
             // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
@@ -166,9 +188,10 @@ public class CatchUpObserver(
         return steps;
     }
 
-    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys)
+    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys, bool deliversPartitionPages)
     {
-        if (request.ObserverType == ObserverType.Projection)
+        // An observer that takes pages spanning partitions is caught up in one walk, like a projection, so its pages are filled.
+        if (request.ObserverType == ObserverType.Projection || deliversPartitionPages)
         {
             return
             [

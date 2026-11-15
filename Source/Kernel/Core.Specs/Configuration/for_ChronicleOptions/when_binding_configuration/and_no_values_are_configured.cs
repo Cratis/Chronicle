@@ -29,6 +29,8 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_have_no_approved_hosts_by_default() => _options.Webhooks.AllowedHosts.ShouldBeEmpty();
     [Fact] void should_have_no_event_store_host_overrides_by_default() => _options.Webhooks.EventStoreAllowedHosts.ShouldBeEmpty();
     [Fact] void should_default_the_revise_interval() => _options.ConnectedClients.ReviseIntervalSeconds.ShouldEqual(2);
+    [Fact] void should_default_the_subscription_check_interval() => _options.ConnectedClients.SubscriptionCheckIntervalSeconds.ShouldEqual(60);
+    [Fact] void should_default_the_subscription_settle_window() => _options.ConnectedClients.SubscriptionSettleSeconds.ShouldEqual(30);
     [Fact] void should_default_the_reservation_ttl() => _options.ConnectedClients.ReservationTtlSeconds.ShouldEqual(30);
     [Fact] void should_default_the_stale_threshold() => _options.ConnectedClients.StaleThresholdSeconds.ShouldEqual(5);
     [Fact] void should_default_the_observe_interval() => _options.ConnectedClients.ObserveIntervalSeconds.ShouldEqual(1);
@@ -46,6 +48,7 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(2);
     [Fact] void should_default_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(5);
     [Fact] void should_default_the_max_concurrent_registrations() => _options.Observers.MaxConcurrentRegistrations.ShouldEqual(0);
+    [Fact] void should_default_the_max_concurrent_subscriptions_to_automatic() => _options.Observers.MaxConcurrentSubscriptions.ShouldEqual(0);
     [Fact] void should_default_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(500);
     [Fact] void should_default_causation_property_retention() => _options.Events.CausationPropertyRetention.ShouldEqual(CausationPropertyRetention.Retain);
     [Fact] void should_default_the_health_port_to_not_set() => _options.Health.Port.ShouldBeNull();

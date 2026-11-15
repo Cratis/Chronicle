@@ -69,6 +69,9 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
     }
 
     /// <inheritdoc/>
+    public Task<bool> HasSubscribers() => Task.FromResult(_subscribers.Count > 0);
+
+    /// <inheritdoc/>
     public async Task Notify(EventStoreNamespaceName namespaceName, ReadModelKey readModelKey, JsonObject readModel, ReadModelChangeContext change)
     {
         // The subscriber count is the decisive signal: zero here while a client is watching means

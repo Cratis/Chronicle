@@ -1,17 +1,22 @@
 ---
 uid: Chronicle.Testing.Reactors
-description: Test Chronicle reactors by putting logic in pure functions and proving the framework contract with ReactorScenario.
+title: Test Chronicle reactor decisions and dispatch
+description: Test Chronicle reactor decisions with direct handler calls, then use ReactorScenario for dispatch and seeded read-model lookup without a server.
 ---
-# Testing Reactors
 
-A reactor turns an event into a side effect — the command or event that should follow. When your reactors return those side effects, most of what you want to verify is a pure function you can test with a plain method call, and Chronicle's `ReactorScenario<TReactor>` covers the framework wiring around it — all in-process, with no Chronicle server, gRPC transport, or observer registration required.
+<a id="testing-reactors"></a>
+
+Test a Chronicle reactor's decision with a direct handler call. Use the .NET `ReactorScenario<TReactor>` when you also need to check event dispatch, dependency resolution, or read-model lookup without starting a Chronicle server.
+
+A reactor responds to an event by producing a side effect, such as another event or a command. Separating that decision from the work of executing it lets a test answer a specific question: given this event and this read model, what should happen next?
 
 ## Two levels of testing
 
-- **The logic** — construct the reactor and call the handler directly, asserting the command or event it returns. Fast, no infrastructure, and resilient to framework changes. This is your default.
-- **The wiring** — use [`ReactorScenario<TReactor>`](scenario) to prove Chronicle materializes the right read model, resolves dependencies, dispatches the right handler, and routes the produced side effect through the real invoker.
+Start by constructing the reactor and calling its handler with the event and read model it needs. Assert on the returned command or event. When the handler depends only on those inputs, this is a pure-function test: Chronicle does not participate in the call.
 
-The rule of thumb: logic goes to a pure function, the framework contract goes to `ReactorScenario`.
+Move to [`ReactorScenario<TReactor>`](scenario) when the question involves Chronicle's invocation path. The scenario selects the handler by event type, resolves dependencies, looks up explicitly seeded read models, and records returned side effects through the real `ReactorInvoker`. It does not build those read models from the supplied events or execute the recorded side effects.
+
+Keep server-backed integration tests for observer registration and delivery, retry scheduling, persistence, and execution of external effects. A passing scenario shows what the reactor produced in-process, not that a command ran or an event reached another observer.
 
 ## Topics
 

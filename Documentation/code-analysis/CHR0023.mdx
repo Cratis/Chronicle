@@ -1,8 +1,7 @@
 ---
+title: "CHR0023: Ambiguous parent key for [ChildrenFrom] collection"
 description: Chronicle analyzer rule CHR0023 reports [ChildrenFrom] collections whose parent key cannot be inferred unambiguously, and how to name it explicitly.
 ---
-# CHR0023: Ambiguous parent key for [ChildrenFrom] collection
-
 ## Rule Description
 
 When a `[ChildrenFrom]` collection omits its `parentKey` argument, Chronicle infers the parent key by matching the parent read model's identifier type against the child event's properties (excluding the child `key`). When more than one property still matches that type, the inference is ambiguous — it would resolve by declaration order, which is fragile.

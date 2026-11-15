@@ -43,13 +43,13 @@ Select from these canonical rules in `.cratis/ai/rules/` only after applying the
 
 ## C# specs — start with the plain call
 
-Specify pure decisions with plain calls first: `Handle()`, `Handle(providedValue)`, reducers and reactor logic. Add the four in-process scenario helpers where the pipeline, validation, constraints or projections contribute proof; prefer them over out-of-process Chronicle host specs for those behaviors:
+Specify pure `Handle()`, validator, reducer and reactor decisions with plain calls and supplied read-model state. Follow `.cratis/ai/rules/specs.scenarios.csharp.md`: add exactly the scenarios its per-artifact decision table obligates (pipeline and authorization, constraints, projection and reducer dispatch, reactor dispatch and routing) plus application-owned race-policy proof, not a platform guard matrix. Keep the single cheap assembly-level admission spec for the application's own decision-model shapes. Prefer in-process helpers over out-of-process Chronicle hosts for the applicable behaviors:
 
 | Tool | Use for |
 |---|---|
 | `CommandScenario<TCommand>` | **State Change** — runs authorization + validators + `Provide()` + `Handle()` + appended events |
 | `EventScenario` | constraint violations, raw append/sequencing semantics |
-| `ReadModelScenario<TReadModel>` | **State View** — projection/reducer state from a sequence of events |
+| `ReadModelScenario<TReadModel>` | **State View** — one class per read model by default (another only for a sequence that cannot share it), many read-only assertions on shared setup |
 | `ReactorScenario<TReactor>` | **Automation / Translation** — reactor invocation + side effects |
 
 Reserve out-of-process integration specs for host/transport/infra boundaries the scenario helpers can't exercise.
@@ -87,14 +87,14 @@ public class and_all_information_is_valid : Specification
 #endif
 ```
 
-(`CommandScenario` event assertions are extension methods keyed by command + event type — `await _scenario.ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId[, predicate])`; seed prior state through `_scenario.Given.ForEventSource(id).Events(...)` or `_scenario.Services`. The mode matters: in legacy mode `Given` materializes an in-memory read-model dictionary only, so constraint preconditions go through `EventScenario`'s `Given`; in decision mode (selected automatically from the command's read-protection mode and dependencies) `Given` writes to the scenario's real log and `EventScenario` is unavailable (accessing it throws), so seed everything through `Given`. Check which mode the spec's scenario uses; see `specs.scenarios.csharp.md` and `cratis-application-slice-specifications`.)
+`CommandScenario` event assertions are extension methods keyed by command + event type: `await _scenario.ShouldHaveAppendedEvent<TCommand, TEvent>(eventSourceId[, predicate])`. Supply model state for business decisions; event seeding belongs to mapping/history/constraint proof, not read-protection plumbing. See `specs.scenarios.csharp.md` and `cratis-application-slice-specifications` for focused pipeline setup and advisory lookup pitfalls.
 
 ### What to specify
 
-0. **Every contract specification first** — one spec each, named after it, using the contract's example values. Then add the code-derived cases below that the contract lacks and report them as proposals for the contract (the `.play` model when one covers the slice, otherwise the agreed outline); never present them as contract coverage. A `.play` specification maps to a plain-call spec for a pure decision, with a scenario added where the pipeline, validation, constraints or projections matter; never edit, skip or delete a spec derived from the contract to make code pass — change the code or return an edit request.
+0. **Every contract specification first** — one spec each, named after it, using the contract's example values. Then add the code-derived cases below that the contract lacks and report them as proposals for the contract (the `.play` model when one covers the slice, otherwise the agreed outline); never present them as contract coverage. A `.play` specification maps to a plain-call spec for a pure decision, with a scenario added only for the pipeline composition it proves (never a simulated race); never edit, skip or delete a spec derived from the contract to make code pass — change the code or return an edit request.
 1. **Happy path** — succeeds, correct event(s) appended.
-2. **Each validation failure** — assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`. Do not assert on message strings by default; assert exact text only when that wording is the specified behavior, and name that behavior in the fact. Violate **only** the rule the spec is named after (build the command valid in every other respect), or a neighbouring rule makes it pass.
-3. **Business-rule violations** — each `Result<,>` rejection / guarded decision condition. Plain injection under `Off` is advisory; for read protection `On`, `[ProtectedDecision]` or stream decisions use `new CommandScenario<T>()` with seeded events, `AppendConcurrently` and `ShouldHaveValidationErrorBecauseOf(ValidationResultReason.ConcurrencyViolation)`, not pinned models and not `UseDecisionReads()`.
+2. **Each validation failure** — call the validator directly with supplied state; pipeline validation specs assert **both** `ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`. Do not assert on message strings by default; assert exact text only when that wording is the specified behavior, and name that behavior in the fact. Violate **only** the rule the spec is named after (build the command valid in every other respect), or a neighbouring rule makes it pass.
+3. **Business-rule violations** — call `Handle()` or the validator directly with the required model state and assert each rejection. Arc/Chronicle specs alone prove platform concurrency, conflict refusal and isolation. The application's only decision-read spec obligation is the single cheap shape-admission spec in `specs.scenarios.csharp.md`; do not repeat guard scenarios per decision.
 4. **Constraint violations** — `ShouldHaveConstraintViolationFor(name)` via `EventScenario`.
 5. **Authorization** — `ShouldNotBeAuthorized()` (an unauthorized result has no validation errors).
 6. **Repeat execution**, when a reactor invokes the command — the same command twice for the same source; specify whether the second is rejected, a no-op, or appends again.

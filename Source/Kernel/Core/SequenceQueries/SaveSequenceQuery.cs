@@ -3,8 +3,10 @@
 
 using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Arc.Validation;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.SequenceQueries;
@@ -57,30 +59,46 @@ public record SaveSequenceQuery(
     /// Handles the command.
     /// </summary>
     /// <param name="currentPrincipalAccessor"><see cref="ICurrentPrincipalAccessor"/> for resolving the owner.</param>
+    /// <param name="administratorAuthorization">The <see cref="IAdministratorAuthorization"/> for the administrator override.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the saved queries.</param>
-    /// <returns>Awaitable task.</returns>
-    public Task Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IStorage storage) =>
-        storage.GetEventStore(EventStore).SequenceQueries.Save(
-            new SequenceQueryDefinition(
-                Id,
-                Name,
-                Scope,
+    /// <returns>Null when the change was applied, otherwise the refusal.</returns>
+    public async Task<ValidationResult?> Handle(ICurrentPrincipalAccessor currentPrincipalAccessor, IAdministratorAuthorization administratorAuthorization, IStorage storage)
+    {
+        var queries = storage.GetEventStore(EventStore).SequenceQueries;
+
+        return await SequenceQueryChangeAccess.Change(
+            () => queries.Get(Id),
+            existing => existing.Owner,
+            existing => existing is null
+                ? queries.Insert(Definition(SequenceQueryOwners.GetCurrent(currentPrincipalAccessor)))
 
                 // Ownership follows the principal saving the query, never a value the client supplies,
-                // so a caller cannot plant a query into somebody else's private set.
-                SequenceQueryOwners.GetCurrent(currentPrincipalAccessor),
-                Folder,
-                Namespace,
-                EventSequenceId,
-                new SequenceQueryFilter(
-                    EventSourceId,
-                    EventSourceType,
-                    EventStreamType,
-                    CorrelationId,
-                    [.. EventTypes],
-                    [.. Tags],
-                    OccurredFrom,
-                    OccurredTo),
-                SequenceQuerySortByParser.Parse(SortBy),
-                Descending));
+                // so a caller cannot plant a query into somebody else's private set. Updating an
+                // existing query keeps the owner it is stored under, and only while it still is.
+                : queries.Update(Definition(existing.Owner), existing.Owner),
+            SequenceQueryChangeAccess.QueryRefusal,
+            currentPrincipalAccessor,
+            administratorAuthorization);
+    }
+
+    SequenceQueryDefinition Definition(SequenceQueryOwner owner) =>
+        new(
+            Id,
+            Name,
+            Scope,
+            owner,
+            Folder,
+            Namespace,
+            EventSequenceId,
+            new SequenceQueryFilter(
+                EventSourceId,
+                EventSourceType,
+                EventStreamType,
+                CorrelationId,
+                [.. EventTypes],
+                [.. Tags],
+                OccurredFrom,
+                OccurredTo),
+            SequenceQuerySortByParser.Parse(SortBy),
+            Descending);
 }

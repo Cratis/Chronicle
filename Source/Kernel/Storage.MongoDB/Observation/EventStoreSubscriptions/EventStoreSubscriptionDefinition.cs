@@ -34,4 +34,14 @@ public class EventStoreSubscriptionDefinition
     /// Gets or sets the generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the named-tag filter. Documents written before the filter existed have none.
+    /// </summary>
+    public IList<NamedTagDocument> NamedTags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the source namespaces to observe. Documents written before the restriction existed have none, which means every namespace.
+    /// </summary>
+    public IList<string> SourceNamespaces { get; set; } = [];
 }

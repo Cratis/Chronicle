@@ -138,4 +138,9 @@ public class ProjectionDefinition
     /// Gets or sets the definition storage format. Zero identifies legacy, lossy definitions.
     /// </summary>
     public int StorageFormatVersion { get; set; }
+
+    /// <summary>
+    /// Gets or sets the graph mappings, serialized as JSON, when the projection targets a graph.
+    /// </summary>
+    public string? Graph { get; set; }
 }

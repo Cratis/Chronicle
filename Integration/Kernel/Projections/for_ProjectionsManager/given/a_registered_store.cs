@@ -42,7 +42,7 @@ public class a_registered_store(NamespaceSubscriptionFixture fixture) : Specific
 
     async Task Establish()
     {
-        var initialStore = await ChronicleClient.GetEventStore($"subscriptions-{Guid.NewGuid():N}", "initial-tenant");
+        var initialStore = await ChronicleClient.GetEventStore($"subs-{Guid.NewGuid():N}", "initial-tenant");
         await initialStore.DiscoverAll();
         await initialStore.RegisterAll();
         (await initialStore.WaitForRegistration(TimeSpan.FromSeconds(30))).IsSuccess.ShouldBeTrue();

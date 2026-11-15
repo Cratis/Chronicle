@@ -23,6 +23,7 @@ public class and_subscription_is_already_subscribed : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
+        _silo.AddNamespaceCasing();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
@@ -51,7 +52,8 @@ public class and_subscription_is_already_subscribed : Specification
 
     [Fact] void should_not_unsubscribe() => _observer.DidNotReceive().Unsubscribe();
 
-    [Fact] void should_not_subscribe_again() =>
+    [Fact]
+    void should_not_subscribe_again() =>
         _observer.DidNotReceive().Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             Arg.Any<ObserverType>(),
             Arg.Any<IEnumerable<EventType>>(),

@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_ReminderTable.when_updating_etags;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class on_sqlite : given.a_reminder_table
 {
     ReminderEntry _entry;

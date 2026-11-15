@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Configuration;
@@ -28,6 +30,8 @@ public class a_registration : Specification
     protected readonly TaskCompletionSource<Exception> _error = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly List<IDisposable> _connections = [];
     Reactors _reactors;
+    protected Subject<ReactorMessage> _messages;
+    protected TaskCompletionSource _messagesReleased;
 
     void Establish()
     {
@@ -42,27 +46,42 @@ public class a_registration : Specification
 #pragma warning restore CA2012
         _reactors = new(
             _grainFactory,
-            Substitute.For<IReactorMediator>(),
+            CreateMediator(),
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
             new ActivitySource<Reactors>(),
             Options.Create(new ChronicleOptions()),
+            AllowingConnectionOwnership.Create(),
             NullLogger<Reactors>.Instance,
-            _gate);
+            _gate,
+            NamespaceCasingContext.Create(),
+            NoSiloDepartures.Instance);
         _grainFactory.ClearReceivedCalls();
         _client.ClearReceivedCalls();
         _gate.ClearReceivedCalls();
     }
 
+    protected virtual IReactorMediator CreateMediator() => Substitute.For<IReactorMediator>();
+
 #pragma warning disable CA2012 // Configuring the substitute; the ValueTask is the stubbed call, not an operation to await
     protected void ExhaustGate() => _gate.Enter(Arg.Any<CancellationToken>()).Returns(call => WaitForPermit(call.Arg<CancellationToken>()));
 #pragma warning restore CA2012
 
-    protected void Connect(string connectionId = "connection", CancellationToken cancellationToken = default)
+    protected void Connect(string connectionId = "connection", CallContext? callContext = null, CancellationToken cancellationToken = default)
     {
-        var messages = new Subject<ReactorMessage>();
+        var messages = _messages = new Subject<ReactorMessage>();
+        var released = _messagesReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observed = Observable.Create<ReactorMessage>(observer =>
+        {
+            var subscription = messages.Subscribe(observer);
+            return Disposable.Create(() =>
+            {
+                subscription.Dispose();
+                released.TrySetResult();
+            });
+        });
         _connections.Add(messages);
-        _connections.Add(_reactors.Observe(messages, new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
+        _connections.Add(_reactors.Observe(observed, callContext ?? new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
         messages.OnNext(new(new(new RegisterReactor
         {
             ConnectionId = connectionId,

@@ -59,6 +59,11 @@ public class ReadModelDefinition
     public Guid SinkConfigurationId { get; set; } = Guid.Empty;
 
     /// <summary>
+    /// Gets or sets the name of the sink configuration the read model stores to. Empty means the default sink.
+    /// </summary>
+    public string SinkName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the indexed property paths serialized as JSON.
     /// </summary>
     public string IndexesJson { get; set; } = "[]";

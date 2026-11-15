@@ -15,4 +15,5 @@ public class when_using_the_defaults : Specification
     void Because() => _tls = new Tls();
 
     [Fact] void should_skip_certificate_validation() => _tls.SkipCertificateValidation.ShouldBeTrue();
+    [Fact] void should_not_mark_validation_as_explicitly_configured() => _tls.HasExplicitSkipCertificateValidation.ShouldBeFalse();
 }

@@ -23,10 +23,10 @@ public class and_no_generation_floor_exists : given.a_startup_task
     [Fact] void should_read_generation_floors_before_applying_patches() => Received.InOrder(() =>
     {
         _storage.ReadGenerationFloors();
-        _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>());
+        _patchRunner.ApplyPatches(Arg.Any<CancellationToken>());
     });
 
-    [Fact] void should_still_apply_patches() => _patchManager.Received(1).ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>());
+    [Fact] void should_still_apply_patches() => _patchRunner.Received(1).ApplyPatches(Arg.Any<CancellationToken>());
     [Fact] void should_not_write_the_event_store_floor_without_opt_in() => _eventStoreStorage.GenerationFloor.DidNotReceiveWithAnyArgs().Advance(Arg.Any<GenerationFloorAdvance>());
     [Fact] void should_not_write_the_system_store_floor_without_opt_in() => _systemStorage.GenerationFloor.DidNotReceiveWithAnyArgs().Advance(Arg.Any<GenerationFloorAdvance>());
 }

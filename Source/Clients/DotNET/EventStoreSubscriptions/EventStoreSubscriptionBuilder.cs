@@ -16,12 +16,43 @@ public class EventStoreSubscriptionBuilder(IEventTypes eventTypes, EventStoreSub
 {
     readonly HashSet<EventTypeId> _eventTypes = new();
     readonly HashSet<EventType> _declaredEventTypes = new();
+    readonly List<NamedTag> _namedTags = [];
+    readonly List<string> _sourceNamespaces = [];
     EventGenerationDelivery _generationDelivery = EventGenerationDelivery.Compatibility;
 
     /// <inheritdoc/>
     public IEventStoreSubscriptionBuilder WithGenerationDelivery(EventGenerationDelivery generationDelivery)
     {
         _generationDelivery = generationDelivery;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptionBuilder WithNamedTag(string name, string value)
+    {
+        var tag = new NamedTag(new TagName(name), value);
+        if (!_namedTags.Contains(tag))
+        {
+            _namedTags.Add(tag);
+        }
+
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IEventStoreSubscriptionBuilder WithSourceNamespace(string @namespace)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(@namespace);
+        if (@namespace.Contains(','))
+        {
+            throw new ArgumentException("The namespace name must not contain a comma. A name like 'a,a' usually means the tenant header was sent twice.", nameof(@namespace));
+        }
+
+        if (!_sourceNamespaces.Contains(@namespace, StringComparer.OrdinalIgnoreCase))
+        {
+            _sourceNamespaces.Add(@namespace);
+        }
+
         return this;
     }
 
@@ -57,7 +88,9 @@ public class EventStoreSubscriptionBuilder(IEventTypes eventTypes, EventStoreSub
         return new(subscriptionId, sourceEventStore, _generationDelivery == EventGenerationDelivery.Pinned ? ids.ToArray() : ids)
         {
             GenerationDelivery = _generationDelivery,
-            EventTypePins = pins
+            EventTypePins = pins,
+            NamedTags = _namedTags.ToArray(),
+            SourceNamespaces = _sourceNamespaces.ToArray()
         };
     }
 

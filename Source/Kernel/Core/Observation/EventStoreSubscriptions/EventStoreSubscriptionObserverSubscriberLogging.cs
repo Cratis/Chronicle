@@ -17,6 +17,9 @@ internal static partial class EventStoreSubscriptionObserverSubscriberLogging
     [LoggerMessage(LogLevel.Warning, "Missing target event store in subscriber context for observer '{ObserverKey}'")]
     internal static partial void MissingTargetEventStore(this ILogger<EventStoreSubscriptionObserverSubscriber> logger, ObserverKey observerKey);
 
+    [LoggerMessage(LogLevel.Debug, "No subscription definition for observer '{ObserverKey}'; the event is not forwarded")]
+    internal static partial void NoDefinitionForObserver(this ILogger<EventStoreSubscriptionObserverSubscriber> logger, ObserverKey observerKey);
+
     [LoggerMessage(LogLevel.Debug, "Successfully forwarded events from observer '{ObserverKey}' to event store '{TargetEventStore}' inbox sequence '{InboxSequenceId}'")]
     internal static partial void SuccessfullyForwardedEvents(this ILogger<EventStoreSubscriptionObserverSubscriber> logger, ObserverKey observerKey, EventStoreName targetEventStore, EventSequenceId inboxSequenceId);
 

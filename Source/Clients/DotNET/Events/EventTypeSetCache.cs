@@ -137,7 +137,7 @@ internal sealed class EventTypeSetCache<TValue>
 
     sealed class Node
     {
-        readonly object _lock = new();
+        readonly Lock _lock = new();
         readonly ConditionalWeakTable<Type, Node>?[] _children = new ConditionalWeakTable<Type, Node>?[3];
         TValue? _value;
 

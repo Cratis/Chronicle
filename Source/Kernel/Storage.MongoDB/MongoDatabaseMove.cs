@@ -24,13 +24,14 @@ internal static class MongoDatabaseMove
     static readonly int[] _existingIndexCodes = [68, 85, 86];
 
     /// <summary>
-    /// Move the content of a database into another.
+    /// Copy every collection of a database, with its indexes, into another database, and drop the source once the
+    /// copy is confirmed.
     /// </summary>
     /// <param name="source">The <see cref="IMongoDatabase"/> to move from.</param>
     /// <param name="target">The <see cref="IMongoDatabase"/> to move to.</param>
     /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
-    /// <returns>True if there was anything to move, false if the source has no collections.</returns>
-    public static async Task<bool> Move(IMongoDatabase source, IMongoDatabase target, ILogger logger)
+    /// <returns>The <see cref="DatabaseMoveOutcome"/>: moved, kept because the copy could not be confirmed, or nothing to move.</returns>
+    public static async Task<DatabaseMoveOutcome> Move(IMongoDatabase source, IMongoDatabase target, ILogger logger)
     {
         var filter = new BsonDocument("type", "collection");
         var collections = (await (await source.ListCollectionsAsync(new ListCollectionsOptions { Filter = filter })).ToListAsync())
@@ -38,7 +39,7 @@ internal static class MongoDatabaseMove
             .ToArray();
         if (collections.Length == 0)
         {
-            return false;
+            return DatabaseMoveOutcome.NothingToMove;
         }
 
         var existing = (await (await target.ListCollectionNamesAsync()).ToListAsync()).ToHashSet(StringComparer.Ordinal);
@@ -59,8 +60,77 @@ internal static class MongoDatabaseMove
             await CopyDocuments(source.GetCollection<BsonDocument>(name), target.GetCollection<BsonDocument>(name));
         }
 
-        await source.Client.DropDatabaseAsync(source.DatabaseNamespace.DatabaseName);
-        return true;
+        // The source is the only copy of anything that did not make it across, so it is dropped only once every
+        // collection is confirmed to be in the target.
+        var confirmed = true;
+        foreach (var collection in collections)
+        {
+            confirmed &= await IsCopyConfirmed(source, target, collection["name"].AsString, logger);
+        }
+
+        if (!confirmed)
+        {
+            return DatabaseMoveOutcome.Kept;
+        }
+
+        return await Drop(source) ? DatabaseMoveOutcome.Moved : DatabaseMoveOutcome.MovedSourceRetained;
+    }
+
+    /// <summary>
+    /// Drop a database whose content has been copied elsewhere.
+    /// </summary>
+    /// <param name="database">The <see cref="IMongoDatabase"/> to drop.</param>
+    /// <returns>True if the database was dropped, false if the server refused to let it be dropped.</returns>
+    /// <remarks>
+    /// The readWriteAnyDatabase role, which is what Atlas hands an application user, does not grant the
+    /// dropDatabase action, but it does grant dropCollection. When the server refuses to drop the database,
+    /// its collections are dropped one by one instead, which leaves the same result: MongoDB removes a database once its
+    /// last collection is gone. A user granted neither can still copy, so the content has already moved; the source is
+    /// then left in place for someone with the rights to drop, rather than failing a move that has done its work.
+    /// Only a refusal on authorization grounds is tolerated, any other failure surfaces.
+    /// </remarks>
+    internal static async Task<bool> Drop(IMongoDatabase database)
+    {
+        try
+        {
+            await database.Client.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+            return true;
+        }
+        catch (Exception exception) when (MongoDBAuthorizationErrors.IsUnauthorized(exception, out _))
+        {
+            // Not allowed to drop the database; fall back to dropping its collections below.
+        }
+
+        try
+        {
+            var names = await (await database.ListCollectionNamesAsync()).ToListAsync();
+            foreach (var name in names.Where(_ => !_.StartsWith("system.", StringComparison.Ordinal)))
+            {
+                await database.DropCollectionAsync(name);
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (MongoDBAuthorizationErrors.IsUnauthorized(exception, out _))
+        {
+            return false;
+        }
+    }
+
+    static async Task<bool> IsCopyConfirmed(IMongoDatabase source, IMongoDatabase target, string name, ILogger logger)
+    {
+        var sourceCount = await source.GetCollection<BsonDocument>(name).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+
+        // The target can hold more than the source, documents the running kernel wrote there, but never fewer: every
+        // document of the source is either copied or was already there.
+        var targetCount = await target.GetCollection<BsonDocument>(name).CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+        if (targetCount >= sourceCount)
+        {
+            return true;
+        }
+
+        logger.UnconfirmedCopy(name, source.DatabaseNamespace.DatabaseName, target.DatabaseNamespace.DatabaseName, sourceCount, targetCount);
+        return false;
     }
 
     static async Task CopyIndexes(IMongoCollection<BsonDocument> source, IMongoDatabase target, string name, ILogger logger)

@@ -10,7 +10,8 @@ The CLI and Stage render supported event-triggered Automation slices as Chronicl
 reactors. Translate/captures, non-event triggers and opaque bodies remain `STAGE-ESM-024`;
 Claim-reading/opaque `runs as` gates (`-034`), legacy `from` (`-035`), mixed effects (`-037`), unsupported mappings (`-039`)
 and protected destinations (`-040`) also remain refused. Command specs that cascade into
-reactions remain `-011`; supported single-hop append specs now render, as do semantic
+reactions remain `-011`. Specifications that state the commands their reactions invoke
+(`then invokes`, ESM v34) are not yet admitted either: check current boundaries. Supported single-hop append specs now render, as do semantic
 reaction `from` and role/authenticated system identities. Only refused scope is hand-written delivery with the model as
 its contract. Source: Stage `Documentation/reference/reaction-rendering.md`;
 full admission: `cratis-stage-rendering-and-sandbox` `references/admission.md`.

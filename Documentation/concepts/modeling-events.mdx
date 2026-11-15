@@ -1,27 +1,31 @@
 ---
-title: Modeling events well
-description: The single most important skill in event sourcing — how to design events that are clear today and still make sense in five years.
+title: Modeling events in Cratis Chronicle
+description: Model events in Cratis Chronicle as business facts, with clear names and focused payloads that remain useful for projections, reactions, and history.
 ---
 
-Events are the foundation everything else is built on. Get them right and projections, reactors, and read models fall into place. Get them wrong and no amount of clever projection code will save you. This is the guide to getting them right.
+An event in Cratis Chronicle records a business fact that happened, rather than an instruction to do something or a copy of the current state. Model that fact explicitly so a projection can build a view of it, a reactor can act on it, and a later reader can understand the change.
 
-The guiding principle behind all of it: **an event is a fact — an immutable record of something that happened.** Every rule below follows from taking that seriously.
+Start with the decision the system accepted. For an order, placing it and applying a discount are meaningful facts; overwriting an order row does not explain either decision. The event's name and payload should preserve that distinction.
 
 ## Name events as facts, in the past tense
 
-An event states what *happened*, so its name is a past-tense verb phrase in the language of the domain: `OrderPlaced`, `AddressChanged`, `PaymentCaptured`, `BookReturned`. Not `CreateOrder` (that's a command — an intent), not `OrderState` (that's a model). If you can't name it in the past tense, it isn't an event yet.
+Use a past-tense phrase in the domain's language: `OrderPlaced`, `AddressChanged`, `PaymentCaptured`, or `BookReturned`. `CreateOrder` names a command, which expresses intent and can still be rejected. `OrderState` names a model, not the change that produced it. If the name sounds like an instruction, identify the fact that becomes true after the instruction succeeds.
 
 <ChronicleClientTabs snippet="concepts/modeling-events/fact-vs-intent" />
 
 ## One event, one purpose
 
-Each event captures a single, meaningful change. Resist the "kitchen-sink" event that carries everything about an entity with most fields irrelevant on any given change. Multipurpose events force every consumer to figure out *which* change actually happened.
+Give each event one meaningful change to describe. A generic `CustomerUpdated` with optional name, address, and status fields makes every consumer infer which change occurred. Separate facts let a consumer subscribe to the change it needs without interpreting unrelated fields.
 
 <ChronicleClientTabs snippet="concepts/modeling-events/single-purpose" />
 
-## Never nullable — if it's optional, you need a second event
+<a id="never-nullable--if-its-optional-you-need-a-second-event"></a>
 
-This is the rule that trips up newcomers most, and it's the most important. An event records what *was true* at the moment it happened. A nullable property means "this fact sometimes didn't happen" — which is a contradiction. If a value is sometimes present and sometimes not, that's **two different facts**, so model two events.
+## When optional data hides a separate fact
+
+Avoid nullable properties that stand in for a separate business fact. In the example below, placing an order and applying a discount describe different changes. Separate events make the distinction visible instead of asking each consumer to interpret an optional discount.
+
+This is modeling guidance, not a prohibition in Chronicle's schema system: nullable properties are supported. The question is whether absence describes the fact accurately or hides another change that deserves its own name.
 
 <ChronicleClientTabs snippet="concepts/modeling-events/no-nullable" />
 
@@ -34,19 +38,21 @@ rather than raw JSON equality to compare appended and stored content. See
 
 ## Capture the decision, not the field write
 
-The temptation coming from CRUD is to mirror table columns: a `Customer` changed, so emit `CustomerUpdated`. But the value of event sourcing is in the *meaning*. `AddressChanged` tells you a customer moved; a generic update tells you nothing. Model the business decision or transition, and the audit trail, analytics, and reactions have something precise to work from.
+When moving from CRUD, it is tempting to emit `CustomerUpdated` whenever a row changes. Name the business transition instead. `AddressChanged` records an address change, but it does not by itself say whether the customer moved or corrected a typo. If that distinction matters to the business, capture it rather than expecting a consumer to reconstruct the reason later.
 
 ## Carry what was true then — and only that
 
-An event holds the data that was true at the moment it occurred, captured by value. Don't reference mutable state that might change later, and don't enrich an event with data a consumer can derive itself. The event should be readable on its own, years from now, without joining against anything.
+Capture values whose historical meaning matters. An order can reference a product by identifier, but looking up that product's current price cannot explain the price accepted for the order. Record the accepted price in the event.
+
+References are useful for identity; they are not substitutes for historical values. Include enough data to interpret the fact later, without copying every field a particular screen might want. Derive presentation-specific values in a read model.
 
 ## The five-year test
 
-Before you commit an event type, ask: **"Will this still make sense to someone reading it in five years, with no other context?"** Clear domain naming and self-contained data are what make that a *yes*. Events are forever — they're worth a minute of thought.
+Before committing to an event type, ask whether someone could understand it in five years without the code that produced it. Check the name, identifiers, units, and values that explain the fact. A field named `Amount` needs a clear currency or other unit; a reference needs a clear meaning. This review is cheaper before consumers depend on the schema.
 
 ## Events change by migration, never by editing
 
-When an event type needs to evolve, you don't rewrite history — you describe how to read old events as the new shape with an [event type migration](./event-type-migrations). Prefer *adding* a new event or field over overloading an existing event; it keeps each fact singular and clear. See the recipe: [Evolve an event's shape](../scenarios/evolve-an-event.md).
+When the same fact needs a new shape, define a new generation and an [event type migration](./event-type-migrations) rather than silently changing the stored contract. If the business meaning has changed, introduce a different event type instead of making an old name mean two things. [Evolve an event's shape](../scenarios/evolve-an-event.md) walks through the generation and migration workflow.
 
 ## Where this leads
 

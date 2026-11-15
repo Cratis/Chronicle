@@ -19,8 +19,9 @@ paths:
   jobs on the Free plan, 5 for macOS). Every queued job competes with every repository.
 - **Public repositories** run free on hosted runners; **private repositories bill every
   minute** — Linux 1×, Windows 2×, macOS 10× — against a small monthly allowance.
-- The organization runs its own scale set (`cratis-arc`). Jobs there cost nothing and
-  do not touch the hosted pool.
+- The organization runs self-hosted scale sets on UpCloud (`cratis-arc` and
+  `cratis-arc-small`). They do not touch the hosted pool, but share infrastructure
+  capacity and cost across Cratis repositories.
 
 ## Scheduling
 
@@ -54,6 +55,9 @@ paths:
   `cancel-in-progress` is false or unset. Keep a single pending slot only for a documented
   design where each run releases everything since the last release, so a replaced run
   loses nothing; say so in a comment beside the `concurrency` block.
+- Avoid duplicate `push` and `pull_request` verification for the same feature-branch
+  commit: use pull requests for branch verification and restrict push verification
+  to the default branch. Filter unrelated heavy jobs by changed paths.
 - **A required check must not be skippable by `paths:` alone.** A workflow that never
   starts never reports, and the pull request hangs. Gate jobs on a change-detection job
   and require one always-run aggregator job (`if: always()`, checks every `needs.*.result`).
@@ -74,9 +78,26 @@ paths:
 
 ## Runners
 
-- Private-repository jobs belong on the organization scale set: `runs-on: cratis-arc`,
-  or a repository variable such as `${{ vars.<REPO>_RUNNER || 'ubuntu-latest' }}` so
-  routing changes without a code change.
+These are judgment-shaped routing and cache choices. Read the
+[Infrastructure runner guide](https://github.com/Cratis/Infrastructure/blob/main/Documentation/deployment/github-runners.md)
+for UpCloud runner resources, ceilings and storage; link it rather than copying
+capacity numbers into workflows or guidance.
+
+- Use GitHub-hosted runners for public repositories (free hosted execution) and jobs
+  needing Windows or macOS. Private Linux jobs use `cratis-arc` for builds, specs,
+  audits, deployments or Docker; `cratis-arc-small` is only for lightweight script/API
+  guards. The small set has no Docker: no container actions, services or Testcontainers.
+  A repository runner variable can make routing configurable.
+- Compare job memory and in-job parallelism with the documented limits before
+  increasing fan-out. Both sets share nodes; pod ceilings and node cold starts can
+  make extra jobs wait. Use the `cratis-ci-pipeline-performance` skill for sizing.
+- Runner pods are ephemeral: workspaces, Docker data and local package downloads do
+  not persist between jobs. Use the shared Cratis cache actions, `actions/cache` or
+  `setup-*` caching keyed on lockfiles; never assume a warm local package cache.
+- When testing locally packed `0.0.0-ci` packages, a restored global NuGet cache can
+  supply stale bytes for the same package ID/version. Use a unique version per run,
+  a per-run packages folder, or remove that package from the restored cache before
+  restoring consumers. See the skill's `references/caching.md`.
 - On self-hosted runners, `actions/setup-dotnet` cannot write `/usr/share/dotnet`.
   Set `DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet` on the setup step.
 - **Never** route `pull_request`-triggered jobs of a *public* repository to self-hosted
@@ -94,6 +115,9 @@ paths:
   content the source repository's CI verified before the rollout, may carry
   `[skip ci]` once the same wrapper content has landed with CI running in one canary
   repository. Package-update bots, and any commit touching another file, keep normal CI.
+- Never put a skip token in a pull request title or an ordinary commit message: a
+  merge commit inherits the pull request title, so GitHub then runs nothing on the
+  default branch. See `cratis-engineering-release-trains`.
 - Comment-triggered agent workflows must gate on the trigger phrase in the job's `if:`
   (for example `contains(github.event.comment.body, '@claude')`) so a runner only
   starts when the agent is actually addressed.
@@ -106,3 +130,9 @@ paths:
   four unintended releases on 2026-08-25.
 - Every repository's release-intent gate must accept `no-release`; a gate that only
   accepts `major`/`minor`/`patch` forces exactly that mistake.
+- Do not merge a pull request that changes `.github/workflows/` while a release Publish
+  run in the same repository has not created its tag yet. `GITHUB_TOKEN` cannot tag a
+  commit whose workflows differ from the default branch, and rerunning fails the same
+  way. Recover with the Publish `workflow_dispatch` from current main.
+- A release-verify job asserts that the GitHub release `v<version>` exists. A watch
+  picks the exact run by head SHA, never by a time window.

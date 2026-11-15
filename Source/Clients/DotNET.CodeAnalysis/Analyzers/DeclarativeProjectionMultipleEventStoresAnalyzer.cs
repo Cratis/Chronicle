@@ -116,6 +116,7 @@ public class DeclarativeProjectionMultipleEventStoresAnalyzer : DiagnosticAnalyz
                typeName.Contains("IProjectionBuilder") ||
                typeName.Contains("IFromBuilder") ||
                typeName.Contains("IJoinBuilder") ||
+               typeName.Contains("IChildrenJoinBuilder") ||
                typeName.Contains("IChildrenBuilder");
     }
 }

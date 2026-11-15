@@ -47,7 +47,7 @@ internal sealed class ExternalServices(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>> GetExternalServices(global::Cratis.Chronicle.Contracts.ExternalServices.GetExternalServicesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.ExternalServices.ExternalService.GetExternalServices((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
@@ -59,7 +59,7 @@ internal sealed class ExternalServices(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>> ObserveExternalServices(global::Cratis.Chronicle.Contracts.ExternalServices.ObserveExternalServicesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             () => global::Cratis.Chronicle.ExternalServices.ExternalService.ObserveExternalServices((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceResponse>)_.Select(ToExternalServiceResponse).ToList()),

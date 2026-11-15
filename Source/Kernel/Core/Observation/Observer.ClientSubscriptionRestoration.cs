@@ -13,6 +13,9 @@ public partial class Observer
     public Task<bool> KnowsClient(ConnectionId connectionId) => Task.FromResult(IsKnownClient(connectionId));
 
     /// <inheritdoc/>
+    public Task<bool> IsClientTarget(ConnectionId connectionId) => Task.FromResult(IsTarget(connectionId));
+
+    /// <inheritdoc/>
     public async Task RestoreClientSubscription<TObserverSubscriber>(
         ObserverType type,
         IEnumerable<EventType> eventTypes,
@@ -53,7 +56,10 @@ public partial class Observer
             filters);
     }
 
+    bool IsTarget(ConnectionId connectionId) =>
+        _subscription.Targets.Any(target => target.ConnectedClient?.ConnectionId == connectionId);
+
     bool IsKnownClient(ConnectionId connectionId) =>
-        _subscription.Targets.Any(target => target.ConnectedClient?.ConnectionId == connectionId) ||
+        IsTarget(connectionId) ||
         _supersededRegistrations.Exists(registration => registration.ConnectionId == connectionId);
 }

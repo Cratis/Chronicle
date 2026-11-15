@@ -43,23 +43,6 @@ public partial class InMemorySink
         return Task.FromResult(state is null ? IsolatedReplaceResult.Removed : IsolatedReplaceResult.Replaced);
     }
 
-    Task<IEnumerable<FailedPartition>> ApplyRemoval(object key, EventSequenceNumber sequenceNumber, SinkWriteMode mode)
-    {
-        bool removedFromPrimary;
-        lock (_collectionLock)
-        {
-            if (IsRejectedGuardedRemoval(key, sequenceNumber, mode))
-            {
-                return Task.FromResult<IEnumerable<FailedPartition>>([]);
-            }
-            Collection.Remove(key);
-            LastHandledEventSequenceNumbers.Remove(key);
-            removedFromPrimary = !_isReplaying;
-        }
-        NotifyChanged(key, removedFromPrimary);
-        return Task.FromResult<IEnumerable<FailedPartition>>([]);
-    }
-
     bool IsRejectedGuardedRemoval(object key, EventSequenceNumber sequenceNumber, SinkWriteMode mode) =>
         mode == SinkWriteMode.GuardedUpsert && sequenceNumber.IsActualValue && !AdvancesWatermark(key, sequenceNumber);
 

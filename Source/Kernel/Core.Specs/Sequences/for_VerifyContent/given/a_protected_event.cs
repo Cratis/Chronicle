@@ -25,6 +25,7 @@ public class a_protected_event : a_stored_event
         _encryption = new Encryption();
         var key = _encryption.GenerateKey();
         _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
+        _keys.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         var handler = new PIICompliancePropertyValueHandler(Substitute.For<IManagedEncryptionKeyProvisioner>(), _keys, _encryption);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(handler), NullLogger<JsonSchemaMetadataManager>.Instance);
         var schema = new JsonSchema { Type = JsonObjectType.Object };

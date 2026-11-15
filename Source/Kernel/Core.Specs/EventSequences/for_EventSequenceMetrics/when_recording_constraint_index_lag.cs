@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequenceMetrics;
@@ -25,7 +26,7 @@ public class when_recording_constraint_index_lag : Specification
 
     void Because()
     {
-        var scope = new Meter<EventSequence>(_meter).BeginEventSequenceScope("store", "ns");
+        var scope = new Meter<EventSequence>(_meter).BeginEventSequenceScope("store", "ns", MetricNames.Convention);
         _error = Catch.Exception(() => scope.ConstraintIndexLag(7));
     }
 

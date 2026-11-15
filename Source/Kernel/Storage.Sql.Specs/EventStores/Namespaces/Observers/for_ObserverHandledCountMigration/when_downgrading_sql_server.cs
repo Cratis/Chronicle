@@ -80,6 +80,6 @@ public class when_downgrading_sql_server(SqlServerFixture fixture) : Specificati
     async Task Destroy()
     {
         await _context.DisposeAsync();
-        await fixture.DropDatabase(_connectionString);
+        await fixture.QueueDatabaseDrop(_connectionString);
     }
 }

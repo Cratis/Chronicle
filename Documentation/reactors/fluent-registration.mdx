@@ -1,44 +1,50 @@
 ---
-title: Define a reactor fluently
-description: Declare a reactor with typed On handlers and a catch-all Subscribe handler, inspect its definition, and register it before or after connecting.
+title: "Cratis Chronicle reactors: register typed delegates"
+description: Define a Cratis Chronicle reactor with typed .NET delegates or a catch-all handler, inspect its subscription, and register it at startup or runtime.
 ---
 
-A reactor is usually a class whose handler methods Chronicle discovers. When the handlers belong to something else, such as a host that builds behavior from configuration or a framework that wires reactors for its own components, you can declare the reactor fluently instead. Give it a stable identifier and a handler for each event type.
+Cratis Chronicle's .NET fluent reactor API registers delegate handlers without a reactor class. Use it when a host builds behavior from configuration or a framework owns the handlers. Give the reactor a stable identifier, declare the event types it handles, and register the resulting definition.
+
+Use a [class-based reactor](getting-started) when convention-based method discovery already fits your application.
 
 ## Handle specific event types
 
-`On<TEvent>` subscribes the reactor to that event type and hands the handler the deserialized event. Each overload can take the event alone or the event together with its [event context](event-processing), and each can be synchronous or return a `Task`:
+Use `On<TEvent>` when the handler needs a known .NET event type. It receives the deserialized event, optionally with its [event context](event-processing). The overloads accept synchronous handlers or handlers that return a `Task`:
 
 <ChronicleClientTabs snippet="reactors/fluent-registration/typed" />
 
-The reactor observes only the event types it has handlers for. A handler receives the event in the generation it subscribed to, which is the latest generation of its type, even when the event was appended in another generation.
+Without a catch-all handler, the reactor subscribes only to the event types declared with `On<TEvent>`. The subscription uses the event type identity and generation registered for `TEvent`; it does not necessarily select the latest generation if that .NET type represents a historical generation.
 
 ## Handle every event
 
-`Subscribe` declares a catch-all handler. It receives each event as an `object` together with its context, and it makes the reactor an all-events subscription:
+Use `Subscribe` when one handler should receive every event type known to the client. It receives each deserialized event as an `object`, together with its context:
 
 <ChronicleClientTabs snippet="reactors/fluent-registration/all-events" />
 
-A catch-all handler receives objects, and only an event type the client knows can become one. So an all-events subscription covers every event type the client knows when the reactor is defined, which is every discovered event type, each in its latest generation. An event type the client does not know is not part of the subscription. Neither is an event type that only becomes known after the reactor was defined. `EventTypes` on the definition lists the exact set Chronicle is asked to deliver.
+The subscription is a snapshot, not a wildcard at the kernel. When the definition is built, `Subscribe` adds the latest known generation of each event type not already covered by a typed handler. Unknown types and types registered later are not included. Inspect `EventTypes` on the definition to see the exact subscription.
 
-A reactor can combine typed and catch-all handlers. For each event the typed handlers for its type run first, in the order they were declared, and then the catch-all handlers run.
+You can combine typed and catch-all handlers. Typed handlers for the delivered .NET type run first, in declaration order, followed by the catch-all handlers.
 
 ## Inspect the definition
 
-`Reactors.Define` builds the definition without registering it. Its `Id`, `EventTypes`, `ClrTypes`, `SubscribesToAllEvents`, `EventSequenceId` and `IsReplayable` show what the reactor will observe. `Reactors.Register(definition)` registers it. `Reactors.Register(id, define)` does both in one call.
+Call `Reactors.Define` to inspect a definition before registering it. Check `EventTypes` and `ClrTypes` for the subscribed identities and .NET types, `EventSequenceId` for the source sequence, and `IsReplayable` for the replay policy. `Id` and `SubscribesToAllEvents` identify the reactor and whether it has a catch-all handler.
+
+Use `Reactors.Register(definition)` when that subscription is correct, or `Reactors.Register(id, define)` to define and register it in one call.
 
 ## How it behaves
 
-A fluently defined reactor is an ordinary Chronicle reactor. It has its own observer and keeps its position under its identifier. It has state, failed partitions and replay, and `GetHandlerById` looks it up later. Handlers are awaited. If one throws or its task fails, the partition fails without advancing past that event, just as it does for a failing method on a reactor class. Use `OnEventSequence` to observe another event sequence, and `NotReplayable` when repeating the side effects is unsafe.
+A fluently defined reactor keeps its own observation position under its identifier, just like a class-based reactor. Use `GetHandlerById` to inspect its state and failed partitions later. Keep the identifier stable across restarts so it remains connected to that stored position.
 
-Keep the identifier stable across restarts, and make side effects idempotent so they tolerate replay, retries and reconnects.
+Chronicle awaits each handler. If one throws or its task fails, the partition fails without advancing past that event. Make external effects idempotent so a retry does not repeat the business outcome; an earlier handler may already have completed before a later one fails.
+
+The definition reads the default event log unless you select another sequence with `OnEventSequence`. Use `NotReplayable` to disable replay when effects must not run through history again. That setting does not eliminate retries or initial catch-up. This API has no start-at-tail option, so a new observer still catches up on existing history.
 
 ## Register while configuring the client
 
-Registering on an event store sends the reactor to Chronicle immediately, and again whenever the connection is re-established. To declare a reactor before the client exists, from hosting or dependency injection setup, add it to the client options. Every event store the client creates defines it the first time it discovers its artifacts, and registers it with the rest of its reactors from then on:
+Registering on an event store sends the subscription to Chronicle immediately and registers it again after reconnecting. If you need to declare it earlier, during hosting or dependency injection setup, add it to the client options:
 
 <ChronicleClientTabs snippet="reactors/fluent-registration/at-startup" />
 
-The definition callback runs once per event store, at that first discovery, so an all-events subscription registered this way covers the event types known at that point.
+Each event store created by the client builds the definition during its first artifact discovery, after event types are known. The callback runs once per event store. A catch-all subscription therefore covers the types known at that point; reconnecting reuses the definition rather than expanding it.
 
-For reactors that handle raw JSON for event types known only by identifier, see [Register at Runtime](runtime-registration).
+If the host knows event type identifiers but has no .NET event classes to deserialize, use [Register at Runtime](runtime-registration) to receive JSON instead.

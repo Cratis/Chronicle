@@ -7,9 +7,12 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Projections;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.Providers;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
@@ -28,13 +31,17 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for notifying actual clients.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="timeProvider"><see cref="TimeProvider"/> for deciding when the cached pipeline is due for a refresh.</param>
+/// <param name="options">The telemetry configuration.</param>
+/// <param name="configurationProvider">The <see cref="IConfigurationForObserverProvider"/> holding the kernel's page maximums, read for every delivery.</param>
 [ConnectedObserverPlacement]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Reducers)]
-public class ReducerObserverSubscriber(
+public partial class ReducerObserverSubscriber(
     IReducerPipelineFactory reducerPipelineFactory,
     IReducerMediator reducerMediator,
     ILogger<ReducerObserverSubscriber> logger,
-    TimeProvider? timeProvider = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber
+    TimeProvider? timeProvider = null,
+    IOptions<ChronicleOptions>? options = null,
+    IConfigurationForObserverProvider? configurationProvider = null) : Grain<ReducerDefinition>, IReducerObserverSubscriber, IReducerPageObserverSubscriber
 {
     /// <summary>
     /// How long a built pipeline - and the sink it resolved the target read model's definition to - is
@@ -54,6 +61,7 @@ public class ReducerObserverSubscriber(
     /// </remarks>
     internal static readonly TimeSpan PipelineRefreshInterval = TimeSpan.FromMinutes(1);
 
+    readonly ClientObserverSubscriberMetrics _metrics = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     ObserverKey _key = ObserverKey.NotSet;
     IReducerPipeline? _pipeline;
@@ -72,53 +80,8 @@ public class ReducerObserverSubscriber(
     }
 
     /// <inheritdoc/>
-    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
-    {
-        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition);
-        if (!await PrepareDelivery(deliveryWait, context))
-        {
-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
-        }
-
-        foreach (var @event in events)
-        {
-            logger.EventReceived(
-                _key.ObserverId,
-                _key.EventStore,
-                _key.Namespace,
-                @event.Context.EventType.Id,
-                _key.EventSequenceId,
-                @event.Context.SequenceNumber);
-        }
-
-        if (context.Metadata is not ConnectedClient connectedClient)
-        {
-            throw new MissingStateForReducerSubscriber(_key.ObserverId);
-        }
-
-        var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        try
-        {
-            var reducerContext = new ReducerContext(
-                events,
-                partition);
-
-            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs));
-            return await NotifyChange(await tcs.Task, notification);
-        }
-        catch (AbandonedDeliveryDiscarded)
-        {
-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded");
-        }
-        catch (TaskCanceledException)
-        {
-            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
-        }
-        catch (ReducerSinkWriteFailed failed)
-        {
-            return await RecordSinkWriteFailures(partition, failed, tcs.Task);
-        }
-    }
+    public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context) =>
+        await BoundedPageDelivery.Deliver(await PageBoundsFor(context), events, page => DeliverPartition(partition, page, context), StateSizeOf(partition));
 
     /// <summary>
     /// Reports only what the read model actually holds.
@@ -147,6 +110,97 @@ public class ReducerObserverSubscriber(
             }).ResumingDeferralWithin(events),
             _ => result
         };
+
+    /// <summary>
+    /// Gets the bounds of the pages the connection receives: the bounds the client declared, capped by the kernel's maximums.
+    /// </summary>
+    /// <remarks>
+    /// A partition split across pages is reduced page by page, each from the state the page before it wrote. A page holds
+    /// the state of every partition in it as well as its events, so the size of each state counts toward the byte bound,
+    /// estimated from the size it had when it was last reduced (see <see cref="StateSizeOf"/>).
+    /// </remarks>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> of the delivery.</param>
+    /// <returns>The <see cref="PageBounds"/>; unbounded for a client that did not declare page delivery.</returns>
+    async Task<PageBounds> PageBoundsFor(ObserverSubscriberContext context)
+    {
+        if (context.Metadata is not ConnectedClient connectedClient ||
+            reducerMediator.GetPageDelivery(_key.ObserverId, connectedClient.ConnectionId, _key.EventStore, _key.Namespace) is not { } declared)
+        {
+            return PageBounds.Unbounded;
+        }
+
+        // Read for every delivery, like the job cursor reads its bounds, so a changed setting takes effect without a restart.
+        var configuration = configurationProvider is null ? new Observers() : await configurationProvider.GetFor(_key);
+        return PageBounds.For(declared, configuration);
+    }
+
+    /// <summary>
+    /// Gets the size the state of a partition had when it was last reduced, zero when it is not known.
+    /// </summary>
+    /// <param name="partition">The <see cref="Key"/> of the partition.</param>
+    /// <returns>The estimated size in bytes.</returns>
+    long StateSizeOf(Key partition) => _pipeline?.StateSizeOf(partition) ?? 0;
+
+    async Task<ObserverSubscriberResult> DeliverPartition(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context)
+    {
+        var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, partition, _metrics);
+        if (!await PrepareDelivery(deliveryWait, context))
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Delivery expired before dispatch");
+        }
+
+        foreach (var @event in events)
+        {
+            logger.EventReceived(
+                _key.ObserverId,
+                _key.EventStore,
+                _key.Namespace,
+                @event.Context.EventType.Id,
+                _key.EventSequenceId,
+                @event.Context.SequenceNumber);
+        }
+
+        if (context.Metadata is not ConnectedClient connectedClient)
+        {
+            throw new MissingStateForReducerSubscriber(_key.ObserverId);
+        }
+
+        var tcs = new TaskCompletionSource<ObserverSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var reducerContext = new ReducerContext(
+                events,
+                partition);
+
+            var notification = _pipeline is null ? null : await _pipeline.Reduce(reducerContext, CreateReducerDelegate(reducerContext, connectedClient, context, tcs), await IsWatched());
+            return await NotifyChange(await tcs.Task, notification);
+        }
+        catch (AbandonedDeliveryDiscarded)
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Abandoned delivery result discarded");
+        }
+        catch (TaskCanceledException)
+        {
+            return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
+        }
+        catch (ReducerSinkWriteFailed failed)
+        {
+            return await RecordSinkWriteFailures(partition, failed, tcs.Task);
+        }
+    }
+
+    async Task<bool> IsWatched()
+    {
+        try
+        {
+            return await _changesetNotifier.HasSubscribers();
+        }
+        catch (Exception)
+        {
+            // Not knowing is not a reason to drop a notification somebody may be waiting for.
+            return true;
+        }
+    }
 
     async Task<ObserverSubscriberResult> NotifyChange(ObserverSubscriberResult result, ReadModelChangeNotification? notification)
     {
@@ -177,7 +231,7 @@ public class ReducerObserverSubscriber(
     ReducerDelegate CreateReducerDelegate(ReducerContext reduction, ConnectedClient client, ObserverSubscriberContext context, TaskCompletionSource<ObserverSubscriberResult> completion) =>
         async (events, initialState) =>
         {
-            var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, reduction.Key);
+            var deliveryWait = new ClientDeliveryWait(_clock, logger, _key, reduction.Key, _metrics);
 
             // Pipeline setup can itself outlive the caller's deadline. Never dispatch a queued ghost.
             if (deliveryWait.Expired(context))
@@ -185,17 +239,24 @@ public class ReducerObserverSubscriber(
                 throw new AbandonedDeliveryDiscarded();
             }
             var reducerSubscriberResultTCS = new TaskCompletionSource<ReducerSubscriberResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            reducerMediator.OnNext(
-                _key.ObserverId,
-                client.ConnectionId,
-                _key.EventStore,
-                _key.Namespace,
-                new(reduction.Key, events, initialState) { DeliverWithin = context.RemainingDeliveryTime(_clock), Origin = context.Origin },
-                reducerSubscriberResultTCS);
+            try
+            {
+                reducerMediator.OnNext(
+                    _key.ObserverId,
+                    client.ConnectionId,
+                    _key.EventStore,
+                    _key.Namespace,
+                    new(reduction.Key, events, initialState) { DeliverWithin = context.RemainingDeliveryTime(_clock), Origin = context.Origin },
+                    reducerSubscriberResultTCS);
 
-            var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);
-            completion.SetResult(AsHandledByThePipeline(result.ObserverResult, events));
-            return result;
+                var result = await deliveryWait.For(reducerSubscriberResultTCS.Task, result => result.ObserverResult, context);
+                completion.SetResult(AsHandledByThePipeline(result.ObserverResult, events));
+                return result;
+            }
+            finally
+            {
+                reducerSubscriberResultTCS.TrySetCanceled();
+            }
         };
 
     /// <summary>
@@ -212,23 +273,35 @@ public class ReducerObserverSubscriber(
     async Task<ObserverSubscriberResult> RecordSinkWriteFailures(Key partition, ReducerSinkWriteFailed failed, Task<ObserverSubscriberResult> result)
     {
         var others = failed.FailedPartitions.Where(failure => !Equals(failure.EventSourceId.Value, partition.Value)).ToArray();
-        if (others.Length > 0)
-        {
-            var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
-            foreach (var failure in others)
-            {
-                await observer.PartitionFailed(
-                    failure.EventSourceId,
-                    failure.EventSequenceNumber,
-                    [ReducerSinkWriteFailed.MessageFor(failure)],
-                    string.Empty,
-                    FailureKind.Handling);
-            }
-        }
+        await RecordFailedPartitions(others);
 
         return others.Length == failed.FailedPartitions.Count && result.IsCompleted
             ? await result
             : ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, failed.Message);
+    }
+
+    /// <summary>
+    /// Records partitions outside the delivery whose writes a shared bulk flush reported as failed, so they are retried.
+    /// </summary>
+    /// <param name="failures">The <see cref="Storage.Sinks.FailedPartition"/> instances to record.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task RecordFailedPartitions(Storage.Sinks.FailedPartition[] failures)
+    {
+        if (failures.Length == 0)
+        {
+            return;
+        }
+
+        var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(_key.ObserverId, _key.EventStore, _key.Namespace, _key.EventSequenceId));
+        foreach (var failure in failures)
+        {
+            await observer.PartitionFailed(
+                failure.EventSourceId,
+                failure.EventSequenceNumber,
+                [ReducerSinkWriteFailed.MessageFor(failure)],
+                string.Empty,
+                FailureKind.Handling);
+        }
     }
 
     async Task HandlePipeline()

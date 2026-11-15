@@ -1,13 +1,17 @@
 ---
 title: "Deep dive: consistency"
-description: Eventual and on-demand read consistency, the Dynamic Consistency Boundary, and how to choose — the model that trips people up most, explained.
+description: Choose between eventual reads, passive read models, and waiting for observers, then protect write-side rules with constraints or decision reads.
 ---
 
-Consistency is where event sourcing feels different from CRUD, and where most early confusion lives. The short version: **writes are validated immediately; reads are usually eventual.** This page unpacks that and shows how to choose the right tool for each decision.
+An append can succeed before a query shows its result. Cratis Chronicle commits the event to the log,
+then projections update materialized (stored) read models asynchronously. When a workflow needs fresher data,
+choose how that caller reads; when a business rule must hold while writers race, protect the
+append itself. Those are different decisions.
 
 ## The two sides
 
-In a CRUD system, you write a row and read it straight back — one place, one consistency model. Event sourcing splits the write side from the read side, and they have different guarantees:
+Event sourcing separates the recorded change from the view built from it. A successful write
+therefore does not mean every view has caught up:
 
 ```mermaid
 flowchart LR
@@ -16,31 +20,60 @@ flowchart LR
     RM -->|query, may briefly lag| UI[Reader]
 ```
 
-- **The write side is consistent now.** When you append an event, it's committed and ordered immediately. Invariants enforced at append time (constraints, the boundary below) hold the moment the command returns.
-- **The read side is eventual.** A [projection](./projection.md) updates the read model *after* the append. The window is usually milliseconds, but a read taken instantly after a write may not reflect it yet.
+A successful append commits and orders the event. Rules enforced by configured constraints or
+concurrency checks are checked as part of that append. A [projection](./projection.md) updates its
+materialized read model afterwards, so a read immediately after the write may still return the
+previous state. Do not rely on a fixed delay to decide that the view is ready.
 
 ## Why not just make reads immediate?
 
-Because eventual reads are what make the model scale and stay simple: projections run independently, read models specialize per use case, and the write path doesn't wait on every view being updated. The cost is the small lag — and most UIs handle it naturally, especially with [observable queries](../scenarios/real-time-query) that update the moment the projection catches up.
+Keeping projections off the write path lets them update independently. A new dashboard does not
+make every append wait for that dashboard's model. The trade-off is that readers can see older
+state while it catches up. [Observable queries](../scenarios/real-time-query) let a UI receive the
+updated result without repeatedly fetching it.
 
-When you genuinely need read-after-write for a specific case, you have two tools. A **passive** read model is never stored: Chronicle computes it from its events when you read it, so it always includes the latest append, at the price of replaying the instance's history — for a read model keyed by its event source id, since only that event source's events are replayed. Or keep the read model materialized and have the one caller that needs its own write back **wait for the append's observers** before reading. Neither makes other writers wait. See [Read model consistency](../read-models/consistency.md).
+For read-after-write, a passive read model computes state from events on demand instead of
+persisting a view. It replays the requested event source's history, so use it for a model keyed by
+that event source id, not one that joins other sources or uses a key from event content. The amount
+of history that must be replayed determines the read cost.
+
+Alternatively, keep the model materialized and wait for the append's observers before reading it.
+In the .NET client, check that the append succeeded, then call `WaitForCompletion()` on its result
+and handle any failed partitions it reports. That adds the catch-up wait to this caller without
+making other writers wait. [Read model consistency](../read-models/consistency.md) covers both
+choices and the client/server differences in which observers are included in the wait.
 
 ## Protecting invariants: don't read, constrain
 
-The classic mistake is enforcing a rule by reading a model first: "is this email taken? no → append." Because the read is eventual, two commands can race and both pass. Enforce invariants on the **write side** instead:
+In the [plain-read race example](../dynamic-consistency-boundary/choosing.mdx), a command reads
+`SeatAvailability`, checks `seat.Claims > 0`, and appends `SeatClaimed` if the seat looks free.
+Two callers can both read zero claims before either appends. Even a fresh passive read leaves
+that gap between reading and writing.
 
-- A [constraint](../constraints/) rejects an append that would violate a rule (uniqueness, for example) — evaluated against authoritative state at append time.
-- A [decision read](../read-models/decision-reads.mdx) guards a rule over state you read first. See the Dynamic Consistency Boundary below.
+A [constraint](../constraints/) checks a rule such as uniqueness at append time. A
+[decision read](../read-models/decision-reads.mdx) instead records the log position used to build
+one event source's state and guards the subsequent append against relevant intervening events.
+Use these write-side mechanisms when the rule must hold despite concurrent writers.
 
 ## The Dynamic Consistency Boundary
 
-Traditional event sourcing draws the consistency boundary around a fixed aggregate. A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/) lets the decision define it: the append is rejected when an event the decision used changed after it was read. Chronicle gives you that for one event source, optionally narrowed to one stream and to the event types the decision reads. A plain read of a read model, even a fresh one, guards nothing. [Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx) shows which mechanism fits which rule, and [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md) says what maps and what does not.
+An aggregate groups domain state behind a fixed consistency boundary: decisions load its events
+and protect that group from conflicting changes. A [Dynamic Consistency Boundary](../dynamic-consistency-boundary/)
+(DCB) lets the decision select the events it depends on instead, including events concerning
+different entities.
+
+Chronicle supports decision guards for one event source, optionally narrowed to a stream and the
+event types the decision reads. It is not a DCB event store: each event has one event source, and
+tags do not participate in consistency. A rule across two entities takes one read and one event
+per entity in one atomic append. [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md)
+explains what maps and what does not. For a concrete rule to implement next, follow
+[Choosing how a rule holds](../dynamic-consistency-boundary/choosing.mdx).
 
 ## How to choose
 
 | You need… | Use |
 |---|---|
-| A view to read and render | A normal [projection](./projection.md) — embrace eventual consistency |
+| A view to read and render | A materialized [projection](./projection.md) when the view can lag behind appends |
 | The UI to update as data changes | An [observable query](../scenarios/real-time-query) |
 | A unique value, or something created once | A [constraint](../constraints/) |
 | A rule over state that must hold while writers race | A [decision read](../read-models/decision-reads.mdx), see [DCB](../dynamic-consistency-boundary/) |

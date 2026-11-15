@@ -69,7 +69,5 @@ public record Token
     /// <summary>
     /// Gets or sets additional properties.
     /// </summary>
-#pragma warning disable IDE0301 // Simplify collection initialization - due to net8 and net9 not having a default constructor for this
-    public ImmutableDictionary<string, JsonElement> Properties { get; set; } = ImmutableDictionary<string, JsonElement>.Empty;
-#pragma warning restore IDE0301 // Simplify collection initialization
+    public ImmutableDictionary<string, JsonElement> Properties { get; set; } = [];
 }

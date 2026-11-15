@@ -1,6 +1,6 @@
 ---
 name: check-bin-obj-clash
-description: 'Detects MSBuild projects with conflicting OutputPath or IntermediateOutputPath and fixes the clash. Use when builds fail with ''Cannot create a file when that file already exists'' or ''The process cannot access the file because it is being used by another process'', fail intermittently but pass on retry, or overwrite outputs in multi-project or multi-targeting builds where bin/obj or project.assets.json collide. Not for OS-level file locking, single-project single-TFM builds, or non-MSBuild build systems.'
+description: Use when multi-project or multi-targeted MSBuild builds collide in bin, obj or project.assets.json, overwrite outputs or fail intermittently with file conflicts. Not for OS-only locks or single-project single-TFM builds.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/check-bin-obj-clash/SKILL.md -->

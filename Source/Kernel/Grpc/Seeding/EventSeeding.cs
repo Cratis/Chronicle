@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Services.Seeding;
 internal sealed class EventSeeding(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Orleans.IGrainFactory grainFactory,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Seeding.EventSeeding> logger) : global::Cratis.Chronicle.Contracts.Seeding.IEventSeeding
 {
     /// <inheritdoc/>
@@ -43,7 +44,7 @@ internal sealed class EventSeeding(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>> GetGlobalSeedData(global::Cratis.Chronicle.Contracts.Seeding.GetGlobalSeedDataRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Seeding.SeedData.GetGlobalSeedData((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, grainFactory);
@@ -55,9 +56,13 @@ internal sealed class EventSeeding(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>> GetNamespaceSeedData(global::Cratis.Chronicle.Contracts.Seeding.GetNamespaceSeedDataRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Seeding.SeedDataResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Seeding.SeedData.GetNamespaceSeedData((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, grainFactory);
                 return ToSeedDataResponse(result);
             },

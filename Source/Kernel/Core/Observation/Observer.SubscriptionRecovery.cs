@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.States;
@@ -89,6 +90,13 @@ public partial class Observer
         if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetFor(types);
         if (CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
+
+        // Another instance of a client already observed with this exact definition is only one more fan-out target.
+        if (!subscribesToAllEvents && subscriberArgs is ConnectedClient connectedClient &&
+            await TryRestoreAsAnotherClientInstance<TObserverSubscriber>(type, types, siloAddress, connectedClient, isReplayable, filters, generationDelivery, schemas))
+        {
+            return;
+        }
 
         try
         {

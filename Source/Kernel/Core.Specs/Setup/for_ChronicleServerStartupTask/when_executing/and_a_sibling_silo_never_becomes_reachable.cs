@@ -4,9 +4,9 @@
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 
 /// <summary>
-/// Retrying is for a cluster that is still settling, and a cluster has settled long before the
-/// budget is spent. A step still timing out after that is not waiting on anything, so it fails the
-/// host exactly as it did before - starting around it would leave the silo quietly half-initialized,
+/// Retrying is for a cluster that is still settling or a silo that is still catching up. A required step keeps
+/// being tried, unready, for ten rounds of five attempts. A step still timing out after that is not waiting on
+/// anything, so it fails the host - starting around it would leave the silo quietly half-initialized,
 /// which is the harder failure to find.
 /// </summary>
 public class and_a_sibling_silo_never_becomes_reachable : given.a_startup_task
@@ -21,5 +21,5 @@ public class and_a_sibling_silo_never_becomes_reachable : given.a_startup_task
 
     [Fact] void should_fail() => _error.ShouldNotBeNull();
     [Fact] void should_fail_with_the_underlying_timeout() => _error.ShouldBeOfExactType<TimeoutException>();
-    [Fact] async Task should_have_exhausted_its_attempts_first() => await _jobsManager.Received(5).Rehydrate();
+    [Fact] async Task should_have_exhausted_all_its_rounds_first() => await _jobsManager.Received(50).Rehydrate();
 }

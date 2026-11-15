@@ -55,13 +55,28 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
             sourceEventStoreName,
             configure);
 
+        await WaitForSubscriptionsToBeProcessed(targetEventStoreName);
+    }
+
+    static readonly EventType[] _subscriptionsReactorEventTypes =
+    [
+        new("EventStoreSubscriptionAdded", EventTypeGeneration.First),
+        new("EventStoreSubscriptionRemoved", EventTypeGeneration.First)
+    ];
+
+    protected async Task WaitForSubscriptionsToBeProcessed(string targetEventStoreName)
+    {
+        var targetEventStore = await ChronicleClient.GetEventStore(targetEventStoreName);
+
         // Wait for subscription reactor to process
         var subscriptionsReactor = await targetEventStore.Reactors.WaitForHandlerById(
             "$system.Cratis.Chronicle.Observation.EventStoreSubscriptions.EventStoreSubscriptionsReactor",
             TimeSpanFactory.DefaultTimeout());
 
+        // The reactor only observes the subscription events, so a later system event it does not handle (such as an
+        // EventTypeAdded from registering event types) would leave the unfiltered tail forever out of its reach.
         var systemLog = targetEventStore.GetEventSequence(EventSequenceId.System);
-        var tailSequenceNumber = (await systemLog.GetTailSequenceNumber()).Value;
+        var tailSequenceNumber = (await systemLog.GetTailSequenceNumber(filterEventTypes: _subscriptionsReactorEventTypes)).Value;
         await subscriptionsReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
     }
 

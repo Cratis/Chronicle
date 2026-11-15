@@ -7,4 +7,4 @@ namespace Cratis.Chronicle.Connections;
 /// The exception that is thrown when a chronicle+srv connection string does not resolve to any DNS SRV records.
 /// </summary>
 /// <param name="serviceName">The DNS SRV service name that was looked up.</param>
-public class NoSrvRecordsFound(string serviceName) : Exception($"No DNS SRV records were found for '{serviceName}'. Verify that the SRV records exist and that the host in the chronicle+srv connection string is correct");
+public class NoSrvRecordsFound(string serviceName) : Exception($"No DNS SRV records were found for '{ConnectionStringDiagnostics.Hide(serviceName)}'. Verify that the SRV records exist and that the host in the chronicle+srv connection string is correct");

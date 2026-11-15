@@ -12,5 +12,5 @@ public class and_reminders_exist : given.a_patch_with_reminders
     [Fact] void should_keep_the_reminder_of_a_real_observer() => _reminderTable.DidNotReceive().RemoveRow(_realObserver.GrainId, Arg.Any<string>(), Arg.Any<string>());
     [Fact] void should_keep_the_reminder_of_a_grain_that_is_not_an_observer() => _reminderTable.DidNotReceive().RemoveRow(_notSetGrainOfAnotherType.GrainId, Arg.Any<string>(), Arg.Any<string>());
     [Fact] void should_remove_exactly_the_not_set_reminders() => _reminderTable.ReceivedCalls().Count(_ => _.GetMethodInfo().Name == nameof(IReminderTable.RemoveRow)).ShouldEqual(2);
-    [Fact] void should_run_after_the_released_version() => (_patch.Version > new Concepts.System.SemanticVersion(19, 117, 0)).ShouldBeTrue();
+    [Fact] void should_run_after_the_released_version() => (_patch.Version > new Cratis.Choreography.Patching.SemanticVersion(19, 117, 0)).ShouldBeTrue();
 }

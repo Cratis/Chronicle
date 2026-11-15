@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -23,6 +24,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine.Expressions;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
+using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -49,6 +51,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="logger">The logger.</param>
 /// <param name="eventCompliance">Optional <see cref="IEventCompliance"/> for releasing stored join events before projecting them.</param>
 /// <param name="eventGenerationRelease">The pinned-generation release boundary for stored key and join events.</param>
+/// <param name="graphProjectionFactory">Optional <see cref="IGraphProjectionFactory"/> for projections that target a graph.</param>
 [Singleton]
 public class ProjectionFactory(
     IReadModelPropertyExpressionResolvers propertyMapperExpressionResolvers,
@@ -59,23 +62,18 @@ public class ProjectionFactory(
     IStorage storage,
     ILogger<ProjectionFactory> logger,
     IEventCompliance? eventCompliance = null,
-    IEventGenerationRelease? eventGenerationRelease = null) : IProjectionFactory
+    IEventGenerationRelease? eventGenerationRelease = null,
+    IGraphProjectionFactory? graphProjectionFactory = null) : IProjectionFactory
 {
     /// <summary>
     /// The versioned algorithm for complete, registration-metadata-independent definition content.
     /// </summary>
     internal const string DefinitionDigestAlgorithm = "definition-content-sha256/v1";
 
-    static readonly string[] _aggregateExpressions =
-    [
-        WellKnownExpressions.Count,
-        WellKnownExpressions.Increment,
-        WellKnownExpressions.Decrement,
-        WellKnownExpressions.Add,
-        WellKnownExpressions.Subtract
-    ];
-
-    static readonly JsonSerializerOptions _fingerprintOptions = new()
+    /// <summary>
+    /// Gets the serializer options that write a definition in full, with dictionaries in a form that does not depend on enumeration order.
+    /// </summary>
+    internal static readonly JsonSerializerOptions FingerprintOptions = new()
     {
         Converters =
         {
@@ -90,6 +88,15 @@ public class ProjectionFactory(
         }
     };
 
+    static readonly string[] _aggregateExpressions =
+    [
+        WellKnownExpressions.Count,
+        WellKnownExpressions.Increment,
+        WellKnownExpressions.Decrement,
+        WellKnownExpressions.Add,
+        WellKnownExpressions.Subtract
+    ];
+
     /// <inheritdoc/>
     public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
@@ -99,6 +106,16 @@ public class ProjectionFactory(
         }
 
         readModelDefinition.Sink.EnsureReadModelSupported();
+        if (definition.Graph is not null)
+        {
+            if (definition.GenerationDelivery == EventGenerationDelivery.Pinned || graphProjectionFactory is null)
+            {
+                throw new EventGenerationDeliveryNotSupported();
+            }
+
+            return graphProjectionFactory.Create(definition, readModelDefinition, DefinitionFingerprintFor(definition));
+        }
+
         ProjectionGenerationDeliveryValidation.Validate(definition);
         if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
             (eventGenerationRelease is null || definition.SubscribesToAllEvents))
@@ -152,7 +169,7 @@ public class ProjectionFactory(
             ReadModel = definition.ReadModel,
             InitialModelState = definition.InitialModelState
         };
-        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, _fingerprintOptions));
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString())));
     }
 
@@ -165,7 +182,7 @@ public class ProjectionFactory(
     internal static ProjectionDefinitionDigest DefinitionDigestFor(ProjectionDefinition definition)
     {
         var normalized = definition with { LastUpdated = default, Version = default, HasLegacyStorageFields = false };
-        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, _fingerprintOptions));
+        var canonical = Canonicalize(JsonSerializer.SerializeToNode(normalized, FingerprintOptions));
         return new(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical!.ToJsonString()))));
     }
 
@@ -385,6 +402,54 @@ public class ProjectionFactory(
         }
     }
 
+    static void ValidateChildrenOrdering(ProjectionId projectionId, PropertyPath childrenProperty, ChildrenOrdering? ordering, JsonSchema? childSchema)
+    {
+        if (ordering is null)
+        {
+            return;
+        }
+
+        if (!Enum.IsDefined(ordering.Placement))
+        {
+            throw new InvalidChildrenOrdering(projectionId, childrenProperty, $"'{(int)ordering.Placement}' is not a known placement - expected one of {string.Join(", ", Enum.GetNames<ChildrenPlacement>())}.");
+        }
+
+        if (!Enum.IsDefined(ordering.Direction))
+        {
+            throw new InvalidChildrenOrdering(projectionId, childrenProperty, $"'{(int)ordering.Direction}' is not a known sort direction - expected one of {string.Join(", ", Enum.GetNames<SortDirection>())}.");
+        }
+
+        if (ordering.Placement != ChildrenPlacement.Sorted)
+        {
+            return;
+        }
+
+        if (ordering.SortBy?.IsSet != true)
+        {
+            throw new InvalidChildrenOrdering(projectionId, childrenProperty, "a sorted ordering needs a child property to sort by.");
+        }
+
+        var childProperties = childSchema?.GetFlattenedProperties().Select(_ => _.Name).ToArray() ?? [];
+        if (childProperties.Length == 0)
+        {
+            return;
+        }
+
+        var sortProperty = childSchema!.GetSchemaPropertyForPropertyPath(ordering.SortBy) ?? throw new InvalidChildrenOrdering(
+            projectionId,
+            childrenProperty,
+            $"the children are sorted by '{ordering.SortBy}', which the child read model does not have (available properties: {string.Join(", ", childProperties)}).");
+
+        var sortType = sortProperty.ActualTypeSchema.Type;
+        if (sortType.HasFlag(JsonObjectType.Object) || sortType.HasFlag(JsonObjectType.Array))
+        {
+            throw new InvalidChildrenOrdering(
+                projectionId,
+                childrenProperty,
+                $"the children are sorted by '{ordering.SortBy}', which is {(sortType.HasFlag(JsonObjectType.Array) ? "a collection" : "an object")} - children can only be sorted by a single value such as a number, string, date, Guid or boolean.");
+        }
+    }
+
     static JsonSchemaProperty GetChildCollectionProperty(ProjectionId projectionId, ReadModelDefinition rootReadModel, JsonSchema currentReadModelSchema, PropertyPath childrenProperty)
     {
         // Resolve against the current child level, using the same casing compatibility as other schema paths.
@@ -564,6 +629,91 @@ public class ProjectionFactory(
         // Property exists and has a concrete, non-dynamic schema - a dynamic key segment is not valid here.
         throw new DynamicPropertyPathOnNonDynamicProperty(propertyPath, basePropertyPath);
     }
+
+    static void ValidateEventContentKey(PropertyPath propertyPath, EventType? eventType, JsonSchema? eventSchema)
+    {
+        var marker = $".{Concepts.WellKnownExpressions.EventContent}.";
+        var markerIndex = propertyPath.Path.IndexOf(marker, StringComparison.Ordinal);
+        if (markerIndex < 0 || eventType is null || eventSchema?.GetFlattenedProperties().Any() != true)
+        {
+            return;
+        }
+
+        var keyPath = new PropertyPath(propertyPath.Path[(markerIndex + marker.Length)..]);
+        if (!EventSchemaHasExactPropertyPath(eventSchema, keyPath))
+        {
+            throw new EventContentKeyNotInEvent(propertyPath, eventType, keyPath);
+        }
+    }
+
+    /// <summary>
+    /// Check that every segment of a path names a property of the event schema exactly as written.
+    /// </summary>
+    /// <remarks>
+    /// The key is read from the event content with the names compared exactly, so a key path that only matches the
+    /// schema when ignoring case would never resolve a key - refuse it when registering instead.
+    /// </remarks>
+    /// <param name="eventSchema">The schema of the event type.</param>
+    /// <param name="keyPath">The key path within the event content.</param>
+    /// <returns>True when the event schema has the path.</returns>
+    static bool EventSchemaHasExactPropertyPath(JsonSchema eventSchema, PropertyPath keyPath)
+    {
+        var schema = eventSchema;
+        foreach (var segment in keyPath.Segments)
+        {
+            var schemaProperty = schema?.GetFlattenedProperties().FirstOrDefault(_ => _.Name.Equals(segment.Value, StringComparison.Ordinal));
+            if (schemaProperty is null)
+            {
+                return false;
+            }
+
+            schema = schemaProperty.ActualTypeSchema;
+        }
+
+        return true;
+    }
+
+    static JsonSchemaProperty ResolveDynamicValueSchemaProperty(Projection projection, string propertyPathString, string expression)
+    {
+        // Arithmetic under a dynamic key has always worked on int64 values, whatever the dictionary declares - keep it
+        // that way so existing projections keep producing the same values. Only plain and set-once values follow the
+        // dictionary's declared value type.
+        if (IsArithmeticExpression(expression))
+        {
+            return new JsonSchemaProperty { Type = JsonObjectType.Integer, Format = "int64" };
+        }
+
+        var basePropertyPath = propertyPathString[..propertyPathString.IndexOf(".$", StringComparison.Ordinal)];
+        var baseSchema = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(basePropertyPath));
+        if (baseSchema?.ActualTypeSchema.AdditionalPropertiesSchema?.ActualSchema is { } valueSchema &&
+            (valueSchema.Type != JsonObjectType.None || valueSchema.Format is not null))
+        {
+            var valueSchemaProperty = new JsonSchemaProperty
+            {
+                Type = valueSchema.Type,
+                Format = valueSchema.Format,
+                Item = valueSchema.Item
+            };
+            foreach (var property in valueSchema.GetFlattenedProperties())
+            {
+                valueSchemaProperty.Properties[property.Name] = property;
+            }
+
+            return valueSchemaProperty;
+        }
+
+        return new JsonSchemaProperty { Type = JsonObjectType.None };
+    }
+
+    static ChildrenOrdering? ChildrenOrderingFor(ProjectionLevel level) =>
+        level.IsChild && !level.IsNested && level.Definition is ChildrenDefinition children ? children.Ordering : null;
+
+    static bool IsArithmeticExpression(string expression) =>
+        expression.StartsWith(Concepts.WellKnownExpressions.Add, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Subtract, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Increment, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Decrement, StringComparison.Ordinal) ||
+        expression.StartsWith(Concepts.WellKnownExpressions.Count, StringComparison.Ordinal);
 
     /// <summary>
     /// Gets the operations contributed by derivative and from-event-property registrations. A parent derives ChildrenAffected from its
@@ -761,7 +911,7 @@ public class ProjectionFactory(
         {
             var matchingSchema = context.EventTypeSchemas.SchemaFor(eventType, projection.GenerationDelivery);
             var mergedProperties = GetMergedFromProperties(fromDefinition, level.Schema, matchingSchema?.Schema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
-            var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, level.AccessorPath + p.Key, p.Value));
+            var propertyMappers = mergedProperties.ConvertAll(p => ResolvePropertyMapper(projection, level.AccessorPath + p.Key, p.Value, eventType, matchingSchema?.Schema));
             propertyMappers.AddRange(everyEventMappers.ClaimFor(eventType.Id));
 
             var fromObservable = projection.Event.WhereEventTypeEquals(eventType, projection.GenerationDelivery);
@@ -791,6 +941,7 @@ public class ProjectionFactory(
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
         {
             var childrenProperty = GetChildCollectionProperty(projectionId, rootReadModel, currentReadModelSchema, kvp.Key);
+            ValidateChildrenOrdering(projectionId, kvp.Key, kvp.Value.Ordering, childrenProperty.Item?.ActualSchema);
             return await CreateProjectionStructure(
                 context,
                 projectionId,
@@ -927,7 +1078,7 @@ public class ProjectionFactory(
         projection.Subscriptions.Add(
             projection.Event
                 .WhereEventTypeEquals(fromEventProperty.Event, projection.GenerationDelivery)
-                .AddChildFromEventProperty(level.AccessorPath, valueProvider).Subscribe());
+                .AddChildFromEventProperty(level.AccessorPath, valueProvider, ChildrenOrderingFor(level)).Subscribe());
     }
 
     void SetupFromWithJoins(ProjectionLevel level, SubscriptionContext context, FromRegistration registration, IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappersForAllEventTypes)
@@ -970,7 +1121,8 @@ public class ProjectionFactory(
                 level.IdentifiedBy,
                 propertyMappersForEveryEventType,
                 level.AccessorPath.IsRoot ? null : projection.InitialModelState,
-                subscriptions: projection.Subscriptions);
+                subscriptions: projection.Subscriptions,
+                ordering: ChildrenOrderingFor(level));
     }
 
     void LogUnmappedCollectionProperties(ProjectionLevel level, SubscriptionContext context)
@@ -994,7 +1146,7 @@ public class ProjectionFactory(
         foreach (var (eventType, joinDefinition) in level.Definition.Join)
         {
             var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, context.EventTypeSchemas.SchemaFor(eventType, projection.GenerationDelivery)?.Schema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
-            var propertyMappers = mergedJoinProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value));
+            var propertyMappers = mergedJoinProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value, eventType, context.EventTypeSchemas.SchemaFor(eventType, projection.GenerationDelivery)?.Schema));
             propertyMappers.AddRange(everyEventMappers.ClaimFor(eventType.Id));
             var joinObservable = projection.Event
                 .WhereEventTypeEquals(eventType, projection.GenerationDelivery)
@@ -1014,7 +1166,7 @@ public class ProjectionFactory(
         var schemaList = context.EventTypeSchemas.ToList();
         var matchingSchema = schemaList.SchemaFor(registration.EventType, projection.GenerationDelivery);
         var mergedFromProperties = GetMergedFromProperties(registration.Definition, level.Schema, matchingSchema?.Schema, projection.AutoMap, projection.NoAutoMapProperties);
-        var propertyMappers = mergedFromProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value));
+        var propertyMappers = mergedFromProperties.ConvertAll(kvp => ResolvePropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value, registration.EventType, matchingSchema?.Schema));
         propertyMappers.AddRange(propertyMappersForAllEventTypes);
         return projection.Event
             .WhereEventTypeEquals(registration.EventType, projection.GenerationDelivery)
@@ -1023,7 +1175,8 @@ public class ProjectionFactory(
                 level.IdentifiedBy,
                 propertyMappers,
                 level.AccessorPath.IsRoot ? null : projection.InitialModelState,
-                subscriptions: projection.Subscriptions);
+                subscriptions: projection.Subscriptions,
+                ordering: ChildrenOrderingFor(level));
     }
 
     void SetupJoinsForFromDefinition(ProjectionLevel level, SubscriptionContext context, FromSubscription from)
@@ -1043,16 +1196,18 @@ public class ProjectionFactory(
         var autoMap = level.AutoMapSettings;
         var joinEventSchema = context.EventTypeSchemas.SchemaFor(joinEventType, level.Projection.GenerationDelivery)?.Schema;
         var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, joinEventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
-        var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(level.Projection, level.AccessorPath + kvp.Key, kvp.Value)).ToArray();
-        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, context.EventTypesStorage, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
+        var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(level.Projection, level.AccessorPath + kvp.Key, kvp.Value, joinEventType, joinEventSchema)).ToArray();
+        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
         ProjectJoined(level, resolvedJoin, joinPropertyMappers);
     }
 
     PropertyMapper<AppendedEvent, ExpandoObject> ResolveEveryEventPropertyMapper(Projection projection, PropertyPath propertyPath, string expression) =>
         EveryEventPropertyMappers.WhenSourceIsPresent(propertyPath, expression, ResolvePropertyMapper(projection, propertyPath, expression));
 
-    PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression)
+    PropertyMapper<AppendedEvent, ExpandoObject> ResolvePropertyMapper(Projection projection, PropertyPath propertyPath, string expression, EventType? eventType = default, JsonSchema? eventSchema = default)
     {
+        ValidateEventContentKey(propertyPath, eventType, eventSchema);
+
         // Check if this is a dynamic property path (dictionary with runtime-determined keys)
         // Pattern: propertyName.$eventContext... or propertyName.$causedBy...
         var propertyPathString = propertyPath.Path;
@@ -1061,11 +1216,12 @@ public class ProjectionFactory(
         // The path's own last segment (e.g. "id" in "eventCountByType.$eventContext.eventType.id") is part of
         // the dynamic key expression, not a real property on the read model - looking it up by that name would
         // risk matching an unrelated, identically-named top-level property and inheriting its schema (and
-        // therefore its value type). A dictionary has no declared value schema of its own, so default to the
-        // int64 shape count/increment/decrement/add/subtract need; a concrete base property is still honored
-        // and validated below.
+        // therefore its value type). Count/increment/decrement/add/subtract always work on int64; a plain set or
+        // set once follows the value type the dictionary declares (additionalProperties), and without one keeps
+        // the event value as is rather than forcing it into a number. A concrete base property is still
+        // validated below.
         var schemaProperty = isDynamicPropertyPath
-            ? new JsonSchemaProperty { Type = JsonObjectType.Integer, Format = "int64" }
+            ? ResolveDynamicValueSchemaProperty(projection, propertyPathString, expression)
             : ResolveStaticSchemaProperty(projection, propertyPath);
 
         if (isDynamicPropertyPath)

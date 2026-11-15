@@ -1,16 +1,18 @@
 ---
-description: Guidance for designing Chronicle events as past-tense, single-purpose, immutable domain events with cohesive properties and no nullable values.
+title: Event
+description: Design Chronicle domain events as past-tense facts, with focused properties that explain a business change and remain useful to future consumers.
 ---
-# Event
 
-Chronicle is optimized for the scenario of [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html).
-Figuring out the correct name of an [event type](./event-type.md) and what properties it should have can be hard.
-This page walks through some general guidance on how to do so. Recommend also reading the [Microsoft guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation) on this.
+<a id="event"></a>
 
-> Note: Read more about the relationship to [event source](./event-source.md)
+An event records something that happened in your domain, such as a person registering or changing
+an address. Cratis Chronicle stores these [domain events](https://www.martinfowler.com/eaaDev/DomainEvent.html)
+so you can derive current state from the changes that led to it. When designing an
+[event type](./event-type.md), start with the business change you need to remember, then choose the
+properties that describe it.
 
-A well-designed event is a single, immutable, past-tense fact. Captured well, the lifecycle
-of one thing in your domain reads as a sequence of these facts in the order they happened:
+Each event belongs to an [event source](./event-source.md), the entity or process whose history it
+records. For one person, that history might look like this:
 
 ```mermaid
 flowchart LR
@@ -22,7 +24,7 @@ flowchart LR
 
 ## Past tense
 
-All events should be named as past tense, something that has happened:
+Name an event in the past tense. The name should describe a fact, not a request to do something:
 
 - ItemAddedToCart
 - UserRegistered
@@ -30,43 +32,39 @@ All events should be named as past tense, something that has happened:
 
 ## Singular purpose
 
-An event should never be ambiguous. It should have a clear meaning and purpose.
-It should not be holding information for multiple purposes. For instance holding properties that are empty and only used
-for specific purposes. Doing so makes the event unclear to reason about and requires logic in all observers and consumers
-of the event.
+Give each event one meaning. If a property is only populated for one of several unrelated changes,
+consumers have to inspect the payload to discover what happened. Separate event types make that
+distinction explicit and keep each consumer from having to reconstruct it.
 
 ## Immutable
 
-In an event sourced system, events are considered immutable because they represent facts that have occurred in the past.
-Once an event is recorded, it should not be altered, as doing so would compromise the integrity and reliability of the event log.
-Immutability ensures that the history of changes is preserved accurately, allowing the system to reconstruct past states and understand the sequence of events that led to the current state.
-This immutability is crucial for debugging, auditing, and maintaining a consistent and trustworthy system.
+Treat a recorded event as an immutable fact. Replacing its values would change the history that
+projections replay and that you inspect when investigating a problem. Record a later business
+change as another event so the earlier state and the change remain distinguishable.
+
+Personal data needs a separate policy: immutability is not a reason to retain it indefinitely.
+Chronicle's [compliance mechanisms](../compliance/index.md) cover encryption, erasure, and redaction.
 
 ## Avoid nullables / empty values
 
-An event has happened, and it should not represent unclear states.
-As with singular purpose, nullable properties are open for interpretation and require extra logic
-for every observer and consumer of the event.
+A missing value should have a clear meaning. Chronicle supports nullable event properties, but
+using null to distinguish different kinds of change leaves every consumer to interpret that
+choice. Prefer a separate event type when the meaning differs. The .NET analyzer rule
+[CHR0012](../code-analysis/CHR0012) warns about nullable event properties so you can review the design.
 
-Chronicle supports nullable properties on event types when needed.
-However, consider this a design smell and prefer introducing a new event type when the meaning differs.
-The .NET analyzer rule [CHR0012](../code-analysis/CHR0012) warns when nullable event properties are used so you can review the design choice.
-
-> Note: There are conditions where it makes sense to allow null, typical data collection scenario might be the case.
-> For instance, a person might not have a middle name.
+Null can still be appropriate in data collection: a person might not have a middle name. That is
+different from leaving the name empty because the event actually describes an address change.
 
 ## Cohesion
 
-Figuring out how "big" an event should be can be even harder.
-The things that needs to go together to represent a meaningful change in the system should constitute the boundaries.
-If we take a system that holds personal details, the name and social security numbers would be separate from
-the address.
-
-Below are some samples of events.
+Keep together the values needed to describe one meaningful change. Registration may capture a
+person's name and address at once; changing either later does not need to repeat the other.
+The following payloads illustrate that boundary. In an application, classify the personal values
+using [PII markers](../compliance/pii) before storing them.
 
 ### PersonRegistered
 
-During registration, it might be necessary to capture all the details about a person as below:
+Registration can capture the person's initial details:
 
 ```json
 {
@@ -83,7 +81,7 @@ During registration, it might be necessary to capture all the details about a pe
 
 ### NameChangedForPerson
 
-Once registered, changing the name could then only be:
+A later name change carries the name, without repeating the address or social security number:
 
 ```json
 {
@@ -95,7 +93,7 @@ Once registered, changing the name could then only be:
 
 ### AddressChangedForPerson
 
-Similar for address:
+An address change carries the address fields together:
 
 ```json
 {
@@ -108,11 +106,17 @@ Similar for address:
 
 ## Integrations
 
-When integrating with systems that are non event sourced you would need to deduct the event types from the data structure.
-The same approach applies for defining the events as described in this document.
+When a source system gives you current-state records rather than events, identify which business
+change the data represents before defining an event type. Apply the same naming and cohesion
+rules; a record's structure alone does not tell a consumer why it changed.
 
 ## Event discovery
 
-There are a couple of well known approaches to discovering events in your domain; [Event Storming](https://www.eventstorming.com)
-and [Event Modelling](https://eventmodeling.org). We tend to favor the latter as it has more focused building blocks. It gives a good
-overview of a an entire system and the flows in it.
+[Event Storming](https://www.eventstorming.com) and [Event Modelling](https://eventmodeling.org) can
+help you discover events before choosing their payloads. Event Modeling's building blocks help
+connect those facts to the flows through the system. The
+[Microsoft domain events guide](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)
+provides further background.
+
+Once the business meaning is clear, read [Event type](./event-type.md) to give that contract an
+identity in Chronicle, then [Modeling events](./modeling-events.mdx) for the implementation guidance.

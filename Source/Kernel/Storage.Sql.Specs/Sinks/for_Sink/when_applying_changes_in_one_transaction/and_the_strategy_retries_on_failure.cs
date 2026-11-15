@@ -7,6 +7,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 /// A strategy that retries, however the database is reached, needs the receipt: the cycle writes one and a retry probes it.
 /// </summary>
 /// <typeparam name="THarness">The database.</typeparam>
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class and_the_strategy_retries_on_failure<THarness> : given.a_cycle_with_failure_injection<THarness>
     where THarness : ISqlSinkHarness
 {

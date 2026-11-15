@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Text.Json;
+using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
@@ -11,11 +12,14 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Traces;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -36,8 +40,11 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
 /// <param name="activitySource">The <see cref="IActivitySource{T}"/> for tracing.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for how often to check the subscription of a connected client.</param>
+/// <param name="connectionOwnership"><see cref="IConnectionOwnership"/> telling which caller opened each connection.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -45,13 +52,17 @@ internal sealed class Reactors(
     JsonSerializerOptions jsonSerializerOptions,
     [FromKeyedServices(WellKnown.MeterName)] IActivitySource<Reactors> activitySource,
     IOptions<ChronicleOptions> options,
+    IConnectionOwnership connectionOwnership,
     ILogger<Reactors> logger,
-    IObserverRegistrationGate registrationGate) : IReactors
+    IObserverRegistrationGate registrationGate,
+    INamespaceCasing namespaceCasing,
+    ISiloDepartures siloDepartures) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
     {
         logger.Observe();
+        var caller = ConnectionCallers.From(context, options.Value);
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingDeliveries = new PendingDeliveries<ObserverSubscriberResult>();
@@ -68,14 +79,7 @@ internal sealed class Reactors(
                         break;
                     }
 
-                    logger.Registering(
-                        register.Reactor.ReactorId,
-                        register.EventStore,
-                        register.Namespace,
-                        register.Reactor.EventSequenceId,
-                        register.ConnectionId);
-
-                    registrationTcs.SetResult(register);
+                    _ = VerifyRegistration(register);
                     break;
 
                 case ReactorResult result:
@@ -97,6 +101,7 @@ internal sealed class Reactors(
         var namespaceName = EventStoreNamespaceName.NotSet;
         IObserver<EventsToObserve>? observableObserver = null;
         (ReactorEventsObserver? deliver, ReactorReplayObserver? replay) = (null, null);
+        ReactorPageObserver? deliverPage = null;
         var observable = Observable.Create<EventsToObserve>(async (observer, cancellationToken) =>
         {
             observableObserver = observer;
@@ -105,6 +110,7 @@ internal sealed class Reactors(
             try
             {
                 var registration = await registrationTcs.Task.WaitAsync(cancellation.Token);
+                registration.Namespace = (await namespaceCasing.Canonicalize(registration.EventStore, registration.Namespace)).Value;
                 connectionId = registration.ConnectionId;
                 observerId = registration.Reactor.ReactorId;
                 eventStoreName = registration.EventStore;
@@ -148,6 +154,28 @@ internal sealed class Reactors(
 
                     observer.OnNext(message);
                 };
+                if (deliversPages)
+                {
+                    deliverPage = (batches, completions, deliverWithin, origin) =>
+                    {
+                        var deliveryId = pendingDeliveries.AddPage(completions.ToDictionary(_ => (Cratis.Chronicle.Concepts.Events.EventSourceId)_.Key, _ => _.Value));
+                        observer.OnNext(new EventsToObserve
+                        {
+                            DeliveryId = deliveryId,
+                            DeliverWithinMilliseconds = DeliveryDeadlines.ToMilliseconds(deliverWithin),
+                            Origin = origin.ToContract(),
+                            Partitions =
+                            [
+                                .. batches.Select(batch => new PartitionEvents
+                                {
+                                    Partition = batch.Partition.Value.ToString()!,
+                                    Events = batch.Events.Select(_ => _.ToContract(jsonSerializerOptions)).ToArray()
+                                })
+                            ]
+                        });
+                    };
+                }
+
                 replay = (replayState, partition) => observer.OnNext(new EventsToObserve { Partition = partition, ReplayState = (Contracts.Observation.ReplayState)replayState });
 
                 reactorMediator.Subscribe(
@@ -157,6 +185,17 @@ internal sealed class Reactors(
                     registration.Namespace,
                     deliver);
 
+                if (deliverPage is not null)
+                {
+                    reactorMediator.SubscribePages(
+                        registration.Reactor.ReactorId,
+                        registration.ConnectionId,
+                        registration.EventStore,
+                        registration.Namespace,
+                        deliverPage,
+                        registration.PageDelivery.ToChronicle());
+                }
+
                 reactorMediator.SubscribeReplayNotifications(
                     registration.Reactor.ReactorId,
                     registration.ConnectionId,
@@ -164,8 +203,8 @@ internal sealed class Reactors(
                     registration.Namespace,
                     replay);
 
-                var definition = registration.Reactor.ToChronicle();
-                using (await registrationGate.Enter(cancellation.Token))
+                var definition = registration.Reactor.ToChronicle() with { PageDelivery = registration.PageDelivery.ToChronicle() };
+                using (var gate = await ObserverRegistrationGateLease.Enter(registrationGate, cancellation.Token))
                 {
                     // The parent is the long-lived Observe request, which the server deliberately does not trace.
                     var requestActivity = Activity.Current;
@@ -175,7 +214,12 @@ internal sealed class Reactors(
                         using var span = activitySource.Register();
                         span?.Activity?.Tag(key, ObserverType.Reactor);
                         clientObserver = grainFactory.GetGrain<IReactor>(key);
-                        await clientObserver.SetDefinitionAndSubscribe(definition);
+                        var reactor = clientObserver;
+                        await ObserverRegistrationEstablishment.Establish(
+                            () => reactor.SetDefinitionAndSubscribe(definition),
+                            (attempt, _) => logger.SubscribingTimedOut(registration.Reactor.ReactorId, registration.ConnectionId, attempt),
+                            () => gate.Reenter(cancellation.Token),
+                            cancellation.Token);
                     }
                     finally
                     {
@@ -184,8 +228,10 @@ internal sealed class Reactors(
                 }
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
-                    () => clientObserver.KeepSubscription(definition),
-                    TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                    () => ClientSubscriptionKeeper.KeepSubscription(clientObserver.IsSubscriptionIntact, () => clientObserver.KeepSubscription(definition)),
+                    SubscriptionCheckSchedule.From(options.Value),
+                    siloDepartures,
+                    TimeProvider.System,
                     registration.ConnectionId,
                     logger,
                     cancellation.Token);
@@ -230,13 +276,47 @@ internal sealed class Reactors(
             register?.Dispose();
         });
 
-        return observable;
+        return MonitorRegistration(observable, registrationTcs.Task, context, (messagesSubscription, register));
+
+        async Task VerifyRegistration(RegisterReactor registration)
+        {
+            try
+            {
+                var verification = connectionOwnership.Verify(grainFactory, registration.ConnectionId, caller.Owner, options.Value.Clustering.ResponseTimeout, cancellationToken: context.CancellationToken);
+#pragma warning disable MA0042 // Result is read only after successful synchronous completion; the hot path must not block or allocate.
+                var access = verification.IsCompletedSuccessfully ? verification.Result : await verification;
+#pragma warning restore MA0042
+                if (access == ConnectionAccessOutcome.Unverifiable)
+                {
+                    logger.ConnectionOwnershipUnverifiable(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.Unavailable, "The connection could not be verified.")));
+                    return;
+                }
+                if (access == ConnectionAccessOutcome.Denied)
+                {
+                    logger.ConnectionNotAvailableToCaller(registration.ConnectionId);
+                    registrationTcs.TrySetException(new RpcException(new Status(StatusCode.PermissionDenied, "The connection is not available to the caller.")));
+                    return;
+                }
+
+                logger.Registering(registration.Reactor.ReactorId, registration.EventStore, registration.Namespace, registration.Reactor.EventSequenceId, registration.ConnectionId);
+                await SystemStoreGuard.CompleteRegistration(context, registration.EventStore, registration.Namespace, StoreAccess.Read | StoreAccess.Manage, registrationTcs, registration);
+            }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                registrationTcs.TrySetCanceled(context.CancellationToken);
+            }
+            catch (Exception exception)
+            {
+                registrationTcs.TrySetException(exception);
+            }
+        }
     }
 
     /// <inheritdoc/>
     public async Task<HasReactorResponse> HasReactor(HasReactorRequest request, CallContext context = default)
     {
-        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.ReactorId));
+        await SystemStoreGuard.Ensure(context, new(request.EventStore, request.ReactorId), StoreAccess.Read, namespaceAddressed: false);
         var eventStore = storage.GetEventStore(request.EventStore);
         var exists = await eventStore.Reactors.Has(new(request.ReactorId));
 
@@ -248,6 +328,16 @@ internal sealed class Reactors(
         var definition = await eventStore.Reactors.Get(new(request.ReactorId));
         return new HasReactorResponse { Exists = true, EventSequenceId = definition.EventSequenceId.Value };
     }
+
+    static IObservable<EventsToObserve> MonitorRegistration(IObservable<EventsToObserve> source, Task<RegisterReactor> registration, CallContext context, (IDisposable Messages, CancellationTokenRegistration? Registration) lifetime) =>
+        Observable.FromAsync(() => registration.WaitAsync(context.CancellationToken))
+            .Catch<RegisterReactor, OperationCanceledException>(_ => Observable.Empty<RegisterReactor>())
+            .SelectMany(arguments => StoreCapabilityGuard.EndWhenRevoked(source, context, arguments.EventStore, arguments.Namespace, StoreAccess.Read | StoreAccess.Manage))
+            .Finally(() =>
+            {
+                lifetime.Messages.Dispose();
+                lifetime.Registration?.Dispose();
+            });
 
     IEnumerable<(string Partition, ObserverSubscriberResult Result)> ToSubscriberResults(ReactorResult result) =>
         result.Partitions.Count > 0

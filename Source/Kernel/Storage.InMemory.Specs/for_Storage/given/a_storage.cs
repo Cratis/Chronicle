@@ -12,7 +12,7 @@ public class a_storage : Specification
 
     void Establish()
     {
-        _eventStoreStorages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Orleans.Storage.IJobsStorage>());
+        _eventStoreStorages = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Cratis.Choreography.Storage.IJobsStorage>());
         _storage = new(_eventStoreStorages, Substitute.For<ISystemStorage>());
     }
 

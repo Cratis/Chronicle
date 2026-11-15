@@ -55,4 +55,9 @@ public record EventContext(
     /// Gets the name of the registered event source definition the event was appended through. Empty when it was not.
     /// </summary>
     public string EventSource { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the sequence number of the event this event compensates for. Null when the event is not a compensation.
+    /// </summary>
+    public ulong? CompensationFor { get; init; }
 }

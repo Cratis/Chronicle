@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Projections.Engine.Graphs;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Projections.Generations;
 using Cratis.Chronicle.ReadModels;
@@ -16,6 +18,8 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.DependencyInjection;
+using Cratis.Metrics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using EngineProjection = Cratis.Chronicle.Projections.Engine.IProjection;
@@ -32,6 +36,8 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="meter">The pipeline manager meter.</param>
+/// <param name="timeProvider">The <see cref="TimeProvider"/> used to judge idleness.</param>
 [Singleton]
 public class ProjectionPipelineManager(
     IStorage storage,
@@ -40,9 +46,26 @@ public class ProjectionPipelineManager(
     ITypeFormats typeFormats,
     IReadModelsCompliance readModelsCompliance,
     IOptions<ChronicleOptions> options,
-    ILoggerFactory loggerFactory) : IProjectionPipelineManager
+    ILoggerFactory loggerFactory,
+    [FromKeyedServices(WellKnown.MeterName)] IMeter<ProjectionPipelineManager>? meter = null,
+    TimeProvider? timeProvider = null) : IProjectionPipelineManager
 {
-    readonly ConcurrentDictionary<string, CachedPipeline> _pipelines = new();
+    /// <summary>How often, at most, idle pipelines are looked for.</summary>
+    internal static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(5);
+
+    /// <summary>How long a pipeline must show no activity before it is released.</summary>
+    internal static readonly TimeSpan IdleTimeout = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// Owns pipelines with buffered work, independently of the compiled-graph LRU.
+    /// Entries are released by explicit eviction/clear, or by the idle sweep once a pipeline has shown no activity
+    /// (see <see cref="IProjectionPipeline.GetActivity"/>) for <see cref="IdleTimeout"/>.
+    /// </summary>
+    readonly ConcurrentDictionary<string, ProjectionPipelineBinding> _pipelines = new();
+    readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
+    readonly ProjectionPipelineManagerMetrics _metrics = new(meter, options.Value.Telemetry.MetricNames);
+    readonly object _sweepGate = new();
+    readonly object _registryGate = new();
 
     /// <summary>
     /// Per-projection handle lock keyed by (eventStore, namespace, projectionId).
@@ -54,9 +77,21 @@ public class ProjectionPipelineManager(
     /// same lock. Without this, the read-modify-write cycle in SetInitialState → HandleEvent
     /// → SaveChanges races for hierarchical or join projections, leaving parent/child links
     /// empty. Each lock stripes purely event-source-keyed projections per event source id and
-    /// serializes all other projections coarsely; growth is bounded by projection count.
+    /// serializes all other projections coarsely. The registry holds locks weakly: a lock lives as long as a pipeline references it,
+    /// so old and new pipelines of one projection share it while locks of unused projections are released.
     /// </remarks>
-    readonly ConcurrentDictionary<string, ProjectionHandleLock> _handleLocks = new();
+    readonly ProjectionHandleLocks _handleLocks = new();
+    DateTimeOffset _lastSweep = (timeProvider ?? TimeProvider.System).GetUtcNow();
+
+    /// <summary>Gets the number of pipelines currently retained.</summary>
+    internal int PipelineCount => _pipelines.Count;
+
+    /// <summary>Gets the number of handle lock keys currently registered.</summary>
+    internal int HandleLockCount => _handleLocks.Count;
+
+    /// <inheritdoc/>
+    public bool TryGetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out ProjectionPipelineBinding? binding) =>
+        _pipelines.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out binding);
 
     /// <inheritdoc/>
     public async Task<IProjectionPipeline> GetFor(
@@ -73,6 +108,20 @@ public class ProjectionPipelineManager(
         pipeline?.Pipeline.ClearPreparedPage();
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
 
+        if (projection.Graph is { } graph)
+        {
+            var graphSink = await namespaceStorage.Sinks.GetGraphFor(projection.ReadModel);
+            var graphPipeline = new GraphProjectionPipeline(
+                projection,
+                new GraphChangesetBuilder(graph, graphSink, projection.Identifier),
+                graphSink,
+                _handleLocks.GetFor(key),
+                objectComparer,
+                loggerFactory.CreateLogger<GraphProjectionPipeline>());
+            Bind(key, projection, graphPipeline);
+            return graphPipeline;
+        }
+
         // A projection is observed per namespace whatever its scope - the events it reacts to only exist there.
         // The scope decides where the result lands. A globally scoped projection resolves its sink against the
         // NotSet namespace, the same event-store-level sentinel event seeding uses, so every namespace's observer
@@ -87,7 +136,7 @@ public class ProjectionPipelineManager(
         var sink = await sinkStorage.Sinks.GetFor(projection.ReadModel);
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
         var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, null);
-        _pipelines[key] = new(newPipeline, projection.DefinitionFingerprint);
+        Bind(key, projection, newPipeline);
         return newPipeline;
     }
 
@@ -98,6 +147,7 @@ public class ProjectionPipelineManager(
         EngineProjection projection,
         MaterializationGenerationIdentity generation)
     {
+        if (projection.Graph is not null) throw new EventGenerationDeliveryNotSupported();
         MaterializationGenerationCapabilities.ThrowIfCannotBuild(projection, generation);
         var key = GenerationKey(eventStore, @namespace, generation);
         if (_pipelines.TryGetValue(key, out var pipeline) && pipeline.Fingerprint == projection.DefinitionFingerprint)
@@ -116,7 +166,7 @@ public class ProjectionPipelineManager(
         // itself, so its futures stay where they always were.
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, generation.ObserverId);
         var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, generation);
-        _pipelines[key] = new(newPipeline, projection.DefinitionFingerprint);
+        Bind(key, projection, newPipeline);
         return newPipeline;
     }
 
@@ -133,20 +183,47 @@ public class ProjectionPipelineManager(
         // The pipeline holds its own lock, so the key is released again rather than accumulating one entry per rebuild.
         var isolatedKey = $"{KeyHelper.Combine(eventStore, @namespace, projection.Identifier)}/isolated/{Guid.NewGuid():N}";
         var pipeline = Build(eventStore, @namespace, projection, namespaceStorage, new PartitionRebuildChangesets(), sink, new PartitionRebuildFutures(), isolatedKey, null);
-        _handleLocks.TryRemove(isolatedKey, out _);
+        _handleLocks.Remove(isolatedKey);
         return pipeline;
     }
 
     /// <inheritdoc/>
-    public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id) =>
+    public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id)
+    {
         _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
+        _metrics.Pipelines(_pipelines.Count);
+    }
 
     /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, MaterializationGenerationIdentity generation) =>
         Evict(GenerationKey(eventStore, @namespace, generation));
 
     /// <inheritdoc/>
-    public void Clear() => _pipelines.Clear();
+    public void Clear()
+    {
+        _pipelines.Clear();
+        _metrics.Pipelines(0);
+    }
+
+    /// <summary>Releases the pipelines that have shown no activity for <see cref="IdleTimeout"/>.</summary>
+    internal void SweepIdle()
+    {
+        var now = _time.GetUtcNow();
+        ICollection<KeyValuePair<string, ProjectionPipelineBinding>> entries = _pipelines;
+        lock (_registryGate)
+        {
+            foreach (var entry in _pipelines.ToArray())
+            {
+                if (entry.Value.Pipeline.IsPinned() || !entry.Value.IsIdle(now, IdleTimeout)) continue;
+                if (!entries.Remove(entry)) continue;
+                entry.Value.Swept = true;
+                entry.Value.Pipeline.ClearPreparedPage();
+            }
+        }
+
+        _handleLocks.Prune();
+        _metrics.Pipelines(_pipelines.Count);
+    }
 
     /// <summary>
     /// Gets the cache and handle lock key of a generation.
@@ -168,6 +245,45 @@ public class ProjectionPipelineManager(
     void Evict(string key)
     {
         if (_pipelines.TryRemove(key, out var pipeline)) pipeline.Pipeline.ClearPreparedPage();
+        _metrics.Pipelines(_pipelines.Count);
+    }
+
+    void Bind(string key, EngineProjection projection, IProjectionPipeline pipeline)
+    {
+        var binding = new ProjectionPipelineBinding(projection, pipeline);
+        _pipelines[key] = binding;
+        pipeline.ObserveSessions(() => Rebind(key, binding));
+        _metrics.Pipelines(_pipelines.Count);
+        SweepWhenDue();
+    }
+
+    /// <summary>
+    /// Makes a binding the idle sweep released discoverable again because a replay or bulk session opened on its pipeline.
+    /// Runs under the same gate as the sweep, so the session's flush/drain never looks for a pipeline the sweep is removing.
+    /// </summary>
+    /// <param name="key">The binding key.</param>
+    /// <param name="binding">The binding.</param>
+    void Rebind(string key, ProjectionPipelineBinding binding)
+    {
+        lock (_registryGate)
+        {
+            if (!binding.Swept) return;
+            if (_pipelines.TryAdd(key, binding)) binding.Swept = false;
+        }
+
+        _metrics.Pipelines(_pipelines.Count);
+    }
+
+    void SweepWhenDue()
+    {
+        var now = _time.GetUtcNow();
+        lock (_sweepGate)
+        {
+            if (now - _lastSweep < SweepInterval) return;
+            _lastSweep = now;
+        }
+
+        SweepIdle();
     }
 
     ProjectionPipeline Build(
@@ -183,7 +299,8 @@ public class ProjectionPipelineManager(
     {
         var replayScopedStorage = new ReplayScopedEventSequenceStorage(namespaceStorage.GetEventSequence(projection.EventSequenceId));
         var futuresTracker = new ProjectionFuturesTracker();
-        var resolveFuturesStep = new ResolveFutures(futuresTracker, projectionFutures, typeFormats, objectComparer, loggerFactory.CreateLogger<ResolveFutures>(), replayScopedStorage, sink);
+        var encryptChangeset = new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace);
+        var resolveFuturesStep = new ResolveFutures(futuresTracker, projectionFutures, typeFormats, objectComparer, encryptChangeset, loggerFactory.CreateLogger<ResolveFutures>(), replayScopedStorage, sink);
 
         IEnumerable<ICanPerformProjectionPipelineStep> steps =
         [
@@ -191,13 +308,13 @@ public class ProjectionPipelineManager(
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
             new DecryptInitialState(readModelsCompliance, eventStore, @namespace),
             new HandleEvent(replayScopedStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
-            new EncryptChangeset(readModelsCompliance, objectComparer, eventStore, @namespace),
+            encryptChangeset,
             new StoreFutures(futuresTracker, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
             new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination)
         ];
 
-        var handleLock = _handleLocks.GetOrAdd(key, _ => new ProjectionHandleLock());
+        var handleLock = _handleLocks.GetFor(key);
 
         return new ProjectionPipeline(
             projection,
@@ -210,6 +327,4 @@ public class ProjectionPipelineManager(
             loggerFactory.CreateLogger<ProjectionPipeline>(),
             generation);
     }
-
-    sealed record CachedPipeline(IProjectionPipeline Pipeline, string Fingerprint);
 }

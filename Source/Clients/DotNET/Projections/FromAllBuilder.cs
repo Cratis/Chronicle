@@ -29,6 +29,15 @@ public class FromAllBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromAllBu
     }
 
     /// <inheritdoc/>
+    public IAllSetBuilder<TReadModel, IFromAllBuilder<TReadModel>> SetOnce<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor)
+    {
+        var propertyPath = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the property to set once on read model '{typeof(TReadModel).FullName}'");
+        var setBuilder = new AllSetOnceBuilder<TReadModel, IFromAllBuilder<TReadModel>>(this, propertyPath, namingPolicy);
+        _propertyExpressions.Add(setBuilder);
+        return setBuilder;
+    }
+
+    /// <inheritdoc/>
     public IFromAllBuilder<TReadModel> Count<TProperty>(Expression<Func<TReadModel, TProperty>> readModelPropertyAccessor) =>
         AddOperation(GetTargetProperty(readModelPropertyAccessor, "the property to count on"), WellKnownExpressions.Count);
 
@@ -71,9 +80,6 @@ public class FromAllBuilder<TReadModel>(INamingPolicy namingPolicy) : IFromAllBu
     {
         var dictionaryProperty = ProjectionPropertyPaths.FromExpression(readModelPropertyAccessor, namingPolicy, ProjectionPathRole.Target, $"the dictionary-typed property on read model '{typeof(TReadModel).FullName}'");
         var contextProperty = ProjectionPropertyPaths.FromExpression(dynamicKeyAccessor, namingPolicy, ProjectionPathRole.Source, $"the dynamic dictionary key for read model '{typeof(TReadModel).FullName}'");
-
-        // Compose already-converted paths with the well-known context marker, not CLR member names.
-        // The context suffix is a source expression for a dynamic dictionary key, not a target member.
-        return new PropertyPath($"{dictionaryProperty}.{WellKnownExpressions.EventContext}.{contextProperty}");
+        return ProjectionPropertyPaths.DictionaryEntry(dictionaryProperty, WellKnownExpressions.EventContext, contextProperty);
     }
 }

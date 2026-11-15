@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-testing-kotlin
-description: Specify Kotlin or Java Arc commands and queries through real in-process pipelines with arc-testing — CommandScenario, QueryScenario, bounded ObservableQueryScenario collection, read-model pins, tenant resolution, and Chronicle append assertions. Use when writing or diagnosing JVM Arc pipeline specifications without Spring Boot or a kernel. Do not use for standalone Chronicle client tests, C# scenarios, or defining the command or query itself.
+description: Use when writing or diagnosing Kotlin or Java Arc pipeline specifications without Spring Boot or a kernel. Not for standalone Chronicle client tests, C# scenarios or defining production commands and queries.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-testing-kotlin/SKILL.md -->

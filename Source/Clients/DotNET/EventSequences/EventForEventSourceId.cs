@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.EventSequences;
 
@@ -63,6 +64,28 @@ public record EventForEventSourceId(EventSourceId EventSourceId, object Event, C
     /// Gets or inits the optional occurred time. If not set, the server will set it to approximately the time of append.
     /// </summary>
     public DateTimeOffset? Occurred { get; init; }
+
+    /// <summary>
+    /// Gets or inits the correlation identifier the event had in its source. Used when importing; an append takes the correlation of the call.
+    /// </summary>
+    public CorrelationId? CorrelationId { get; init; }
+
+    /// <summary>
+    /// Gets or inits the identity that caused the event in its source. Used when importing; an append records the current identity.
+    /// </summary>
+    public Identity? CausedBy { get; init; }
+
+    /// <summary>
+    /// Gets or inits the generation of its event type the event was written in. Used when importing; an append writes the
+    /// generation the event's type is registered with.
+    /// </summary>
+    public EventTypeGeneration? Generation { get; init; }
+
+    /// <summary>
+    /// Gets or inits the sequence number the event had in its source. Used when importing, where it is kept in the
+    /// event's causation; the event gets a new sequence number in the sequence it is imported into.
+    /// </summary>
+    public EventSequenceNumber? SourceSequenceNumber { get; init; }
 
     /// <summary>
     /// Gets or inits the tags to associate with the event. These are combined with any static tags declared on the

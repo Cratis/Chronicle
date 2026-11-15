@@ -1,17 +1,18 @@
 ---
+title: ChronicleOptions Reference
 description: Reference for ChronicleOptions, the root configuration class of Chronicle .NET clients, set in code or bound from appsettings.json.
 ---
-# ChronicleOptions Reference
-
 `ChronicleOptions` is the root configuration class for all Chronicle .NET clients. All properties can be set in code via the `configureOptions` callback on `AddCratisChronicle`, and most can be bound directly from `appsettings.json` under the `Cratis:Chronicle` section.
 
 There are three options classes that form an inheritance chain, each adding settings relevant to its hosting context:
 
 | Class | Used by | Adds |
 |---|---|---|
-| `ChronicleOptions` | All clients | Connection, serialization, timeouts, TLS, auth |
+| `ChronicleOptions` | All clients | Connection, serialization, timeouts, TLS, auth, telemetry, concurrency |
 | `ChronicleClientOptions` | Worker services, console apps | Event store name, namespace resolver type |
-| `ChronicleAspNetCoreOptions` | ASP.NET Core apps | HTTP header–based namespace resolution |
+| `ChronicleAspNetCoreOptions` | ASP.NET Core apps | HTTP header–based namespace resolution, automatic middleware, request unit of work |
+
+Several connection settings exist both as options and as connection string keys (TLS paths, `skipTlsValidation`, `skipKeepAlive`, `skipCompatibilityCheck`, serverless). [Connection string and option precedence](../connection-strings/configuration.mdx#settings-available-as-both-options-and-connection-string-keys) says which one wins. Values that must agree with the kernel are listed in [Settings that must match the kernel](must-match-the-kernel.mdx).
 
 ## appsettings.json
 
@@ -34,9 +35,6 @@ All bindable settings live under `Cratis:Chronicle`:
       "Tls": {
         "CertificatePath": "/certs/client.pfx",
         "CertificatePassword": "secret"
-      },
-      "Authentication": {
-        "Authority": "https://login.example.com"
       }
     }
   }
@@ -133,6 +131,19 @@ Intended for short-lived processes such as command line tools, functions and job
 ### RegistrationMode
 
 Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Only has an effect when `AutoDiscoverAndRegister` is enabled. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
+
+### Serverless
+
+Settings for running the .NET client in a function or another scaled-to-zero host, bound from `Cratis:Chronicle:Serverless`.
+
+| | |
+|---|---|
+| Type | `ChronicleServerlessOptions` |
+| Default | `Mode` is `Off` |
+
+Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. `Delivery:Timeout` (30 seconds by default, must be greater than zero) is the delivery timeout for HTTP reactors and reducers; it has no effect until HTTP delivery ships and does not change the kernel's 60 second webhook timeout. See [Serverless mode](../clients/dotnet/serverless-mode.md).
+
+`Serverless:CheckArtifactFingerprint` defaults to `true`. In serverless `Deploy` mode only, it schedules one background deployment-metadata query and a local prepared-definition fingerprint comparison per client and event-store name, shared across namespaces. It warns about missing or stale deployment metadata without blocking callers, registering artifacts or changing readiness. A nonzero `DeploymentGeneration` is compared too; zero leaves only the fingerprint comparison. Set `Cratis:Chronicle:Serverless:CheckArtifactFingerprint` to `false` to avoid the query and computation. This is a best-effort diagnostic, not enforcement or automatic repair; manual discovery mode checks only current prepared artifacts. Deployment tooling remains responsible for [registering definitions](../clients/dotnet/explicit-artifacts.md), and non-native registries retain their existing empty fingerprint contribution.
 
 ### DefaultSinkTypeId
 
@@ -280,19 +291,85 @@ In `appsettings.json`:
 
 Use `Fail` in CI or staging to investigate likely identity changes before deploying. This is a heuristic: rolling deployments can hide reactor or reducer renames, and unrelated same-named observers or same-shaped events can match. Projections are more prone to false positives because subscribed candidates are included; their findings remain informational. Event types cannot be removed to acknowledge a finding; preserve the old id or switch to `Warn` after reviewing an intentional new identity. See [Discovery report and identity drift](../clients/dotnet/discovery-report.md) for findings, log levels, and limitations.
 
+### Telemetry
+
+Controls what the client puts on its OpenTelemetry spans. Bound from `Cratis:Chronicle:Telemetry`.
+
+| Nested property | Type | Default | Description |
+|---|---|---|---|
+| `SpanNames` | `ClientSpanNames` | `Legacy` | Span naming convention. Keep `Legacy` until dashboards and alerts are moved to the new names. See [Telemetry names](../hosting/configuration/telemetry-names.md) |
+| `EventSourceIdTracing` | `EventSourceIdTracing` | `Raw` | How event source ids appear in spans. `Raw` writes the id as is, so an id that contains personal data reaches your tracing backend. Use `Hashed` (or turn it off) when ids can identify a person |
+| `EventSourceIdHashKey` | `string?` | `null` | Secret used when `EventSourceIdTracing` is `Hashed`. At least 32 characters; startup validation fails otherwise. Not read from serialized options, so supply it from a secret store |
+
+```json
+{ "Cratis": { "Chronicle": { "Telemetry": { "EventSourceIdTracing": "Hashed" } } } }
+```
+
+Set the hash key through `Cratis__Chronicle__Telemetry__EventSourceIdHashKey`. See [Telemetry identifiers](../hosting/configuration/telemetry-identifiers.md) and [Tracing client operations](../hosting/client-tracing.mdx).
+
+### ConcurrencyOptions
+
+Default behavior for [event concurrency](../events/concurrency.mdx). Set in code through the `ChronicleOptions` constructor argument or `configureOptions`; it is not a configuration-file section.
+
+| Property | Type | Default | When to change it |
+|---|---|---|---|
+| `DefaultStrategy` | `Type` | `OptimisticConcurrencyStrategy` | Replace it with your own `IConcurrencyStrategy` implementation when every append needs the same custom check |
+| `CheckFirstAppendIntoAScope` | `bool` | `false` | Set to `true` to reject the first append into a narrowed scope when a matching event already exists. Turning it on rejects appends that succeed today; it is scheduled to become the default in the next major version |
+| `SkipIncompleteExplicitScopes` | `bool` | `false` | Keeps the legacy unchecked behavior for incomplete caller-supplied scopes. Leave it off unless an existing caller depends on that |
+| `AllowRouteScopeStreamMismatch` | `bool` | `false` | Allows a definition-linked explicit scope to guard a different stream than a single-route append |
+
+### JsonSerializerOptions
+
+The `System.Text.Json` options the client uses to serialize events. Code only: set it through the `ChronicleOptions` constructor argument or `configureOptions`; it cannot be bound from configuration.
+
+| | |
+|---|---|
+| Type | `JsonSerializerOptions` |
+| Default | A new `JsonSerializerOptions` with System.Text.Json defaults |
+
+Change it when events need custom converters. Property naming is controlled separately by the [naming policy](camel-casing.mdx), not by this setting.
+
+### EventGenerationDelivery
+
+How client reactors, reducers and typed materialized projections receive event generations.
+
+| | |
+|---|---|
+| Type | `EventGenerationDelivery` |
+| Default | `Compatibility` |
+
+`Pinned` asks the kernel to select and release the subscribed generation. Leave the default unless you are migrating event types across generations. See [Migrations](../migrations/index.md).
+
+### Fixed client behavior
+
+The client sets these values itself. They cannot be configured, so they do not appear in any options class.
+
+| Behavior | Value |
+|---|---|
+| gRPC keep-alive ping | Every 60 seconds, with a 30-second timeout for the reply |
+| gRPC call retry | Up to 5 attempts, backing off from 1 second to 10 seconds (multiplier 1.5) |
+| Endpoint handshake per server | 5 seconds, within the `ConnectTimeout` budget |
+| Connection watchdog | Treats the connection as stale after 5 seconds without keep-alive; reconnect waits double from 1 second up to 30 seconds |
+
+`ConnectTimeout` is the only connection timeout you can change. Retry of artifact registration is separate and configurable through `RegistrationRetry`.
+
 ### Tls
 
-TLS certificate settings for the gRPC connection. TLS is active when both `CertificatePath` and `CertificatePassword` are set. See [TLS](tls) for full details.
+The client uses TLS by default for the gRPC connection, independently of client-certificate configuration. `CertificatePath` and `CertificatePassword` configure a client certificate; they do not enable TLS. The `disableTls=true` connection-string option uses cleartext HTTP/2 instead and requires a matching cleartext kernel listener.
+
+Server certificate validation is separate: `SkipCertificateValidation` defaults to `true`. Validation is skipped only when both this option and the connection string's `skipTlsValidation` permit it; skipping accepts any server certificate, including self-signed certificates. Set `SkipCertificateValidation` to `false` to enable validation. When the only validation errors are certificate-chain errors, the client still accepts the server certificate if its hash matches the configured client certificate's hash. This pinning exception does not bypass a host-name mismatch or a missing server certificate. See [TLS](tls) for full details.
 
 | | |
 |---|---|
 | Type | `Tls` |
-| Default | TLS disabled (no certificate configured) |
+| Default | TLS enabled, no client certificate configured, server certificate validation skipped |
 
 | Nested property | Type | Description |
 |---|---|---|
-| `CertificatePath` | `string?` | Path to a PFX certificate file |
-| `CertificatePassword` | `string?` | Password for the certificate file |
+| `CertificatePath` | `string?` | Path to a PFX client certificate file |
+| `CertificatePassword` | `string?` | Password for the client certificate file |
+| `CaCertificatePath` | `string?` | Path to a PEM or PKCS#7 file with the certificate authorities the server certificate must chain to when validation is enabled; see [TLS](tls#trusting-a-private-certificate-authority) |
+| `SkipCertificateValidation` | `bool` | Skip server certificate validation; defaults to `true` |
 
 ### Occurrences
 
@@ -308,9 +385,21 @@ Kernel delivery settings under `Cratis:Chronicle:Occurrences`. These settings do
 
 Lease duration is selected by the claim or renew request, not this section: zero or a negative value uses 60 seconds, and the maximum is 600 seconds. Claims return at most 1,000 occurrences and remain subject to `MaxInFlight`. Kernel time controls expiry and backoff. See [occurrence delivery and receipts](../concepts/effect-receipts.md#record-and-deliver-an-occurrence) for ordering, quarantine and recovery.
 
+### Imports
+
+Kernel settings for [bulk event imports](../events/importing.mdx) under `Cratis:Chronicle:Imports`.
+
+| Property | Type | Default | Behavior |
+|---|---|---|---|
+| `StagingRetention` | `TimeSpan` | `24:00:00` | An open import without activity for longer than this is abandoned and its staging discarded |
+| `RetentionSweepInterval` | `TimeSpan` | `00:15:00` | How often each silo looks for imports that outlived their retention |
+| `CommitChunkSize` | `int` | `1000` | How many staged events the commit appends in one call to the event sequence |
+| `MaxChunkEvents` | `int` | `1000` | The most events one staged chunk may carry |
+| `MaxChunkBytes` | `int` | `4194304` | The most bytes of event content one staged chunk may carry |
+
 ### Authentication
 
-OAuth/OIDC authority configuration. When `Authority` is not set, the Chronicle internal OAuth authority is used.
+OAuth/OIDC authority configuration for the client-credentials token. The .NET client requests its token from, in order of precedence: `TokenEndpoint`, the token endpoint discovered from `Authority` (`{Authority}/.well-known/openid-configuration`), or the Chronicle server's own `/connect/token`.
 
 | | |
 |---|---|
@@ -319,7 +408,26 @@ OAuth/OIDC authority configuration. When `Authority` is not set, the Chronicle i
 
 | Nested property | Type | Description |
 |---|---|---|
-| `Authority` | `string?` | OAuth/OIDC authority URL |
+| `Authority` | `string?` | OAuth/OIDC authority URL used to discover the token endpoint |
+| `TokenEndpoint` | `string?` | Token endpoint used as is; takes precedence over `Authority` |
+| `Scope` | `string?` | Scope sent with the token request; requires `TokenEndpoint` or `Authority` |
+
+Optional external-provider example. Leave `Authentication` out to keep requesting tokens from the Chronicle server, and replace the placeholder values with your own provider:
+
+```json
+{
+  "Cratis": {
+    "Chronicle": {
+      "Authentication": {
+        "Authority": "https://login.example.com",
+        "Scope": "api://chronicle/.default"
+      }
+    }
+  }
+}
+```
+
+These options apply only to client credentials, so API key and `auth=none` connections ignore them. `Authority` and `TokenEndpoint` must be absolute `https` URLs without user info, and the .NET client always validates the certificate of an external authority. The connection string must carry its own client credentials, because the development credentials are never sent to an external authority. `AddCratisChronicleConnection` and the other SDKs don't support these options yet.
 
 ## ChronicleClientOptions properties
 
@@ -340,18 +448,23 @@ The name of the event store the client connects to. Required.
 
 ### EventStoreNamespaceResolverType
 
-The `Type` of the `IEventStoreNamespaceResolver` to use for resolving the event store namespace. When `null`, defaults to `DefaultEventStoreNamespaceResolver` at runtime, which always returns the default namespace.
+The `Type` of the `IEventStoreNamespaceResolver` to use for resolving the event store namespace. The default depends on the host:
+
+| Host | Default |
+|---|---|
+| Worker services and console apps (`ChronicleClientOptions`) | `null`, which resolves to `DefaultEventStoreNamespaceResolver` at runtime and always returns the default namespace |
+| ASP.NET Core (`ChronicleAspNetCoreOptions`) | `HttpHeaderEventStoreNamespaceResolver`, which reads the namespace from the request header and falls back to the default namespace when the header is absent |
 
 | | |
 |---|---|
 | Type | `Type?` |
-| Default | `null` → `DefaultEventStoreNamespaceResolver` |
+| Default | Per host, see the table above |
 
 This is a structural dependency — it resolves a type reference and cannot be meaningfully set from `appsettings.json`. Set it in code via the `configureOptions` callback or via `IChronicleBuilder`.
 
 ## ChronicleAspNetCoreOptions properties
 
-`ChronicleAspNetCoreOptions` extends `ChronicleClientOptions` and is used by ASP.NET Core applications via `WebApplicationBuilder.AddCratisChronicle`. It defaults `EventStoreNamespaceResolverType` to `HttpHeaderEventStoreNamespaceResolver`.
+`ChronicleAspNetCoreOptions` extends `ChronicleClientOptions` and is used by ASP.NET Core applications via `WebApplicationBuilder.AddCratisChronicle`. It defaults `EventStoreNamespaceResolverType` to `HttpHeaderEventStoreNamespaceResolver`, unlike the other hosts, which use the default resolver.
 
 ### NamespaceHttpHeader
 
@@ -366,6 +479,28 @@ The HTTP request header used to resolve the event store namespace on a per-reque
 { "Cratis": { "Chronicle": { "NamespaceHttpHeader": "x-my-tenant" } } }
 ```
 
+> [!WARNING]
+> The caller sets this header, so any client that can reach your application can pick any tenant. In a multi-tenant production deployment, either configure the claims-based resolver, which reads the tenant from a validated token, or make sure the header is set only by trusted infrastructure such as your gateway, which must overwrite any value the client sends. The subdomain resolver is no safer on its own: the caller sets the Host header too, so use it only when trusted infrastructure controls the host. Whichever resolver you use, your application must still check that the signed-in caller is allowed to use the resolved tenant. See [Namespaces](../namespaces/index.md).
+
+### UseAutomaticMiddleware
+
+Controls whether Chronicle's unit of work and causation middleware is installed by startup filters.
+
+| | |
+|---|---|
+| Type | `bool` |
+| Default | `true` |
+
+Set to `false` when the middleware must run after authentication and authorization. Then place it yourself with `app.UseCratisChronicle()` at that point in the pipeline.
+
+### UnitOfWork
+
+Settings for the request unit of work, bound from `Cratis:Chronicle:UnitOfWork`.
+
+| Nested property | Type | Default | Description |
+|---|---|---|---|
+| `ReportFailuresBeforeResponseStarts` | `bool` | `false` | When `true`, MVC completes the request's unit of work before executing the result and reports a failed commit as problem details (409 for conflicts, 400 for constraint violations, 500 otherwise). Minimal APIs opt in separately with `WithUnitOfWork()`. See [Transactions](../events/transactions.mdx) |
+
 ## Webhooks (Kernel only)
 
 The Kernel's `Cratis.Chronicle.Configuration.ChronicleOptions.Webhooks` is separate from the client
@@ -375,7 +510,7 @@ options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`,
 
 | Key | Default | Purpose |
 |---|---|---|
-| `Validation` | `Warn` in Development builds; `BlockLocalAddresses` otherwise | `BlockLocalAddresses` blocks local ranges, `BlockPrivateAddresses` blocks all private/special ranges, and `Enforce` rejects every violation. Other violations warn. Metadata requires explicit approval in every mode. Enforce is reserved as the next-major default. |
+| `Validation` | `Warn` in builds compiled with `DEVELOPMENT`; `BlockLocalAddresses` otherwise | `BlockLocalAddresses` blocks local ranges, `BlockPrivateAddresses` blocks all private/special ranges, and `Enforce` rejects every violation. Other violations warn. Metadata requires explicit approval in every mode. Enforce is reserved as the next-major default. |
 | `AllowInsecureHttp` | `false` | Permit HTTP in Development. Ignored with a startup warning outside Development. Loopback HTTP is automatically permitted in Development. |
 | `AllowedHosts` | `[]` | Exact receiver/OAuth hosts or wildcard subdomains such as `*.example.com`. In Enforce mode unlisted hosts are rejected; approving a host also permits its private addresses. |
 | `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |

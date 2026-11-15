@@ -2,13 +2,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation;
 
@@ -46,6 +46,28 @@ public static partial class JobsManagerExtensions
         jobsManager.GetJobs(new JobQuery { Statuses = _unfinishedStatuses, Take = 0 });
 
     /// <summary>
+    /// Gets the jobs of one type that are outstanding: unfinished, or removing with work still in flight.
+    /// </summary>
+    /// <param name="jobsManager">The <see cref="IJobsManager"/> to ask.</param>
+    /// <typeparam name="TJob">The type of the job.</typeparam>
+    /// <returns>The outstanding <see cref="JobState"/> of that type.</returns>
+    /// <remarks>
+    /// Jobs of other types are not read. A job holds its whole step plan, which for a job over thousands of partitions is
+    /// megabytes, so listing every job to find the few of one type reads, copies and discards all of it on every call.
+    /// </remarks>
+    public static Task<IImmutableList<JobState>> GetOutstandingJobsOf<TJob>(this IJobsManager jobsManager) =>
+        ListOf<TJob>(jobsManager, _outstandingStatuses, jobsManager.GetOutstandingJobs);
+
+    /// <summary>
+    /// Gets the jobs of one type that are unfinished.
+    /// </summary>
+    /// <param name="jobsManager">The <see cref="IJobsManager"/> to ask.</param>
+    /// <typeparam name="TJob">The type of the job.</typeparam>
+    /// <returns>The unfinished <see cref="JobState"/> of that type.</returns>
+    public static Task<IImmutableList<JobState>> GetUnfinishedJobsOf<TJob>(this IJobsManager jobsManager) =>
+        ListOf<TJob>(jobsManager, _unfinishedStatuses, jobsManager.GetUnfinishedJobs);
+
+    /// <summary>
     /// Gets jobs that still own work, including jobs draining during removal.
     /// </summary>
     /// <param name="jobsManager">The jobs manager.</param>
@@ -74,7 +96,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -114,7 +136,7 @@ public static partial class JobsManagerExtensions
     /// <param name="onStartNew">The optional callback when a new job needs to be started.</param>
     /// <param name="onResumeRefused">The optional callback when a stopped job was found but refused to resume, so nothing owns the work.</param>
     /// <param name="concludedJobs">The optional jobs that have already reported their work as done and therefore can not own it, even while still finalizing. Read after the lookup and never changed; forgetting them is up to their owner.</param>
-    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Orleans refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
+    /// <param name="maxJobsToDrop">The most stopped jobs that were never prepared to delete instead of resuming them; 0 drops none. Cratis.Choreography refuses to resume them, so they would block the work for good. When any exist, up to the allowed number is dropped and no job is resumed or started in this call; the next call looks the jobs up again.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -189,7 +211,7 @@ public static partial class JobsManagerExtensions
         onResume ??= () => Task.CompletedTask;
         onStartNew ??= () => Task.CompletedTask;
         onResumeRefused ??= () => Task.CompletedTask;
-        var jobs = await jobsManager.GetOutstandingJobs();
+        var jobs = await jobsManager.GetOutstandingJobsOf<TJob>();
         var request = createRequest();
 
         // The exclusion is read after the lookup, so it covers jobs that concluded while it was in flight. A listing is no
@@ -201,6 +223,16 @@ public static partial class JobsManagerExtensions
             requestPredicate(observerRequest) &&
             !(concludedJobs?.Contains(job.Id) ?? false)).ToImmutableList();
         var now = DateTimeOffset.UtcNow;
+
+        // A job stuck in preparation without any step is neither live nor resumable, and would block the work forever.
+        var abandoned = jobs.Where(job => JobLiveness.PreparationAbandoned(job, now)).ToList();
+        foreach (var job in abandoned)
+        {
+            logger.DeletingAbandonedPreparingJob(job.Id);
+            await jobsManager.Delete(job.Id);
+        }
+
+        jobs = jobs.RemoveRange(abandoned);
         var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsLive(now));
         if (alreadyRunningJob is not null)
         {
@@ -271,10 +303,10 @@ public static partial class JobsManagerExtensions
     /// a hung completion. Treating it as running told an operator a replay had started while nothing was created.
     /// </remarks>
     internal static bool IsLive(this JobState job, DateTimeOffset now) =>
-        (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now);
+        (job.IsPreparingOrRunning || job.Status == JobStatus.Removing) && !JobLiveness.HasConcludedAllStepsLongAgo(job, now) && !JobLiveness.PreparationAbandoned(job, now);
 
     /// <summary>
-    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Orleans: a stopped job that
+    /// Gets whether a job ever reached its steps. Mirrors Job.JobIsPrepared in Cratis.Choreography: a stopped job that
     /// was never prepared is refused when resumed, so it can never run again.
     /// </summary>
     /// <param name="job">The <see cref="JobState"/> to check.</param>
@@ -396,6 +428,9 @@ public static partial class JobsManagerExtensions
     [LoggerMessage(LogLevel.Warning, "Could not resume stopped job {JobId} - nothing will drive it forward")]
     static partial void CouldNotResumeJob(this ILogger logger, JobId jobId);
 
+    [LoggerMessage(LogLevel.Warning, "Deleting job {JobId} that stayed in preparation without a step - nothing will ever drive it forward")]
+    static partial void DeletingAbandonedPreparingJob(this ILogger logger, JobId jobId);
+
     [LoggerMessage(LogLevel.Warning, "Dropping stopped job {JobId} that was never prepared and can never resume")]
     static partial void DroppingJobThatCanNeverResume(this ILogger logger, JobId jobId);
 
@@ -404,4 +439,16 @@ public static partial class JobsManagerExtensions
 
     [LoggerMessage(LogLevel.Warning, "Stopped job {JobId} never prepared a step and can not be resumed - removing it so catch-up can start a new job")]
     static partial void RemovingUnresumableJob(this ILogger logger, JobId jobId);
+
+    static Task<IImmutableList<JobState>> ListOf<TJob>(IJobsManager jobsManager, JobStatus[] statuses, Func<Task<IImmutableList<JobState>>> listAll)
+    {
+        // A job type that is not known cannot be narrowed to, so everything is listed, as it always was.
+        var jobTypes = JobTypes.Instance;
+        if (jobTypes is null || !jobTypes.GetFor(typeof(TJob)).TryPickT0(out var jobType, out _))
+        {
+            return listAll();
+        }
+
+        return jobsManager.GetJobs(new JobQuery { Type = jobType, Statuses = statuses, Take = 0 });
+    }
 }

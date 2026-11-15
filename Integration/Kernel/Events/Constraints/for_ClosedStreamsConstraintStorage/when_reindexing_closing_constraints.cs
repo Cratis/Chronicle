@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -11,8 +12,6 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Orleans.Jobs;
-
 using context = Cratis.Chronicle.Kernel.Integration.Events.Constraints.for_ClosedStreamsConstraintStorage.when_reindexing_closing_constraints.context;
 
 namespace Cratis.Chronicle.Kernel.Integration.Events.Constraints.for_ClosedStreamsConstraintStorage;

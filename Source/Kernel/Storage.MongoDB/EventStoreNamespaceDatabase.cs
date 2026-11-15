@@ -30,6 +30,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     internal static readonly string[] ObsoleteEventIndexNames = ["eventSourceId", "eventTypeId", "eventStreamType", "contentHashes"];
 
     readonly IMongoDatabase _database;
+    readonly string _requestedDatabaseName;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
 
     /// <summary>
@@ -50,6 +51,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         IMongoDBStorageConnections? connections = null)
     {
         var databaseName = DatabaseNames.ForEventStoreNamespace(eventStore, @namespace, storageOptions?.Value.DatabaseNamePrefix ?? string.Empty, storageOptions?.Value.SystemDatabaseName ?? Configuration.Storage.DefaultSystemDatabaseName);
+        _requestedDatabaseName = databaseName;
         if (connections is not null)
         {
             _database = connections.GetDatabase(StorageConnectionKind.Namespace, databaseName, eventStore.Value, @namespace.Value);
@@ -66,7 +68,7 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         // TODO: Performance optimization - separate reads from writes in a clustered setup. Read from secondary.
         // settings.ReadPreference = ReadPreference.SecondaryPreferred;
         Client = clientManager.GetClientFor(settings);
-        _database = Client.GetDatabase(databaseName);
+        _database = Client.GetDatabaseByExistingCasing(databaseName);
     }
 
     /// <inheritdoc/>
@@ -121,7 +123,17 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     public async Task Drop()
     {
         _indexedEventSequences.Clear();
-        await Client.DropDatabaseAsync(_database.DatabaseNamespace.DatabaseName).ConfigureAwait(false);
+        var databaseName = _database.DatabaseNamespace.DatabaseName;
+
+        // A database opened by another casing than this namespace's belongs to the namespace that has that casing.
+        // Dropping it would delete that namespace's events, so it is kept.
+        if (!string.Equals(databaseName, _requestedDatabaseName, StringComparison.Ordinal) &&
+            string.Equals(databaseName, _requestedDatabaseName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await Client.DropDatabaseAsync(databaseName).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -130,6 +142,13 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         using var cursor = await _database.ListCollectionNamesAsync().ConfigureAwait(false);
         var names = await cursor.ToListAsync().ConfigureAwait(false);
         return names.Count > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasOwnDatabase()
+    {
+        using var databases = await Client.ListDatabaseNamesAsync().ConfigureAwait(false);
+        return (await databases.ToListAsync().ConfigureAwait(false)).Contains(_requestedDatabaseName, StringComparer.Ordinal);
     }
 
     /// <summary>

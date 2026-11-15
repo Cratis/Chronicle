@@ -1,13 +1,14 @@
 ---
-description: Adorn an event property with [Unique] so Chronicle enforces that its value is unique across every event of that type in the event store.
+title: Cratis Chronicle unique property constraints
+description: Use Cratis Chronicle unique property constraints to reserve values across event sources, choose how claims are retained, and release them with events.
 ---
-# Unique property constraint
+A Cratis Chronicle unique property constraint prevents different event sources from claiming the same value, such as an email address or handle. The source that owns a value can append it again without a violation, so use this rule to protect ownership of a value rather than to prevent repeated events.
 
-Adorn a property with `[Unique]` to enforce that the **value of that property is unique** across every event of this type in the event store.
-
-Chronicle discovers `[Unique]`-adorned properties automatically and registers the constraints with the Kernel when the client starts.
+In .NET, apply `[Unique]` to the event property. The client discovers the declaration on registered event types and sends its constraint definition to the Kernel when it starts.
 
 ## Defining a unique property constraint
+
+The declaration below reserves the email address for the event source that appends the registration event. Another source cannot claim that address while it is held:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/basic" />
 
@@ -19,7 +20,7 @@ Do not constrain a property containing the event source's own id to prevent a se
 
 ## Keeping every value
 
-If one project accumulates many version ids, retaining only its latest id lets another project reuse an earlier one. Set `Mode = UniqueConstraintMode.PerValue` to reserve every value until you explicitly release it. The default, `PerEventSource`, keeps the replacement behavior described above. Per-value mode is available through the .NET client for now.
+If one project accumulates many version ids, retaining only its latest id lets another project reuse an earlier one. In .NET, set `Mode = UniqueConstraintMode.PerValue` to reserve every value until you explicitly release it. The default, `PerEventSource`, keeps the replacement behavior described above. Elixir exposes the same retention choice through `:mode`; the example here uses the .NET attribute.
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/per-value" />
 
@@ -29,7 +30,7 @@ For a composite value, list removal properties in the same order as the constrai
 
 ## Strongly-typed properties
 
-`[Unique]` works on `ConceptAs<T>` properties — the idiomatic way to model a domain value in Cratis. Chronicle treats the concept as the underlying primitive it wraps (`string`, `Guid`, and so on), so a uniqueness rule on a strongly-typed `EmailAddress` or `OrganizationNumber` behaves exactly like one on the raw primitive, and registers and enforces identically through the [declarative](../declarative/unique) form too:
+In .NET, `[Unique]` also works on event properties typed as `ConceptAs<T>`. A concept gives a domain value its own type, such as `EmailAddress`, while wrapping a primitive such as `string` or `Guid`. Chronicle checks uniqueness using that underlying value:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/strongly-typed" />
 
@@ -39,40 +40,44 @@ When multiple event types share the same constraint `name`, Chronicle groups the
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/grouping" />
 
-Both events now participate in the same `UniqueEmail` constraint, so neither `UserRegistered` nor `UserEmailChanged` can introduce an email address that already exists.
+Both events now participate in `UniqueEmail`. A user can change to an unclaimed email address, but neither the registration event nor the email-change event can claim an address held by another event source. Under the default retention mode, changing the address frees the user's previous one.
 
 ## Scoping to the event log
 
-By default a constraint applies to every event sequence its event type is appended to, and each sequence keeps its own index. When the event is a domain fact that is also forwarded to the outbox, the forwarded copy claims the value in the outbox's index, and only a removal event appended to the outbox can release it. Set `EventSequences` on `[Unique]` to apply the constraint only to the sequences you name. The kernel neither validates nor indexes it for any other sequence:
+An event sequence is a separately indexed collection of events, such as the event log or outbox. By default, a constraint applies to every sequence its event type is appended to. Forwarding an event to the outbox therefore claims its value in the outbox's index too; a removal event in the log does not release that outbox claim.
+
+If the rule should protect only the event log, set `EventSequences` on the .NET `[Unique]` attribute. The Kernel neither validates nor indexes the constraint for sequences outside that selection:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/event-log-only" />
 
-When several properties share a constraint name, the event sequences declared on each are combined. A property that sets no `EventSequences` means every event sequence, and that wins: if any property sharing the name leaves it unset, the constraint applies to every event sequence.
+When properties share a constraint name, their event sequence selections are combined. If any of those properties leaves `EventSequences` unset, the combined constraint applies to every sequence. Set the selection on every participating property to keep the rule limited to the log.
 
 Changing the sequences takes effect when the client next registers its constraints. The kernel then rebuilds, in every namespace, the index of each sequence the constraint now applies to but did not before, from the events already in that sequence. A sequence the constraint no longer applies to stops validating it, and its index is no longer read until the constraint applies there again, when it is rebuilt.
 
 ## Violation message
 
-The `message` parameter is optional. Chronicle produces a default violation message when one is not supplied. C# supports a custom violation message, and so do Kotlin and Java from `io.cratis:chronicle` 6.5.0: the client that registered the constraint puts its message on the violations its appends return, with `{detailKey}` placeholders filled in from the violation details. TypeScript uses Chronicle's default message. Elixir accepts `:message` as a string or a `{Module, :function}` callback:
+Supply a message to explain why the caller's append was rejected. Without one, Chronicle uses its default violation message. The .NET, TypeScript, Kotlin, and Java model-bound declarations accept fixed messages. Kotlin and Java use the annotations in `io.cratis:chronicle`. Elixir accepts `:message` as a string or a `{Module, :function}` callback:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/violation-message" />
 
 ## Releasing a constraint
 
-Apply `[RemoveConstraint]` to the event type that signals a domain object has been removed. When this event is appended, Chronicle releases the named constraint and its previously held values can be claimed again:
+Declare which event releases the value when its owner no longer needs it. In .NET, apply `[RemoveConstraint]` to that event type. Appending it releases the named constraint's claims for that event source, so another source can claim the freed values:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/releasing" />
 
-The constraint name must exactly match the name used in the `[Unique]` attribute that established it.
+The removal declaration must exactly match the constraint name. In .NET, an unnamed property constraint defaults to the property name. Use an explicit name when several event types share the rule.
 
 An event type can release more than one constraint by stacking multiple attributes:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/multiple-remove-constraints" />
 
-The reverse also holds: more than one event type can release the same constraint. Name it from each event that ends the lifecycle and every one of them frees the held values:
+In .NET, more than one event type can release the same constraint. Name it from each event that ends the lifecycle so each can free the held values. Kotlin and Java accept only one removal event type per constraint name and keep the first one discovered:
 
 <ChronicleClientTabs snippet="constraints/model-bound/unique/several-removal-events" />
 
 ## How constraints are enforced
 
-The Chronicle Kernel reads the `[Unique]` and `[RemoveConstraint]` attributes when the client connects and creates the indexes it needs. Every subsequent append is checked against those indexes server-side, so no constraint logic runs in client code.
+The client reads the model-bound declarations and registers constraint definitions. The Kernel builds the indexes and checks appends against them server-side. Clients also resolve custom violation messages for the append results they return.
+
+For case-insensitive matching or scope configuration beyond the attribute's options, use the [declarative unique property constraint](../declarative/unique).

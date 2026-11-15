@@ -49,6 +49,9 @@ public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
     }
 
     /// <inheritdoc/>
+    bool IBatchReducerInvoker.HasBatchMethod => _batchMethod is not null;
+
+    /// <inheritdoc/>
     public IImmutableList<EventType> EventTypes { get; }
 
     /// <inheritdoc/>
@@ -161,6 +164,25 @@ public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
         return methods.Keys.Concat(batchMethod?.EventTypes ?? []).Select(eventTypes.GetEventTypeFor).ToImmutableList();
     }
 
+    static void ThrowIfAnyReducerMethodTakesBatchContext(Type targetType, Type readModelType, IEnumerable<Type> eventTypes)
+    {
+        // In a reducer with a batch method, a method shaped like a reducer method but taking the BatchContext is a
+        // helper the batch method calls with the context it was given. Only a per-event reducer can have meant it as a
+        // reducer method, and skipped it.
+        if (BatchMethods.DeclaresAny(targetType))
+        {
+            return;
+        }
+
+        var offending = Array.Find(
+            targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
+            method => method.TakesBatchContextAsReducerMethod(readModelType, eventTypes));
+        if (offending is not null)
+        {
+            throw new BatchContextOnlyForBatchMethods(targetType, offending.Name);
+        }
+    }
+
     static ReduceResult FailedReduction(object? currentModelState, EventSequenceNumber lastSuccessfulObservation, Exception exception) =>
         new(currentModelState, lastSuccessfulObservation, exception.GetAllMessages(), exception.StackTrace ?? string.Empty)
         {
@@ -180,6 +202,7 @@ public class ReducerInvoker : IReducerInvoker, IBatchReducerInvoker
         // dropped from dispatch without a word, so its events were never applied and the reducer merely looked
         // registered. Reject it here instead - it can only ever be a mistake (#3947).
         ReducerMethodCurrentReadModelMustBeNullable.ThrowIfAnyMethodHasNonNullableCurrentReadModel(targetType, readModelType, eventTypes);
+        ThrowIfAnyReducerMethodTakesBatchContext(targetType, readModelType, eventTypes);
 
         var methodsByEventType = new Dictionary<Type, MethodInfo>();
 

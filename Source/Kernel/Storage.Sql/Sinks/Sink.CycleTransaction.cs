@@ -69,7 +69,7 @@ public partial class Sink
         var wroteDirect = await RunInCycleTransaction(write.Scope, write.SequenceNumber, nonJoinedChanges.Length > 0, () => ApplyJoinsThenDirectChanges(write, nonJoinedChanges));
         if (wroteDirect)
         {
-            await SqlCompositeKeyShadow.Stamp(write.Scope.DbContext, write.Key, write.Id, _logger);
+            await _compositeKeyShadow.Stamp(write.Scope.DbContext, write.Key, write.Id, _logger);
         }
 
         return _noFailedPartitions;
@@ -147,7 +147,7 @@ public partial class Sink
                 {
                     // Another writer inserted the row first. Inside a transaction we do not recover in place:
                     // PostgreSQL has aborted it. Rerun, and the row is now found and updated.
-                    SqlStorageTelemetry.RecoveredCollision("read-model");
+                    _telemetry.RecoveredCollision("read-model");
                 }
                 catch (Exception exception) when (IsVerifyDrift(verifying, exception))
                 {

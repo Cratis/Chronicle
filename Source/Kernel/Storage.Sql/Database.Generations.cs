@@ -4,6 +4,7 @@
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
+using Cratis.Arc.EntityFrameworkCore.Connections;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Storage.Sql.Cluster;
@@ -85,6 +86,14 @@ public partial class Database
         {
             builder.AddInterceptors(new ResolvedIdentityInterceptor(_resolution.Resolver, target.Request));
         }
+
+        // Nodes starting together provision the same databases. SQL Server refuses the login (18456) to a database that
+        // another node has only just created and is still bringing online, and the read must not fail node startup over it.
+        if (connectionString.GetDatabaseType() == DatabaseType.SqlServer)
+        {
+            builder.UseSqlServer(connectionString, _ => _.EnableRetryOnFailure(MaxRetryCount, _maxRetryDelay, [ConnectionResolutionInterceptor.SqlServerLoginFailed]));
+        }
+
         return builder.Options;
     }
 

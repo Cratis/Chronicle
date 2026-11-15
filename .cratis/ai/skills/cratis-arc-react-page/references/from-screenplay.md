@@ -84,9 +84,9 @@ module Marina
       screen BerthListScreen
         title "Berths"
         data BerthListView[] via query ListBerths
-        action BookBerth
+        action BookBerth for screen
           label "Book a berth"
-        action CancelBerth
+        action CancelBerth for item
         table BerthListView
           column boatName label "Boat"
           on row-click navigate to BerthDetailsScreen by berthId
@@ -95,7 +95,7 @@ module Marina
         data BerthListView via query GetBerth by berthId
         summary BerthListView
           field boatName label "Boat"
-        action CancelBerth
+        action CancelBerth for item
           navigate to BerthListScreen
 
   form BookBerthForm for BookBerth
@@ -120,8 +120,8 @@ field because `berthId` is the identifier, not something the user types.
 | `table BerthListView` with `column boatName label "Boat"` | `<DataPage.Columns><Column field='boatName' header='Boat' /></DataPage.Columns>`; one `Column` per modeled `column`, no extras | Verified |
 | A second `table` on one screen | `DataTableForQuery` / `DataTableForObservableQuery` ([data-tables.md](data-tables.md)) | Verified |
 | `summary BerthListView` with `field boatName label "Boat"` | Plain markup in the page or in `detailsComponent` (`{ item }`), one labelled line per modeled `field` | Gap: this skill's verified sources name no summary component |
-| `action BookBerth` with `label "Book a berth"` | `<MenuItem label='Book a berth' icon={...} command={() => showBookBerth()} />` plus `CommandDialog` and `useDialog` | Verified |
-| `action CancelBerth` on a list with a table | `MenuItem` with `disableOnUnselected`; the selected row supplies the identifier | Verified prop |
+| `action BookBerth for screen` with `label "Book a berth"` | `<MenuItem label='Book a berth' icon={...} command={() => showBookBerth()} />` plus `CommandDialog` and `useDialog`; no row fills its inputs | Verified |
+| `action CancelBerth for item` on a list with a table | `MenuItem` with `disableOnUnselected`; the selected row supplies the identifier | Verified prop |
 | `action` with no `label` | The model gives no text. Use the command name, spaced, and report it | Gap |
 | `action X` with `navigate to S [by p]` | Navigate to the page for `S` after the command succeeds, in `onSuccess`; pass `p` from the response or the row | Assumption: `screens.md` does not say when it navigates. The form's `on submit` is defined as "after a successful submit"; confirm with the model owner |
 | `on row-click navigate to S by p` | `DataPage` and `DataTableForQuery` forward no row-click prop (only `DataTableCore` has `onRowClick`, and it takes rows, not a query). Use controlled `selection` and `onSelectionChange` to navigate, or a link in a `Column` `body` | Gap: selection is not a click; report which you chose |

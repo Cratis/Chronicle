@@ -18,7 +18,7 @@ public class and_the_occurrence_is_unknown : for_ReadModels.given.all_dependenci
     {
         _readBindings.Resolve(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelDefinition>(), Arg.Any<ReadModelContainerName?>())
             .Returns<Task<ReadModelReadBinding>>(_ => throw new UnknownReadModelOccurrence("test-read-model"));
-        _materializedService = new(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
+        _materializedService = new(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance, NamespaceCasingContext.Create());
     }
 
     async Task Because() => _error = await Catch.Exception(() => _materializedService.GetInstances(new()

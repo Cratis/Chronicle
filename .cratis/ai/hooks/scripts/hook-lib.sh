@@ -2,8 +2,8 @@
 # cratis-ai-managed: hooks/scripts/hook-lib.sh
 # Shared helpers for the Cratis enforcement hooks.
 #
-# Sourced by cratis-guard-writes.sh, cratis-guard-store-mutations.sh, cratis-pattern-scan.sh and
-# cratis-quality-gate.sh.
+# Sourced by cratis-guard-secrets.sh, cratis-guard-writes.sh, cratis-guard-store-mutations.sh,
+# cratis-pattern-scan.sh and cratis-quality-gate.sh.
 # Portable: bash 3.2 (macOS system bash) and up, BSD + GNU userland. No GNU-only flags,
 # no `mapfile`/`readarray`, no associative arrays, no `eval`.
 set -euo pipefail
@@ -33,6 +33,27 @@ hook_have() {
 # Read all of stdin. Never fails on an empty pipe.
 hook_read_stdin() {
     cat 2>/dev/null || true
+}
+
+# Shared installation hint, without a trailing newline so guards can append their warning.
+hook_jq_install_hint() {
+    printf 'Stop and ask the user to install jq (macOS: brew install jq; Debian/Ubuntu: sudo apt-get install jq;\n'
+    printf 'Windows: winget install jqlang.jq), then retry.'
+}
+
+# Refuse the tool call when jq is missing: $1 is the guard name, $2 the variable that lets a person run without it.
+# A guard that cannot read the tool call cannot check it, so this ends the sourcing script with exit 2
+# (the deny signal every wired harness honors). It uses only builtins, so it works without jq.
+hook_require_jq() {
+    hook_have jq && return 0
+    {
+        printf 'BLOCKED by %s: jq is not installed, so this guard cannot read the tool call and refuses every call until it is.\n' "$1"
+        hook_jq_install_hint
+        printf ' Do not work around the guard.\n'
+        printf 'A person who accepts running without this guard sets %s=1 in the environment the agent\n' "$2"
+        printf 'harness was started from; setting it inside the command has no effect.\n'
+    } >&2
+    exit 2
 }
 
 # Extract a single scalar from a JSON document on $1 using the jq path in $2.

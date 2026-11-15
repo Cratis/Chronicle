@@ -11,10 +11,21 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.given;
 /// The backoff exists to let a forming cluster settle, which is a property of production rather than
 /// of the behavior under specification. Waiting it out here would write minutes of wall-clock into
 /// the suite and couple it to a duration nothing asserts.
+/// <para>
+/// Its clock is virtual: every requested delay moves it forward, so how long the task believes it has waited follows
+/// the delays it asked for rather than the wall clock.
+/// </para>
 /// </remarks>
 public sealed class an_immediate_time_provider : TimeProvider
 {
     readonly List<TimeSpan> _delays = [];
+    long _elapsed;
+
+    /// <inheritdoc/>
+    public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+    /// <inheritdoc/>
+    public override long GetTimestamp() => Interlocked.Read(ref _elapsed);
 
     /// <summary>
     /// Gets the delays requested, in order, so a spec can assert the backoff shape without waiting it out.
@@ -37,6 +48,8 @@ public sealed class an_immediate_time_provider : TimeProvider
         {
             _delays.Add(dueTime);
         }
+
+        if (dueTime > TimeSpan.Zero) Interlocked.Add(ref _elapsed, dueTime.Ticks);
 
         return new immediate_timer(callback, state);
     }

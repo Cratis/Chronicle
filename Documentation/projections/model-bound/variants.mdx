@@ -1,105 +1,60 @@
 ---
-description: Model an entity that changes shape over its lifetime as a group of read model variants in a model-bound Chronicle projection.
+title: Model lifecycle stages with Cratis Chronicle read model variants
+description: Use Cratis Chronicle model-bound variants to give each lifecycle stage its own read model, with entering events that remove the entity from other stages.
 ---
-# Variants
 
-Some entities do not have one shape for their whole lifetime — a work item is a backlog entry until a
-pull request exists for it, then it is a pull request until it merges, then it is closed. Modeling that
-as a single read model with a `Status` property and an ever-growing set of nullable columns makes every
-query filter on state before it can trust a field, and a shape meant for one stage leaks properties that
-only make sense in another.
+<a id="variants"></a>
 
-Variants let you declare several mutually exclusive read models for the same logical entity instead. Each
-variant is an ordinary model-bound projection with its own shape — the properties that stage of the entity's
-life needs. Entering one variant automatically removes the entity from every other variant in the group,
-so at any point in time an entity exists in exactly one of them.
+Cratis Chronicle read model variants represent lifecycle stages as separate model-bound projections. Use them when a query should return only entities in one stage, such as backlog items or pull requests, without filtering a shared collection by status.
 
-The stages can differ a lot, or hardly at all. Variants fit entities whose stages are really different
-things, and they fit just as well when the stages share nearly the same shape: each variant is its own
-collection, so a query for one stage reads only that stage and there is no `Status` to filter or index.
+Each variant has its own properties and collection. A backlog item can carry a title while a pull request also carries its URL and build status. The shapes can be nearly identical, too: separate collections are useful whenever callers want to query a stage directly.
+
+An entering event creates that stage's read model and removes the entity from the other variants in its group. Before an entity has entered a variant, it need not exist in any of them.
 
 ## Declaring a group of variants
 
-Use `[VariantOf<TIdentity>]` on every read model that represents one stage, and `[EntersOn<TEvent>]` to say
-which event activates that stage. `TIdentity` anchors the group — every variant marked with the same
-identity type is mutually exclusive with every other:
+In C#, apply `[VariantOf<TIdentity>]` to every read model in the group and `[EntersOn<TEvent>]` to name its entering event. The identity type groups the variants; the entity's key identifies the instance moving between them. Each variant must declare a key and an entering event:
 
 <ChronicleClientTabs snippet="projections/model-bound/variants/basic" />
 
-`WorkItem` does not have to be a read model itself, and it does not need a common CLR base type with any of
-the variants — its only job is to be a shared type every variant in the group points at.
+`MbVariantWorkItem` is the shared identity type in this example. It does not have to be a read model, and the variants do not have to inherit from it.
 
-When an `IssueCreated` event is processed, a `BacklogItem` is created — `Title` maps by convention, exactly
-as it would on an ordinary `[FromEvent<T>]` projection. When a `PullRequestCreated` event is processed for
-the same entity, a `PullRequestItem` is created **and the `BacklogItem` for that entity is removed** — no
-`RemovedWith` attribute needed, the group takes care of it. If `PullRequestCreated` arrives for an entity
-that was never a `BacklogItem` at all, `PullRequestItem` is still created; variants are not required to be
-entered in any particular order, only to be mutually exclusive once entered.
+The issue-created event creates a backlog item and maps `Title` by name. A pull-request-created event for the same entity creates a pull request item and removes its backlog item. Chronicle adds that removal behavior from the group declaration; you do not need a separate `RemovedWith` attribute.
+
+A pull request can also be the first variant the entity enters. The group does not require a backlog item to exist before accepting its entering event.
 
 ## Only the entering event can create a variant
 
-Everything a variant maps from besides its entering event is still declared exactly like an ordinary
-projection — `[SetFrom<TEvent>]`, `[Key]`, and the rest all work the same way. The only difference is what
-that mapping is allowed to do: it can update an already-active instance of the variant, but it can never
-create one.
+Use the usual property mappings for events that update a variant after entry. Chronicle treats these non-entering events as update-only: they can change an existing instance but cannot create one.
 
 <ChronicleClientTabs snippet="projections/model-bound/variants/updating-a-variant" />
 
-`BuildStatus` is mapped from `BuildCompleted`. Because `BuildCompleted` is not the event named with
-`[EntersOn<T>]`, Chronicle reclassifies that mapping into an update-only join on the variant's own key
-before it ever reaches the projection engine — the entering event stays the only door into the variant.
+`BuildStatus` comes from `MbVariantUpdatingBuildCompleted`, while the pull-request-created event controls entry. Chronicle converts the build mapping into a join on the variant's own key. A join updates matching read models without creating a missing one, so a late build event cannot recreate a pull request that has moved to another stage.
 
-Because the mapping is a join, it is also resolved when the variant is created: the join is re-resolved
-against the last stored event of the joined stream whenever the variant handles its own event. A
-`BuildCompleted` appended before the entering event therefore never creates a `PullRequestItem` on its own,
-but its value is on the `PullRequestItem` the moment the entering event creates it.
+The join also resolves against stored history when the entering event creates the variant. If a build-completed event was appended first, it does not create a pull request item on its own, but its stored value can populate `BuildStatus` when the pull request enters. Non-entering events are update-only, not discarded history.
 
-If the same non-entering event also has a `[Join<TEvent>]` attribute, the join keeps its mappings and
-routing rather than being replaced. Non-conflicting `From` mappings are added, and the join wins on
-conflicting properties. Its key remains the event source ID. Its `On` uses the attribute's explicit
-property name, or defaults to the annotated member's name — not the variant's key property. Specify
-`on: nameof(Id)` on the join attribute if you want it to match the variant's `Id`.
+If you also declare `[Join<TEvent>]` for that non-entering event, Chronicle preserves the explicit join's mappings and routing. It adds non-conflicting `From` mappings, and the join wins where both map the same property. The join's key remains the event source ID. Its `On` uses the attribute's explicit property name or defaults to the annotated member's name. Specify `on: nameof(Id)` if it should match the variant's `Id`; an explicit join does not automatically switch to the variant key.
 
-:::caution[Why this matters]
-Without that reclassification, an out-of-order or replayed `BuildCompleted` event could **resurrect** a
-`PullRequestItem` for an entity that has since moved on to another variant, or even one that was never a
-pull request at all — the exact bug this feature exists to make structurally impossible. You do not have
-to reason about event ordering to get this guarantee; declaring `[EntersOn<T>]` is what gives it to you.
-:::
+These entry rules apply to non-entering events. An entering event still creates its variant, including during replay. See [Joins](joins.mdx) for how join keys select existing read models.
 
 ## Sharing handlers across variants
 
-A mapping that every variant needs — a title every stage keeps up to date, for example — does not have to
-be repeated on each variant type. Declare it once on a type marked `[GlobalFor<TIdentity>]` instead:
+Declare common mappings once on a type marked `[GlobalFor<TIdentity>]`. Use the same identity type as the variants so, for example, one title-change mapping keeps the title current in whichever stage is active:
 
 <ChronicleClientTabs snippet="projections/model-bound/variants/shared-handler" />
 
-Every mapping declared on the shared handler is merged into every variant of `WorkItem`, so a member that only
-the shared handler populates, like `Title` here, is populated on whichever variant the entity is in. The
-`CHR0024` analyzer counts the entering events and the shared handlers of a variant's group as mapping sources. Like any other
-non-entering event, a shared mapping can only update an already-active variant — it can never create or
-resurrect one, so it is safe to share across a group whose members enter at different times.
+The shared handler maps the title-change event to `Title` in both variants. Like other non-entering mappings, this mapping updates an existing variant without creating an inactive one. The `CHR0024` analyzer counts the group's entering events and shared handlers as mapping sources; it discovers shared handlers only within the same compilation.
 
-Every variant must have the member a shared mapping targets. A variant that does not is a declaration
-error, not a silently skipped mapping — this is caught when the projection is discovered, not at some
-unpredictable point at runtime once a shared event happens to arrive for that variant.
+Every variant must declare the member that a shared mapping targets. A missing `Title` member is a declaration error caught during projection discovery; Chronicle does not silently skip the mapping for that variant.
 
 ## Complete example
+
+This example combines entry, build-status updates, and a shared title mapping. Follow one entity key through the events: issue creation puts it in the backlog, pull request creation moves it out, and later build or title changes update only the active variant.
 
 <ChronicleClientTabs snippet="projections/model-bound/variants/full-example" />
 
 ## Best practices
 
-1. **Pick an identity type that means something on its own** — `WorkItem` in the examples above, not a
-   marker interface with no purpose beyond grouping. It is the type every variant, and every shared
-   handler, points back to.
-2. **Give every variant the properties that stage of the entity needs.** A shared property
-   that every stage needs belongs on a `[GlobalFor<T>]` handler instead of being copy-pasted onto each
-   variant.
-3. **Variants suit both kinds of shape.** Use them when the stages genuinely diverge, each with properties
-   the others do not have. Use them just as well when the stages share nearly the same shape: each
-   variant is its own collection, so a query for one stage reads only that stage, with no `Status`
-   property to filter on or index. The two uses are not mutually exclusive.
-4. **Remember each variant is its own collection.** There is no built-in query that spans a whole group —
-   a caller that needs "this entity, whichever stage it's currently in" queries each variant explicitly
-   (or by its shared key) rather than assuming a single combined collection.
+Choose an identity type that names the entity, such as the work item in these examples, and give each variant the properties its callers need. Keep common event mappings on a shared handler when they apply to every stage.
+
+Plan queries around the separate collections. There is no built-in query spanning a variant group: a caller that needs an entity regardless of stage must query the variants explicitly, using the shared entity key where appropriate. For reading a particular variant by key, continue with [Read-model consistency](../../read-models/consistency.md).

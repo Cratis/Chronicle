@@ -1,8 +1,7 @@
 ---
+title: Empty results and query failures in Cratis Chronicle clients
 description: How a Chronicle client should normalize empty collection results and distinguish them from query failures at the contract boundary.
 ---
-# Empty results and query failures
-
 A successful collection query with no matches returns an empty collection, not `null`.
 The same rule applies to non-nullable collection members inside response messages.
 Client code should be able to enumerate those collections without a null check.

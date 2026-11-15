@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-legacy-extraction
-description: "Turn an existing system into an evidence-backed, intentional Screenplay `.play` model: interview and freeze agreement, provider-coverage inventory, `cratis screenplay generate`, approval-gated Prologue capture and interpret, bounded UI walks, targeted code reads, an evidence table with exact path:start-end locators that keeps unknowns, keep / change / remove decisions, re-slicing by business decision, a loss report and expert verification. Use for brownfield understanding, documentation or migration. Not for: greenfield modeling (use `cratis-screenplay-discovery`), reviewing the candidate (use `cratis-screenplay-model-review`), running Chronicle systems (use `cratis-chronicle-cli-operations`)."
+description: Use when understanding an inherited system or deriving a candidate Screenplay model for brownfield documentation or migration. Not for greenfield discovery, reviewing the candidate or diagnosing a live Chronicle store.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-legacy-extraction/SKILL.md -->

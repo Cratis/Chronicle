@@ -56,17 +56,19 @@ internal sealed class SelfReducerReplayHooks
     /// Invokes an existing hook and awaits it before disposing its asynchronous scope.
     /// </summary>
     /// <param name="serviceProvider">The owning client's root provider.</param>
+    /// <param name="context">The <see cref="ObserverDeliveryContext"/> entered before the notification scope is created.</param>
     /// <param name="state">The delivered notification.</param>
     /// <param name="partition">The delivered partition.</param>
     /// <returns>The hook's completion.</returns>
     /// <exception cref="InvalidSelfReducerLifecycleHook">A required service is unregistered or the hook returns a null task.</exception>
-    internal async Task Invoke(IServiceProvider serviceProvider, ReplayState state, Partition partition)
+    internal async Task Invoke(IServiceProvider serviceProvider, ObserverDeliveryContext context, ReplayState state, Partition partition)
     {
         if (!_methods.TryGetValue(state, out var method))
         {
             return;
         }
 
+        using var delivery = ObserverDeliveryScope.Enter(serviceProvider, context);
         await using var scope = serviceProvider.CreateAsyncScope();
         var provider = scope.ServiceProvider;
         var availability = provider.GetService<IServiceProviderIsService>();

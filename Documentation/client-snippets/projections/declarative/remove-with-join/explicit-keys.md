@@ -28,8 +28,7 @@ public class DecRemoveWithJoinExplicitEmployeeProjection : IProjectionFor<DecRem
                 .UsingParentKey(e => e.EmployeeId)
                 .UsingKey(e => e.ProjectId)
                 .Set(m => m.AssignedAt).ToEventContextProperty(c => c.Occurred))
-            .Join<DecRemoveWithJoinExplicitProjectCreated>(_ => _
-                .On(m => m.ProjectId))
+            .Join<DecRemoveWithJoinExplicitProjectCreated>()
             .RemovedWithJoin<DecRemoveWithJoinExplicitProjectCancelled>(_ => _
                 .UsingKey(e => e.ProjectId)));
 }

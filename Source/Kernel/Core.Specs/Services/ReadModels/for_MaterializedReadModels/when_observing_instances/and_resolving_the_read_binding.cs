@@ -21,7 +21,7 @@ public class and_resolving_the_read_binding : for_ReadModels.given.all_dependenc
 
     async Task Because()
     {
-        var service = new MaterializedReadModels(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance);
+        var service = new MaterializedReadModels(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance, NamespaceCasingContext.Create());
         await service.ObserveInstances(new()
         {
             EventStore = "test-store",

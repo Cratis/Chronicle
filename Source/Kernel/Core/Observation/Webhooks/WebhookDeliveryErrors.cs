@@ -41,11 +41,11 @@ static class WebhookDeliveryErrors
         : error;
 
     /// <summary>
-    /// Creates the failure for an unsuccessful receiver response, omitting the reason phrase for managed identity targets.
+    /// Creates the failure for an unsuccessful receiver response, omitting receiver-controlled reason text.
     /// </summary>
     /// <param name="target">The <see cref="WebhookTarget"/> being delivered to.</param>
     /// <param name="response">The <see cref="HttpResponseMessage"/> from the receiver.</param>
     /// <returns>The <see cref="WebhookDeliveryFailed"/> to record.</returns>
     internal static WebhookDeliveryFailed ForResponse(WebhookTarget target, HttpResponseMessage response) =>
-        new(target.Url, response.StatusCode, target.Authorization.IsT4 ? null : response.ReasonPhrase);
+        new(target.Url, response.StatusCode, null);
 }

@@ -1,18 +1,13 @@
 ---
-title: Get started with the .NET client
-description: Connect a .NET application to Chronicle and append an event.
+title: Cratis Chronicle .NET client connection and first append
+description: Connect a .NET application to Cratis Chronicle, define an event, and append it to an event log, or use host integration for a service.
 ---
 
-Use the .NET client when you want direct typed access to Chronicle from a C# application. The smallest useful loop is:
-
-1. create a `ChronicleClient`
-2. open an event store
-3. append a fact to an event log
-4. let projections, reducers, and reactors observe that fact
+Use the Cratis Chronicle .NET client to record a fact from your C# application in an event log. This guide connects a client to a local kernel, opens an event store, and appends a `BookAdded` event. You can then add projections to build read models or reactors to respond to that event.
 
 ## Connect
 
-For local development, start the Chronicle kernel and connect with the development connection string.
+Have the Chronicle kernel running locally and add the `Cratis.Chronicle` package to your application; the [client setup page](./index.md#install) covers package selection. Then connect with the development connection string:
 
 ```csharp
 using Cratis.Chronicle;
@@ -21,11 +16,13 @@ using var client = new ChronicleClient(ChronicleConnectionString.Development);
 var eventStore = await client.GetEventStore("Quickstart");
 ```
 
-`ChronicleConnectionString.Development` points at the default local Chronicle kernel with development credentials. `ChronicleConnectionString.Default` also points at `localhost:35000`; it names no credentials, so connecting with it falls back to the same development credentials (`auth=none` is the anonymous option). To connect to any other environment, pass an explicit `new ChronicleConnectionString("chronicle://...")` carrying that environment's host and credentials, and set `skipTlsValidation=false` when its certificate is verifiable — see [Client TLS](/chronicle/configuration/tls/).
+`Quickstart` names the event store this client will use. `ChronicleConnectionString.Development` connects to the default local kernel with development credentials.
+
+`ChronicleConnectionString.Default` also points at `localhost:35000` but names no credentials, so it falls back to the same development credentials. Use `auth=none` for an anonymous connection. For another environment, pass an explicit `new ChronicleConnectionString("chronicle://...")` with its host and credentials, and set `skipTlsValidation=false` when its certificate is verifiable. See [Client TLS](/chronicle/configuration/tls/).
 
 ## Define an event
 
-Events are immutable facts. In .NET, mark event records with `[EventType]` so Chronicle can discover and register their schema.
+An event records something that has happened. Mark the record with `[EventType]` so the client can discover it and register its schema with Chronicle:
 
 ```csharp
 using Cratis.Chronicle.Events;
@@ -36,7 +33,7 @@ public record BookAdded(string Title, string Isbn);
 
 ## Append the event
 
-Append the event against the event source it belongs to. The event source id is not part of the event payload; Chronicle stores it in the event context.
+Use `bookId` to identify the book whose history this event belongs to. That event source id stays outside the payload: Chronicle stores it in the event context, while the `BookAdded` record carries the title and ISBN.
 
 ```csharp
 var bookId = "book-123";
@@ -51,7 +48,7 @@ if (!result.IsSuccess)
 }
 ```
 
-After the append succeeds, Chronicle persists the event and forwards it to the projections, reducers, reactors, and subscriptions that observe the event sequence.
+`result.IsSuccess` tells you whether the append succeeded. The stored event can then be processed by projections, reducers, reactors, and subscriptions observing that event sequence. Append success does not by itself mean those observers have finished processing it; see [shared append semantics](/chronicle/events/appending/) before reading a model that depends on the new event.
 
 ## Use a host integration
 
@@ -61,12 +58,13 @@ For ASP.NET Core and Worker Service applications, prefer the host integration in
 builder.AddCratisChronicle(options => options.EventStore = "Quickstart");
 ```
 
-The host integration registers the event store, event log, read models, projections, reducers, reactors, constraints, and related services in dependency injection.
+The host integration makes the event store, event log, read models, projections, reducers, reactors, constraints, and related services available through dependency injection. Follow the hosting guide for your application type below to complete startup. For an ASP.NET Core service, [expose a readiness health check](./health-checks.md) so traffic waits for the connection and artifact registration.
 
 ## Pin reactor and reducer generations
 
-When independently deployed consumers use different generations of an event type, opt in to kernel
-selection and release of the generation each reactor or reducer handles. Configure this before connecting:
+If independently deployed consumers handle different generations of the same event type, use pinned
+delivery to have the kernel select and deliver the generation each reactor or reducer handles.
+Configure it before connecting:
 
 ```csharp
 using Cratis.Chronicle;

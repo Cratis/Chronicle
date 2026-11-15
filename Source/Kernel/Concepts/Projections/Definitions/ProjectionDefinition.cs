@@ -66,6 +66,15 @@ public record ProjectionDefinition(
     public EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
+    /// Gets the graph mappings when the projection targets a graph instead of a document or relational read model.
+    /// </summary>
+    /// <remarks>
+    /// Additive: a definition without graph mappings behaves exactly as before.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Graphs.GraphProjectionDefinition? Graph { get; init; }
+
+    /// <summary>
     /// Gets the software version of the client application that registered the definition, if it identified one.
     /// </summary>
     /// <remarks>
@@ -108,5 +117,5 @@ public record ProjectionDefinition(
     /// stack to explain it (#3934).
     /// </remarks>
     [JsonIgnore]
-    public bool IsEmpty => (From?.Count ?? 0) == 0 && (Children?.Count ?? 0) == 0 && (Nested is null || Nested.Count == 0);
+    public bool IsEmpty => (From?.Count ?? 0) == 0 && (Children?.Count ?? 0) == 0 && (Nested is null || Nested.Count == 0) && Graph?.IsEmpty != false;
 }

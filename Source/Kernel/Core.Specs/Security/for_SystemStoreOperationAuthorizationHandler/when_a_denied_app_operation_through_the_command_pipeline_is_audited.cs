@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Security.for_SystemStoreOperationAuthorizationHandler
 
 public class when_a_denied_app_operation_through_the_command_pipeline_is_audited : given.an_operation_policy
 {
-    void Establish() => _operation = new CommandContext(CorrelationId.New(), _operation.GetType(), _operation, [], new CommandContextValues());
+    void Establish() => _operation = new CommandContext(CorrelationId.New(), _operation.GetType(), _operation, [], new CommandContextValues(), ServiceProvider: Security.given.caller_services.For(_authorization).HttpContext!.RequestServices);
 
     Task Because() => AuthorizeOperation();
 

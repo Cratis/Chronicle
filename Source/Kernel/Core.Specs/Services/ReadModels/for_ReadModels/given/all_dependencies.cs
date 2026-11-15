@@ -119,7 +119,8 @@ public class all_dependencies : Specification
             _localSiloDetails,
             _complianceHelper,
             _materializedReadModels,
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            NamespaceCasingContext.Create());
     }
 
     void ConfigureJsonCompliance()

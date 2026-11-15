@@ -1,7 +1,7 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-toolchain/references/automation-translate-example.md -->
 # Automation and Translate example (ESM v6)
 
-Executable Automation and Translate slices. Binds as `executableReady` on the standalone tool and on the compiler bundled in the CLI; see [executable-subset.md](executable-subset.md) for what renders. Shows a reaction `produces` cascade, `invokes`, `where`, clock `at`, an application trigger, a capture with translate and a transition `when`, and v6 specifications.
+Executable Automation and Translate slices. Binds as `executableReady` (ESM v34, for `then invokes`) on the standalone tool and on a CLI whose bundled compiler is Screenplay 4.246.0 or later; see [executable-subset.md](executable-subset.md) for what renders. Shows a reaction `produces` cascade, `invokes`, `where`, clock `at`, an application trigger, a capture with translate and a transition `when`, and v6 specifications. Each specification states only its own slice (Screenplay decision 0115); the automation states the command it invokes with `then invokes` (ESM v34).
 
 The `Renew` command is ungated so that the reaction can invoke it: this is a syntax demonstration, not a safe production design. Reactions invoke with no caller, so a real model needs a trusted path (see [cratis-screenplay-automations-and-translations](../../cratis-screenplay-automations-and-translations/SKILL.md)).
 
@@ -24,12 +24,9 @@ module Membership
         given clock "2026-10-05T09:00:00Z"
         when Subscribe
           memberId = "5b6c1f7e-2d3a-4e8b-9c0d-1a2b3c4d5e6f"
-        then MemberSubscribed                             // v6: cascades are part of `then`
+        then MemberSubscribed                             // its own slice only: Onboarding states WelcomeSent
           for "5b6c1f7e-2d3a-4e8b-9c0d-1a2b3c4d5e6f"
           subscribedAt = "2026-10-05T09:00:00Z"
-        then WelcomeSent
-          for "5b6c1f7e-2d3a-4e8b-9c0d-1a2b3c4d5e6f"
-          sentAt = "2026-10-05T09:00:00Z"
 
     slice StateChange Renew
       command Renew                                       // ungated for the demo only: reactions invoke with no caller
@@ -79,9 +76,9 @@ module Membership
         when trigger RenewalFileArrived
           memberId = "5b6c1f7e-2d3a-4e8b-9c0d-1a2b3c4d5e6f"
           months   = 12
-        then MembershipRenewed
-          for "5b6c1f7e-2d3a-4e8b-9c0d-1a2b3c4d5e6f"
-          months = 12
+        then invokes Renew                                // ESM v34: the hand-over; Renew's slice proves MembershipRenewed
+          memberId = "5b6c1f7e-2d3a-4e8b-9c0d-1a2b3c4d5e6f"
+          months   = 12
       specification IssuingTheWeeklyReport
         given clock "2026-10-05T07:00:00Z"
         when clock "2026-10-05T07:30:00Z"

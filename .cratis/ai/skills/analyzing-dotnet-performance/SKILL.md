@@ -1,6 +1,6 @@
 ---
 name: analyzing-dotnet-performance
-description: 'Scans .NET code for about 50 performance anti-patterns across async, memory, strings, collections, LINQ, regex, serialization, and input/output, with tiered severity. Use when analyzing .NET code for optimization opportunities, reviewing hot paths, or auditing allocation-heavy patterns. Not for measuring or profiling a running process (use profiling or microbenchmarking) or for SIMD work (use vectorization).'
+description: Use when reviewing .NET hot paths or scanning source for allocation-heavy and inefficient patterns. Not for measuring a running process, benchmark design or SIMD optimization.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/analyzing-dotnet-performance/SKILL.md -->

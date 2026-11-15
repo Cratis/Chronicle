@@ -9,8 +9,14 @@ namespace Cratis.Chronicle.Reactors;
 
 internal static partial class ReactorsLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Registering Reactor '{Id}'")]
+    [LoggerMessage(LogLevel.Information, "Registering Reactor '{Id}'")]
     internal static partial void RegisteringReactor(this ILogger<Reactors> logger, ReactorId id);
+
+    [LoggerMessage(LogLevel.Information, "Subscribed to observation stream for Reactor '{Id}'")]
+    internal static partial void ReactorObservationSubscribed(this ILogger<Reactors> logger, ReactorId id);
+
+    [LoggerMessage(LogLevel.Information, "Reactor '{Id}' disconnected after connection loss")]
+    internal static partial void ReactorDisconnected(this ILogger<Reactors> logger, ReactorId id);
 
     [LoggerMessage(LogLevel.Trace, "Discover all Reactors")]
     internal static partial void DiscoverAllReactors(this ILogger<Reactors> logger);
@@ -53,4 +59,7 @@ internal static partial class ReactorsLogMessages
 
     [LoggerMessage(LogLevel.Error, "Failed to activate Reactor '{ReactorId}' for replay notification '{ReplayState}'")]
     internal static partial void FailedActivatingReactorForReplayNotification(this ILogger<Reactors> logger, Exception ex, ReactorId reactorId, ReplayState replayState);
+
+    [LoggerMessage(LogLevel.Error, "Failed to enter the delivery scope for Reactor {ReactorId} and replay notification {ReplayState}")]
+    internal static partial void FailedEnteringDeliveryScopeForReactorReplayNotification(this ILogger<Reactors> logger, Exception ex, ReactorId reactorId, ReplayState replayState);
 }

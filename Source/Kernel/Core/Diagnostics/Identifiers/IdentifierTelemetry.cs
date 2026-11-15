@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
 using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Diagnostics.Identifiers;
@@ -10,6 +11,8 @@ namespace Cratis.Chronicle.Diagnostics.Identifiers;
 /// </summary>
 public sealed class IdentifierTelemetry
 {
+    static readonly Lazy<string> _ephemeralKey = new(() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)));
+
     readonly IdentifierHasher? _hasher;
 
     /// <summary>
@@ -21,7 +24,7 @@ public sealed class IdentifierTelemetry
         Tracing = telemetry.EventSourceIdTracing;
         if (Tracing == EventSourceIdTracing.Hashed)
         {
-            _hasher = new IdentifierHasher(telemetry.EventSourceIdHashKey ?? string.Empty);
+            _hasher = new IdentifierHasher(string.IsNullOrEmpty(telemetry.EventSourceIdHashKey) ? _ephemeralKey.Value : telemetry.EventSourceIdHashKey);
         }
     }
 

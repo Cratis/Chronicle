@@ -25,7 +25,7 @@ on:
         value: ${{ jobs.grain-compatibility.outputs.skipped }}
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: "11.0.x"
   CONTRACTS_PATH: Source/Kernel/Core/OrleansContracts.txt
   PAYLOAD_CONTRACTS_PATH: Source/Kernel/Core/GrainPayloadContracts.txt
 
@@ -82,6 +82,12 @@ jobs:
           LATEST_MAJOR="${LATEST_MAJOR%%.*}"
           if [ -n "$RELEASE_VERSION" ] && [ "${RELEASE_VERSION%%.*}" != "$LATEST_MAJOR" ]; then
             echo "::notice title=Grain compatibility not checked::$RELEASE_VERSION starts a new major after $LATEST_TAG, which is upgraded with a full stop."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if grep -qE "^${LATEST_TAG//./\\.}( |$)" .github/grain-compatibility-waivers.txt 2>/dev/null; then
+            echo "::warning title=Grain compatibility waived::$LATEST_TAG is listed in .github/grain-compatibility-waivers.txt, so silos of that release are not expected to share a cluster with this one."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi

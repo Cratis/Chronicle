@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReplayedModels;
@@ -39,7 +40,7 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
         }
 
         var occurrences = await scope.DbContext.ReplayedModels
-            .Where(r => r.ReadModelIdentifier == readModel.Value)
+            .WhereExact(scope.DbContext, r => r.ReadModelIdentifier, readModel.Value)
             .ToListAsync();
 
         return occurrences.Select(ReplayedModelsConverters.ToReadModelOccurrence);
@@ -53,7 +54,8 @@ public class ReplayedModelsStorage(EventStoreName eventStore, EventStoreNamespac
         var observerId = occurrence.ObserverId.Value;
         var readModel = occurrence.Type.Identifier.Value;
         var candidates = await scope.DbContext.ReplayedModels
-            .Where(_ => _.ObserverId == observerId && _.ReadModelIdentifier == readModel)
+            .WhereExact(scope.DbContext, _ => _.ObserverId, observerId)
+            .WhereExact(scope.DbContext, _ => _.ReadModelIdentifier, readModel)
             .ToListAsync();
 
         // An observer has one row per replay; remove only the replay this occurrence describes.

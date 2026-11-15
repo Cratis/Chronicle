@@ -67,7 +67,8 @@ public class a_composed_watch_topology : for_ReadModels.given.all_dependencies
             _localSiloDetails,
             _complianceHelper,
             _materializedReadModels,
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            NamespaceCasingContext.Create());
         _service = _readModels;
     }
 

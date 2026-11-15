@@ -14,14 +14,16 @@ public class when_max_batch_size_is_configured : Specification
 
     void Establish()
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { { "Cratis:Chronicle:ReadModels:MaxBatchSize", "3" } }).Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { { "Cratis:Chronicle:Storage:Type", "inmemory" }, { "Cratis:Chronicle:ReadModels:MaxBatchSize", "3" } }).Build();
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         ChronicleOptions.AddConfiguration(services, configuration);
         _services = services.BuildServiceProvider();
     }
 
+#pragma warning disable SYSLIB0066 // The synchronous IStartupValidator is what ValidateOnStart registers and the spec exercises.
     void Because() => _error = Catch.Exception(() => _services.GetRequiredService<IStartupValidator>().Validate());
+#pragma warning restore SYSLIB0066
 
     [Fact] void should_accept_startup() => _error.ShouldBeNull();
     [Fact] void should_use_the_expected_cap() => _services.GetRequiredService<IOptions<ChronicleOptions>>().Value.ReadModels.MaxBatchSize.ShouldEqual(3);

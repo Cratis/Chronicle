@@ -22,13 +22,4 @@ internal static partial class RenameReactorsLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Completed RenameReactors patch")]
     internal static partial void PatchCompleted(this ILogger<RenameReactors> logger);
-
-    [LoggerMessage(LogLevel.Debug, "Starting RenameReactors patch rollback - adding 'Grains' back to reactor names")]
-    internal static partial void StartingRollback(this ILogger<RenameReactors> logger);
-
-    [LoggerMessage(LogLevel.Debug, "Restoring reactor name from {OldId} to {NewId}")]
-    internal static partial void RestoringReactorName(this ILogger<RenameReactors> logger, ReactorId oldId, ReactorId newId);
-
-    [LoggerMessage(LogLevel.Debug, "Completed RenameReactors patch rollback")]
-    internal static partial void RollbackCompleted(this ILogger<RenameReactors> logger);
 }

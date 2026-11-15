@@ -1,6 +1,6 @@
 ---
 name: cratis-ci-pipeline-performance
-description: Make a Cratis repository's GitHub Actions CI/CD faster and cheaper by measuring workflow timings first, picking the lever that fits the measured bottleneck (build once and shard, caching, path filters with an aggregator, concurrency, runner routing, publish from artifacts) and verifying before and after. Use when a workflow is slow, queues, burns runner minutes, reruns or cancels a lot, or when editing .github/workflows to speed up CI. Not for authoring a release (use cratis-governed-release-methodology), recurring regressions on one surface (use cratis-engineering-regression-cluster), runtime performance of application code (use cratis-performance-review), or fixing a red build.
+description: Use when GitHub Actions is slow, queues, wastes runner minutes or repeatedly reruns and cancels work. Not for fixing a red build, runtime application performance or release-assurance planning.
 license: LICENSE
 ---
 <!-- cratis-ai-managed: skills/cratis-ci-pipeline-performance/SKILL.md -->
@@ -76,7 +76,7 @@ named reference before applying one.
 **Build once, shard the tests.** Fits execution-bound workflows where build and
 tests run serially or several jobs each rebuild. Default: one job builds in
 `Release`, uploads the output with `actions/upload-artifact`, and a matrix of shard jobs downloads it and runs
-`dotnet test --no-build`. Pitfall: a shard whose filter matches nothing still
+each built spec executable; only VSTest projects use `dotnet test <project> --no-build`. Pitfall: a shard whose filter matches nothing still
 passes, so assert that every shard ran tests. Read
 `references/build-once-and-shard.md` when applying or reviewing this.
 
@@ -112,11 +112,12 @@ when keyed on `github.ref` for merged `pull_request` `closed` events). A workflo
 whose release tooling aggregates since the last release may keep one pending slot,
 documented. Read `references/publish-pipelines.md`.
 
-**Runner routing.** Fits queue-bound workflows. Default: private-repository jobs
-on the organization scale set `cratis-arc` or a repository variable that falls
-back to a hosted label, hosted runners for public repositories. Pitfall: never
-route `pull_request` jobs of a public repository to self-hosted runners; that is
-fork code on our infrastructure. The rule owns the details.
+**Runner routing.** Fits queue-bound workflows. Read the
+[Infrastructure runner guide](https://github.com/Cratis/Infrastructure/blob/main/Documentation/deployment/github-runners.md)
+for the UpCloud scale sets `cratis-arc` and `cratis-arc-small`; do not copy its
+capacity numbers. The rule owns routing and public-fork safety. Read
+`references/runner-sizing-and-images.md` when choosing hosted versus self-hosted
+runners, sizing in-job parallelism or weighing fan-out against cold starts.
 
 **Publish from tested artifacts.** Fits release workflows that rebuild what the
 pull-request run already built and tested. Default: build and pack once, then
@@ -134,7 +135,7 @@ OS or framework matrix. Default: full matrix on `schedule` and
 rule states this). Pitfall: the full matrix needs an owner who reads its failures.
 
 **Flaky and hung jobs.** Fits failure-bound workflows. Default: a
-`timeout-minutes` on every job, `--blame-hang`, retry only a diagnosed flake, and
+`timeout-minutes` on every job, `--blame-hang` with a mini dump, retry only a diagnosed flake, and
 quarantine a test with an issue. Pitfall: a blanket rerun hides the defect and
 doubles minutes. Read `references/flaky-and-hung-jobs.md`.
 
@@ -144,10 +145,14 @@ handle it. Pitfall: without `merge_group` the required check never reports in th
 queue. Read `references/required-checks-and-path-filters.md`.
 
 **Compile once, analyze once.** Fits any workflow where one push compiles the same
-code several times. Default: build once and reuse the output; run analyzers in one
-parallel lint job instead of in every build, and let that job fail early on compile
-and analyzer errors before long test legs. Pitfall: dropping analyzers from the only
-build that consumers enforce. Read `references/test-setup-cost.md`.
+code several times. Default: build the spec path without analyzers
+(`-p:RunAnalyzers=false`) and reuse the output; enforce every analyzer with warnings
+as errors in one parallel **required** job that fails early on compile and analyzer
+errors, while the local fast loop may skip analyzers and the pre-push gate runs them.
+Pitfall: dropping analyzers from the only build that consumers enforce, or leaving
+the analyzer job out of the required checks. Measure analyzer cost per rule before
+and after (binlog analyzer timings), and fix a slow analyzer at its source rather
+than switching it off. Read `references/test-setup-cost.md`.
 
 **Cores per job before job count.** Fits uniformly slow jobs. Default: check `nproc`
 and the runner's resources before sharding; undersized runners make every job slow.
@@ -196,7 +201,7 @@ touches `permissions:`, uses `pull_request_target`, or adds a cache.
 - Read `references/publish-pipelines.md` when a release or deploy workflow queues, drops runs or rebuilds.
 - Read `references/flaky-and-hung-jobs.md` when runs fail, hang or are rerun.
 - Read `references/test-setup-cost.md` when test steps outlast reported test time, tests duplicate a dependency's suite, or compiles repeat per push.
-- Read `references/runner-sizing-and-images.md` when jobs are uniformly slow, pull images, install tools or reuse workspaces.
+- Read `references/runner-sizing-and-images.md` when choosing runners, sizing parallelism, or when jobs are uniformly slow, pull images, install tools or reuse workspaces.
 - Read `references/security-and-pinning.md` when a change touches actions, permissions, triggers or caches.
 - Read `references/sources.md` when attributing or extending the method.
 - Execute `scripts/ci-timings.sh` for every measurement; read it only to change it. Its self-test reads the synthetic inputs `scripts/fixtures/runs.json` and `scripts/fixtures/jobs/1003.json`, `scripts/fixtures/jobs/1007.json`, `scripts/fixtures/jobs/1010.json`; edit them only together with the expected lines in the script.

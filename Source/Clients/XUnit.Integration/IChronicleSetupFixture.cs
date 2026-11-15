@@ -61,6 +61,21 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     public IServiceProvider Services { get; }
 
     /// <summary>
+    /// Gets additional host configuration key-value pairs for the in-process silo, for instance the connection to a graph sink.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the storage host configuration, these only add to the configuration of the silo: they never select or replace the
+    /// storage backend. Returns null when there is nothing to add.
+    /// </remarks>
+    public IReadOnlyDictionary<string, string?>? AdditionalHostConfiguration => null;
+
+    /// <summary>
+    /// Gets an optional action that registers services in the in-process silo, for a fixture that must decide something the host otherwise defaults,
+    /// such as the naming policy. It runs before the defaults are applied, so what it registers wins.
+    /// </summary>
+    public Action<IServiceCollection>? ConfigureHostServices => null;
+
+    /// <summary>
     /// Gets the database name prefix of the current context's isolated MongoDB storage, or empty when storage is shared.
     /// </summary>
     internal string DatabaseNamePrefix => string.Empty;

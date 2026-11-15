@@ -28,6 +28,7 @@ public class with_legacy_state : given.a_failed_partition_storage
 
     async Task Because() => _restored = (await _storage.GetFor((ObserverId)"observer")).Partitions.Single();
 
+    [Fact] void should_have_no_replay_epoch() => _restored.ReplayEpoch.ShouldBeNull();
     [Fact] void should_not_initialize_a_cursor() => _restored.RecoveryCursor.ShouldBeNull();
     [Fact] void should_not_assign_an_owner() => _restored.RecoveryOwner.ShouldBeNull();
     [Fact] void should_not_invent_a_hold() => _restored.Hold.ShouldBeNull();

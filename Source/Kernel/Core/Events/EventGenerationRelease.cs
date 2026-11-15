@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventSequences.Migrations;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -20,12 +21,14 @@ namespace Cratis.Chronicle.Events;
 /// <param name="migrations">The plaintext migration engine.</param>
 /// <param name="metadataManager">The strict compliance release boundary.</param>
 /// <param name="converter">The schema-guided content converter.</param>
+/// <param name="schemaCache">The effective protection schema cache.</param>
 public class EventGenerationRelease(
     IStorage storage,
     IEventCompliance eventCompliance,
     IEventTypeMigrations migrations,
     IJsonSchemaMetadataManager metadataManager,
-    IExpandoObjectConverter converter) : IEventGenerationRelease
+    IExpandoObjectConverter converter,
+    IEventTypeSchemaCache schemaCache) : IEventGenerationRelease
 {
     /// <inheritdoc/>
     public async Task<AppendedEvent[]> Release(EventStoreName eventStore, IEnumerable<EventType> pins, IDictionary<EventType, EventTypeSchema> schemas, IEnumerable<AppendedEvent> events)
@@ -64,11 +67,11 @@ public class EventGenerationRelease(
 
             if (!@event.IsRevised && @event.GenerationalContent.TryGetValue((int)pin.Generation.Value, out var storedContent))
             {
-                var effective = GenerationProtectionSchemas.For(definition, pin.Generation);
+                var effective = await schemaCache.GetProtectionSchemaFor(eventStore, pin.Id, pin.Generation, schema.Schema);
                 var content = converter.ToExpandoObject(JsonNode.Parse(storedContent)!.AsObject(), effective);
                 var hash = @event.GenerationalHashes.GetValueOrDefault((int)pin.Generation.Value, EventHash.NotSet);
                 var selected = @event with { Content = content, Context = @event.Context with { EventType = pin, Hash = hash } };
-                releasedEvents.Add(await eventCompliance.Release(selected, effective));
+                releasedEvents.Add(await eventCompliance.Release(selected, schema.Schema));
                 continue;
             }
 

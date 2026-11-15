@@ -28,6 +28,8 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     static readonly JsonSerializerOptions _migrationJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     readonly ILogger<EventTypesStorage> _logger = logger ?? NullLogger<EventTypesStorage>.Instance;
     readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
+    readonly object _definitionInvalidation = new();
+    long _definitionRevision;
     ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
@@ -47,7 +49,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             existingEventType.Owner == owner && existingEventType.Source == source && existingEventType.Tombstone == type.Tombstone &&
             existingEventType.Visibility == visibility && existingEventType.Origin == origin &&
             existingEventType.Schemas.TryGetValue(type.Generation, out var storedSchema) &&
-            JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(storedSchema, schema.ToJson()))
+            JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(storedSchema, schema.ToJson()))
         {
             return false;
         }
@@ -62,7 +64,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
-        _definitionsByType.TryRemove(eventType.Id, out _);
+        InvalidateDefinition(eventType.Id);
         return true;
     }
 
@@ -99,7 +101,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         _eventTypes.Add(eventType);
 
         await scope.DbContext.EventTypes.Upsert(eventType);
-        _definitionsByType.TryRemove(definition.Id, out _);
+        InvalidateDefinition(definition.Id);
         return true;
     }
 
@@ -119,19 +121,58 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             return cached;
         }
 
-        var eventType = await GetSpecificEventType(eventTypeId);
-        if (eventType is null)
+        while (true)
         {
-            var schema = await GetFor(eventTypeId);
-            return new EventTypeDefinition(
-                eventTypeId,
-                EventTypeOwner.None,
-                false,
-                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
-                []);
+            long revision;
+            lock (_definitionInvalidation)
+            {
+                revision = _definitionRevision;
+            }
+
+            var eventType = await GetSpecificEventType(eventTypeId);
+            if (eventType is null)
+            {
+                var schema = await GetFor(eventTypeId);
+                return new EventTypeDefinition(
+                    eventTypeId,
+                    EventTypeOwner.None,
+                    false,
+                    [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                    []);
+            }
+
+            lock (_definitionInvalidation)
+            {
+                // A read started before invalidation cannot repopulate the definition cache.
+                if (revision != _definitionRevision)
+                {
+                    continue;
+                }
+
+                return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var id = eventTypeId.Value;
+        var stored = await scope.DbContext.EventTypes.FirstOrDefaultAsync(item => item.Id == id);
+        if (stored is null || !stored.Schemas.TryGetValue(generation.Value, out var previous))
+        {
+            return false;
+        }
+        if (JsonNode.DeepEquals(JsonNode.Parse(previous), schema.Node))
+        {
+            return false;
         }
 
-        return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
+        stored.Schemas = new Dictionary<uint, string>(stored.Schemas) { [generation.Value] = schema.ToJson() };
+        await scope.DbContext.SaveChangesAsync();
+        Invalidate(eventTypeId);
+        return true;
     }
 
     /// <inheritdoc/>
@@ -225,7 +266,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     /// <inheritdoc/>
     public void Invalidate(EventTypeId eventTypeId)
     {
-        _definitionsByType.TryRemove(eventTypeId, out _);
+        InvalidateDefinition(eventTypeId);
         if (_eventTypes.Any(_ => _.Id == eventTypeId))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
@@ -249,9 +290,9 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     {
         var schemas = new Dictionary<uint, string>(stored);
 
-        // Omitted schemas and stored CLR titles survive when the structural schema is unchanged.
+        // Omitted schemas and stored annotations survive when the structural schema is unchanged.
         foreach (var (generation, schema) in incoming.Where(_ => !stored.TryGetValue(_.Key, out var previous) ||
-            !JsonSchemaCompatibilityExtensions.EqualsIgnoringTitles(previous, _.Value)))
+            !JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(previous, _.Value)))
         {
             schemas[generation] = schema;
         }
@@ -286,6 +327,15 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         var byEndpoint = stored.ToDictionary(_ => (_.FromGeneration, _.ToGeneration));
         return incoming.TrueForAll(migration => byEndpoint.TryGetValue((migration.FromGeneration, migration.ToGeneration), out var previous) &&
             JsonNode.DeepEquals(JsonSerializer.SerializeToNode(previous, _migrationJsonOptions), JsonSerializer.SerializeToNode(migration, _migrationJsonOptions)));
+    }
+
+    void InvalidateDefinition(EventTypeId eventTypeId)
+    {
+        lock (_definitionInvalidation)
+        {
+            _definitionRevision++;
+            _definitionsByType.TryRemove(eventTypeId, out _);
+        }
     }
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)

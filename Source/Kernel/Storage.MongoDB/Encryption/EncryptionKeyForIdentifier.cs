@@ -13,4 +13,13 @@ namespace Cratis.Compliance.MongoDB;
 /// <param name="Id">The composite <see cref="EncryptionKeyId"/> that uniquely identifies this key revision.</param>
 /// <param name="PublicKey">The public part of the key.</param>
 /// <param name="PrivateKey">The private part of the key.</param>
-public record EncryptionKeyForIdentifier(EncryptionKeyId Id, byte[] PublicKey, byte[] PrivateKey);
+/// <param name="Published">Whether this revision passed fence validation; absent on legacy rows.</param>
+/// <param name="StagedLifecycle">The lifecycle observed before staging.</param>
+/// <param name="WriterNonce">The unique owner of this staged revision.</param>
+public record EncryptionKeyForIdentifier(
+    EncryptionKeyId Id,
+    byte[] PublicKey,
+    byte[] PrivateKey,
+    bool Published = true,
+    uint? StagedLifecycle = null,
+    string? WriterNonce = null);

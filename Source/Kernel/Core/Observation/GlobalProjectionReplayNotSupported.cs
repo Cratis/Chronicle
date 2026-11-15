@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Observation;
 /// <summary>
 /// Refuses a namespace-local operation on an uncoordinated global replay.
 /// </summary>
-internal sealed class GlobalProjectionReplayNotSupported : InvalidOperationException
+internal sealed class GlobalProjectionReplayNotSupported : ReplayNotSupported
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="GlobalProjectionReplayNotSupported"/> class.

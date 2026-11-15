@@ -1,6 +1,6 @@
 ---
 name: cratis-components-common-controls
-description: Choose and bind Cratis Components ComboBox, ToggleGroup, Tabs, TagGroup and Breadcrumbs with controlled values, query states, keyboard semantics and localizable names. Use for entity pickers, exclusive choices, panel tabs, tag inputs or navigation trails. Do not use for Arc generated command fields, data tables, canvas palettes or theming.
+description: Use when binding Cratis Components entity pickers, exclusive choices, panel tabs, tag inputs or breadcrumb trails. Not for generated Arc command fields, data tables, canvas palettes or theming.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-common-controls/SKILL.md -->
@@ -20,6 +20,17 @@ All claims and prop shapes are from **Cratis/Components** source rather than unc
 | React | `Source/package.json` |
 
 Imports are exported by `Source/Common/index.ts`; `Source/package.json` exposes the `Common` subpath. Use **cratis-components-styling** for the provider and CSS setup and **cratis-components-accessibility** for naming/focus. These controls do not replace Arc's generated `InputTextField`/other command fields; use **cratis-arc-react-page** for those bindings.
+
+Requires Components 4.38.0 for provider routing and forwarded non-modal calendar fields; check `yarn why @cratis/components`, or retain host navigation and modal dates.
+
+Set `CratisComponentsProvider.router` with `navigate` and optional `useHref` to
+integrate `Breadcrumbs` and other link components with the app router. Plain
+clicks navigate client-side; modifier and middle clicks retain native behavior.
+Do not intercept every click in a host `onNavigate`.
+
+`DatePickerInput.isNonModal` defaults to `false`; opting in lets an outside click
+both close the calendar and reach the clicked control. The command form's
+`CalendarField` forwards the same prop.
 
 ## Choose the semantic control first
 

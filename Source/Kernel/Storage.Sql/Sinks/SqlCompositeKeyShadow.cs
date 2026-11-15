@@ -4,6 +4,7 @@
 using System.Diagnostics.Metrics;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +12,14 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable SA1204 // Static SQL and logging helpers follow the stamping operation.
+
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 /// <summary>
 /// Best-effort, post-commit stamping of composite keys without changing legacy primary keys or EF mappings.
 /// </summary>
-internal static partial class SqlCompositeKeyShadow
+internal sealed partial class SqlCompositeKeyShadow
 {
     /// <summary>
     /// The sink-owned, unmapped composite-key stamp column.
@@ -24,8 +27,17 @@ internal static partial class SqlCompositeKeyShadow
     internal const string ColumnName = "__compositeKey";
     const int MaximumLength = 850;
     static readonly Meter _meter = new("Cratis.Chronicle.Storage.Sql.CompositeKeyShadow");
-    static readonly Counter<long> _failures = _meter.CreateCounter<long>("chronicle.sql.composite_key.stamp_failures");
-    static readonly Counter<long> _collisions = _meter.CreateCounter<long>("chronicle.sql.composite_key.collisions");
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _failures;
+    readonly MetricInstrument<long, CounterMetricRecorder<long>> _collisions;
+
+    /// <summary>Initializes a new instance of the <see cref="SqlCompositeKeyShadow"/> class.</summary>
+    /// <param name="names">The metric naming mode.</param>
+    internal SqlCompositeKeyShadow(MetricNames names)
+    {
+        var instruments = new MetricSet(_meter, names);
+        _failures = instruments.Counter<long>(WellKnownMetricNames.SqlCompositeKeyStampFailures, WellKnownMetricNames.SqlCompositeKeyStampFailuresUnit);
+        _collisions = instruments.Counter<long>(WellKnownMetricNames.SqlCompositeKeyCollisions, WellKnownMetricNames.SqlCompositeKeyCollisionsUnit);
+    }
 
     /// <summary>
     /// Stamps a committed row if no kernel has stamped it yet. Never fails the original write.
@@ -35,7 +47,7 @@ internal static partial class SqlCompositeKeyShadow
     /// <param name="id">The unchanged legacy primary key.</param>
     /// <param name="logger">The sink logger.</param>
     /// <returns>Awaitable task.</returns>
-    internal static async Task Stamp(ReadModelDbContext context, Key key, string id, ILogger<Sink> logger)
+    internal async Task Stamp(ReadModelDbContext context, Key key, string id, ILogger<Sink> logger)
     {
         if (key.Value is not ExpandoObject parts || !context.Columns.Any(column => column.IsCompositeKey))
         {
@@ -54,13 +66,13 @@ internal static partial class SqlCompositeKeyShadow
             var stored = await ShadowColumns.Access(context, ColumnName, () => StampIfNull(context, id, encoding));
             if (CompositeKeyEncoding.IsEncoded(stored) && !string.Equals(stored, encoding, StringComparison.Ordinal))
             {
-                _collisions.Add(1);
+                _collisions.Record(1);
                 KeyCollision(logger, context.TableName, id);
             }
         }
         catch (Exception exception)
         {
-            _failures.Add(1);
+            _failures.Record(1);
             StampingFailed(logger, exception, context.TableName, id);
         }
     }

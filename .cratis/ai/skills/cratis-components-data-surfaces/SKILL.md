@@ -1,6 +1,6 @@
 ---
 name: cratis-components-data-surfaces
-description: Compose Cratis Components PivotViewer exploration, TimeMachine historical snapshots, Canvas pan/zoom boards and public Chat conversation/sidebar surfaces. Use when a table is not the right presentation, when supplying Pixi-backed content, or when binding host-owned chat data and actions. Do not use for DataPage lists, backend event replay, chat persistence, canvas tool palettes or Scene authoring.
+description: Use when a Cratis UI needs pivot exploration, historical snapshots, a pan/zoom board or host-owned chat views. Not for DataPage lists, event replay, chat persistence, tool palettes or Scene authoring.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-data-surfaces/SKILL.md -->
@@ -132,6 +132,11 @@ Camera/controls contract (`Canvas.tsx`, `CanvasHandle.ts`):
 - `readOnly` absorbs content interaction but leaves pan/zoom available. `backgroundDragPans=false` lets a product own background drag selection while wheel/middle-button/touch panning remain available.
 
 Persist item edits in the host, not in camera callbacks. Browser-test gestures and dimensions. For jsdom tests provide a `ResizeObserver` substitute where required; Pixi integration still needs a real browser signal.
+
+For bound-table server filtering, query-state isolation, refreshed selection and
+localized numbered pagination, read
+[Query table updates](references/query-table-updates.md). Page-local filtering is
+still the default; `serverQuery` is opt-in.
 
 ## 4. Public Chat: bind the host's messages and outcomes
 

@@ -12,6 +12,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 /// </summary>
 internal static partial class EventSequenceStorageLogging
 {
+    [LoggerMessage(LogLevel.Debug, "Revision history for event {SequenceNumber} does not describe its latest content; a later write is not recorded")]
+    internal static partial void IncompleteRevisionHistory(this ILogger<EventSequenceStorage> logger, EventSequenceNumber sequenceNumber);
+
     [LoggerMessage(LogLevel.Error, "Failed to append event with sequence number {SequenceNumber} to event sequence {EventSequenceId}")]
     internal static partial void FailedToAppendEvent(this ILogger<EventSequenceStorage> logger, Exception ex, EventSequenceNumber sequenceNumber, EventSequenceId eventSequenceId);
 

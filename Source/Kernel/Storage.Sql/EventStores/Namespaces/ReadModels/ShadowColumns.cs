@@ -45,8 +45,12 @@ internal static partial class ShadowColumns
             }
             return new AddColumnOperation
             {
-                Name = name, Table = context.TableName, ClrType = typeof(string), ColumnType = definition.ColumnType,
-                IsNullable = true, DefaultValue = null,
+                Name = name,
+                Table = context.TableName,
+                ClrType = typeof(string),
+                ColumnType = definition.ColumnType,
+                IsNullable = true,
+                DefaultValue = null,
                 ComputedColumnSql = definition.GeneratedSql?.Invoke(helper.DelimitIdentifier(column.Name)),
                 IsStored = definition.GeneratedSql is null ? null : false
             };

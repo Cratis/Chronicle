@@ -1,6 +1,6 @@
 ---
 name: cratis-engineering-regression-cluster
-description: Stop fixing instances when one surface keeps breaking - name the failure class, add the gate that owns it, prove the gate fails, then fix the instance. Use when a third bug, regression, revert or review finding lands on the same screen, endpoint, command, workflow or module, when the same kind of fix keeps being reapplied, or when asked why something keeps breaking. Not for a first or isolated bug (fix it with a regression specification), for proving a consolidation dropped nothing (use cratis-engineering-consolidation-guard), or for a boundary that reports success after failing (use cratis-engineering-effect-boundaries).
+description: Use when a third regression hits the same surface, a fix keeps being reapplied or recurring failures need a shared cause. Not for isolated bugs, consolidation loss checks or false-success effect boundaries.
 license: LICENSE
 ---
 <!-- cratis-ai-managed: skills/cratis-engineering-regression-cluster/SKILL.md -->

@@ -1,31 +1,43 @@
 ---
-description: Seed events with the Chronicle .NET client by implementing a seeder, choosing global or namespace scope, and seeding one or mixed event types.
+title: Seed a Cratis Chronicle event store with C#
+description: Implement ICanSeedEvents in C# to seed a Cratis Chronicle event store. Choose namespace or stream routing and check which initial events reached the log.
 ---
-# Seeding with C Sharp
 
-This page shows how to seed events using the Chronicle .NET client. Choose the scope before defining your seeds:
-global seeds reach every namespace in the event store, including tenants created later. Use `ForNamespace(...)`
-for development or sample data that belongs only in a named namespace.
+<a id="seeding-with-c-sharp" />
+
+To seed a Cratis Chronicle event store in C#, implement `ICanSeedEvents` and define the initial events your application needs. The .NET client discovers your seeder and registers its events when it connects, giving a new environment a starting history without a separate append script.
+
+Start with a running kernel and a connected [.NET client](../clients/dotnet/getting-started.md). Choose the scope before defining seeds: global seeds reach every namespace in the event store, including tenants created later. A namespace is a separate data scope within an event store. Use `ForNamespace(...)` for development or sample data that belongs only in a named namespace.
 
 ## Define events
 
-Use `record` types for event definitions in examples:
+Define the facts you want in the starting history. These examples use C# records marked with `[EventType]`, so Chronicle can discover and register their event types:
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/events" />
 
 ## Implement a seeder
 
-Implement `ICanSeedEvents` and use `IEventSeedingBuilder` to define events to append:
+Implement `ICanSeedEvents`. Chronicle calls its `Seed` method with an `IEventSeedingBuilder`; use that builder to associate events with an event source identifier, the key for the entity whose history they belong to:
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/seeder" />
 
+Here, `For<TEvent>` adds events of one type for `user-123`. `ForEventSource` adds the registration and verification events for `user-456` in the order shown. Both calls use the top-level builder, so these are global seeds. Use the namespace-scoped builder shown below if these users should exist only in a development namespace.
+
 ## Seed multiple events of the same type
+
+Pass a list to `For<TEvent>` when one event source needs several events of that type:
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/seed-multiple-same-type" />
 
+Both entries belong to `user-123`; changing the email in the payload does not create a different event source. Use separate source identifiers if the entries represent different users.
+
 ## Seed mixed event types
 
+Use `ForEventSource` when the starting history contains different event types for the same source:
+
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/seed-mixed-types" />
+
+The registration, verification, and profile update form the initial history of `user-123`. Rerunning these same definitions skips occurrences already seeded successfully.
 
 ## Seed onto an event stream
 
@@ -35,7 +47,9 @@ work on the builder returned by `ForNamespace`.
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/stream-routed" />
 
-Use `ForEvents` for per-event routing. Its `EventForEventSourceId` entries can specify an
+The first call seeds the `Offices` stream `office-1` under `company-123` across namespaces. The second targets only `tenant-a`, using the same source but stream identifier `office-2`. Both record `Company` as the event source type.
+
+Use `ForEvents` when individual entries need different routes. Its `EventForEventSourceId` entries can specify an
 `EventSource` definition type and an `EventStream` name; Chronicle resolves their routing
 from the discovered definition and rejects contradictory explicit types. Entry tags are
 combined with static event-type tags. Set `EventSource` whenever you use a typed `EventStream`:
@@ -55,30 +69,27 @@ older kernels.
 
 ## Development-only seeding
 
-If seed data should only run in development, use conditional compilation or runtime configuration:
+Decide whether a build or environment should offer sample data before you register it. The example uses conditional compilation, so the seeder exists only in builds that define `DEBUG`:
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/development-only" />
 
-Chronicle does not distinguish between development and production seed data. Decide when to seed based on build configuration or runtime settings,
-and scope development or sample data with `ForNamespace(EventStoreNamespaceName.Default)` rather than the global builder.
-A build flag prevents declaring those seeds in that build. With an upgraded .NET client and kernel,
-startup replaces the program's stored declaration, even when its global set is empty.
+Chronicle does not distinguish between development and production seed data. Use your build configuration or runtime settings to control when the seeder runs, and `ForNamespace(EventStoreNamespaceName.Default)` to keep its entries out of other namespaces. Neither choice removes events already appended.
+
+With a .NET client and kernel that support global declarations, startup replaces the program's stored global declaration even when its new global set is empty. The cleanup procedure below covers seeds previously registered globally.
 
 ## Organize seeders by feature
 
-For larger solutions, split seeders by domain or feature:
+Keep seed definitions beside the feature they support. Separate `ICanSeedEvents` implementations let you change the user and order starting histories independently:
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/organize-by-feature" />
 
 ## Namespace-scoped seed data
 
-`For` and `ForEventSource` on the top-level builder define global seeds. The server stores them per event store,
-applies them to every existing namespace, and applies them once to each namespace created later.
-Opening a store for a new namespace creates that namespace. The kernel then applies stored global seeds asynchronously,
-usually before your application's first write, but there is no ordering guarantee. Do not rely on that timing;
-put development or sample data in `ForNamespace(...)` rather than the global builder.
+`For` and `ForEventSource` on the top-level builder define global seeds. The server stores them per event store and applies them to every existing namespace and each namespace created later.
 
-To target a specific namespace, use `ForNamespace` to get a scoped builder:
+Opening a store for a new namespace creates that namespace. The kernel applies stored global seeds asynchronously; there is no guarantee they arrive before your application's first write. Do not rely on that timing for startup logic.
+
+Use `ForNamespace` to get a builder that targets only one namespace. In this example, the product is global, while tenant-specific users and organization events stay in their named namespaces:
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/namespace-scoped" />
 
@@ -87,33 +98,19 @@ The scoped builder supports the same `For<TEvent>` and `ForEventSource` methods 
 
 ## Authoritative global seed sets
 
-The .NET client declares the complete discovered global set for each program. A declaration replaces that
-program's previous declaration, including when the new set is empty. Removing an entry from `ICanSeedEvents`
-stops it reaching namespaces created afterwards; events already appended to existing namespaces are never retracted.
-Explicitly queued globals (`eventStore.Seeding.For(...)` or an independent `CreateEventSeeding()` buffer)
-remain append-only and are not removed by a later declaration, even if an identical seed was already declared.
+An authoritative global seed set is the complete set of global seeds a program currently declares through its discovered seeders. Each declaration replaces that program's previous one, including when the new set is empty. Removing an entry from `ICanSeedEvents` stops it reaching namespaces created afterwards. Events already appended to existing namespaces are never retracted.
 
-If two programs declare the same seed, a namespace receives it once, not once per program.
-For repeated identical seeds, Chronicle uses the largest occurrence count in any program's declaration or
-explicit additions, not the sum across programs. Seed identity includes the event source, event type,
-content, tags, and routing. Clearing one program's declaration does not remove a seed another program
-still declares or has added explicitly. Existing namespaces receive only missing occurrences; no events
-are retracted.
+Explicitly queued globals work differently. Entries added through `eventStore.Seeding.For(...)` or an independent `CreateEventSeeding()` buffer remain append-only. A later declaration does not remove them, even if an identical seed was already declared. Use discovered seeders when future namespaces should follow your current definitions, and explicit additions when the entries should remain part of the stored global set.
 
-If any discovered seeder cannot activate or its callback fails, the client logs the failing seeder types
-and sends no discovered global declaration during that registration. The previous declaration stays in
-place; the partial discovered set is not stored as explicit additions either. Namespace-scoped entries
-and manually queued entries still register. The next registration retries discovery, and a complete
-successful discovery declares the global set as usual.
+Programs sharing a store can declare the same seed without multiplying it. A namespace receives the largest occurrence count from any program's declaration or explicit additions, not the sum across programs. For example, if one program declares an entry twice and another declares it once, the namespace receives two occurrences. Seed identity includes the event source, event type, content, tags, and routing.
 
-Ownership uses `ChronicleOptions.ProgramIdentifier`, falling back to the entry assembly name when the option
-is still `"[N/A]"`. Set a distinct, stable `ProgramIdentifier` for each program when several programs share a
-store, so one program does not replace another's declaration. The first authoritative registration after
-upgrading also clears legacy stored global seeds whose owner was not recorded. Other programs' owned declarations and explicit
-additions remain stored.
+Clearing one program's declaration leaves a seed in place if another program still declares it or has added it explicitly. Existing namespaces receive only missing occurrences; reducing a count never retracts events.
 
-This requires an upgraded client and kernel. Old clients keep append-only behavior. A new client still works
-against an older kernel, but that kernel ignores declarations and retains its stored globals.
+If a discovered seeder cannot be activated or its `Seed` method fails, the client logs the failing seeder types and keeps the previous global declaration. It sends no discovered global declaration during that registration and does not store the partial discovered set as explicit additions. Namespace-scoped and manually queued entries still register. The next registration retries discovery; a complete successful discovery then declares the global set.
+
+Ownership uses `ChronicleOptions.ProgramIdentifier`, falling back to the entry assembly name when the option is still `"[N/A]"`. Set a distinct, stable `ProgramIdentifier` for each program sharing a store, so one program does not replace another's declaration.
+
+Both the .NET client and kernel must support declarations for replacement to take effect. Older clients keep append-only behavior. A newer client can still register default-routed seeds against an older kernel, but that kernel ignores declarations and retains its stored globals. The first authoritative registration after upgrading also clears legacy stored global seeds whose owner was not recorded. Other programs' owned declarations and explicit additions remain stored.
 
 ### Clear stale development seeds
 
@@ -126,9 +123,9 @@ all events already appended. This does not remove explicitly queued globals.
 
 ## Register corrected seed definitions without reconnecting
 
-When registration fails with a command or transport error, Chronicle retains the attempted entries in the event store's default `Seeding` buffer.
-That makes retrying an unchanged idempotent batch safe after a transient failure. If the definitions themselves
-were wrong, create an independent empty buffer so the corrected set is not combined with the retained set:
+A command or transport error leaves the attempted entries in the event store's default `Seeding` buffer. You can retry the same entries after a transient failure without duplicating successful occurrences.
+
+If the definitions themselves were wrong, create an independent empty buffer so the corrected set is not combined with retained entries:
 
 <ChronicleClientTabs snippet="event-seeding/seeding-with-csharp/corrected-seed-set" />
 
@@ -137,26 +134,16 @@ failure from its `Register()` call still propagates normally.
 
 ## How it runs
 
-- Seeders are automatically discovered at application startup.
-- Each client sends its discovered global seed set once per event store name per connection lifetime, not once
-  per namespace store it opens. After a disconnect and reconnect, it sends the global set again.
-- Each namespace store still sends its `ForNamespace(...)` entries during registration.
-- Every entry is applied once per namespace, and seeding is idempotent across restarts: entries that have
-  already been appended are skipped on the next run.
-- An entry that your seeder yields twice is two events, not one. Two events of the same type, on the same
-  event source, carrying the same payload are two facts, and both are appended.
-- Events are appended in batches of 100. A batch is validated as a whole before anything is written, so a
-  single entry that violates a constraint means none of its batch is appended. The server logs the
-  rejection at `Error` with the violated constraint names and counts and leaves those entries unseeded.
-  A rejected batch does not fail registration and is not reported to the client, so check the server log.
-  The client clears its buffer once registration returns, so after correcting the definitions, restart the
-  process or use `CreateEventSeeding()` to offer the corrected set. Retrying only helps for a real command or
-  transport error.
+With automatic discovery enabled, the .NET client discovers seeders at application startup. It sends the discovered global set once per event store name per connection lifetime, even if it opens stores for several namespaces. Reconnecting sends that global set again. Each namespace store still sends its `ForNamespace(...)` entries during registration.
+
+Chronicle tracks successful occurrences in each namespace, so restarting skips events already appended. If your seeder yields the same entry twice, both occurrences are appended. That remains true when the event type, source, and payload are identical; rerunning the list skips those two successful occurrences.
+
+Events are appended in batches of 100. A batch is validated as a whole before anything is written, so one constraint violation prevents every entry in that batch from being appended. The server logs the rejection at `Error` with the violated constraint names and counts, and leaves those entries unseeded.
+
+A rejected batch does not fail registration and is not reported to the client. Check the server log even when registration returns successfully. The client clears its buffer after that return, so correcting the definitions alone does not offer them again: restart the process or use `CreateEventSeeding()` to register the corrected set. Retrying the retained buffer applies only to command or transport errors, not to a server-side batch rejection.
 
 ## Best practices
 
-- Keep seed data minimal and deterministic.
-- Use clear event source IDs to make debugging easier.
-- Group seeders by scenario; dropping a discovered global seed stops future application, not events already appended.
-- Use build flags or runtime settings to prevent seeding in production.
-- Use `ForNamespace` when seed data is tenant-specific or environment-specific to avoid polluting other namespaces.
+Keep the starting history small and deterministic, with source identifiers you can recognize in the log. Group seeders by feature or scenario so changes remain easy to trace. For tenant-specific or environment-specific data, choose `ForNamespace` and control whether the seeder runs through build flags or runtime settings.
+
+After starting the application, open [Chronicle Workbench](../workbench/index.mdx), select the intended event store and namespace, and inspect the event log for the source identifiers in your seeder. For the first example, look for the registration event under `user-123` and the registration and verification events under `user-456`. Check the server log for rejected batches if events are missing. Restart with unchanged definitions and confirm those successful occurrences are not appended again.

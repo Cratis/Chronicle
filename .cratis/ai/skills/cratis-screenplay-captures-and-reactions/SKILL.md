@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-captures-and-reactions
-description: Model the reactive edges of a Cratis Screenplay `.play` model — `capture` in the Change Data Capture Language for turning external data into events, and `reaction` plus `trigger` for work that runs when something happens, on a schedule, or on an integration signal. Use when integrating an external system, translating outside data into events, or declaring automatic follow-up work in a `.play` model. Do not use for commands, projections or screens.
+description: Use when writing Screenplay capture, reaction or trigger syntax for outside facts and automatic follow-up work. Not for deciding integration guarantees or declaring commands, projections and screens.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-captures-and-reactions/SKILL.md -->
@@ -15,8 +15,8 @@ Translate slices cross public boundaries; Automation slices cause private follow
 ## Locate the model
 
 Look first for the project's existing `.play` files: their folder is the model.
-For a new model, check `Source/` or `src/`, else use `Screenplay/` at the repository
-root. Never put a model under `.cratis/` or hand-copy it between repositories.
+Reuse existing model/workspace roots; code-only `Source/` or `src/` does not
+qualify. Otherwise use repository-root `Screenplay/` ([discovery/version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)). Never put a model under `.cratis/` or hand-copy it between repositories.
 `cratis ai install` manages `.cratis/ai/`, never model files. Keep explanatory
 Markdown in project documentation; `.play` is the single flow model.
 
@@ -29,7 +29,7 @@ Language claims follow Screenplay `reactions.md`, `triggers.md`, `captures.md` a
 
 The compiler's ESM admission decides, not the slice type. Reactions, triggers and
 captures bind/reference-execute from v6; older compilers refuse them. Read toolchain
-`references/diagnostics.md` when diagnosing skew or false PLAY0285 cascades.
+`references/diagnostics.md` when diagnosing skew or `PLAY0285`/`PLAY0816` on a specification.
 - **Stage realization:** read `cratis-stage-rendering-and-sandbox` `references/admission.md`
   before claiming rendering. Supported event-triggered Automation renders; captures,
   Translate, clocks and opaque bodies remain gap-fill (`-024`).
@@ -226,7 +226,7 @@ Requires Screenplay 4.176.0 or later (`screenplay --version`) for PLAY0694; olde
 
 - [ ] `screenplay <model> --warnaserror` reports zero errors and zero warnings
       (standalone, or a `cratis` whose compiler admits ESM v6). Under an older compiler expect
-      `PLAY0268` at binding and a false `PLAY0285` on cascade specifications, and report them
+      `PLAY0268` at binding, and `then invokes` unreadable before 4.246.0 (ESM v34); report them
       as tool skew.
 - [ ] The tool that bound the model is named (standalone, or a `cratis` whose compiler admits ESM v6, for ESM v6 constructs); reference scenarios use
       `screenplay test`/MCP. Unadmitted refusal/redelivery is not executed evidence.

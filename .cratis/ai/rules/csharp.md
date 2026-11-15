@@ -13,8 +13,8 @@ The goal is minimal ceremony, maximum clarity. Modern C# (13+) gives us records,
 ## Building
 
 - Use `dotnet build` from the command line.
-- Use `dotnet format` to format code.
-- Use `dotnet test` to run tests.
+- Follow `.editorconfig`; run `dotnet format` only when CI requires it.
+- Run affected spec executables; use `dotnet test <project> --no-build` only for VSTest (see `specs.csharp.md`).
 
 ## Formatting
 

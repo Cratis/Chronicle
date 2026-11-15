@@ -1,20 +1,18 @@
 ---
 uid: Chronicle.ReadModels.Indexing
-description: Declare indexes on a Chronicle read model so the store can read it efficiently, including nested and child properties and when they take effect.
+description: Declare Chronicle read model indexes with [Index] and [CompositeIndex] so supported indexes are recreated when replay replaces a collection or table.
 ---
 
 # Indexing Read Models
 
-A read model is stored in a collection or table, and the store needs indexes to read it efficiently.
-You could create those indexes yourself, but you would have to create them again every time the
-container is recreated — and Chronicle recreates it on its own, during a replay.
+Declare indexes on a Chronicle read model with `[Index]` or `[CompositeIndex]` when your queries
+need indexed properties beyond its key. Chronicle recreates supported indexes when replay replaces
+the collection or table, so you do not have to reapply them by hand.
 
-The `[Index]` attribute moves the decision to where it belongs: onto the read model. You declare
-which properties are indexed, and Chronicle creates them every time the container is built.
-
-The MongoDB sink supports the full property path. The SQL sink creates non-unique indexes on
-top-level scalar columns and nested JSON scalar paths for SQLite, PostgreSQL, and SQL Server,
-including replay shadow tables.
+Choose the properties and order to match the queries you run against storage. The declaration travels
+with the read model; the sink, Chronicle's storage writer, decides how to implement it. MongoDB supports
+full property paths. SQLite, PostgreSQL, and SQL Server support non-unique indexes on top-level scalar
+columns and nested JSON scalar paths, with the differences described under [SQL storage](#sql-storage).
 
 ## Declaring an index
 
@@ -24,10 +22,9 @@ Put `[Index]` on the property — or, for a record, on the constructor parameter
 
 The key of a read model does not need `[Index]` — the store already indexes it.
 
-Both forms declare the same thing, so `[property: Index]` on a positional parameter is equivalent to the
-shorthand above and there is no reason to prefer it. C# binds a bare attribute on a positional record
-parameter to the *parameter* rather than the property, and Chronicle looks in both places for exactly that
-reason — the same way it does for `[Subject]`.
+The example indexes `CustomerId` and `Number` separately. A bare `[Index]` on a positional record
+parameter targets the parameter; `[property: Index]` targets the generated property. Chronicle reads
+both locations, so either form produces the same declaration, as it does for `[Subject]`.
 
 ## Nested and child properties
 
@@ -36,8 +33,8 @@ collection's element type is indexed at its full path:
 
 <ChronicleClientTabs snippet="read-models/indexing/nested" />
 
-This declares an index on `lines.productId`. The path uses the naming policy the client is
-configured with, the same one that decides how the properties are stored.
+Here, `[Index]` on `ProductId` in the line-item type declares `lines.productId` on the order.
+The path follows the client's serialization naming policy, so the index uses the stored property names.
 
 ## Composite and descending indexes
 
@@ -45,10 +42,11 @@ Use `[CompositeIndex]` on a read model to declare an ordered set of property nam
 
 <ChronicleClientTabs snippet="read-models/indexing/composite" />
 
-The order of the properties is the order of the index keys. `IsDescending` supplies one flag per
-property; omitting it, or using an empty array, makes every key ascending. A read model can declare
-multiple composite indexes. Each path segment is resolved against the CLR model and converted through
-the serialization naming policy, including nested and collection-element paths.
+This example puts `CustomerId` first and `CreatedAt` second, with creation time descending.
+The property order defines the index key order. `IsDescending` supplies one flag per property;
+omitting it or using an empty array makes every key ascending. A read model can declare multiple
+composite indexes. Chronicle resolves each path against the .NET model and applies the serialization
+naming policy, including paths through nested objects and collection elements.
 
 Use `[Index(IsDescending = true)]` for a descending single-property index, on either a property or a
 record parameter:
@@ -128,20 +126,14 @@ columns, but preserves user indexes and computed columns still used by an index.
 
 ## Why it lives on the read model
 
-Chronicle replays a read model by building it into a **shadow container** — a separate collection or
-table — and swapping that in when the replay completes. The container the application reads from
-afterwards is therefore not the one it read from before: it is a new one, and it only has the
-indexes that were created on it.
+During replay, Chronicle builds a separate collection or table, called a shadow container, then swaps
+it in when replay completes. Only indexes created on that replacement are available afterward.
+A manually created index on the old collection does not survive the swap.
 
-That is the reason `[Index]` exists. Because the declaration travels with the read model's
-definition rather than being applied to a container by hand, Chronicle can recreate the indexes for
-whichever container it is currently building — the original one, or the shadow one a replay is
-filling. An index created manually against the live collection does not survive the swap; a declared
-one does.
-
-It is also why this is declarative rather than store-specific. `[Index]` says *what* should be
-indexed; each sink decides *how*. On MongoDB that means an ordered single-property or compound index. A single ascending index is
-named `chronicle_idx_<path>`; another store expresses the same declaration its own way.
+Keeping declarations on the read model gives Chronicle the information to recreate supported indexes
+on both the original storage and its replacement. MongoDB implements them as ordered single-property
+or compound indexes; a single ascending index is named `chronicle_idx_<path>`. SQL providers implement
+the same declarations using the column and expression indexes described above.
 
 ## When it takes effect
 
@@ -154,7 +146,6 @@ kernel. It does not require a replay — the index is created against the existi
 
 ## What it does not do
 
-`[Index]` does not give you a query surface. Chronicle's read model API is keyed, and indexing does
-not change that — see [Querying Read Models](./querying.md) for what to do when you need to search a
-read model by something other than its key. What indexing does is make *that* work efficient, whether
-the query comes from Chronicle's own key lookups or from your code going to the store directly.
+`[Index]` creates storage indexes; it does not add query methods to Chronicle's keyed read model API
+or guarantee that a database uses an index. To search by properties other than the key, follow
+[Querying Read Models](./querying.md) and write queries suited to your storage provider and indexes.

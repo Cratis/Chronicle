@@ -1,5 +1,18 @@
 ---
-applyTo: "**/*"
+applyTo: "**/*.cs,**/*.ts,**/*.tsx,**/*.go,**/*.kt,**/*.kts,**/*.java,**/*.ex,**/*.exs,**/*.csproj,**/package.json,**/go.mod"
+paths:
+  - "**/*.cs"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.go"
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.java"
+  - "**/*.ex"
+  - "**/*.exs"
+  - "**/*.csproj"
+  - "**/package.json"
+  - "**/go.mod"
 profile: framework
 ---
 <!-- cratis-ai-managed: harnesses/copilot/instructions/framework.instructions.md -->
@@ -38,6 +51,7 @@ Repo conventions follow from this: `Source/DotNET` + `Source/JavaScript` for dua
 - **Backward compatibility is a contract.** A change to a public type, attribute, interface, or generated-proxy shape is a breaking change for every downstream app — label PRs by semver impact (`major`/`minor`/`patch`) and treat removals/renames of public surface as `major`.
 - **Convention discovery is built here.** `IInstancesOf<T>` / `IImplementationsOf<T>`, attribute-based discovery, and source generation are the mechanisms the framework *provides*; use them internally too rather than hand-registration where a convention fits. A Fundamentals project reference does not carry the type-discovery analyzer like its NuGet package does: reference `Fundamentals.TypeDiscovery.Generator` explicitly, or your project's types may be absent from the generated universe.
 - **Source generators / analyzers** (Arc's proxy generator, Fundamentals) follow Roslyn conventions; their output is consumed verbatim by apps, so treat generated shape as public API.
+- **Analyzers and generators are written for speed** (fast feedback is a product requirement): incremental generators only; a syntactic prefilter (name or kind) before any semantic bind; compute shared evidence once per compilation, never once per analyzer or per symbol; touch it only after cheap relevance checks; never rebind every call site of the compilation. Each expensive analyzer gets a performance spec.
 - **Orleans grains** in the Chronicle kernel follow `orleans.md`.
 - **An alternate implementation of an interface must match the primary one's *semantics*, not just its signature.** Chronicle ships several implementations of the same storage interfaces (MongoDB, SQL, in-memory) and the in-memory ones exist precisely so the real kernel code paths can run without infrastructure. When you touch one, **diff it against the persistent implementations** — the signature tells you nothing about the contract. The specific trap: query criteria carry **sentinels meaning "do not narrow"** (`EventSourceId.Unspecified`, `EventSourceType.Unspecified`/`Default`, `EventStreamType.All`, `EventStreamId.Default`, an empty event-type set). Callers asking for "everything" pass those sentinels, never `null`, so a plain `is not null` check narrows every row away and the read silently returns nothing. A divergence here does not fail — it makes specs pass vacuously, which is worse.
 - **A stub that silently succeeds is a bug, not a placeholder.** An unimplemented method returning `Task.CompletedTask`/an empty result lets a spec assert on work that never happened. Implement it, or make it fail loudly — never leave it quietly lying.
@@ -47,7 +61,7 @@ Repo conventions follow from this: `Source/DotNET` + `Source/JavaScript` for dua
 ## Quality gates (framework)
 
 - Build clean (Debug and Release) with **zero warnings, zero errors**.
-- Specs pass for affected projects (C# via `dotnet test`; TS packages via their test command; Components also `build-storybook`).
+- Specs pass for affected projects (C# spec executables (VSTest only: `dotnet test <project> --no-build`); TS packages via their test command; Components also `build-storybook`).
 - For public-facing changes (APIs, attributes, generated output, component props): update the product documentation and verify it.
 - Match the repo's existing patterns; when a deep architectural question isn't answered by the universal rules or this file, consult the **repo's own docs/CONTRIBUTING** or ask — do not infer framework internals from a single call site.
 

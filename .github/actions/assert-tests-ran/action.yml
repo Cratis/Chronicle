@@ -15,10 +15,16 @@ inputs:
     description: Name of the test run, used in the log and failure message.
     required: false
     default: The test run
+  prefixes:
+    description: >-
+      Optional comma-separated class-name prefixes (namespaces). Each one must own at least one executed
+      result, so a member of a batched job that matches nothing fails the job even when others ran.
+    required: false
+    default: ''
 
 runs:
   using: composite
   steps:
     - name: Assert the executed test count is not zero
       shell: bash
-      run: python3 "${GITHUB_ACTION_PATH}/assert-tests-ran.py" "${{ inputs.path }}" "${{ inputs.name }}"
+      run: python3 "${GITHUB_ACTION_PATH}/assert-tests-ran.py" "${{ inputs.path }}" "${{ inputs.name }}" "${{ inputs.prefixes }}"

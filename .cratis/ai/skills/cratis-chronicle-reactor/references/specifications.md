@@ -13,8 +13,29 @@
 
 Start with `Specification` plus a direct call for pure reactor decisions,
 passing the trigger and supplied values explicitly and asserting the returned
-command or event. Add `ReactorScenario<TReactor>` only where invocation,
-dependency wiring or side effects contribute proof. In those scenarios, drive
+command or event. Add one `ReactorScenario<TReactor>` per reactor for what only
+Chronicle proves: dispatch, filtering, read-model parameters and routing of
+produced events to the right event source (the
+[decision table](../../../rules/specs.scenarios.csharp.md)).
+Substitute the reactor's collaborators in either style; never substitute the
+event store as proof of routing.
+
+```csharp
+public class when_an_author_is_registered : Specification
+{
+    readonly INotifier _notifier = Substitute.For<INotifier>();
+    readonly AuthorId _id = AuthorId.New();
+
+    async Task Because() =>
+        await new AuthorNotifications(_notifier).Registered(
+            new AuthorRegistered("Jane Austen"),
+            EventContext.EmptyWithEventSourceId(_id));
+
+    [Fact] void should_notify_about_the_author() => _notifier.Received(1).Notify("Jane Austen");
+}
+```
+
+In reactor scenarios, drive
 events with a service provider of substitutes and assert on the substitutes for
 non-event side effects; for handlers that return events, assert the resulting
 appends through the scenario's event store. Cover the replay path separately

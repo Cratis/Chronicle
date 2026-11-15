@@ -1,30 +1,33 @@
 ---
 uid: Chronicle.ReadModels.Querying
-description: Chronicle's read model API is keyed, with no server-side query surface; this explains why and what to do instead for querying.
+title: Querying read models in Cratis Chronicle
+description: Use keyed reads and materialized paging in Cratis Chronicle, or query the backing store when you need server-side filtering, sorting, or search.
 ---
 
-# Querying Read Models
+## Querying Read Models
 
-Chronicle's read model API is keyed. You can get an instance by its id, get snapshots of it, watch it, and replay the whole collection. What you cannot do through `IReadModels` is run a server-side filter or search by a field that is not the key — there is no server query engine and no `IQueryable`. The one predicate is `Observe<TReadModel>(filter)`, which filters the whole observed materialized collection in the client; it does not reduce what the server reads or sends, and passive and event-target read models cannot be observed this way. See [Observing read models](observing-read-models.mdx). Paging is the one exception: `IReadModels.Materialized` reads the stored instances a page at a time, without filtering or sorting — see [Materialized read models](materialized-pagination.mdx).
+Cratis Chronicle's read model API retrieves instances by key; it does not provide server-side field filtering or search. Use a keyed read when the caller knows the instance, materialized paging for a stored list, and the backing store's query API for filtering or sorting that must happen on the server.
 
-That is deliberate, and this page says so plainly, because from the outside a missing method looks the same whether it was left out or never intended.
+In the .NET client, `IReadModels` has no `IQueryable` surface. `Observe<TReadModel>(filter)` accepts a predicate, but applies it in the client after reading the whole materialized collection. It does not reduce what the server reads or sends. Passive models and models that target an event sequence cannot use this collection observation; see [Observing read models](observing-read-models.mdx).
+
+For a page of stored instances, use `IReadModels.Materialized`. It supports paging without filtering or sorting; see [Materialized read models](materialized-pagination.mdx).
 
 ## Why there is no query surface
 
-A read model is not a table you query. It is a shape you decided on in advance, built by a projection from the events that feed it, so that one read case is answered by one direct lookup. Deciding what a read model contains, how it is keyed, and which events maintain it *is* the design work. A read model that has to be searched by arbitrary fields is usually a read model that has not been shaped for the read it is serving.
+A projection builds a read model for a particular read task. Its key can make that task a direct lookup: for example, an account overview keyed by account ID needs no search when the request already carries that ID.
 
-So the boundary is drawn on purpose: Chronicle takes responsibility for building read models from events and handing them back by key. It does not take on being a query engine, because the storage you already have is one.
+Chronicle maintains that state from events and exposes keyed access. A search screen has different needs, such as user-selected filters or ordering. Those belong to the query API of the store holding the materialized model, rather than to Chronicle's keyed read API.
 
 ## What to do instead
 
-**First, ask whether the read model is the right shape.** If you are searching by a field, that field is what the read case is really keyed on. A projection keyed that way turns the search into a lookup — and unlike a query, it stays correct as events arrive.
+Start with the lookup the caller needs. If a stable, unique key can answer it, consider a read model keyed that way and use [Getting a Single Instance](getting-single-instance.mdx). Changing the key changes how events are grouped, so check that the projection still represents the state you intend.
 
-**When the shape genuinely cannot be known in advance**, go to the storage directly. Searching an arbitrary field, ad-hoc reporting, an admin screen with user-chosen filters — these are query problems, and a query engine solves them better than an abstraction over one would. Reaching for the driver here is not a workaround; it is the supported answer.
+For arbitrary field searches, ad-hoc reports, or user-chosen filters, query the materialized read model through its storage driver. That lets the store filter and sort before returning results instead of loading the whole collection into the application.
 
-**For a small collection, replay and filter in memory.** See [Getting a Collection of Instances](getting-collection-instances.mdx). This is proportional to event history, so keep it to result sets you know are small.
+For a small diagnostic collection, reading every instance and filtering in memory may be enough. [Getting a Collection of Instances](getting-collection-instances.mdx) explains the stored and replay paths. A passive model, or an explicit event-count cap, requires replay work proportional to the history processed; a materialized collection read loads the stored instances.
 
 ## What this costs you
 
-Going to storage directly means that code knows which store the read model lives in, and a test for it needs that store rather than the in-memory read model harness. That is a real cost and worth weighing against reshaping the read model — which is why reshaping is the first thing to consider, not the last.
+A storage-native query couples that query code to the store and its schema. Tests of its actual filtering and sorting need that store; the in-memory read model harness does not exercise the driver's query behavior. Weigh that dependency against maintaining a separate read model for a known lookup.
 
-The trade is deliberate: Chronicle would have to leak a query language into its own API to avoid it, and the abstraction that resulted would be worse than the one you already have underneath.
+Querying storage also does not make materialized state fresher or guard a later append. If the result determines whether a command is allowed, use [Read model consistency](consistency.md) to choose the read path and [decision-consistent reads](decision-reads.mdx) to protect an admitted decision.

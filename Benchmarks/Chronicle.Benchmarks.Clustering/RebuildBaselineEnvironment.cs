@@ -15,8 +15,8 @@ internal static class RebuildBaselineEnvironment
     /// <summary>Gets the running kernel informational version.</summary>
     internal static string? KernelVersion => typeof(KernelCore::Cratis.Chronicle.Observation.IObserverService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
-    /// <summary>Gets the running Cratis.Orleans informational version.</summary>
-    internal static string? OrleansVersion => AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == "Cratis.Orleans")?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    /// <summary>Gets the running Cratis.Choreography informational version.</summary>
+    internal static string? OrleansVersion => AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == "Cratis.Choreography")?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
     /// <summary>Reports OS, CPU count and process-available memory.</summary>
     /// <returns>The machine metadata and the boundary of its memory measurement.</returns>

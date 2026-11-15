@@ -417,6 +417,8 @@ public class ReactorInvoker(
                     throw new InvalidBatchMethodReturnType(targetType, batchMethod.Method.Name, batchMethod.Method.ReturnType);
                 }
 
+                Observation.BatchMethods.ThrowIfParametersCannotBeSupplied(targetType, batchMethod.Method, 1);
+
                 var handledPerEvent = batchMethod.EventTypes.FirstOrDefault(_ => live.ContainsKey(_) || replay.ContainsKey(_));
                 if (handledPerEvent is not null)
                 {

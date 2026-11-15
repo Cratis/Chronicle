@@ -30,7 +30,7 @@ public class with_existing_definitions : given.a_projections_manager
             [_firstReadModelDefinition, _secondReadModelDefinition]);
     }
 
-    [Fact] void should_create_first_projection_in_second_namespace() => _manager.TryGet(_eventStore, _secondNamespace, _firstDefinition.Identifier, out _firstProjectionInSecondNamespace).ShouldBeTrue();
-    [Fact] void should_create_second_projection_in_second_namespace() => _manager.TryGet(_eventStore, _secondNamespace, _secondDefinition.Identifier, out _secondProjectionInSecondNamespace).ShouldBeTrue();
-    [Fact] void should_create_projections_for_all_definitions_in_new_namespace() => _projectionFactory.Received(2).Create(_eventStore, _secondNamespace, Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>(), Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>());
+    [Fact] void should_not_create_first_projection_in_second_namespace() => _manager.TryGet(_eventStore, _secondNamespace, _firstDefinition.Identifier, out _firstProjectionInSecondNamespace).ShouldBeFalse();
+    [Fact] void should_not_create_second_projection_in_second_namespace() => _manager.TryGet(_eventStore, _secondNamespace, _secondDefinition.Identifier, out _secondProjectionInSecondNamespace).ShouldBeFalse();
+    [Fact] void should_not_compile_for_namespace_registration() => _projectionFactory.DidNotReceive().Create(_eventStore, _secondNamespace, Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>(), Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>());
 }

@@ -1,8 +1,7 @@
 ---
+title: "CHR0050: [EventType] and [EventTypeGenerationFor<T>] cannot be combined"
 description: Chronicle analyzer rule CHR0050 reports a type marked with both [EventType] and [EventTypeGenerationFor<T>], which can be only one of the two.
 ---
-# CHR0050: `[EventType]` and `[EventTypeGenerationFor<T>]` cannot be combined
-
 ## Rule Description
 
 A type is either the current event type (marked with `[EventType]`) or a previous generation of one (marked with `[EventTypeGenerationFor<T>]`), never both. Remove one of the two attributes.

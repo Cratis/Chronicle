@@ -18,7 +18,7 @@ public class when_after_startup_completes : Specification
         lifetime.ApplicationStarted.Returns(started.Token);
         lifetime.ApplicationStopping.Returns(stopping.Token);
         await started.CancelAsync();
-        _result = await new StartupHealthCheck(lifetime).CheckHealthAsync(new HealthCheckContext());
+        _result = await new StartupHealthCheck(given.startup_state.For(lifetime)).CheckHealthAsync(new HealthCheckContext());
     }
 
     [Fact] void should_report_healthy() => _result.Status.ShouldEqual(HealthStatus.Healthy);

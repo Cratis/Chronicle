@@ -24,7 +24,7 @@ public class and_another_instance_created_the_namespace(PostgreSqlFixture fixtur
     void Because()
     {
         var other = CreateDatabase();
-        using var jobs = new Cratis.Orleans.Storage.Sql.Jobs.JobsDbContext(other.GetJobsDbContextOptions(Store, Namespace));
+        using var jobs = new Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext(other.GetJobsDbContextOptions(Store, Namespace));
         _jobsDatabase = jobs.Database.GetDbConnection().Database;
     }
 

@@ -32,6 +32,10 @@ public record FailedPartition(
     /// <summary>Gets the last automatic recovery that reset the episode budget.</summary>
     public Guid? WebhookRecoveryId { get; init; }
 
+    /// <summary>Gets the replay operation that produced the failure.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? ReplayEpoch { get; init; }
+
     /// <summary>
     /// Gets the number of attempts made before the retry budget was last reset.
     /// </summary>

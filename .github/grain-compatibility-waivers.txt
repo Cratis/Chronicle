@@ -1,0 +1,4 @@
+# Baseline releases whose grain contracts this repository is knowingly allowed to differ from.
+# One tag per line, then a reason after a space. A waiver applies only while that tag is the baseline, so it
+# stops mattering as soon as a later release is cut; delete the line then.
+v19.123.0 Job and job step identifiers moved from the Cratis.Orleans to the Cratis.Choreography namespace, which changes the wire identity of IObserver.ReportHandledEvents, ReportHandledEventsBatch and CaughtUp. Settle running jobs before upgrading.

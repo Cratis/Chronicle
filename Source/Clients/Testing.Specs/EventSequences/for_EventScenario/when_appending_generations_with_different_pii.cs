@@ -33,7 +33,7 @@ public class when_appending_generations_with_different_pii : Specification
     }
 
     [Fact] void should_encrypt_the_old_generations_private_field() => Convert.FromBase64String(_firstStored["alias"]!.GetValue<string>()).Take(4).ShouldContainOnly("CENV"u8.ToArray());
-    [Fact] void should_keep_the_old_generations_public_field() => _firstStored["address"]!.GetValue<string>().ShouldEqual("public-old-address");
+    [Fact] void should_encrypt_the_old_generations_field_classified_by_the_newer_generation() => Convert.FromBase64String(_firstStored["address"]!.GetValue<string>()).Take(4).ShouldContainOnly("CENV"u8.ToArray());
     [Fact] void should_keep_the_new_generations_public_field() => _secondStored["alias"]!.GetValue<string>().ShouldEqual("public-new-alias");
     [Fact] void should_encrypt_the_new_generations_private_field() => Convert.FromBase64String(_secondStored["address"]!.GetValue<string>()).Take(4).ShouldContainOnly("CENV"u8.ToArray());
     [Fact] void should_release_the_old_generation_into_the_current_client_shape() => _readBack[0].Content.ShouldEqual(new ContactReclassified("private-old-alias", "public-old-address"));

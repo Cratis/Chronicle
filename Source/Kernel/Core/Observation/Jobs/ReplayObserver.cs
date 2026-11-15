@@ -3,12 +3,12 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -23,11 +23,13 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="jsonSerializerOptions">The serializer options used for JSON serialization.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="jobGauges">The <see cref="IObserverJobGauges"/> the job reports its progress to.</param>
 public class ReplayObserver(
     IObserverServiceClient replayStateServiceClient,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
-    ILogger<ReplayObserver> logger) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
+    ILogger<ReplayObserver> logger,
+    IObserverJobGauges? jobGauges = null) : Job<ReplayObserverRequest, JobStateWithLastHandledEvent>, IReplayObserver
 {
     /// <summary>
     /// The number of times the observer is notified that the replay concluded before it is left to the observer's watchdog.
@@ -44,6 +46,7 @@ public class ReplayObserver(
     /// </remarks>
     internal const int ActiveStepWindow = 16;
 
+    readonly ObserverJobGaugeReporter _gauge = new(jobGauges, ObserverJobGaugeType.Replay);
     bool _refusalNotificationScheduled;
 
     /// <summary>
@@ -97,12 +100,19 @@ public class ReplayObserver(
         {
             await EnsureReplaySupported();
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             return Result.Failed<ResumeJobSuccess, ResumeJobError>(CannotResumeJobError.JobCannotBeResumed);
         }
 
         return await base.Resume();
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        _gauge.Release();
+        return base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -114,7 +124,9 @@ public class ReplayObserver(
         State.FailedPartitionKeys = (await observer.GetFailedPartitionKeys()).Distinct().ToList();
         State.ReplayPartitionSteps.Clear();
 
-        if (request.ObserverType == ObserverType.Projection)
+        // An observer that takes pages spanning partitions is replayed in one walk, like a projection, so its pages are filled.
+        State.ReplayedInOneSweep = request.ObserverType == ObserverType.Projection || (await observer.GetSubscription()).DeliversPartitionPages;
+        if (State.ReplayedInOneSweep)
         {
             return
             [
@@ -157,7 +169,8 @@ public class ReplayObserver(
                     EventObservationState.Replay,
                     request.EventTypes)
                 {
-                    ReaderScope = request.ReaderScope
+                    ReaderScope = request.ReaderScope,
+                    ReplayEpoch = new ReplayEpoch(JobId.Value)
                 });
             steps.Add(step);
             if (failedKeys.Contains(key))
@@ -178,6 +191,7 @@ public class ReplayObserver(
         await EnsureReplaySupported();
         await DeleteAllOtherJobsForObserver();
         await replayStateServiceClient.BeginReplayFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
@@ -242,6 +256,7 @@ public class ReplayObserver(
         }
 
         await replayStateServiceClient.ResumeReplayFor(State.ObserverDetails);
+        _gauge.Report(JobId, Request.ObserverKey, State.Progress);
     }
 
     /// <inheritdoc/>
@@ -255,7 +270,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnStepCompletedOrStopped(JobStepId jobStepId, JobStepResult result)
     {
-        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions);
+        await TransientTimeouts.ReportPartitionFailedWhenAttemptsAreExhausted(GrainFactory.GetGrain<IObserver>(Request.ObserverKey), result, jsonSerializerOptions, new ReplayEpoch(JobId.Value));
         State.HandleResult(result, jsonSerializerOptions);
         var handled = result.TryGetError(out _) ? null : HandleEventsStepResults.ReadProgress(result, jsonSerializerOptions);
         if (handled?.LastHandledEventSequenceNumber.IsActualValue == true)
@@ -272,6 +287,7 @@ public class ReplayObserver(
         }
 
         var progress = State.Progress;
+        _gauge.Update(progress);
         if (progress.TotalSteps > 0)
         {
             var completedSteps = progress.SuccessfulSteps + progress.FailedSteps + progress.StoppedSteps;
@@ -281,7 +297,11 @@ public class ReplayObserver(
     }
 
     /// <inheritdoc/>
-    protected override Task OnStopped() => base.OnStopped();
+    protected override Task OnStopped()
+    {
+        _gauge.Release();
+        return base.OnStopped();
+    }
 
     /// <inheritdoc/>
     protected override async Task OnFailedToPrepare()
@@ -309,6 +329,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        _gauge.Release();
         await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var finalized = true;
@@ -323,8 +344,10 @@ public class ReplayObserver(
             finalized = false;
             release = true;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not ReplayNotSupported)
         {
+            // A refusal is not a failed finalization: it propagates, its notification already scheduled, so nothing
+            // reports the replay as completed and the observer does not advance past work that was never promoted.
             logger.ReplayFinalizationFailed(exception);
             finalized = false;
         }
@@ -352,7 +375,7 @@ public class ReplayObserver(
             {
                 // A projection's single ordered step covers every partition up to its own global watermark.
                 // Reactors and reducers have independent steps: only a successful result from that partition counts.
-                coveredPartitions = Request.ObserverType == ObserverType.Projection
+                coveredPartitions = Request.ObserverType == ObserverType.Projection || State.ReplayedInOneSweep
                     ? State.FailedPartitionKeys.ToDictionary(_ => _, _ => State.LastHandledEventSequenceNumber)
                     : State.ReplayPartitionSteps
                         .Where(_ => _.LastHandledEventSequenceNumber.IsActualValue)
@@ -453,8 +476,9 @@ public class ReplayObserver(
         try
         {
             await GlobalProjectionReplay.EnsureSupported(storage, request.ObserverKey, request.ObserverType, State, WriteStateAsync);
+            await GenerationInitializationReplay.EnsureContinueAllowed(storage, request, State, WriteStateAsync);
         }
-        catch (GlobalProjectionReplayNotSupported)
+        catch (ReplayNotSupported)
         {
             if (!_refusalNotificationScheduled)
             {

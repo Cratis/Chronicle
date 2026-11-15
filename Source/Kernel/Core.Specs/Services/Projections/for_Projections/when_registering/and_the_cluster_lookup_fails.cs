@@ -11,5 +11,5 @@ public class and_the_cluster_lookup_fails : given.a_registration_with_a_connecti
     async Task Because() => _exception = await Catch.Exception(() => _service.Register(_request));
 
     [Fact] void should_not_fail_registration() => _exception.ShouldBeNull();
-    [Fact] async Task should_still_register_with_the_manager() => await _manager.Received(1).Register(Arg.Is<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(definitions => definitions.Single().Identifier == _projectionDefinition.Identifier), null, null, RegisteredVersion);
+    [Fact] async Task should_still_register_with_the_manager() => await _manager.Received(1).RegisterShared(Arg.Any<string>(), Arg.Is<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(definitions => definitions.Single().Identifier == _projectionDefinition.Identifier), null, null, RegisteredVersion);
 }

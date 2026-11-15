@@ -31,7 +31,7 @@ public static class PartitionReplayabilityClassifier
             nameof(ProjectionDefinition.NoAutoMapProperties), nameof(ProjectionDefinition.Scope),
             nameof(ProjectionDefinition.GenerationDelivery), nameof(ProjectionDefinition.Version),
             nameof(ProjectionDefinition.HasLegacyStorageFields), nameof(ProjectionDefinition.IsKernelOwned),
-            nameof(ProjectionDefinition.IsEmpty)
+            nameof(ProjectionDefinition.IsEmpty), nameof(ProjectionDefinition.Graph)
         ],
         [typeof(FromDefinition)] = [nameof(FromDefinition.Properties), nameof(FromDefinition.Key), nameof(FromDefinition.ParentKey)],
         [typeof(FromEveryDefinition)] =
@@ -70,6 +70,7 @@ public static class PartitionReplayabilityClassifier
         definition.Children is { Count: 0 } &&
         (definition.Nested is null || definition.Nested.Count == 0) &&
         definition.FromEventProperty is null &&
+        definition.Graph is null &&
         HasClosedEventDefinitions(definition);
 
     static bool HasClosedEventDefinitions(ProjectionDefinition definition) =>

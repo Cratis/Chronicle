@@ -33,14 +33,17 @@ public class and_the_event_occurred_before_it_is_forwarded : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddService(Substitute.For<IStorage>());
+        _silo.AddNamespaceCasing();
+        var storage = Substitute.For<IStorage>();
+        storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition("subscription", "Admin", [])]);
+        _silo.AddService(storage);
         _silo.AddService(Substitute.For<IEventGenerationRelease>());
         _silo.AddService(new JsonSerializerOptions());
         _silo.AddService(Substitute.For<ILogger<EventStoreSubscriptionObserverSubscriber>>());
 
         _encryptionKeyStorage = Substitute.For<IEncryptionKeyStorage>();
         _encryptionKeyStorage.HasFor("Lobby", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(false);
-        _encryptionKeyStorage.TryGetFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKey([], []));
+        _encryptionKeyStorage.TryGetLatestFor("Admin", EventStoreNamespaceName.Default, Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(new([], []), EncryptionKeyRevision.Initial));
         _silo.AddService(_encryptionKeyStorage);
 
         _inboxSequence = Substitute.For<IEventSequence>();

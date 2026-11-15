@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Registrations;
+using Cratis.Chronicle.Serverless;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,7 +24,7 @@ internal sealed class OccurrenceLifecycle(
     IOptions<HostOptions> hostOptions,
     ILogger<OccurrenceLifecycle> logger) : IHostedService, IDisposable
 {
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     CancellationTokenRegistration _stopping;
     CancellationTokenSource? _deadline;
     Task? _shutdown;
@@ -34,6 +35,8 @@ internal sealed class OccurrenceLifecycle(
     /// <inheritdoc/>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (ServerlessActivation.IsOn(client.Options)) return;
+
         var hasLifecycle = artifacts.OccurrenceHandlers.SelectMany(_ => _.GetInterfaces()).Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IOccurrenceHandler<>) && TriggerRegistry.IsLifecycle(_.GenericTypeArguments[0]));
         if (!hasLifecycle) return;
         LifecycleActivation.Resolve(Options);

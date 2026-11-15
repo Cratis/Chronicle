@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -44,6 +44,11 @@ public class JobStateWithLastHandledEvent : JobState
     /// Gets or sets the per-partition replay steps and their successfully handled watermarks.
     /// </summary>
     public IList<ReplayPartitionStep> ReplayPartitionSteps { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the replay walks the whole sequence in one step instead of one step per partition.
+    /// </summary>
+    public bool ReplayedInOneSweep { get; set; }
 
     /// <summary>
     /// Gets or sets the failed partition keys captured before the replay began.

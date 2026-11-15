@@ -318,8 +318,10 @@ A limitation parked in its own closing paragraph: "One honest limit:".
 ```
 
 Flag any match in the last paragraph, and the batch when three or more pieces end this way.
-Move the limit into the sentence it qualifies: "On macOS and Linux, the installer…". Never
-delete it to improve the ending. Basis: editorial.
+Put the limit beside the behavior it qualifies: "On macOS and Linux, the installer…".
+Keep an important warning before the affected action, not buried in a subordinate clause.
+Never delete a consequential limit to improve the ending. Internal proof notes belong in
+the private change or review record; keep decision-relevant evidence visible. Basis: editorial.
 
 ## Tonal
 
@@ -368,8 +370,9 @@ qualifiers that protect the writer without informing the reader.
 ```
 
 Flag every match of the first pattern. Count the second per sentence and flag two or more in
-one sentence. Move review residue to the review record. Keep a qualifier when it is true and
-would change what the reader does. Basis: editorial.
+one sentence. Move internal review residue and verification provenance to the private change
+or review record, not the public closing paragraph. Keep decision-relevant evidence and a
+true qualifier that changes what the reader does or expects. Basis: editorial.
 
 ### N5. Meaning lost in the edit
 
@@ -387,7 +390,11 @@ identifiers (backtick spans, CamelCase words, dotted names, paths), quoted value
 to straight ones in the extracted words, so a change of apostrophe style alone isn't
 reported. Flag any item present before and missing after, and any number or identifier that
 appears only after. A person then reads each flagged pair for meaning; counts can't show that
-"there is no need to" has become "without needing to". Basis: editorial.
+"there is no need to" has become "without needing to". Tokens and counts are flags, not
+immutable wording. Compare propositions, polarity, quantities, necessary identifiers and
+consequential limits, including causal roles, sequence and concurrency. Relocate a limit
+beside its behavior or a warning before the affected action without weakening it; move
+internal proof notes to the private record, not out of the evidence altogether. Basis: editorial.
 
 Run these fixtures before relying on the check. Each pair must give the result shown.
 

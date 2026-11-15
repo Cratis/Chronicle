@@ -20,4 +20,6 @@ public class and_the_partition_runs_out_of_retries_with_metrics : given.an_obser
     [Fact] void should_not_count_a_quarantined_observer() => _metrics.For(ObserverQuarantined).ShouldBeEmpty();
     [Fact] void should_not_tag_the_quarantined_partition_with_the_partition() => IsNotTaggedWithPartition(PartitionsQuarantined).ShouldBeTrue();
     [Fact] void should_tag_the_quarantined_partition_with_the_observer_scope_only() => IsTaggedWithObserverScopeOnly(PartitionsQuarantined).ShouldBeTrue();
+    [Fact] void should_create_the_quarantined_partition_instrument_without_a_unit() => (_metrics.InstrumentNamed(PartitionsQuarantined) is { Unit: null }).ShouldBeTrue();
+    [Fact] void should_create_the_quarantined_partition_instrument_with_a_description() => string.IsNullOrWhiteSpace(_metrics.InstrumentNamed(PartitionsQuarantined)?.Description).ShouldBeFalse();
 }

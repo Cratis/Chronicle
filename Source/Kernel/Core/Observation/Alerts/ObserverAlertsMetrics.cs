@@ -1,49 +1,30 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Metrics;
 
 namespace Cratis.Chronicle.Observation.Alerts;
 
 /// <summary>
-/// Counts failed attempts to record observer alert transitions.
+/// Counts failed attempts to record observer alert transitions, with instruments and tags cached at activation.
 /// </summary>
-internal static class ObserverAlertsMetrics
+/// <param name="meter">The meter.</param>
+/// <param name="key">The observer key.</param>
+/// <param name="names">The naming mode.</param>
+internal sealed class ObserverAlertsMetrics(IMeter<ObserverAlerts> meter, ObserverKey key, MetricNames names)
 {
-    static readonly Lock _counterLock = new();
-    static Counter<int>? _failedTransitions;
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _failures = new MetricSet(
+        meter.ActualMeter,
+        names,
+        [
+            new(WellKnownTelemetryAttributes.ObserverId, key.ObserverId),
+            new(WellKnownTelemetryAttributes.EventStoreName, key.EventStore),
+            new(WellKnownTelemetryAttributes.EventStoreNamespace, key.Namespace),
+            new(WellKnownTelemetryAttributes.EventSequenceId, key.EventSequenceId)
+        ]).Counter<int>(WellKnownMetricNames.AlertFailedTransitions, WellKnownMetricNames.AlertFailedTransitionsUnit, "Number of failed attempts to record observer alert transitions");
 
-    /// <summary>
-    /// Records a failed attempt to persist an alert transition.
-    /// </summary>
-    /// <param name="meter">The observer-scoped meter.</param>
-    /// <remarks>
-    /// Hand-written until Cratis/Fundamentals#1138 is consumed: the metrics generator passes description as unit.
-    /// </remarks>
-    internal static void TransitionFailed(this IMeterScope<ObserverAlerts> meter)
-    {
-        if (meter.Meter is null)
-        {
-            return;
-        }
-
-        Counter<int> counter;
-        lock (_counterLock)
-        {
-            counter = _failedTransitions ??= meter.Meter.CreateCounter<int>(
-                "chronicle-alert-transitions-failed",
-                unit: null,
-                description: "Number of failed attempts to record observer alert transitions");
-        }
-
-        var tags = default(TagList);
-        foreach (var (key, value) in meter.Tags)
-        {
-            tags.Add(key, value);
-        }
-
-        counter.Add(1, tags);
-    }
+    /// <summary>Records a real failed transition, never an initial zero.</summary>
+    internal void TransitionFailed() => _failures.Record(1);
 }

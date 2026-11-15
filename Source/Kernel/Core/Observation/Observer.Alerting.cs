@@ -16,7 +16,6 @@ public partial class Observer
     /// Identifies the durable wakeup dedicated to alert reconciliation.
     /// </summary>
     internal const string AlertReminderName = "chronicle-observer:alerts";
-    const string LegacyAlertReminderName = "chronicle-observer-alert-reconciliation";
     readonly SemaphoreSlim _alertMutationLock = new(1, 1);
     readonly SemaphoreSlim _stateWriteLock = new(1, 1);
     readonly Dictionary<IncidentId, AlertClearedReason> _alertEndings = [];
@@ -25,13 +24,52 @@ public partial class Observer
     AlertDisposition _alertDisposition;
     Guid? _quarantineEpisodeId;
     bool _alertReconciliationPending = true;
+    bool _alertReportRequested;
     bool _alertStateNeedsPersistence;
     bool _alertReportScheduled;
     bool _alertReportInProgress;
     bool? _projectionDefinitionExists;
     bool _observerExists;
+    bool _alertReminderRegistered = true;
 
     bool IsRetired => _alertDisposition == AlertDisposition.Retired;
+
+    /// <summary>
+    /// Gets when the alert reminder first fires. Orleans anchors every later tick to this moment, so a due time derived
+    /// from the observer key spreads thousands of reminders over the period instead of letting them tick in one second.
+    /// </summary>
+    TimeSpan AlertReminderDueTime
+    {
+        get
+        {
+            // string.GetHashCode is randomized per process, so use a stable hash to keep the phase across restarts.
+            var hash = 2166136261u;
+            foreach (var character in this.GetPrimaryKeyString())
+            {
+                hash = (hash ^ character) * 16777619u;
+            }
+
+            var offset = TimeSpan.FromTicks(_minimumRetryReminderPeriod.Ticks * (hash % 1000) / 1000);
+            return _minimumRetryReminderPeriod + offset;
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether something is waiting to be reported, which is the only time the reminder is needed.
+    /// </summary>
+    /// <remarks>
+    /// Every activation confirms its alert level once, but that confirmation alone does not need a durable wakeup: the
+    /// activation reports it straight away, the watchdog retries it while the activation lives and the next activation
+    /// confirms again. Registering a reminder for it made every activation write one and release it a period later, so a
+    /// cold start of thousands of healthy observers wrote thousands of reminders, and a silo that went down within that
+    /// period left them all overdue for the next start (#5677).
+    /// </remarks>
+    bool HasAlertWorkPending =>
+        (_alertReconciliationPending && _alertReportRequested) ||
+        _alertStateNeedsPersistence ||
+        _alertLifecycleId == Guid.Empty ||
+        Failures.HasFailedPartitions ||
+        State.RunningState == ObserverRunningState.Quarantined;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -49,21 +87,9 @@ public partial class Observer
     /// </summary>
     internal void ScheduleAlertReport()
     {
-        _alertReconciliationPending = true;
-        if (_deferAlertReports || _alertReportScheduled || _removed || !_observerExists)
-        {
-            return;
-        }
-
-        _alertReportScheduled = true;
-        this.ScheduleInSeparateTurn(async () =>
-        {
-            _alertReportScheduled = false;
-            if (_alertReconciliationPending)
-            {
-                await ReportAlertState();
-            }
-        });
+        _alertReportRequested = true;
+        EnsureAlertReminderRegistered();
+        ScheduleAlertReportTurn();
     }
 
     /// <summary>
@@ -187,6 +213,30 @@ public partial class Observer
         }
     }
 
+    /// <summary>
+    /// Confirms the alert level this activation loaded, without the durable wakeup a change needs.
+    /// </summary>
+    void ScheduleActivationAlertReport() => ScheduleAlertReportTurn();
+
+    void ScheduleAlertReportTurn()
+    {
+        _alertReconciliationPending = true;
+        if (_deferAlertReports || _alertReportScheduled || _removed || !_observerExists)
+        {
+            return;
+        }
+
+        _alertReportScheduled = true;
+        this.ScheduleInSeparateTurn(async () =>
+        {
+            _alertReportScheduled = false;
+            if (_alertReconciliationPending)
+            {
+                await ReportAlertState();
+            }
+        });
+    }
+
     void ChangeAlertState()
     {
         _alertRevision++;
@@ -204,28 +254,81 @@ public partial class Observer
         // The state provider supplies an identifier even for missing records. Consult storage rather than
         // treating a management probe (or a shared definition in another namespace) as observer creation.
         var source = await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace).Observers.Get(_observerId);
-        if (!Failures.Partitions.Any(partition => partition.Partition.ToString() == LegacyAlertReminderName))
-        {
-            await UnregisterReminderNamed(LegacyAlertReminderName);
-        }
+
+        // A reminder under the legacy alert name is not looked up here: that is a reminder-table read on every
+        // activation, the cold-start storm #5677 removes. ReceiveReminder unregisters it when it next ticks, unless a
+        // deferred failed partition shares its name.
 
         // An activation under another event sequence than the definition's is not this observer, even though it
         // loads its record. It must neither keep the reminder that reactivates it nor count as existing.
         if (source.Identifier != _observerId || !KeyOwnsDefinition)
         {
             await UnregisterReminderNamed(AlertReminderName);
+            _alertReminderRegistered = false;
             return;
         }
 
         await EnsureAlertState();
     }
 
+    /// <summary>
+    /// Registers the alert reminder again after a settled observer gave it up.
+    /// </summary>
+    void EnsureAlertReminderRegistered()
+    {
+        if (_alertReminderRegistered || !_observerExists || _removed)
+        {
+            return;
+        }
+
+        _alertReminderRegistered = true;
+        this.ScheduleInSeparateTurn(() => this.RegisterOrUpdateReminder(AlertReminderName, AlertReminderDueTime, _minimumRetryReminderPeriod));
+    }
+
+    /// <summary>
+    /// Gives the alert reminder up once a tick finds nothing to report.
+    /// </summary>
+    /// <remarks>
+    /// An observer with nothing wrong does not need to be woken every minute. Thousands of them, all overdue after the
+    /// kernel was down, activated at once on start and exhausted the connection pool (#5677). A change that needs
+    /// reporting registers the reminder again through <see cref="ScheduleAlertReport"/>.
+    /// </remarks>
+    async Task ReleaseAlertReminderWhenSettled()
+    {
+        // A sealed activation keeps its wakeup until reactivation can tell whether the source still exists.
+        if (_removed ||
+            !_observerExists ||
+            _alertReconciliationPending ||
+            _alertStateNeedsPersistence ||
+            Failures.HasFailedPartitions ||
+            State.RunningState == ObserverRunningState.Quarantined)
+        {
+            return;
+        }
+
+        _alertReminderRegistered = false;
+        await UnregisterReminderNamed(AlertReminderName);
+    }
+
     async Task EnsureAlertState()
     {
         _observerExists = true;
 
-        // Retain this reminder even while healthy. Unregistering on an acknowledgment races interleaved recovery.
-        await this.RegisterOrUpdateReminder(AlertReminderName, _minimumRetryReminderPeriod, _minimumRetryReminderPeriod);
+        // A healthy observer needs no wakeup. The reminder is registered while something is waiting to be reported and
+        // released again by ReleaseAlertReminderWhenSettled once a tick finds nothing.
+        if (HasAlertWorkPending)
+        {
+            _alertReminderRegistered = true;
+            await this.RegisterOrUpdateReminder(AlertReminderName, AlertReminderDueTime, _minimumRetryReminderPeriod);
+        }
+        else
+        {
+            // Leave the reminder table alone rather than look the reminder up on every activation. One left over from an
+            // earlier activation, or registered by a version that kept one per observer, releases itself on its next tick,
+            // and until then it still wakes the observer should this activation's confirmation not land.
+            _alertReminderRegistered = false;
+        }
+
         if (_alertLifecycleId == Guid.Empty)
         {
             _alertLifecycleId = Guid.NewGuid();

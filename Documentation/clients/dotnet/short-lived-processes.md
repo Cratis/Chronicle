@@ -1,11 +1,15 @@
 ---
-title: Short-lived processes
-description: Use the .NET client from command line tools, functions and jobs that connect, do a little work and exit.
+title: Cratis Chronicle .NET clients for short-lived processes
+description: Configure Cratis Chronicle .NET clients for tools, functions, and jobs that append or read events without hosting long-running observers.
 ---
 
-A command line tool, a function or a job connects, appends or reads a few events and exits. It does not want a long-lived keep-alive stream or a watchdog, and it does not host reactors or reducers. The short-lived preset configures the client for exactly that.
+Use the Cratis Chronicle .NET short-lived preset for a tool, function, or job that connects, appends or reads events, and exits without hosting reactors or reducers. It disables the keep-alive stream and watchdog that long-running clients use to detect a lost connection.
 
 ## Using the preset
+
+In an application referencing `Cratis.Chronicle`, use `ChronicleOptions.ForShortLivedProcess`
+from the `Cratis.Chronicle` namespace. This example assumes the local kernel is running and
+`SomethingHappened` is one of your application's declared event types:
 
 ```csharp
 var options = ChronicleOptions.ForShortLivedProcess("chronicle://localhost:35000");
@@ -15,7 +19,10 @@ var eventStore = await client.GetEventStore("my-store");
 await eventStore.EventLog.Append("source", new SomethingHappened());
 ```
 
-The preset sets `SkipKeepAlive` and a `RegistrationMode`. It leaves `AutoDiscoverAndRegister` and `SkipCompatibilityCheck` alone, so discovery and the compatibility check keep working as usual. To apply it to options you already have, call `UseShortLivedProcess()`:
+`ForShortLivedProcess` sets `SkipKeepAlive` and defaults `RegistrationMode` to `Inline`. It leaves
+`AutoDiscoverAndRegister` and `SkipCompatibilityCheck` unchanged, so it does not disable discovery or
+the compatibility check. For options you are configuring directly, call `UseShortLivedProcess()`;
+this example also limits registration to event types:
 
 ```csharp
 var options = new ChronicleOptions().UseShortLivedProcess(RegistrationMode.EventTypesOnly);
@@ -23,13 +30,15 @@ var options = new ChronicleOptions().UseShortLivedProcess(RegistrationMode.Event
 
 ## What the client does not do
 
-With keep-alive skipped the kernel has no live connection to deliver events on. The client therefore:
+Without keep-alive, the kernel has no live connection on which to deliver events to this process.
+The client therefore:
 
 - opens no keep-alive stream and no watchdog
 - does not register reactors, reducers, read model reactors or occurrences, and does not subscribe to external event stores
 - throws `ClientObserversRequireKeepAlive` if you register a reactor or reducer explicitly, or nominate one through `ExplicitArtifacts`
 
-Appending and reading events, and the rest of the client, work as before. Host reactors and reducers in a long-running service that does not skip keep-alive.
+You can still append and read events. Host reactors and reducers in a long-running service that
+keeps keep-alive enabled; they cannot receive events through this short-lived client.
 
 ## Choosing how to register
 
@@ -37,11 +46,16 @@ Appending and reading events, and the rest of the client, work as before. Host r
 
 | Mode | What happens |
 | --- | --- |
-| `Inline` | Registers everything that is discovered. The default. |
+| `Inline` | Registers discovered artifacts except the client-hosted observers excluded above. The default. |
 | `EventTypesOnly` | Ensures the event store exists and registers the event types only. |
-| `AtDeployment` | Registers nothing. Another process of the application registered the artifacts at deployment time. |
+| `AtDeployment` | Registers nothing; uses artifacts registered by another process at deployment time. |
 
-Use `EventTypesOnly` or `AtDeployment` so a short-lived process does not pay for registering projections, constraints and read models on every start. `RegistrationMode` only has an effect when `AutoDiscoverAndRegister` is enabled.
+Choose `EventTypesOnly` when the process needs to register its events but should not register
+projections, constraints, and read models on every start. Choose `AtDeployment` when another process
+has already registered the definitions; [register definitions as a deployment step](./explicit-artifacts#register-definitions-as-a-deployment-step)
+explains that workflow. `RegistrationMode` only has an effect when `AutoDiscoverAndRegister` is enabled.
+
+For functions and other scaled-to-zero hosts, see [Serverless mode](./serverless-mode.md), which builds on this preset.
 
 ## From a connection string
 

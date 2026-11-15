@@ -41,7 +41,7 @@ V2 executable diagnostics:    <clean | n diagnostics: codes | not run: reason>
 V3 binding-ready:             <ready | blocked: codes | not run: reason>
 V4 reference specs run:       <route, expected vs discovered, passed/failed/unsupported; overall unbound | not run: no route>
 V5 rendered, target-verified: admission <...>; publication <...>; build <...>; tests <...>   (each "not run: reason" when absent)
-Gaps: <capability gaps and tool-version gaps, e.g. a false PLAY0285 on cascades from a cratis before 3.28.2 bundle>
+Gaps: <capability gaps and tool-version gaps, e.g. `then invokes` unreadable by a compiler older than 4.246.0>
 
 ## Inventory (read-only audit; MCP describe-application view=summary, find-assertion-gaps)
 Modules n, features n, slices n (StateChange n, StateView n, Automation n, Translate n),

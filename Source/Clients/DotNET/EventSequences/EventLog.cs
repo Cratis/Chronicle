@@ -35,6 +35,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="sideEffectHandlers">Optional handlers used to recognize synchronous reactor return types.</param>
 /// <param name="eventSources">Optional <see cref="IEventSources"/> for appending through event source definitions.</param>
 /// <param name="telemetry">Optional event source id tracing configuration.</param>
+/// <param name="tagResolver">Optional <see cref="EventTagResolver"/> resolving the named tags of every appended event.</param>
 public class EventLog(
      EventStoreName eventStoreName,
      EventStoreNamespaceName @namespace,
@@ -50,7 +51,8 @@ public class EventLog(
      JsonSerializerOptions jsonSerializerOptions,
      IReactorSideEffectHandlers? sideEffectHandlers = null,
      IEventSources? eventSources = null,
-     ChronicleTelemetryOptions? telemetry = null) : EventSequence(
+     ChronicleTelemetryOptions? telemetry = null,
+     EventTagResolver? tagResolver = null) : EventSequence(
         eventStoreName,
         @namespace,
         EventSequenceId.Log,
@@ -66,4 +68,5 @@ public class EventLog(
         jsonSerializerOptions,
         sideEffectHandlers: sideEffectHandlers,
         eventSources: eventSources,
-        telemetry: telemetry), IEventLog;
+        telemetry: telemetry,
+        tagResolver: tagResolver), IEventLog;

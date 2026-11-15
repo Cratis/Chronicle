@@ -1,13 +1,13 @@
 ---
-title: Querying behavior patterns
-description: Ask what a user usually does in a given context, from the .NET client, backed by the patterns Chronicle mined from event history.
+title: Query Cratis Chronicle behavior patterns in .NET
+description: Query mined behavior in Cratis Chronicle from .NET to suggest usual actions, check established context, or browse the patterns held for a user.
 ---
 
-[Behavior patterns](/chronicle/patterns/) are recurring combinations of context that Chronicle mined from an event store's history. The .NET client exposes them on `IEventStore.Patterns`.
+Cratis Chronicle's .NET [behavior patterns](/chronicle/patterns/) API lets you ask what a user usually does in a given context, based on mined event history. Use `IEventStore.Patterns` to suggest a usual action, check whether an action fits an established pattern, or browse what the store has learned. These are observations about recorded behavior, not guarantees about what someone will do next.
 
 ## Asking what somebody usually does right now
 
-Most applications have one question: *what does this person normally do at this point in the week?* Every Chronicle client offers that as a single call — see [asking about a moment](/chronicle/patterns/) for the shared contract. In .NET it is `GetPatternsAt`, and it takes the scope and nothing else:
+Call `GetPatternsAt` when you want to suggest what someone usually does at this point in the week. Pass a scope, the grouping key whose behavior you want to query, normally the user's identity subject. With no moment supplied, the method uses the current time. See [asking about a moment](/chronicle/patterns/) for how the query uses that time.
 
 ```csharp
 foreach (var pattern in await eventStore.Patterns.GetPatternsAt(userId))
@@ -17,15 +17,15 @@ foreach (var pattern in await eventStore.Patterns.GetPatternsAt(userId))
 }
 ```
 
-Each answer names a **command**, and its `Confidence` is the chance of that command given the context it was established in. You get at most one answer per command, so a habit mined at several context sizes at once comes back once rather than three times.
+Each answer names an action in `CommandType`. Chronicle takes it from the last named link in the causation chain, the record of what led to the append. If no link names itself, Chronicle uses the event type. `Confidence` measures how often the action occurs in the context where the pattern was established. The query returns at most one answer per action, even if mining found it at several levels of detail.
 
-The day and the part of the day are read off the moment for you, using the same rule the engine bucketed events with when it mined them — so the answer is about the slot the behavior was actually learned in. Pass a moment to ask about a different one:
+`GetPatternsAt` derives the day and time bucket from the moment using the engine's bucketing rule. Pass a moment to ask about another time:
 
 ```csharp
 var patterns = await eventStore.Patterns.GetPatternsAt(userId, tomorrowMorning);
 ```
 
-Add further facets when the question is narrower than a moment — *what does this person usually do with an invoice on a Monday morning?*
+Add facets, the named dimensions of a context, when you need a narrower question. For example, constrain the event source type to ask what the user usually does with an invoice at this time:
 
 ```csharp
 var patterns = await eventStore.Patterns.GetPatternsAt(
@@ -33,13 +33,11 @@ var patterns = await eventStore.Patterns.GetPatternsAt(
     alsoConstraining: FacetSet.Empty.With(FacetName.AggregateType, "Invoice"));
 ```
 
-:::note
-Derive the time bucket yourself and you own a copy of a rule the engine also owns. When they drift, nothing fails — the query simply asks about a slot the mining never used and returns nothing. `GetPatternsAt` exists so that copy does not have to exist. If you do need the bucket for something else, `ToTimeBucket()` on `DateTimeOffset` is the same rule the engine mines with.
-:::
+Use `GetPatternsAt` rather than duplicating the time-bucketing rules in your application. A different rule can produce an empty result simply because it asks about a different slot. If you need the bucket separately, `ToTimeBucket()` on `DateTimeOffset` uses the same rule as the engine and reads the offset carried by the moment.
 
 ## Asking about a context that is not a moment
 
-`GetUsualActions` is the call underneath. Build a context from the facets you know and ask within a scope — normally the user whose behavior you are asking about:
+Use `GetUsualActions` when the known context is not tied to a particular moment. Build a `FacetSet` from the dimensions you know, then ask within the user's scope:
 
 ```csharp
 using Cratis.Chronicle.Concepts.Patterns;
@@ -56,13 +54,13 @@ foreach (var pattern in patterns)
 }
 ```
 
-The context may constrain **any subset** of the facets. Facets the store does not mine are discarded rather than narrowing the lookup to nothing, so a caller can describe its situation in whatever terms it has.
+You can supply any subset of the facets. The server discards facets it is not configured to mine, so including one does not narrow the results.
 
-Results are ranked **most likely first**. Constraining `CommandType` here does nothing — it names the answer rather than the situation, and the answer is what you are asking for.
+Results are ranked by descending confidence, then descending context specificity, then descending support, with ties broken by facet key in ascending ordinal order. `CommandType` does not constrain this query because the action is the answer you are asking for, not part of the situation you already know.
 
 ## Checking whether an action is normal
 
-`GetPatterns` asks the opposite question: given a situation you can describe *completely*, including the command, which established patterns cover it? That is the check you make before flagging something as unusual, rather than the prediction above.
+Use `GetPatterns` when you already know the action and want to check which established patterns cover it in this context. Include `CommandType` with the dimensions you want to check. This can inform an unusual-action check, but an empty result alone does not establish that the action is wrong.
 
 ```csharp
 var covering = await eventStore.Patterns.GetPatterns(
@@ -78,11 +76,11 @@ if (!covering.Any(pattern => pattern.Facets.Constrains(FacetName.CommandType)))
 }
 ```
 
-A pattern is returned when **its facets are a subset of the context you asked with**, so every result describes something you named. Results are ranked **most specific first**, then most confident: a pattern constraining everything you asked about describes your situation; a broader, more confident one describes a situation you did not ask about.
+A pattern matches when all of its facets are present with the same values in your context. Results are ranked most specific first, then most confident, so a detailed match appears ahead of a broader one. The example checks for an action facet because a result that only describes the day or time does not establish that this action is normal.
 
 ### An empty result is an answer
 
-Both calls return nothing when no pattern clears the confidence bar. That is a true statement — this scope has no established behavior for this context — and it is deliberately not padded with the best of a bad set. Treat "no patterns" as "do not claim to know":
+Both calls return an empty collection when no stored pattern meets the context and confidence threshold. That can mean the scope has too little recorded history or that its patterns do not cover this situation. It does not mean the action never happens. Let the application say it does not know rather than inventing a recommendation:
 
 ```csharp
 var patterns = await eventStore.Patterns.GetUsualActions(userId, context);
@@ -94,6 +92,8 @@ if (!patterns.Any())
 
 ### Thresholds and limits
 
+Set `minimumConfidence` when your application needs a higher confidence bar, and `maximumResults` to bound the number of answers:
+
 ```csharp
 var patterns = await eventStore.Patterns.GetUsualActions(
     groupingKey: userId,
@@ -103,17 +103,17 @@ var patterns = await eventStore.Patterns.GetUsualActions(
     cancellationToken: cancellationToken);
 ```
 
-Leave `minimumConfidence` and `maximumResults` unset to use whatever the **server** is configured for. The client deliberately does not carry its own copy of the thresholds — a default duplicated here would silently disagree with the configured one the moment either changed.
+If you omit `minimumConfidence`, the server uses its configured minimum. If you omit `maximumResults`, the server returns at most ten results. The client sends these choices to the server rather than filtering the response locally.
 
 ## Browsing everything a scope established
 
-`GetPatternsForScope` is the listing call — everything held for a scope, unfiltered, including patterns below the confidence threshold. It is what a browsing view binds to, as opposed to the two calls above, which each answer a question about one situation.
+Use `GetPatternsForScope` to build a browsing view rather than answer a question about one situation. It returns all stored patterns for a scope, including those below the confidence threshold used by the query methods:
 
 ```csharp
 var everything = await eventStore.Patterns.GetPatternsForScope(userId);
 ```
 
-Which leaves the question of what to pass. A browsing view rarely knows a scope up front — it has to offer the ones that exist — and patterns are per scope, so there is nothing to show until one is chosen. `GetScopes` is that list:
+If the view needs a scope selector, call `GetScopes` to list the scopes that hold patterns:
 
 ```csharp
 foreach (var scope in await eventStore.Patterns.GetScopes())
@@ -122,7 +122,7 @@ foreach (var scope in await eventStore.Patterns.GetScopes())
 }
 ```
 
-The scopes returned are the ones that actually hold patterns, not every identity that ever appeared in the store. A scope missing from the list has established no behavior yet — which is the same answer an empty `GetUsualActions` gives, one level up.
+This list is not an identity directory. A scope missing from it has no stored patterns to browse, even if its identity has appeared in the event store.
 
 ## What you get back
 
@@ -132,13 +132,13 @@ Each result is a `BehaviorPattern`:
 | --- | --- | --- |
 | `GroupingKey` | `PatternGroupingKey` | The scope the pattern belongs to |
 | `Facets` | `FacetSet` | The facets the pattern constrains |
-| `Occurrences` | `PatternOccurrences` | How many times it has been observed |
+| `Occurrences` | `PatternOccurrences` | The miner's count of observations of this pattern |
 | `Confidence` | `PatternConfidence` | How often it holds when its context is present, 0 to 1 |
-| `Support` | `PatternSupport` | The share of all observed events it was seen in, 0 to 1 |
+| `Support` | `PatternSupport` | The share of observed events in this scope it was seen in, 0 to 1 |
 | `Weight` | `PatternWeight` | Recency-weighted strength — decays as the behavior goes unseen |
 | `FirstSeen` / `LastSeen` | `DateTimeOffset` | When it was first and last observed |
 
-`Occurrences` counts everything that ever happened; `Weight` is how much of that is still recent. Order by `Weight` when recency matters more than history.
+`Occurrences` is a mining count, not an exact audit total; checkpoint replay after a crash can cause a small tail of events to be counted again. `Weight` reflects recency rather than the total count. Order a browsing view by `Weight` when recent behavior matters more than older observations.
 
 Read a single facet off a pattern with `ValueOf`, and check whether it constrains one at all with `Constrains`:
 
@@ -154,7 +154,7 @@ if (pattern.Facets.Constrains(FacetName.TimeBucket))
 
 ## Building a context
 
-`FacetSet` is canonical and immutable: facets are ordered by name, at most one value per facet survives, and facets with no value are dropped. `With` returns a new set and **replaces** a facet that is already constrained, so a context built up in steps never depends on the order it was written in.
+`FacetSet` is immutable and normalizes its contents: facets are ordered by name, each name has at most one value, and unspecified values are dropped. `With` returns a new set and replaces any existing value for that name. In the example, the second `Day` assignment wins, so the resulting context describes Tuesday, not Monday:
 
 ```csharp
 var context = FacetSet.Empty
@@ -163,13 +163,13 @@ var context = FacetSet.Empty
     .With(FacetName.Day, DayOfWeek.Tuesday.ToString());   // replaces Monday
 ```
 
-The facet names are the well-known statics on `FacetName` — `CommandType`, `InitiatorType`, `InitiatorId`, `OnBehalfOf`, `CausedByCommand`, `CorrelationRootId`, `AggregateType`, `Year`, `Month`, `Day` and `TimeBucket`. See [Behavior Patterns](/chronicle/patterns/) for what each one means and which of them are mined by default.
+The well-known names on `FacetName` are `CommandType`, `InitiatorType`, `InitiatorId`, `OnBehalfOf`, `CausedByCommand`, `CorrelationRootId`, `AggregateType`, `Year`, `Month`, `Day`, and `TimeBucket`. See [Behavior Patterns](/chronicle/patterns/) to choose the facets that answer your application's question and check which ones the store mines by default.
 
 ## Making the command visible to mining
 
-`CommandType` and `CausedByCommand` are only as good as what named the command. If you append through [Cratis Arc](/arc/), its command pipeline records a `Command` causation naming the executing command and nothing else is needed.
+For patterns to name a command rather than fall back to an event type, record the command in the causation chain. The [Cratis Arc](/arc/) command pipeline does this through its Chronicle integration, recording a `Command` causation for the executing command.
 
-Appending directly, add the same property to the causation you scope around the work:
+When appending directly, open a causation scope around the work and set the command name:
 
 ```csharp
 using Cratis.Chronicle.Auditing;
@@ -183,4 +183,4 @@ using (causationManager.BeginScope(
 }
 ```
 
-Use `BeginScope` rather than `Add` for work with a beginning and an end. `Add` is append-only, which is right for a link describing how the work arrived — an HTTP request — but wrong for one describing a bounded piece of work: two such pieces done one after the other both stay on the chain, and the second then reads as caused by the first. That ordering never happened, and pattern mining would learn it as a fact.
+Use `BeginScope` for work with a beginning and an end. Disposing the scope removes its causation from subsequent appends. `Add` leaves the link on the chain, so using it for two consecutive commands can make the second appear to have been caused by the first. A bounded scope keeps the recorded relationship aligned with the work that actually ran.

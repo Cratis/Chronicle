@@ -14,6 +14,8 @@
   href: filtering.mdx
 - name: Immediate projections
   href: immediate-projections.md
+- name: Graph projections
+  href: graph-projections.mdx
 - name: Tagging Projections
   href: tagging-projections.mdx
 - name: Nested Objects (Design)

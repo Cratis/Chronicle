@@ -23,6 +23,12 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 /// </remarks>
 internal static partial class PIIManagerLogMessages
 {
+    [LoggerMessage(LogLevel.Debug, "Pending erasure request lookup failed; erasure fan-out will report authority failures.")]
+    internal static partial void RequestLookupDeferred(this ILogger<PIIManager> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Confirmed erasure request compaction was deferred; the request remains inline and will be archived on a later attempt.")]
+    internal static partial void CompactionDeferred(this ILogger<PIIManager> logger);
+
     [LoggerMessage(LogLevel.Information, "Erased the encryption key for the subject bound to '{SubjectBinding}' in namespace '{Namespace}', across all {EventStoreCount} event stores in it: {EventStores}. Every PII value protected under that key is now permanently unreadable, and no event store in the namespace will provision or accept a key for the subject until a new one is explicitly authorized")]
     internal static partial void ErasedSubject(this ILogger<PIIManager> logger, string subjectBinding, EventStoreNamespaceName @namespace, int eventStoreCount, string eventStores);
 

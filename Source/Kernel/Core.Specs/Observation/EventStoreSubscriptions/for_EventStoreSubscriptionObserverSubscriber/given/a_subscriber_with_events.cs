@@ -29,13 +29,21 @@ public class a_subscriber_with_events : Specification
     protected EventStoreSubscriptionObserverSubscriber _subscriber = null!;
     protected IEventSequence _inboxSequence = null!;
     protected AppendedEvent[] _events = null!;
+    protected Cratis.Chronicle.Namespaces.INamespaceCasing _namespaceCasing;
+    protected string _inboxKey;
+    protected virtual EventStoreName SourceEventStore => "Admin";
+    protected virtual EventStoreNamespaceName SourceNamespace => EventStoreNamespaceName.Default;
     protected Func<EventType, AppendResult> _appendResultFor = _ => AppendResult.Success(CorrelationId.New(), 1UL);
 
     async Task Establish()
     {
         var silo = new TestKitSilo();
+        _namespaceCasing = silo.AddNamespaceCasing();
         _storage = Substitute.For<IStorage>();
         _generationRelease = CreateGenerationRelease();
+
+        // The committed definition of the subscription: without one the subscriber fails closed and forwards nothing.
+        _storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition("subscription", SourceEventStore, [])]);
         silo.AddService(_storage);
         silo.AddService(_generationRelease);
         silo.AddService(new JsonSerializerOptions());
@@ -59,12 +67,16 @@ public class a_subscriber_with_events : Specification
             Arg.Any<Concepts.EventSequences.Concurrency.ConcurrencyScope>(),
             Arg.Any<DateTimeOffset?>(),
             Arg.Any<Subject?>()).Returns(call => _appendResultFor(call.ArgAt<EventType>(4)));
-        silo.AddProbe(_ => _inboxSequence);
+        silo.AddProbe<IEventSequence>(identity =>
+        {
+            _inboxKey = identity.ToString();
+            return _inboxSequence;
+        });
 
         var subscriberKey = new ObserverSubscriberKey(
             new ObserverId("subscription->Lobby"),
-            new EventStoreName("Admin"),
-            EventStoreNamespaceName.Default,
+            SourceEventStore,
+            SourceNamespace,
             EventSequenceId.Outbox,
             new EventSourceId("partition-1"),
             "127.0.0.1:11111@1");

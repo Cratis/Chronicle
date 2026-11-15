@@ -44,7 +44,8 @@ Screenplay meaning, and when you meet the older usage, translate it and say so.
   `invokes` a command or `produces` events).
 - Chronicle **reactor**: C# observer, usually for side effects; it does not by itself define
   business decisions. Stage renders supported event-triggered Automation as Chronicle reactors.
-  Translate/captures and refused reactions remain gap-fill. Mixed events and commands
+  Bounded source-event captures and outbound Translate also render; refused shapes
+  remain gap-fill (see Stage's `references/current-boundaries.md`). Mixed events and commands
   in one handler remain `STAGE-ESM-037`: Arc supports the return shape, but redelivery
   after a failed command duplicates events. Keep the reaction whole and prove retry safety.
   Source boundary: Stage skill `references/admission.md`.

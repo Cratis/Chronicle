@@ -20,5 +20,11 @@ internal class EnsureNamespaceValidator : CommandValidator<EnsureNamespace>
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
         RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.Namespace).NotEmpty().WithMessage("Namespace name is required.");
+        RuleFor(_ => _.Namespace)
+            .Must(name => string.IsNullOrEmpty(name) || !name.Contains('+'))
+            .WithMessage("The namespace name is not allowed.");
+        RuleFor(_ => _.Namespace)
+            .Must(name => string.IsNullOrEmpty(name) || !NamespaceNameRules.ContainsComma(name))
+            .WithMessage(NamespaceNameRules.CommaMessage);
     }
 }

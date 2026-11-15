@@ -14,6 +14,6 @@ public class and_the_stored_generation_is_joined_more_than_once : given.a_join_o
     }
 
     [Fact] void should_resolve_the_join_every_time() => _results.Count.ShouldEqual(2);
-    [Fact] void should_release_every_stored_event() => _eventCompliance.Received(2).Release(_storedEvent, _storedSchema);
-    [Fact] void should_only_load_the_schema_of_the_stored_generation_once() => _eventTypes.Received(1).GetFor(Arg.Any<IEnumerable<EventType>>());
+    [Fact] void should_release_every_stored_event_through_current_effective_protection() => _eventCompliance.Received(2).Release(_storedEvent, _projectionSchema);
+    [Fact] void should_not_cache_retained_own_schemas_in_the_join_pipeline() => _eventTypes.DidNotReceive().GetFor(Arg.Any<IEnumerable<EventType>>());
 }

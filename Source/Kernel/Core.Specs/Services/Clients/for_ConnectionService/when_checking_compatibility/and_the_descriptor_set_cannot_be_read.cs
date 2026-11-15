@@ -26,6 +26,8 @@ public class and_the_descriptor_set_cannot_be_read : Specification
             Substitute.For<ILocalSiloDetails>(),
             new ConnectedClientsQuery(Substitute.For<IGrainFactory>(), Options.Create(new ChronicleOptions())),
             new OpenConnections(),
+            AllowingConnectionOwnership.Create(),
+            Substitute.For<IConnectedClientsVisibility>(),
             NullLogger<KernelConnectionService>.Instance,
             Options.Create(new ChronicleOptions()));
 

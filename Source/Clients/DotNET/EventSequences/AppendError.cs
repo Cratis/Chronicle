@@ -21,6 +21,16 @@ public record AppendError(string Value) : ConceptAs<string>(Value)
     public static readonly AppendError AppendOutcomeUnknown = nameof(AppendOutcomeUnknown);
 
     /// <summary>
+    /// The event being compensated for does not exist in the event sequence.
+    /// </summary>
+    public static readonly AppendError CompensatedEventNotFound = nameof(CompensatedEventNotFound);
+
+    /// <summary>
+    /// The event type used for the compensation is not declared as a compensation for the type of the event being compensated.
+    /// </summary>
+    public static readonly AppendError EventTypeDoesNotCompensateEventType = nameof(EventTypeDoesNotCompensateEventType);
+
+    /// <summary>
     /// Implicitly convert from string to <see cref="AppendError"/>.
     /// </summary>
     /// <param name="id">String to convert from.</param>

@@ -1,0 +1,29 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Concepts.SequenceQueries;
+using Cratis.Chronicle.Storage.InMemory.for_SequenceQueryStorage.given;
+using Cratis.Chronicle.Storage.SequenceQueries;
+
+namespace Cratis.Chronicle.Storage.InMemory.for_SequenceQueryStorage;
+
+public class when_updating_with_the_wrong_owner : given.a_storage_holding_one_query_and_one_folder
+{
+    SequenceQueryWriteOutcome _query;
+    SequenceQueryWriteOutcome _folder;
+    SequenceQueryDefinition? _storedQuery;
+    SequenceQueryFolderDefinition? _storedFolder;
+
+    async Task Because()
+    {
+        _query = await _storage.Update(Query("query-1", "Changed", "bob"), "bob");
+        _folder = await _storage.UpdateFolder(Folder("folder-1", "bob", "changed"), "bob");
+        _storedQuery = await _storage.Get("query-1");
+        _storedFolder = await _storage.GetFolder("folder-1");
+    }
+
+    [Fact] void should_refuse_the_query() => _query.ShouldEqual(SequenceQueryWriteOutcome.Conflict);
+    [Fact] void should_refuse_the_folder() => _folder.ShouldEqual(SequenceQueryWriteOutcome.Conflict);
+    [Fact] void should_leave_the_stored_query_unchanged() => _storedQuery!.ShouldBeStoredAs("Stored", "alice");
+    [Fact] void should_leave_the_stored_folder_unchanged() => _storedFolder!.ShouldBeStoredAs("alice", "stored");
+}

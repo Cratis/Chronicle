@@ -1,8 +1,7 @@
 ---
+title: Extracting Protobuf contracts for Cratis Chronicle
 description: How Chronicle's ProtoGenerator tool extracts .proto files from its code-first C# gRPC contracts so clients in other languages can use them.
 ---
-# Protobuf Extraction from C# Contracts
-
 This document explains how to extract `.proto` files from C# gRPC service definitions using the ProtoGenerator tool.
 
 ## Overview
@@ -35,7 +34,7 @@ dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
 
 ```bash
 dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-  Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+  Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll \
   Source/Kernel/Protobuf
 ```
 
@@ -49,7 +48,7 @@ dotnet build -c Release
 # Generate proto files
 cd ../../..
 dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-  Source/Kernel/Contracts/bin/Release/net10.0/Cratis.Chronicle.Contracts.dll \
+  Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll \
   Source/Kernel/Protobuf
 ```
 
@@ -101,7 +100,7 @@ protoc \
 
 ### TypeScript Example
 
-See [TypeScript gRPC Package](typescript-grpc-package) for details on the TypeScript client generation.
+See [TypeScript gRPC Package](typescript-grpc-package.mdx) for details on the TypeScript client generation.
 
 ## Maintenance
 
@@ -118,7 +117,7 @@ When adding new gRPC services to the C# Contracts:
 The ProtoGenerator tool uses:
 
 - `protobuf-net.Grpc.Reflection` - For extracting proto definitions from C# attributes
-- `.NET 10` - Runtime for the tool
+- `.NET 11` - Runtime for the tool
 
 ## Proto File Format
 

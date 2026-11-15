@@ -21,4 +21,14 @@ public record EventStoreSubscriptionAdded(
     /// Gets the generation delivery policy for this registration.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the named-tag filter of the subscription. Empty means every event of the subscribed types.
+    /// </summary>
+    public IEnumerable<EventStoreSubscriptionTag> NamedTags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the source namespaces the subscription observes. Empty means every namespace.
+    /// </summary>
+    public IEnumerable<EventStoreNamespaceName> SourceNamespaces { get; init; } = [];
 }

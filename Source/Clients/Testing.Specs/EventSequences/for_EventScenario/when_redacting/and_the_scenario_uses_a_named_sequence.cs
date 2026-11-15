@@ -25,7 +25,7 @@ public class and_the_scenario_uses_a_named_sequence : Specification
     {
         await _scenario.EventSequence.Redact(_sequenceNumber, "Named sequence");
         _events = await _scenario.EventSequence.GetFromSequenceNumber(EventSequenceNumber.First);
-        _payload = JsonDocument.Parse(await _scenario.ReadContentAtRest(_sequenceNumber)).RootElement;
+        _payload = JsonSerializer.Deserialize<JsonElement>(await _scenario.ReadContentAtRest(_sequenceNumber));
     }
 
     void Destroy() => _scenario.Dispose();

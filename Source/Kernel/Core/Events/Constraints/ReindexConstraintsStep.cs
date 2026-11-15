@@ -2,16 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Dynamic;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -26,6 +27,7 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="complianceManager"><see cref="IJsonSchemaMetadataManager"/> for releasing (decrypting) PII before hashing.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting between ExpandoObject and JsonObject.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="schemaCache">The effective protection schema cache.</param>
 /// <remarks>
 /// Closing constraints rebuild only when explicitly named by the job. Their transitions are staged before
 /// writing differences. If a redacted property-sourced closing or reopening event has no recoverable scope in the
@@ -33,14 +35,15 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// constraint and event position. Other constraints still rebuild; no reopening tombstones are retained.
 /// </remarks>
 public partial class ReindexConstraintsStep(
-    [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Orleans.WellKnownGrainStorageProviders.JobSteps)]
+    [PersistentState(nameof(ReindexConstraintsStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<ReindexConstraintsStepState> state,
     IJobStepThrottle throttle,
     IStorage storage,
     IGrainFactory grainFactory,
     IJsonSchemaMetadataManager complianceManager,
     IExpandoObjectConverter expandoObjectConverter,
-    ILogger<ReindexConstraintsStep> logger) : JobStep<ReindexConstraintsRequest, object, ReindexConstraintsStepState>(state, throttle, logger), IReindexConstraintsStep
+    ILogger<ReindexConstraintsStep> logger,
+    IEventTypeSchemaCache schemaCache) : JobStep<ReindexConstraintsRequest, object, ReindexConstraintsStepState>(state, throttle, logger), IReindexConstraintsStep
 {
     /// <summary>
     /// Reindexes a single event against a single constraint definition using the released (plaintext) content.
@@ -171,8 +174,8 @@ public partial class ReindexConstraintsStep(
                 await closingReindexer.Initialize(closingDefinitions);
 
                 var tracking = CreateTracking(changedDefinitions, uniqueConstraintsStorage, progress);
-                var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, complianceManager, expandoObjectConverter);
-                await ReindexStoredEvents(namespaceStorage.GetEventSequence(currentState.EventSequenceId), storedContent, closingReindexer, tracking, cancellationToken);
+                var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, complianceManager, expandoObjectConverter, schemaCache);
+                await ReindexStoredEvents(namespaceStorage.GetEventSequence(currentState.EventSequenceId), storedContent, closingReindexer, closingDefinitions, tracking, cancellationToken);
                 await closingReindexer.Commit(cancellationToken, () => progress.WroteAnything = true);
                 if (!await ReportCollisions(progress, cancellationToken))
                 {
@@ -225,16 +228,32 @@ public partial class ReindexConstraintsStep(
         uniqueConstraintsStorage,
         progress);
 
+    static async Task ClearUnscopedIndexes(RebuildTracking tracking, CancellationToken cancellationToken)
+    {
+        foreach (var definition in tracking.Definitions.Where(definition => definition.Scope?.HasScope != true))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            tracking.Progress.WroteAnything = true;
+            await tracking.Storage.ClearValues(definition, string.Empty);
+            tracking.Seen[definition.Name].Add((EventSourceId.Unspecified, string.Empty));
+        }
+    }
+
     async Task ReindexStoredEvents(
         IEventSequenceStorage eventSequenceStorage,
         StoredConstraintEventContent storedContent,
         ClosesStreamConstraintReindexer closingReindexer,
+        ClosesStreamConstraintDefinition[] closingDefinitions,
         RebuildTracking tracking,
         CancellationToken cancellationToken)
     {
         // GetFromSequenceNumber supplies an ascending sequence-number cursor in every provider. Consume
         // its batches and events sequentially so releases precede subsequent claims, including on retry.
-        using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: cancellationToken);
+        await ClearUnscopedIndexes(tracking, cancellationToken);
+        var types = ConstraintEventTypes.For(tracking.Definitions.Cast<IConstraintDefinition>().Concat(closingDefinitions));
+        if (types.Length == 0) return;
+
+        using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventTypes: types, cancellationToken: cancellationToken);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)

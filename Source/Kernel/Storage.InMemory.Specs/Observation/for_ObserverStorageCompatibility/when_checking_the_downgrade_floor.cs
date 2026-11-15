@@ -10,7 +10,7 @@ public class when_checking_the_downgrade_floor : ObserverStorageCompatibilityCon
 {
     EventStoreStorages _stores;
 
-    void Establish() => _stores = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Orleans.Storage.IJobsStorage>());
+    void Establish() => _stores = new(new KnownInstancesOf<ISinkFactory>([]), Substitute.For<Choreography.Storage.IJobsStorage>());
 
     protected override IEventStoreStorage OpenStore() => _stores.GetOrCreate("orders");
     protected override IObserverStateStorage OpenObservers() => OpenStore().GetNamespace("default").Observers;

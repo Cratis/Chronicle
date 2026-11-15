@@ -14,6 +14,18 @@ when independence cannot be proved. Counters and joins are repaired by replay,
 not by deploying corrected mappings: earlier double-counts remain until rebuilt.
 A `FromAll` subscription change redefines existing projections.
 
+Adding mappings for event types that already have history requires
+**full** replay: `Automatic` rebuilds; `PartialOnly` and `Manual` recommend it.
+The kernel no longer replays those mappings onto live state, where watermarks
+could discard historical writes or counters could count twice. No history for
+the added types means no action. Explicit partition replay is unchanged.
+Verified in `Source/Kernel/Core/Projections/Projection.cs`
+(`EvolveForAllNamespaces`).
+
+Requires Chronicle 19.101.3 for explicit refusal of global projection replay.
+
+Global projection replay (full or partition) is refused before writing. Do not promise to repair globally scoped state by replay.
+
 Projection replay and catch-up each walk the sequence in **one globally ordered
 job step**, not parallel per-source steps. A new failure during catch-up stops
 that ordered step even if other sources are healthy. Full replay keeps the
@@ -49,6 +61,27 @@ A lost subscription is repaired, but reconciliation never lifts quarantine,
 revives a retired observer, or restarts a stopped/deleted capture. A kernel
 restart or a newly added namespace still ends projection quarantine through a
 fresh subscription; do not interpret ordinary watchdog repair as operator clear.
+
+## Upgrade repair checks
+
+Verified through **v19.110.1**:
+`Source/Kernel/Storage.MongoDB/Sinks/Sink.cs`,
+`Source/Kernel/Core/Projections/Engine/KeyResolvers.ParentHistory.cs` and the
+tagged release notes:
+
+Requires Chronicle 19.110.0 for MongoDB resumed bulk-window preservation, replaced-window fencing and historical parent-key resolution.
+
+- MongoDB catch-ups resumed while clients restarted/re-registered could lose
+  unflushed writes on older kernels. Upgrade, then replay affected
+  projections, including catch-ups with `BulkWindowLost` or completed failures;
+  silent loss may leave no log entry. The fixed sink preserves the window,
+  refuses a window replaced before the first checkpoint and
+  prevents queued writes crossing replay/catch-up collections.
+- With content-keyed parents, children rebuilt before this fix may be under the
+  wrong parent. Replay after upgrading; key lookup now uses the child's event
+  position rather than the parent's latest key.
+- These are kernel-backed storage/replay behaviors. In-process projection
+  scenarios do not prove bulk durability or historical parent-key resolution.
 
 Closing a stream does not erase its events or prevent a projection replay.
 Keep the closing fact as history; see **cratis-chronicle-event-constraints**.

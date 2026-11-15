@@ -11,6 +11,13 @@ using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ClientApplicationIds = Cratis.Chronicle.Security.ClientApplicationIds;
+using ConfiguredGrant = Cratis.Chronicle.Security.ConfiguredGrant;
+using IStoreEntitlements = Cratis.Chronicle.Security.IStoreEntitlements;
+using PrincipalKey = Cratis.Chronicle.Security.PrincipalKey;
+#if DEVELOPMENT
+using StoreAccess = Cratis.Chronicle.Security.StoreAccess;
+#endif
 
 namespace Cratis.Chronicle.Setup.Authentication;
 
@@ -37,6 +44,10 @@ internal sealed class AuthenticationService(
     static readonly PasswordHasher<object> _passwordHasher = new();
     readonly Configuration.ChronicleOptions _options = options.Value;
     readonly InitialAdminSetupTokenLogging _setupTokenLogging = new(setupTokens, options, logger);
+    readonly HashSet<string> _reportedDuplicateClients = [];
+#if DEVELOPMENT
+    Dictionary<string, string> _resolvedApplications = [];
+#endif
 
     /// <inheritdoc/>
     public async Task<User?> AuthenticateUser(Username username, Password password)
@@ -139,14 +150,10 @@ internal sealed class AuthenticationService(
         }
 
         var clients = _options.Clients;
-        if (!clients.Any())
-        {
-            return;
-        }
-
         logger.BootstrappingClients(clients.Count());
 
-        var existingApplications = await applicationStorage.GetAll();
+        var existingApplications = (await applicationStorage.GetAll()).ToArray();
+        var resolved = ToCanonicalApplications(existingApplications);
 
         foreach (var client in clients)
         {
@@ -165,16 +172,23 @@ internal sealed class AuthenticationService(
             logger.RegisteringBootstrapClient(client.ClientId);
 
             var hashedSecret = _passwordHasher.HashPassword(null!, client.ClientSecret);
-            var applicationId = Guid.NewGuid().ToString();
+
+            // Deterministic, so nodes bootstrapping concurrently converge on the same application.
+            var applicationId = ClientApplicationIds.For(client.ClientId).ToString();
             var @event = new Security.ApplicationAdded(
                 client.ClientId,
                 hashedSecret);
 
             var eventSequence = grainFactory.GetEventLog();
             await eventSequence.Append(applicationId, @event);
+            resolved[client.ClientId] = applicationId;
 
             logger.BootstrapClientRegistered(client.ClientId);
         }
+#if DEVELOPMENT
+        _resolvedApplications = resolved;
+#endif
+        await ReconcileConfiguredGrants(resolved);
     }
 
 #if DEVELOPMENT
@@ -206,25 +220,99 @@ internal sealed class AuthenticationService(
         // Write directly to storage for immediate availability. The event-driven path
         // (ApplicationsReactor) is asynchronous, which causes token endpoint failures
         // during integration test resets before the reactor has processed the event.
-        await applicationStorage.Create(new Application
+        // The id is deterministic, so nodes starting concurrently against a shared store converge on one row.
+        var applicationId = ClientApplicationIds.For(defaultClientId);
+        try
         {
-            Id = Guid.NewGuid(),
-            ClientId = (ClientId)defaultClientId,
-            ClientSecret = (ClientSecret)hashedSecret,
-            Type = (ApplicationType)"confidential",
-            ConsentType = (ConsentType)"implicit",
-            Permissions =
-            [
-                (Permission)"ept:token",
-                (Permission)"gt:client_credentials",
-                (Permission)"gt:password",
-                (Permission)"gt:refresh_token"
-            ]
-        });
+            await applicationStorage.Create(new Application
+            {
+                Id = applicationId,
+                ClientId = (ClientId)defaultClientId,
+                ClientSecret = (ClientSecret)hashedSecret,
+                Type = (ApplicationType)"confidential",
+                ConsentType = (ConsentType)"implicit",
+                Permissions =
+                [
+                    (Permission)"ept:token",
+                    (Permission)"gt:client_credentials",
+                    (Permission)"gt:password",
+                    (Permission)"gt:refresh_token"
+                ]
+            });
+            logger.DefaultClientCredentialsCreated(defaultClientId);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // A concurrent node won the write; the storage provider rejected the duplicate.
+            existingApplications = await applicationStorage.GetAll();
+            var winner = ToCanonicalApplications(existingApplications.Where(a => a.ClientId == defaultClientId));
+            if (!winner.TryGetValue(defaultClientId, out var winnerId))
+            {
+                throw;
+            }
 
-        logger.DefaultClientCredentialsCreated(defaultClientId);
+            logger.DefaultClientCredentialsCreatedConcurrently(defaultClientId, exception);
+            applicationId = winnerId;
+        }
+
+        // Applications registered through events are only visible in storage once the reactor has run, so they are carried over from the bootstrap step.
+        var resolved = new Dictionary<string, string>(_resolvedApplications);
+        foreach (var (clientId, id) in ToCanonicalApplications(existingApplications)) resolved.TryAdd(clientId, id);
+        resolved[defaultClientId] = applicationId.ToString();
+        _resolvedApplications = resolved;
+        await ReconcileConfiguredGrants(resolved);
     }
 #endif
+
+    static ConfiguredGrant ToGrant(PrincipalKey holder, Configuration.ConfiguredEventStoreAccess entry) =>
+        new(holder, entry.EventStore is null ? null : new Concepts.EventStoreName(entry.EventStore), entry.Namespace is null ? null : new Concepts.EventStoreNamespaceName(entry.Namespace), entry.Access);
+
+    /// <summary>
+    /// Maps each client id to one canonical application id, tolerating duplicate rows left by concurrent bootstraps.
+    /// </summary>
+    /// <param name="applications">The stored applications.</param>
+    /// <returns>The application id per client id.</returns>
+    /// <remarks>
+    /// The deterministic id for the client wins when present; otherwise the lowest id, so every node picks the same one.
+    /// </remarks>
+    Dictionary<string, string> ToCanonicalApplications(IEnumerable<Application> applications)
+    {
+        var resolved = new Dictionary<string, string>();
+        foreach (var group in applications.GroupBy(application => application.ClientId.ToString()))
+        {
+            var candidates = group.ToArray();
+            var deterministicId = ClientApplicationIds.For(group.Key);
+            var canonical = candidates.FirstOrDefault(application => application.Id == deterministicId) ?? candidates.MinBy(application => application.Id.Value)!;
+            if (candidates.Length > 1 && _reportedDuplicateClients.Add(group.Key))
+            {
+                logger.DuplicateApplicationsForClient(group.Key, candidates.Length, canonical.Id.ToString());
+            }
+
+            resolved[group.Key] = canonical.Id.ToString();
+        }
+
+        return resolved;
+    }
+
+    async Task ReconcileConfiguredGrants(Dictionary<string, string> applications)
+    {
+        var grants = _options.Authentication.EventStoreAccess
+            .Select(entry => ToGrant(new(entry.Issuer, entry.Subject, entry.IsClient), entry))
+            .ToList();
+        foreach (var client in _options.Clients)
+        {
+            if (!applications.TryGetValue(client.ClientId, out var subject)) continue;
+            grants.AddRange(client.EventStores.Select(entry => ToGrant(new(PrincipalKey.LocalIssuer, subject), entry)));
+        }
+#if DEVELOPMENT
+        // The development client has a normal, visible configuration grant, not an authorization bypass.
+        if (applications.TryGetValue("chronicle-dev-client", out var developmentSubject))
+        {
+            grants.Add(new(new(PrincipalKey.LocalIssuer, developmentSubject), null, null, StoreAccess.Read | StoreAccess.Append | StoreAccess.Manage));
+        }
+#endif
+        await grainFactory.GetGrain<IStoreEntitlements>(IStoreEntitlements.Key).Reconcile(grants);
+    }
 
     Task GrantBootstrapPrivilege(AppendResult initialResult, UserId userId) => initialResult.IsSuccess
         ? grainFactory.GetGrain<Security.IAdministratorRoster>(AdministratorRoster.Key)

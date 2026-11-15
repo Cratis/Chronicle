@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.Compliance;
 /// minting a replacement or quietly accepting the old material back. Reaching this means one of three things:
 /// personal data is being written for a subject whose key was erased, a composed store or a cross-event-store
 /// subscription is trying to heal the erased key back in, or a lawful new lifecycle for the subject has simply
-/// not been authorized yet - see <see cref="IEncryptionKeyStorage.AllowNewKeyFor"/> for that last one.
+/// not been authorized yet - see <see cref="IEncryptionKeyStorage.AllowNewKeyFor(Concepts.EventStoreName, Concepts.EventStoreNamespaceName, EncryptionKeyIdentifier)"/> for that last one.
 /// </remarks>
 /// <param name="identifier">The <see cref="EncryptionKeyIdentifier"/> that was erased.</param>
 /// <param name="erasure">The <see cref="EncryptionKeyErasure"/> that refused the operation.</param>

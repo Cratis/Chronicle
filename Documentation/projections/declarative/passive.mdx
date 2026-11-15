@@ -1,39 +1,34 @@
 ---
-description: A passive Chronicle projection is not materialized to a store but queried on demand for in-memory lookups, declared with Passive().
+title: "Cratis Chronicle passive projections: compute state on demand"
+description: "Use Passive() in Cratis Chronicle to compute a read model from one event source's history on each read instead of maintaining a stored read model."
 ---
-# Passive projection
-
-A passive projection is a projection that is not actively materialized to a persistent store but can be queried on-demand for in-memory lookups. This is useful for scenarios where you need to construct read models from events without the overhead of maintaining persistent state.
+A passive projection in Cratis Chronicle computes a read model from events when you request it, rather than maintaining a stored result. Use it for source-local lookups when you want to read from event history without waiting for a background observer to update a read-model store.
 
 ## Defining a passive projection
 
-Use the `.Passive()` method to mark a projection as passive:
+Call `.Passive()` on the projection builder. Keep the event mappings you would use for a materialized projection:
 
 <ChronicleClientTabs snippet="projections/declarative/passive/projection" />
 
-This projection:
-
-- Will not be actively maintained in persistent storage
-- Can be read on demand through `ReadModels.GetInstanceById`
-- Reconstructs the read model from events when requested
+The declaration disables background materialization. `ReadModels.GetInstanceById` instead reconstructs the requested instance from its event history.
 
 A read model declaring `[EventStream<TSource>(stream)]` is also passive, even without `.Passive()`. It stays keyed by event source ID but requires a stream-aware instance read; a key-only read is refused rather than mixing stream IDs. See [Read models scoped to one event stream](../../read-models/per-stream.mdx).
 
 ## Using passive projections
 
-Passive projections are accessed through the event store's `ReadModels` using the `GetInstanceById` method:
+Pass the event source ID to `GetInstanceById` through the event store's `ReadModels` API:
 
 <ChronicleClientTabs snippet="projections/declarative/passive/service" />
 
 ## Read model definition
 
-The read model is defined the same way as for regular projections:
+The read model remains an ordinary record or class. This example holds a user's summary:
 
 <ChronicleClientTabs snippet="projections/declarative/passive/read-model" />
 
 ## Event definitions
 
-Events should match the read model structure or use explicit mapping:
+The creation and update events supply the user's name and email. Matching properties map automatically; use explicit mappings when the names differ:
 
 <ChronicleClientTabs snippet="projections/declarative/passive/events" />
 
@@ -41,9 +36,11 @@ Events should match the read model structure or use explicit mapping:
 
 When you call `GetInstanceById` on a passive projection:
 
-1. Chronicle folds the relevant events for the specified event source ID in memory, starting from the first event.
-2. The result is returned. Nothing is kept between reads: there is no persistent read-model sink and no cached state.
-3. Every later read folds the history again, so it reflects everything appended up to that read, including redactions, revisions and erased personal data.
+1. Chronicle retrieves the subscribed event types for the requested event source ID, starting at the beginning of its history.
+2. It applies the projection mappings in memory and returns the computed instance.
+3. A later read repeats that work from the start rather than reusing the previous read-model state.
+
+There is no persistent read-model sink, meaning no storage destination containing a materialized result. A read can include events you have just successfully appended without waiting for an observer, but it does not reserve that state against another writer. If the result drives a decision that must hold under concurrent writes, use a [decision-consistent read](../../read-models/decision-reads.mdx).
 
 By-ID reads select one event source. A cross-source join or custom-key aggregation cannot generally
 reconstruct the same answer as its materialized counterpart this way. See
@@ -51,17 +48,12 @@ reconstruct the same answer as its materialized counterpart this way. See
 
 ## When to use passive projections
 
-Passive projections are ideal for:
+Choose a passive projection when each lookup concerns one event source and replaying its history fits the request's latency requirements. Infrequent reads over short histories are a good fit: you avoid maintaining a stored result that callers rarely use.
 
-- **Infrequent queries**: When read models are accessed rarely or sporadically
-- **Current source state**: When you need an on-demand fold instead of waiting for materialization
-- **Storage-sensitive scenarios**: When you want to avoid a persistent read-model sink
-- **Temporary calculations**: For read models that are computed and discarded
-- **Testing and debugging**: When you need to inspect event-driven state without persistence
+Keep a projection materialized when it joins other sources, aggregates under a custom key, or serves frequent reads over long histories. Passive mode moves the work to read time; it does not remove that work.
 
 ## Performance considerations
 
-- Every read folds the source's history from the start, so read cost grows with the number of relevant events for that source.
-- Passive projections trade persistent storage for read-time processing on every read.
-- A reactor or command that reads a passive model on every event over a long stream repeats that fold each time; keep such histories short, or use a materialized projection when eventual consistency is acceptable.
-- Use bounded, source-local histories when read latency matters.
+Read cost grows with the number of relevant events for the source. A reactor or command that reads a passive model on every event repeats the full fold each time, so measure that path with representative histories.
+
+For the trade-off between computing from events, reading stored state, and waiting for an observer, continue with [consistency models](../../read-models/consistency.md).

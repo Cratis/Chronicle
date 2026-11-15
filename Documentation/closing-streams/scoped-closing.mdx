@@ -1,13 +1,15 @@
 ---
-title: Scoped closing
-description: Close one event source's stream, all streams of an event source, or any dimension combination in Chronicle, only when nothing landed since your last fact.
+title: Close a scoped stream in Cratis Chronicle
+description: Use ClosedStreamScope in Cratis Chronicle to close one event source's stream, and check its expected tail before rejecting further appends.
 ---
 
-The two-argument `CompleteStream(streamType, streamId)` closes a stream for every event source that uses that pair. That forces you to make stream ids globally unique just so you can close one. A `ClosedStreamScope` lets you name what you mean instead. For the scope model and its rules, see [Closing streams](index.mdx).
+Use `ClosedStreamScope` in Cratis Chronicle to close one event source's stream without closing other sources that share its stream type and id. Pass the scope to `CompleteStream`, with an expected tail when the close depends on the history you have read.
+
+The two-argument `CompleteStream(streamType, streamId)` closes that pair across every event source. The examples below use the .NET scope API to narrow the close to one report or extend it to every stream of one entity. If you need another combination, start with the [scope dimensions and matching rules](index.mdx#choose-a-scope).
 
 ## Close one event source's stream
 
-Set the event source id together with the stream type and stream id. Only that event source's stream is refused. Other reports that use `monthly-report` / `2026-04` stay open:
+Set the event source id together with the stream type and stream id. This closes the April stream for one report; it leaves other reports using `monthly-report` / `2026-04` open:
 
 <ChronicleClientTabs snippet="closing-streams/scoped-closing/close-source-stream" />
 
@@ -15,7 +17,7 @@ The scope has three dimensions set, so an append is refused only when it carries
 
 ## Close every stream of an event source
 
-`ClosedStreamScope.ForEventSource` sets only the event source id. Every stream of that event source is refused, including its default stream. This is how you archive an entity whose events use no stream id at all:
+To stop all future appends for an entity, use `ClosedStreamScope.ForEventSource`. It sets only the event source id, so the closure covers every stream of that source, including its default stream. This also works when the entity's events use no explicit stream id:
 
 <ChronicleClientTabs snippet="closing-streams/scoped-closing/close-source" />
 
@@ -23,19 +25,23 @@ The scope has three dimensions set, so an append is refused only when it carries
 
 ## Close only if nothing landed
 
-Appending the last fact and then closing are two calls. Another append can land between them. Pass the sequence number of the last fact you know about as `expectedTailSequenceNumber`. The kernel compares it with the tail of the scope, the sequence number of the last event inside the scope, and closes in the same step. If another event landed, the call returns `ExpectedTailMismatch` and writes nothing:
+An approval followed by a manual close takes two calls. If another event arrives between them, the approval may no longer describe the history you intended to close. Pass the approval's sequence number as `expectedTailSequenceNumber` so the kernel checks for that change before closing.
+
+The kernel compares the expected number with the scope's tail, meaning the sequence number of its last event. It performs that check and the close in the same step. A changed tail returns `ExpectedTailMismatch` and writes no closure:
 
 <ChronicleClientTabs snippet="closing-streams/scoped-closing/close-expected-tail" />
 
-An empty scope has the tail `EventSequenceNumber.Unavailable`. The scope's tail only counts events inside the scope, so events appended elsewhere in the sequence do not cause a mismatch.
+A scope with no matching events has the tail `EventSequenceNumber.Unavailable`. Events appended elsewhere in the sequence do not change this scope's tail and do not cause a mismatch.
 
-A retry is safe. The `AlreadyCompleted` check runs first, so repeating a close that succeeded returns `AlreadyCompleted` instead of a tail mismatch. The example above treats it as success.
+In the example, an accepted approval supplies the expected tail. A failed append returns before attempting the close. The result treats `AlreadyCompleted` as success because a manual closure already covers the scope. That check runs before the expected-tail check, so retrying a successful close does not fail with a tail mismatch.
 
 :::tip[Prefer a closing event when a domain fact ends the scope]
-If the last fact itself should end the scope, declare it as a [closing event](closing-events.mdx). The closure is then written in the same step as the append, and there is no gap to guard.
+If approval itself should end the scope, declare it as a [closing event](closing-events.mdx). The kernel then writes the closure after the event without allowing another append between them. The [crash-recovery limit](index.mdx#guarantees-and-limits) still applies.
 :::
 
 ## Handle the errors
+
+Check the result before treating the scope as closed. An expected-tail mismatch needs a new decision based on the current history, not a retry with the same number:
 
 <ChronicleClientTabs snippet="closing-streams/scoped-closing/handle-errors" />
 
@@ -48,6 +54,6 @@ If the last fact itself should end the scope, declare it as a [closing event](cl
 
 Event-driven closures alone do not produce `AlreadyCompleted`. The call succeeds and writes a manual closure as well, which a `ReopenedBy` event can no longer undo.
 
-Closing is final for manual closures. If you closed the wrong scope, see [Inspecting and repairing](inspecting-and-repairing.mdx).
+After a successful close, use [Inspecting and repairing](inspecting-and-repairing.mdx) to check the persisted scope or investigate an unexpected rejection. Manual closures have no normal client reopen call; undoing a mistaken close requires the operator repair path.
 
-To build the scope from an event source definition rather than from strings, see [Close a stream of a definition](../event-sources/closing.mdx). A closed scope makes the decisions taken on it final, which is why it fits a [Dynamic Consistency Boundary](../dynamic-consistency-boundary/chronicle.md) that ends.
+To take the scope from an event source definition rather than construct it from strings, follow [Close a stream of a definition](../event-sources/closing.mdx). For the relationship between a closed scope and decisions based on its history, see [Dynamic Consistency Boundary in Chronicle](../dynamic-consistency-boundary/chronicle.md).

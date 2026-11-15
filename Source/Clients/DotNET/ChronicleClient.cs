@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Auditing;
@@ -15,10 +16,12 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Migrations;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.Identities;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reactors.SideEffects;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Seeding;
+using Cratis.Chronicle.Serverless;
 using Cratis.Json;
 using Cratis.Serialization;
 using Cratis.Types;
@@ -42,6 +45,9 @@ public class ChronicleClient : IChronicleClient, IDisposable
     const string OperatingSystemMetadataKey = "os";
     const string MachineNameMetadataKey = "machineName";
     const string ProcessMetadataKey = "process";
+
+    readonly Lock _deploymentCheckLock = new();
+    readonly ConcurrentDictionary<EventStoreName, Lazy<Task>> _deploymentChecks = new();
 
     readonly IChronicleConnection _connection;
     readonly IChronicleServicesAccessor _servicesAccessor;
@@ -69,7 +75,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// then handed the loser a store that was no longer the cached one.
     /// </remarks>
     readonly ConcurrentDictionary<EventStoreKey, Lazy<Task<IEventStore>>> _eventStores = new();
+    CancellationTokenSource? _deploymentCheckCancellation;
     int _isDisposed;
+    int _serverlessReported;
+    global::Cratis.Chronicle.Federation.IFederationEnrollments? _federation;
+    global::Cratis.Chronicle.Federation.IFederationPolicies? _federationPolicies;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
@@ -113,6 +123,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
     /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/>. Defaults to <see cref="DefaultNamingPolicy"/> if not provided.</param>
+    /// <exception cref="InvalidServerlessConfiguration">Thrown when serverless mode is on and the configuration is not valid.</exception>
     public ChronicleClient(
         ChronicleOptions options,
         IClientArtifactsProvider? artifactsProvider = null,
@@ -152,7 +163,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
         var skipTlsValidation = TlsCertificateValidationPolicy.ShouldSkip(options.Tls, options.ConnectionString);
         var skipCompatibilityCheck = CompatibilityCheckPolicy.ShouldSkip(options, options.ConnectionString);
 
-        var tokenProvider = CreateTokenProvider(options, skipTlsValidation);
+        // Loaded once here and shared by every TLS connection the client makes to the Chronicle server.
+        var caCertificatePath = options.Tls.CaCertificatePath ?? options.ConnectionString.CaCertificatePath;
+        var certificateAuthorities = string.IsNullOrEmpty(caCertificatePath) ? null : CertificateLoader.LoadCertificateAuthorities(caCertificatePath);
+
+        var tokenProvider = CreateTokenProvider(options, skipTlsValidation, certificateAuthorities);
         _ownedConnectionCancellation = new();
 
         _connection = new ChronicleConnection(
@@ -172,7 +187,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
             tokenProvider,
             skipCompatibilityCheck: skipCompatibilityCheck,
             skipKeepAlive: options.SkipKeepAlive,
-            loadBalancerStrategy: options.LoadBalancerStrategy);
+            serverAddressResolver: null,
+            loadBalancerStrategy: options.LoadBalancerStrategy,
+            timeProvider: null,
+            certificateAuthorities: certificateAuthorities);
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
@@ -189,6 +207,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <param name="namespaceResolver">Optional <see cref="IEventStoreNamespaceResolver"/>. Defaults to <see cref="DefaultEventStoreNamespaceResolver"/> if not provided.</param>
     /// <param name="loggerFactory">Optional <see cref="ILoggerFactory"/>. Defaults to a no-op factory if not provided.</param>
     /// <param name="namingPolicy">Optional <see cref="INamingPolicy"/>. Defaults to <see cref="DefaultNamingPolicy"/> if not provided.</param>
+    /// <exception cref="InvalidServerlessConfiguration">Thrown when serverless mode is on and the configuration is not valid.</exception>
     public ChronicleClient(
         IChronicleConnection connection,
         ChronicleOptions options,
@@ -216,6 +235,11 @@ public class ChronicleClient : IChronicleClient, IDisposable
         _artifactActivator = result.ArtifactActivator;
         _eventTypeMigrators = new EventTypeMigrators(_artifactsProvider, _serviceProvider);
         _connection = connection;
+        if (ServerlessActivation.IsOn(options))
+        {
+            ServerlessActivation.RequireSkippedKeepAlive(connection);
+        }
+
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
@@ -225,6 +249,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     /// <inheritdoc/>
     public ICausationManager CausationManager { get; }
+
+    /// <inheritdoc/>
+    public global::Cratis.Chronicle.Federation.IFederationEnrollments Federation => _federation ??= new global::Cratis.Chronicle.Federation.FederationEnrollments(_connection);
+
+    /// <inheritdoc/>
+    public global::Cratis.Chronicle.Federation.IFederationPolicies FederationPolicies => _federationPolicies ??= new global::Cratis.Chronicle.Federation.FederationPolicies(_connection);
 
     /// <summary>
     /// Gets the cancellation token used for the owned connection lifetime.
@@ -239,6 +269,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             return;
         }
 
+        CancelDeploymentFingerprintChecks();
         foreach (var eventStore in CreatedEventStores())
         {
             // Disposing the connection raises no disconnect, so the background registration retry must be stopped here.
@@ -264,7 +295,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
         EventStoreName name,
         EventStoreNamespaceName? @namespace = null)
     {
-        @namespace ??= _namespaceResolver.Resolve();
+        @namespace ??= ObserverDeliveryContext.NamespaceFor(name) ?? _namespaceResolver.Resolve();
         var key = new EventStoreKey(name, @namespace);
 
         var lazyEventStore = _eventStores.GetOrAdd(
@@ -328,6 +359,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
     (ICausationManager CausationManager, IJsonSchemaGenerator JsonSchemaGenerator, IConcurrencyScopeStrategies ConcurrencyScopeStrategies, IClientArtifactsActivator ArtifactActivator) InitializeInternal()
     {
+        ServerlessActivation.Apply(Options, ServerlessEnvironment.Resolve(_serviceProvider));
+
         if (Options.SoftwareVersion == DefaultSoftwareVersion)
         {
             _loggerFactory.CreateLogger<ChronicleClient>().SoftwareVersionIsDefault(Options.SoftwareVersion);
@@ -362,31 +395,15 @@ public class ChronicleClient : IChronicleClient, IDisposable
         return (causationManager, jsonSchemaGenerator, concurrencyScopeStrategies, artifactActivator);
     }
 
-    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool skipTlsValidation)
-    {
-        if (options.ConnectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
-        {
-            var username = options.ConnectionString.Username;
-            var password = options.ConnectionString.Password;
-            if (string.IsNullOrEmpty(username) &&
-                string.IsNullOrEmpty(password))
-            {
-                username = ChronicleConnectionString.DevelopmentClient;
-                password = ChronicleConnectionString.DevelopmentClientSecret;
-            }
-
-            return new OAuthTokenProvider(
-                () => _connection is ChronicleConnection connection
-                    ? connection.CurrentServerAddress
-                    : options.ConnectionString.ServerAddress,
-                username!,
-                password!,
-                skipTlsValidation,
-                _loggerFactory.CreateLogger<OAuthTokenProvider>());
-        }
-
-        return new NoOpTokenProvider();
-    }
+    ITokenProvider CreateTokenProvider(ChronicleOptions options, bool skipTlsValidation, X509Certificate2Collection? certificateAuthorities) =>
+        TokenProviderFactory.Create(
+            options,
+            () => _connection is ChronicleConnection connection
+                ? connection.CurrentServerAddress
+                : options.ConnectionString.ServerAddress,
+            skipTlsValidation,
+            _loggerFactory,
+            certificateAuthorities);
 
     void InitializeJsonSerializationOptions()
     {
@@ -410,6 +427,72 @@ public class ChronicleClient : IChronicleClient, IDisposable
         Options.JsonSerializerOptions.Converters.Add(new PolygonJsonConverter());
         Options.JsonSerializerOptions.Converters.Add(new EnumerableModelWithIdToConceptOrPrimitiveEnumerableConverterFactory());
         Options.JsonSerializerOptions.WithDeclaredCollectionsNeverNull();
+    }
+
+    void ReportServerlessStartup(EventStore eventStore)
+    {
+        if (Interlocked.Exchange(ref _serverlessReported, 1) == 1)
+        {
+            return;
+        }
+
+        var logger = _loggerFactory.CreateLogger<ChronicleClient>();
+        var plan = eventStore.DeliveryPlan;
+        if (ServerlessActivation.IsOn(Options))
+        {
+            var level = ServerlessEnvironment.IsDevelopment(ServerlessEnvironment.Resolve(_serviceProvider)) ? LogLevel.Information : LogLevel.Warning;
+            logger.ServerlessDowngrades(level, string.Join("; ", ServerlessDowngrades.Describe(plan, Options)));
+        }
+        else if (ServerlessEnvironmentHints.Detect(Environment.GetEnvironmentVariable) is { } variable && plan is { Stream.Count: > 0 })
+        {
+            logger.ServerlessHostDetected(variable, plan.Stream.Count);
+        }
+
+        if (plan is { UnknownOverrides.Count: > 0 })
+        {
+            logger.UnknownObserverDeliveryOverrides(string.Join(", ", plan.UnknownOverrides));
+        }
+    }
+
+    void ScheduleDeploymentFingerprintCheck(EventStore eventStore)
+    {
+        if (!DeploymentFingerprintCheck.IsEnabled(Options)) return;
+        lock (_deploymentCheckLock)
+        {
+            if (Volatile.Read(ref _isDisposed) != 0) return;
+            _deploymentCheckCancellation ??= new();
+            var token = _deploymentCheckCancellation.Token;
+            var generation = Options.Serverless.DeploymentGeneration;
+            var check = _deploymentChecks.GetOrAdd(
+                eventStore.Name,
+                static (_, state) => new(
+                    () =>
+                    {
+                        // Do not inherit preparation's AsyncLocal lease ownership.
+                        if (ExecutionContext.IsFlowSuppressed())
+                        {
+                            return Task.Run(() => DeploymentFingerprintCheck.Run(state.eventStore, state.generation, state.loggerFactory, state.token));
+                        }
+                        Task task;
+                        using (ExecutionContext.SuppressFlow())
+                        {
+                            task = Task.Run(() => DeploymentFingerprintCheck.Run(state.eventStore, state.generation, state.loggerFactory, state.token));
+                        }
+                        return task;
+                    },
+                    LazyThreadSafetyMode.ExecutionAndPublication),
+                (eventStore, generation, loggerFactory: _loggerFactory, token));
+            _ = check.Value;
+        }
+    }
+
+    void CancelDeploymentFingerprintChecks()
+    {
+        lock (_deploymentCheckLock)
+        {
+            _deploymentCheckCancellation?.Cancel();
+            _deploymentCheckCancellation?.Dispose();
+        }
     }
 
     async Task<IEventStore> CreateEventStore(EventStoreKey key)
@@ -446,6 +529,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 await eventStore.DiscoverAll();
             }
 
+            ReportServerlessStartup(eventStore);
             await _connection.Connect();
             if (Options.AutoDiscoverAndRegister && _connection.Lifecycle.IsConnected && !eventStore.Registration.HasRun)
             {
@@ -454,6 +538,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 await eventStore.RegisterAll();
             }
 
+            ScheduleDeploymentFingerprintCheck(eventStore);
             return eventStore;
         }
         catch

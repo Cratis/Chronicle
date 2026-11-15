@@ -8,6 +8,7 @@
 
 - Retention window and rejection specifications
 - Missing-offset input rejection
+- Clock operands and calendars (parsed, not runnable)
 
 Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`); older binders refuse date comparisons with PLAY0268. Upgrade the compiler without weakening the rule.
 
@@ -110,3 +111,18 @@ Include a skipped-condition case where applicable. A typed `.play` fixture with
 that invalid value refuses binding with PLAY0273; `then error` does not turn it
 into an executed runtime rejection. Record the target test separately, not as a
 passing `.play` specification or a `given clock` workaround.
+
+## Clock operands and calendars (parsed, not runnable)
+
+Both compilers parse these forms, but executable binding refuses each with PLAY0268 and
+none selects an ESM version. Do not author them into an executable model:
+
+- application root: `time zone "<id>"` or `time zone configurable default "<id>"`;
+- command: `calendar "<id>"` or `calendar from $context.<member>`;
+- specification: `given time zone "<id>"`;
+- condition operands: clock offsets such as `today - 7 days` and `now + 2 hours`, and
+  `date of occurred` or `date of now`.
+
+Bare `today` and `now` stay ordinary property paths. PLAY0812, PLAY0813 and PLAY0814 report
+a repeated or malformed time zone, command calendar and specification time zone.
+Requires Screenplay 4.242.0 (`screenplay --version`) to parse them.

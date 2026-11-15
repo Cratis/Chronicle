@@ -1,10 +1,12 @@
 ---
 uid: Chronicle.Testing.ReadModels
-description: Test read model projections and reducers in process with seeded events, and identify which behavior still needs kernel-backed integration tests.
+title: Test Chronicle read models from event history
+description: Test Chronicle projection mappings and reducer logic with a known event history, then choose server-backed tests for storage and delivery behavior.
 ---
-# Testing Read Models
 
-Read-model scenarios turn a known event history into an assertable read model without starting Chronicle or a database. Use them for fast feedback on projection mappings and reducer logic, then use integration tests for the infrastructure behavior they substitute.
+<a id="testing-read-models"></a>
+
+Read-model scenarios check what a Chronicle projection or reducer produces from a known event history without starting a server or database. Use them to verify the resulting state; use server-backed integration tests to check how that state is stored and delivered.
 
 ## Start with a small event history
 
@@ -16,19 +18,21 @@ dotnet add package Cratis.Specifications.XUnit
 dotnet test
 ```
 
-The central .NET API is `ReadModelScenario<TReadModel>`. Create a scenario for the read model under test, seed events with `Given.ForEventSource(id).Events(...)`, and assert on `Instance`. Reading the result triggers processing of the collected events. The scenario discovers a reducer, fluent projection, or model-bound projection; `WithProjection(...)` can select an inline projection instead, including when a reducer was discovered.
+Create a .NET `ReadModelScenario<TReadModel>` for the model under test, supply events with `Given.ForEventSource(id).Events(...)`, and assert on `Instance`. The events wait until you read a result; that read triggers the fold, which applies the history to produce the model's state. The scenario discovers a reducer, fluent projection, or model-bound projection. Use `WithProjection(...)` to select an inline projection instead, including when a reducer was discovered.
 
 For example, a customer-summary test can seed a registration event followed by a name-change event for the same customer, then assert that the summary contains the new name. Keep the history focused on the behavior being specified; unrelated events make failures harder to explain.
 
 ## Choose the right result
 
-`Instance` is convenient when the history materializes one model. If more than one instance materializes, it throws rather than selecting one arbitrarily. Use `Instances` or `InstanceForEventSourceId(...)` to select the intended result.
+In .NET, use `Instance` when the history produces one model. If it produces more than one keyed instance, `Instance` throws rather than choosing one. Select the intended result with `Instances` or `InstanceForEventSourceId(...)`. Reducers fed only bare events retain a single fold across sources unless you seed per-key read models; use `ProcessAppendedEvents(...)` when you need independent source folds from appended history.
 
 When event context matters, seed source and stream metadata explicitly or use `ProcessAppendedEvents(...)` to preserve original appended-event context. The [scenario guide](scenario.mdx) covers these APIs and includes client-specific examples; their names and capabilities differ between clients.
 
 ## Know the test boundary
 
-A passing in-process test does not prove database persistence, network delivery, or the full kernel pipeline. In .NET, inspect `Substitutions` to see which substituted layers the tested model actually reaches. `WithStrictFidelity()` makes a dependency on such a layer fail the scenario instead of merely describing it. Use that information to choose the kernel-backed tests needed alongside the fast specification.
+A correct projected value does not prove that a database stores the key correctly or that an observer recovers after a failure. The .NET harness uses the projection engine with an in-memory sink, or the client reducer invoker, rather than the full Chronicle kernel pipeline.
+
+Inspect `Substitutions` to find model-specific dependencies on behavior the harness stands in for, such as join-key resolution or compliance protection. `WithStrictFidelity()` makes those dependencies fail the scenario when you read a result. An empty list does not mean that storage or observer delivery was tested. The [scenario guide's boundary section](scenario.mdx#what-the-harness-stands-in-for) explains which assertions need a kernel-backed companion test.
 
 ## Topics
 

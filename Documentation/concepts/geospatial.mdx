@@ -1,38 +1,35 @@
 ---
-description: Chronicle supports the Point, LineString and Polygon geospatial types from Cratis.Fundamentals in events, read models, reducers and projections.
+title: Store geospatial values in Chronicle
+description: Chronicle supports Point, LineString and Polygon values in events and read models, with GeoJSON serialization and format-aware storage.
 ---
-# Geospatial Types
 
-Chronicle has built-in support for geospatial types from Cratis.Fundamentals: `Point`, `LineString`, and `Polygon`. You can use them directly in events, read models, reducers, and projections without any extra setup.
+Cratis Chronicle supports geographic points, paths and areas as typed values in events and read models. Use `Point`, `LineString` and `Polygon` for a location, route or boundary that a projection or reducer needs to carry into a view.
 
-:::note[Client coverage]
-Geospatial types are currently C#-only — Kotlin, Elixir, and TypeScript don't have an equivalent `Point`/`LineString`/`Polygon` type in their client SDKs.
-:::
+The .NET types come from Cratis.Fundamentals in the `Cratis.Geospatial` namespace. Kotlin and Java use the types in `io.cratis.fundamentals.geospatial`, with GeoJSON adapters supplied by their Chronicle client. Elixir and TypeScript clients do not expose equivalent geospatial types.
 
-## Geospatial Types
+<a id="geospatial-types-1"></a>
 
-The three geospatial types are records defined in the `Cratis.Geospatial` namespace:
+## Geospatial types
+
+Choose a type for the shape your event records:
 
 <ChronicleClientTabs snippet="concepts/geospatial/types" />
 
-- **Point** represents a single geographic location in longitude-then-latitude order (GeoJSON standard).
-- **LineString** represents a connected series of points forming a line or path.
-- **Polygon** represents an enclosed area with a shell (outer boundary) and optional holes (inner boundaries).
-- **LinearRing** is an array of points that form a closed loop (used by Polygon).
+`Point` represents one location, with longitude before latitude as in GeoJSON. `LineString` joins points into a path. `Polygon` defines an area with an outer boundary, or shell, and optional inner boundaries, or holes. A `LinearRing` supplies the closed loop of points used for a polygon boundary.
 
-## Using Geospatial Types in Events and Read Models
+## Using geospatial types in events and read models
 
-Import the namespace and use the geospatial types as any other property type:
+Declare the geometry as a property on the event and on the read model that will hold it. These examples record an asset's location, a route's path and a zone's boundaries:
 
 <ChronicleClientTabs snippet="concepts/geospatial/events-and-read-models" />
 
-Projections and reducers handle geospatial types like any other value type. AutoMap picks them up automatically:
+A projection can copy the geometry into the read model through `AutoMap`; it does not need to map each coordinate separately:
 
 <ChronicleClientTabs snippet="concepts/geospatial/projection" />
 
 ## JSON schema
 
-Chronicle describes a geospatial value as a **leaf**: an object carrying only its format, with no sub-properties.
+The .NET schema generator describes a geospatial value as a leaf: an object carrying its format, with no sub-properties. The format identifies the type for storage and materialization, which turns stored content back into typed values:
 
 ```json
 { "type": "object", "format": "point" }
@@ -40,9 +37,9 @@ Chronicle describes a geospatial value as a **leaf**: an object carrying only it
 { "type": "object", "format": "polygon" }
 ```
 
-The format is the entire description, and that is deliberate. A geospatial value is stored and materialized as a single typed CLR value — `Point`, `LineString`, `Polygon` — so the members you see on the wire belong to the type's own GeoJSON converter, not to your event or read model. Were the schema to flatten them into properties, the sink would treat the coordinates as fields of your model and drop them on the way through.
+The .NET storage path materializes each geometry as one typed value. Its GeoJSON converter owns the coordinates and other members inside that value. Flattening them into event or read-model properties would cause coordinates to be dropped during conversion.
 
-That format annotation is what every reader keys off: the storage sinks use it to materialize the typed value, and tools like the Workbench use it to recognize a geographic field and display it as one.
+Storage sinks use the format annotation to recover the typed value. The Workbench also uses it to recognize and display a geographic field.
 
 On the wire, the value itself is GeoJSON:
 
@@ -52,25 +49,25 @@ On the wire, the value itself is GeoJSON:
 }
 ```
 
-Longitude comes first, then latitude — the GeoJSON convention, and the same order the `Point` constructor takes.
+Longitude comes first, then latitude, matching both GeoJSON and the `Point` constructor.
 
 ## Geospatial values alongside PII
 
-The two features meet more often than you might expect: a delivery has a customer name and a drop-off point, an incident report has a reporter and a location. As soon as *anything* in an event or read model is marked `[PII]`, Chronicle runs its compliance pass over the whole document — not just the personal values — so the geospatial value gets visited too.
+An event may contain both a location and personally identifiable information (PII), such as a venue location beside an organizer's name. When a property is marked `[PII]`, Chronicle's compliance pass visits the whole document, including the geospatial value.
 
-Nothing happens to it. Chronicle stops at a geospatial value rather than descending into its GeoJSON members: those members belong to the type's converter, and there is no schema property under them for a `[PII]` marker to sit on. The location is written and read back verbatim, in the clear — which is what you want, because a venue is public data even when the organizer's name is not.
+An unmarked geospatial value stays in plaintext. The pass treats it as one value instead of descending into its GeoJSON members, which have no separate schema properties for `[PII]` markers. Decide whether the location itself is personal data before storing it; a public venue and a person's precise location have different privacy implications.
 
 :::caution[Don't mark a geospatial value `[PII]`]
-`[PII]` on a geospatial property encrypts the whole GeoJSON object into a single ciphertext string. It survives an ordinary round trip, so it looks like it works — but once that subject exercises [erasure](../compliance/erasing-a-subject), the released value is empty and can no longer be materialized back into a `Point`, `LineString` or `Polygon`. The read then fails for the entire read model rather than degrading that one property.
+`[PII]` on a geospatial property encrypts the whole GeoJSON object into a single ciphertext string. An ordinary round trip succeeds, but after [subject erasure](../compliance/erasing-a-subject) the released value is empty and cannot be materialized as a `Point`, `LineString` or `Polygon`. Reading the entire read model then fails, not just that property.
 
-Treat a personal location as unsupported for now. Keep the geospatial value out of the person-scoped document, or store the sensitive part as a separate `[PII]` value beside a coarser location.
+A personal location stored this way cannot survive the erasure path. Keep the geospatial value out of the person-scoped document, or store the sensitive part as a separate `[PII]` value beside a coarser location that is safe to retain.
 :::
 
 ## Storage
 
-### MongoDB Sink
+### MongoDB sink
 
-Chronicle stores geospatial values in BSON format:
+The MongoDB read-model sink uses the following BSON (binary JSON) shapes, which differ from the GeoJSON wire format above:
 
 **Point**: Flat document with `longitude` and `latitude`
 
@@ -102,13 +99,13 @@ Chronicle stores geospatial values in BSON format:
 }
 ```
 
-BSON serializers are registered automatically — no configuration required.
+Chronicle registers these BSON serializers automatically.
 
-### SQL Sink
+### SQL sink
 
-Geospatial types generate as JSON objects in the schema, so the SQL sink stores them as JSON columns. No migration or configuration changes are required.
+Geospatial types appear as objects in the schema, so the SQL read-model sink stores them in JSON columns. No additional migration or configuration is required for these types.
 
-## Workbench Display
+## Workbench display
 
 The Chronicle Workbench recognizes geospatial format markers in event schemas and renders them as human-readable strings rather than expanding nested structures:
 
@@ -117,3 +114,5 @@ Point: lat: 42.123, long: 10.456
 LineString: [lat: 42.123, long: 10.456], [lat: 43.456, long: 11.789]
 Polygon: shell with 5 points, 0 holes
 ```
+
+Once the event and read-model properties are defined, use [declarative projections](../projections/declarative/simple-projection.mdx) to build the view. If the event contains personal data, review [PII protection](../compliance/pii.mdx) before choosing what location detail to retain.

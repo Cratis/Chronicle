@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-read-surface
-description: Declare the read side of a Cratis Screenplay `.play` model — the `readmodel` shape, `query` with `by`/`filter`/`scoped to`/`observable`/`performer`, and `screen` at its three levels of detail, including the data/action contract that later component bindings, templates, forms, toolbars, routes and outlets consume. Use when adding or changing a query, a read-model shape, or a screen in a `.play` model, or when deciding what a caller may narrow a result by. Do not use for how events fill the read model, and do not use for layouts, templates or forms.
+description: Use when writing Screenplay read-model shapes, query filtering or screen data and action contracts. Not for event-to-state mappings or component layouts, templates and forms.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-read-surface/SKILL.md -->
@@ -15,11 +15,10 @@ shape, the `query` is the entry point, and the `screen` renders it.
 ## Locate the model
 
 Look first for the project's existing `.play` files: the folder holding them is the
-model. A new model goes under the repository's `Source/` or `src/` folder, else in a
-`Screenplay/` folder at the repository root; never under `.cratis/`, which holds
-configuration and the shared AI corpus only. This is the
-conventional home for consumer-owned `.play` source; do not invent another
-location or search the whole repository before checking it.
+model. Reuse existing model/workspace roots; code-only `Source/` or `src/` does
+not qualify. Otherwise use repository-root `Screenplay/`, never `.cratis/`
+(configuration/shared corpus only). Read [discovery/version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)
+when locating the model; do not invent another location.
 
 `cratis ai install` manages `.cratis/ai/`, never model files. Never
 hand-copy Screenplay source between repositories. Keep Markdown that explains,
@@ -166,12 +165,42 @@ A query is **complete without a performer** — it is realization metadata, not 
 precondition. It takes a `file` reference or an inline block in a tagged fence
 (` ```csharp `, ` ```sql `), and is the query's counterpart to a command's
 `handler`. The parser accepts any registered inline language and does not reject
-a nonsensical one, so the choice is yours to get right. Performer code is opaque:
+a nonsensical one, so the choice is yours to get right. Built-in inline languages are `csharp`, `typescript`, `react`, `html`, `sql` and `java`. A performer query refuses a `by` or `filter` argument sourced from `$context` with PLAY0810 (C# binding; Requires Screenplay 4.244.0, `screenplay --version`; older compilers silently drop it): take a caller-supplied argument instead. Performer code is opaque:
 Screenplay never runs it. It is reported as information `PLAY0270` and left out of the executable model; a specification that reads it is left out while every other specification still runs. Older compilers refuse it with PLAY0268: see the [version gate](../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does).
 
 A read model a performer composes needs no projection, and no event builds it.
 Specify it from state with `given readmodel`, then `when query <Query>` with the
 arguments and `then result` - see `cratis-screenplay-specifications`.
+
+#### Performer bodies are rendered
+
+Reach for a performer body when the declarative query cannot say what the read needs, for
+example a filter relative to today: clock operands are syntax-only in query filters, so the
+body computes it. Attach the body with `file` (or an inline `csharp` fence):
+
+```screenplay excerpt
+query FiguresInRegion => InvoiceFigures[]
+  filter region String
+  filter status String optional
+  performer
+    file Queries/FiguresInRegion.cs
+```
+
+The body is synchronous C# that returns the read-model instance (or null) for a single query,
+or `IEnumerable<ReadModel>` for a collection. It sees `readModels` (the current collection), the
+caller arguments by camelCase name and on `context.Arguments`, and `context.Tenant`,
+`context.Identity` and `context.ReceivedAt`, for example
+`return readModels.Where(figures => figures.Total > 0);`.
+
+Stage renders the read model record and the query method with its route, parameters (filters in
+declaration order, optional ones defaulted) and the modeled `[Authorize]` policy, and embeds the
+verified body in a compile-checked helper; no projection or reducer is needed. Do not hand-write
+a supported performer as gap-fill: attach the body to the model and render. An observable
+performer, a non-C# body, a missing, changed or hash-invalid body, or a body that does not compile
+becomes an explicit implementation gap instead, with a not-fully-runnable marker (see
+[bodies and implementation gaps](../cratis-stage-rendering-and-sandbox/references/current-boundaries.md#bodies-and-implementation-gaps)).
+
+Requires Stage 4.197.0 to render performer bodies, run directly or through a CLI that bundles it (check with `cratis --version`; CLI 3.100.0 bundles Stage 4.196.0); older versions keep the gap-fill path.
 
 A query's key goes on its own `by` line in the body. `query X => RM optional by id Type`
 on the header line is a declaration error, not a shorthand.
@@ -267,7 +296,7 @@ bindings; the selected command still enforces its own gate/rules/constraints.
 Read [guarded actions](references/guarded-actions.md) for the checked model,
 missing-versus-null behavior and source-versus-renderer boundary. For a gesture
 choosing a whole action list rather than one labeled command, use block-form
-`when`/`otherwise` on click/double click/select:
+`when`/`otherwise` on click, double click, select or change:
 [guarded interactions](../cratis-screenplay-ui-composition/references/guarded-interactions.md).
 
 ## How a bare name resolves

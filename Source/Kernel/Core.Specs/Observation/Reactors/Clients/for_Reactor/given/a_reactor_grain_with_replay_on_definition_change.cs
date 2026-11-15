@@ -42,7 +42,12 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
         var namespacesGrain = Substitute.For<INamespaces>();
         namespacesGrain.GetAll().Returns([]);
         _silo.AddProbe(_ => namespacesGrain);
-        _silo.AddProbe(_ => Substitute.For<IConnectedClients>());
+        var connectedClients = Substitute.For<IConnectedClients>();
+        connectedClients.IsConnected(Arg.Any<Cratis.Chronicle.Concepts.Clients.ConnectionId>()).Returns(true);
+        _silo.AddProbe(_ => connectedClients);
+        var management = Substitute.For<IManagementGrain>();
+        management.GetHosts(true).Returns(new Dictionary<SiloAddress, SiloStatus>());
+        _silo.AddProbe(_ => management);
         _observerProbe = Substitute.For<IObserver>();
         _observerProbe.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         _silo.AddProbe(_ => _observerProbe);

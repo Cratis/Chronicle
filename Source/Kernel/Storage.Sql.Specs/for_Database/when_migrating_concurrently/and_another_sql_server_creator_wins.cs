@@ -53,7 +53,7 @@ public class and_another_sql_server_creator_wins(SqlServerFixture fixture) : giv
 
         if (_connectionString is not null)
         {
-            await Fixture.DropDatabase(_connectionString);
+            await Fixture.QueueDatabaseDrop(_connectionString);
         }
     }
 }

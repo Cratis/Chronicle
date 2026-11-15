@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -28,8 +29,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     static readonly TimeSpan _failedFetchRetryDelay = TimeSpan.FromSeconds(5);
 
     readonly Func<string> _tokenEndpoint;
+    readonly TokenEndpointSource _source;
     readonly string _clientId;
     readonly string _clientSecret;
+    readonly string? _scope;
     readonly ILogger<OAuthTokenProvider> _logger;
     readonly SemaphoreSlim _refreshLock = new(1, 1);
     readonly HttpClient _httpClient;
@@ -59,6 +62,26 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class that validates the server certificate against a set of certificate authorities.
+    /// </summary>
+    /// <param name="serverAddress">The Chronicle server address.</param>
+    /// <param name="clientId">The OAuth client ID.</param>
+    /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
+    /// <param name="logger">Logger for logging.</param>
+    /// <param name="certificateAuthorities">Certificate authorities the server certificate must chain to when validation is enabled; <see langword="null"/> uses the system trust store.</param>
+    public OAuthTokenProvider(
+        ChronicleServerAddress serverAddress,
+        string clientId,
+        string clientSecret,
+        bool skipTlsValidation,
+        ILogger<OAuthTokenProvider> logger,
+        X509Certificate2Collection? certificateAuthorities)
+        : this(() => serverAddress, clientId, clientSecret, skipTlsValidation, logger, certificateAuthorities)
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class.
     /// </summary>
     /// <param name="serverAddressProvider">Provides the Chronicle server address to request tokens from - evaluated per request so it follows the currently connected server.</param>
@@ -72,7 +95,27 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         string clientSecret,
         bool skipTlsValidation,
         ILogger<OAuthTokenProvider> logger)
-        : this(serverAddressProvider, clientId, clientSecret, logger, CreateHttpMessageHandler(skipTlsValidation), TimeProvider.System)
+        : this(serverAddressProvider, clientId, clientSecret, skipTlsValidation, logger, certificateAuthorities: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class that validates the server certificate against a set of certificate authorities.
+    /// </summary>
+    /// <param name="serverAddressProvider">Provides the Chronicle server address to request tokens from - evaluated per request so it follows the currently connected server.</param>
+    /// <param name="clientId">The OAuth client ID.</param>
+    /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the token request.</param>
+    /// <param name="logger">Logger for logging.</param>
+    /// <param name="certificateAuthorities">Certificate authorities the server certificate must chain to when validation is enabled; <see langword="null"/> uses the system trust store.</param>
+    public OAuthTokenProvider(
+        Func<ChronicleServerAddress> serverAddressProvider,
+        string clientId,
+        string clientSecret,
+        bool skipTlsValidation,
+        ILogger<OAuthTokenProvider> logger,
+        X509Certificate2Collection? certificateAuthorities)
+        : this(serverAddressProvider, clientId, clientSecret, logger, CreateHttpMessageHandler(skipTlsValidation, certificateAuthorities), TimeProvider.System)
     {
     }
 
@@ -92,14 +135,61 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         ILogger<OAuthTokenProvider> logger,
         HttpMessageHandler httpMessageHandler,
         TimeProvider timeProvider)
+        : this(
+            () =>
+            {
+                var serverAddress = serverAddressProvider();
+                return $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
+            },
+            clientId,
+            clientSecret,
+            null,
+            logger,
+            httpMessageHandler,
+            timeProvider)
     {
-        _tokenEndpoint = () =>
-        {
-            var serverAddress = serverAddressProvider();
-            return $"https://{serverAddress.Host}:{serverAddress.Port}/connect/token";
-        };
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OAuthTokenProvider"/> class that requests tokens from a fixed external endpoint.
+    /// </summary>
+    /// <param name="tokenEndpoint">The absolute https token endpoint.</param>
+    /// <param name="clientId">The OAuth client ID.</param>
+    /// <param name="clientSecret">The OAuth client secret.</param>
+    /// <param name="scope">Optional scope to request.</param>
+    /// <param name="logger">Logger for logging.</param>
+    /// <param name="httpMessageHandler">The <see cref="HttpMessageHandler"/> to perform token requests with.</param>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> for expiry and throttling decisions.</param>
+    /// <param name="source">Where the endpoint came from - the only endpoint information diagnostics carry.</param>
+    /// <exception cref="InsecureTokenEndpoint">Thrown when the endpoint is not an absolute https URL without user info.</exception>
+    internal OAuthTokenProvider(
+        Uri tokenEndpoint,
+        string clientId,
+        string clientSecret,
+        string? scope,
+        ILogger<OAuthTokenProvider> logger,
+        HttpMessageHandler httpMessageHandler,
+        TimeProvider timeProvider,
+        TokenEndpointSource source = TokenEndpointSource.Configured)
+        : this(ExternalEndpoint(tokenEndpoint, source), clientId, clientSecret, scope, logger, httpMessageHandler, timeProvider, source)
+    {
+    }
+
+    OAuthTokenProvider(
+        Func<string> tokenEndpoint,
+        string clientId,
+        string clientSecret,
+        string? scope,
+        ILogger<OAuthTokenProvider> logger,
+        HttpMessageHandler httpMessageHandler,
+        TimeProvider timeProvider,
+        TokenEndpointSource source = TokenEndpointSource.DefaultServer)
+    {
+        _tokenEndpoint = tokenEndpoint;
+        _source = source;
         _clientId = clientId;
         _clientSecret = clientSecret;
+        _scope = scope;
         _logger = logger;
         _httpMessageHandler = httpMessageHandler;
         _httpClient = new HttpClient(httpMessageHandler);
@@ -173,14 +263,43 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         _httpMessageHandler.Dispose();
     }
 
-    static SocketsHttpHandler CreateHttpMessageHandler(bool skipTlsValidation) => new()
+    /// <summary>
+    /// Creates a <see cref="HttpMessageHandler"/> for external authorities that always validates the server certificate.
+    /// </summary>
+    /// <returns>The <see cref="HttpMessageHandler"/>.</returns>
+    /// <remarks>
+    /// Redirects are never followed: a redirect would resend the client credentials to a host nobody configured.
+    /// </remarks>
+    internal static SocketsHttpHandler CreateExternalHttpMessageHandler() => new() { AllowAutoRedirect = false };
+
+    /// <summary>
+    /// Gets the <see cref="HttpMessageHandler"/> token requests are performed with.
+    /// </summary>
+    /// <returns>The <see cref="HttpMessageHandler"/>.</returns>
+    internal HttpMessageHandler GetMessageHandler() => _httpMessageHandler;
+
+    /// <summary>
+    /// Gets the token endpoint tokens are currently requested from.
+    /// </summary>
+    /// <returns>The token endpoint.</returns>
+    internal string GetCurrentTokenEndpoint() => _tokenEndpoint();
+
+    static Func<string> ExternalEndpoint(Uri tokenEndpoint, TokenEndpointSource source)
+    {
+        var endpoint = ExternalTokenEndpoints.Require(tokenEndpoint, source).AbsoluteUri;
+        return () => endpoint;
+    }
+
+    static SocketsHttpHandler CreateHttpMessageHandler(bool skipTlsValidation, X509Certificate2Collection? certificateAuthorities) => new()
     {
         SslOptions = new SslClientAuthenticationOptions
         {
             RemoteCertificateValidationCallback =
-                CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null)
+                CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null, certificateAuthorities)
         }
     };
+
+    static bool IsTransportFailure(Exception exception) => exception is HttpRequestException { StatusCode: null };
 
     static bool IsTransientStatus(HttpStatusCode statusCode) =>
         (int)statusCode >= 500 || statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests;
@@ -188,23 +307,19 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     async Task<string?> FetchToken(CancellationToken cancellationToken)
     {
         var tokenEndpoint = _tokenEndpoint();
+        var loggedEndpoint = TokenDiagnostics.Label(_source);
         try
         {
-            _logger.RequestingAccessToken(tokenEndpoint);
+            _logger.RequestingAccessToken(loggedEndpoint);
 
-            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["grant_type"] = "client_credentials",
-                ["client_id"] = _clientId,
-                ["client_secret"] = _clientSecret
-            });
+            using var content = new FormUrlEncodedContent(CreateTokenRequestParameters());
 
             var response = await _httpClient.PostAsync(new Uri(tokenEndpoint), content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
-                await LogTokenRequestFailure(response, cancellationToken);
-                response.EnsureSuccessStatusCode();
+                await LogTokenRequestFailure(response, loggedEndpoint, cancellationToken);
+                throw new HttpRequestException($"The token endpoint returned HTTP status {(int)response.StatusCode}.", null, response.StatusCode);
             }
 
             var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -234,29 +349,37 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             {
                 // Only the refresh margin has been crossed, not the actual expiry - a transient
                 // token-endpoint failure must not take down an otherwise healthy session.
-                _logger.ServingCachedTokenAfterFailedFetch(tokenEndpoint, _expiresAt, ex);
+                _logger.ServingCachedTokenAfterFailedFetch(loggedEndpoint, _expiresAt, TokenDiagnostics.Label(TokenDiagnostics.Categorize(ex)));
                 return cachedToken;
             }
 
-            LogTokenFetchFailure(tokenEndpoint, ex);
+            LogTokenFetchFailure(loggedEndpoint, ex);
+            if (IsTransportFailure(ex))
+            {
+                // The original transport failure can name the remote host; surface the category only.
+                throw new HttpRequestException(TokenDiagnostics.Describe(TokenDiagnostics.Categorize(ex)));
+            }
+
             throw;
         }
     }
 
-    async Task LogTokenRequestFailure(HttpResponseMessage response, CancellationToken cancellationToken)
+    async Task LogTokenRequestFailure(HttpResponseMessage response, string loggedEndpoint, CancellationToken cancellationToken)
     {
-        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+        // Never log the remote reason phrase or response body: a token endpoint can reflect the submitted credentials.
+        var errorCode = OAuthErrorCodes.Describe(await response.Content.ReadAsStringAsync(cancellationToken));
+        var statusName = response.StatusCode.ToString();
         if (IsTransientStatus(response.StatusCode))
         {
-            _logger.TokenRequestFailed((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
+            _logger.TokenRequestFailed(loggedEndpoint, (int)response.StatusCode, statusName, errorCode);
         }
         else
         {
-            _logger.TokenRequestRejected((int)response.StatusCode, response.ReasonPhrase ?? "Unknown", errorContent);
+            _logger.TokenRequestRejected(loggedEndpoint, (int)response.StatusCode, statusName, errorCode);
         }
     }
 
-    void LogTokenFetchFailure(string tokenEndpoint, Exception exception)
+    void LogTokenFetchFailure(string loggedEndpoint, Exception exception)
     {
         switch (exception)
         {
@@ -264,10 +387,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
                 // The HTTP response status was already reported; do not log it a second time.
                 break;
             case HttpRequestException:
-                _logger.TokenEndpointUnreachable(tokenEndpoint, exception);
+                _logger.TokenEndpointUnreachable(loggedEndpoint, TokenDiagnostics.Label(TokenDiagnostics.Categorize(exception)));
                 break;
             default:
-                _logger.FailedToObtainAccessToken(tokenEndpoint, exception);
+                _logger.FailedToObtainAccessToken(loggedEndpoint, TokenDiagnostics.Label(TokenDiagnostics.Categorize(exception)));
                 break;
         }
     }
@@ -278,4 +401,21 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
 
     string? CachedTokenIfStillValid() =>
         !string.IsNullOrEmpty(_accessToken) && _timeProvider.GetUtcNow() < _expiresAt ? _accessToken : null;
+
+    Dictionary<string, string> CreateTokenRequestParameters()
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            ["grant_type"] = "client_credentials",
+            ["client_id"] = _clientId,
+            ["client_secret"] = _clientSecret
+        };
+
+        if (!string.IsNullOrWhiteSpace(_scope))
+        {
+            parameters["scope"] = _scope;
+        }
+
+        return parameters;
+    }
 }

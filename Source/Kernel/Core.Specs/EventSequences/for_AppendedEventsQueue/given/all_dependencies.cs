@@ -19,12 +19,13 @@ public class all_dependencies : Specification
         // on the caller here deadlocks the spec under constrained parallelism (e.g. CI's 2-core agents):
         // the handler's continuations and the test's AwaitQueueDepletion timers contend for the same
         // starved thread pool and never make progress. Offload to a dedicated thread to mirror production.
+        // The task it returns is the work's own, as in production: a lane's completion is what a successor lane waits on.
         _taskFactory
-            .When(_ => _.Run(Arg.Any<Func<Task>>()))
-            .Do(callInfo => Task.Factory.StartNew(
+            .Run(Arg.Any<Func<Task>>())
+            .Returns(callInfo => Task.Factory.StartNew(
                 callInfo.Arg<Func<Task>>(),
                 CancellationToken.None,
                 TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
-                TaskScheduler.Default));
+                TaskScheduler.Default).Unwrap());
     }
 }

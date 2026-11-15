@@ -1,6 +1,6 @@
 ---
-title: Operating Chronicle
-description: The operator path for a running Chronicle: watch health, find a stuck observer, read the failure, choose a recovery and confirm it worked.
+title: Operate and recover Chronicle observers
+description: Diagnose stopped Chronicle observers, choose a recovery that preserves or rebuilds state, and verify that event processing and output recover.
 ---
 
 import { CardGrid } from '@astrojs/starlight/components';
@@ -12,20 +12,22 @@ import TopicHero from '@components/TopicHero.astro';
   eyebrow="Operations"
   title="Operate a running Chronicle"
 >
-  An observer stopped, a read model went stale, or an alert fired. This section
-  gives you one path from the symptom to a confirmed recovery, and sends you to
-  the Cratis CLI pages that own every command.
+  Use Cratis Chronicle's observer state, failed-partition records and jobs to
+  find why processing stopped, choose a recovery and check the resulting output.
+  Start here when a read model goes stale, a reactor stops doing its work or an
+  observer alert fires.
 </TopicHero>
 
 ## The operator journey
 
-1. **Watch.** Chronicle exposes a [health endpoint](/chronicle/hosting/configuration/health-endpoint/) and can [alert on observer failures](/chronicle/hosting/alerting-on-observer-failures/). Start from an alert rather than from a user report.
-2. **Find the stuck observer.** [Diagnostics](/chronicle/operations/diagnostics/) lists what to look at, in order.
-3. **Read the failure.** The failed partition carries the error message and the sequence number it stopped at.
-4. **Choose a recovery.** [Recovering from failures](/chronicle/operations/recovering-from-failures/) explains retry, partition replay, full observer replay and clearing quarantine, and when each one fits.
-5. **Confirm.** [Recover a failed partition](/chronicle/operations/recover-a-failed-partition/) ends with what done looks like.
+An observer processes events for a projection, reducer or reactor. A failed partition holds back part of that work; it does not necessarily stop the whole observer. Diagnose the affected scope before choosing how much history to process again.
 
-Chronicle already retries a failed partition on its own, with a backoff. You step in when the retries are used up, or when you know retrying cannot help.
+1. Monitor the [health endpoint](/chronicle/hosting/configuration/health-endpoint/) and configure [alerts on observer failures](/chronicle/hosting/alerting-on-observer-failures/) so you can investigate before a user reports stale output.
+2. Follow [Diagnostics](/chronicle/operations/diagnostics/) to find the observer and partition in the correct event store and namespace. Read the exception and failing event sequence number, then check whether a recovery job is already running.
+3. Use [Recovering from failures](/chronicle/operations/recovering-from-failures/) to choose between preserving the existing state with a retry and rebuilding it with a replay. Clearing quarantine can start processing again, so fix the cause and account for repeated side effects before releasing it.
+4. Follow [Recover a failed partition](/chronicle/operations/recover-a-failed-partition/) to carry out the recovery through the Cratis CLI runbook and verify both processing progress and application output.
+
+Chronicle automatically retries failed partitions with backoff, waiting longer between attempts. Intervene when the retry budget is exhausted or when the cause needs a code, data or dependency fix. A successful recovery request is only the start: the job and resulting output still need checking.
 
 ## Continue
 
@@ -34,10 +36,10 @@ Chronicle already retries a failed partition on its own, with a backoff. You ste
     Start from a symptom in your application.
   </SimpleCard>
   <SimpleCard title="Workbench" icon="laptop" link="/chronicle/workbench/">
-    Inspect runtime state and run recovery actions from a local browser.
+    Inspect runtime state and choose recovery actions in a browser.
   </SimpleCard>
   <SimpleCard title="Cratis CLI" icon="rocket" link="/cli/">
-    The commands for diagnosis and recovery.
+    Find the command syntax and options for diagnosis and recovery.
   </SimpleCard>
   <SimpleCard title="Jobs" icon="seti:json" link="/chronicle/jobs/">
     See and control the background work the kernel runs.

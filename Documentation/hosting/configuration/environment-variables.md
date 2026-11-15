@@ -1,8 +1,7 @@
 ---
+title: Environment variables for Cratis Chronicle Server
 description: Set any Chronicle Server option with environment variables using the Cratis__Chronicle__ prefix and double underscores for nested sections.
 ---
-# Environment Variables
-
 All configuration options can be set using environment variables with the prefix `Cratis__Chronicle__`. Use double underscores (`__`) to represent nested configuration sections.
 
 ## Example configuration
@@ -35,8 +34,13 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__HealthCheckEndpoint | Health check endpoint path |
 | Cratis__Chronicle__Telemetry__OrleansTracing | Export Orleans runtime and grain-call spans (default `false`); trace context propagation remains enabled; see [OpenTelemetry](open-telemetry.md#orleans-trace-volume) |
 | Cratis__Chronicle__Telemetry__GrpcClientTracing | Enable kernel gRPC client tracing (default `false`); see [OpenTelemetry trace volume defaults](open-telemetry.md#trace-volume-defaults) |
+| Cratis__Chronicle__Telemetry__MetricSeriesLimit | Most series each metric instrument holds (default `500`); see [how many series to expect](open-telemetry.md#how-many-series-to-expect) |
 | Cratis__Chronicle__Health__Port | Dedicated HTTP/1.1 port for the health endpoint |
 | Cratis__Chronicle__Health__Tls | Whether the dedicated health port uses TLS (default `true`) |
+| Cratis__Chronicle__Federation__Enabled | Opens the dedicated federation listener and runs consumer bindings (default `false`); see [Federation](federation.md) |
+| Cratis__Chronicle__Federation__Port | Port of the federation listener (default `35100`) |
+| Cratis__Chronicle__Federation__CertificatePath | PKCS#12 certificate of the federation listener |
+| Cratis__Chronicle__Federation__CertificatePasswordPath | File holding the federation certificate password |
 | Cratis__Chronicle__Features__Api | Enable REST API endpoint |
 | Cratis__Chronicle__Features__Workbench | Enable Workbench UI |
 | Cratis__Chronicle__Features__ChangesetStorage | Enable changeset storage |
@@ -44,6 +48,12 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Features__IsolatedPartitionReplay | Reserved: rebuild a replayed partition in isolation (default `false`, no effect yet) |
 | Cratis__Chronicle__Storage__Type | Storage provider type |
 | Cratis__Chronicle__Storage__ConnectionDetails | Storage connection string |
+| Cratis__Chronicle__Storage__ConnectionDetailsFile | Path of a file holding the storage connection string, such as a mounted Kubernetes Secret; set either this or `ConnectionDetails` |
+| Cratis__Chronicle__Sinks__Configurations__\<name\>__ConnectionDetailsFile | Path of a file holding the connection string of a named sink; set either this or its `ConnectionDetails` |
+| Cratis__Chronicle__Sinks__Configurations__\<name\>__ServerFile | Path of a file holding the bolt address of a named Neo4j sink; set either this or its `Server` |
+| Cratis__Chronicle__Sinks__Configurations__\<name\>__PasswordFile | Path of a file holding the password of a named Neo4j sink; set either this or its `PasswordSecret` |
+| Cratis__Chronicle__Neo4j__ServerFile | Path of a file holding the bolt address of the default graph connection; set either this or `Neo4j__Server` |
+| Cratis__Chronicle__Neo4j__PasswordFile | Path of a file holding the password of the default graph connection; set either this or `Neo4j__PasswordSecret` |
 | Cratis__Chronicle__Storage__Schema | SQL schema for Chronicle's tables |
 | Cratis__Chronicle__Storage__CreateIfMissing | Whether Chronicle creates missing databases and schemas |
 | Cratis__Chronicle__Storage__PostgreSqlPooling__MaxPoolSize | Maximum PostgreSQL connections per database pool (default 20; connection string values take precedence) |
@@ -53,6 +63,7 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Observers__LiveDeliveryBudget | Maximum events delivered inline in a live call (default 100); larger batches are deferred to partition catch-up (0 or less disables the limit) |
 | Cratis__Chronicle__Observers__MaxConcurrentPartitions | Upper bound on parallel job steps, applied together with `Jobs__MaxParallelSteps` (does not limit live event delivery) |
 | Cratis__Chronicle__Observers__MaxConcurrentRegistrations | Maximum concurrent gRPC reactor and reducer registrations per silo (default 0, unlimited; values below 1 disable the gate). Does not limit event append or observer delivery |
+| Cratis__Chronicle__Observers__MaxConcurrentSubscriptions | Maximum concurrent projection subscriptions and failed-partition recovery batches per silo, shared by every event store (default 0, automatic: two per processor, at least 4 and at most 16) |
 | Cratis__Chronicle__Observers__MaxRetryAttempts | Maximum retry attempts for observers |
 | Cratis__Chronicle__Observers__BackoffDelay | Initial observer backoff delay in seconds |
 | Cratis__Chronicle__Observers__ExponentialBackoffDelayFactor | Exponential backoff multiplier |
@@ -91,6 +102,8 @@ the same way (`compliance.encryption.migrateFromDefaultStorage` becomes
 | Cratis__Chronicle__Clustering__SingleWriterLease__Enabled | Single-writer protection for Localhost persistent storage (unset: automatic; `false`: opt out) |
 | Cratis__Chronicle__Clustering__SingleWriterLease__Ttl | Lease lifetime, minimum `00:00:05` (default `00:00:30`) |
 | Cratis__Chronicle__Clustering__SingleWriterLease__AcquireTimeout | Maximum startup wait; zero attempts once (default `00:02:00`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__Standby | Report ready in standby while waiting for the lease, for start-before-stop rollouts (default `false`) |
+| Cratis__Chronicle__Clustering__SingleWriterLease__StandbyStartupTimeout | How long standby may last after the lease is taken before readiness reports unhealthy (default `00:10:00`) |
 | Cratis__Chronicle__Tls__Enabled | Use TLS on the Chronicle port (default `true`); `false` requires a private h2c backend behind an HTTPS proxy |
 | Cratis__Chronicle__ForwardedHeaders__KnownProxies__0 | Trusted immediate proxy IP (index upward for more than one); see [Trusted reverse proxies](tls.md#trusted-reverse-proxies) |
 | Cratis__Chronicle__ForwardedHeaders__KnownNetworks__0 | Trusted immediate proxy CIDR (index upward for more than one) |

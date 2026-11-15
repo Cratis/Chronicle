@@ -18,6 +18,7 @@ internal sealed class FallbackServiceProvider(IServiceProvider inner, MutableSer
       IDisposable, IAsyncDisposable
 {
     /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The shared host would resolve a test service missing from the current context.</exception>
     public object? GetService(Type serviceType)
     {
         // Return ourselves for framework meta-types so scoped resolution also goes through the wrapper.
@@ -61,9 +62,7 @@ internal sealed class FallbackServiceProvider(IServiceProvider inner, MutableSer
         // may take dependencies must not be constructed from it for a later context.
         if (registry.IsContainerFallbackRejected(serviceType))
         {
-            throw new InvalidOperationException(
-                $"Service '{serviceType.FullName}' is not registered for the current test context and would be constructed by the shared test host with dependencies from the first context. " +
-                $"Register it explicitly in the current context's ConfigureServices, for example services.AddSingleton(new {serviceType.Name}(...)).");
+            throw ContainerFallbackPolicy.CreateRejection(serviceType);
         }
 
         // Fall back to the inner (built) container for framework and silo types.

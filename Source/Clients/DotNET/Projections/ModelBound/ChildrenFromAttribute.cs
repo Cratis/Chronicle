@@ -40,4 +40,25 @@ public sealed class ChildrenFromAttribute<TEvent>(
 
     /// <inheritdoc/>
     public string? IdentifiedBy { get; } = identifiedBy;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Ordering belongs to the collection: every ChildrenFrom attribute on the same member has to agree on it, or leave it unset.
+    /// Updating an existing child never moves it.
+    /// </remarks>
+    public bool Prepend { get; init; }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Ordering belongs to the collection: every ChildrenFrom attribute on the same member has to agree on it, or leave it unset.
+    /// Children without a value sort first. Updating an existing child never moves it, even when this property changes.
+    /// </remarks>
+    public string? OrderBy { get; init; }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Ordering belongs to the collection: every ChildrenFrom attribute on the same member has to agree on it, or leave it unset.
+    /// Children without a value sort last. Updating an existing child never moves it, even when this property changes.
+    /// </remarks>
+    public string? OrderByDescending { get; init; }
 }

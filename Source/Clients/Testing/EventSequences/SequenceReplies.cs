@@ -24,6 +24,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
     }
 
     /// <inheritdoc/>
+    public Task<CommandResult<AppendResponse>> Compensate(CompensateRequest request, CallContext callContext = default) => inner.Compensate(request, callContext);
+
+    /// <inheritdoc/>
     public async Task<CommandResult<AppendResponse>> AppendWithNamedTags(AppendWithNamedTagsRequest request, CallContext callContext = default)
     {
         var result = await inner.AppendWithNamedTags(request, callContext);
@@ -94,6 +97,9 @@ internal sealed class SequenceReplies(IEventSequences inner, DropReplyIntercepto
 
     /// <inheritdoc/>
     public Task<CommandResult> Redact(RedactRequest request, CallContext callContext = default) => inner.Redact(request, callContext);
+
+    /// <inheritdoc/>
+    public Task<CommandResult<Guid>> CopyEventsForEventSource(CopyEventsForEventSourceRequest request, CallContext callContext = default) => inner.CopyEventsForEventSource(request, callContext);
 
     /// <inheritdoc/>
     public Task<CommandResult> RedactForEventSource(RedactForEventSourceRequest request, CallContext callContext = default) => inner.RedactForEventSource(request, callContext);

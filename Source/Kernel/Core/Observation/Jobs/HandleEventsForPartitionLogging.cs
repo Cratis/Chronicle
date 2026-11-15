@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs;
@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Observation.Jobs;
 
 internal static partial class HandleEventsForPartitionLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failing job {JobId} step {JobStepId}: the prepared job step state was missing its observer key")]
+    internal static partial void MissingObserverKey(this ILogger<HandleEventsForPartition> logger, JobId jobId, JobStepId jobStepId);
+
     [LoggerMessage(LogLevel.Debug, "Preparing HandleEventsForPartition job step handling events for partition {Partition} from sequence number {FromSequenceNumber} to sequence number {ToSequenceNumber}")]
     internal static partial void Preparing(this ILogger<HandleEventsForPartition> logger, Key partition, EventSequenceNumber fromSequenceNumber, EventSequenceNumber toSequenceNumber);
 

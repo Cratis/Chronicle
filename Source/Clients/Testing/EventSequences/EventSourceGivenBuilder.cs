@@ -19,11 +19,16 @@ public class EventSourceGivenBuilder(IEventLog eventLog, EventSourceId eventSour
     /// </summary>
     /// <param name="events">The event instances to seed, in order.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="GivenEventAppendFailed">Thrown when the kernel refuses an event.</exception>
     public async Task Events(params object[] events)
     {
         foreach (var @event in events)
         {
-            await eventLog.Append(eventSourceId, @event);
+            var result = await eventLog.Append(eventSourceId, @event);
+            if (!result.IsSuccess)
+            {
+                throw new GivenEventAppendFailed(@event.GetType(), result);
+            }
         }
     }
 }

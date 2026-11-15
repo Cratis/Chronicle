@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Storage.Graphs;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
@@ -46,4 +47,11 @@ public interface ISinks
     /// for the read model's own container. Used by materialization generations, each writing only to its own destination.
     /// </remarks>
     Task<ISink> GetFor(ReadModelDefinition readModel, ReadModelContainerName container);
+
+    /// <summary>
+    /// Get a <see cref="IGraphSink"/> for a graph read model.
+    /// </summary>
+    /// <param name="readModel"><see cref="ReadModelDefinition"/> of the graph read model.</param>
+    /// <returns><see cref="IGraphSink"/> instance, with its schema ensured.</returns>
+    Task<IGraphSink> GetGraphFor(ReadModelDefinition readModel);
 }

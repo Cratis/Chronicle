@@ -60,7 +60,7 @@ public class a_release_boundary : Specification
             GenerationalContent = new Dictionary<int, string> { [1] = "{\"name\":\"ciphertext\"}", [2] = "{\"fullName\":\"ciphertext\"}" },
             GenerationalHashes = new Dictionary<int, EventHash> { [1] = "first-hash", [2] = "second-hash" }
         };
-        _release = new(_storage, new EventCompliance(_metadata, _converter), _migrations, _metadata, _converter);
+        _release = new(_storage, new EventCompliance(_metadata, _converter, new OwnGenerationSchemaCache()), _migrations, _metadata, _converter, new OwnGenerationSchemaCache());
     }
 
     protected static JsonSchema CreateSchema(string property)

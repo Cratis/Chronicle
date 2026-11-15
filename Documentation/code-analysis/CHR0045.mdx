@@ -1,8 +1,7 @@
 ---
+title: "CHR0045: Event stream metadata attribute on an event type has no effect"
 description: Chronicle analyzer rule CHR0045 reports [EventStreamType] or [EventSourceType] on an event type, where the attribute has no effect on appends.
 ---
-# CHR0045: Event stream metadata attribute on an event type has no effect
-
 ## Rule Description
 
 `[EventStreamType]` or `[EventSourceType]` is applied to a type marked with `[EventType]`, where it does nothing. An append resolves its event source type and event stream type from the arguments it is given — the appending command's metadata, the reactor's, or the explicit parameters — never from the CLR type of the event being appended. Nothing reads either attribute off an event type, so the value is not transmitted, never reaches the appended event's context, and narrows nothing on the way back out.

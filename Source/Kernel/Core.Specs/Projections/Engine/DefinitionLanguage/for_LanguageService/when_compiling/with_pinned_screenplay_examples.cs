@@ -13,18 +13,18 @@ public class with_pinned_screenplay_examples : for_LanguageService.given.a_langu
     static readonly string _corpus = Path.Combine(AppContext.BaseDirectory, "Projections", "Engine", "DefinitionLanguage", "ScreenplayExamples");
     static readonly IReadOnlyDictionary<string, string> _rejected = new Dictionary<string, string>
     {
-        ["Documentation/screenplay/projections/removal.md:82"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/removal.md:98"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/removal.md:164"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/removal.md:210"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/removal.md:234"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/removal.md:258"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/removal.md:88"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/removal.md:106"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/removal.md:178"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/removal.md:228"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/removal.md:254"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
         ["Documentation/screenplay/projections/removal.md:280"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/removal.md:328"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/removal.md:374"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
-        ["Documentation/screenplay/projections/variants.md:48"] = "Chronicle reports unsupported variant blocks as compiler errors (#4109); declaration-language variant lowering is not implemented",
-        ["Documentation/screenplay/projections/variants.md:63"] = "Chronicle reports unsupported variant blocks as compiler errors (#4109); declaration-language variant lowering is not implemented",
-        ["Documentation/screenplay/projections/variants.md:81"] = "Chronicle reports unsupported variant blocks as compiler errors (#4109); declaration-language variant lowering is not implemented"
+        ["Documentation/screenplay/projections/removal.md:304"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/removal.md:348"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/removal.md:393"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
+        ["Documentation/screenplay/projections/variants.md:52"] = "Chronicle reports unsupported variant blocks as compiler errors (#4109); declaration-language variant lowering is not implemented",
+        ["Documentation/screenplay/projections/variants.md:69"] = "Chronicle reports unsupported variant blocks as compiler errors (#4109); declaration-language variant lowering is not implemented",
+        ["Documentation/screenplay/projections/variants.md:89"] = "Chronicle reports unsupported variant blocks as compiler errors (#4109); declaration-language variant lowering is not implemented"
     };
 
     JsonDocument _provenance;

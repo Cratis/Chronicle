@@ -1,8 +1,7 @@
 ---
-description: Reference of the ports Chronicle Server exposes, with TLS defaults and an optional dedicated health port.
+title: Port reference for Cratis Chronicle Server
+description: Cratis Chronicle Server exposes ports for gRPC, HTTP, Orleans clustering and optional health probes, with TLS defaults and firewall guidance.
 ---
-# Port Reference
-
 Chronicle Server exposes the following ports:
 
 ## Example configuration

@@ -1,31 +1,33 @@
 ---
-description: Chronicle behavior patterns mine a store's event history for recurring behavior so you can ask what usually happens in a given situation.
+title: "Cratis Chronicle behavior patterns: understand recurring actions"
+description: Cratis Chronicle behavior patterns summarize recurring actions in event context so you can ask what a user usually does in a given situation.
 ---
-# Behavior Patterns
 
-Chronicle mines the event history of a store for **recurring behavior** — combinations of context that keep leading to the same action — and lets you ask what usually happens in a situation. The answer is backed by what actually happened, not by a guess.
+<a id="behavior-patterns"></a>
 
-The question it answers is: *given this user, this day, this time of day, what does this person normally do?* An agent, a workflow, or the Workbench can ask it and act on a real answer, or learn that there is no established behavior and say so.
+Cratis Chronicle behavior patterns summarize recurring actions in event context so you can ask what a user usually does in a given situation. For example, an application can ask which commands a person usually carries out on Monday mornings, using the history recorded for that person.
+
+Use the results to suggest a familiar action in your application, give an agent context about established routines, or inspect those routines in the Workbench. Patterns describe observed behavior; they do not establish what someone should do next. An empty result means no pattern meets the query's conditions, not that an action is wrong.
 
 ## What a pattern is
 
-A **behavior pattern** is a combination of facets that recurred often enough and reliably enough to survive:
+A behavior pattern is a recurring combination of facets: named dimensions of an event's context, such as the command, day of the week, or part of the day. Chronicle retains combinations that meet its support and confidence thresholds.
 
 | Part | Meaning |
 | --- | --- |
-| **Grouping key** | The scope the behavior belongs to — normally the user |
-| **Facets** | The contextual dimensions the pattern constrains, and their values |
-| **Occurrences** | How many times it has been observed |
-| **Confidence** | How often it holds when its context is present, 0 to 1 |
-| **Support** | The share of all observed events it was seen in, 0 to 1 |
-| **Weight** | Recency-weighted strength — decays as the behavior goes unseen |
-| **First seen / last seen** | When it was first and last observed |
+| Grouping key | The scope the behavior belongs to, normally a user |
+| Facets | The context dimensions and values the pattern describes |
+| Occurrences | The approximate count of observed events containing the combination |
+| Confidence | How often the action occurs within the pattern's context, from 0 to 1 |
+| Support | The share of observed events in this scope containing the combination, from 0 to 1 |
+| Weight | A recency-weighted measure that decreases with elapsed time between observations |
+| First seen / last seen | When the combination was first and last observed |
 
-A pattern such as `{ Day: Monday, TimeBucket: EarlyMorning, CommandType: RegisterInvoice }` with a confidence of `0.9` reads as: *first thing on a Monday, this person enters supplier invoices nine times out of ten.*
+For a pattern such as `{ Day: Monday, TimeBucket: EarlyMorning, CommandType: RegisterInvoice }`, confidence of `0.9` means that about 90% of this scope's observed events in that day-and-time context carry that action. It does not mean the person registers invoices on 90% of Mondays: the miner counts events, not calendar days or command invocations.
 
 ## Facets
 
-Facets are read off an event's **context** — never its content — so the same vocabulary applies to every event type in every event store.
+Chronicle reads facets from an event's context, not its payload. A pattern can describe who acted, what caused the event, and when it occurred without depending on fields specific to an invoice or a leave request.
 
 | Facet | Where it comes from |
 | --- | --- |
@@ -40,113 +42,108 @@ Facets are read off an event's **context** — never its content — so the same
 | `Day` | Day of week |
 | `TimeBucket` | `EarlyMorning`, `Morning`, `Midday`, `Afternoon`, `Evening` or `Night` |
 
-Every time-derived facet comes from the event's own **occurred** timestamp, never from wall-clock time at processing. A backdated append and a replay both land in the bucket the event actually belongs to.
+Time-derived facets use the event's own occurred timestamp, including its offset, rather than the time Chronicle processes it. A backdated append therefore contributes to the day and time bucket recorded on the event. The pattern capture observer is not replayable; replay is not a way to rebuild these counts.
 
 ### Who the behavior belongs to
 
-An agent acting on behalf of a person contributes to **that person's** behavior, not its own — otherwise one habit would be split across every agent that happened to carry it out. The agent is still recorded as the initiator, so agent-driven and user-driven behavior stay distinguishable.
+Chronicle groups behavior by the identity at the root of the on-behalf-of chain. An agent acting for a person therefore contributes to that person's scope. `InitiatorType` still distinguishes agent-driven work from work the person does directly.
 
-An event nobody can be named for is not mined at all. Its behavior belongs to no scope, and counting it into a catch-all that every unattributed append pours into produces noise rather than a pattern.
+Events without an identifiable root identity are not mined. They do not contribute to a shared anonymous scope. Scopes are also separate for each event store and namespace, so the same identity name in two namespaces does not combine their histories.
 
 ## How mining works
 
-Chronicle does not store anything per event. It keeps a bounded **Lossy Counting** sketch per scope:
+The miner keeps a Lossy Counting sketch per scope: an in-memory summary of candidate combinations and their counts, rather than a separate mining record for every event. It expands each event's selected facets into combinations of up to `MaximumCombinationSize` facets, which defaults to 3. Limiting the combination size controls how many candidates each event contributes.
 
-1. Each event's facets are expanded into every combination up to `MaximumCombinationSize` (3 by default). The cap is what keeps the candidate space polynomial rather than exponential.
-2. Each combination is counted in the sketch. Memory is bounded by the `Error` parameter regardless of how long the stream runs — nothing with a true frequency above the support threshold is ever missed.
-3. A combination that goes unseen **decays**: its weight is multiplied by `DecayFactor` for every day since it was last seen, so behavior that stopped happening sinks below the threshold and is pruned instead of competing forever with what a person does now.
-4. Only combinations clearing both `MinimumSupport` and `MinimumConfidence` are persisted.
+Lossy Counting periodically removes combinations that have not remained frequent enough. The `Error` setting controls the counting approximation and its memory trade-off. Only combinations meeting both `MinimumSupport` and `MinimumConfidence` are persisted as patterns, so pattern storage contains surviving summaries rather than a copy of the event history.
 
-Storage therefore scales with **distinct recurring behavior**, not with event volume. A store that appends millions of events but sees a few hundred recurring behaviors holds a few hundred rows.
+Weight is separate from these thresholds. When a combination occurs again, its previous weight is reduced according to `DecayFactor` and the elapsed time before the new occurrence is added. A lower weight does not by itself remove a pattern: support and confidence use occurrence counts.
 
-Mining happens in memory on every observed event; **persistence is deferred** — the scopes an interval touched are rewritten on the `PersistenceInterval` cadence, so a bulk ingest of thousands of events costs a handful of writes rather than one rewrite per event. Sketches are kept **per event store and per namespace**: the same scope name in two stores — or two tenants' namespaces — is two different people's behavior and never counts into one sketch.
+Mining updates the sketch as events are observed. Persistence happens later, on the `PersistenceInterval` cadence, and rewrites the surviving patterns for scopes touched during that interval. Allow for observer processing and this persistence delay before expecting a newly appended event to affect a query.
 
 ### Across restarts
 
-The sketch lives in memory, but what survived it is persisted — so when the server restarts, a scope's established patterns are **restored into the sketch before anything new is mined for it** and counting continues where it left off. Without that, the first events after a restart would be a fresh sketch's only observations, held with full support, and rewriting the scope from them would wipe established behavior. `Occurrences` stays a bounded approximation: a small tail of events can be re-mined after a crash, over-counting by at most the observer's checkpoint window.
+Before mining new events for a scope after a restart, Chronicle restores its persisted patterns into the sketch. This preserves established behavior instead of treating the first few new events as the scope's entire history.
+
+`Occurrences` remains approximate. Lossy Counting can undercount combinations, and events after the observer's last checkpoint can be mined again after a crash. Use the event log when you need an exact tally.
 
 ### Confidence
 
-Confidence reads as the rule *"in this context, this action follows"*: the frequency of the whole combination over the frequency of the same combination without its `CommandType` facet. A combination that names no action is pure context, and its confidence is its support.
+For a combination containing `CommandType` and context facets, confidence is the combination's occurrence count divided by the count for the same context without `CommandType`. This answers how common the action is within that context. A combination with no action, or with an action but no context facets, uses support as its confidence.
 
 ## Configuration
 
-Under `Cratis:Chronicle:PatternDetection`:
+Configure mining under `Cratis:Chronicle:PatternDetection`. Start with the default facets, then add dimensions only when they help answer your application's question.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `Facets` | `CommandType`, `InitiatorType`, `CausedByCommand`, `AggregateType`, `Day`, `TimeBucket` | Which facets take part in the mined combination |
 | `MaximumCombinationSize` | `3` | The largest number of facets a combination may hold |
-| `Error` | `0.001` | The Lossy Counting error parameter — smaller buys accuracy with memory |
+| `Error` | `0.001` | The Lossy Counting error parameter; a smaller value trades more memory for counting accuracy |
 | `MinimumSupport` | `0.01` | The smallest share of events a combination must hold to survive |
 | `MinimumConfidence` | `0.5` | The smallest confidence a combination must hold to survive |
-| `DecayFactor` | `0.99` | Daily decay applied to a combination that has gone unseen |
+| `DecayFactor` | `0.99` | Daily decay factor applied to a combination's weight between observations |
 | `PersistenceInterval` | `5` | Seconds between persisting the scopes mining has touched |
 
-`Year` and `Month` are deliberately absent from `Facets`: they are kept on a surviving pattern for recency, but combining them multiplies the candidate space by every month the store has been running while splitting one behavior across all of them. Add them when a deployment wants to mine seasonality and can afford the cardinality.
+`Year` and `Month` are available but excluded from `Facets` by default. Including them splits otherwise recurring behavior across separate years or months and increases the number of distinct combinations to track. Add them when that seasonal distinction matters. `FirstSeen` and `LastSeen` retain the pattern's observed time range without adding those dimensions.
 
 ## When capture starts
 
-Pattern capture observes the event types an event store has registered, and re-subscribes as more are registered — so a store that gains its first event types while the server is already running starts being captured then, not at the next restart. A **namespace added while the server runs** is subscribed the moment it appears, so a tenant onboarded between restarts is mined from its first event.
+Pattern capture subscribes to the event types registered in an event store and updates its subscriptions as more types are registered. It also subscribes namespaces added while the server is running. Neither a new event type nor a new namespace requires a restart to begin capture.
 
 ## Naming the command
 
-For `CommandType` and `CausedByCommand` to be meaningful, something above the event has to name the command. [Cratis Arc](/arc/) records a `Command` causation naming the executing command for the duration of that command, so nested commands produce a real "caused by" chain and sibling commands do not. Anything else appending to Chronicle can do the same by putting a `commandType` property on its causation.
+To distinguish commands in patterns, record their names in the causation chain: the context links describing what led to an event. The Chronicle integration in [Cratis Arc](/arc/) records a `Command` causation for the duration of each command. Nested commands add another link; commands executed one after another do not become each other's cause. Applications appending directly to Chronicle can supply a `commandType` property on their causation.
 
-Without such a link the mined `CommandType` falls back to the event type, which is still a meaningful action in an event-sourced store — the fact that was recorded *is* what happened.
+The miner uses the last named causation link for `CommandType` and the preceding named link for `CausedByCommand`. When no link names itself, `CommandType` falls back to the event type. Without command metadata, do not interpret that fallback as the name of a command that ran.
 
 For an ASP.NET Core request, mining uses the matched route **template** (for example, `/customers/{email}`), not the request path (such as `/customers/jane@example.com`). The causation middleware still records the actual path for other consumers, but the miner ignores it. When no route template is available, the request is named by its causation type instead. Place the middleware after endpoint routing if request templates should be available to it.
 
-Patterns persisted before this change may contain actual request paths. Upgrading does not remove those historical values; review stored patterns for cleanup where needed.
+Older persisted patterns may contain actual request paths. Upgrading does not remove those historical values; review stored patterns for cleanup where needed.
 
 ## Querying patterns
 
-Ask what usually happens with the [.NET client's pattern API](/chronicle/clients/dotnet/patterns/), or over gRPC through the `Patterns` service:
+Choose the query according to whether you need an action suggestion, a description of known behavior, or data to browse. The [.NET client's pattern API](/chronicle/clients/dotnet/patterns/) exposes these methods; the gRPC `Patterns` service provides the underlying queries.
 
-- **`GetUsualActions`** — given a situation, what is usually *done* in it, ranked by confidence.
-- **`GetPatterns`** — given a situation, the patterns that *describe* it, ranked by specificity and then confidence.
-- **`GetPatternsForScope`** — everything a scope has established, unfiltered, for browsing.
-- **`GetScopes`** — the scopes that hold any patterns at all, which is what a browsing view needs before it can offer one.
+| .NET method | Use it to |
+| --- | --- |
+| `GetUsualActions` | Find actions associated with a context, ranked by confidence |
+| `GetPatterns` | Find patterns describing a supplied situation, ranked by specificity and then confidence |
+| `GetPatternsForScope` | Browse all established patterns for one scope |
+| `GetScopes` | List scopes with established patterns |
 
 ### Two questions, and why they are different calls
 
-Most applications want the first one: *what does this person usually do here?* You describe the situation you are in — a day, a part of the day, the kind of thing being worked on — and the answer is the command.
+Use `GetUsualActions` when you know the situation but want to discover the action. Given Monday and early morning, it can return a pattern like `CommandType=RegisterInvoice; Day=Monday; TimeBucket=EarlyMorning`. It compares the pattern's context facets with your query and returns the command as part of the answer.
 
-The second is the opposite question: *is what I am looking at normal?* There you already know the command, and you want the established patterns that cover it — which is what you check an action against before flagging it as unusual.
+Use `GetPatterns` when you already know the action and want established patterns that describe it. Every facet in a returned pattern must be present with the same value in your query, including `CommandType` if the pattern names one. This can supply context for a review of an unfamiliar action, but an absent match is not an anomaly verdict.
 
-They cannot be one call, because they compare different halves of a pattern. A pattern like `CommandType=RegisterInvoice; Day=Monday; TimeBucket=EarlyMorning` **describes** a situation only if everything it names was named in the question. But nobody asking what usually happens on a Monday morning can name the command — naming it is what they are asking for. So `GetUsualActions` compares only the *context* half of a pattern against your question and hands back the command as the answer, while `GetPatterns` compares the whole pattern and can only ever return facets you already named.
+`GetUsualActions` keeps at most one pattern per action. When several patterns name the same action, it keeps the one using the most context facets, then uses confidence and support to break ties. It ranks the resulting actions by confidence. `GetPatterns` instead ranks by specificity, meaning the number of facets in the pattern, and then confidence.
 
-`GetUsualActions` returns **at most one answer per action**. A habit is established at several context sizes at once — on a Monday, in the early morning, and on a Monday early morning are three mined combinations describing one behavior — and returning all three says the same thing three times while pushing the second-most-likely action out of a limited result set. The one kept is the one conditioned on most of your question.
-
-Ranking differs for the same reason. `GetPatterns` leads with specificity, because the pattern covering most of what you asked describes your situation best. `GetUsualActions` leads with **confidence**, which is already the chance of that action given the context it was established in — a number that compares directly between one answer and the next, where a facet count does not.
-
-**Nothing clearing the confidence bar returns nothing.** An empty answer is a true statement — this scope has no established behavior for this context — and is not padded with the best of a bad set.
+Both calls return an empty result when nothing matches above the requested confidence threshold. They do not substitute a lower-confidence pattern to fill the result set.
 
 ## Asking about a moment
 
-The context an application usually has is a person and a point in time, so every client offers that as a single call on top of `GetUsualActions`: **give it the scope, optionally give it a moment, and it fills in the rest**. The moment defaults to now.
-
-What it fills in is the `Day` and the `TimeBucket`, derived from the moment with **the same rule the engine used when it mined the events**. That rule is the load-bearing part. A caller deriving the bucket itself owns a second copy of it, and when the two drift nothing fails loudly — the query simply asks about a slot the mining never used and comes back empty. Each client therefore exposes the bucketing rule as well, so the copy never has to exist:
+When you have a scope and a point in time, the .NET and Elixir helpers below derive `Day` and `TimeBucket` and query usual actions for that context. Use them instead of duplicating the bucketing rule in your application: a different rule can put your query in a different slot from the recorded events.
 
 | Client | Ask about a moment | Bucket a moment |
 | --- | --- | --- |
 | [.NET](/chronicle/clients/dotnet/patterns/) | `Patterns.GetPatternsAt(scope, moment?)` | `moment.ToTimeBucket()` |
 | [Elixir](https://github.com/Cratis/Chronicle.Elixir/blob/main/Documentation/patterns.md) | `Chronicle.Patterns.get_patterns_at(scope, moment)` | `Chronicle.Patterns.time_bucket(moment)` |
 
-The Elixir moment argument is optional and defaults to now. Other clients — TypeScript, Kotlin, Python — expose the same capability in their own idiom; see the client's own page for the exact shape. The contract they share is the one above: scope required, moment optional and defaulting to now, day and time bucket derived by the engine's rule rather than the caller's.
+The .NET helper defaults to now with the application's local offset; the Elixir helper defaults to now in UTC. For a question about a user's local time, pass a moment carrying the intended offset. Both helpers derive the day and time bucket from that moment without first converting it to UTC. Additional context constraints are supported, but the moment's derived `Day` and `TimeBucket` take precedence over conflicting supplied values. Check the selected client's documentation for its exact arguments rather than assuming other clients expose these helpers.
 
 ## Seeing patterns in the Workbench
 
-Two views under an event store's namespace read the same patterns from different angles.
+Under an event store's namespace, use Behavior patterns to browse patterns across scopes. Its pivot view lets you filter and group by facets such as command, initiator type, day, or event source type. Scope is a filter within the view, so you can compare scopes side by side. Cards show confidence and occurrence counts; opening a pattern shows its facets, confidence, and support in more detail.
 
-**Behavior patterns** pivots every pattern in the namespace, with the scope as the first filter rather than a control above the viewer — so two people's behavior can be compared side by side instead of one being chosen before anything can be seen. The facets become the dimensions and filters, so the same set can be approached from whichever direction the question comes: by command, by who initiated it, by day or part of day, by aggregate, by what caused it, or by how specific the pattern is. Each card carries a confidence bar, so a well-established habit is distinguishable from a marginal one without reading numbers.
+Use Pattern heatmap to inspect one scope's weekly routine. The grid places patterns by day and time bucket, shades each slot using its strongest pattern's occurrence count relative to the scope's busiest slot, and outlines the current slot. Clicking a cell lists its patterns. When the current slot contains a pattern, the panel above the grid shows its strongest pattern. This selection is based on occurrences, with confidence breaking ties; it is not the confidence-ranked result of [`GetUsualActions`](/chronicle/clients/dotnet/patterns/).
 
-**Pattern heatmap** answers the narrower question of *when*, for one scope at a time. It is a day-by-time-of-day grid where each cell is shaded by how much the scope does in that slot, with the current slot outlined. Activity rather than confidence, because confidence saturates — anything habitual sits at a hundred percent, so shading by it would make every slot a person works in look the same. Clicking a cell lists everything established for it. Above the grid, a panel names what the scope usually does *right now* — the same question [`GetUsualActions`](/chronicle/clients/dotnet/patterns/) answers from code, asked with the current day and time bucket as the context.
-
-A pattern that constrains neither day nor time of day belongs to no cell and is left out of the grid rather than drawn somewhere arbitrary. It is still in the pivot view, which is the one that shows everything.
+A pattern needs both `Day` and `TimeBucket` to appear in a grid cell. Patterns missing one or both dimensions remain available in the pivot view. An empty heatmap therefore does not necessarily mean the scope has no patterns.
 
 ## Trying it out
 
-The **Backoffice** sample in the Chronicle repository generates half a year of work in the internal system a mid-size company runs on — accounts payable, the ledger, procurement, HR and payroll — plus agents acting on people's behalf, an overnight system run, and one person with no routine at all as a control.
+The Backoffice sample in the Chronicle repository generates a fictional half-year of accounts payable, ledger, procurement, HR, and payroll work. It includes agents acting for people, scheduled system work, and a person whose work has no regular day-and-time routine.
 
-It is the quickest way to see what the views are for, because nobody in it does only one thing. Everybody holds three or four different jobs at different points in the week, so each person's heatmap is a different shape with several commands in it rather than one dominant block: the accounts payable clerk lights up first thing and again at lunchtime with different work in each, the controller lights up through the afternoons and twice a week at midday, and the person who covers whatever is short-handed lights up nowhere. Its README explains what was put in, so what Chronicle establishes can be checked against it.
+Follow the README in `Samples/Backoffice` to generate the history, then compare scopes in the Workbench. Look for different commands at different times of the week, and compare the heatmap with the pivot view for the person without a time-based routine. The generated history gives you a known scenario to compare with the mined summaries; it is not customer data.
+
+To use the same queries in an application, continue with the [.NET pattern API](/chronicle/clients/dotnet/patterns/), which shows how to supply a scope and context.

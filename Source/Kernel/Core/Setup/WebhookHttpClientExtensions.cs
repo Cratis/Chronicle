@@ -39,7 +39,9 @@ public static class WebhookHttpClientExtensions
             .AddHttpMessageHandler<WebhookValidationHandler>();
         delivery.AddResilienceHandler($"{WebhookHttpClientFactory.HttpClientName}-pipeline", (pipeline, context) =>
             {
-                var webhooks = context.ServiceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value.Webhooks;
+                var options = context.ServiceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value;
+                var webhooks = options.Webhooks;
+                var metrics = new WebhookDeliveryMetrics(options.Telemetry.MetricNames);
 
                 // The observer owns durable retries; the HTTP pipeline performs one attempt only.
                 // Circuit breaker
@@ -55,8 +57,8 @@ public static class WebhookHttpClientExtensions
                     BreakDuration = TimeSpan.FromSeconds(webhooks.CircuitBreakerBreakDurationSeconds),
                     OnOpened = arguments =>
                     {
-                        var authority = arguments.Context.GetRequestMessage()!.RequestUri!.GetLeftPart(UriPartial.Authority);
-                        WebhookDeliveryMetrics.CircuitOpened(authority);
+                        var authority = WebhookDiagnostics.Authority(arguments.Context.GetRequestMessage()!.RequestUri!.AbsoluteUri);
+                        metrics.CircuitOpened(authority);
                         return ValueTask.CompletedTask;
                     }
                 });

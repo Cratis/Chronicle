@@ -50,7 +50,8 @@ public partial class ReadModels
                 Sink = new()
                 {
                     ConfigurationId = Guid.Empty,
-                    TypeId = GetSinkTypeIdFor(readModel.ReadModelType)
+                    TypeId = GetSinkTypeIdFor(readModel.ReadModelType),
+                    Name = GetSinkNameFor(readModel.ReadModelType)
                 },
                 Schema = schemaGenerator.GenerateForReadModel(readModel.ReadModelType).ToJson(),
                 Indexes = GetIndexesForType(readModel.ReadModelType),
@@ -58,6 +59,11 @@ public partial class ReadModels
                 ObserverIdentifier = observerIdentifier
             };
         });
+
+        if (projections is Projections.Projections { Graphs: { } graphs })
+        {
+            definitions.AddRange(graphs.Registrations.Select(_ => _.ReadModel));
+        }
 
         return new()
         {

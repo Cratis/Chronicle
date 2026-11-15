@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Jobs;
 
@@ -22,6 +22,6 @@ public static class JobsManagerExtensions
     {
         // Dispatch as a static call: extension-method lookup stops at the innermost enclosing namespace -
         // this class - whose concept-typed overload then converts the strings back and recurses into itself.
-        return Cratis.Orleans.Jobs.JobsManagerExtensions.GetJobsManager(factory, eventStoreName.Value, namespaceName.Value);
+        return Cratis.Choreography.Jobs.JobsManagerExtensions.GetJobsManager(factory, eventStoreName.Value, namespaceName.Value);
     }
 }

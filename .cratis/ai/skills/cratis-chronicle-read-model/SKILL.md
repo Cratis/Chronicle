@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-read-model
-description: Create a Chronicle read model and its query surface - past-tense event types, the read-model record and its key, choosing a projection or a reducer to build it, snapshot versus observable queries (including why Arc does not discover a query declared to return Subject or BehaviorSubject), and reading an instance directly through IReadModels. Use when creating a read model from scratch; for changing how an existing model is populated use the projection or reducer skill instead.
+description: Use when creating a Chronicle read model from scratch or choosing its C# Arc query surface. Not for changing only an existing model's event mappings or state transitions; use the projection or reducer sibling.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-read-model/SKILL.md -->
@@ -76,7 +76,9 @@ public record <ReadModelName>(
   reserves those for compliance-subject tracking, and analyzer `CHR0035`
   rejects them.
 - `Cratis.Chronicle.ReadModels.IndexAttribute` (`[Index]`) marks a property for
-  indexing in the sink.
+  indexing in the sink, including SQL. `[CompositeIndex]` on the class declares ordered multi-property indexes and
+  `[Index(IsDescending = true)]` declares descending ones. Read
+  [indexing](references/indexing.md) for valid paths, flags and store-specific limits.
 
 ### Shape the model for its consumer
 

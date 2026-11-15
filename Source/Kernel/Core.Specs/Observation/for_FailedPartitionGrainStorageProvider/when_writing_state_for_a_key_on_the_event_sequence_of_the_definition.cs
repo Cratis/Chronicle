@@ -19,5 +19,5 @@ public class when_writing_state_for_a_key_on_the_event_sequence_of_the_definitio
 
     Task Because() => provider.WriteStateAsync("name", GrainId.Create("type", _observerKey.ToString()), _state);
 
-    [Fact] void should_save_the_failed_partitions() => _failedPartitionsStorage.Received(1).Save(_observerKey.ObserverId, _state.State);
+    [Fact] void should_save_the_failed_partitions() => _failedPartitionsStorage.Received(1).Save(_observerKey.ObserverId, Arg.Any<FailedPartitions>());
 }

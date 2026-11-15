@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.Security;
@@ -27,7 +28,7 @@ public class SqlTokenStorage(IDatabase database, JsonSerializerOptions jsonSeria
     public async Task<Token?> GetByReferenceId(string referenceId, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        var entity = await scope.DbContext.Tokens.FirstOrDefaultAsync(t => t.ReferenceId == referenceId, cancellationToken);
+        var entity = await scope.DbContext.Tokens.WhereExact(scope.DbContext, t => t.ReferenceId, referenceId).FirstOrDefaultAsync(cancellationToken);
         return entity is null ? null : ToToken(entity);
     }
 
@@ -96,35 +97,35 @@ public class SqlTokenStorage(IDatabase database, JsonSerializerOptions jsonSeria
     public async Task<IEnumerable<Token>> FindByApplicationId(string applicationId, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Tokens.Where(t => t.ApplicationId == applicationId).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
+        return (await scope.DbContext.Tokens.WhereExact(scope.DbContext, t => t.ApplicationId, applicationId).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Token>> FindByAuthorizationId(string authorizationId, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Tokens.Where(t => t.AuthorizationId == authorizationId).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
+        return (await scope.DbContext.Tokens.WhereExact(scope.DbContext, t => t.AuthorizationId, authorizationId).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Token>> FindBySubject(string subject, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Tokens.Where(t => t.Subject == subject).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
+        return (await scope.DbContext.Tokens.WhereExact(scope.DbContext, t => t.Subject, subject).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Token>> FindByApplicationIdAndSubject(string applicationId, string subject, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Tokens.Where(t => t.ApplicationId == applicationId && t.Subject == subject).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
+        return (await scope.DbContext.Tokens.WhereExact(scope.DbContext, t => t.ApplicationId, applicationId).WhereExact(scope.DbContext, t => t.Subject, subject).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<Token>> FindByApplicationIdSubjectAndStatus(string applicationId, string subject, string status, CancellationToken cancellationToken = default)
     {
         await using var scope = await database.Cluster();
-        return (await scope.DbContext.Tokens.Where(t => t.ApplicationId == applicationId && t.Subject == subject && t.Status == status).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
+        return (await scope.DbContext.Tokens.WhereExact(scope.DbContext, t => t.ApplicationId, applicationId).WhereExact(scope.DbContext, t => t.Subject, subject).WhereExact(scope.DbContext, t => t.Status, status).ToListAsync(cancellationToken)).Select(ToToken).ToArray();
     }
 
     /// <inheritdoc/>

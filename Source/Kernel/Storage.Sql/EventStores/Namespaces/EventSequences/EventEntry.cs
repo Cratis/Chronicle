@@ -85,6 +85,16 @@ public class EventEntry
     public string ContentHashes { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the original generational content and hashes before the first recorded revision.
+    /// </summary>
+    public string? OriginalContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recorded revisions, ordered from oldest to newest.
+    /// </summary>
+    public string? Revisions { get; set; }
+
+    /// <summary>
     /// Gets or sets the JSON provenance of generations added by backfill. Null for legacy and append-derived content.
     /// </summary>
     public string? DerivedGenerations { get; set; }
@@ -99,6 +109,12 @@ public class EventEntry
     /// Null for events not appended through a definition, including events stored before event sources existed.
     /// </summary>
     public string? EventSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sequence number of the event this event compensates for.
+    /// Null for events that are not compensations, including events stored before compensations existed.
+    /// </summary>
+    public ulong? CompensationFor { get; set; }
 
     /// <summary>
     /// Gets or sets the publication identity hash used for binary, collation-independent uniqueness.

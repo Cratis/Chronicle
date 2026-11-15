@@ -1,30 +1,54 @@
 ---
-description: Handle a page of Chronicle events in one reactor method, declare its event types with Observes, and report failures or deferrals per partition.
+title: Cratis Chronicle reactors — handle events in batches
+description: Handle a page of Cratis Chronicle events in one reactor method for bulk work, and report failures or delayed retries for individual partitions.
 ---
-# Handling events in batches
+<span id="handling-events-in-batches"></span>
 
-Chronicle delivers events to a reactor in **pages**. A page holds events for one or more partitions, in sequence order.
-Per-event handler methods keep working as they always have: the client calls them once per event, partition by
-partition. A **batch method** is called once per page instead, with every event of the types it observes. Use it when
-the work is cheaper in bulk, for example one bulk request to a search index instead of one request per event.
+A batch method handles the matching events from a page of Cratis Chronicle events in one call. Use it when a downstream system accepts bulk work, such as updating a search index with one request instead of a request per event. You can still report failures or delayed retries for individual partitions.
+
+A page is a delivery containing events for one or more partitions, each identified by an event source id. A batch method receives only the event types it observes, in sequence order, and runs once for a page that contains matching events. Per-event methods continue to run once per event, partition by partition.
 
 <ChronicleClientTabs snippet="reactors/batches/index-users" />
+
+Here, `Index` receives `UserRegistered` and `UserRenamed` events together, while `EmailChanged` remains a per-event method. The bulk response identifies partitions that failed or need more time; `Fail` and `Defer` let the rest of the page succeed.
 
 ## Declaring a batch method
 
 A batch method takes an `EventBatch` as its first parameter and declares each event type it observes with
 `[Observes<TEvent>]`, once per type. It may also take a `BatchContext`, a `CancellationToken`, and services from the
-service provider. Inside, pattern-match on the events.
+service provider. The `CancellationToken` can be declared optional, as `CancellationToken cancellationToken = default`;
+no other parameter can. Inside, pattern-match on the events.
 
-A reactor can have batch methods and per-event methods side by side. Each event type reaches exactly one method, and
-Chronicle refuses to register a reactor that breaks this:
+Each event type assigned to a batch method must belong to that method alone. The analyzers in `Cratis.Chronicle.CodeAnalysis` report each of these mistakes when you build, and Chronicle refuses to register a reactor that has one:
 
-- an event type observed by a batch method and also handled by a per-event method, or observed by two batch methods
-- a batch method without `[Observes<TEvent>]`, or `[Observes<TEvent>]` on a method that does not take an `EventBatch`
-- a per-event method taking a `BatchContext`
-- a batch method returning anything but `Task` or `void`
+| Mistake | Rule |
+| --- | --- |
+| A method with `[Observes<TEvent>]` does not take an `EventBatch` | [CHR0070](../code-analysis/CHR0070.mdx) |
+| A batch method has no `[Observes<TEvent>]` | [CHR0071](../code-analysis/CHR0071.mdx) |
+| An event type is observed by two batch methods, or by a batch method and a per-event method | [CHR0072](../code-analysis/CHR0072.mdx) |
+| A per-event method takes a `BatchContext` | [CHR0073](../code-analysis/CHR0073.mdx) |
+| A batch method returns anything but `Task` or `void` | [CHR0074](../code-analysis/CHR0074.mdx) |
+| A batch method takes a parameter Chronicle cannot supply, such as an `EventContext` | [CHR0076](../code-analysis/CHR0076.mdx) |
 
-Returning events from a batch method is not supported. Append through the event log the reactor takes as a dependency.
+A batch method can only receive the event types it observes, so a pattern on any other event type never matches. [CHR0077](../code-analysis/CHR0077.mdx) warns about such a pattern, which usually means an `[Observes<TEvent>]` is missing.
+
+Returning events from a batch method is not supported. If the batch must produce events, append them through an event log supplied as a dependency.
+
+## Page size
+
+Chronicle decides when to send a page; the reactor's bounds decide how big it can be. Declare them with `[BatchSize]` on the reactor:
+
+<ChronicleClientTabs snippet="reactors/batches/batch-size" />
+
+| Property | Meaning | Default |
+| --- | --- | --- |
+| `MaxEvents` | The most events in one page | 500 for a reactor with a batch method, 100 for a reactor with only per-event methods |
+| `MaxBytes` | The most bytes of event content in one page, counted as the UTF-8 length of each event's JSON content | 0, so the kernel's maximum applies |
+| `MaxDelayMilliseconds` | How long the kernel may wait to fill a live page. Accepted, but not applied yet | 0 |
+
+The kernel honors `MaxEvents` and `MaxBytes` on every path: live, catch-up, replay and retry. It caps them with its own page maximums, `maxEventsPerPage` (1 000 by default) and `maxBytesPerSubscriberCall` (4 MiB by default), and a bound of zero takes the kernel's maximum. A page is never larger than what the path hands over: during catch-up, replay and retry that is `maxEventsPerSubscriberCall` events (100 by default), so a declared bound above it takes effect there only once you raise it; see [page bounds](../hosting/configuration/observers.md#page-bounds). An event larger than `MaxBytes` is sent alone in its own page, so it never stalls its partition.
+
+The kernel does not yet apply `MaxDelayMilliseconds`: a live page holds what is already waiting, so under light load it holds one event. Chronicle refuses to register a reactor with a negative bound.
 
 ## Order
 
@@ -34,9 +58,9 @@ order, handle them in the same method.
 
 ## The batch context
 
-`BatchContext` describes the page: the observer, event store, namespace and event sequence, the partitions in the page,
-how many events it holds, its first and last sequence numbers, the deadline the kernel waits until, and the
-cancellation token. `Origin` says where the page came from:
+`BatchContext` describes the whole page, even when a method's `EventBatch` contains only some of its events. It includes the observer, event store, namespace, event sequence, partitions, event count, and first and last sequence numbers. It also supplies a cancellation token and the deadline until which the kernel waits; a null deadline means it waits without a deadline.
+
+`Origin` explains why Chronicle delivered the page:
 
 | Origin | Meaning |
 | --- | --- |
@@ -47,16 +71,25 @@ cancellation token. `Origin` says where the page came from:
 
 ## Reporting outcomes
 
-- **Return normally** and every partition in the batch succeeded.
-- **Throw** and every partition in the batch fails at its first event in the batch. The partitions go through the normal
-  [failed partition](../concepts/observers.mdx#failed-partitions) recovery.
-- **`Fail`** a partition, or the partition of one event, and only that partition fails, from its first event in the
-  batch or from that event. Its earlier events count as handled, and the rest of the batch succeeds.
-- **`Defer`** a partition, or the partition of one event, and it is delivered again after the delay you give. A deferral
-  is not a failure and does not count towards quarantine, so use it when a downstream system asks you to back off.
+Return normally without reporting a problem to mark every partition in the batch as successful. Throwing an exception fails every partition in that batch at its first event in the batch. Those partitions enter the normal [failed partition](../concepts/observers.mdx#failed-partitions) recovery process.
 
-When several methods of one reactor report on the same partition, the partition settles at the earliest event any of
-them reported. Everything from that event is delivered again, including events another method already handled, so keep
-side effects idempotent and use the [delivery identity](delivery-identity) to recognize a redelivery.
+For a partial result, report the affected partition on `EventBatch`:
 
-A kernel that does not deliver pages cannot defer a partition. The client then fails the partition instead and says why.
+| Call | Result |
+| --- | --- |
+| `Fail(partition, exception)` | Fails that partition from its first event in the batch |
+| `Fail(eventContext, exception)` | Fails that event's partition from that event; earlier events count as handled |
+| `Defer(partition, retryAfter)` | Delivers that partition again from its first event in the batch after the delay |
+| `Defer(eventContext, retryAfter)` | Delivers that event's partition again from that event after the delay |
+
+A deferral does not count as a failure toward quarantine. Use it when a downstream system asks you to back off. A kernel that does not deliver pages cannot defer a partition; the client fails the partition instead and says why.
+
+When several methods report a problem for the same partition, Chronicle retries from the earliest event any of them reported. That can deliver events another method already handled. Keep side effects idempotent, meaning that repeating the same work does not repeat its effect, and use the [delivery identity](delivery-identity) to recognize a redelivery.
+
+## Testing a batch reactor
+
+`ReactorScenario` from `Cratis.Chronicle.Testing` runs batch methods. The events of one `Events(...)` call reach each batch method as one live page; `Given.Page(...)` delivers events for several event sources as one page, in the order given. Per-event methods still receive the events no batch method observes, one at a time.
+
+<ChronicleClientTabs snippet="reactors/batches/testing" />
+
+Partitions a batch method reports with `Fail` or `Defer` are listed in `PartitionOutcomes`, and `ShouldHaveFailed` and `ShouldHaveDeferred` assert on them. A batch method that throws fails its whole batch, and the scenario throws that exception from the call that delivered the events. For more on scenarios, see [testing reactors](../testing/reactors/scenario.mdx).

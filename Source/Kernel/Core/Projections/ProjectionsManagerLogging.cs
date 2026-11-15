@@ -37,6 +37,15 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Information, "Registered projections for event store {EventStore} from '{Registrant}': {Definitions} submitted, {Changed} changed, {Skipped} subscriptions left to the background repair. Took {TotalMs:F0} ms (detecting changes {DetectingMs:F0}, engine {EngineMs:F0}, subscribing {SubscribingMs:F0}, retiring {RetiringMs:F0})")]
     internal static partial void RegistrationTimings(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant, int definitions, int changed, int skipped, double totalMs, double detectingMs, double engineMs, double subscribingMs, double retiringMs);
 
+    [LoggerMessage(LogLevel.Information, "Skipping a repeat of the registration of {Definitions} projections for event store {EventStore} from '{Registrant}': an identical one has just completed")]
+    internal static partial void SkippingRepeatedRegistration(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant, int definitions);
+
+    [LoggerMessage(LogLevel.Debug, "Joining the identical registration already in flight for event store {EventStore} from '{Registrant}'")]
+    internal static partial void JoiningRegistrationInFlight(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant);
+
+    [LoggerMessage(LogLevel.Information, "Registration for event store {EventStore} changes: {Definitions}")]
+    internal static partial void ChangedDefinitions(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string definitions);
+
     [LoggerMessage(LogLevel.Debug, "Registering {Count} changed projection definitions")]
     internal static partial void RegisteringChangedDefinitions(this ILogger<ProjectionsManager> logger, int count);
 
@@ -63,6 +72,9 @@ internal static partial class ProjectionsManagerLogging
 
     [LoggerMessage(LogLevel.Warning, "Ignoring the registration of projection '{Identifier}' from client version {IncomingVersion}, since it is older than version {StoredVersion} it was last registered with. The stored definition is kept")]
     internal static partial void IgnoringOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionId identifier, string incomingVersion, string storedVersion);
+
+    [LoggerMessage(LogLevel.Warning, "Could not recommend looking at {Count} ignored projection registration(s) in event store {EventStore}; the registration itself is not affected")]
+    internal static partial void FailedToRecommendIgnoredRegistrations(this ILogger<ProjectionsManager> logger, Exception exception, EventStoreName eventStore, int count);
 
     [LoggerMessage(LogLevel.Warning, "The full set of projections for owner '{Owner}' registered by client version {IncomingVersion} is older than what is stored - not retiring any projections")]
     internal static partial void NotRetiringForOlderRegistration(this ILogger<ProjectionsManager> logger, ProjectionOwner owner, string incomingVersion);

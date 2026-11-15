@@ -36,7 +36,8 @@ internal static class EventContextConverters
         Subject = context.Subject?.Value ?? string.Empty,
         NamedTags = context.NamedTags.Select(_ => new Contracts.Events.NamedTag { Name = _.Name.Value, Value = _.Value }).ToList(),
         EventSource = context.EventSource?.Value ?? string.Empty,
-        AppendedGeneration = context.AppendedGeneration is { } generation ? generation.Value : 0
+        AppendedGeneration = context.AppendedGeneration is { } generation ? generation.Value : 0,
+        CompensationFor = context.CompensationFor is { } compensationFor ? compensationFor.Value : null
     };
 
     /// <summary>
@@ -64,7 +65,8 @@ internal static class EventContextConverters
     {
         NamedTags = (context.NamedTags ?? []).Select(tag => new NamedTag(tag.Name, tag.Value)).ToArray(),
         EventSource = ResolveEventSource(context.EventSource),
-        AppendedGeneration = context.AppendedGeneration == 0 ? null : new EventTypeGeneration(context.AppendedGeneration)
+        AppendedGeneration = context.AppendedGeneration == 0 ? null : new EventTypeGeneration(context.AppendedGeneration),
+        CompensationFor = context.CompensationFor is { } compensationFor ? new EventSequenceNumber(compensationFor) : null
     };
 
     /// <summary>
@@ -109,6 +111,7 @@ internal static class EventContextConverters
     {
         NamedTags = (context.NamedTags ?? []).Select(tag => tag.ToClient()).ToArray(),
         EventSource = ResolveEventSource(context.EventSource),
+        CompensationFor = context.CompensationFor is { } compensationFor ? new EventSequenceNumber(compensationFor) : null,
         ErasedProperties = erasedProperties
     };
 

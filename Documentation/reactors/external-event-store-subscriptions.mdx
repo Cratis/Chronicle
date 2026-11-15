@@ -1,65 +1,64 @@
 ---
-description: Subscribe a Chronicle reactor to events from an external event store through automatic inbox routing driven by [EventStore] metadata, in C#.
+title: Cratis Chronicle reactors — subscribe to external stores
+description: Subscribe a Cratis Chronicle reactor to another event store's outbox in C#. EventStore metadata selects the inbox and creates the subscription.
 ---
-# Subscribe Reactors to External Event Stores
+<span id="subscribe-reactors-to-external-event-stores"></span>
+
+Cratis Chronicle can route a C# reactor to another event store's events using `[EventStore]` metadata. The declaration selects a local inbox sequence and creates or reuses the subscription that forwards matching events from the source store's outbox. Your handler reads those forwarded events from the inbox.
 
 :::note[Client coverage]
-External event store inbox routing is currently C#-only — it uses `[EventStore]` metadata on event types or reactors, or explicit reactor registration options. These routing declarations are not available in Kotlin, Elixir, or TypeScript.
+Automatic inbox routing through these declarations is C#-only. The `[EventStore]` metadata and reactor registration options shown here are not available in Kotlin, Elixir, or TypeScript.
 :::
 
-## Automatic Inbox Routing
+## Automatic inbox routing
 
-When all event types handled by a reactor come from the same source event store, Chronicle routes the reactor to the matching inbox sequence automatically:
-
-- Source event store: `fulfillment-service`
-- Inbox sequence observed by the reactor: `inbox-fulfillment-service`
-
-This works when the source is declared on event types (or assembly) using `[EventStore("...")]`, and no explicit event sequence is configured on the reactor.
+If you own the event contracts, declare their source with `[EventStore("...")]` on each event type or on their assembly. With no explicit event sequence on the reactor, Chronicle infers the inbox from that metadata.
 
 <ChronicleClientTabs snippet="reactors/external-event-store-subscriptions/automatic-routing" />
 
-## Observer-Level EventStore for Missing Event Metadata
+The event type declares `fulfillment-service`, so the reactor observes `inbox-fulfillment-service`. The source must publish the events to its outbox; this subscription does not forward events from its event log. See [Implicit Event Store Subscriptions](../subscriptions/implicit-subscriptions) for the producer and consumer setup.
 
-When event contracts cannot carry `[EventStore]` metadata, apply `[EventStore]` directly on the reactor.
+Keep inferred sources to one store per reactor. Conflicting event-type sources throw `MultipleEventStoresDefined` at startup. If the inferred source is the reactor's own store, Chronicle selects the local event log instead of an inbox.
 
-Chronicle resolves the reactor to the inbox for that source event store and implicitly creates or reuses the outbox-to-inbox subscription.
+## Observer-level EventStore for missing event metadata
+
+If you cannot change the event contracts, put `[EventStore]` on the reactor instead. This selects the source for the reactor without requiring the attribute on its event types.
 
 <ChronicleClientTabs snippet="reactors/external-event-store-subscriptions/observer-level-event-store" />
 
-## Source Event Store from Configuration
+Here, the reactor observes `inbox-identity-service`, and Chronicle creates or reuses the outbox-to-inbox subscription for `identity-service`.
 
-When the source event store name is only known at runtime, register the reactor with `ReactorRegistrationOptions.FromEventStore(name)` instead of adding an `[EventStore]` attribute. Chronicle resolves it to `inbox-<store>` and creates the same implicit outbox-to-inbox subscription. A different `[EventStore]` declaration or an explicit event sequence conflicts with this option. As with the attribute, a source equal to the current store still selects `inbox-<store>`, but does not create a subscription.
+## Source event store from configuration
+
+When configuration supplies the source name at runtime, register the reactor with `ReactorRegistrationOptions.FromEventStore(name)` instead of adding an `[EventStore]` attribute.
 
 <ChronicleClientTabs snippet="reactors/external-event-store-subscriptions/configured-source-event-store" />
 
-## Implicit Combined Event Type Filtering
+The supplied name selects `inbox-<store>` and creates the same implicit subscription. A different `[EventStore]` declaration or an explicit event sequence conflicts with this option.
 
-For each source event store, Chronicle combines all reactor and reducer event types into one implicit subscription filter.
+Unlike source inference from event types, both the reactor-level attribute and the registration option always select `inbox-<store>`, even when the source equals the current store. In that case, Chronicle does not create a subscription.
 
-This means:
+## Implicit combined event type filtering
 
-- You get one subscription per source event store.
-- The filter is the union of handled event types from all participating observers.
-- Only those event types are forwarded from source outbox to target inbox.
+Chronicle combines the event types handled by participating reactors and reducers into one subscription filter per source event store. It also merges event types requested by projections. Only event types in that combined filter are forwarded from the source outbox to the target inbox, so adding another observer can expand what the shared subscription forwards.
 
-## Explicit Event Sequence Is Not Allowed with Observer EventStore
+## Explicit event sequence is not allowed with observer EventStore
 
-When a reactor has `[EventStore("...")]` or is registered with `ReactorRegistrationOptions.FromEventStore(name)`, do not combine it with:
+A reactor-level source declaration already chooses the inbox sequence. Do not combine `[EventStore("...")]` or `ReactorRegistrationOptions.FromEventStore(name)` with any of these explicit sequence declarations:
 
 - `[EventSequence("...")]`
 - `[EventLog]`
 - `[Reactor(eventSequence: "...")]`
 
-This is invalid and fails:
-
-- At runtime with `EventStoreCannotBeCombinedWithExplicitEventSequence`; registration options fail when the store is created.
-- At compile time with analyzer rule `CHR0013` for the attribute only.
+These combinations throw `EventStoreCannotBeCombinedWithExplicitEventSequence` at runtime; registration options fail when the store is created. Analyzer rule `CHR0013` also catches the attribute combination at compile time, but does not check registration options.
 
 ## Forwarded metadata
 
-Inbox forwarding now preserves append tags along with event-source and stream-route metadata, so tag filters can select forwarded events. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
+Inbox forwarding preserves append tags along with event-source and stream-route metadata, so tag filters can select forwarded events. Events forwarded by earlier releases that dropped tags remain untagged; upgrading does not backfill them.
 
-## See Also
+## See also
+
+For shared contracts, follow the implicit-subscription setup below. Choose explicit subscriptions when you need to manage the forwarding filter or subscription lifecycle yourself.
 
 - [Implicit Event Store Subscriptions](../subscriptions/implicit-subscriptions)
 - [Explicit Event Store Subscriptions](../subscriptions/explicit-subscriptions)

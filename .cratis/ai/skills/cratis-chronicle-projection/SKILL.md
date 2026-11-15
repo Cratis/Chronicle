@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-projection
-description: Add Chronicle projection behavior to an existing read model - model-bound attributes first, the fluent IProjectionFor builder when they cannot express the shape. Covers AutoMap, keys, children and nested types, counters, event-sequence selection, variants (VariantOf and EntersOn, as attributes or fluent calls) for an entity with mutually exclusive lifecycle shapes such as a work item that is a backlog entry then a pull request then closed, and the startup-crash traps. Use when populating a read model from events; do not use to create the read model and its query surface, and do not reach for a reducer before exhausting these options.
+description: Use when populating an existing Chronicle read model through event mappings, structured joins or lifecycle variants, or diagnosing projection startup failures. Not for new query surfaces or external side effects.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/SKILL.md -->

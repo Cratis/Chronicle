@@ -8,9 +8,12 @@ using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 using ConceptsEventStoreSubscriptionDefinition = Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition;
@@ -25,10 +28,12 @@ namespace Cratis.Chronicle.Services.Observation.EventStoreSubscriptions;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing subscription definitions.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="httpContextAccessor">The current request accessor.</param>
 internal sealed class EventStoreSubscriptions(
     IGrainFactory grainFactory,
     IStorage storage,
-    IOptions<ChronicleOptions> options) : ContractIEventStoreSubscriptions
+    IOptions<ChronicleOptions> options,
+    IHttpContextAccessor? httpContextAccessor = null) : ContractIEventStoreSubscriptions
 {
     /// <inheritdoc/>
     public async Task Add(AddEventStoreSubscriptions request, CallContext context = default)
@@ -37,7 +42,11 @@ internal sealed class EventStoreSubscriptions(
         foreach (var subscription in request.Subscriptions)
         {
             EnsureNotReserved(subscription.SourceEventStore);
+            await SystemStoreGuard.Ensure(context, new(subscription.SourceEventStore), StoreAccess.Read, namespaceAddressed: false);
+            EnsureValidSourceNamespaces(subscription.SourceNamespaces);
         }
+
+        await SystemStoreGuard.Ensure(context, new(request.TargetEventStore), StoreAccess.Append | StoreAccess.Manage, namespaceAddressed: false);
 
         // Validate every pinned registration before reserving or appending any definition in this request.
         foreach (var subscription in request.Subscriptions.Where(_ => _.GenerationDelivery == Contracts.Observation.EventGenerationDelivery.Pinned))
@@ -61,7 +70,9 @@ internal sealed class EventStoreSubscriptions(
                 new EventStoreName(subscription.SourceEventStore),
                 subscription.EventTypes.Select(et => new EventType(et.Id, et.Generation)).ToArray())
             {
-                GenerationDelivery = (EventGenerationDelivery)subscription.GenerationDelivery
+                GenerationDelivery = (EventGenerationDelivery)subscription.GenerationDelivery,
+                NamedTags = (subscription.NamedTags ?? []).Select(_ => new NamedTag(new TagName(_.Name), _.Value)).ToArray(),
+                SourceNamespaces = (subscription.SourceNamespaces ?? []).Select(_ => new EventStoreNamespaceName(_)).ToArray()
             };
 
             var existingSubscriptions = await subscriptionsManager.GetSubscriptionDefinitions();
@@ -77,7 +88,9 @@ internal sealed class EventStoreSubscriptions(
                     definition.SourceEventStore,
                     definition.EventTypes)
                 {
-                    GenerationDelivery = definition.GenerationDelivery
+                    GenerationDelivery = definition.GenerationDelivery,
+                    NamedTags = definition.NamedTags.Select(_ => new EventStoreSubscriptionTag(_.Name.Value, _.Value)).ToArray(),
+                    SourceNamespaces = definition.SourceNamespaces.ToArray()
                 });
             }
 
@@ -111,6 +124,7 @@ internal sealed class EventStoreSubscriptions(
     public async Task Remove(RemoveEventStoreSubscriptions request, CallContext context = default)
     {
         EnsureNotReserved(request.TargetEventStore);
+        await SystemStoreGuard.Ensure(context, new(request.TargetEventStore), StoreAccess.Append | StoreAccess.Manage, namespaceAddressed: false);
         var eventSequence = grainFactory.GetSystemEventSequence(request.TargetEventStore);
         await Task.WhenAll(request.SubscriptionIds.Select(subscriptionId => eventSequence.Append(subscriptionId, new EventStoreSubscriptionRemoved())));
     }
@@ -118,15 +132,38 @@ internal sealed class EventStoreSubscriptions(
     /// <inheritdoc/>
     public async Task<IEnumerable<ContractEventStoreSubscriptionDefinition>> GetSubscriptions(GetEventStoreSubscriptionsRequest request)
     {
-        SystemStoreGuard.EnsureNotSystem(new(request.TargetEventStore));
+        await SystemStoreGuard.EnsureNotSystemFromRequest(httpContextAccessor?.HttpContext, new(request.TargetEventStore), StoreAccess.Read);
         var definitions = await storage.GetEventStore(request.TargetEventStore).EventStoreSubscriptions.GetAll();
         return definitions.Select(definition => new ContractEventStoreSubscriptionDefinition
         {
             Identifier = definition.Identifier.Value,
             SourceEventStore = definition.SourceEventStore.Value,
             EventTypes = definition.EventTypes.Select(et => new Contracts.Events.EventType { Id = et.Id, Generation = et.Generation }).ToList(),
-            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery
+            GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery,
+            NamedTags = definition.NamedTags.Select(tag => new Contracts.Events.NamedTag { Name = tag.Name.Value, Value = tag.Value }).ToList(),
+            SourceNamespaces = definition.SourceNamespaces.Select(_ => _.Value).ToList()
         });
+    }
+
+    static void EnsureValidSourceNamespaces(IEnumerable<string>? sourceNamespaces)
+    {
+        foreach (var name in sourceNamespaces ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "A source namespace name must not be empty."));
+            }
+
+            if (NamespaceNameRules.ContainsComma(name))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, NamespaceNameRules.CommaMessage));
+            }
+
+            if (name.Contains('+'))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "The source namespace name is not allowed."));
+            }
+        }
     }
 
     static void EnsureNotReserved(string eventStore)
@@ -147,6 +184,8 @@ internal sealed class EventStoreSubscriptions(
 
         var existingEventTypes = existing.EventTypes.ToHashSet();
         var incomingEventTypes = incoming.EventTypes.ToHashSet();
-        return existingEventTypes.SetEquals(incomingEventTypes);
+        return existingEventTypes.SetEquals(incomingEventTypes) && existing.NamedTags.ToHashSet().SetEquals(incoming.NamedTags)
+            && existing.SourceNamespaces.Select(_ => _.Value).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                .SetEquals(incoming.SourceNamespaces.Select(_ => _.Value));
     }
 }

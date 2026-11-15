@@ -1,32 +1,27 @@
 ---
 title: Dynamic Consistency Boundary in Chronicle
-description: How Chronicle supports DCB-style decision models and append conditions in its event-source model, what maps well, what it cannot do and what it adds.
+description: Chronicle uses decision reads and concurrency scopes for conditional appends. Compare its event-source boundaries with tag-based Dynamic Consistency Boundary.
 ---
 
-Use this page if you know the DCB pattern and want to see how Chronicle maps to it. For the idea itself, read [Dynamic Consistency Boundary](./index.md).
+Chronicle supports Dynamic Consistency Boundary (DCB)-style decisions through fresh reads and conditional appends, using event source and stream metadata rather than custom tags. This lets one append depend on several entities' state, while each event still belongs to one event source. For the pattern itself, read [Dynamic Consistency Boundary](./index.md).
 
 ## The short answer
 
-Chronicle supports DCB-style decision models and append conditions within its event-source model. It is not a DCB event store.
+A [concurrency scope](../events/concurrency.mdx) holds a log position and a filter over event types, event source and stream metadata. The kernel rejects an append if a matching event exists after that position. A [decision read](../read-models/decision-reads.mdx) builds the scope for you: it records the position before folding events into the state you decide on. The state is the decision model; the scope supplies the append condition.
 
-A [concurrency scope](../events/concurrency.mdx) holds a position and a filter (event types, event source, stream), and the kernel rejects the append when a matching event exists after that position. A [decision read](../read-models/decision-reads.mdx) builds that scope for you: it notes the position before it folds the state you decide on. That is a decision model and an append condition.
+DCB also lets one event belong to several domain concepts through tags. Chronicle does not use that model. Each event has one event source ID and single-valued stream metadata. An event can carry another entity's ID in its payload, but a decision read on that other entity does not include it. Custom tags are stored and filterable; concurrency scopes do not use them.
 
-What Chronicle does not have is DCB's central idea, that **one event can belong to several domain concepts** through tags. In Chronicle:
-
-- **Each event has exactly one event source ID** and single-valued stream metadata. There is no way to say that one event concerns both a student and a course.
-- **Tags are not part of consistency.** A scope filters by event types and by the stream metadata, which is what plays the role of DCB's tags: event source ID, event source type, event stream type and event stream ID. Each has one value per event. Custom tags are stored and filterable, but they do not take part in concurrency checks.
-
-A fact about two entities is therefore written as two events, one per event source, in one atomic `AppendMany`. That works, and it keeps both decisions correct. It does record one fact as two events, which DCB sets out to avoid. [When two events are acceptable](#when-one-fact-becomes-two-events) says when that is fine.
+When both entities need a fact in their histories, write two events in one atomic `AppendMany`, guarded by both reads. A source that only supplies facts for the decision needs a guard but no new event. [When two events are acceptable](#when-one-fact-becomes-two-events) explains the modeling choice.
 
 ## What maps well
 
 | DCB concept | In Chronicle |
 |---|---|
-| Decision model | The state of a decision read: a flat projection keyed by the event source, over a finite set of event types |
+| Decision model | The state of a decision read: a supported projection or reducer over a finite set of event types, keyed by event source |
 | Query | The filter of a concurrency scope. A decision read uses the key and the event types of its read model |
 | Query item: event types are ORed | `EventTypes` on the scope: a match on any listed type |
 | Query item: tags are ANDed | The stream metadata plays the role of the tags: event source ID, event source type, event stream type and event stream ID, each equal to one value, ANDed. An [event source definition](../event-sources/dcb.mdx) chooses which of them guard an append. Custom tags are not part of it |
-| Several query items, ORed | Several scopes on one append. Any violation rejects the whole append. Two items on the same event source must be merged into one scope, which is wider but safe |
+| Several query items, ORed | Several scopes can guard one append; any violation rejects the batch. Decision reads on the same source merge into a wider scope. Explicit scope conjunctions can retain independent conditions |
 | `after` position, noted before the read | `SequenceNumber` on each scope. A decision read notes it before it folds. By hand, call `GetTailSequenceNumber` before you read |
 | No `after`: no matching event may exist | `ExpectingNoMatchingEvent()` on the builder, or `EventSequenceNumber.BeforeFirst` |
 | Append condition | `guardedBy:` on `AppendMany`, decision reads enrolled in a unit of work, or `concurrencyScopes:` and `concurrencyScope:` |
@@ -40,15 +35,15 @@ A fact about two entities is therefore written as two events, one per event sour
 
 ## What DCB can do that Chronicle cannot
 
-- **Tag one event with several entities.** Chronicle gives an event one event source ID and one stream. One fact for two entities is two events.
-- **Query for events tagged with both X and Y.** DCB ANDs tags inside one event, which is how its `studentAlreadySubscribed` projection finds the subscription of one student to one course. Chronicle has no form for "events concerning both". You read each entity's own history instead.
-- **Use tags in the append condition.** Chronicle scopes do not carry custom tags. Anything the guard needs to distinguish must be an event source ID, event source type, stream type, stream ID or event type.
-- **Put several independent query items on the same event source in one condition.** Chronicle merges them into one wider scope.
-- **Decide from a projection that joins entities or is keyed by something other than the event source.** Decision reads refuse those shapes.
-- **Guard a read across event sequences.** Decision reads and their guards apply to the event log only, and a unit of work cannot span event sequences.
-- **Target the default event stream ID specifically.** The default acts as a wildcard.
+| DCB capability | Chronicle boundary |
+|---|---|
+| One event belongs to several entities through tags | One event has one event source ID and one stream. If both histories need the fact, append an event to each source |
+| A consistency query matches custom tags, such as both student and course | Scopes filter built-in metadata and event types, not custom tags. Read the facts from each source whose state matters |
+| A decision model joins entities or uses a key unrelated to event source ID | Decision reads refuse these projection shapes; use separate supported reads |
+| A read and its guard span event sequences | Decision reads apply to the event log, and a unit of work cannot span event sequences |
+| A condition targets the default event stream ID specifically | The default acts as a wildcard |
 
-Chronicle does not implement the DCB specification's API. It offers equivalent mechanics through its own.
+Chronicle does not implement the DCB specification's API. Choose its constraints, decision reads and concurrency scopes according to the rule, rather than translating tag queries literally.
 
 ## The Chronicle answer to each canonical DCB example
 
@@ -65,9 +60,9 @@ Chronicle does not implement the DCB specification's API. It offers equivalent m
 
 ### When one fact becomes two events
 
-Two events for one fact is acceptable when each event is a fact in its own entity's history. A student subscribing to a course is an event in the course's story ("a student took a seat") and in the student's ("the student joined a course"). Giving them separate event types, such as `CourseSeatTaken` and `StudentJoinedCourse`, makes that explicit. It also keeps each read model to its own events: one type appended to both sources would create rows keyed by the wrong ids.
+A course subscription changes two histories: the course has one fewer seat, and the student has joined one more course. Separate types, such as `CourseSeatTaken` and `StudentJoinedCourse`, express those effects and let each read model count only its own source's events. Using one type on both sources would also create seat rows keyed by student IDs, and subscription rows keyed by course IDs.
 
-It is the wrong answer when the two copies are the same fact with the same meaning and nothing in either story needs it. Then look for a form with one event: a constraint, or one event on one source with a decision read over the other. The invoice number and the dynamic product price examples take that route. A decision read over a key you only read costs a fold but records nothing.
+Do not duplicate an event merely because the decision reads two entities. If the second history does not change, guard its read without writing to it. The product-price example reads product histories but writes only the order. For a unique value, a constraint can remove the need for a decision read altogether.
 
 ## How a decision flows
 
@@ -84,19 +79,21 @@ flowchart LR
 
 The kernel evaluates constraints first and then every scope, and writes nothing if either fails. Read models update afterwards, so a read after the append can still show old state for a moment.
 
-## History mutation is outside the guard
+<a id="history-mutation-is-outside-the-guard"></a>
 
-A revision or redaction of an earlier event does not advance the position that an append condition compares, so a decision made before the mutation can still commit. [Costs and limits](./limits.mdx#what-is-outside-the-guard) lists this and the other limits, and the [operational guidance](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions) says how to revise safely.
+## How history mutations affect a guard
+
+A log position alone does not detect a revision or redaction of an earlier event. The .NET decision-read client also carries the kernel's mutation epoch, a counter that changes around history mutations, when the kernel reports it. The kernel rejects that guard if history is mutating or the epoch has changed. A scope without an epoch still checks appended events only; do not assume every client or kernel supplies this protection.
+
+For the other boundaries, see [Costs and limits](./limits.mdx#what-is-outside-the-guard). When a path does not carry an epoch, follow the [operational guidance](../events/concurrency.mdx#revisions-and-redactions-are-outside-append-conditions) before changing history.
 
 ## What Chronicle adds
 
-- **Constraints.** The kernel enforces unique values, one event of a type per event source, and closed streams, for every writer, without a read. See [Constraints](../constraints/index.md).
-- **Event source definitions.** A typed declaration of an event source and its streams, with the concurrency dimensions each stream is guarded by. See [Event sources and streams](../event-sources/index.mdx).
-- **Closed streams.** A stream can be ended so no later append can invalidate a decision about it. See [Closing streams](../closing-streams/index.mdx).
-- **Admission checks.** A decision read refuses a model it cannot guard exactly, such as a join, a child collection or a classic reducer with filters or constructor dependencies other than `ILogger<T>`, with a typed reason. A self-reducing read model is exempt from the dependency rule. It also checks that its fold reached the events it expected and retries up to three attempts.
-- **Owner-only commit.** A unit of work that enrolled a decision read can be committed or rolled back only by its owner, so application code cannot commit it half-guarded.
-- **Visible skipped checks.** `ConcurrencyCheckPerformed` on the append result says whether a scope was compared. A skipped check does not look like a passing one.
-- **Conflicts mapped to your model.** `GetDecisionConflicts` tells you which read model and key changed, and which event changed it.
+[Constraints](../constraints/index.md) enforce unique values, one event of a type per event source, and closed streams without an application read. Unlike a decision-read guard, they apply to every writer. [Event source definitions](../event-sources/index.mdx) name the sources, streams and dimensions used in a guard. A stream can also be [closed](../closing-streams/index.mdx) to prevent later appends.
+
+Decision reads check whether a model can be guarded before reading it. Joins and child collections are refused, as are classic reducers with filters or constructor dependencies other than `ILogger<T>`. Self-reducing read models are exempt from the dependency rule. The client checks that the fold reached the expected events and makes up to three attempts. Once a read is enrolled in a unit of work, only its owner can commit or roll it back.
+
+Check the append result as well as the read. `ConcurrencyCheckPerformed` distinguishes a skipped check from a passing one. `GetDecisionConflicts` maps a conflict back to the read model and key, with the conflicting event when the kernel reports it.
 
 ## Metadata tags and custom tags
 
@@ -114,13 +111,15 @@ See [Concurrency](../events/concurrency.mdx#formalized-metadata-tags-for-concurr
 
 ## Aggregate roots and Arc
 
-Chronicle has no aggregate root. If you prefer that style, Cratis Arc provides it on top of Chronicle and takes the position before the aggregate applies events. Arc also adds read protection, whose On mode reads a command's read-model parameters as decision reads. Read [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) and [Aggregate roots](/arc/backend/csharp/chronicle/aggregates/).
+Chronicle has no aggregate-root abstraction. Cratis Arc provides one on top of Chronicle and captures a position before the aggregate applies events. Arc can also manage decision reads and read protection around command execution. Start with [Choosing how a command's rule holds](/arc/backend/csharp/chronicle/consistency/) for the binding rules and explicit read allowances, or [Aggregate roots](/arc/backend/csharp/chronicle/aggregates/) for that programming model.
 
 ## Example: a rule across two entities
 
 The course subscription rule needs two decision reads and two events. [Scenarios](./scenarios.mdx#a-rule-across-two-keys) shows the code.
 
 ## Next steps
+
+Choose a mechanism first, then follow its example and API reference. Use the limits page before committing to a model with long histories or frequent conflicts.
 
 - [Choosing how a rule holds](./choosing.mdx)
 - [Costs and limits](./limits.mdx)

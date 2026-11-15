@@ -2,12 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Orleans.CodeGeneration;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
 
 /// <summary>
 /// Defines a client reducer.
 /// </summary>
+[Version(2)]
 public interface IReducer : IGrainWithStringKey
 {
     /// <summary>
@@ -41,4 +43,29 @@ public interface IReducer : IGrainWithStringKey
     /// <param name="definition">The <see cref="ReducerDefinition"/> the connection registered with.</param>
     /// <returns>Awaitable task.</returns>
     Task KeepSubscription(ReducerDefinition definition);
+
+    /// <summary>
+    /// Checks, without the definition, that the subscription is intact.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="KeepSubscription"/> is called for every observer of every connection while it is open, and its
+    /// definition - every event type, filter and delivery option - is copied through the JSON serializer on each call.
+    /// With hundreds of observers per client that copying was a large part of the kernel's CPU, enough to starve
+    /// connects and leave observers disconnected. This is the call that is made on every check: it answers
+    /// <see langword="true"/> when the client is known to the observer and nothing is pending, and only when it answers
+    /// <see langword="false"/> does the connection send the definition with <see cref="KeepSubscription"/>.
+    /// </remarks>
+    /// <returns><see langword="true"/> when there is nothing to restore; otherwise <see langword="false"/>.</returns>
+    Task<bool> IsSubscriptionIntact();
+
+    /// <summary>
+    /// Checks whether the registration is still held back, waiting for a webhook that serves the observer to leave.
+    /// </summary>
+    /// <remarks>
+    /// An inactive reducer has no subscription to check, only a registration that may be deferred. The connection asks
+    /// after <see cref="KeepSubscription"/> has tried to complete it, and keeps checking every revise interval for as long
+    /// as it is deferred.
+    /// </remarks>
+    /// <returns><see langword="true"/> while the registration is deferred; otherwise <see langword="false"/>.</returns>
+    Task<bool> IsRegistrationDeferred();
 }

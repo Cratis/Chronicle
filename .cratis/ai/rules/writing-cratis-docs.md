@@ -6,67 +6,70 @@ paths:
 ---
 <!-- cratis-ai-managed: rules/writing-cratis-docs.md -->
 
-# Writing Cratis documentation — tour voice and Starlight authoring
+# Writing Cratis Documentation
 
-The Cratis docs must **take the reader on a tour, like a teacher** — the way [Marten](https://martendb.io), [Wolverine](https://wolverinefx.net), and [aspire.dev](https://aspire.dev) docs do — **not** state facts like a reference dump. The differentiator is pedagogical structure, not decoration. Match it.
+Read and use **cratis-documentation-writing** to establish the reader's goal and
+page purpose, then **cratis-engineering-docs-authoring** to draft from product
+evidence. Before writing explanations beside examples, work through
+[Explaining code](../skills/cratis-engineering-docs-authoring/references/explaining-code.md).
+It shows how a concrete registration or directive can carry the explanation
+without making the page read like a review form. Read a current, well-reviewed
+tutorial in the product or a closely related product before writing, without
+assuming its vocabulary fits this product.
 
-## The bar
+Write as a developer explaining the code to another developer. Start with the
+reader's problem, show the relevant example, and explain the part they cannot
+see: why this type matters, what the call changes, or where responsibility
+passes to another component. Let each paragraph develop that point. Use steps
+for a procedure and a table for a comparison; neither replaces a connected
+explanation. A reference entry can state its contract directly.
 
-- **Pain → relief.** Open by naming the friction the reader feels, then reveal the feature as the relief.
-- **Why before how.** A reader who understands the reasoning handles edge cases the docs do not cover.
-- **Active voice, present tense, second person.** “You append the event,” not “the event is appended.”
-- **Be honest about limits.** A “when this is the wrong fit” section builds more trust than omitting the limits.
+The example should also teach the intended idiom. Explain a tempting alternative
+when it exposes a real trap, and put a limitation beside the action it affects.
+Do not add a stock warning or a closing list of everything the product does not
+do. A concrete recommendation with a source-backed reason is useful perspective;
+an invented customer story or personal experience is not. Make the first example
+the convention path: do not hand-register what the framework already discovers.
+Explain that invisible wiring against the backend the reader actually built,
+then show an observable result before introducing another concept.
 
-## One primary purpose per page
+Use **cratis-technical-examples** to verify code, configuration, commands and
+results against the applicable product source. It is fine to explain the effect
+of code that is absent, such as convention-based wiring, but establish that
+effect first. Do not infer a second client's API or behavior from the first.
+Read the multi-client section of **Explaining code** before choosing shared
+prose, tabs or separate guides. Preserve the owning repository's snippet and
+language-tab workflow rather than inventing another one. Show both the backend
+contract and generated frontend shape when both matter, keeping required
+producer/consumer actions sequential.
 
-| Type | Reader is… | Reads like |
-|---|---|---|
-| **Tutorial** | learning by doing | a guided lesson — each step produces a visible result |
-| **How-to** | solving a specific problem | a recipe — assume competence, no teaching |
-| **Explanation** | trying to understand | a discussion — concepts, trade-offs, *why*, a diagram |
-| **Reference** | looking something up | a dictionary — exhaustive, terse, tables/signatures |
+Choose presentation to support the reader, not decorate the page. The exact
+Markdown/MDX boundary, aside semantics, component contracts and rendering checks
+live in [Documentation Structure and Formatting](documentation-structure-and-formatting.md).
+Use the owning site's supported components and inspect the emitted Markdown;
+a raw source mirror is not proof that essential labels or warnings survive.
 
-Use the page's primary reader need to guide its structure, not to ban a brief prerequisite or explanation. A tutorial padded with a reference dump overwhelms; a how-to interrupted by a long conceptual detour stops being a recipe. Link out when the other material deserves sustained attention. Diátaxis does not imply a universal navigation bucket; bucket names are product-specific.
+Link the guided explanation to exact reference and connect neighboring products
+at their workflow seams instead of retelling their setup. A coming-from-X bridge
+can put the reader's existing code beside the Cratis equivalent and explain
+what changes. Keep that comparison fair and version-accurate, or label it
+illustrative; say when the existing approach remains the better fit. It does
+not impose universal navigation buckets.
 
-## The tour-voice checklist
+Follow the [documentation rule](documentation.md) for naming, claims and version
+constraints. The reader needs the minimum or compatibility boundary that changes
+what they can run, not the author's source-checking diary. Keep verification
+provenance in the private change summary. A rendered page, compiling example,
+observed result and successful reader journey are different evidence.
 
-Apply this checklist to tutorials, getting-started pages, and explanations:
-
-1. **Open with a concrete scenario**, not a definition of the tool.
-2. **Name the friction first**, then the feature as its relief.
-3. **Make the first snippet the convention path.** Show the shape that works without registration or wiring a convention already handles (no manual `.AutoMap()`, no hand-registered handlers). A first example that configures what a convention does teaches the reader to distrust the convention.
-4. **Use chronological verbs** such as define → append → project → query.
-5. **After every code block, explain the invisible**: what happens under the hood and why it matters. Verify that explanation against the setup the reader actually built; a backend without Chronicle appends no events, so "the command appended an event" would be false there.
-6. **Recap before pivoting** to the next concept.
-7. **Anticipate a likely mistake** near the example it affects. Use a caution aside where the risk would otherwise be missed, such as a convention that fails silently (proxy generation, service lifetimes, AutoMap): show the working shape and a verified recovery path, and name affected versions only when the product source establishes them.
-8. **Show the result** — output, a resulting model, or another visible success signal.
-9. **Organize by workflow**, not alphabetically.
-10. **End each substantial section with the natural next step** when one exists.
-
-Read a current, well-reviewed tutorial in the product or a closely related product before writing; do not assume one product's domain vocabulary fits every other product.
-
-## Use presentation to support the tour
-
-Choose the simplest authoring surface that preserves the reading flow. Use steps for real procedures, tabs for genuine alternatives, asides for meaningful context or risk, and diagrams for non-trivial flows. Do not turn sequential cause-and-effect examples into tabs merely because they use different languages; hiding one side can make the explanation harder to follow.
-
-Full-stack type safety is a differentiator, so show both the backend contract and generated frontend shape when both matter. Use `FullStackTabs` only when each pane remains understandable independently.
-
-The raw Markdown mirror behind page actions such as “Copy Markdown” comes from synchronized Markdown/MDX rather than rendered HTML. Converter rewrites and normalized frontmatter are present, but component imports and JSX remain visible. Prefer plain Markdown unless a component adds real teaching value.
-
-The exact Markdown/MDX boundary, aside semantics, component contracts, import paths, and rendering checks live in [Documentation Structure and Formatting](./documentation-structure-and-formatting.md). Do not duplicate or infer that rendering API here.
-
-## Two voices, connected products
-
-- **Two voices per area:** the toured/educational layer and the terse, exhaustive reference. Narrative pages link *down* into the reference; the reference stays a dictionary.
-- **Connect at the seams** rather than re-explaining. Show how neighboring products meet in the user's workflow and link to the glossary for shared terms.
-- **Coming-from-X bridges** map new concepts to what the reader already knows without organizing the whole product around a competitor. Give each the same shape: the reader's current code, the Cratis equivalent beside it, then a short "what changed and why" list. Write one page per source technology. Keep the other technology's code accurate at a named version, or label it illustrative; state the trade-offs fairly and say when the reader's current approach remains the better fit.
-
-## Before you call a page done
-
-- Verify every framework API in a code example against real source — see [Writing Correct Code Examples](./writing-correct-examples.md). Readers paste snippets verbatim.
-- The owning repository's local documentation gate passes when one exists; when available, the sibling Documentation site's full check has zero hard lint errors and zero broken rendered links attributable to the change.
-- For a visual page, preview it and inspect light **and** dark screenshots using the owning site's screenshot workflow.
-
-Study the **aspire.dev** docs for strong Starlight information architecture and tour writing.
-
-The edit/sync/verify loop and source ownership live in [Editing Cratis Documentation](./editing-cratis-docs.md).
+Before returning a draft, read its explanation as prose: does it make the code
+easier to understand, or merely name responsibilities and limitations? Use
+**cratis-writing-voice-and-cadence** for an authorized revision, preserving
+technical claims and approval boundaries. For a materially changed journey,
+follow the reader-review procedure owned by **cratis-documentation-writing**;
+report when independent review is unavailable. Do not edit generated copies,
+change navigation, or publish as part of writing. Run the owning documentation
+gate and, when available, the Documentation site's full check for attributable
+lint and rendered-link errors. For a visual page, use the owning preview workflow
+and inspect light and dark screenshots. Source ownership and the edit/sync/verify
+loop live in [Editing Cratis Documentation](editing-cratis-docs.md).

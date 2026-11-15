@@ -59,7 +59,7 @@ public class an_event_sequence_with_idempotency_keys : appending_many_events
         {
             _writes++;
             _written = call.Arg<IEnumerable<EventToAppendToStorage>>().ToList();
-            return Task.FromResult<Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>>(Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Success(AppendedEventsFrom(_written)));
+            return Task.FromResult(Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Success(AppendedEventsFrom(_written)));
         });
         _complianceManager.LocateProtectedValues(Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(_ => []);
         _complianceManager.ApplyReportingKeys(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
@@ -96,10 +96,10 @@ public class an_event_sequence_with_idempotency_keys : appending_many_events
     protected async Task Protect(bool erased = false)
     {
         _request.Content["name"] = "Alice";
-        var location = new ProtectedValueLocation("name", ProtectionKind.Pii, _eventSourceId.Value, _request.Content["name"]!.DeepClone());
+        var location = new ProtectedValueLocation("name", ProtectionKind.Pii, _eventSourceId.Value, _request.Content["name"].DeepClone());
         var use = new ProtectedValueUse("name", ProtectionKind.Pii, location.Plaintext, new(ProtectionKind.Pii, _eventSourceId.Value, _protectingKey, EncryptionKeyRevision.Initial));
         _complianceManager.LocateProtectedValues(Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>()).Returns(call =>
-            [location with { Plaintext = call.Arg<JsonObject>()["name"]!.DeepClone() }]);
+            [location with { Plaintext = call.Arg<JsonObject>()["name"].DeepClone() }]);
         var encoded = AppendFingerprint.Compute(Input(_request, [location]), [use]).AsT0.Format();
         Durable(fingerprint: encoded);
         await _backingKeys.SaveFor(EventStore, EventStoreNamespace, _eventSourceId.Value, _protectingKey, EncryptionKeyRevision.Initial);
@@ -110,8 +110,10 @@ public class an_event_sequence_with_idempotency_keys : appending_many_events
         }
         _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision?>())
             .Returns(call => _backingKeys.TryGetFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision?>(3)));
-        _keys.GetErasureFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
-            .Returns(call => _backingKeys.GetErasureFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        _keys.TryGetAtRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision>())
+            .Returns(call => _backingKeys.TryGetAtRevisionFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision>(3)));
+        _keys.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _backingKeys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
     }
 
     protected async Task SeedSlot(EventSequenceNumber number, EventType? type = null) => await _log.Append(

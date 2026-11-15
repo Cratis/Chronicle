@@ -19,6 +19,7 @@ internal sealed class EventStores(
     global::Orleans.IGrainFactory grainFactory,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Cratis.Chronicle.EventStores.IEventStoreInitialization eventStoreInitialization,
+    global::System.IServiceProvider serviceProvider,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.EventStores.EventStores> logger) : global::Cratis.Chronicle.Contracts.EventStores.IEventStores
 {
     /// <inheritdoc/>
@@ -37,7 +38,7 @@ internal sealed class EventStores(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse>> GetEventStoreDeployment(global::Cratis.Chronicle.Contracts.EventStores.GetEventStoreDeploymentRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.EventStores.EventStoreDeploymentResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.EventStores.EventStoreDeployment.GetEventStoreDeployment(request.EventStore, grainFactory);
@@ -50,7 +51,7 @@ internal sealed class EventStores(
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>(
             async () =>
             {
-                var result = await global::Cratis.Chronicle.EventStores.EventStoreNames.AllEventStores(storage, eventStoreInitialization);
+                var result = await global::Cratis.Chronicle.EventStores.EventStoreNames.AllEventStores(storage, eventStoreInitialization, serviceProvider);
                 return result.Select(ToEventStoreNamesResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "EventStores", "AllEventStores"));
@@ -58,7 +59,7 @@ internal sealed class EventStores(
     /// <inheritdoc/>
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>> ObserveEventStores(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>>(
-            () => global::Cratis.Chronicle.EventStores.EventStoreNames.ObserveEventStores(storage, eventStoreInitialization)
+            () => global::Cratis.Chronicle.EventStores.EventStoreNames.ObserveEventStores(storage, eventStoreInitialization, serviceProvider)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.EventStores.EventStoreNamesResponse>)_.Select(ToEventStoreNamesResponse).ToList()),
             exception => logger.QueryFailed(exception, "EventStores", "ObserveEventStores"));

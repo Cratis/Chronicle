@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Storage.Sql.Cluster;
 /// <param name="options">The Orleans cluster identity.</param>
 public partial class SqlMembershipTable(IDatabase database, IOptions<ClusterOptions> options) : IMembershipTable
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
     readonly string _clusterId = options.Value.ClusterId;
 
     /// <inheritdoc/>

@@ -80,8 +80,9 @@ internal sealed class InProcessCompliance
     /// <summary>
     /// Creates the <see cref="KernelEvents::EventCompliance"/> that releases event content on read.
     /// </summary>
+    /// <param name="storage">The storage used to resolve effective protection schemas.</param>
     /// <returns>A new <see cref="KernelEvents::EventCompliance"/> over the shared manager.</returns>
-    public KernelEvents::EventCompliance CreateEventCompliance() => new(Manager, _expandoObjectConverter);
+    public KernelEvents::EventCompliance CreateEventCompliance(Storage.IStorage storage) => new(Manager, _expandoObjectConverter, new KernelCore::Cratis.Chronicle.EventTypes.EventTypeSchemaCache(storage));
 
     /// <summary>
     /// Creates the <see cref="KernelReadModels::ReadModelsCompliance"/> that applies and releases read model content.

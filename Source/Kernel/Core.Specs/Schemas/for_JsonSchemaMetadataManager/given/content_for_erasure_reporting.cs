@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Compliance.GDPR;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager.given;
 public class content_for_erasure_reporting : Specification
 {
     protected InMemoryEncryptionKeyStorage _keys;
+    protected bool _materialMissing;
     protected JsonSchemaMetadataManager _manager;
     protected JsonSchema _schema;
     protected JsonObject _plaintext;
@@ -25,10 +27,15 @@ public class content_for_erasure_reporting : Specification
         _keys = new();
         var encryption = new Encryption();
         var provisioner = new ManagedEncryptionKeyProvisioner(_keys, encryption);
+        var access = Substitute.For<IEncryptionKeyStorage>();
+        access.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _materialMissing ? Task.FromResult<EncryptionKeyAtRevision?>(null) : _keys.TryGetLatestFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        access.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
+            .Returns(call => _keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
         _manager = new(
             new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(
-                new PIICompliancePropertyValueHandler(provisioner, _keys, encryption),
-                new EncryptedSubjectValueHandler(provisioner, _keys, encryption)),
+                new PIICompliancePropertyValueHandler(provisioner, access, encryption),
+                new EncryptedSubjectValueHandler(provisioner, access, encryption)),
             NullLogger<JsonSchemaMetadataManager>.Instance);
         _schema = await JsonSchema.FromJsonAsync("""
             {"type":"object","properties":{

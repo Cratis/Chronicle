@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Auditing;
+using Cratis.Chronicle.Occurrences.given;
 
 namespace Cratis.Chronicle.Occurrences.for_OccurrenceAttempt;
 
-public class when_redelivering_an_occurrence : given.an_occurrence_client
+public class when_redelivering_an_occurrence : an_occurrence_client
 {
     readonly List<CorrelationId> _correlations = [];
     readonly List<IDictionary<string, string>> _causes = [];
@@ -23,10 +24,10 @@ public class when_redelivering_an_occurrence : given.an_occurrence_client
     async Task Because()
     {
         var attempt = CreateAttempt(TimeProvider.System);
-        await attempt.Run(_claim, CancellationToken.None);
+        await attempt.Run(_claim, TimeProvider.System.GetTimestamp(), CancellationToken.None);
         _claim.Epoch++;
         _claim.Attempts++;
-        await attempt.Run(_claim, CancellationToken.None);
+        await attempt.Run(_claim, TimeProvider.System.GetTimestamp(), CancellationToken.None);
     }
 
     [Fact] void should_use_a_fresh_correlation_per_attempt() => _correlations.Distinct().Count().ShouldEqual(2);

@@ -27,6 +27,7 @@ public partial class EventSequence
     /// <inheritdoc/>
     public async Task<IdempotentAppendResult> AppendWithIdempotencyKey(EventToAppend @event, IdempotencyKey idempotencyKey, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScope concurrencyScope)
     {
+        if (!_mayWriteSequence) throw new ReservedEventSequenceName(_eventSequenceId);
         var requests = new List<KeyedAppend> { new(@event, idempotencyKey) };
         var scopes = new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope> { [@event.EventSourceId] = concurrencyScope });
         await AppendKeyedBatch(requests, correlationId, causation, causedBy, scopes);
@@ -160,7 +161,8 @@ public partial class EventSequence
                 var @event = request.Event;
                 var schema = await EventTypesStorage.GetFor(@event.EventType.Id, @event.EventType.Generation);
                 var subject = @event.Subject?.IsSet == true ? @event.Subject.Value : @event.EventSourceId.Value;
-                var locations = await AppendFingerprint.LocateProtectedValues(jsonComplianceManagerProvider, schema.Schema, subject, @event.Content);
+                var protectionSchema = await schemaCache.GetProtectionSchemaFor(_eventSequenceKey.EventStore, @event.EventType.Id, @event.EventType.Generation, schema.Schema);
+                var locations = await AppendFingerprint.LocateProtectedValues(jsonComplianceManagerProvider, protectionSchema, subject, @event.Content);
                 if (!locations.IsSuccess)
                 {
                     request.Result = new(AppendResult.Failed(correlationId, [IdempotencyRefusals.Unsupported(key)]));

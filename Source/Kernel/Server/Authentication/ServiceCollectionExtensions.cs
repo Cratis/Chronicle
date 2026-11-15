@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OpenIddict.Validation.AspNetCore;
 using User = Cratis.Chronicle.Storage.Security.User;
 
@@ -81,6 +82,12 @@ public static class ServiceCollectionExtensions
                 .AddAdministratorPolicies();
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.FederationEnrollment);
+
+            // The sign-in controllers need the Identity stack skipped above, so they are left out of MVC rather
+            // than mapped and failing with a 500 when activated. Their routes answer 404, like the Identity API.
+            services.AddMvcCore().ConfigureApplicationPartManager(manager =>
+                manager.FeatureProviders.Add(new AuthenticationDisabledControllerFeatureProvider()));
 
             return services;
         }
@@ -136,6 +143,7 @@ public static class ServiceCollectionExtensions
                 options.Authority = chronicleOptions.Authentication.Authority;
                 options.Audience = chronicleOptions.Authentication.Audience;
                 options.RequireHttpsMetadata = chronicleOptions.Authentication.RequireHttpsMetadata;
+                options.TokenValidationParameters.AuthenticationType = ExternalAuthority.AuthenticationType;
             });
         }
 
@@ -172,12 +180,18 @@ public static class ServiceCollectionExtensions
     static void AddAdministratorAuthorizationHandlers(this IServiceCollection services)
     {
         services.AddChronicleAdministratorAuthorization();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, ExternalAdministratorClaimValidation>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
+
+        // Reads the grants the startup task loaded: given once the silo is active, never from a hosted service (#4040).
+        services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, StoreEntitlementsStartupNotice>();
     }
 
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder
         .AddPolicy(WellKnownAuthorizationPolicies.Administrator, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new AdministratorRequirement()))
-        .AddPolicy(WellKnownAuthorizationPolicies.AdministratorOperations, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new SystemStoreOperationRequirement()));
+        .AddPolicy(WellKnownAuthorizationPolicies.AdministratorOperations, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new SystemStoreOperationRequirement()))
+        .AddPolicy(WellKnownAuthorizationPolicies.FederationEnrollment, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new FederationEnrollmentRequirement()));
 
     /// <summary>
     /// Shapes an administrator policy. With authentication disabled there are no schemes and the handlers decide alone;

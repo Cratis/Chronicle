@@ -1,6 +1,6 @@
 ---
 name: cratis-components-accessibility
-description: Apply the accessibility conventions Cratis Components 4 actually implements — dialog initial-focus discipline and the armed-Enter hazard, supplying every accessible name as a localizable prop or provider message, putting the accessible name on the focusable element rather than the wrapper, keeping decorative icons hidden, and customizing through parts without fighting the component's own ARIA. Use when building or reviewing a dialog, a form control, a data table, a toast, or any component whose accessible name is currently a hard-coded English string. Do not use as a general WCAG conformance guide.
+description: Use when fixing Cratis Components focus, keyboard submission, accessible names, field announcements or decorative icons. Not for claiming general WCAG conformance or choosing a visual theme.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-components-accessibility/SKILL.md -->

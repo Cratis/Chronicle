@@ -74,7 +74,7 @@ export const QueryEditor = ({
         runWith(next);
     };
 
-    const { AppendEventWrapper, RedactEventWrapper, ReviseWrapper, append, redact, revise } =
+    const { AppendEventWrapper, RedactEventWrapper, ReviseWrapper, CompensateWrapper, append, redact, revise, compensate, canCompensate } =
         useEventActions(eventStore, state.namespace, state.eventSequenceId, selectedEvent, run);
 
     const menuItems: ActionMenuItem[] = [
@@ -105,6 +105,12 @@ export const QueryEditor = ({
             icon: <faIcons.FaArrowsRotate className='mr-2' />,
             disabled: !selectedEvent,
             command: revise
+        },
+        {
+            label: sequenceStrings.actions.compensate,
+            icon: <faIcons.FaRotateLeft className='mr-2' />,
+            disabled: !selectedEvent || !canCompensate,
+            command: compensate
         },
         {
             label: sequenceStrings.actions.export,
@@ -167,6 +173,7 @@ export const QueryEditor = ({
             <AppendEventWrapper />
             <RedactEventWrapper />
             <ReviseWrapper />
+            <CompensateWrapper />
         </div>
     );
 };

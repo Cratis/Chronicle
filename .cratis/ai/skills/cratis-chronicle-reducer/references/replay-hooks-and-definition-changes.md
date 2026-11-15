@@ -34,3 +34,10 @@ partial replay only when history proves they follow all previously consumed
 events per source. Interleaved history requires full replay. Manual policies
 leave recommendations; they do not silently rebuild. Source:
 `Documentation/hosting/configuration/observers.md`.
+
+At **v19.110.1**, replay writes reduced state to a separate sink and switches to
+it only when replay completes. Abandoning a failed reducer replay does not
+publish partially rebuilt state. This is a kernel sink boundary, not proof that
+external side effects are reversed. Verified in
+`Source/Kernel/Core/Observation/Jobs/ReplayObserver.cs` and the tagged observer
+configuration documentation.

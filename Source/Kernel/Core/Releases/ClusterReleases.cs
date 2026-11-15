@@ -54,6 +54,9 @@ public sealed class ClusterReleases : IClusterReleases
     /// <inheritdoc/>
     public ClusterReleaseSummary Summarize() => Read().Summary;
 
+    /// <inheritdoc/>
+    public IReadOnlyList<SemanticVersion> FindIncompatible(SemanticVersion local) => ClusterReleaseBoundary.FindIncompatible(local, Read().Summary);
+
     static bool IsReleaseCharacter(char character) => char.IsAsciiLetterOrDigit(character) || character is '.' or '-' or '+';
 
     Snapshot Read()

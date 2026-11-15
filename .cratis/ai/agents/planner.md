@@ -134,7 +134,7 @@ For an implemented application slice, require the applicable changed-lane gates 
 - [ ] `dotnet build` succeeds with zero errors and zero warnings
 - [ ] `yarn lint` passes with zero errors (if frontend is present)
 - [ ] `npx tsc -b` passes with zero errors (if frontend is present)
-- [ ] All integration specs pass (`dotnet test`)
+- [ ] All integration specs pass (built C# spec executables; `dotnet test <project> --no-build` only for VSTest; see specs.csharp)
 - [ ] All TypeScript specs pass (`yarn test`) if applicable
 - [ ] Public-facing changes (clients, SDKs, public APIs) include associated documentation updates
 - [ ] `Documentation/verify-markdown.sh` passes when documentation is added or changed

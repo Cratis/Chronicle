@@ -1,42 +1,52 @@
 ---
-title: Build a separate reducer
-description: Put a read-model fold in an IReducerFor<T> class when it needs injected services or separation from the model.
+title: Build a separate Cratis Chronicle reducer
+description: Build an order summary with a separate Cratis Chronicle reducer. Handle nullable state, configure observation, and retrieve the result by event source ID.
 ---
 
-Use a separate `IReducerFor<T>` when the fold needs injected services, instance behavior during replay,
-or must live apart from its model. For application code, start with model-bound attributes, then fluent
-mappings, then reducer code; a [self-reducing model](self-reducing-read-models.mdx) is the default for new
-reducers. [Choose how to build a read model](../projections/choosing-a-read-model-style.mdx) explains the
-choice; this guide shows the separate-class form.
+A separate Cratis Chronicle reducer keeps state-transition code outside the read model. That code is
+the fold: it combines an event with current state to produce the next state. Use the .NET
+`IReducerFor<T>` form when the fold needs injected services, instance behavior during replay, or
+separation from a shared model contract. This guide builds an order summary from creation and item
+changes, then reads it by order ID.
+
+If the transitions can live on the model, start with a
+[self-reducing model](self-reducing-read-models.mdx) instead. If you have not yet chosen between
+mappings and reducer code, [compare the read-model styles](../projections/choosing-a-read-model-style.mdx)
+first.
 
 ## Prerequisites
 
-Before you begin, ensure you have:
-
-- A Chronicle-enabled application
-- Basic understanding of events and event sourcing
-- A read model class to reduce events into
+Use an application already configured with Chronicle and its event types. Append all events for one
+order with the same event source ID, and use that ID when reading its summary. An `OrderId` property
+in an event does not replace the event source ID used to route the fold.
 
 ## Creating a Reducer
 
 ### 1. Define Your Read Model
 
-First, create a record representing the state you want to compute:
+The summary holds the order's total amount, item count, and last update time. Define the shape the
+caller needs, rather than storing another copy of every event:
 
 <ChronicleClientTabs snippet="reducers/getting-started/read-model" />
 
 ### 2. Implement the Reducer
 
-Create a reducer by implementing `IReducerFor<TReadModel>` with methods for each event type:
+In .NET, implement `IReducerFor<TReadModel>` for this one model and add methods for its events.
+Creation initializes the summary; item changes calculate the next total and count:
 
 <ChronicleClientTabs snippet="reducers/getting-started/reducer-implementation" />
 
-The event context supplies metadata such as occurrence time and event source ID. TypeScript handlers
-can take it as a third argument after the event and current state.
+The item handlers return `null` if creation has not produced a summary yet. Once state exists, each
+returns an updated copy. `context.Occurred` sets `LastUpdated` from the recorded event time, so
+replaying the history does not substitute today's time.
+
+The event context also supplies the event source ID and sequence number. TypeScript handlers can
+take it as a third argument after the event and current state.
 
 ## Method Signatures
 
-Reducer methods are discovered by convention and support the following signatures:
+The following signatures describe .NET instance methods. Chronicle selects a handler from its event
+parameter type, not its method name, and awaits an asynchronous result before applying the next event.
 
 ### Synchronous Methods
 
@@ -46,18 +56,10 @@ Reducer methods are discovered by convention and support the following signature
 
 <ChronicleClientTabs snippet="reducers/getting-started/async-signatures" />
 
-These overload tables describe .NET instance-method dispatch. Kotlin and Java match the first
-parameter's event type. TypeScript selects a method by the camelCase event-class name and passes
-`(event, current, context)`; it awaits the result, so an `async` handler works. Kotlin awaits `suspend`
-handlers. Elixir uses a `reduce/3` callback pattern-matched by event struct.
-
-**Key Points:**
-
-- In .NET, method names are unrestricted; the examples use `On` followed by the event type name
-- The `@event` parameter is the specific event being processed
-- The `current` parameter contains the existing state (null if no previous state exists)
-- The `EventContext` parameter provides metadata like event source ID, occurred timestamp, and sequence number
-- Both synchronous and asynchronous methods are supported
+Kotlin and Java also match the first parameter's event type; Kotlin awaits `suspend` handlers.
+TypeScript discovers camelCase event-class names or explicitly marked handlers, passes
+`(event, current, context)`, and awaits the result. Elixir uses a `reduce/3` callback pattern-matched
+by event struct. Use the selected client's examples rather than translating a .NET signature.
 
 ### .NET dispatch and diagnostics
 
@@ -75,43 +77,52 @@ You can customize the reducer using the `[Reducer]` attribute:
 
 <ChronicleClientTabs snippet="reducers/getting-started/reducer-attribute" />
 
-**Attribute parameters:**
+| .NET parameter | Effect |
+| --- | --- |
+| `id` | Identifies the reducer; defaults to its fully qualified type name. |
+| `eventSequence` | Selects the sequence to observe. Without it, Chronicle infers the event log or the inbox for one foreign source store from the handled event types. More than one source store is rejected. |
+| `isActive` | Enables active observation; defaults to `true`. |
 
-- `id` - Custom identifier for the reducer (defaults to the fully qualified type name)
-- `eventSequence` - The event sequence to observe. When not specified, it is inferred from the handled event types: normally the event log, or the inbox of the source event store when the handled events belong to one foreign source store. Handled events from more than one source store are rejected. See [Event sequences](event-sequence.mdx)
-- `isActive` - Whether the reducer actively observes events (defaults to `true`)
+The example explicitly selects `order-events`. Omit that selection when the normal inferred sequence
+is what you need; see [Event sequences](event-sequence.mdx) before choosing a different one.
 
 Use the client tab's configuration shape. TypeScript expresses identity and sequence through the
 `reducer()` decorator; Kotlin and Java use `@Reducer`.
 
 ## Retrieving Reduced State
 
-Once your reducer is set up, you can retrieve the computed state:
+Read the summary with the event source ID used to append the order's events:
 
 <ChronicleClientTabs snippet="reducers/getting-started/retrieving-state" />
 
+For an active reducer, this returns materialized state, the result already stored by the observer.
+It does not wait for the latest append to be reduced. Expect no instance before creation has been
+processed; after creation, additions increase the total and count, while removals decrease them.
+For an executable check of those transitions, use
+[ReadModelScenario](../testing/read-models/scenario.mdx).
+
 ## Event Processing
 
-Reducer methods are called for each event matching the event type:
+Chronicle keeps each order's state separate and applies its events in sequence order. The first call
+in a delivered batch starts from the stored state, which can be `null`. Each later call receives the
+previous call's result, not a fresh read from storage. The batch's final successful result is what
+gets persisted.
 
-1. **Event Type Matching** - Chronicle calls the method that handles the specific event type
-2. **Event Source ID** - Each method receives events for a single event source
-3. **Sequential Processing** - Events are processed in the order they were appended
-
-The `current` parameter in each method:
-
-- Is `null` when no previous state exists for this event source
-- Contains the current persisted state for this event source
+Return `current` unchanged to ignore an event. Return `null` only when the state should remain absent
+or an existing instance should be removed.
 
 ## Best Practices
 
-1. **Keep reducers deterministic** - Compute state from recorded facts. An injected clock or live rate service can return different values during replay; record time and rates in events when they determine the result.
-2. **Handle null current state** - Always check if `current` is null for the initial state
-3. **Use immutable state** - Create new instances rather than mutating the current state
-4. **Process events in order** - The events are provided in sequence order; respect that order
-5. **Consider performance** - For large event streams, optimize your reduction logic
+Compute state from recorded facts. An injected clock or live rate service can return different
+values during replay; put time and rates in events when they determine the result. Keep external
+side effects out of the fold because retries and replay can invoke it again.
+
+Create new state rather than mutating `current`, and copy nested collections before changing them.
+Test events that arrive without prior state as well as the expected order history. This catches
+missing null handling before an observer encounters it.
 
 ## Next Steps
 
-- Learn about [Passive Reducers](passive-reducers) to control when reducers observe
-- Explore [Event Processing](event-processing) for advanced patterns
+Continue with [Event Processing](event-processing) when you need handler-selection rules, collection
+updates, or failure behavior. If stored state is not the read behavior you need,
+[Passive Reducers](passive-reducers) explains how to fold on demand.

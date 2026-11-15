@@ -18,7 +18,7 @@ public class with_a_compatibility_payload : given.a_webhook_delivery
         {
             [new(_pin.Id, 1)] = new(new(_pin.Id, 1), EventTypeOwner.Client, EventTypeSource.Code, _firstSchema)
         };
-        _events = (await new EventCompliance(_metadata, _converter).Release(_events, schemas)).ToArray();
+        _events = (await new EventCompliance(_metadata, _converter, new OwnGenerationSchemaCache()).Release(_events, schemas)).ToArray();
     }
 
     async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));

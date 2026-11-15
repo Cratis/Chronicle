@@ -25,7 +25,7 @@ public class when_granting_through_the_management_command : given.an_administrat
 
     async Task Because()
     {
-        await new GrantAdministrator(_first).Handle(_grainFactory, _principalAccessor);
+        await new GrantAdministrator(_first).Handle(_grainFactory, _principalAccessor, Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()));
         _grant = Recorded<UserGrantedAdministrator>().Single();
         _administrator = await _roster.IsActiveAdministrator(_first);
     }
@@ -36,6 +36,6 @@ public class when_granting_through_the_management_command : given.an_administrat
     void should_audit_the_actor_without_copying_its_token()
     {
         using var evidence = JsonDocument.Parse(_grant.Evidence);
-        evidence.RootElement.GetProperty("Actor").GetString().ShouldEqual(_actor);
+        evidence.RootElement.GetProperty("Actor").GetString().ShouldEqual($"chronicle:local|{_actor}");
     }
 }

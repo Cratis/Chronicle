@@ -5,8 +5,14 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 
 public class and_the_stream_closes : given.a_client_subscription_keeper
 {
-    Task Because() => KeepUntilTheStreamCloses();
+    async Task Because()
+    {
+        StartKeeping();
+        await _clock.Elapse();
+        await _clock.NextWait();
+        await _streamClosed.CancelAsync();
+    }
 
-    [Fact] void should_complete() => _completed.ShouldBeTrue();
-    [Fact] void should_stop_checking() => _checks.ShouldEqual(ChecksBeforeTheStreamCloses);
+    [Fact] async Task should_complete() => await Observation.given.ManualClock.Within(_keeping);
+    [Fact] void should_have_checked_once() => _checks.ShouldEqual(1);
 }

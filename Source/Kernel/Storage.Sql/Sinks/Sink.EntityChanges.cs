@@ -6,9 +6,13 @@ using System.Globalization;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using static Cratis.Chronicle.Storage.Sql.Sinks.ChildCollectionRemovals;
+using static Cratis.Chronicle.Storage.Sql.Sinks.ChildCollectionUpserts;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnCoercion;
 using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
 
 #pragma warning disable SA1202 // Private helpers grouped next to the methods they back.
@@ -82,9 +86,16 @@ public partial class Sink
             return;
         }
 
+        // The sink owns the row identity from Key, matching MongoDB's IsMongoDBKey filter.
+        if (column.IsKey)
+        {
+            return;
+        }
+
         if (!column.IsJson)
         {
-            if (difference.PropertyPath.Segments.Count() == 1)
+            // A removal always addresses a key inside a dictionary, which is stored as JSON - never a typed column.
+            if (difference.PropertyPath.Segments.Count() == 1 && !difference.IsRemoval)
             {
                 SetTypedColumn(entry, column, difference.Changed);
             }
@@ -101,6 +112,11 @@ public partial class Sink
     void ApplyJsonColumnDifference(EntityEntry<DynamicReadModelEntity> entry, ProjectedColumn column, PropertyDifference difference)
     {
         var current = LoadJsonColumnState(entry, column);
+        if (difference.IsRemoval && current is null)
+        {
+            return;
+        }
+
         var indexers = difference.ArrayIndexers ?? ArrayIndexers.NoIndexers;
         var subPath = BuildSubPath(difference.PropertyPath);
 
@@ -112,16 +128,24 @@ public partial class Sink
         // for an empty path, so use it to detect "replace the entire column value".
         if (!subPath.IsSet)
         {
-            entry.Entity[column.Name] = SerializeJsonColumn(UnwrapForJson(difference.Changed), column);
+            if (difference.IsRemoval)
+            {
+                return;
+            }
+
+            entry.Entity[column.Name] = SerializeJsonColumnReplacement(UnwrapForJson(difference.Changed), column);
         }
         else
         {
-            var rebuilt = ApplyDifferenceToJsonRoot(current, column, new JsonDifference(subPath, indexers, difference.Changed));
+            var rebuilt = ApplyDifferenceToJsonRoot(current, column, new JsonDifference(subPath, indexers, difference.Changed, difference.IsRemoval));
             entry.Entity[column.Name] = SerializeJsonColumn(rebuilt, column);
         }
 
         entry.Property(column.Name).IsModified = true;
     }
+
+    static string? SerializeJsonColumnReplacement(object? value, ProjectedColumn column) =>
+        value is null && !column.IsArray ? null : SerializeJsonColumn(value, column);
 
     void TryApplyDifferenceViaArrayIndexers(EntityEntry<DynamicReadModelEntity> entry, PropertyDifference difference)
     {
@@ -145,7 +169,12 @@ public partial class Sink
         // Pass it directly as the subPath — ApplyDifferenceToJsonRoot will locate the element via
         // the ArrayIndexers and apply the leaf property change within it.
         var current = LoadJsonColumnState(entry, jsonColumn);
-        var rebuilt = ApplyDifferenceToJsonRoot(current, jsonColumn, new JsonDifference(difference.PropertyPath, indexers, difference.Changed));
+        if (difference.IsRemoval && current is null)
+        {
+            return;
+        }
+
+        var rebuilt = ApplyDifferenceToJsonRoot(current, jsonColumn, new JsonDifference(difference.PropertyPath, indexers, difference.Changed, difference.IsRemoval));
         entry.Entity[jsonColumn.Name] = SerializeJsonColumn(rebuilt, jsonColumn);
         entry.Property(jsonColumn.Name).IsModified = true;
     }
@@ -170,20 +199,21 @@ public partial class Sink
         var identifierName = childAdded.IdentifiedByProperty;
         var identifierValue = UnwrapConceptValue(childAdded.Key);
         var list = current as IList<object?> ?? new List<object?>();
+        var childSchema = _schema.GetSchemaForPropertyPath(childAdded.ChildrenProperty);
         if (pathSegments.Length == 1)
         {
             // Top-level children collection on the column: upsert by identifier so repeated
             // ChildAdded events for the same identifier (e.g. during replay) update in place
             // instead of duplicating. Mirrors how MongoDB's projection engine treats a child
             // re-introduced via ChildAdded as a replacement when the identifier already exists.
-            UpsertChildInList(list, identifierName, identifierValue, unwrappedState);
+            UpsertChildInList(list, new ChildValue(identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema));
         }
         else
         {
             // Nested children — e.g. Configurations.Hubs — locate the matching parent inside the
             // column's JSON tree using ArrayIndexers, then upsert into its child collection.
             var indexers = childAdded.ArrayIndexers ?? ArrayIndexers.NoIndexers;
-            UpsertNestedChild(list, 1, new ChildUpsert(pathSegments, indexers, identifierName, identifierValue, unwrappedState));
+            UpsertNestedChild(list, 1, new ChildUpsert(pathSegments, indexers, new ChildValue(identifierName, identifierValue, unwrappedState, childAdded.Ordering, childSchema)));
         }
 
         entry.Entity[column.Name] = SerializeJsonColumn(list, column);
@@ -386,6 +416,12 @@ public partial class Sink
     {
         if (current is ExpandoObject rootExpando)
         {
+            if (difference.IsRemoval)
+            {
+                difference.SubPath.RemoveValue(rootExpando, difference.Indexers);
+                return rootExpando;
+            }
+
             difference.SubPath.SetValue(rootExpando, difference.Changed!, difference.Indexers);
             return rootExpando;
         }
@@ -396,6 +432,11 @@ public partial class Sink
         }
 
         var fresh = new ExpandoObject();
+        if (difference.IsRemoval)
+        {
+            return fresh;
+        }
+
         difference.SubPath.SetValue(fresh, difference.Changed!, difference.Indexers);
         return fresh;
     }
@@ -422,6 +463,10 @@ public partial class Sink
             // The whole element is being replaced.
             ReplaceChildContents(element, difference.Changed);
         }
+        else if (difference.IsRemoval)
+        {
+            difference.SubPath.RemoveValue(element, RewriteIndexersRelativeTo(column.Name, difference.Indexers));
+        }
         else
         {
             difference.SubPath.SetValue(element, difference.Changed!, RewriteIndexersRelativeTo(column.Name, difference.Indexers));
@@ -430,5 +475,5 @@ public partial class Sink
         return list;
     }
 
-    sealed record JsonDifference(PropertyPath SubPath, ArrayIndexers Indexers, object? Changed);
+    sealed record JsonDifference(PropertyPath SubPath, ArrayIndexers Indexers, object? Changed, bool IsRemoval = false);
 }

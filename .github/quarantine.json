@@ -1,0 +1,11 @@
+{
+  "entries": [
+    {
+      "spec": "Cratis.Chronicle.Integration.Projections.Scenarios.when_removing_child_collection.and_reregistering_after_the_child_collection_was_removed.should_store_the_definition_without_the_removed_child",
+      "issue": 5008,
+      "owner": "woksin",
+      "expires": "2026-12-12",
+      "reason": "Conservative quarantine: root cause is not proven. The removed child remained in the stored definition in run 38993997072 (attempt 1); reproduce before fixing. https://github.com/Cratis/Chronicle/actions/runs/38993997072"
+    }
+  ]
+}

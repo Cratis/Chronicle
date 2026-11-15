@@ -29,6 +29,8 @@ public partial class ReadModelPropertyExpressionResolvers(
             new CountExpressionResolver(typeFormats),
             new IncrementExpressionResolver(typeFormats),
             new DecrementExpressionResolver(typeFormats),
+            new RemoveExpressionResolver(),
+            new SetOnceExpressionResolver(eventValueProviderExpressionResolvers),
             new SetExpressionResolver(eventValueProviderExpressionResolvers)
         ];
 

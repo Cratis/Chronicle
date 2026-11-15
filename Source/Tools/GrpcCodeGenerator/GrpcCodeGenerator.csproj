@@ -3,7 +3,7 @@
     <PropertyGroup>
         <!-- Host tools must not inherit packaging multi-targeting during restore. -->
         <TargetFrameworks></TargetFrameworks>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
         <NoWarn>$(NoWarn);SA1600;RCS1201</NoWarn>

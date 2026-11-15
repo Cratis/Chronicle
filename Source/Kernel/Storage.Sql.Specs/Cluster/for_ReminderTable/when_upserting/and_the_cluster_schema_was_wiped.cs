@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_ReminderTable.when_upserting;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_the_cluster_schema_was_wiped : given.a_wiped_reminder_table
 {
     string? _etag;

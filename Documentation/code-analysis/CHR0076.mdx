@@ -1,0 +1,40 @@
+---
+title: "CHR0076: Batch method has a signature Chronicle cannot call"
+description: "CHR0076 reports a Cratis Chronicle reactor or reducer batch method whose parameters or result Chronicle cannot supply or read."
+---
+
+## Rule description
+
+Chronicle calls a batch method with arguments it knows how to supply, and reads its result in a fixed way:
+
+- A reactor batch method takes `(EventBatch batch, BatchContext context)`.
+- A reducer batch method takes `(EventBatch events, TReadModel? current, BatchContext context)` and returns `TReadModel?` or `Task<TReadModel?>`. Returning `null` removes the read model.
+- On a self-reducing read model the batch method is `public static` and named `Reduce`.
+- After those, a batch method can take a `CancellationToken` and services from the service provider. `BatchContext` is optional. The `CancellationToken` can be declared optional, as `CancellationToken cancellationToken = default`.
+
+CHR0076 reports a batch method that takes an `EventContext` (each event in the batch carries its own), a second `EventBatch`, a primitive, value type or string, a `ref`, `out`, `in` or `params` parameter, an optional parameter other than a `CancellationToken`, or is generic. For a reducer it also reports a missing or mistyped current read model, a result that is not the read model, and a batch method on a self-reducing read model that is not public, not static or not named `Reduce`.
+
+The client discovers a self-reducing read model's batch method only as a `public static` method named `Reduce`. The analyzer recognizes a method taking an `EventBatch` first and the read model second as a self-reducing batch method the client would not discover when it is:
+
+- a static method with another name than `Reduce`;
+- a static method that is not public;
+- an instance method that declares `[Observes<TEvent>]`.
+
+Chronicle refuses to register an observer whose batch method has any of these problems, with one exception. The client never finds an undiscoverable self-reducing batch method by itself; it only meets one among the methods of a read model that is self-reducing through another method, and then refuses the reducer for having more than one batch method or for mixing batch and per-event methods. A read model whose only reduce method is undiscoverable is not a reducer at all: it never runs and nothing fails, which is why the analyzer reports it.
+
+## Severity
+
+Error
+
+## How to fix
+
+Change the signature to the shape the message names.
+
+## Related rules
+
+- [CHR0074](CHR0074.mdx): Reactor batch method must return `Task` or `void`.
+
+## Related topics
+
+- [Reactor batch methods](../reactors/batches.mdx)
+- [Reducer batch methods](../reducers/batches.mdx)

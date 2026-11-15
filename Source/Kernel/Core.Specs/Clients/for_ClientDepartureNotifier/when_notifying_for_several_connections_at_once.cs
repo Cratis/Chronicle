@@ -53,6 +53,13 @@ public class when_notifying_for_several_connections_at_once : Specification
         }
 
         silo.AddProbe<IObserver>(identity => _observers[identity.ToString()]);
+
+        // Resolve probes serially so concurrent notifications only read the test kit's unsynchronized cache.
+        foreach (var key in _firstKeys.Concat(_secondKeys))
+        {
+            silo.GrainFactory.GetGrain<IObserver>(key);
+        }
+
         _notifier = new ClientDepartureNotifier(silo.GrainFactory, Substitute.For<ILogger<ClientDepartureNotifier>>());
     }
 

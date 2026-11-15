@@ -16,5 +16,5 @@ public class when_chaining_multiple_extensions : Specification
         .WithCredentials("user", "pass")
         .WithTlsValidationSkipped());
 
-    [Fact] void should_build_complete_url() => _result.ShouldEqual("chronicle://user:pass@example.com:8080");
+    [Fact] void should_build_complete_url() => _result.ShouldEqual("chronicle://user:pass@example.com:8080?skipTlsValidation=true");
 }

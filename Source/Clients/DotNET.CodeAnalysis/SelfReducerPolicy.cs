@@ -43,7 +43,19 @@ internal static class SelfReducerPolicy
     /// <param name="compilation">The owning compilation.</param>
     /// <returns>Whether the type is structurally a self reducer.</returns>
     internal static bool IsSelf(INamedTypeSymbol type, Compilation compilation) =>
-        CanBeSelf(type, compilation) && Methods(type).Any(method => IsValid(method, type, compilation));
+        CanBeSelf(type, compilation) && Methods(type).Any(method => IsValid(method, type, compilation) || IsValidBatch(method, type, compilation));
+
+    /// <summary>
+    /// Checks the runtime shape of a static batch transition: <c language="csharp">Reduce(EventBatch, TModel?, ...)</c> returning the model.
+    /// </summary>
+    /// <param name="method">The declaration.</param>
+    /// <param name="model">The model.</param>
+    /// <param name="compilation">The owning compilation.</param>
+    /// <returns>Whether the method is a batch method the client discovers on a self-reducing model.</returns>
+    internal static bool IsValidBatch(IMethodSymbol method, INamedTypeSymbol model, Compilation compilation) =>
+        method.Name == "Reduce" && method is { IsStatic: true, DeclaredAccessibility: Accessibility.Public } &&
+        BatchObservers.IsBatchMethod(method, compilation) && method.Parameters.Length > 1 &&
+        Equal(method.Parameters[1].Type, model) && ReturnsModel(method, model, compilation);
 
     /// <summary>
     /// Recognizes invalid static methods that refer to their model as state or result.

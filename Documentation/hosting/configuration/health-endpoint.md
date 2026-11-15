@@ -1,8 +1,7 @@
 ---
+title: Configure health endpoints in Cratis Chronicle Server
 description: Configure Chronicle's health check endpoint, served on the main port by default or on an optional dedicated port for orchestrator probes.
 ---
-# Health Endpoint
-
 By default Chronicle serves its health check on the main port (35000) — the same port that carries gRPC, the Workbench, the REST API and OAuth. The main port uses TLS by default, multiplexing HTTP/2 and HTTP/1.1 via ALPN. In development that TLS certificate is self-signed and generated automatically. If `tls.enabled=false`, the main port instead serves cleartext HTTP/2 only; probes on it must support HTTP/2.
 
 That is exactly where orchestrator and load-balancer probes run into trouble. A health probe that has to speak TLS — and sometimes validate the certificate — against a port that may be serving a self-signed certificate is awkward at best and broken at worst. The dedicated health port removes that friction: it publishes the health endpoint on its own HTTP/1.1 port where you can turn TLS off.
@@ -16,6 +15,9 @@ Chronicle binds the main and configured dedicated health listeners before starti
 | `/health/live` | Returns 200 once the listener accepts requests, even during silo startup. Use for startup and liveness probes. |
 | `/health` | Readiness: startup has completed, the host has started, and shutdown has not begun. Existing storage checks must also pass. Returns 503 otherwise. |
 | `/health/ready` | Same checks and status as `/health`. |
+
+The readiness body is the aggregated status: `Healthy`, `Degraded` or `Unhealthy`, or `Standby` while an
+[opted-in standby node](#single-writer-lease-readiness) waits for the single-writer lease.
 
 A different `healthCheckEndpoint` moves all three routes: `/probe` also exposes `/probe/live` and `/probe/ready`. All three remain available on an exclusive health port.
 
@@ -79,8 +81,22 @@ With `Localhost` clustering on persistent storage, the default single-writer lea
 lease. Losing ownership or reaching TTL/2 without a confirmed renewal makes it unhealthy and initiates
 shutdown. It is not registered for `MongoDB` clustering, `InMemory` storage or an explicitly disabled lease.
 
-A node still waiting for acquisition has not completed silo startup and is not ready. The lease does not
-bind an early health listener or advertise a ready standby. See [Clustering](clustering.md#single-writer-lease).
+A node still waiting for acquisition has not completed silo startup and is not ready, unless standby is
+enabled. With `clustering.singleWriterLease.standby` set to `true`, `/health` and `/health/ready` return
+**200** with the body `Standby` from the moment the node starts waiting for the lease until its startup
+has completed; the checks involved report `Degraded` with a standby description. In standby the node
+still refuses all non-health traffic with HTTP 503 and `Retry-After`, or gRPC `Unavailable`. Once startup
+completes the body is `Healthy` (or `Degraded` for other reasons, as before). If startup has not completed
+`clustering.singleWriterLease.standbyStartupTimeout` (default 10 minutes) after the node took the lease,
+readiness reports **503** `Unhealthy` instead, so a stuck startup does not look ready. Because the body
+`Standby` is a 200, alert on how long a node stays in standby rather than on the status code alone. See
+[Standby for start-before-stop rollouts](clustering.md#standby-for-start-before-stop-rollouts).
+
+## Storage authorization
+
+The `storage-authorization` check (tagged `ready`) reports `Degraded` while a storage permission failure is recorded. HTTP stays **200**, keeping the kernel in rotation. The log entry names the database, collection, and refused operation without exposing connection details.
+
+The failure clears after the next successful access completes index setup for that collection. If database names differ from those granted to the storage user, check [the database-name prefix](storage.mdx).
 
 ## Restricting the dedicated port to health only
 
@@ -101,6 +117,8 @@ Set `health.exclusive` to `true` to close that off. The port then serves the hea
 The restriction keys on the local port the connection was accepted on, which a client cannot influence. It is not derived from the `Host` header or any `X-Forwarded-*` header, so a request arriving on the main port cannot dress itself up as a health-port request or vice versa. The main port is never restricted, and the option does nothing unless a dedicated `health.port` is configured and differs from the main port.
 
 It defaults to `false` so that enabling a dedicated health port never silently removes endpoints from an existing deployment; turn it on deliberately when the probe port is reachable from somewhere the Workbench and API should not be.
+
+Once it is on, the Workbench is served from the main port only. A reverse proxy or ingress that routes Workbench traffic to the health port gets 404 and has to target the main port instead, over HTTPS or, with `tls.enabled=false`, over h2c. [Workbench configuration](workbench.md#with-an-exclusive-health-port) shows that setup.
 
 ## Why a plaintext health port helps in Kubernetes
 

@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-web-workbench
-description: Use the Chronicle browser Workbench - its screens, what each one can read and change, how it is reached and enabled, and the operational discipline for redaction, revision, replay, quarantine clearing and kernel reset. Use when inspecting or operating a running Chronicle store through the browser, or when deciding whether the Workbench should be exposed at all. Do not use for the CLI's terminal Workbench, and do not use for application source changes.
+description: Use when inspecting Chronicle through its browser Workbench, planning an authorized Workbench operation or deciding whether to expose it. Not for the CLI terminal Workbench or application source changes.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-web-workbench/SKILL.md -->

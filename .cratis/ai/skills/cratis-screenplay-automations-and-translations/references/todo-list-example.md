@@ -6,14 +6,15 @@
 - Design-only additions
 
 A complete model: a result opens a work item, a reaction invokes a command, the command's fact
-closes the item. It binds as ESM v6 (`executableReady: true`), standalone and through `cratis screenplay mcp`.
-Stage renders supported event reactions, but this model's clock/cascade specs remain
-refused (`-024`/`-011`); keep them intact. A compiler that stops before v6 rejects the
-Automation slice at binding with PLAY0285 or PLAY0268. Versions: `cratis-screenplay-toolchain` `SKILL.md`.
+closes the item. `then invokes` selects ESM v34 (`executableReady: true` from Screenplay 4.246.0),
+standalone and through `cratis screenplay mcp`. The Stage spec runner compares `then invokes`, but the
+Cratis renderer refuses models after v33 with `STAGE-ESM-016`; keep the specifications intact. A compiler
+that stops before v34 refuses `then invokes`. Versions: `cratis-screenplay-toolchain` `SKILL.md`.
 
-The first spec lists the whole cascade (`then` names every new fact: `CoursePassed`, and
-`CertificateSent` through the reaction), and `given clock` supplies the instant that
-`$context.occurred` needs. Both tools accept that cascade when they admit v6; an older compiler reports a false PLAY0285 on it.
+Each specification states only its own slice (Screenplay decision 0115): `RecordingAPass`
+states `CoursePassed`, `SendingAfterAPass` states the hand-over with `then invokes
+SendCertificate` (ESM v34), and `SendingACertificate` states `CertificateSent`. `given clock`
+supplies the instant that `$context.occurred` needs.
 Current admitted scenarios can be run with
 standalone `screenplay test` or MCP `run-specifications`.
 
@@ -59,7 +60,7 @@ module Courses
           CoursePassed
             for enrolmentId
             enrolmentId = enrolmentId          // copied on purpose: the reaction selects it as a value
-            completedAt = $context.occurred    // carried on the fact: a projection cannot read $eventContext.occurred
+            completedAt = $context.occurred    // carried on the fact, so every reader sees the same instant
         produces when passed == false
           CourseFailed
             for enrolmentId
@@ -82,9 +83,6 @@ module Courses
           for "0d3b9e2a-6c4f-4f1e-8b7a-5e2d1c3b4a01"
           enrolmentId = "0d3b9e2a-6c4f-4f1e-8b7a-5e2d1c3b4a01"
           completedAt = "2026-10-05T08:00:00Z"
-        then CertificateSent
-          for "0d3b9e2a-6c4f-4f1e-8b7a-5e2d1c3b4a01"
-          sentAt = "2026-10-05T08:00:00Z"
       specification RefusingANonCoordinator
         given caller
           authenticated
@@ -181,9 +179,8 @@ module Certification
           for "0d3b9e2a-6c4f-4f1e-8b7a-5e2d1c3b4a01"
           enrolmentId = "0d3b9e2a-6c4f-4f1e-8b7a-5e2d1c3b4a01"
           completedAt = "2026-10-05T08:00:00Z"
-        then CertificateSent
-          for "0d3b9e2a-6c4f-4f1e-8b7a-5e2d1c3b4a01"
-          sentAt = "2026-10-05T08:00:00Z"
+        then invokes SendCertificate
+          enrolmentId = "0d3b9e2a-6c4f-4f1e-8b7a-5e2d1c3b4a01"
 ```
 
 ## Design-only additions

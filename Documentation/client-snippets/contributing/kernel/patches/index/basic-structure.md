@@ -11,11 +11,5 @@ public class PatchesBasicPatch(IStorage storage, ILogger<PatchesBasicPatch> logg
         var reactors = await eventStore.Reactors.GetAll();
         logger.LogInformation("Found {Count} reactors", reactors.Count());
     }
-
-    public Task Down()
-    {
-        logger.LogInformation("Rolling back PatchesBasicPatch");
-        return Task.CompletedTask;
-    }
 }
 ```

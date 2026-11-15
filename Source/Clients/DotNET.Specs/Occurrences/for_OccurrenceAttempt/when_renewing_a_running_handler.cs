@@ -3,16 +3,17 @@
 
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Occurrences;
+using Cratis.Chronicle.Occurrences.given;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Occurrences.for_OccurrenceAttempt;
 
-public class when_renewing_a_running_handler : given.an_occurrence_client
+public class when_renewing_a_running_handler : an_occurrence_client
 {
     readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _renewed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    readonly given.ManualOccurrenceClock _clock = new();
-    given.ManualOccurrenceClock.ManualTimer _timer;
+    readonly ManualOccurrenceClock _clock = new();
+    ManualOccurrenceClock.ManualTimer _timer;
 
     void Establish()
     {
@@ -26,8 +27,8 @@ public class when_renewing_a_running_handler : given.an_occurrence_client
 
     async Task Because()
     {
-        var running = CreateAttempt(_clock).Run(_claim, CancellationToken.None);
-        _timer = await _clock.Created.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var running = CreateAttempt(_clock).Run(_claim, _clock.GetTimestamp(), CancellationToken.None);
+        _timer = await _clock.WaitForTimer(TimeSpan.FromSeconds(20));
         _timer.Tick();
         await _renewed.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _release.SetResult();

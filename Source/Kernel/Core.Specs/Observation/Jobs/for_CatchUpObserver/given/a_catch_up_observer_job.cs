@@ -3,6 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -11,8 +13,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.Core;
@@ -107,6 +107,7 @@ public class a_catch_up_observer_job : Specification
         loggerFactory.CreateLogger(Arg.Any<string>()).Returns(NullLogger.Instance);
 
         _observer = Substitute.For<IObserver>();
+        _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
         _observer.GetFailedPartitionKeys().Returns(Task.FromResult(Enumerable.Empty<Key>()));
         _silo.AddProbe(_ => _observer);
 

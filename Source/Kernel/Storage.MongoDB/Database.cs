@@ -3,9 +3,9 @@
 
 using System.Collections.Concurrent;
 using Cratis.Arc.MongoDB;
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -109,7 +109,7 @@ public class Database : IDatabase
         }
 
         var client = _clientManager.GetClientFor(settings);
-        database = client.GetDatabase(databaseName);
+        database = client.GetDatabaseByExistingCasing(databaseName);
         _readModelDatabases[key] = database;
         return database;
     }

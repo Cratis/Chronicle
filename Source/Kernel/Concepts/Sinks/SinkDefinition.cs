@@ -16,6 +16,20 @@ public record SinkDefinition(SinkConfigurationId Configuration, SinkTypeId Type,
     /// </summary>
     public static readonly SinkDefinition None = new(SinkConfigurationId.None, SinkTypeId.None);
 
+    readonly SinkName _name = SinkName.Default;
+
+    /// <summary>
+    /// Gets the name of the sink configuration to store to. <see cref="SinkName.Default"/> means the default sink for the kind of read model.
+    /// </summary>
+    /// <remarks>
+    /// Definitions stored before named sinks existed have no name; they read as <see cref="SinkName.Default"/>.
+    /// </remarks>
+    public SinkName Name
+    {
+        get => _name ?? SinkName.Default;
+        init => _name = value ?? SinkName.Default;
+    }
+
     /// <summary>
     /// Refuses a sink definition whose type and event-target metadata disagree, so that metadata can never be
     /// ignored by a read-model sink and a missing target can never fall back to a read model or the event log.

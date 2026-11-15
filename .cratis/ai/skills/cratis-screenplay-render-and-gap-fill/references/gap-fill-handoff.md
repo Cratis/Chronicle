@@ -77,8 +77,9 @@ a caller-supplied status is not enforcement.
 
 ## Automation and Translate scope
 Stage renders supported event-triggered Automation as Chronicle reactors.
-Translate/captures and refused reactions are gap-fill against the slice and its specifications;
-see Stage's `references/admission.md` for precise limits. The realization follows the actual construct and
+Bounded source-event capture and outbound Translate paths also render. Refused shapes remain
+gap-fill against the slice and its specifications; see
+[Stage target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md). The realization follows the actual construct and
 trigger, not the slice label: a capture is an ingestion adapter, an event reaction (including a
 translator reaction) is a reactor, a clock or application trigger is a scheduler or host signal. Where they are
 registered depends on the case. Case B (a generated base exists, and the user authorized the
@@ -108,11 +109,15 @@ reaction or drop an effect to dodge rendering.
 
 Preserve declared `reaction batches atomic` boundaries: each trigger occurrence's
 direct productions and each selected refusal branch are separate batches, with
-invoked commands independent. Atomic mode refuses STAGE-ESM-043.
-Requires Stage 4.139.0 for v22 admission; older Stage reports -016.
+invoked commands independent. Stage v4.197.0 semantic execution supports atomic
+batches; bounded event-only production renders, while multiple same-event
+production triggers and routed productions retain STAGE-ESM-043.
 The declaration is not external-effect deduplication.
 For described handlers, hand off only payload computation under the v23 result
-contract; Stage STAGE-IMPL-002 means no stubs, even Stub mode. Protected v25 reads
+contract; rendering still refuses STAGE-IMPL-002 even in Stub mode.
+Unsupported query performers can instead emit explicit gaps and a not-fully-runnable
+marker. Preserve each requirement identity, typed context, query shape and reason;
+a generated throwing method or gap is not completed behavior. Protected v25 reads
 render from Stage 4.138.0 (STAGE-ESM-044 from older bundles, or for shapes it cannot
 preserve) and need generated-app admission/enrollment tests wherever you hand-write them;
 ordinary injection never supplies protection.

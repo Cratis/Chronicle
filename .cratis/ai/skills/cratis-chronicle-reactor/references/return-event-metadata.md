@@ -15,6 +15,19 @@ analyzers flag synchronous custom returns even when the runtime handler accepts 
 Return events rather than inject `IEventLog`: **a convention, not an analyzer
 contract**. Returned appends stay inside Chronicle's transaction.
 
+Requires Chronicle 19.94.0 for receipt-keyed returned events.
+
+Returned events on receipt-capable kernels have stable effect keys: retries, crash redelivery and same-generation replay do not append them
+again. This covers bare, cross-source and mixed returned-event results, not
+arbitrary HTTP calls or independently injected `IEventLog` appends. Older kernels
+retain the previous at-least-once behavior. Preserve deterministic return
+ordering/content; a changed result is a conflict, not a reason to discard the
+receipt. Keep `ReactorDelivery`-based idempotency for external side effects and
+`[OnceOnly]` for deliberate replay exclusion. Verified at **v19.110.1**:
+`Source/Clients/DotNET/Reactors/SideEffects/ReactorEffectKeys.cs`,
+`EventResultHandler.cs`, `MixedSideEffectsResultHandler.cs` and
+`Documentation/reactors/side-effects.mdx`.
+
 ```csharp
 // One event, on the triggering event's own event source.
 public Task<<ResultEvent>> <MethodName>(<EventName> @event, EventContext context) =>

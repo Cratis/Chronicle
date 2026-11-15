@@ -39,7 +39,7 @@ public record JobStepSummary(
     public static async Task<IEnumerable<JobStepSummary>> GetJobSteps(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
-        Cratis.Orleans.Jobs.JobId jobId,
+        Cratis.Choreography.Jobs.JobId jobId,
         IStorage storage)
     {
         var result = await storage

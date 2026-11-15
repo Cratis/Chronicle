@@ -19,12 +19,12 @@ namespace Cratis.Chronicle.Jobs;
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
 [BelongsTo(WellKnownServices.Jobs)]
-public record ResumeJobWithResult(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Orleans.Jobs.JobId JobId)
+public record ResumeJobWithResult(EventStoreName EventStore, EventStoreNamespaceName Namespace, Cratis.Choreography.Jobs.JobId JobId)
 {
     /// <summary>
-    /// Handles the command by invoking <see cref="Cratis.Orleans.Jobs.IJobsManager.Resume"/> on the jobs manager grain.
+    /// Handles the command by invoking <see cref="Cratis.Choreography.Jobs.IJobsManager.Resume"/> on the jobs manager grain.
     /// </summary>
-    /// <param name="grainFactory">The <see cref="Cratis.Orleans.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
+    /// <param name="grainFactory">The <see cref="Cratis.Choreography.Jobs.IJobsManager"/> to get the jobs manager grain with.</param>
     /// <returns>The <see cref="ResumeJobOutcome"/> telling whether the job was taken forward, and why not when it was not.</returns>
     public async Task<ResumeJobOutcome> Handle(IGrainFactory grainFactory) =>
         JobCommandOutcomes.ForResume(await grainFactory.GetJobsManager(EventStore, Namespace).Resume(JobId));

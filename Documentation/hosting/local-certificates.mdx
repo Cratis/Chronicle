@@ -1,17 +1,16 @@
 ---
-description: Set up your own PFX TLS certificate for local Chronicle development, generated with OpenSSL or the .NET CLI, instead of the self-signed default.
+title: Cratis Chronicle local TLS certificate setup
+description: Supply a PFX TLS certificate for local Cratis Chronicle development, configure its container path, and trust it on machines that connect to the server.
 ---
-# Local Certificate Setup for Development
-
-This guide explains how to set up your own TLS certificate for local Chronicle development. In development, Chronicle already serves its single port over TLS with an auto-generated self-signed certificate — so you only need this when you want to supply a specific certificate, for example to test with a trusted certificate or to simulate a production setup.
+Supply your own TLS certificate to Cratis Chronicle when you need to test certificate trust or connect through a custom local hostname. The development image already generates a self-signed certificate for its service port, so skip this setup if you only need the default local server.
 
 ## Overview
 
-Chronicle supports TLS certificates in PFX (PKCS#12) format. You can generate certificates using either OpenSSL or the .NET CLI tools. This guide covers both approaches.
+Chronicle loads TLS certificates from PFX (PKCS#12) files containing a private key. Use the .NET CLI for a localhost certificate, or OpenSSL when you need to choose the hostnames yourself. The paths in the configuration must be readable by the Chronicle process; for Docker, mount the file as shown in [Docker Development](#docker-development).
 
 ## Option 1: Using .NET CLI (Recommended for .NET Developers)
 
-The .NET CLI provides a simple way to generate development certificates that are automatically trusted by your system.
+Export a localhost development certificate with the .NET CLI. Exporting does not establish trust: run the separate `--trust` command on the machine that will connect to Chronicle. Applications in other machines or containers need their own trust configuration.
 
 ### Generate a Development Certificate
 
@@ -45,7 +44,7 @@ export Cratis__Chronicle__Tls__CertificatePassword=YourPassword123
 
 ## Option 2: Using OpenSSL
 
-OpenSSL provides more control over certificate generation and is useful for advanced scenarios.
+Use OpenSSL to create a self-signed certificate and export its private key in a PFX. The first example sets a common name only. For browser or client hostname validation, use the following SAN example, which lists the names and IP address the certificate covers.
 
 ### Generate a Self-Signed Certificate
 
@@ -69,7 +68,7 @@ openssl pkcs12 -export -out chronicle-dev.pfx \
 
 ### Generate a Certificate with Subject Alternative Names (SAN)
 
-For production-like testing with custom domains:
+Subject Alternative Names (SANs) identify the DNS names and IP addresses a certificate covers. This example covers `localhost`, `chronicle.local`, and `127.0.0.1`. Your machine must resolve any custom name, such as `chronicle.local`, to the server; the certificate does not configure DNS.
 
 ```bash
 # Create a configuration file for SAN
@@ -121,7 +120,7 @@ Update your `chronicle.json`:
 
 ## Trusting Self-Signed Certificates
 
-For local development, you may want to trust your self-signed certificate to avoid browser warnings.
+Trust the certificate on each machine whose clients need to validate it. These commands change the operating system's trust store and may require administrator privileges. Only import certificates you generated or otherwise trust. A matching hostname is still required, and some clients use a separate trust store.
 
 ### Windows
 
@@ -174,7 +173,7 @@ sudo update-ca-trust
 
 ## Docker Development
 
-When running Chronicle in Docker, mount the certificate file:
+Mount the certificate file read-only and set `CertificatePath` to its path inside the container. The excerpt below uses the production image and shows only TLS configuration; it also needs external storage and, by default, an encryption certificate before it can start. For a complete deployment, use [Production Hosting](production.md).
 
 ```yaml
 version: '3.8'
@@ -194,46 +193,28 @@ services:
 
 ## Client Configuration
 
-When connecting to a Chronicle server with a self-signed certificate, configure the client:
+For a local server with a self-signed certificate, the client configuration is shown below. The development images generate an untrusted certificate on every start when none is configured, with SANs `localhost`, `chronicle`, `127.0.0.1`, and `::1`. A pin must match the current certificate.
+
+The .NET client still skips validation when both settings are omitted in this release; the next major release will enable it by default. We recommend explicitly setting `skipTlsValidation=false` after configuring trust or a matching pin. For development only, explicitly opt out with `chronicle://localhost:35000?skipTlsValidation=true`. An explicit `Tls.SkipCertificateValidation=false` still requires validation. Before connecting to a production server, configure certificate validation as described in [Client TLS configuration](../configuration/tls) and [Production Hosting](production.md).
 
 <ChronicleClientTabs snippet="hosting/local-certificates/client-configuration" />
 
 ## Security Considerations
 
-⚠️ **Important**: The certificates generated in this guide are for **development only**.
-
-- **Never use development certificates in production**
-- **Do not commit certificates or passwords to source control**
-- Use strong passwords for certificate protection
-- Rotate certificates regularly
-- For production, obtain certificates from a trusted Certificate Authority
+Use these generated certificates only for development. Keep PFX files, private keys, and passwords out of source control, and replace the example passwords before use. For production TLS, obtain a certificate from a certificate authority your clients trust and plan for renewal.
 
 ## Troubleshooting
 
 ### Certificate Errors
 
-If you encounter certificate validation errors:
+If Chronicle cannot load the certificate, check that the configured path exists from the server process's working directory. In Docker, use the mounted container path. Verify that the password matches the PFX export and that the file includes the private key.
 
-1. **Verify the certificate path is correct**
-   - Use absolute paths or paths relative to the working directory
-
-2. **Check certificate password**
-   - Ensure the password matches the one used during generation
-
-3. **Verify certificate format**
-   - Chronicle requires PFX (PKCS#12) format
-   - Use `openssl pkcs12` to convert other formats
+If the server starts but a client reports a validation error, check the certificate's validity dates, the hostname in its SANs, and the client's trust store. Converting a file to PFX does not fix a hostname or trust mismatch.
 
 ### Connection Errors
 
-If the client cannot connect:
-
-1. **Verify TLS is enabled on both server and client**
-2. **Check that the server is listening on HTTPS**
-3. **Ensure the client trusts the server certificate**
-4. **Check firewall rules allow HTTPS traffic**
+Confirm that the server is listening on the expected HTTPS address and that the client uses the same host and port. Check Docker port mappings and firewall rules before changing certificate settings. Once the address is reachable, verify that the client trusts the certificate and validates the hostname.
 
 ## Next Steps
 
-- [Production Hosting](production.md) - Learn about production certificate requirements
-- [Configuration](configuration/index.md) - Complete configuration reference
+Use [Production Hosting](production.md) when you need durable storage, production certificates, and health probes. The [Configuration reference](configuration/index.md) covers the remaining server settings.

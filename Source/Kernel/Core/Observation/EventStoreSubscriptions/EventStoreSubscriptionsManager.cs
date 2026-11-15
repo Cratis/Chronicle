@@ -17,17 +17,20 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// </summary>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="namespaceCasing">The namespace casing resolver.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventStoreSubscriptionsManager)]
 public class EventStoreSubscriptionsManager(
     ILocalSiloDetails localSiloDetails,
-    ILogger<EventStoreSubscriptionsManager> logger) : Grain<EventStoreSubscriptionsState>, IEventStoreSubscriptionsManager, IOnBroadcastChannelSubscribed, IRemindable
+    ILogger<EventStoreSubscriptionsManager> logger,
+    INamespaceCasing namespaceCasing) : Grain<EventStoreSubscriptionsState>, IEventStoreSubscriptionsManager, IOnBroadcastChannelSubscribed, IRemindable
 {
     const string SubscriptionReminderPrefix = "event-store-subscription-subscribe:";
     static readonly TimeSpan _pollInterval = TimeSpan.FromMilliseconds(10);
     static readonly TimeSpan _subscriptionReminderDelay = TimeSpan.FromMilliseconds(100);
     static readonly TimeSpan _subscriptionReminderPeriod = TimeSpan.FromMinutes(1);
 
+    readonly Dictionary<EventStoreSubscriptionId, HashSet<EventStoreNamespaceName>> _pendingRevocations = [];
     EventStoreName _targetEventStoreName = EventStoreName.NotSet;
 
     /// <inheritdoc/>
@@ -38,7 +41,7 @@ public class EventStoreSubscriptionsManager(
     {
         _targetEventStoreName = this.GetPrimaryKeyString();
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
-        var tasks = State.Subscriptions.Select(definition => EnsureSubscriptionOnActivation(definition, namespaces));
+        var tasks = State.Subscriptions.Select(definition => EnsureSubscriptionOnActivationWithoutFailing(definition, namespaces));
         await Task.WhenAll(tasks);
     }
 
@@ -52,6 +55,11 @@ public class EventStoreSubscriptionsManager(
         await WriteStateAsync();
 
         await ScheduleSubscriptionReminder(definition.Identifier);
+
+        // The state is written first, so a concurrent reminder already filters by the new restriction.
+        // Sweep even on the first Add to revoke legacy observers; reminders retry only failed revocations.
+        var targetNamespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+        await RevokeUnobserved(definition, targetNamespaces);
     }
 
     /// <inheritdoc/>
@@ -72,6 +80,8 @@ public class EventStoreSubscriptionsManager(
 
         var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
         await Unsubscribe(namespaces, definition);
+        await RevokeUnobserved(definition, namespaces);
+        _pendingRevocations.Remove(subscriptionId);
     }
 
     /// <inheritdoc/>
@@ -99,6 +109,7 @@ public class EventStoreSubscriptionsManager(
             throw new TimeoutException($"Subscription '{subscriptionId}' was not registered within {timeout.TotalMilliseconds}ms");
         }
 
+        namespacesToWaitFor = (await CanonicalNamespaces(definition, namespacesToWaitFor)).ToList();
         bool isReady;
         do
         {
@@ -167,6 +178,8 @@ public class EventStoreSubscriptionsManager(
         try
         {
             var namespaces = await GrainFactory.GetGrain<INamespaces>(_targetEventStoreName).GetAll();
+            await RetryPendingRevocations(definition);
+            namespaces = await CanonicalNamespaces(definition, namespaces);
             var healthCheckTasks = namespaces.Select(ns => HealthCheckSubscription(definition, ns));
             var healthCheckResults = await Task.WhenAll(healthCheckTasks);
 
@@ -226,7 +239,7 @@ public class EventStoreSubscriptionsManager(
     {
         try
         {
-            var observer = GetObserver(definition, namespaceName);
+            var observer = await GetObserver(definition, namespaceName);
             return await observer.IsSubscribed() && await IsSubscribedToCurrentEventTypes(observer, definition);
         }
         catch (OperationCanceledException)
@@ -248,19 +261,53 @@ public class EventStoreSubscriptionsManager(
     async Task EnsureSubscriptionOnActivation(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
         await ScheduleSubscriptionReminder(definition.Identifier);
+        await RevokeUnobserved(definition, namespaces);
         await RefreshSubscription(definition, namespaces);
+    }
+
+    /// <summary>
+    /// Ensures a subscription on activation without letting a failure fail the activation.
+    /// </summary>
+    /// <param name="definition">The <see cref="EventStoreSubscriptionDefinition"/> to ensure.</param>
+    /// <param name="namespaces">The namespaces of the target event store.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// One subscription that cannot be refreshed - a namespace whose database name differs only by case from an
+    /// existing one is such a case - must not fail the activation of this grain, because that fails the startup of the
+    /// whole kernel for every other event store. The reminder scheduled first re-checks and refreshes it every minute.
+    /// </remarks>
+    async Task EnsureSubscriptionOnActivationWithoutFailing(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        try
+        {
+            await EnsureSubscriptionOnActivation(definition, namespaces);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.ActivationRefreshFailed(ex, definition.Identifier);
+        }
     }
 
     async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
     {
-        var tasks = namespaces.Select(namespaceName => RefreshSubscription(definition, namespaceName));
-        await Task.WhenAll(tasks);
+        var canonical = await CanonicalNamespaces(definition, namespaces);
+        var refreshing = Task.WhenAll(canonical.Select(namespaceName => RefreshSubscription(definition, namespaceName)));
+        try
+        {
+            await refreshing;
+        }
+        catch when (refreshing.Exception is { InnerExceptions.Count: > 1 } failures)
+        {
+            // The caller logs the failure once; carry every namespace's failure to it, not only the first.
+            throw failures.Flatten();
+        }
     }
 
     async Task RefreshSubscription(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
-        var observer = GetObserver(definition, namespaceName);
+        var observer = await GetObserver(definition, namespaceName);
 
+        // A failure is logged once, by the caller that handles it - not here as well, which wrote every stack trace twice.
         try
         {
             var subscribed = await observer.IsSubscribed();
@@ -283,10 +330,9 @@ public class EventStoreSubscriptionsManager(
             logger.Subscribing(definition.Identifier, namespaceName);
             await Subscribe(observer, definition);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.ErrorRefreshingSubscription(ex, definition.Identifier, namespaceName);
-            throw;
+            throw new EventStoreSubscriptionRefreshFailed(definition.Identifier, namespaceName, ex);
         }
     }
 
@@ -309,7 +355,7 @@ public class EventStoreSubscriptionsManager(
     {
         try
         {
-            var observer = GetObserver(definition, namespaceName);
+            var observer = await GetObserver(definition, namespaceName);
             if (!await observer.IsSubscribed())
             {
                 return false;
@@ -328,7 +374,12 @@ public class EventStoreSubscriptionsManager(
 
     async Task SubscribeIfNotSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
-        var observer = GetObserver(definition, namespaceName);
+        if (!SubscriptionObservation.Observes(definition, namespaceName))
+        {
+            return;
+        }
+
+        var observer = await GetObserver(definition, namespaceName);
         logger.Subscribing(definition.Identifier, namespaceName);
         await Subscribe(observer, definition);
     }
@@ -353,13 +404,18 @@ public class EventStoreSubscriptionsManager(
     {
         logger.Unregistering(definition.Identifier);
 
-        var tasks = namespaces.Select(namespaceName => UnsubscribeIfSubscribed(definition, namespaceName));
+        var canonical = await CanonicalNamespaces(definition, namespaces);
+        var tasks = canonical.Select(namespaceName => UnsubscribeIfSubscribed(definition, namespaceName));
         await Task.WhenAll(tasks);
     }
 
     async Task UnsubscribeIfSubscribed(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
-        var observer = GetObserver(definition, namespaceName);
+        await UnsubscribeIfSubscribed(definition, await GetObserver(definition, namespaceName), namespaceName);
+    }
+
+    async Task UnsubscribeIfSubscribed(EventStoreSubscriptionDefinition definition, IObserver observer, EventStoreNamespaceName namespaceName)
+    {
         var subscribed = await observer.IsSubscribed();
 
         if (subscribed)
@@ -372,7 +428,86 @@ public class EventStoreSubscriptionsManager(
         logger.AlreadyUnsubscribed(definition.Identifier, namespaceName);
     }
 
-    IObserver GetObserver(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    async Task<IEnumerable<EventStoreNamespaceName>> CanonicalNamespaces(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        var observed = namespaces.Where(name => SubscriptionObservation.Observes(definition, name));
+        var canonical = await Task.WhenAll(observed.Select(async name => await namespaceCasing.Canonicalize(definition.SourceEventStore, name)));
+        return canonical.Distinct().ToArray();
+    }
+
+    /// <summary>
+    /// Unsubscribes every observer the source holds for a namespace this subscription does not observe.
+    /// </summary>
+    /// <param name="definition">The <see cref="EventStoreSubscriptionDefinition"/>.</param>
+    /// <param name="namespaces">The namespaces of the target event store.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Revocation runs on add, activation and removal, derived from the observers that exist, never from what was
+    /// observed before, so it covers restarts and legacy observers for names that can no longer be observed (a comma).
+    /// Only a namespace the source already has is looked at: resolving an observer for any other would create it there.
+    /// Failures are logged and tracked in memory; reminders retry only those namespaces, not every excluded namespace.
+    /// </remarks>
+    async Task RevokeUnobserved(EventStoreSubscriptionDefinition definition, IEnumerable<EventStoreNamespaceName> namespaces)
+    {
+        HashSet<EventStoreNamespaceName> failed = [];
+        foreach (var name in namespaces.Where(name => !SubscriptionObservation.Observes(definition, name)))
+        {
+            if (!await TryRevoke(definition, name))
+            {
+                failed.Add(name);
+            }
+        }
+
+        _pendingRevocations.Remove(definition.Identifier);
+        if (failed.Count > 0)
+        {
+            _pendingRevocations[definition.Identifier] = failed;
+        }
+    }
+
+    async Task RetryPendingRevocations(EventStoreSubscriptionDefinition definition)
+    {
+        if (!_pendingRevocations.TryGetValue(definition.Identifier, out var pending))
+        {
+            return;
+        }
+
+        await RevokeUnobserved(definition, pending);
+    }
+
+    async Task<bool> TryRevoke(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
+        try
+        {
+            var sourceNamespaces = GrainFactory.GetGrain<INamespaces>(definition.SourceEventStore);
+            var canonical = await sourceNamespaces.GetCanonical(namespaceName);
+            if (canonical is not null)
+            {
+                await UnsubscribeIfSubscribed(definition, ObserverFor(definition, canonical), canonical);
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.ErrorRevokingNamespace(ex, definition.Identifier, namespaceName);
+            return false;
+        }
+    }
+
+    async Task<IObserver> GetObserver(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    {
+        // The single place an observer on the source event store is resolved, and resolving one creates the namespace
+        // there. A namespace the definition does not observe must never get this far.
+        if (!SubscriptionObservation.Observes(definition, namespaceName))
+        {
+            throw new InvalidOperationException($"Subscription '{definition.Identifier}' does not observe namespace '{namespaceName}'.");
+        }
+
+        return ObserverFor(definition, await namespaceCasing.Canonicalize(definition.SourceEventStore, namespaceName));
+    }
+
+    IObserver ObserverFor(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
     {
         // The observer id must be unique per (source, target) event store. The subscription Identifier is only
         // the source store, so without the target here two target stores subscribing to the same source's

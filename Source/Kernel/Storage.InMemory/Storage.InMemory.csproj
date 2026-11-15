@@ -13,7 +13,7 @@
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
         <PackageReference Include="System.Reactive" />
-        <PackageReference Include="Cratis.Orleans.Storage" />
+        <PackageReference Include="Cratis.Choreography.Storage" />
     </ItemGroup>
 
     <ItemGroup>

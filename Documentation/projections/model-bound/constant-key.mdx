@@ -1,36 +1,37 @@
 ---
-description: Use ConstantKey on [FromEvent] in a model-bound Chronicle projection so all events of a type accumulate into one read model instance.
+title: "Cratis Chronicle model-bound projections: Use constant keys"
+description: Use ConstantKey in Cratis Chronicle model-bound projections to route events from different event sources into one shared read model instance.
 ---
-# Constant Keys
-
-A constant key fixes the read model key to a literal string value, so all events of a given type accumulate into a **single** read model instance regardless of which event source they come from.
+Use a constant key in Cratis Chronicle when events from different event sources should update one shared read model instance. Instead of selecting an instance by the event source id, the mapping uses a fixed string, such as `"metrics"`. This lets a counter track a total across sources rather than a separate total for each source.
 
 ## FromEvent with ConstantKey
 
-Use `ConstantKey` on the `[FromEvent]` attribute at the class level to route all matching events to a fixed read model instance:
+In .NET, set `ConstantKey` on the class-level `[FromEvent]` attribute to route that event type to a fixed instance:
 
 <ChronicleClientTabs snippet="projections/model-bound/constant-key/basic" />
 
-Every `OrderPlaced` event from every event source updates the same `GlobalOrderSummary` instance.
+Every matching order-placement event updates the same summary instance, regardless of its event source. A constant key selects the destination; the property's mappings still decide whether to replace a value, add an amount, or count the event.
 
 ## Count, Increment, and Decrement with ConstantKey
 
-`Count`, `Increment`, and `Decrement` attributes also support `ConstantKey` for collecting events from all event sources into a single document:
+`Count`, `Increment`, and `Decrement` also accept `ConstantKey`. Give the counter events the same key when they should contribute to one shared document:
 
 <ChronicleClientTabs snippet="projections/model-bound/constant-key/counters" />
 
-All three properties converge on the `"metrics"` document regardless of which user or order they come from.
+Here, the three counter properties update the `"metrics"` document regardless of which user or order produced the events.
 
 ## Mixing event source key and constant key
 
-You can mix regular key-based events with constant key events on the same read model:
+A read model can use the event source id for one event type and a constant key for another. The destination is selected per event mapping, not once for the entire read model type:
 
 <ChronicleClientTabs snippet="projections/model-bound/constant-key/mixed-keys" />
 
-> **Note:** When `ConstantKey` is set on a counter attribute, it affects *which read model instance the counter updates* — not the key of the read model the attribute belongs to. In this example, `PlatformTotalOrders` would update the document with key `"global-stats"`, not the `UserDashboard` instance.
+The registration event selects a user-specific dashboard. The order counter selects the document with key `"global-stats"`; it does not copy the platform total into every user's dashboard. Both documents use the same read model type, but they are different instances.
 
 ## Complete example
 
+This store summary routes its counter events to the same key, so users and products contribute to one set of store-wide metrics:
+
 <ChronicleClientTabs snippet="projections/model-bound/constant-key/full-example" />
 
-All events from all users and products accumulate into the single `StoreMetrics` document with key `"store"`.
+The matching events accumulate into the document with key `"store"`. For the difference between an event total and a quantity that rises and falls, see [counters](counters).

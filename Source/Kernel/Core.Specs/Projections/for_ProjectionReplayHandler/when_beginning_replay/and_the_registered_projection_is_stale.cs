@@ -11,6 +11,7 @@ public class and_the_registered_projection_is_stale : given.a_projection_replay_
 
     void Establish()
     {
+        _projectionPipelineManager.TryGetFor(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId, out _).Returns(false);
         _current = Substitute.For<Engine.IProjection>();
         _current.ReadModel.Returns(_readModel);
         _projections.GetCurrent(_observerDetails.Key.EventStore, _observerDetails.Key.Namespace, _observerDetails.Key.ObserverId).Returns(_current);

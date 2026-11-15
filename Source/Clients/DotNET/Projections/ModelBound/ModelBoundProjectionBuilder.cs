@@ -418,7 +418,7 @@ internal class ModelBoundProjectionBuilder(
         var targetRemovedWith = isRoot ? definition.RemovedWith : childrenDef?.RemovedWith ?? definition.RemovedWith;
         var targetRemovedWithJoin = isRoot ? definition.RemovedWithJoin : childrenDef?.RemovedWithJoin ?? definition.RemovedWithJoin;
 
-        void TrackAndProcess<TAttribute>(Action<IDictionary<EventType, FromDefinition>, Type, string, string> mappingAction)
+        void TrackAndProcess<TAttribute>(Action<IDictionary<EventType, FromDefinition>, Type, string, string, Attribute> mappingAction)
             where TAttribute : Attribute
         {
             var attributes = parameter.GetCustomAttributes()
@@ -437,16 +437,16 @@ internal class ModelBoundProjectionBuilder(
                 {
                     PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
                 }
-                mappingAction(targetFrom, eventType, propertyName, propertyToUse);
+                mappingAction(targetFrom, eventType, propertyName, propertyToUse, attr);
             }
         }
 
-        TrackAndProcess<SetFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
-        TrackAndProcess<AddFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddAddMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
-        TrackAndProcess<SubtractFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSubtractMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
-        TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
-        TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
-        TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<SetFromAttribute<object>>((from, eventType, prop, eventProp, attr) => from.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp, attr is ISetFromAttribute { SetOnce: true }));
+        TrackAndProcess<AddFromAttribute<object>>((from, eventType, prop, eventProp, _) => from.AddAddMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<SubtractFromAttribute<object>>((from, eventType, prop, eventProp, _) => from.AddSubtractMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
 
         ProcessConstantKeyForEventAttributes(parameter.GetAttributesOfGenericType<IncrementAttribute<object>>(), targetFrom);
         ProcessConstantKeyForEventAttributes(parameter.GetAttributesOfGenericType<DecrementAttribute<object>>(), targetFrom);
@@ -459,7 +459,7 @@ internal class ModelBoundProjectionBuilder(
             var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
             var propertyToValidate = contextPropertyName ?? parameter.Name!;
             var contextPath = PropertyValidator.ValidateContextPropertyPath<EventContext>(propertyToValidate);
-            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, contextPath);
+            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, contextPath, attr is ISetFromContextAttribute { SetOnce: true });
         }
 
         var parameterIsNested = parameter.IsDefined(typeof(NestedAttribute), inherit: false);
@@ -595,7 +595,7 @@ internal class ModelBoundProjectionBuilder(
 
         var eventTypesReferencedByMember = new HashSet<Type>();
 
-        void TrackAndProcess<TAttribute>(Action<IDictionary<EventType, FromDefinition>, Type, string, string> mappingAction)
+        void TrackAndProcess<TAttribute>(Action<IDictionary<EventType, FromDefinition>, Type, string, string, Attribute> mappingAction)
             where TAttribute : Attribute
         {
             var attributes = property.GetCustomAttributes()
@@ -614,16 +614,16 @@ internal class ModelBoundProjectionBuilder(
                 {
                     PropertyValidator.ValidatePropertyExists(eventType, propertyToUse);
                 }
-                mappingAction(targetFrom, eventType, propertyName, propertyToUse);
+                mappingAction(targetFrom, eventType, propertyName, propertyToUse, attr);
             }
         }
 
-        TrackAndProcess<SetFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
-        TrackAndProcess<AddFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddAddMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
-        TrackAndProcess<SubtractFromAttribute<object>>((from, eventType, prop, eventProp) => from.AddSubtractMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
-        TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
-        TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
-        TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<SetFromAttribute<object>>((from, eventType, prop, eventProp, attr) => from.AddSetMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp, attr is ISetFromAttribute { SetOnce: true }));
+        TrackAndProcess<AddFromAttribute<object>>((from, eventType, prop, eventProp, _) => from.AddAddMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<SubtractFromAttribute<object>>((from, eventType, prop, eventProp, _) => from.AddSubtractMapping(GetOrCreateEventType, _namingPolicy, eventType, prop, eventProp));
+        TrackAndProcess<IncrementAttribute<object>>((from, eventType, prop, _, _) => from.AddIncrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<DecrementAttribute<object>>((from, eventType, prop, _, _) => from.AddDecrementMapping(GetOrCreateEventType, eventType, prop));
+        TrackAndProcess<CountAttribute<object>>((from, eventType, prop, _, _) => from.AddCountMapping(GetOrCreateEventType, eventType, prop));
 
         ProcessConstantKeyForEventAttributes(property.GetAttributesOfGenericType<IncrementAttribute<object>>(), targetFrom);
         ProcessConstantKeyForEventAttributes(property.GetAttributesOfGenericType<DecrementAttribute<object>>(), targetFrom);
@@ -636,7 +636,7 @@ internal class ModelBoundProjectionBuilder(
             var contextPropertyName = contextPropertyNameProperty?.GetValue(attr) as string;
             var propertyToValidate = contextPropertyName ?? property.Name;
             var contextPath = PropertyValidator.ValidateContextPropertyPath<EventContext>(propertyToValidate);
-            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, contextPath);
+            targetFrom.AddContextPropertyMapping(GetOrCreateEventType, _namingPolicy, eventType, propertyName, contextPath, attr is ISetFromContextAttribute { SetOnce: true });
         }
 
         var memberIsNested = Attribute.IsDefined(property, typeof(NestedAttribute));

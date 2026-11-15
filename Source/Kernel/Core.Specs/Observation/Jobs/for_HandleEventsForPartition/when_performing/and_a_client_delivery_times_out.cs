@@ -2,12 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForPartition.when_performing;

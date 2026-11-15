@@ -1,11 +1,11 @@
 ---
-title: Dynamic Consistency Boundary
-description: What a Dynamic Consistency Boundary is, why it replaces fixed aggregate boundaries for many rules, and where to go to apply it in Chronicle.
+title: 'Dynamic Consistency Boundary: when to use it'
+description: A Dynamic Consistency Boundary protects a decision by checking the events it depends on at append time. Learn when it fits and how Chronicle applies it.
 ---
 
-Use this page to understand the idea. To apply it, go to [Choosing how a rule holds](./choosing.mdx).
+A Dynamic Consistency Boundary (DCB) defines which events must not change between reading state and appending a decision's result. Use it when a rule depends on current state, such as a course's remaining seats, and concurrent writers could invalidate what you read.
 
-A Dynamic Consistency Boundary (DCB) is the smallest set of facts that must stay unchanged for one decision to be correct. You do not fix it in advance as an aggregate or a stream. The decision defines it when it runs: by the query it used to read its facts.
+The decision defines its boundary through the query used to read those facts. It does not have to use a fixed aggregate or stream as its boundary. In Chronicle, [Choosing how a rule holds](./choosing.mdx) helps you choose between a decision read, a constraint and an explicit concurrency scope.
 
 ## How it works
 
@@ -28,25 +28,29 @@ flowchart TD
 
 ## Why it matters
 
-A fixed boundary forces unrelated facts into one consistency scope. A stream or aggregate per entity cannot express a rule that spans two entities, such as a course with a capacity and a student with a course limit, without either merging them or accepting a race. A DCB lets one append be conditional on exactly the facts the decision used, so independent writes do not conflict and dependent writes do.
+Consider a student joining a course. The decision needs both the course's remaining capacity and the student's subscription count. Guarding only the course misses another request enrolling the same student elsewhere; guarding only the student misses someone taking the last seat.
 
-The cost is that the decision carries its own query and position, and the store must evaluate the condition when it appends. A conflict is normal: the caller reads again and decides again.
+A DCB lets the append depend on both sets of events without combining the student and course into one aggregate. Events outside the query do not cause a conflict. A matching event does, even if the rule might still pass after reading the new state.
+
+The decision carries its query and position, and the store evaluates that condition when it appends. After a conflict, the caller reads again and decides again. Reusing the old decision would ignore the change the guard detected.
 
 ## DCB and Chronicle
 
-DCB as specified lets one event belong to several entities through tags, and lets a decision query by any combination of them. Chronicle supports DCB-style decision models and append conditions within its own model, where each event has exactly one event source and tags take no part in consistency. It is not a DCB event store. Where DCB tags one event with a student and a course, Chronicle writes two events, one per event source, in one atomic append. [Dynamic Consistency Boundary in Chronicle](./chronicle.md) says what maps and what does not, and [DCB examples in Chronicle](./dcb-examples.mdx) gives the Chronicle answer to each canonical DCB example.
+DCB as specified lets one event belong to several entities through tags, and lets a decision query by combinations of those tags. Chronicle supports decision models and conditional appends within its event-source model, but does not implement the DCB specification's API. An event source is the entity or process whose history an event belongs to; each Chronicle event has exactly one event source ID. Custom tags do not take part in consistency checks.
+
+For the course subscription, Chronicle records a seat taken on the course and a course joined on the student, in one atomic append guarded by both reads. A decision can also guard a source it only reads, without writing to it. [Dynamic Consistency Boundary in Chronicle](./chronicle.md) explains the mapping and its limits; [DCB examples in Chronicle](./dcb-examples.mdx) shows which examples need two events and which do not.
 
 ## When it fits and when it does not
 
 | It fits | It does not fit |
 |---|---|
-| A rule over a count, a stock or a status on one or a few keys | A value that must be unique across all keys. A [constraint](../constraints/index.md) is simpler and cheaper |
+| A rule over a count, a stock or a status on one or a few keys | A value that must be unique across all keys. A [constraint](../constraints/index.md) enforces it without a decision read |
 | A rule that spans two entities | A rule that depends on data outside the event log |
-| Writers that rarely touch the same facts at the same time | A single key written by many writers all the time: conflicts will be constant |
+| Writers that rarely touch the same facts at the same time | A heavily contested key: matching writes cause conflicts, and each decision read folds its history again |
 
 ## Read in this order
 
-The pages run from the simplest use to the most detailed. Stop when you have what you need.
+Start with the choice your rule needs, then follow the scenario or reference that matches it.
 
 | Step | You want to | Read |
 |---|---|---|

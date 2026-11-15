@@ -37,7 +37,8 @@
             "events": "Events",
             "eventTypes": "Event types",
             "namespaces": "Namespaces",
-            "unavailable": "Key figures unavailable"
+            "unavailable": "Key figures unavailable",
+            "notAuthorized": "Not authorized on {databases}"
         },
         "subtitle": "Pick an event store to open its dashboard",
         "addEventStore": "Add event store"
@@ -74,6 +75,7 @@
         "readModels": "Read Models",
         "identities": "Identities",
         "closedStreams": "Closed Streams",
+        "constraints": "Constraints",
         "general": {
             "groupLabel": "General",
             "eventTypes": "Event Types",
@@ -95,6 +97,7 @@
             "applications": "Applications",
             "connectedClients": "Connected Clients",
             "servers": "Servers",
+            "federation": "Federation",
             "developmentTools": "Development Tools"
         },
         "dashboard": "Dashboard"
@@ -529,6 +532,7 @@
                     "appendEvent": "Append Event",
                     "redact": "Redact",
                     "revise": "Revise",
+                    "compensate": "Compensate",
                     "export": "Export",
                     "run": "Run",
                     "newQuery": "New query",
@@ -594,6 +598,11 @@
                         "confirmMessage": "The following observers will be replayed after this revision:",
                         "confirmNoObservers": "No observers will be replayed. Proceed with revision?"
                     },
+                    "compensate": {
+                        "title": "Compensate Event",
+                        "okLabel": "Compensate",
+                        "eventType": "Compensation Event Type"
+                    },
                     "deleteQuery": {
                         "title": "Delete query",
                         "message": "Delete \"{name}\"? This cannot be undone."
@@ -602,6 +611,10 @@
                         "title": "Delete folder",
                         "empty": "Delete the folder \"{folder}\"?",
                         "withQueries": "Delete the folder \"{folder}\" and the {count} queries filed under it? This cannot be undone."
+                    },
+                    "partiallyApplied": {
+                        "title": "Some items were not changed",
+                        "message": "{count} of {total} items belong to another owner and were left as they were."
                     }
                 },
                 "details": {
@@ -826,6 +839,20 @@
                     "examples": "Example partitions (most recent, up to 10)",
                     "viewFailedPartitions": "View failed partitions"
                 }
+            },
+            "constraints": {
+                "title": "Constraints",
+                "description": "Rebuild all applicable unique and closing constraint indexes from the event log for this event store and namespace.",
+                "action": "Reindex constraints",
+                "dialog": {
+                    "title": "Reindex constraints",
+                    "message": "Rebuild all applicable constraint indexes? While the reindex runs, governed appends may wait."
+                },
+                "started": "Constraint reindex started.",
+                "viewJob": "Follow job {id} in Jobs",
+                "unauthorized": "You are not authorized to reindex constraints.",
+                "failed": "Constraint reindex could not be started.",
+                "invalid": "The constraint reindex request is invalid."
             },
             "closedStreams": {
                 "title": "Closed Streams",
@@ -1067,6 +1094,11 @@
         }
     },
     "components": {
+        "storageAuthorization": {
+            "title": "Chronicle's storage user is missing a permission",
+            "failure": "{operation} on {database}.{collection} was refused (Unauthorized)",
+            "hint": "Grant the storage user access to these databases, or set storage.databaseNamePrefix. Check the kernel log and the storage-authorization health check."
+        },
         "projectionEditor": {
             "tooltips": {
                 "help": "Show Projection Declaration Language help panel"
@@ -1139,5 +1171,98 @@
         "causedByCommand": "Caused by",
         "lessActive": "Less active",
         "moreActive": "More active"
+    },
+    "federation": {
+        "title": "Federation",
+        "refresh": "Refresh",
+        "bindings": {
+            "tab": "Consumer bindings",
+            "title": "Consumer bindings (inbound)",
+            "direction": "Inbound: this kernel pulls events from the peers listed here.",
+            "empty": "No consumer bindings",
+            "actions": {
+                "add": "Add binding",
+                "edit": "Edit binding",
+                "remove": "Remove binding"
+            },
+            "remove": {
+                "title": "Remove binding",
+                "message": "Remove the binding '{id}'? This kernel stops pulling from that peer."
+            },
+            "columns": {
+                "id": "Binding",
+                "logicalSource": "Logical source",
+                "endpoint": "Endpoint",
+                "remote": "Remote store / namespace",
+                "local": "Local store / namespace",
+                "origin": "Origin",
+                "state": "State",
+                "lag": "Lag (consumed / remote tail)",
+                "lastDelivery": "Last delivery",
+                "lastError": "Last error"
+            },
+            "dialog": {
+                "addTitle": "Add consumer binding",
+                "editTitle": "Edit consumer binding",
+                "direction": "Inbound: this kernel pulls events from the peer.",
+                "id": "Binding id",
+                "logicalSource": "Logical source",
+                "endpoint": "Peer endpoint (https)",
+                "endpointInvalid": "The endpoint must be an absolute https URL.",
+                "serverPin": "Server certificate pin",
+                "pinInvalid": "A pin is 'sha256:' followed by a 44-character base64 digest.",
+                "clientCertificate": "Client certificate name",
+                "clientCertificateHelp": "The name of a certificate configured on this kernel, never the certificate or its secret.",
+                "remoteEventStore": "Remote event store",
+                "remoteNamespace": "Remote namespace",
+                "targetEventStore": "Local event store",
+                "targetNamespace": "Local namespace"
+            }
+        },
+        "grants": {
+            "tab": "Producer grants",
+            "title": "Producer grants (outbound)",
+            "direction": "Outbound: the peers listed here pull events from this kernel.",
+            "empty": "No producer grants",
+            "allPublic": "All public event types",
+            "activeState": "Active",
+            "revokedState": "Revoked",
+            "actions": {
+                "add": "Add grant",
+                "edit": "Edit grant",
+                "revoke": "Revoke",
+                "reinstate": "Reinstate"
+            },
+            "revoke": {
+                "title": "Revoke link",
+                "message": "Revoke '{id}'? The peer stops receiving events until the grant is reinstated."
+            },
+            "columns": {
+                "id": "Link",
+                "clientPin": "Client pin",
+                "eventStore": "Event store",
+                "namespaces": "Namespaces",
+                "scope": "Scope",
+                "state": "State",
+                "origin": "Origin",
+                "lastPull": "Last pull",
+                "eventsDelivered": "Events delivered",
+                "bytesDelivered": "Delivered",
+                "throttled": "Throttled"
+            },
+            "dialog": {
+                "addTitle": "Add producer grant",
+                "editTitle": "Edit producer grant",
+                "direction": "Outbound: the peer pulls events from this kernel.",
+                "id": "Link id",
+                "clientPin": "Client certificate pin",
+                "pinInvalid": "A pin is 'sha256:' followed by a 44-character base64 digest.",
+                "eventStore": "Event store",
+                "namespaces": "Namespaces",
+                "allPublic": "All public event types",
+                "eventTypes": "Event types",
+                "listHelp": "Separate entries with commas."
+            }
+        }
     }
 }

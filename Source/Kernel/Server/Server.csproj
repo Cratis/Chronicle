@@ -63,6 +63,7 @@
         <ProjectReference Include="../Grpc/Grpc.csproj" />
         <ProjectReference Include="../Storage.InMemory/Storage.InMemory.csproj" />
         <ProjectReference Include="../Storage.MongoDB/Storage.MongoDB.csproj" />
+        <ProjectReference Include="../Storage.Neo4j/Storage.Neo4j.csproj" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
         <ProjectReference Include="../Storage.AzureKeyVault/Storage.AzureKeyVault.csproj" />
         <ProjectReference Include="../Storage.Vault/Storage.Vault.csproj" />

@@ -116,3 +116,35 @@
   href: CHR0064.mdx
 - name: CHR0065 - Read model fold method will not be discovered
   href: CHR0065.mdx
+- name: CHR0066 - A node or an edge can only have primitive properties
+  href: CHR0066.mdx
+- name: CHR0067 - A node needs exactly one key
+  href: CHR0067.mdx
+- name: CHR0068 - A node or an edge cannot be a read model
+  href: CHR0068.mdx
+- name: CHR0069 - [Sink] cannot be combined with [Passive]
+  href: CHR0069.mdx
+- name: "CHR0070 - [Observes<T>] is only for batch methods"
+  href: CHR0070.mdx
+- name: "CHR0071 - Batch method observes no event types"
+  href: CHR0071.mdx
+- name: "CHR0072 - An event type reaches more than one method"
+  href: CHR0072.mdx
+- name: "CHR0073 - BatchContext is only for batch methods"
+  href: CHR0073.mdx
+- name: "CHR0074 - Reactor batch method must return Task or void"
+  href: CHR0074.mdx
+- name: "CHR0075 - A reducer with a batch method has no other reduce methods"
+  href: CHR0075.mdx
+- name: "CHR0076 - Batch method has a signature Chronicle cannot call"
+  href: CHR0076.mdx
+- name: "CHR0077 - Batch method matches an event type it does not observe"
+  href: CHR0077.mdx
+- name: "CHR0078 - A graph view must be anchored at a node"
+  href: CHR0078.mdx
+- name: "CHR0079 - A relation of a graph view must follow an edge"
+  href: CHR0079.mdx
+- name: "CHR0080 - A relation of a graph view must lead to a view"
+  href: CHR0080.mdx
+- name: "CHR0081 - A graph view cannot be a node or an edge"
+  href: CHR0081.mdx

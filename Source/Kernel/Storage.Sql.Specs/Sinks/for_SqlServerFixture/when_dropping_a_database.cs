@@ -19,8 +19,8 @@ public class when_dropping_a_database(SqlServerFixture fixture) : Specification
         _dropped = await fixture.CreateDatabase();
         await Execute(_dropped, "CREATE TABLE written_by_the_dropped_database (id int)");
         await fixture.DropDatabase(_dropped);
-        _next = await fixture.CreateDatabase();
         _droppedStillExists = await Exists(_dropped);
+        _next = await fixture.CreateDatabase();
         _nextExists = await Exists(_next);
         _nextHasTables = (await Scalar(_next, "SELECT COUNT(*) FROM sys.tables")) > 0;
     }
@@ -30,7 +30,7 @@ public class when_dropping_a_database(SqlServerFixture fixture) : Specification
     [Fact] void should_keep_the_next_database() => _nextExists.ShouldBeTrue();
     [Fact] void should_give_the_next_specification_an_empty_database() => _nextHasTables.ShouldBeFalse();
 
-    async Task Destroy() => await fixture.DropDatabase(_next);
+    async Task Destroy() => await fixture.QueueDatabaseDrop(_next);
 
     static async Task<bool> Exists(string connectionString)
     {

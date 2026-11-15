@@ -90,6 +90,12 @@ public class when_kernel_exits : Cratis.Specifications.Specification
         using var exitTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var exit = await client.Containers.WaitContainerAsync(id, exitTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
         exit.StatusCode.ShouldNotEqual(0);
+
+        // Only once the exit has been processed does Docker clear both the running and the paused flags together.
+        using var inspectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var state = await client.Containers.InspectContainerAsync(id, inspectTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
+        state.State.Paused.ShouldBeFalse();
+        state.State.Running.ShouldBeFalse();
     }
 
     static async Task UnpauseOwnedContainer(DockerClient client, string id)
@@ -101,12 +107,9 @@ public class when_kernel_exits : Cratis.Specifications.Specification
         }
         catch (DockerApiException)
         {
-            // The in-flight kill may already have taken the container out of the paused state. Docker reports a
-            // container as running until the kill's exit is processed, so only the frozen state is asserted here;
-            // termination is proven by the awaited kill and the non-zero exit code in KillAndUnpause.
-            using var inspectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var state = await client.Containers.InspectContainerAsync(id, inspectTimeout.Token).WaitAsync(TimeSpan.FromSeconds(15));
-            state.State.Paused.ShouldBeFalse();
+            // The in-flight kill may already have ended the frozen process. Docker then refuses the unpause while it
+            // still reports the container as both running and paused, until it processes the kill's exit; inspecting
+            // here races that. KillAndUnpause asserts both flags once the exit has been awaited.
         }
     }
 

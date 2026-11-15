@@ -20,9 +20,9 @@ public class when_the_system_store_check_runs_in_the_authorization_stage : given
             .ToArray();
     }
 
-    async Task Because() => _result = await _authorizationFilters.Single().OnExecution(ContextFor(Retry("System")));
+    async Task Because() => _result = await _authorizationFilters.OfType<SystemStoreAuthorizationCommandFilter>().Single().OnExecution(ContextFor(Retry("System")));
 
-    [Fact] void should_have_one_authorization_filter_in_the_kernel() => _authorizationFilters.Length.ShouldEqual(1);
-    [Fact] void should_refuse_a_caller_who_is_not_an_administrator() => _result!.IsAuthorized.ShouldBeFalse();
-    [Fact] void should_not_be_the_filter_that_checks_routing_values() => _authorizationFilters.Single().GetType().ShouldNotEqual(typeof(SystemStoreCommandFilter));
+    [Fact] void should_have_one_system_store_authorization_filter_in_the_kernel() => _authorizationFilters.OfType<SystemStoreAuthorizationCommandFilter>().Count().ShouldEqual(1);
+    [Fact] void should_refuse_a_caller_who_is_not_an_administrator() => _result.IsAuthorized.ShouldBeFalse();
+    [Fact] void should_not_be_the_filter_that_checks_routing_values() => _authorizationFilters.OfType<SystemStoreAuthorizationCommandFilter>().Single().GetType().ShouldNotEqual(typeof(SystemStoreCommandFilter));
 }

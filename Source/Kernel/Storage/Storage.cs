@@ -16,10 +16,14 @@ namespace Cratis.Chronicle.Storage;
 /// <param name="clusterStorage">The <see cref="IClusterStorage"/> instance.</param>
 /// <param name="systemStorage">The <see cref="ISystemStorage"/> instance.</param>
 /// <param name="sinkFactories"><see cref="ISinkFactory"/> instances.</param>
+/// <param name="systemEventStoreRelocation">The <see cref="ISystemEventStoreRelocation"/> of the storage provider, when it has one.</param>
+/// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> resolving named sinks; none configured when omitted.</param>
 public class Storage(
     IClusterStorage clusterStorage,
     ISystemStorage systemStorage,
-    IInstancesOf<ISinkFactory> sinkFactories) : IStorage
+    IInstancesOf<ISinkFactory> sinkFactories,
+    ISystemEventStoreRelocation? systemEventStoreRelocation = null,
+    ISinkConfigurations? sinkConfigurations = null) : IStorage
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new(CaseInsensitiveEventStoreNameComparer.Instance);
 
@@ -29,6 +33,18 @@ public class Storage(
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<EventStoreName, Concepts.Projections.Generations.Enablement.GenerationFloor>> ReadGenerationFloors() =>
         clusterStorage.ReadGenerationFloors();
+
+    /// <inheritdoc/>
+    public Task<string?> FindMisplacedSystemEventStoreData() =>
+        systemEventStoreRelocation?.FindMisplacedData() ?? Task.FromResult<string?>(null);
+
+    /// <inheritdoc/>
+    public Task<string?> FindRetainedLegacySystemEventStoreData() =>
+        systemEventStoreRelocation?.FindRetainedLegacyData() ?? Task.FromResult<string?>(null);
+
+    /// <inheritdoc/>
+    public Task MoveSystemEventStoreTo(SystemEventStoreLocation location) =>
+        systemEventStoreRelocation?.MoveTo(location) ?? Task.CompletedTask;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventStoreName>> GetEventStores() => (await clusterStorage.GetEventStores()).Where(IsListed);
@@ -60,17 +76,19 @@ public class Storage(
         // Use Task.Run to avoid deadlocking Orleans grain task schedulers: the async continuations inside these
         // methods must not be posted back to the Orleans ActivationTaskScheduler, which would be the case if called
         // directly with GetAwaiter().GetResult() from within a grain method.
+        // The storage is created first: creating it validates the name and throws for one that cannot be resolved,
+        // and such a name must never be registered.
+        var created = clusterStorage.CreateStorageForEventStore(
+            eventStore,
+            (eventStoreNamespaceName) =>
+                new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories, sinkConfigurations));
+
         var eventStores = Task.Run(clusterStorage.GetEventStores).GetAwaiter().GetResult();
         var existingEventStore = eventStores.SingleOrDefault(e => e == eventStore);
         if (existingEventStore is null)
         {
             Task.Run(() => clusterStorage.SaveEventStore(eventStore)).GetAwaiter().GetResult();
         }
-
-        var created = clusterStorage.CreateStorageForEventStore(
-            eventStore,
-            (eventStoreNamespaceName) =>
-                new Sinks.Sinks(eventStore, eventStoreNamespaceName, sinkFactories));
 
         return _eventStores.GetOrAdd(eventStore, created);
     }

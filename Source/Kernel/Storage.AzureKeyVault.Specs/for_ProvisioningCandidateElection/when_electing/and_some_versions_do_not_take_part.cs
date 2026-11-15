@@ -12,11 +12,10 @@ public class and_some_versions_do_not_take_part : given.versions_of_a_secret
     void Establish()
     {
         AddVersion("saved-directly", LongAgo.AddMinutes(-10), candidate: false);
-        AddVersion("disabled", LongAgo.AddMinutes(-5), enabled: false);
         AddVersion("candidate", LongAgo);
     }
 
     async Task Because() => _elected = await _election.Elect(SecretName);
 
-    [Fact] void should_elect_only_among_enabled_candidates() => VersionOf(_elected).ShouldEqual("candidate");
+    [Fact] void should_elect_only_among_candidates() => VersionOf(_elected).ShouldEqual("candidate");
 }

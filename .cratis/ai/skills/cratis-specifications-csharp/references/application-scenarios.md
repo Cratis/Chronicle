@@ -10,23 +10,22 @@
 - Application conventions
 
 The four scenario helpers exercise the real Arc and Chronicle pipelines
-in-process. Use them for event-sourced *application* behavior where the pipeline,
-validation, constraints or projections matter; a pure decision (`Handle()`,
-`Handle(providedValue)`, reducer or reactor logic) is specified first as a plain
-call. A library or framework repository reaches for a scenario only to test the
+in-process. Follow the [scenario selection and cost rule](../../../rules/specs.scenarios.csharp.md):
+use them for pipeline/authorization wiring, constraints, or declarative mapping;
+specify pure `Handle()`, validator, reducer and
+reactor decisions first as plain calls with supplied read-model state. A library or framework repository reaches for a scenario only to test the
 very engine it provides.
 
 Read [query and decision scenarios](../../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
-when using `QueryScenario<T>`, buffered emissions or guarded command scenarios.
-Guarded decisions need actual seeded events, not pinned models; their given
-state and appends share one in-process log, unlike legacy dictionary seeding.
+when using `QueryScenario<T>`, or buffered emissions.
+Read-protection plumbing is the harness's responsibility, never application setup.
 
 | Helper | Exercises | Use for |
 | --- | --- | --- |
-| `CommandScenario<TCommand>` | Authorization, validators, `Provide()`, `Handle()`, appended events | State Change behavior |
+| `CommandScenario<TCommand>` | Authorization, validators, `Provide()`, `Handle()`, appended events | Pipeline wiring, authorization, domain constraints |
 | `QueryScenario<TReadModel>` | Argument conversion, authorization, validation, interceptors and buffered observations | Query pipeline behavior |
-| `EventScenario` | Chronicle append semantics without the command pipeline | Constraints, raw sequencing, concurrency |
-| `ReadModelScenario<TReadModel>` | Projection or reducer state from a sequence of events | State View behavior |
+| `EventScenario` | Chronicle append semantics without the command pipeline | Domain constraints; raw engine guards belong in framework specs |
+| `ReadModelScenario<TReadModel>` | Projection or reducer state from a sequence of events | Declarative mapping/wiring, one class per model |
 | `ReactorScenario<TReactor>` | Reactor invocation and its side effects | Automation and Translation behavior |
 
 Wrap scenario specification files in `#if DEBUG … #endif` only when they compile
@@ -84,9 +83,9 @@ from `Cratis.Arc.Chronicle.Testing`.
   `AppendedEvents`. `Given.ForEventSource(id).Events(…)` seeds the events an
   injected read model is then materialized from by its own projection or
   reducer; `Given.ForEventSource(id).ReadModel(instance)` pins a specific
-  read-model value instead. Both return `void`. Prefer seeding events — it
-  exercises the projection production depends on, so the specification cannot
-  pass against a read-model shape the projection never produces.
+  read-model value instead. Both return `void`. Supply state for business
+  decisions; seed events only when history/mapping is part of the example, never
+  solely to satisfy read-protection infrastructure.
 - **Validator and `Provide()` dependencies** are registered in
   `_scenario.Services`; the concrete validator is discovered automatically.
 - **Caller setup (Requires Arc 22.75.1):** register a substituted
@@ -234,18 +233,20 @@ async Task Because() =>
     Assert.True(_scenario.Instance!.<Property>);
 ```
 
-The helper auto-detects a model-bound projection, a fluent projection, or a
-reducer. Use the named-parameter constructor when services or initial state are
+Use one scenario class per read model, many read-only facts and shared lifecycle.
+Apply its event sequence once; capture intermediate states in `Because` for
+lifecycle assertions. Do not split startup per property, attribute or event.
+Pure reducer decisions remain plain calls. The helper auto-detects a model-bound
+projection, a fluent projection, or a reducer. Use the named-parameter constructor when services or initial state are
 needed: `new ReadModelScenario<<ReadModelType>>(initialState: null,
 serviceProvider: services)`. Pre-seed a keyed read model with
 `Given.ForEventSourceId(id).ReadModel(instance)` for code that calls
 `IReadModels.GetInstanceById`. Cross-stream projections are supported — seed each
 contributing stream with its own `Given.ForEventSource(…)`.
 
-To bridge read models into a command scenario, build a focused
-`ReadModelScenario<T>`, seed it, then register its read models into the command
-scenario with `_scenario.Services.AddSingleton(readModelScenario.ReadModels)`.
-For non-key searches, register a lookup double in the scenario services instead.
+Do not build a projection scenario merely to feed a pure command decision.
+Pass state directly or substitute the application's lookup collaborator; provider
+behavior belongs in provider integration specs.
 
 Do not pre-emptively skip a read-model assertion. Assume scalar concept, enum,
 and identifier properties populate; if one does not, investigate the projection.

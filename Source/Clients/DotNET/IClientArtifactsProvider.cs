@@ -26,6 +26,25 @@ public interface IClientArtifactsProvider
     IEnumerable<Type> ModelBoundProjections { get; }
 
     /// <summary>
+    /// Gets all the types that are nodes or edges in a property graph, declared with the node and edge attributes.
+    /// </summary>
+    IEnumerable<Type> GraphElements => [];
+
+    /// <summary>
+    /// Gets all the graph projections declared with the fluent builder.
+    /// </summary>
+    IEnumerable<Type> GraphProjections => [];
+
+    /// <summary>
+    /// Gets all the types that are views over a property graph, declared with the view attribute.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to an empty set so an existing <see cref="IClientArtifactsProvider"/> implementation compiles and behaves
+    /// unchanged without knowing this member exists.
+    /// </remarks>
+    IEnumerable<Type> GraphViews => [];
+
+    /// <summary>
     /// Gets all the available Reactor types.
     /// </summary>
     IEnumerable<Type> Reactors { get; }

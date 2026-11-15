@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -83,7 +83,7 @@ public partial class Observer
         List<JobState> candidates;
         try
         {
-            candidates = RetryJobsThatCanNeverRun(await _jobsManager.GetOutstandingJobs());
+            candidates = RetryJobsThatCanNeverRun(await _jobsManager.GetOutstandingJobsOf<IRetryFailedPartition>());
         }
         catch (Exception ex)
         {

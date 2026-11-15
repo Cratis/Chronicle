@@ -30,7 +30,7 @@ public class when_schema_lock_acquisition_fails : Specification
         _listener.Start();
     }
 
-    async Task Because() => _error = await Catch.Exception(() => SqlStorageTelemetry.WaitForSchemaLock(() => Task.FromException(_failure), _provider));
+    async Task Because() => _error = await Catch.Exception(() => SqlStorageTelemetry.Legacy.WaitForSchemaLock(() => Task.FromException(_failure), _provider));
 
     void Destroy() => _listener.Dispose();
 

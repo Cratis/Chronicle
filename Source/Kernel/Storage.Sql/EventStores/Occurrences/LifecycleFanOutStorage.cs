@@ -11,8 +11,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
 /// Stores lifecycle snapshots in the event-store database with insert-if-absent semantics.
 /// </summary>
 /// <param name="open">Opens an event-store context for each operation.</param>
-public class LifecycleFanOutStorage(Func<Task<DbContextScope<EventStoreDbContext>>> open) : ILifecycleFanOutStorage
+/// <param name="database">The configured database for telemetry, if any.</param>
+public class LifecycleFanOutStorage(Func<Task<DbContextScope<EventStoreDbContext>>> open, IDatabase? database = null) : ILifecycleFanOutStorage
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public async Task<LifecycleFanOutIntent?> Get(OccurrenceId id)
     {
@@ -33,7 +36,7 @@ public class LifecycleFanOutStorage(Func<Task<DbContextScope<EventStoreDbContext
         }
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
-            SqlStorageTelemetry.RecoveredCollision("lifecycle-fan-out");
+            _telemetry.RecoveredCollision("lifecycle-fan-out");
             return false;
         }
     }

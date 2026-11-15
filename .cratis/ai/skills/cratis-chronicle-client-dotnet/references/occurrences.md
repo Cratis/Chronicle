@@ -82,7 +82,7 @@ a handler through in-process ingress, claims, receipts and completion:
 
 There are no background workers, automatic lease renewals or reminders in this
 scenario; it does not prove behavior in a real multi-node cluster. Run
-`dotnet test` on the owning spec project and assert duplicate ingress, redelivery,
+the owning spec project's built executable (see [specs.csharp](../../../rules/specs.csharp.md)) and assert duplicate ingress, redelivery,
 terminal refusal, lost reply and unsupported-capability paths.
 
 Requires Chronicle 19.78.0 for `Defaults` and `EventStoreForTesting` constructors

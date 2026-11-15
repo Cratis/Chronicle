@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -37,6 +38,7 @@ namespace Cratis.Chronicle.Sequences;
 /// that BCL type - it has no plain reflectable shape, so the gRPC contract generated from this command would produce
 /// a field nothing can actually put on the wire.
 /// </remarks>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record Append(

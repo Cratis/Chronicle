@@ -1,21 +1,25 @@
 ---
-title: Getting a Collection of Instances
-description: Read every instance of a read model for small reports, diagnostics, and current-state analysis.
+title: Read a collection of Cratis Chronicle read models
+description: Read all instances of a Cratis Chronicle read model for a small report or diagnostic task, with guidance on filtering, replay limits, and paging.
 ---
 
-Sometimes you need every instance of a read model at once: a small report, an integrity check, a back-office export, or a diagnostic script. Chronicle answers this the same way it answers a single-instance read — from the materialized store when the read model has one, and by replaying events when it does not.
+Read a whole collection in Cratis Chronicle when a small report or diagnostic task needs every instance of a read model. Without an event-count limit, the read returns stored instances for a materialized model and computes passive models from events.
 
-Either way the whole result set comes back in one call, so this is not the tool for hot list views or large data sets. Reach for [materialized paging](materialized-pagination) when the caller needs a window rather than everything.
+The caller receives the entire result, so use [materialized paging](materialized-pagination) for list views or large data sets. A small number of instances can still have a long event history; allow for replay work as well as the size of the returned collection.
 
 ## Read all instances
 
 <ChronicleClientTabs snippet="read-models/getting-collection-instances/basic" />
 
-For a **materialized** read model the kernel pages through the sink until it has read every stored instance, releases compliance-protected values, and returns them. For a **passive** read model it replays the events that feed the read model and returns the state that falls out, which is strongly consistent and proportional to the length of the history.
+For a materialized model, the kernel pages through the sink, the storage destination updated by its observer, and releases compliance-protected values before returning the stored instances. The result reflects observer progress; reading all instances does not wait for the observer to catch up.
+
+For a passive model, the read processes the events that feed it and returns the computed instances. The work grows with the relevant event history. This is a collection read, not a guard for a later append; use [decision-consistent reads](decision-reads.mdx) when a command depends on state remaining unchanged.
+
+A [per-stream read model](per-stream.mdx) cannot be read as a whole collection. Read one source and stream instance explicitly instead.
 
 ## Filter in memory
 
-The read returns every instance. Apply language-native filtering afterwards, and keep that in-memory cost in mind.
+Filtering after the read does not reduce the events processed or the instances returned to the client. Use language-native filtering when the complete collection is small enough to load first.
 
 <ChronicleClientTabs snippet="read-models/getting-collection-instances/filtering" />
 
@@ -23,11 +27,11 @@ For large result sets, page the materialized read model or use a product-specifi
 
 ## Limit the replay
 
-You can cap the number of events Chronicle processes. Because a cap only means something to a replay, passing one always replays — even for a materialized read model.
+Pass an event-count cap to process a limited number of matching events from the beginning of the history. This requests replay even for a materialized model; it does not limit the number of stored instances returned.
 
 <ChronicleClientTabs snippet="read-models/getting-collection-instances/event-count" />
 
-This can make diagnostics faster, but it can also return incomplete state if the cap cuts off events that matter. Use an event-count cap for historical analysis, back-testing, or bounded diagnostics. Do not use it when the reader expects the current truth.
+A cap bounds replay work, but later events may change or remove the instances it returns. Use it to inspect a prefix of history for diagnostics or back-testing, not when the reader expects current state. For historical state of one key, continue with [Getting Snapshots](getting-snapshots).
 
 ## When to use this
 

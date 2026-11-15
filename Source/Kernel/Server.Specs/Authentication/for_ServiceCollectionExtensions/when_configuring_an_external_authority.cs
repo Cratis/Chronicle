@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -24,5 +25,6 @@ public class when_configuring_an_external_authority : given.chronicle_authentica
 
     [Fact] void should_use_the_configured_authority() => _result.Authority.ShouldEqual("https://identity.example");
     [Fact] void should_require_the_chronicle_audience() => _result.Audience.ShouldEqual("chronicle");
+    [Fact] void should_mark_external_identities() => _result.TokenValidationParameters.AuthenticationType.ShouldEqual(ExternalAuthority.AuthenticationType);
     [Fact] void should_require_https_metadata() => _result.RequireHttpsMetadata.ShouldBeTrue();
 }

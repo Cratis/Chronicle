@@ -40,7 +40,7 @@ public class when_reading_with_erased_properties : Specification
         tenant.GetEventSequence(Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(_sequence);
         store.EventTypes.GetFor(Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns([]);
         _stored = new(Concepts.Events.EventContext.Empty with { SequenceNumber = 42 }, new ExpandoObject());
-        _sequence.GetFromSequenceNumber(Arg.Any<Concepts.Events.EventSequenceNumber>(), Arg.Any<Concepts.Events.EventSourceId?>(), Arg.Any<Concepts.Events.EventSourceType?>(), Arg.Any<Concepts.Events.EventStreamType?>(), Arg.Any<Concepts.Events.EventStreamId?>(), Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns(cursor);
+        _sequence.GetFromSequenceNumberWithHistory(Arg.Any<Concepts.Events.EventSequenceNumber>(), Arg.Any<Concepts.Events.EventSourceId?>(), Arg.Any<Concepts.Events.EventSourceType?>(), Arg.Any<Concepts.Events.EventStreamType?>(), Arg.Any<Concepts.Events.EventStreamId?>(), Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns(cursor);
         cursor.MoveNext().Returns(true, false, true, false);
         cursor.Current.Returns([_stored]);
         _compliance.ReleaseReportingErasure(Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<IDictionary<Concepts.Events.EventType, EventTypeSchema>>()).Returns([_stored with { ErasedProperties = ["contacts[0].email"] }]);

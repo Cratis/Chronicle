@@ -16,5 +16,6 @@ SKILL.md:
 - Render unimported mtp-hot-reload routing reference as plain topic text.
 - Rewrite the description to the Cratis shape (what it does, Use when, Not for) and drop references to skills that are not part of this corpus.
 - Remove the reference to the mtp-hot-reload skill.
+- Ask for mini dumps in the crash and hang dump options and add the read-then-delete instruction.
 
 NOTICE: Add this attribution, change list, and any download/execution disclosure.

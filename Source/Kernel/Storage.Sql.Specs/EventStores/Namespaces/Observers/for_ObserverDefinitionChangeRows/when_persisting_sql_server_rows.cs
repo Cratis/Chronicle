@@ -22,7 +22,7 @@ public class when_persisting_sql_server_rows(SqlServerFixture fixture) : Definit
         await context.Database.MigrateAsync();
     }
 
-    async Task Destroy() => await fixture.DropDatabase(_connectionString);
+    async Task Destroy() => await fixture.QueueDatabaseDrop(_connectionString);
 
     protected override IObserverDefinitionChangeRows<T> OpenRows<T>() => new ObserverDefinitionChangeRows<T>(() => Task.FromResult(new DbContextScope<NamespaceDbContext>(CreateContext(), static () => { })));
 

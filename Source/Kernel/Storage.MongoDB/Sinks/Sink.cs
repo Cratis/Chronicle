@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Storage.Diagnostics;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -40,6 +41,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing the collections of the read model.</param>
 /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
 /// <param name="writes"><see cref="ISinkWrites"/> executing the data writes, fenced or not.</param>
+/// <param name="authorizationDiagnostics">The storage authorization diagnostics.</param>
 public partial class Sink(
     ReadModelDefinition readModel,
     IMongoDBConverter converter,
@@ -48,8 +50,33 @@ public partial class Sink(
     IExpandoObjectConverter expandoObjectConverter,
     IReadModelChangeStreams changeStreams,
     ILogger<Sink> logger,
-    ISinkWrites writes) : ISink, ISinkCompositeKeyLookup, ISinkPagePrefetch, IDisposable
+    ISinkWrites writes,
+    IStorageAuthorizationDiagnostics authorizationDiagnostics) : ISink, ISinkCompositeKeyLookup, ISinkPagePrefetch, IDisposable
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Sink"/> class with local authorization diagnostics.
+    /// </summary>
+    /// <param name="readModel">The <see cref="ReadModelDefinition"/> the sink is for.</param>
+    /// <param name="converter"><see cref="IMongoDBConverter"/> for dealing with conversion.</param>
+    /// <param name="collections">Provider for <see cref="ISinkCollections"/> to use.</param>
+    /// <param name="changesetConverter">Provider for <see cref="IChangesetConverter"/> for converting changesets.</param>
+    /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting documents.</param>
+    /// <param name="changeStreams"><see cref="IReadModelChangeStreams"/> for observing collections.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for logging.</param>
+    /// <param name="writes"><see cref="ISinkWrites"/> executing the data writes.</param>
+    public Sink(
+        ReadModelDefinition readModel,
+        IMongoDBConverter converter,
+        ISinkCollections collections,
+        IChangesetConverter changesetConverter,
+        IExpandoObjectConverter expandoObjectConverter,
+        IReadModelChangeStreams changeStreams,
+        ILogger<Sink> logger,
+        ISinkWrites writes)
+        : this(readModel, converter, collections, changesetConverter, expandoObjectConverter, changeStreams, logger, writes, new StorageAuthorizationDiagnostics(NullLogger<StorageAuthorizationDiagnostics>.Instance))
+    {
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Sink"/> class writing without a fence.
     /// </summary>
@@ -105,7 +132,7 @@ public partial class Sink(
     /// </summary>
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
-    readonly object _bulkLock = new();
+    readonly Lock _bulkLock = new();
     readonly CancellationTokenSource _bulkCancellation = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
     readonly HashSet<BsonValue> _bulkDestinations = [];
@@ -162,6 +189,9 @@ public partial class Sink(
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
+
+    /// <inheritdoc/>
+    public bool IsInBulkMode => _isBulkMode;
 
     /// <inheritdoc/>
     public void Dispose() => _bulkCancellation.Dispose();
@@ -574,6 +604,12 @@ public partial class Sink(
 
     async Task<IEnumerable<FailedPartition>> ApplyRemoval(Key key, EventSequenceNumber eventSequenceNumber, FilterDefinition<BsonDocument> filter, SinkWriteOptions options)
     {
+        if (options.Page is { } page)
+        {
+            page.Add(new DeleteOneModel<BsonDocument>(filter), key, options.PartitionOr(key), eventSequenceNumber);
+            return [];
+        }
+
         if (CanBuffer(options))
         {
             var cacheKey = SinkCacheKey.For(converter.ToBsonValue(key));
@@ -672,6 +708,12 @@ public partial class Sink(
 
     async Task<bool> TryBufferOperation(WriteModel<BsonDocument> operation, UpdateWrite write, SinkWriteOptions options)
     {
+        if (options.Page is { } page)
+        {
+            page.Add(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
+            return true;
+        }
+
         if (!CanBuffer(options))
         {
             return false;
@@ -703,7 +745,7 @@ public partial class Sink(
 
     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
-        if (!CanBuffer(options))
+        if (options.Page is null && !CanBuffer(options))
         {
             return null;
         }
@@ -713,6 +755,13 @@ public partial class Sink(
             IsUpsert = write.IsUpsert,
             ArrayFilters = write.Converted.ArrayFilters
         };
+
+        if (options.Page is { } page)
+        {
+            page.Add(updateModel, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
+            return [];
+        }
+
         var hasJoined = changeset.HasJoined();
         var cacheState = hasJoined || options.Mode == SinkWriteMode.GuardedUpsert ? null : CreateCacheState(write.Key, changeset, write.EventSequenceNumber);
 
@@ -1163,32 +1212,43 @@ public partial class Sink(
     public async Task EnsureIndexes()
     {
         var collection = Collection;
-        using var cursor = await collection.Indexes.ListAsync();
-        var existingIndexes = await cursor.ToListAsync();
-        var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
-
-        var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
-        var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
-            ? readModel.Indexes
-            : readModel.Indexes.Append(initializedIndex);
-        foreach (var indexDefinition in indexes)
+        try
         {
-            ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
-            var indexName = ReadModelIndexKeys.Name(indexDefinition);
-            var keys = ReadModelIndexKeys.For(indexDefinition);
+            using var cursor = await collection.Indexes.ListAsync();
+            var existingIndexes = await cursor.ToListAsync();
+            var collation = new Lazy<Task<BsonValue>>(() => GetCollectionCollation(collection));
 
-            var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, keys));
-            if (await IsIndexPresent(candidates, indexName, collation))
+            var initializedIndex = new IndexDefinition(WellKnownProperties.ReadModelInstanceInitialized);
+            var indexes = readModel.Indexes.Any(index => index.Signature == initializedIndex.Signature)
+                ? readModel.Indexes
+                : readModel.Indexes.Append(initializedIndex);
+            foreach (var indexDefinition in indexes)
             {
-                continue;
+                ReadModelIndexKeys.Validate(indexDefinition, readModel.GetSchemaForLatestGeneration());
+                var indexName = ReadModelIndexKeys.Name(indexDefinition);
+                var keys = ReadModelIndexKeys.For(indexDefinition);
+
+                var candidates = existingIndexes.FindAll(index => HasMatchingKeyAndOptions(index, keys));
+                if (await IsIndexPresent(candidates, indexName, collation))
+                {
+                    continue;
+                }
+
+                var indexModel = new CreateIndexModel<BsonDocument>(
+                    keys,
+                    new CreateIndexOptions { Name = indexName, Background = true });
+
+                await collection.Indexes.CreateOneAsync(indexModel);
             }
-
-            var indexModel = new CreateIndexModel<BsonDocument>(
-                keys,
-                new CreateIndexOptions { Name = indexName, Background = true });
-
-            await collection.Indexes.CreateOneAsync(indexModel);
         }
+        catch (Exception exception) when (MongoDBAuthorizationErrors.IsUnauthorized(exception, out var operation))
+        {
+            var ns = collection.CollectionNamespace;
+            authorizationDiagnostics.Record(new(ns.DatabaseNamespace.DatabaseName, ns.CollectionName, operation ?? nameof(EnsureIndexes)));
+            throw;
+        }
+
+        authorizationDiagnostics.Clear(collection.CollectionNamespace.DatabaseNamespace.DatabaseName, collection.CollectionNamespace.CollectionName);
     }
 
     static async Task<bool> IsIndexPresent(List<BsonDocument> candidates, string indexName, Lazy<Task<BsonValue>> collation)
@@ -2015,13 +2075,13 @@ public partial class Sink(
         public string For(int operationIndex) => ByOperation.TryGetValue(operationIndex, out var reason) ? reason : First;
     }
 
-    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null)
+    sealed record SinkWriteOptions(SinkWriteMode Mode, HashSet<BulkBatch>? DrainedBatches = null, Key? Partition = null, PageOperations? Page = null)
     {
         public bool IsImmediate => DrainedBatches is not null;
 
         public Key PartitionOr(Key key) => Partition ?? key;
 
-        public bool CanBuffer(bool isBulkMode) => isBulkMode && !IsImmediate;
+        public bool CanBuffer(bool isBulkMode) => isBulkMode && !IsImmediate && Page is null;
     }
 
     sealed record WritePlan(

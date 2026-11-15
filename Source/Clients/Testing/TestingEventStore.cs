@@ -4,11 +4,12 @@
 extern alias KernelConcepts;
 extern alias KernelCore;
 extern alias KernelGrpc;
-
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.Constraints;
@@ -19,6 +20,7 @@ using Cratis.Chronicle.EventSources;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.InMemory;
 using Cratis.Chronicle.Storage.InMemory.Events.EventTypes;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
@@ -30,8 +32,6 @@ using Cratis.Chronicle.Transactions;
 using Cratis.Execution;
 using Cratis.Json;
 using Cratis.Monads;
-using Cratis.Orleans.Jobs;
-using Cratis.Orleans.Storage;
 using Cratis.Serialization;
 using Cratis.Types;
 using KernelConceptsNs = KernelConcepts::Cratis.Chronicle.Concepts;
@@ -69,7 +69,8 @@ internal sealed class TestingEventStore : IDisposable
         _storages = new EventStoreStorages(
             new KnownInstancesOf<ISinkFactory>([new InMemorySinkFactory(new TypeFormats())]),
             new InMemoryJobsStorage(new NoJobTypes()),
-            _ => new DiscoveredEventTypesStorage(new EventTypesStorage(), eventTypes));
+            _ => new DiscoveredEventTypesStorage(new EventTypesStorage(), eventTypes),
+            new EventSequenceMutationDigestKeys(Compliance.KeyStorage, NullLogger<EventSequenceMutationDigestKeys>.Instance));
         Storage = new Storage.InMemory.Storage(_storages, new SystemStorage());
         Time = time ?? new ScenarioTime();
         Capabilities = capabilities ?? new KernelCapabilitiesForTesting();

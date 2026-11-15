@@ -80,7 +80,8 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
                     NullLogger<JsonSchemaMetadataManager>.Instance),
                 _expandoObjectConverter),
             _materializedReadModels,
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            NamespaceCasingContext.Create());
     }
 
     async Task Because()

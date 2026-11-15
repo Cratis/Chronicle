@@ -21,6 +21,7 @@ internal static class SinkDefinitionConverters
         {
             ConfigurationId = definition.Configuration,
             TypeId = definition.EventSequence is null ? definition.Type : WellKnownSinkTypes.EventSequence,
+            Name = definition.Name?.Value ?? string.Empty,
             EventSequence = definition.EventSequence is null ? null : new()
             {
                 EventType = new()
@@ -48,6 +49,9 @@ internal static class SinkDefinitionConverters
             eventSequence.EventSequence is null ? null : new(eventSequence.EventSequence),
             eventSequence.IsPublic);
 
-        return new(new SinkConfigurationId(contract.ConfigurationId), eventSequence is null ? contract.TypeId : WellKnownSinkTypes.EventSequence, configuration);
+        return new(new SinkConfigurationId(contract.ConfigurationId), eventSequence is null ? contract.TypeId : WellKnownSinkTypes.EventSequence, configuration)
+        {
+            Name = string.IsNullOrWhiteSpace(contract.Name) ? SinkName.Default : contract.Name.Trim()
+        };
     }
 }

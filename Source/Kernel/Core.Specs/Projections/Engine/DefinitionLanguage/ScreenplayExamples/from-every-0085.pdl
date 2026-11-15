@@ -1,4 +1,0 @@
-projection Doc => DocReadModel
-  every
-    Version = $eventContext.sequenceNumber
-    UpdatedAt = $eventContext.occurred

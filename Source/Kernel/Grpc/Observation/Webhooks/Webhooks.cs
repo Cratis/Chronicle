@@ -47,7 +47,7 @@ internal sealed class Webhooks(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>> GetWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
                 var result = await global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails.GetWebhooks((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage);
@@ -59,7 +59,7 @@ internal sealed class Webhooks(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>> ObserveWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.ObserveWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             () => global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails.ObserveWebhooks((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, storage)
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>)_.Select(ToWebhookDetailsResponse).ToList()),

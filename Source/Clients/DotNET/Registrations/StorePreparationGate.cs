@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Registrations;
 /// <param name="preparationFailed">Publishes the exact failure of the current local revision.</param>
 internal sealed class StorePreparationGate(Action<Exception>? preparationFailed = null)
 {
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     readonly ArtifactPreparationLease _lease = new();
     readonly AsyncLocal<Ownership?> _ownership = new();
     Revision? _current;
@@ -106,7 +106,7 @@ internal sealed class StorePreparationGate(Action<Exception>? preparationFailed 
             var revision = GetOrStart(prepare, forceNew: false);
             await revision.Verdict;
             await _lease.WaitAsync();
-            var isCurrent = false;
+            bool isCurrent;
             lock (_lock)
             {
                 isCurrent = ReferenceEquals(_current, revision) && revision.PayloadVerdict is null;

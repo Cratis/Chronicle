@@ -5,8 +5,10 @@ using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -29,7 +31,8 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this pipeline belongs to.</param>
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
-public class ReducerPipeline(
+/// <param name="memoryGate">Optional <see cref="ReducerMemoryGate"/> that makes reduces of large states wait for room in the memory budget.</param>
+public partial class ReducerPipeline(
     ReadModelDefinition readModel,
     ISink sink,
     IObjectComparer objectComparer,
@@ -37,8 +40,11 @@ public class ReducerPipeline(
     EventStoreName eventStore,
     EventStoreNamespaceName eventStoreNamespace,
     bool guardWritesOnWatermark = true,
-    IExpandoObjectConverter? expandoObjectConverter = null) : IReducerPipeline
+    IExpandoObjectConverter? expandoObjectConverter = null,
+    ReducerMemoryGate? memoryGate = null) : IReducerPipeline
 {
+    readonly string _memoryScope = $"{eventStore}/{eventStoreNamespace}/{readModel.Identifier}";
+
     readonly IExpandoObjectConverter _expandoObjectConverter = expandoObjectConverter ?? new ExpandoObjectConverter(new TypeFormats());
 
     /// <inheritdoc/>
@@ -60,27 +66,91 @@ public class ReducerPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk() => Sink.EndBulk();
 
     /// <inheritdoc/>
-    public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer)
-    {
-        var schema = ReadModel.GetTargetSchema();
-        var storedInitial = await Sink.FindOrDefault(context.Key);
-        var initial = storedInitial;
-        object? storedSubject = null;
+    public long StateSizeOf(Key partition) => memoryGate?.RememberedSizeOf(_memoryScope, partition) ?? 0;
 
-        if (initial is not null)
+    /// <inheritdoc/>
+    public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true)
+    {
+        using var memoryTicket = memoryGate is null ? ReducerMemoryTicket.None : await memoryGate.Enter(_memoryScope, context.Key);
+        var storedInitial = await Sink.FindOrDefault(context.Key);
+        if (memoryGate is not null)
         {
-            ((IDictionary<string, object?>)initial).TryGetValue(WellKnownProperties.Subject, out storedSubject);
-            initial = await readModelsCompliance.Release(
-                eventStore,
-                eventStoreNamespace,
-                schema,
-                initial);
+            await memoryGate.Observe(memoryTicket, _memoryScope, context.Key, storedInitial);
         }
 
-        var result = await reducer(context.Events, initial);
+        var stored = await Release(storedInitial);
+
+        var result = await reducer(context.Events, stored.Released);
 
         if (result.ObserverResult.State != ObserverSubscriberState.Ok) return null;
 
+        var (notification, failures) = await Write(context, stored, result, createNotification);
+        if (failures.Length > 0)
+        {
+            throw new ReducerSinkWriteFailed(failures);
+        }
+
+        return notification;
+    }
+
+    /// <summary>
+    /// Releases the state a partition's read model holds for the reducer.
+    /// </summary>
+    /// <param name="storedInitial">The state as the sink holds it, or null when there is none.</param>
+    /// <returns>The <see cref="StoredState"/> of the partition.</returns>
+    async Task<StoredState> Release(ExpandoObject? storedInitial)
+    {
+        if (storedInitial is null)
+        {
+            return new(null, null, null);
+        }
+
+        ((IDictionary<string, object?>)storedInitial).TryGetValue(WellKnownProperties.Subject, out var storedSubject);
+        var released = await readModelsCompliance.Release(
+            eventStore,
+            eventStoreNamespace,
+            ReadModel.GetTargetSchema(),
+            storedInitial);
+        return new(storedInitial, released, storedSubject);
+    }
+
+    /// <summary>
+    /// Writes the state the reducer returned for a partition.
+    /// </summary>
+    /// <param name="context">The <see cref="ReducerContext"/> of the partition.</param>
+    /// <param name="stored">The <see cref="StoredState"/> the partition was reduced from.</param>
+    /// <param name="result">The <see cref="ReducerSubscriberResult"/> the reducer returned.</param>
+    /// <param name="createNotification">Whether to build the notification of the change.</param>
+    /// <returns>The change to notify watchers of, if any, and the partitions the sink reported as failed.</returns>
+    async Task<(ReadModelChangeNotification? Notification, FailedPartition[] Failures)> Write(ReducerContext context, StoredState stored, ReducerSubscriberResult result, bool createNotification)
+    {
+        if (await Prepare(context, stored, result) is not { } write)
+        {
+            return (null, []);
+        }
+
+        var failures = (await Sink.ApplyChanges(write.Key, write.Changeset, write.EventSequenceNumber, write.Mode)).ToArray();
+        if (failures.Length > 0)
+        {
+            return (null, failures);
+        }
+
+        // The notification is a whole new copy of the state, so it is only built when something is watching.
+        return (createNotification ? CreateNotification(context, result.ReadModelState, stored.Released, write.StoredState) : null, []);
+    }
+
+    /// <summary>
+    /// Works out what to write for the state the reducer returned for a partition.
+    /// </summary>
+    /// <param name="context">The <see cref="ReducerContext"/> of the partition.</param>
+    /// <param name="stored">The <see cref="StoredState"/> the partition was reduced from.</param>
+    /// <param name="result">The <see cref="ReducerSubscriberResult"/> the reducer returned.</param>
+    /// <returns>The <see cref="PreparedWrite"/>, or null when the state did not change.</returns>
+    async Task<PreparedWrite?> Prepare(ReducerContext context, StoredState stored, ReducerSubscriberResult result)
+    {
+        var schema = ReadModel.GetTargetSchema();
+        var storedInitial = stored.Stored;
+        var initial = stored.Released;
         var identifier = context.Events.First().Context.ResolveComplianceIdentifier(context.Key);
 
         // Sinks apply encrypted differences to the stored snapshot, not the released schema-only state.
@@ -112,13 +182,13 @@ public class ReducerPipeline(
             {
                 initialForComparison = new ExpandoObject();
                 var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
-                foreach (var (name, value) in initial.Where(property => property.Key != "_id" && (!WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key))))
+                foreach (var (name, value) in initial.Where(property => !WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key)))
                 {
                     ((IDictionary<string, object?>)initialForComparison)[name] = value;
                 }
-                if (storedSubject is not null)
+                if (stored.Subject is not null)
                 {
-                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = storedSubject;
+                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = stored.Subject;
                 }
             }
 
@@ -148,15 +218,7 @@ public class ReducerPipeline(
         var mode = guardWritesOnWatermark && initial is not null
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
-        var failedPartitions = await Sink.ApplyChanges(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode);
-
-        var failures = failedPartitions.ToArray();
-        if (failures.Length > 0)
-        {
-            throw new ReducerSinkWriteFailed(failures);
-        }
-
-        return CreateNotification(context, result.ReadModelState, initial, storedState);
+        return new(context.Key, changeset, context.Events.Last().Context.SequenceNumber, mode, storedState);
     }
 
     ReadModelChangeNotification CreateNotification(ReducerContext context, ExpandoObject? result, ExpandoObject? initial, ExpandoObject? storedState)
@@ -181,5 +243,29 @@ public class ReducerPipeline(
                 Subject = subject,
                 Subjects = subjects
             });
+    }
+
+    /// <summary>
+    /// Represents the state a partition's read model holds when it is reduced.
+    /// </summary>
+    /// <param name="Stored">The state as the sink holds it, or null when there is none.</param>
+    /// <param name="Released">The state released for the reducer, or null when there is none.</param>
+    /// <param name="Subject">The subject the stored state carries, if any.</param>
+    sealed record StoredState(ExpandoObject? Stored, ExpandoObject? Released, object? Subject);
+
+    /// <summary>
+    /// Represents what to write for a partition.
+    /// </summary>
+    /// <param name="Key">The <see cref="Key"/> of the partition.</param>
+    /// <param name="Changeset">The changes to apply.</param>
+    /// <param name="EventSequenceNumber">The sequence number of the last event reduced.</param>
+    /// <param name="Mode">The <see cref="SinkWriteMode"/> to write with.</param>
+    /// <param name="StoredState">The state the sink holds once the write is applied.</param>
+    sealed record PreparedWrite(Key Key, Changeset<AppendedEvent, ExpandoObject> Changeset, EventSequenceNumber EventSequenceNumber, SinkWriteMode Mode, ExpandoObject? StoredState)
+    {
+        /// <summary>
+        /// Gets the write as a <see cref="SinkPageWrite"/>.
+        /// </summary>
+        public SinkPageWrite AsPageWrite => new(Key, Changeset, EventSequenceNumber, Mode);
     }
 }

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -42,7 +43,8 @@ public class EventSequenceSinkFactory(IServiceProvider serviceProvider) : ISinkF
             configuration,
             serviceProvider.GetRequiredService<IGrainFactory>(),
             serviceProvider.GetRequiredService<IStorage>(),
-            serviceProvider.GetRequiredService<IExpandoObjectConverter>());
+            serviceProvider.GetRequiredService<IExpandoObjectConverter>(),
+            serviceProvider.GetRequiredService<IReservedEventSequenceIds>());
     }
 
     static bool CarriesCompliance(JsonNode? node) => node switch

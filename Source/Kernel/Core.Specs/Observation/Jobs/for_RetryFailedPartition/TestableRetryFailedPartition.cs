@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using System.Text.Json;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_RetryFailedPartition;
@@ -35,6 +35,14 @@ public class TestableRetryFailedPartition(JsonSerializerOptions jsonSerializerOp
     /// <returns>The <see cref="JobStepDetails"/> the real job prepares.</returns>
     public Task<IImmutableList<JobStepDetails>> PrepareRecoverySteps(RetryFailedPartitionRequest request) =>
         base.PrepareSteps(request);
+
+    /// <summary>
+    /// Records a step's result as the job does when the step completes or stops.
+    /// </summary>
+    /// <param name="stepId">The step that completed.</param>
+    /// <param name="result">Its result.</param>
+    /// <returns>Awaitable task.</returns>
+    public Task RecordStepForTesting(JobStepId stepId, JobStepResult result) => OnStepCompletedOrStopped(stepId, result);
 
     /// <summary>
     /// Checks whether the persisted job can resume.

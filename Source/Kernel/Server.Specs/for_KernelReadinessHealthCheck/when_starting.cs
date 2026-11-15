@@ -18,7 +18,7 @@ public class when_starting : Specification
         lifetime.ApplicationStarted.Returns(started.Token);
         lifetime.ApplicationStopping.Returns(stopping.Token);
 
-        _result = await new KernelReadinessHealthCheck(new(lifetime)).CheckHealthAsync(new());
+        _result = await new KernelReadinessHealthCheck(given.startup_state.For(lifetime)).CheckHealthAsync(new());
     }
 
     [Fact] void should_report_unhealthy() => _result.Status.ShouldEqual(HealthStatus.Unhealthy);

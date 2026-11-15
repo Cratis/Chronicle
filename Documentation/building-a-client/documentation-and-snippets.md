@@ -1,8 +1,7 @@
 ---
+title: Documentation and snippets for Cratis Chronicle clients
 description: How to shape a new Chronicle client's Documentation folder, snippets and CI validator so it plugs into the shared Chronicle docs site.
 ---
-# Documentation and snippets
-
 Chronicle's docs are published as one site, aggregated at build time from a `Documentation/`
 folder in each product repo — including every client repo. A new client needs to shape its
 `Documentation/` folder the same way from day one, because the shared Chronicle pages actively rely

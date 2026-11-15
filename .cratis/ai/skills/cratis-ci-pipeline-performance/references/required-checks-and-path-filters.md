@@ -5,6 +5,7 @@
 
 - The hang
 - Change detection and the aggregator
+- Avoiding redundant runs
 - Keeping required checks stable
 - Merge queue
 
@@ -82,6 +83,35 @@ jobs:
 - Keep workflow-level `paths:` for workflows nothing requires (a docs site
   build). For one event, `paths` and `paths-ignore` cannot be combined; use
   `paths` with `!` negation patterns.
+
+## Avoiding redundant runs
+
+On the shared Cratis runner pools, two events for the same feature-branch commit
+consume capacity that another repository needs. Verify open pull requests through
+`pull_request` and restrict push verification to the default branch:
+
+```yaml
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+```
+
+Use the repository's actual default branch. Keep publish/release/deploy workflows
+separate and follow their non-cancelling queue rules in
+[github-actions.md](../../../rules/github-actions.md). Cancellation stops obsolete
+PR runs; it does not deduplicate `push` and `pull_request` events, whose refs differ.
+Use change detection above to avoid unrelated heavy jobs without suppressing the
+required aggregator. Retain any required `merge_group` trigger as described below.
+
+Verify event deduplication with
+`gh run list --workflow <workflow.yml> --commit <sha> --json event,headSha,status`:
+a PR update should have one verification run for that workflow, not both a push
+and a pull-request run. Check that a superseded PR run cancels, unrelated paths
+skip heavy jobs, and the required aggregator still reports.
 
 ## Keeping required checks stable
 

@@ -35,7 +35,7 @@ public class when_binding_generated_contracts : Specification
             .Returns(new AlertIncidentStoragePage([_row], new(10UL, _row.Id)));
         _incidents.GetOpen(Arg.Any<AlertIncidentScope>(), _row.Id).Returns(_row);
         _incidents.GetOpenCounts(Arg.Any<AlertIncidentScope>()).Returns([new AlertIncidentCount("tenant", "future-condition", AlertSeverity.Critical, 1)]);
-        _service = new Services.Alerts.Alerts(storage, readiness, NullLogger<Services.Alerts.Alerts>.Instance);
+        _service = new Services.Alerts.Alerts(storage, readiness, NamespaceCasingContext.Create(), NullLogger<Services.Alerts.Alerts>.Instance);
         _request = new()
         {
             EventStore = "affected",

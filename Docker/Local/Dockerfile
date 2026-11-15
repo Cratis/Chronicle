@@ -4,7 +4,7 @@
 # Cratis Chronicle Server
 # Build runtime image.
 ####################################
-FROM cratis/base-mongodb
+FROM cratis/base-mongodb:dotnet11
 
 WORKDIR /app
 

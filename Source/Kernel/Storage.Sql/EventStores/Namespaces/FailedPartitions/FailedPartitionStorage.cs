@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.FailedPartitions;
@@ -72,7 +73,7 @@ public class FailedPartitionStorage(
         await using var scope = await database.Namespace(eventStore, @namespace);
         var observerIdValue = observerId.Value;
         var entities = await scope.DbContext.FailedPartitions
-            .Where(failedPartition => failedPartition.ObserverId == observerIdValue)
+            .WhereExact(scope.DbContext, failedPartition => failedPartition.ObserverId, observerIdValue)
             .ToListAsync();
         if (entities.Count == 0)
         {
@@ -92,7 +93,7 @@ public class FailedPartitionStorage(
         if (observerId is not null)
         {
             var observerIdValue = observerId.Value;
-            query = query.Where(fp => fp.ObserverId == observerIdValue);
+            query = query.WhereExact(scope.DbContext, fp => fp.ObserverId, observerIdValue);
         }
 
         var entities = await query.ToListAsync();
@@ -116,10 +117,11 @@ public class FailedPartitionStorage(
 
         await using var scope = await database.Namespace(eventStore, @namespace);
 
+        var requested = idsAsStrings.ToHashSet(StringComparer.Ordinal);
         var entities = await scope.DbContext.FailedPartitions
             .Where(fp => idsAsStrings.Contains(fp.ObserverId))
             .ToListAsync();
-        var failedPartitions = entities.Select(e => e.ToFailedPartition());
+        var failedPartitions = entities.Where(e => requested.Contains(e.ObserverId)).Select(e => e.ToFailedPartition());
 
         return new Concepts.Observation.FailedPartitions
         {

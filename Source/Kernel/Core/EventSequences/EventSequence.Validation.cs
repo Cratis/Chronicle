@@ -42,8 +42,10 @@ public partial class EventSequence
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
         EventSourceName? eventSource,
-        EventPublication? publication = null)
+        EventPublication? publication = null,
+        EventSequenceNumber? compensationFor = null)
     {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         using var span = activitySource.Append();
         span?.Activity?.Tag(_eventSequenceKey.EventStore);
         span?.Activity?.Tag(_eventSequenceKey.Namespace);
@@ -53,7 +55,7 @@ public partial class EventSequence
         span?.Activity?.Tag(eventType);
         try
         {
-            var result = await AppendValidatedCore(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource, publication);
+            var result = await AppendValidatedCore(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource, publication, compensationFor);
             span?.Activity?.RecordAppendOutcome(result);
             return result;
         }
@@ -61,6 +63,10 @@ public partial class EventSequence
         {
             span?.Activity?.RecordFailure(ex);
             throw;
+        }
+        finally
+        {
+            _metrics?.AppendDuration(System.Diagnostics.Stopwatch.GetElapsedTime(started), _eventSequenceKey.EventSequenceId);
         }
     }
 
@@ -80,7 +86,8 @@ public partial class EventSequence
         Subject? subject,
         IReadOnlyCollection<NamedTag> namedTags,
         EventSourceName? eventSource,
-        EventPublication? publication = null)
+        EventPublication? publication = null,
+        EventSequenceNumber? compensationFor = null)
     {
         try
         {
@@ -129,7 +136,8 @@ public partial class EventSequence
                 subject,
                 namedTags,
                 eventSource,
-                publication);
+                publication,
+                compensationFor);
 
             return appendResult.ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
         }

@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -76,9 +77,10 @@ public record Revise(
             throw new InvalidRevisionEventType(SequenceNumber, original.Context.EventType.Id, EventType.Id);
         }
 
-        var schema = await eventStore.EventTypes.GetFor(EventType.Id, EventType.Generation);
+        var definition = await eventStore.EventTypes.GetDefinition(EventType.Id);
+        var protectionSchema = GenerationProtectionSchemas.For(definition, EventType.Generation);
         var subject = original.Context.Subject?.IsSet == true ? original.Context.Subject.Value : original.Context.EventSourceId.Value;
-        var protectedContent = await metadataManager.Apply(EventStore, Namespace, schema.Schema, subject, JsonNode.Parse(Content)!.AsObject());
+        var protectedContent = await metadataManager.Apply(EventStore, Namespace, protectionSchema, subject, JsonNode.Parse(Content)!.AsObject());
         var systemEventSequence = grainFactory.GetSystemEventSequence(EventStore, Namespace);
         await systemEventSequence.Append(
             (EventSourceId)EventSequenceId.Value,

@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Configuration;
@@ -10,12 +11,14 @@ using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Changes;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints;
 using Cratis.Chronicle.Storage.MongoDB.EventSequences;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.MongoDB.Identities;
 using Cratis.Chronicle.Storage.MongoDB.Keys;
 using Cratis.Chronicle.Storage.MongoDB.Observation;
@@ -29,7 +32,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Storage.Jobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -67,9 +69,10 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     /// <param name="expandoObjectConverter"><see cref="Json.IExpandoObjectConverter"/> for converting between expando object and json objects.</param>
     /// <param name="jsonSerializerOptions">The global <see cref="JsonSerializerOptions"/>.</param>
     /// <param name="sinks"><see cref="ISinks"/> for getting all <see cref="ISinkFactory"/> instances.</param>
-    /// <param name="jobsStorage">The <see cref="Orleans.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
+    /// <param name="jobsStorage">The <see cref="Choreography.Storage.IJobsStorage"/> resolving jobs storage for an event store namespace.</param>
     /// <param name="options"><see cref="ChronicleOptions"/>.</param>
     /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+    /// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
     public EventStoreNamespaceStorage(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
@@ -78,11 +81,12 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         Json.IExpandoObjectConverter expandoObjectConverter,
         JsonSerializerOptions jsonSerializerOptions,
         ISinks sinks,
-        Orleans.Storage.IJobsStorage jobsStorage,
+        Choreography.Storage.IJobsStorage jobsStorage,
         IOptions<ChronicleOptions> options,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IEventSequenceMutationDigestKeys? mutationDigestKeys = null)
     {
-        _occurrences = new(eventStoreNamespaceDatabase.GetCollection<BsonDocument>("occurrences").Database);
+        _occurrences = new(eventStoreNamespaceDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences).Database);
         _eventStore = eventStore;
         _namespace = @namespace;
         _eventStoreNamespaceDatabase = eventStoreNamespaceDatabase;
@@ -114,7 +118,12 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         ReplayContexts = new ReplayContexts(new ReplayContextsStorage(eventStoreNamespaceDatabase));
         ReplayedReadModels = new ReplayedReadModelsStorage(eventStoreNamespaceDatabase);
         EventSeeding = new Seeding.EventSeedingStorage(eventStoreNamespaceDatabase);
+        Imports = new Imports.ImportStorage(eventStoreNamespaceDatabase);
         ProjectionFutures = new Projections.ProjectionFuturesStorage(eventStoreNamespaceDatabase, jsonSerializerOptions);
+        EventSequenceMutations = new DigestKeyedEventSequenceMutationRegistry(
+            eventStore,
+            mutationDigestKeys ?? UnavailableEventSequenceMutationDigestKeys.Instance,
+            new EventSequenceMutationRegistry(eventStore, @namespace, eventStoreNamespaceDatabase));
 
         _converter = new EventConverter(
             eventStore,
@@ -123,6 +132,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
             Identities,
             expandoObjectConverter);
     }
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Imports.IImportStorage Imports { get; }
 
     /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.IOccurrencesStorage Occurrences => _occurrences;
@@ -183,6 +195,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
 
     /// <inheritdoc/>
     public IProjectionFuturesStorage ProjectionFutures { get; }
+
+    /// <inheritdoc/>
+    public IEventSequenceMutationRegistry EventSequenceMutations { get; }
 
     /// <inheritdoc/>
     /// <remarks>

@@ -1,13 +1,16 @@
 ---
-description: Add metadata such as correlation or tenant identifiers to every appended Chronicle event by implementing ICanProvideAdditionalEventInformation.
+title: Add cross-cutting properties to Chronicle events
+description: Use ICanProvideAdditionalEventInformation in the Chronicle .NET client to add shared properties to event payloads without changing each event type.
 ---
-# Cross-cutting properties
+Cross-cutting properties add shared fields to Chronicle event payloads without requiring each event type to declare them. Use them for values supplied outside domain code, such as a tenant identifier or a system-generated timestamp.
 
-You can add properties to all events that are appended without requiring each event type to define the fields. This is useful for metadata such as correlation identifiers, tenant identifiers, or system-generated values that should not be set by domain code.
-
-To provide cross-cutting properties, implement `ICanProvideAdditionalEventInformation`:
+In the .NET client, implement `ICanProvideAdditionalEventInformation` to modify the serialized event before it is appended:
 
 <ChronicleClientTabs snippet="events/cross-cutting-properties/provider" />
 
-Chronicle will discover providers automatically and apply the additional properties during event append.
+The provider receives a `JsonObject` containing the event's serialized properties. This example adds `something` and `someTime` to that object, so the appended payload includes both fields even though the event type does not declare them.
+
+Chronicle discovers providers automatically and calls their `ProvideFor` methods during serialization. You do not need to call the provider from each append operation.
+
+These fields belong to the event payload. If you want metadata for selecting events instead, use [tags](appending-with-tags.mdx) and [observer filters](filtering/index.md).
 

@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Services.Identities;
 internal sealed class Identities(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Identities.Identities> logger) : global::Cratis.Chronicle.Contracts.Identities.IIdentities
 {
     /// <inheritdoc/>
@@ -29,19 +30,30 @@ internal sealed class Identities(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>> AllIdentities(global::Cratis.Chronicle.Contracts.Identities.AllIdentitiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
-            () => global::Cratis.Chronicle.Identities.IdentityDetails.AllIdentities((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
+            () => QueryExecutor.Canonicalize(async () =>
+            {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
+                return global::Cratis.Chronicle.Identities.IdentityDetails.AllIdentities((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
-                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>)_.Select(ToIdentityDetailsResponse).ToList()),
+                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>)_.Select(ToIdentityDetailsResponse).ToList());
+            }, callContext.CancellationToken),
             exception => logger.QueryFailed(exception, "Identities", "AllIdentities"));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>> GetIdentities(global::Cratis.Chronicle.Contracts.Identities.GetIdentitiesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Identities.IdentityDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Identities.IdentityDetails.GetIdentities((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
                 return result.Select(ToIdentityDetailsResponse).ToList();
             },

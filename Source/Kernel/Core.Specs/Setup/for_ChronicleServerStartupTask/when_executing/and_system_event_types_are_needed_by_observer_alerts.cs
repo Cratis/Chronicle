@@ -5,7 +5,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
@@ -26,10 +25,10 @@ public class and_system_event_types_are_needed_by_observer_alerts : given.a_star
             _registered = true;
             return Task.CompletedTask;
         });
-        _patchManager.ApplyPatchesFor(Arg.Any<Cratis.Chronicle.Concepts.System.SemanticVersion>()).Returns(_ =>
+        _patchRunner.ApplyPatches(Arg.Any<CancellationToken>()).Returns(_ =>
         {
             _registeredBeforePatches = _registered;
-            return Task.FromResult(PatchOutcome.Completed);
+            return Task.CompletedTask;
         });
         _reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default).Returns(_ =>
         {

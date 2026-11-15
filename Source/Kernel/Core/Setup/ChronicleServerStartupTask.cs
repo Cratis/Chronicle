@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Patching;
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
@@ -14,7 +16,6 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Occurrences;
-using Cratis.Chronicle.Patching;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Kernel;
@@ -23,8 +24,8 @@ using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans.Jobs;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Orleans.Hosting;
 
@@ -40,11 +41,16 @@ namespace Orleans.Hosting;
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="authenticationService"><see cref="IAuthenticationService"/> for managing authentication.</param>
 /// <param name="storageErrorClassifier"><see cref="IStorageErrorClassifier"/> for recognizing the active storage provider's own transient failures.</param>
-/// <param name="localSiloDetails">The caller's silo for patch-manager handover.</param>
+/// <param name="patchRunner">The <see cref="IPatchRunner"/> that applies pending patches.</param>
 /// <param name="clusterReleases">The published releases for startup diagnostics.</param>
+/// <param name="kernelProjectionRetries">The background retries for deferred kernel projection registrations.</param>
+/// <param name="busySilos"><see cref="IBusySilos"/> for telling a busy silo apart from one that cannot be reached.</param>
+/// <param name="options">The <see cref="Cratis.Chronicle.Configuration.ChronicleOptions"/>, for how long a busy silo is waited for.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">Optional <see cref="TimeProvider"/> the retry backoff waits on; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
+/// <param name="storeEntitlementsCache">The local silo's entitlement snapshot cache.</param>
+/// <param name="federationRegistry">Optional federation registry whose configured bindings and grants are bootstrapped at startup.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -73,17 +79,17 @@ internal sealed class ChronicleServerStartupTask(
     IGrainFactory grainFactory,
     IAuthenticationService authenticationService,
     IStorageErrorClassifier storageErrorClassifier,
-    ILocalSiloDetails localSiloDetails,
+    IPatchRunner patchRunner,
     IClusterReleases clusterReleases,
+    IKernelProjectionRegistrationRetries kernelProjectionRetries,
+    IBusySilos busySilos,
+    IOptions<Cratis.Chronicle.Configuration.ChronicleOptions> options,
     ILogger<ChronicleServerStartupTask> logger,
     TimeProvider? timeProvider = null,
-    IGenerationFloorAdmission? generationFloorAdmission = null) : ILifecycleParticipant<ISiloLifecycle>
+    IGenerationFloorAdmission? generationFloorAdmission = null,
+    Cratis.Chronicle.Security.IStoreEntitlementsCache? storeEntitlementsCache = null,
+    Cratis.Chronicle.Federation.IFederationRegistry? federationRegistry = null) : ILifecycleParticipant<ISiloLifecycle>
 {
-    /// <summary>
-    /// The exact Orleans placement-failure prefix for this grain and interface.
-    /// </summary>
-    internal const string PatchManagerPlacementFailure = "No active nodes are compatible with grain patchmanager and interface Cratis.Chronicle.Patching.IPatchManager version ";
-
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
     /// </summary>
@@ -95,11 +101,39 @@ internal sealed class ChronicleServerStartupTask(
     /// </remarks>
     const int MaxAttempts = 5;
 
-    static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
+    /// <summary>
+    /// How many rounds of <see cref="MaxAttempts"/> a required step is tried before the host is failed.
+    /// </summary>
+    /// <remarks>
+    /// A sibling that is gone, a cluster that has not formed, or storage that does not answer can take a while to
+    /// recover, so a required step tries for a long while, unready, before it is believed to be broken (#5676, #4068).
+    /// A timeout against a silo that is up - this one, or a sibling the cluster reports as active - is not counted at
+    /// all: that silo is busy catching up, and stopping the process then only restarts the same backlog. That wait has its
+    /// own, much longer limit instead (<see cref="Cratis.Chronicle.Configuration.Startup.BusySiloWaitLimit"/>).
+    /// </remarks>
+    const int MaxRounds = 10;
 
-    static readonly TimeSpan _patchManagerRelocationDelay = TimeSpan.FromSeconds(1);
+    /// <summary>
+    /// How many observers are activated at once while startup rehydrates them.
+    /// </summary>
+    const int MaxConcurrentObserverActivations = 32;
+
+    /// <summary>
+    /// How many times a required step waits for a busy silo before the wait is reported as an error rather than a warning.
+    /// </summary>
+    /// <remarks>
+    /// Each wait already includes Orleans' 30 second response timeout, so this is several minutes of waiting. The silo
+    /// keeps waiting after that - restarting it only restarts the backlog - but an operator should see it, until
+    /// <see cref="Cratis.Chronicle.Configuration.Startup.BusySiloWaitLimit"/> is spent.
+    /// </remarks>
+    const int BusyWaitsBeforeEscalating = 10;
+
+    static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
+    static readonly TimeSpan _roundDelay = TimeSpan.FromMinutes(1);
+    static readonly TimeSpan _maxBusySiloDelay = TimeSpan.FromMinutes(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    readonly TimeSpan _busySiloWaitLimit = options.Value.Startup.BusySiloWaitLimit;
 
     /// <inheritdoc/>
     public void Participate(ISiloLifecycle lifecycle)
@@ -107,16 +141,13 @@ internal sealed class ChronicleServerStartupTask(
         lifecycle.Subscribe(
             nameof(ChronicleServerStartupTask),
             ServiceLifecycleStage.Active,
-            Execute);
+            Execute,
+            _ =>
+            {
+                kernelProjectionRetries.Stop();
+                return Task.CompletedTask;
+            });
     }
-
-    /// <summary>
-    /// Recognizes only the patch manager's no-compatible-node response during manifest convergence.
-    /// </summary>
-    /// <param name="exception">The Orleans placement failure.</param>
-    /// <returns>Whether the bounded patch-manager relocation loop should retry.</returns>
-    internal static bool IsPatchManagerAwaitingManifest(OrleansException exception) =>
-        exception.Message.StartsWith(PatchManagerPlacementFailure, StringComparison.Ordinal);
 
     /// <summary>
     /// Determines whether an observer's activation is required for startup.
@@ -131,6 +162,9 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        RefuseIncompatibleCluster();
+        await RefuseMisplacedSystemData();
+        await WarnAboutRetainedLegacySystemData();
         await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
 
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
@@ -139,8 +173,7 @@ internal sealed class ChronicleServerStartupTask(
         await Step("DiscoverAndRegisterSystemEventTypes", () => eventTypes.DiscoverAndRegister(EventStoreName.System));
 
         // Apply patches before other grains start
-        var patchManager = grainFactory.GetGrain<IPatchManager>(0);
-        await Step(nameof(IPatchManager.ApplyPatches), () => ApplyPatches(patchManager, cancellationToken));
+        await Step(nameof(IPatchRunner.ApplyPatches), () => ApplyPatches(cancellationToken));
 
         await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
@@ -183,9 +216,9 @@ internal sealed class ChronicleServerStartupTask(
             var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
             await Step("EnsureProjections", projectionsManager.Ensure);
 
-            // Before the persisted definitions are registered below, so the kernel's own projections are part of
-            // the set that pass registers rather than a second registration racing it.
-            await Step("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore));
+            // Persisted kernel definitions are registered with the local engine below even when this is
+            // deferred. Changed definitions reach every silo's engine when the background retry succeeds.
+            await RegisterKernelProjections(eventStore, cancellationToken);
 
             var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
             await Step("EnsureWebhooks", webhooksManager.Ensure);
@@ -199,6 +232,11 @@ internal sealed class ChronicleServerStartupTask(
             // Bound the namespace fan-out so starting a store with many tenants does not flood the cluster.
             await Parallel.ForEachAsync(await namespaces.GetAll().WaitAsync(cancellationToken), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (namespaceName, token) =>
             {
+                // The steps here run on the per-namespace token. Parallel.ForEachAsync cancels it when another
+                // namespace fails and then waits for every body to finish, so a body still waiting on a busy silo
+                // with the outer token would keep the failure from ever reaching the host.
+                Task NamespaceStep(string step, Func<Task> action) => RunStep(step, action, token);
+
                 var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
                 var hasData = await namespaceStorage.HasData().WaitAsync(token);
 
@@ -206,9 +244,9 @@ internal sealed class ChronicleServerStartupTask(
                 // There will be no new NamespaceAdded broadcast for an already registered namespace.
                 try
                 {
-                    await Step("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName));
+                    await RunStep("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName), token, maxRounds: 1, waitForBusySilos: false);
                 }
-                catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+                catch (Exception exception) when (!token.IsCancellationRequested)
                 {
                     // Analytics must not fail the Active lifecycle stage. The event log reconciles a missed
                     // subscription on its timer, including namespaces whose first append happens after startup.
@@ -223,60 +261,117 @@ internal sealed class ChronicleServerStartupTask(
                     return;
                 }
 
-                await Step("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, cancellationToken));
+                await NamespaceStep("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, token));
 
                 var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
-                await Step("RehydrateJobs", jobsManager.Rehydrate);
-                await Step("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
-                await Step("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
-                await Step("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
+                await NamespaceStep("RehydrateJobs", jobsManager.Rehydrate);
+                await NamespaceStep("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
+                await NamespaceStep("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
+                await NamespaceStep("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
             });
         }
 
         await EnsureAdministrator(cancellationToken);
+        if (federationRegistry is not null)
+        {
+            await Step(nameof(Cratis.Chronicle.Federation.IFederationRegistry.BootstrapFromConfiguration), federationRegistry.BootstrapFromConfiguration);
+        }
+
         await Step(nameof(IAuthenticationService.EnsureBootstrapClients), authenticationService.EnsureBootstrapClients);
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
     }
 
-    async Task ApplyPatches(IPatchManager patchManager, CancellationToken cancellationToken)
+    /// <summary>
+    /// Stops the silo when the cluster holds a release it can never exchange grain calls with.
+    /// </summary>
+    /// <remarks>
+    /// Without this the silo goes on to call grains on the other release, and the failure shows up as a crash loop and
+    /// thousands of grain errors on both sides instead of a reason (#5666).
+    /// </remarks>
+    /// <exception cref="IncompatibleClusterRelease">The cluster holds a release across a boundary.</exception>
+    void RefuseIncompatibleCluster()
     {
-        RequestContext.Set(PatchManagerRelocation.CallerSiloKey, localSiloDetails.SiloAddress);
+        var local = Cratis.Chronicle.Sys.KernelVersion.Current;
+        if (!Cratis.Chronicle.Sys.KernelVersion.IsKnown(local))
+        {
+            return;
+        }
+
+        var incompatible = clusterReleases.FindIncompatible(local);
+        if (incompatible.Count == 0)
+        {
+            return;
+        }
+
+        logger.StartupRefusedBecauseOfIncompatibleRelease(local.ToString(), clusterReleases.Summarize().ToString());
+        throw new IncompatibleClusterRelease(local, incompatible);
+    }
+
+    /// <summary>
+    /// Refuses to start when the System event store's data sits under the name this kernel is not configured to use.
+    /// </summary>
+    /// <remarks>
+    /// Starting anyway would create a fresh administrator roster in an empty store and fail with a message that
+    /// does not say the databases were renamed (#5690).
+    /// </remarks>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="SystemEventStoreDataMisplaced">The data is under the other name.</exception>
+    async Task RefuseMisplacedSystemData()
+    {
+        var misplaced = await storage.FindMisplacedSystemEventStoreData();
+        if (string.IsNullOrWhiteSpace(misplaced))
+        {
+            return;
+        }
+
+        logger.StartupRefusedBecauseSystemDataIsMisplaced(misplaced);
+        throw new SystemEventStoreDataMisplaced(misplaced);
+    }
+
+    /// <summary>
+    /// Warns, on every start, about System event store databases left behind under their previous name.
+    /// </summary>
+    /// <remarks>
+    /// The move that left them ran once, as a patch, so its own warning is not repeated. They are harmless to the
+    /// running kernel and only an operator with more rights than the kernel can remove them, so this never stops startup.
+    /// </remarks>
+    /// <returns>Awaitable task.</returns>
+    async Task WarnAboutRetainedLegacySystemData()
+    {
+        var retained = await storage.FindRetainedLegacySystemEventStoreData();
+        if (!string.IsNullOrWhiteSpace(retained))
+        {
+            logger.LegacySystemDataRetained(retained);
+        }
+    }
+
+    async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken cancellationToken)
+    {
+        if (!await TryRunStep("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore), cancellationToken))
+        {
+            logger.DeferringKernelProjectionRegistration(eventStore, MaxAttempts);
+            kernelProjectionRetries.Defer(eventStore);
+        }
+    }
+
+    async Task ApplyPatches(CancellationToken cancellationToken)
+    {
         try
         {
-            var delay = _patchManagerRelocationDelay;
-            for (var attempt = 0; attempt < MaxAttempts; attempt++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
-                {
-                    if (await patchManager.ApplyPatchesFor(Cratis.Chronicle.Sys.KernelVersion.Current) == PatchOutcome.Completed) return;
-                }
-                catch (OrleansException exception) when (IsPatchManagerAwaitingManifest(exception))
-                {
-                    // A v2 placement can arrive before the new silo's manifest has converged.
-                }
-
-                // The older activation deactivates once idle; back off exponentially, since under load its
-                // deactivation can take longer than a short fixed wait allows.
-                if (attempt < MaxAttempts - 1)
-                {
-                    await Task.Delay(delay, _timeProvider, cancellationToken);
-                    delay += delay;
-                }
-            }
-            logger.PatchManagerCouldNotRelocate(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), clusterReleases.Summarize().ToString());
-            throw new InvalidOperationException("Patch manager could not relocate to a kernel at least as new as the caller.");
+            await patchRunner.ApplyPatches(cancellationToken);
         }
-        finally
+        catch (PatchManagerCouldNotRelocate)
         {
-            RequestContext.Remove(PatchManagerRelocation.CallerSiloKey);
+            logger.PatchManagerCouldNotRelocate(Cratis.Chronicle.Sys.KernelVersion.Current.ToString(), clusterReleases.Summarize().ToString());
+            throw;
         }
     }
 
     async Task EnsureAdministrator(CancellationToken cancellationToken)
     {
+        if (storeEntitlementsCache is not null) await RunStep(nameof(storeEntitlementsCache.Load), storeEntitlementsCache.Load, cancellationToken);
         await RunStep(nameof(IAuthenticationService.EnsureDefaultAdminUser), authenticationService.EnsureDefaultAdminUser, cancellationToken);
         await RunStep(nameof(Cratis.Chronicle.Security.IAdministratorRoster.EnsureAdministratorPrivilege), () => grainFactory.GetGrain<Cratis.Chronicle.Security.IAdministratorRoster>(Cratis.Chronicle.Concepts.Security.AdministratorRoster.Key).EnsureAdministratorPrivilege(), cancellationToken);
     }
@@ -287,23 +382,65 @@ internal sealed class ChronicleServerStartupTask(
     /// <param name="step">The name of the step, for the operator reading the log.</param>
     /// <param name="action">The work to perform.</param>
     /// <param name="cancellationToken">Token for cancelling startup and retry backoff.</param>
+    /// <param name="maxRounds">How many rounds of attempts are made before the host is failed.</param>
+    /// <param name="waitForBusySilos">Whether a timeout against a silo that is up is waited out instead of counted as an attempt.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
     /// Only the failures <see cref="SiblingSiloInstability.IsTransient"/> or the registered
     /// <see cref="IStorageErrorClassifier"/> recognize are retried. Anything else - and anything
     /// still failing once the budget is spent - propagates, so a genuine defect still fails the
     /// host on startup rather than being started around.
+    /// <para>
+    /// A timeout against this silo itself, or against a sibling the cluster reports as active, is not
+    /// part of that budget: the target is there and busy catching up, and terminating the process only
+    /// restarts the same backlog (#5676). The step waits for it with a capped backoff, keeping the silo
+    /// running and not ready, and says so in the log every time.
+    /// </para>
+    /// <para>
+    /// A grain that never answers - a deadlock, or storage that hangs - times out the same way, so the wait is
+    /// bounded by <see cref="Cratis.Chronicle.Configuration.Startup.BusySiloWaitLimit"/>, measured from the step's
+    /// first such timeout. Once it is spent the step fails as any exhausted step does: a Critical log and a failed host.
+    /// </para>
     /// </remarks>
-    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken)
+    async Task RunStep(string step, Func<Task> action, CancellationToken cancellationToken, int maxRounds = MaxRounds, bool waitForBusySilos = true) =>
+        await TryRunStep(step, action, cancellationToken, failOnExhaustion: true, maxRounds, waitForBusySilos);
+
+    async Task<bool> TryRunStep(string step, Func<Task> action, CancellationToken cancellationToken, bool failOnExhaustion = false, int maxRounds = MaxRounds, bool waitForBusySilos = false)
     {
         var delay = _initialRetryDelay;
+        var busyDelay = _initialRetryDelay;
+        var busyWaits = 0;
+        var busySince = 0L;
+        var round = 1;
         for (var attempt = 1; ; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 await action().WaitAsync(cancellationToken);
-                return;
+                return true;
+            }
+            catch (Exception exception) when (waitForBusySilos && busySilos.FindBusySilo(exception) is { } busySilo)
+            {
+                if (busyWaits == 0)
+                {
+                    busySince = _timeProvider.GetTimestamp();
+                }
+
+                busyWaits++;
+                var waited = _timeProvider.GetElapsedTime(busySince);
+                if (waited >= _busySiloWaitLimit)
+                {
+                    logger.StartupStepGaveUpWaitingForBusySilo(exception, step, busySilo.Address, busyWaits, waited, _busySiloWaitLimit);
+                    throw;
+                }
+
+                LogWaitingForBusySilo(exception, step, busySilo, busyDelay, busyWaits, waited);
+                await Task.Delay(busyDelay, _timeProvider, cancellationToken);
+                busyDelay = busyDelay * 2 < _maxBusySiloDelay ? busyDelay * 2 : _maxBusySiloDelay;
+
+                // Waiting for a busy silo is not an attempt at the step.
+                attempt--;
             }
             catch (Exception exception) when (IsTransient(exception) && attempt < MaxAttempts)
             {
@@ -313,7 +450,18 @@ internal sealed class ChronicleServerStartupTask(
             }
             catch (Exception exception) when (IsTransient(exception))
             {
-                logger.StartupStepExhaustedRetries(exception, step, MaxAttempts);
+                if (!failOnExhaustion) return false;
+                if (round < maxRounds)
+                {
+                    logger.StartupStepStillFailing(exception, step, MaxAttempts, _roundDelay, round, maxRounds);
+                    await Task.Delay(_roundDelay, _timeProvider, cancellationToken);
+                    round++;
+                    attempt = 0;
+                    delay = _initialRetryDelay;
+                    continue;
+                }
+
+                logger.StartupStepExhaustedRetries(exception, step, MaxAttempts, maxRounds);
                 throw;
             }
             catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
@@ -325,6 +473,29 @@ internal sealed class ChronicleServerStartupTask(
     }
 
     bool IsTransient(Exception exception) => SiblingSiloInstability.IsTransient(exception) || storageErrorClassifier.IsTransient(exception);
+
+    void LogWaitingForBusySilo(Exception exception, string step, BusySilo busySilo, TimeSpan delay, int waits, TimeSpan waited)
+    {
+        var escalate = waits > BusyWaitsBeforeEscalating;
+
+        // The same timeout and stack repeat on every wait; carrying them on the first wait and on escalation is enough.
+        var detail = waits == 1 || waits == BusyWaitsBeforeEscalating + 1 ? exception : null;
+        switch ((busySilo.IsThisSilo, escalate))
+        {
+            case (true, false):
+                logger.StartupStepWaitingForThisSilo(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+            case (true, true):
+                logger.StartupStepStillWaitingForThisSilo(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+            case (false, false):
+                logger.StartupStepWaitingForBusySibling(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+            default:
+                logger.StartupStepStillWaitingForBusySibling(detail, step, busySilo.Address, delay, waits, waited);
+                break;
+        }
+    }
 
     /// <summary>
     /// Registers the persisted projection definitions for an event store with the local silo.
@@ -415,6 +586,11 @@ internal sealed class ChronicleServerStartupTask(
             .Select(_ => new ObserverKey(_.Identifier, eventStore, namespaceName, _.EventSequenceId));
         var observerKeys = reducerObserverKeys.Concat(reactorObserverKeys).Distinct().ToArray();
 
-        await Task.WhenAll(observerKeys.Select(_ => grainFactory.GetGrain<IObserver>(_).Ensure()));
+        // A store can hold thousands of observers, and activating them all at once starves the silo's own calls (#4068, #5676).
+        // The failure of any one still fails the step, as it did when they were awaited together.
+        await Parallel.ForEachAsync(
+            observerKeys,
+            new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentObserverActivations },
+            async (key, _) => await grainFactory.GetGrain<IObserver>(key).Ensure());
     }
 }

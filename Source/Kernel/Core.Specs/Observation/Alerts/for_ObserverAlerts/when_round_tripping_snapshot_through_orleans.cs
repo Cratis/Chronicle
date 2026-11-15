@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography;
 using Cratis.Chronicle.Alerts;
 using Cratis.Chronicle.Concepts.Alerts;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -8,7 +9,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Storage;
-using Cratis.Orleans;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 
@@ -32,7 +32,7 @@ public class when_round_tripping_snapshot_through_orleans : Specification
     void Because()
     {
         var services = new ServiceCollection();
-        services.AddCratisOrleansSerializers();
+        services.AddCratisChoreographySerializers();
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(Substitute.For<IStorage>());
         var builder = Substitute.For<ISiloBuilder>();

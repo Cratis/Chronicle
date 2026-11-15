@@ -1,79 +1,82 @@
 ---
 uid: Chronicle.Events.ObservingAppends
-title: "Observing Append Operations"
-description: "Observe append operations on an event sequence, and wait for observers to catch up after an append."
+title: "Cratis Chronicle append notifications and observer completion"
+description: "Observe local append outcomes in Cratis Chronicle's .NET client and wait for affected observers when your next step needs an updated read model."
 ---
 
-`IEventSequence` exposes an `AppendOperations` observable that emits after every `Append` or
-`AppendMany` call on that sequence. Any code can subscribe to this observable to react to appended
-events in real time — without polling the event log.
+Cratis Chronicle's .NET client reports local append outcomes through `AppendOperations`. Use these
+notifications to record diagnostics or capture events in a test. A notification does not mean
+observers have processed the events; use `WaitForCompletion()` when your next step depends on
+that processing.
 
 ## AppendOperations
 
 <ChronicleClientTabs snippet="events/observing-appends/shape" />
 
-The observable emits a collection of `AppendedEventWithResult` after each operation:
+Both `IEventSequence` and `IEventLog` expose this observable. An ordinary single-event `Append`
+that returns a result emits a collection containing one `AppendedEventWithResult`. An ordinary,
+nonempty `AppendMany` emits the full batch as one collection. An idempotent retry that finds an
+event already appended does not notify it as a new append.
 
-- A single-event `Append` emits a collection containing one element.
-- A batch `AppendMany` emits the full batch as one collection.
-
-Each `AppendedEventWithResult` pairs the appended event with its result:
+Each entry pairs the event supplied to the append call with its result:
 
 | Member | Type | Description |
 |---|---|---|
-| `Event` | `AppendedEvent` | The appended event, including context and deserialized content |
-| `Event.Content` | `object` | The deserialized event object |
+| `Event` | `AppendedEvent` | The event and its context |
+| `Event.Content` | `object` | The event object supplied to the append call |
 | `Event.Context` | `EventContext` | Metadata: event source, sequence number, correlation ID, causation chain |
 | `Result` | `AppendResult` | Success flag, sequence number, violations, and errors |
 
-Subscribers receive the notification after the operation has completed, whether it succeeded or failed.
-This observable does not fire for transactional appends through `ITransactionalEventSequence`.
+Rejected appends can also produce notifications, so check `Result.IsSuccess` rather than treating a
+notification as proof that an event was stored. Notifications are local to this event-sequence
+instance; they do not report writes from other clients or processes. Transactional appends through
+`ITransactionalEventSequence` do not fire this observable.
 
 ## Subscribing
 
-Inject `IEventSequence` (or `IEventLog`) and subscribe to `AppendOperations`:
+Subscribe on the `IEventSequence` or `IEventLog` used by the code you want to monitor:
 
 <ChronicleClientTabs snippet="events/observing-appends/subscribing" />
 
-Always dispose the subscription when you no longer need it to avoid resource leaks.
+The monitor prints each event's type and whether its append succeeded. Its `Dispose` method
+releases the subscription; tie that disposal to the monitor's lifetime. The client invokes
+subscribers before returning the append result, so keep notification handlers short.
 
 ## Integration Testing
 
-The most common use of `AppendOperations` in application code is through the
-`IEventAppendCollection` helper provided by `Cratis.Chronicle.XUnit.Integration`. It subscribes
-internally and provides a ready-to-assert collection of `AppendedEventWithResult` entries.
-See <xref:Chronicle.Testing.EventAppendCollection> for full details.
+For a kernel-backed integration test, `IEventAppendCollection` from
+`Cratis.Chronicle.XUnit.Integration` collects this client's event-log append outcomes as
+`AppendedEventWithResult` entries. Follow [Event append collection](../testing/event-append-collection.mdx)
+to set up the fixture and wait for follow-up events.
 
 ## Waiting for Observer Completion After Append
 
-When you need to wait until observers affected by an append operation have completed, use
-`WaitForCompletion()` from the `Cratis.Chronicle.Observation` namespace.
+A successful append means the event is persisted, not that its observers have caught up.
+Projections, reducers, and reactors process events asynchronously. A read model queried immediately
+after an append may still show the earlier state.
+
+Call `WaitForCompletion()` on the `AppendResult` or `AppendManyResult` when the next step needs
+affected observers to finish, such as an integration-test assertion. The extension method is in
+`Cratis.Chronicle.Observation`. Check the append's `IsSuccess` first: an append that never reached
+the log has nothing to wait for, so its completion result reports success without validating the append.
 
 With the current .NET client and server, the wait includes observers that handle the appended event
-types, plus observers subscribed to all events. For `AppendMany`, each observer waits only through
-its last matching event in the batch. An observer whose tag, event source type, or event stream type
-filters exclude the appended events does not hold up the wait. If an affected observer fails while
-catching up, the result includes failed partitions. Check the append result before you wait: an append
-that failed never reached the log, so there is nothing to wait for and the wait reports success.
+types and observers subscribed to all events. Each observer waits through its last matching event
+in an `AppendMany` batch. If its tag, event source type, or event stream type filters exclude the
+whole bounded append range, it does not block the wait. The server still waits when it cannot
+establish a match, including for disconnected observers or an unknown or oversized append range.
 
-Only clients sending the first appended sequence number get filter-aware waits. The current .NET
-client sends it, including when the batch starts at sequence zero. TypeScript, Elixir, Kotlin, Python,
-and older .NET clients do not; filtered observers can hold up their waits until the timeout. A batch
-larger than the server's bounded scan also falls back to waiting through its tail.
+The completion result exposes `IsSuccess`, `FailedPartitions`, `TimedOut`, and
+`OutstandingObservers`. The last property contains observer IDs still behind at the deadline.
+The default server timeout is five seconds; pass a `TimeSpan` to change it or
+`Timeout.InfiniteTimeSpan` to wait without a deadline. The .NET client allows an additional 200 ms
+for the server to return timeout details. A timeout returns `IsSuccess` false and `TimedOut` true
+rather than throwing.
 
-The wait gives up after five seconds unless you pass a longer `timeout`. A timeout returns a result
-with `IsSuccess` false and `TimedOut` true instead of throwing. Newer servers name the observers still
-behind in `OutstandingObservers`. TypeScript, Elixir, Kotlin, and Python clients also send no event
-types and consider every observer on the sequence rather than narrowing by event type. An older
-server ignores the new fields, so a newer .NET client can still time out on a filtered observer or
-a mixed-type batch there.
-
-Waiting only means something when there are observers behind the connection. The in-process testing
-surfaces (`EventScenario` and `EventStoreForTesting`) run the event sequence without a silo, so an
-append there never reaches a projection, reducer, or reactor. Rather than report that everything
-completed, `WaitForCompletion()` throws `CannotWaitForObserverCompletion` on an append result that
-carries no observer surface — assert on the scenario's own surface, or move the check to an
-out-of-process integration spec where observers genuinely run.
+A successful append on the in-process testing surfaces (`EventScenario` and `EventStoreForTesting`)
+has no observer service to wait on. Calling `WaitForCompletion()` there throws
+`CannotWaitForObserverCompletion`. Assert through those testing surfaces directly, or use a
+kernel-backed fixture to check observer completion.
 
 ### Append
 
@@ -82,3 +85,25 @@ out-of-process integration spec where observers genuinely run.
 ### AppendMany
 
 <ChronicleClientTabs snippet="events/observing-appends/wait-for-completion-append-many" />
+
+Both examples check append success before waiting, then inspect completion separately. The events
+can be stored while an affected observer has failed or timed out.
+
+### Client and server compatibility
+
+The .NET client sends per-event-type tail sequence numbers and explicitly marks the first number
+in the append range, including a batch that starts at zero. Older .NET clients that omit that
+range information cannot get the same filter-aware waits. A range larger than the server's bounded
+scan also falls back to waiting through the relevant tail.
+
+TypeScript's `waitForCompletion` and Elixir's `wait_for_completion` and
+`append_and_wait_for_completion` send only the overall append tail. Their requests do not narrow
+the wait by event type or identify the append range for filter-aware waits. Their timeout behavior
+differs from .NET's; do not assume the same timeout diagnostics across clients.
+
+An older server ignores the new fields, so even a newer .NET client can time out on a filtered
+observer or mixed-type batch. If the server ignores the deadline, client cancellation returns a
+timed-out result without outstanding observer names.
+
+If the next step can tolerate a read model catching up later, you do not need to wait. Design that
+path to handle an older view rather than assuming every successful append is immediately visible.

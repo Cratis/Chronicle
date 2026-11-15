@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-event-modeling
-description: Design a Chronicle event model before writing code - stream boundaries and event-source identities, commands, past-tense events, read models, automations and translations, compliance subjects, and the specification outline. Use when behavior, event vocabulary, stream boundaries, or a multi-slice flow is not yet settled. Do not use to draw or update an existing model diagram, and do not use for a mechanical change to a flow that is already decided.
+description: Use when hand-written Chronicle behavior, event vocabulary or stream boundaries are unsettled in a code-first repository. Not for opted-in .play model authoring, diagram-only edits or mechanical wiring.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-event-modeling/SKILL.md -->

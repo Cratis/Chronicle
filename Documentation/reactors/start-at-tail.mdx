@@ -1,37 +1,46 @@
 ---
-title: StartAtTail
-description: Keep a new side-effecting reactor from acting on events that predate its first registration.
+title: Cratis Chronicle StartAtTail — skip initial reactor history
+description: Use StartAtTail to skip existing events when a Cratis Chronicle reactor first registers. Restarts keep its saved position; explicit replay still reads history.
 ---
+<span id="startattail"></span>
 
-A new reactor starts from the first event in the event sequence and catches up on everything that is already there. That is what you want for a reactor that builds something from history. It is not what you want for one that sends an email, calls an external system or starts a job, because it will do that once for every event in history the moment it is deployed.
+`StartAtTail` makes a new Cratis Chronicle reactor skip the events already in its event sequence when it first registers. Use it when deploying a notification sender or job starter should not act on old events. A reactor with a saved position keeps that position, so a restart does not skip events it has yet to handle.
 
-Mark such a reactor with `StartAtTail`. The first time Chronicle sees it, the reactor begins at the tail of the event sequence and observes only what is appended from then on.
+Without the attribute, a new reactor starts from the beginning to catch up. Put `[StartAtTail]` on the C# reactor class to choose the current end of the sequence, called the tail, instead:
 
 <ChronicleClientTabs snippet="reactors/start-at-tail/basic" />
 
+The example observes events appended after its first registration, rather than sending welcome emails for the history already present.
+
 ## What it does
 
-`StartAtTail` decides where a reactor **starts**, once. It does not filter events and it does not change what the reactor does afterwards.
+On the reactor's first registration, Chronicle saves a position just after the current tail before observation begins. If the sequence is empty, it starts with the first event appended to it. Later registrations and restarts retain the saved position, including when events arrived while the reactor was down. Leave the attribute in place; it does not move an existing reactor forward.
 
-- **First registration only.** A reactor that Chronicle already holds a position for keeps that position. The marker is safe to leave in place; it never skips events after a restart or a redeploy.
-- **Per namespace.** Each namespace has its own observer, so a reactor that appears in a new namespace starts at the tail of that namespace.
-- **Replay is unaffected.** An explicit replay still replays from the beginning. See [Replay](replay) and [OnceOnly](once-only) for keeping side effects out of a replay.
+The position is per namespace: each namespace has its own observer. A reactor that appears in a new namespace starts at that namespace's tail.
+
+The tail belongs to whichever event sequence the reactor observes, including a named sequence or an inbox. For an inbox, events still waiting in the upstream source are not skipped by this setting. Once forwarded, they are new events in the sequence the reactor observes.
+
+An explicit replay still reads history from the beginning. `StartAtTail` chooses only the initial position; it does not turn off replay.
 
 ## Compared with OnceOnly
 
-`OnceOnly` and `StartAtTail` cover different moments, and a reactor with side effects often needs both:
+`OnceOnly` skips a handler during replay, not during the initial catch-up. Catching up a newly registered reactor is ordinary observation, so `OnceOnly` alone still runs the handler against existing history.
 
-| | Moment it acts on | What it does |
+| Marker | When it applies | What it does |
 | --- | --- | --- |
-| `OnceOnly` | A replay of an observer that already exists | Skips the handler for replayed events |
-| `StartAtTail` | The first registration of a new observer | Starts at the tail, so history is never delivered |
+| `OnceOnly` | Replay | Skips the marked handler for replayed events |
+| `StartAtTail` | First registration of a new observer | Starts after the events already in its sequence |
 
-Neither is an exactly-once guarantee. Recovering a failed partition re-delivers an event as ordinary observation. See [Delivery identity](delivery-identity).
+Use `StartAtTail` to skip initial history. Combine it with [OnceOnly](once-only) when the handler should also be skipped during an explicit [Replay](replay).
+
+Neither guarantees exactly-once delivery. Recovering a failed partition delivers an event again as ordinary observation. Protect external side effects against repeated calls; the [delivery identity](delivery-identity) provides a stable key for recognizing the same delivery.
 
 ## Renaming a reactor
 
-A reactor's default id is its full type name, so renaming it or moving its namespace makes it a **new** reactor, and a reactor marked `StartAtTail` starts at the tail again. That is usually the safe outcome. It also means events appended between the old reactor's last position and the rename are not seen by the new one. If the new reactor must continue from where the old one stopped, give it its old id explicitly. See [Reactor identity and renaming](identity).
+Chronicle recognizes a C# reactor by its id, which defaults to the type's full name. Renaming the class or moving its namespace changes that default id and makes it a new reactor. With `StartAtTail`, it starts at the tail again, skipping any history present at that moment, including events the old reactor had not handled.
+
+Before refactoring, preserve the existing id explicitly if the reactor must keep its position. Use [Reactor identity and renaming](identity) to plan that change.
 
 ## Server and client versions
 
-Both the Chronicle server and the client must support `StartAtTail`. A server that predates it ignores the request and the reactor catches up from the beginning, as before. Upgrade the server first, then the clients.
+Both the Chronicle server and the client must support `StartAtTail`. A server that predates it ignores the request, and the reactor catches up from the beginning. Upgrade the server first, then the clients, before relying on the attribute to suppress side effects against existing history.

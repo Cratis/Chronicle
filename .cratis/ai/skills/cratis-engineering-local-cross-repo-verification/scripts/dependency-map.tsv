@@ -1,0 +1,69 @@
+# cratis-ai-managed: skills/cratis-engineering-local-cross-repo-verification/scripts/dependency-map.tsv
+# Reference table of producer/consumer dependencies between Cratis repositories. cratis-local-packages.sh reads it to derive the pack plan.
+# Tab-separated; # starts a comment; no versions (pins are read live from consumer manifests).
+#   pack  <repo> <eco> <target> [PROP=VAL,...]  pack targets; PROP is a -p:PROP=VAL argument (never an environment variable)
+#   ids   <repo> <eco> <comma-separated expected package IDs>
+#   uses  <consumer> <producer> <eco> <manifest path relative to consumer>
+#   image <repo> <dockerfile> <tag-suffix>
+# A target of "." means the repository root (npm workspaces).
+
+# Fundamentals
+pack	Fundamentals	nuget	Fundamentals.slnx
+ids	Fundamentals	nuget	Cratis.Fundamentals,Cratis.Metrics.Roslyn,Cratis.OpenTelemetry
+pack	Fundamentals	npm	.
+
+# Orleans (edges only)
+pack	Orleans	nuget	Orleans.slnx
+
+# Arc
+pack	Arc	nuget	Arc.slnx	CratisSpecsTargetFramework=net10.0
+ids	Arc	nuget	Cratis.Arc,Cratis.Arc.Core,Cratis.Arc.MongoDB,Cratis.Arc.EntityFrameworkCore,Cratis.Arc.Swagger,Cratis.Arc.Connections.Azure,Cratis.Arc.ProxyGenerator.Build,Cratis.Arc.Testing
+pack	Arc	npm	.
+ids	Arc	npm	@cratis/arc,@cratis/arc.react,@cratis/arc.react.mvvm,@cratis/arc.vite
+
+# Chronicle (clients only; the kernel ships as an image)
+pack	Chronicle	nuget	Source/Clients/Packages.slnf	IsPackaging=true,DisableProxyGenerator=true,DisableDockerBuild=true
+ids	Chronicle	nuget	Cratis.Chronicle,Cratis.Chronicle.AspNetCore,Cratis.Chronicle.Aspire,Cratis.Chronicle.CodeAnalysis,Cratis.Chronicle.Connections,Cratis.Chronicle.Contracts,Cratis.Chronicle.Testing,Cratis.Chronicle.XUnit.Integration
+image	Chronicle	Docker/Production/Dockerfile	(none)
+
+# Components
+pack	Components	npm	.
+ids	Components	npm	@cratis/components,@cratis/components.primereact,@cratis/components.mui
+
+# Screenplay
+pack	Screenplay	nuget	Screenplay.slnx
+pack	Screenplay	npm	.
+ids	Screenplay	npm	@cratis/screenplay-language
+
+# Stage
+pack	Stage	nuget	Stage.slnx
+
+# Edges (consumer, producer, ecosystem, manifest)
+uses	Arc	Fundamentals	nuget	Directory.Packages.props
+uses	Arc	Chronicle	nuget	Directory.Packages.props
+uses	Arc	Screenplay	nuget	Directory.Packages.props
+uses	Chronicle	Fundamentals	nuget	Directory.Packages.props
+uses	Chronicle	Arc	nuget	Directory.Packages.props
+uses	Chronicle	Orleans	nuget	Directory.Packages.props
+uses	Chronicle	Arc	npm	Source/Workbench
+uses	Orleans	Arc	nuget	Directory.Packages.props
+uses	Orleans	Chronicle	nuget	Directory.Packages.props
+uses	Orleans	Fundamentals	nuget	Directory.Packages.props
+uses	Stage	Fundamentals	nuget	Directory.Packages.props
+uses	Stage	Arc	nuget	Directory.Packages.props
+uses	Stage	Chronicle	nuget	Directory.Packages.props
+uses	Stage	Screenplay	nuget	Directory.Packages.props
+uses	Studio	Fundamentals	nuget	Directory.Packages.props
+uses	Studio	Arc	nuget	Directory.Packages.props
+uses	Studio	Chronicle	nuget	Directory.Packages.props
+uses	Studio	Orleans	nuget	Directory.Packages.props
+uses	Studio	Stage	nuget	Directory.Packages.props
+uses	Studio	Screenplay	nuget	Directory.Packages.props
+uses	Studio	Components	npm	.
+uses	Studio	Screenplay	npm	.
+uses	Direct	Fundamentals	nuget	Directory.Packages.props
+uses	Direct	Arc	nuget	Directory.Packages.props
+uses	Direct	Chronicle	nuget	Directory.Packages.props
+uses	Direct	Orleans	nuget	Directory.Packages.props
+uses	Direct	Screenplay	nuget	Directory.Packages.props
+uses	Direct	Chronicle	image	Source/Watchdog/Dockerfile.full

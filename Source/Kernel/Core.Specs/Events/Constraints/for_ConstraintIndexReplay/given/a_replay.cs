@@ -78,7 +78,7 @@ public class a_replay : Specification
             .Returns(call => new EventTypeSchema(new(call.ArgAt<EventTypeId>(0), call.ArgAt<EventTypeGeneration>(1)), EventTypeOwner.None, EventTypeSource.Unknown, new JsonSchema()));
         _metadata = Substitute.For<IJsonSchemaMetadataManager>();
         _converter = Substitute.For<IExpandoObjectConverter>();
-        _content = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _types, _metadata, _converter);
+        _content = new(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, _types, _metadata, _converter, new OwnGenerationSchemaCache());
     }
 
     protected void Start(int cap = 100000, EventSequenceNumber? closingStart = null, bool noConstraints = false) =>

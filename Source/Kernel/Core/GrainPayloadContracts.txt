@@ -5,6 +5,130 @@
 orleans [Alias("ClearPartitionQuarantineResult")] Cratis.Chronicle.Concepts.Observation.ClearPartitionQuarantineResult
   [Id(0,Level=0,Constructor=true)] Outcome: Cratis.Chronicle.Concepts.Observation.ClearPartitionQuarantineOutcome
   [Id(1,Level=0,Constructor=true)] RetryOutcome: Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome
+enum Cratis.Choreography.Jobs.CannotResumeJobError : int
+  JobCannotBeResumed = 2
+  JobIsNotPrepared = 1
+  MissingStepPlan = 4
+  NotAdmitted = 3
+  Unknown = 0
+json Cratis.Choreography.Jobs.FailedResumingJobSteps
+  failedJobSteps: System.Collections.Generic.IEnumerable<Cratis.Choreography.Jobs.JobStepId>
+enum Cratis.Choreography.Jobs.JobError : int
+  JobIsStoppedOrCompleted = 0
+  PersistStateError = 3
+  StorageError = 2
+  UnknownError = 1
+concept Cratis.Choreography.Jobs.JobId : System.Guid
+enum Cratis.Choreography.Jobs.JobStepError : int
+  FailedToPersistState = 1
+  FailedToReportToJob = 2
+  StopTimedOut = 3
+  Unknown = 0
+concept Cratis.Choreography.Jobs.JobStepId : System.Guid
+json Cratis.Choreography.Jobs.JobStepIdentifier
+  jobId: Cratis.Choreography.Jobs.JobId
+  jobStepId: Cratis.Choreography.Jobs.JobStepId
+concept Cratis.Choreography.Jobs.JobStepName : string
+concept Cratis.Choreography.Jobs.JobStepPercentage : int
+json Cratis.Choreography.Jobs.JobStepProgress
+  message: Cratis.Choreography.Jobs.JobStepProgressMessage
+  percentage: Cratis.Choreography.Jobs.JobStepPercentage
+concept Cratis.Choreography.Jobs.JobStepProgressMessage : string
+orleans Cratis.Choreography.Jobs.JobStepResult
+  [Id(0)] _result: Cratis.Monads.Result<object,Cratis.Choreography.Jobs.PerformJobStepError>
+enum Cratis.Choreography.Jobs.JobStepStatus : int
+  CompletedSuccessfully = 3
+  CompletedWithFailure = 4
+  Failed = 6
+  Removing = 7
+  Running = 2
+  Scheduled = 1
+  Stopped = 5
+  Unknown = 0
+  Unreachable = 8
+json Cratis.Choreography.Jobs.JobStepStatusChanged
+  exceptionMessages: System.Collections.Generic.IEnumerable<string>
+  exceptionStackTrace: string
+  occurred: System.DateTimeOffset
+  status: Cratis.Choreography.Jobs.JobStepStatus
+concept Cratis.Choreography.Jobs.JobStepType : string
+orleans Cratis.Choreography.Jobs.PerformJobStepError
+  [Id(0,Level=0,Constructor=true)] PartialResult: object
+  [Id(1,Level=0,Constructor=true)] ErrorMessages: System.Collections.Generic.IList<string>
+  [Id(2,Level=0,Constructor=true)] ExceptionStackTrace: string
+  [Id(3,Level=0,Constructor=true)] Cancelled: bool
+enum Cratis.Choreography.Jobs.PrepareJobStepError : int
+  CannotPrepare = 2
+  UnexpectedErrorPreparing = 3
+  Unknown = 0
+  WrongRequestType = 1
+enum Cratis.Choreography.Jobs.RemoveJobError : int
+  CouldNotPersistRemoval = 3
+  JobIsAlreadyBeingRemoved = 2
+  JobIsCompleted = 1
+  Unknown = 0
+oneof Cratis.Choreography.Jobs.ResumeJobError
+  case0: Cratis.Choreography.Jobs.CannotResumeJobError
+  case1: Cratis.Choreography.Jobs.FailedResumingJobSteps
+enum Cratis.Choreography.Jobs.ResumeJobSuccess : int
+  JobAlreadyRunning = 2
+  JobIsCompleted = 1
+  JobIsNotRunning = 3
+  Success = 0
+enum Cratis.Choreography.Jobs.RetryFailedStepsError : int
+  CouldNotPersist = 3
+  JobIsNotCompletedWithFailures = 2
+  NotSupported = 1
+  Unknown = 0
+concept Cratis.Choreography.Jobs.Stages.JobStepStage : int
+enum Cratis.Choreography.Jobs.StartJobError : int
+  AllJobStepsFailedStarting = 3
+  AlreadyBeenPrepared = 5
+  AlreadyCompleted = 6
+  CouldNotPrepareJobSteps = 1
+  FailedStartingSomeJobSteps = 2
+  InvalidStepPlan = 8
+  NoJobStepsToStart = 4
+  NotAdmitted = 7
+  Unknown = 0
+enum Cratis.Choreography.Jobs.StartJobStepError : int
+  AlreadyStarted = 2
+  Completed = 3
+  NotPrepared = 1
+  Unknown = 0
+  UnrecoverableFailedState = 4
+enum Cratis.Choreography.Jobs.StopJobError : int
+  CouldNotPersistStop = 4
+  JobIsCompleted = 1
+  JobIsNotRunning = 3
+  Unknown = 0
+json Cratis.Choreography.Storage.Jobs.JobStepLease
+  activationId: System.Guid
+  attempt: int
+  lastHeartbeat: System.DateTimeOffset
+  owner: string
+enum Cratis.Choreography.Workers.GrainWithBackgroundTaskStatus : int
+  Completed = 2
+  Failed = 3
+  NotStarted = 0
+  Running = 1
+  Stopped = 4
+enum Cratis.Choreography.Workers.PerformWorkError : int
+  Cancelled = 1
+  None = 0
+  PerformingWorkError = 3
+  WorkerError = 2
+json Cratis.Choreography.Workers.PerformWorkResult<Cratis.Choreography.Jobs.JobStepResult>
+  error: Cratis.Choreography.Workers.PerformWorkError
+  exception: System.Exception
+  hasException: bool
+  hasResult: bool
+  isSuccess: bool
+  result: Cratis.Choreography.Jobs.JobStepResult
+enum Cratis.Choreography.Workers.WorkerGetResultError : int
+  NotFinished = 1
+  NotStarted = 0
+  WorkCancelled = 2
 json Cratis.Chronicle.Alerts.FailedPartitionSnapshot
   attemptCount: int
   attemptsInCurrentBudget: int
@@ -29,6 +153,21 @@ json Cratis.Chronicle.Captures.Engine.CaptureValidationMessage
   column: int
   line: int
   message: string
+json Cratis.Chronicle.Changes.ChildrenOrdering
+  direction: Cratis.Chronicle.Changes.SortDirection
+  placement: Cratis.Chronicle.Changes.ChildrenPlacement
+  sortBy: Cratis.Chronicle.Properties.PropertyPath
+enum Cratis.Chronicle.Changes.ChildrenPlacement : int
+  Append = 0
+  Prepend = 1
+  Sorted = 2
+enum Cratis.Chronicle.Changes.SortDirection : int
+  Ascending = 0
+  Descending = 1
+orleans [Alias("Cratis.Chronicle.Clients.ConnectionOwner")] Cratis.Chronicle.Clients.ConnectionOwner
+  [Id(0)] Issuer: string
+  [Id(1)] Subject: string
+  [Id(2)] IsClient: bool
 concept Cratis.Chronicle.Compliance.EncryptionKeyIdentifier : string
 enum Cratis.Chronicle.Concepts.Alerts.AlertClearedReason : int
   Cleared = 1
@@ -171,6 +310,7 @@ json Cratis.Chronicle.Concepts.Events.EventContext
   appendedGeneration: Cratis.Chronicle.Concepts.Events.EventTypeGeneration
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>
   causedBy: Cratis.Chronicle.Concepts.Identities.Identity
+  compensationFor: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   correlationId: Cratis.Execution.CorrelationId
   eventSource: Cratis.Chronicle.Concepts.Events.EventSourceName
   eventSourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
@@ -225,6 +365,22 @@ json Cratis.Chronicle.Concepts.Identities.Identity
   onBehalfOf: Cratis.Chronicle.Concepts.Identities.Identity
   subject: string
   userName: string
+concept Cratis.Chronicle.Concepts.Imports.ImportId : System.Guid
+json Cratis.Chronicle.Concepts.Imports.ImportKey
+  eventStore: Cratis.Chronicle.Concepts.EventStoreName
+  importId: Cratis.Chronicle.Concepts.Imports.ImportId
+  namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+enum Cratis.Chronicle.Concepts.Imports.ImportState : int
+  Abandoned = 6
+  Committing = 3
+  Completed = 4
+  Failed = 5
+  Open = 0
+  Staging = 1
+  Validating = 2
+enum Cratis.Chronicle.Concepts.Imports.OnInvalidEvent : int
+  Reject = 0
+  Skip = 1
 custom Cratis.Chronicle.Concepts.Keys.Key
 enum Cratis.Chronicle.Concepts.Observation.AlertDisposition : int
   Active = 0
@@ -248,7 +404,9 @@ json Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSub
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
   identifier: Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId
+  namedTags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.NamedTag>
   sourceEventStore: Cratis.Chronicle.Concepts.EventStoreName
+  sourceNamespaces: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.EventStoreNamespaceName>
 concept Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId : string
 json Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression
   eventType: Cratis.Chronicle.Concepts.Events.EventType
@@ -267,6 +425,7 @@ json Cratis.Chronicle.Concepts.Observation.FailedPartition
   partition: Cratis.Chronicle.Concepts.Keys.Key
   recoveryCursor: Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryCursor
   recoveryOwner: Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryOwner
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   webhookDisposition: Cratis.Chronicle.Concepts.Observation.WebhookFailureDisposition?
   webhookRecoveryId: System.Guid?
 json Cratis.Chronicle.Concepts.Observation.FailedPartitionAttempt
@@ -352,6 +511,10 @@ enum Cratis.Chronicle.Concepts.Observation.ObserverType : int
   Reactor = 1
   Reducer = 3
   Unknown = 0
+json Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
+  maxBytesPerPage: int
+  maxDelay: System.TimeSpan
+  maxEventsPerPage: int
 json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
   id: System.Guid
   reason: Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason
@@ -377,6 +540,7 @@ json Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition
   identifier: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner
+  pageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
   startAtTail: bool
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId : string
@@ -392,9 +556,11 @@ json Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition
   hash: string
   identifier: Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId
   isActive: bool
+  pageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
   readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   tags: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId : string
+concept Cratis.Chronicle.Concepts.Observation.ReplayEpoch : System.Guid
 json Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason
   type: Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType
 concept Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType : string
@@ -402,6 +568,7 @@ enum Cratis.Chronicle.Concepts.Observation.WebhookFailureDisposition : int
   Configuration = 1
   Gone = 2
   Retryable = 0
+concept Cratis.Chronicle.Concepts.Observation.Webhooks.EncryptedWebhookSigningSecret : string
 oneof Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookAuthorization
   case0: Cratis.Chronicle.Concepts.Security.BasicAuthorization
   case1: Cratis.Chronicle.Concepts.Security.BearerTokenAuthorization
@@ -422,6 +589,25 @@ enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner : int
   Client = 1
   Kernel = 2
   Unspecified = 0
+enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningAlgorithm : int
+  Ed25519 = 0
+  HmacSha256 = 1
+json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey
+  algorithm: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningAlgorithm
+  createdAt: System.DateTimeOffset
+  encryptedSecret: Cratis.Chronicle.Concepts.Observation.Webhooks.EncryptedWebhookSigningSecret
+  keyId: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyId
+  overlapEndsAt: System.DateTimeOffset?
+  publicKey: string
+  retiredAt: System.DateTimeOffset?
+  status: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyStatus
+  webhook: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId
+concept Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyId : string
+concept Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyOverlap : System.TimeSpan
+enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyStatus : int
+  Active = 0
+  Overlap = 1
+  Retired = 2
 json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTarget
   authorization: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookAuthorization
   headers: System.Collections.Generic.IReadOnlyDictionary<string,string>
@@ -497,6 +683,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition
   fromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   fromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
+  graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   hasLegacyStorageFields: bool
   identifiedBy: Cratis.Chronicle.Properties.PropertyPath
   identifier: Cratis.Chronicle.Concepts.Projections.ProjectionId
@@ -507,6 +694,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition
   lastUpdated: System.DateTimeOffset?
   nested: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
   noAutoMapProperties: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Properties.PropertyPath>
+  ordering: Cratis.Chronicle.Changes.ChildrenOrdering
   owner: Cratis.Chronicle.Concepts.Projections.ProjectionOwner
   readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   removedWith: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition>
@@ -544,6 +732,7 @@ json Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition
   fromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   fromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
   generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
+  graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   hasLegacyStorageFields: bool
   identifier: Cratis.Chronicle.Concepts.Projections.ProjectionId
   initialModelState: System.Text.Json.Nodes.JsonObject
@@ -583,6 +772,36 @@ enum Cratis.Chronicle.Concepts.Projections.Generations.Enablement.GenerationInit
   MaterializationAdopted = 3
   None = 0
 concept Cratis.Chronicle.Concepts.Projections.Generations.Enablement.StoreIncarnation : System.Guid
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  properties: System.Collections.Generic.IDictionary<string,string>
+  sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  targetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition
+  from: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition>
+  removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition>
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  sourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  targetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  properties: System.Collections.Generic.IDictionary<string,string>
+  updateOnly: bool
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition
+  from: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition>
+  removedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition>
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition
+  detach: bool
+  forEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+  key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
+json Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
+  edges: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition>
+  isEmpty: bool
+  nodes: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition>
 concept Cratis.Chronicle.Concepts.Projections.ProjectionDeclaration : string
 concept Cratis.Chronicle.Concepts.Projections.ProjectionFutureId : System.Guid
 concept Cratis.Chronicle.Concepts.Projections.ProjectionId : string
@@ -665,7 +884,9 @@ concept Cratis.Chronicle.Concepts.Sinks.SinkConfigurationId : System.Guid
 json Cratis.Chronicle.Concepts.Sinks.SinkDefinition
   configuration: Cratis.Chronicle.Concepts.Sinks.SinkConfigurationId
   eventSequence: Cratis.Chronicle.Concepts.Sinks.EventSequenceSinkConfiguration
+  name: Cratis.Chronicle.Concepts.Sinks.SinkName
   type: Cratis.Chronicle.Concepts.Sinks.SinkTypeId
+concept Cratis.Chronicle.Concepts.Sinks.SinkName : string
 concept Cratis.Chronicle.Concepts.Sinks.SinkTypeId : string
 json Cratis.Chronicle.Concepts.System.SemanticVersion
   buildMetadata: string
@@ -732,7 +953,27 @@ orleans Cratis.Chronicle.EventSequences.ConstraintIndexRebuildRunId
   [Id(0)] Value: System.Guid
   [Id(1)] Attempt: System.Guid
   [Id(2)] Started: System.DateTimeOffset
-  [Id(3)] JobId: Cratis.Orleans.Jobs.JobId
+  [Id(3)] JobId: Cratis.Choreography.Jobs.JobId
+json Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsRequest
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventTypes: System.Collections.Generic.IReadOnlyCollection<Cratis.Chronicle.Concepts.Events.EventTypeId>
+  sourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  targetId: Cratis.Chronicle.Concepts.Events.EventSourceId
+json Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsStepState
+  attempt: int
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventTypes: System.Collections.Generic.IList<Cratis.Chronicle.Concepts.Events.EventTypeId>
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
+  isPrepared: bool
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  sourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  targetId: Cratis.Chronicle.Concepts.Events.EventSourceId
+  type: Cratis.Choreography.Jobs.JobStepType
 json Cratis.Chronicle.EventSequences.EventToAppend
   causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Auditing.Causation>
   content: System.Text.Json.Nodes.JsonObject
@@ -774,29 +1015,29 @@ json Cratis.Chronicle.EventSequences.Migrations.BackfillEventTypeGenerationsRequ
 json Cratis.Chronicle.EventSequences.Migrations.BackfillEventTypeGenerationsStepState
   attempt: int
   eventTypeId: Cratis.Chronicle.Concepts.Events.EventTypeId
-  id: Cratis.Orleans.Jobs.JobStepIdentifier
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
   isPrepared: bool
-  lease: Cratis.Orleans.Storage.Jobs.JobStepLease
-  name: Cratis.Orleans.Jobs.JobStepName
-  progress: Cratis.Orleans.Jobs.JobStepProgress
-  stage: Cratis.Orleans.Jobs.Stages.JobStepStage
-  status: Cratis.Orleans.Jobs.JobStepStatus
-  statusChanges: System.Collections.Generic.IList<Cratis.Orleans.Jobs.JobStepStatusChanged>
-  type: Cratis.Orleans.Jobs.JobStepType
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
 json Cratis.Chronicle.EventSequences.Migrations.MigrateExistingEventsForTypeRequest
   eventTypeId: Cratis.Chronicle.Concepts.Events.EventTypeId
 json Cratis.Chronicle.EventSequences.Migrations.MigrateExistingEventsForTypeStepState
   attempt: int
   eventTypeId: Cratis.Chronicle.Concepts.Events.EventTypeId
-  id: Cratis.Orleans.Jobs.JobStepIdentifier
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
   isPrepared: bool
-  lease: Cratis.Orleans.Storage.Jobs.JobStepLease
-  name: Cratis.Orleans.Jobs.JobStepName
-  progress: Cratis.Orleans.Jobs.JobStepProgress
-  stage: Cratis.Orleans.Jobs.Stages.JobStepStage
-  status: Cratis.Orleans.Jobs.JobStepStatus
-  statusChanges: System.Collections.Generic.IList<Cratis.Orleans.Jobs.JobStepStatusChanged>
-  type: Cratis.Orleans.Jobs.JobStepType
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
 orleans Cratis.Chronicle.EventStores.DeploymentDecision
   [Id(0)] Accepted: bool
   [Id(1)] Stored: Cratis.Chronicle.EventStores.DeploymentState
@@ -828,15 +1069,97 @@ json Cratis.Chronicle.Events.Constraints.ReindexConstraintsStepState
   collisionSampleOverflowCounts: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName,long>
   collisionSamples: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.Constraints.ConstraintName,System.Collections.Generic.IList<Cratis.Chronicle.Events.Constraints.ConstraintCollisionSample>>
   eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
-  id: Cratis.Orleans.Jobs.JobStepIdentifier
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
   isPrepared: bool
-  lease: Cratis.Orleans.Storage.Jobs.JobStepLease
-  name: Cratis.Orleans.Jobs.JobStepName
-  progress: Cratis.Orleans.Jobs.JobStepProgress
-  stage: Cratis.Orleans.Jobs.Stages.JobStepStage
-  status: Cratis.Orleans.Jobs.JobStepStatus
-  statusChanges: System.Collections.Generic.IList<Cratis.Orleans.Jobs.JobStepStatusChanged>
-  type: Cratis.Orleans.Jobs.JobStepType
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
+json Cratis.Chronicle.Federation.FederationEnrollmentCreatedResult
+  code: string
+  expiresAt: System.DateTimeOffset
+  id: string
+json Cratis.Chronicle.Federation.FederationIssuance
+  authority: string
+  certificate: string
+  endpoint: string
+  identity: string
+  notAfter: System.DateTimeOffset
+  outcome: Cratis.Chronicle.Federation.FederationIssuanceOutcome
+  serial: string
+enum Cratis.Chronicle.Federation.FederationIssuanceOutcome : int
+  InvalidRequest = 2
+  Issued = 0
+  Rejected = 1
+json Cratis.Chronicle.Imports.ImportChunkAppendResult
+  errors: System.Collections.Generic.IEnumerable<string>
+  isSettled: bool
+  outcomes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Imports.ImportEventOutcome>
+json Cratis.Chronicle.Imports.ImportChunkStagingResult
+  alreadyStaged: bool
+  chunkIndex: int
+  error: string
+  eventsReceived: int
+  eventsStaged: int
+  rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
+json Cratis.Chronicle.Imports.ImportChunkValidationResult
+  mustRestart: bool
+  mustWait: bool
+  rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
+json Cratis.Chronicle.Imports.ImportEvent
+  causation: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Sequences.Causation>
+  causedBy: Cratis.Chronicle.Sequences.Identity
+  content: string
+  correlationId: System.Guid?
+  eventSource: string
+  eventSourceId: string
+  eventSourceType: string
+  eventStreamId: string
+  eventStreamType: string
+  eventType: Cratis.Chronicle.Sequences.EventType
+  idempotencyKey: string
+  namedTags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Sequences.NamedTag>
+  occurred: System.DateTimeOffset?
+  sourceSequenceNumber: ulong?
+  subject: string
+  tags: System.Collections.Generic.IEnumerable<string>
+json Cratis.Chronicle.Imports.ImportEventOutcome
+  eventType: string
+  index: long
+  kind: Cratis.Chronicle.Imports.ImportEventOutcomeKind
+  reasons: System.Collections.Generic.IEnumerable<string>
+  sequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+enum Cratis.Chronicle.Imports.ImportEventOutcomeKind : int
+  AlreadyAppended = 1
+  Appended = 0
+  Rejected = 2
+json Cratis.Chronicle.Imports.ImportEventToAppend
+  causedBy: Cratis.Chronicle.Concepts.Identities.Identity
+  correlationId: Cratis.Execution.CorrelationId
+  event: Cratis.Chronicle.EventSequences.EventToAppend
+  idempotencyKey: Cratis.Chronicle.Concepts.EventSequences.IdempotencyKey
+  index: long
+json Cratis.Chronicle.Imports.ImportEventsRequest
+  importId: Cratis.Chronicle.Concepts.Imports.ImportId
+json Cratis.Chronicle.Imports.ImportEventsStepState
+  attempt: int
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
+  importId: Cratis.Chronicle.Concepts.Imports.ImportId
+  isPrepared: bool
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
+json Cratis.Chronicle.Imports.ImportOperationResult
+  error: string
+  isSuccess: bool
+  record: Cratis.Chronicle.Storage.Imports.ImportRecord
 json Cratis.Chronicle.Observation.Alerts.ObserverAlertReceipt
   lifecycleId: System.Guid
   outcome: Cratis.Chronicle.Observation.Alerts.ObserverAlertReconciliation
@@ -883,20 +1206,20 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverState
   endEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   eventObservationState: Cratis.Chronicle.Concepts.Events.EventObservationState
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
-  id: Cratis.Orleans.Jobs.JobStepIdentifier
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
   isPrepared: bool
   lastSuccessfullyHandledEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
-  lease: Cratis.Orleans.Storage.Jobs.JobStepLease
-  name: Cratis.Orleans.Jobs.JobStepName
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
-  progress: Cratis.Orleans.Jobs.JobStepProgress
+  progress: Cratis.Choreography.Jobs.JobStepProgress
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
   skipFailedPartitions: bool
-  stage: Cratis.Orleans.Jobs.Stages.JobStepStage
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
   startEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
-  status: Cratis.Orleans.Jobs.JobStepStatus
-  statusChanges: System.Collections.Generic.IList<Cratis.Orleans.Jobs.JobStepStatusChanged>
-  type: Cratis.Orleans.Jobs.JobStepType
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
 json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionArguments
   deferralId: System.Guid?
   endEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
@@ -909,6 +1232,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionArguments
   ownershipEpoch: ulong?
   partition: Cratis.Chronicle.Concepts.Keys.Key
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   revision: ulong?
   startEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionState
@@ -918,24 +1242,25 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForPartitionState
   episodeId: Cratis.Chronicle.Concepts.Observation.FailedPartitionId
   eventObservationState: Cratis.Chronicle.Concepts.Events.EventObservationState
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
-  id: Cratis.Orleans.Jobs.JobStepIdentifier
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
   isPrepared: bool
   lastSuccessfullyHandledEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
-  lease: Cratis.Orleans.Storage.Jobs.JobStepLease
-  name: Cratis.Orleans.Jobs.JobStepName
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   partition: Cratis.Chronicle.Concepts.Keys.Key
-  progress: Cratis.Orleans.Jobs.JobStepProgress
+  progress: Cratis.Choreography.Jobs.JobStepProgress
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
-  stage: Cratis.Orleans.Jobs.Stages.JobStepStage
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
   startEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
-  status: Cratis.Orleans.Jobs.JobStepStatus
-  statusChanges: System.Collections.Generic.IList<Cratis.Orleans.Jobs.JobStepStatusChanged>
-  type: Cratis.Orleans.Jobs.JobStepType
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
 orleans Cratis.Chronicle.Observation.Jobs.HandledEventsReport
   [Id(0)] Partition: Cratis.Chronicle.Concepts.Keys.Key
   [Id(1)] Counts: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId,Cratis.Chronicle.Concepts.Events.EventCount>
-  [Id(2)] ReportedBy: Cratis.Orleans.Jobs.JobStepId
+  [Id(2)] ReportedBy: Cratis.Choreography.Jobs.JobStepId
   [Id(3)] HandledUpTo: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 json Cratis.Chronicle.Observation.Jobs.ReplayObserverPartitionRequest
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
@@ -966,10 +1291,21 @@ json Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType
   ownershipEpoch: ulong?
   readerScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
   revision: ulong?
 json Cratis.Chronicle.Observation.ObserverDetails
   key: Cratis.Chronicle.Concepts.Observation.ObserverKey
   type: Cratis.Chronicle.Concepts.Observation.ObserverType
+json Cratis.Chronicle.Observation.ObserverInformationSnapshot
+  definition: Cratis.Chronicle.Storage.Observation.ObserverDefinition
+  isSubscribed: bool
+  runningStateChangedAt: System.DateTimeOffset?
+  state: Cratis.Chronicle.Storage.Observation.ObserverState
+json Cratis.Chronicle.Observation.ObserverPageResult
+  results: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key,Cratis.Chronicle.Observation.ObserverSubscriberResult>
+json Cratis.Chronicle.Observation.ObserverPartitionBatch
+  events: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Events.AppendedEvent>
+  partition: Cratis.Chronicle.Concepts.Keys.Key
 custom Cratis.Chronicle.Observation.ObserverSubscriberContext
 json Cratis.Chronicle.Observation.ObserverSubscriberResult
   deferral: Cratis.Chronicle.Concepts.Observation.PartitionDeferral
@@ -991,6 +1327,7 @@ custom Cratis.Chronicle.Observation.ObserverSubscription
 json Cratis.Chronicle.Observation.PartitionFailureContext
   deliveryFence: Cratis.Chronicle.Concepts.Observation.DeliveryFenceContext
   policy: Cratis.Chronicle.Observation.WebhookDeliveryFailurePolicy
+  replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
 json Cratis.Chronicle.Observation.States.ReplayCandidateRequest
   observerId: Cratis.Chronicle.Concepts.Observation.ObserverId
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
@@ -1060,6 +1397,40 @@ orleans Cratis.Chronicle.Projections.SingleReadModelProjectionState
   [Id(2)] IsInitialized: bool
 custom Cratis.Chronicle.Properties.PropertyPath
 custom Cratis.Chronicle.Schemas.JsonSchema
+orleans Cratis.Chronicle.Security.ConfiguredGrant
+  [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
+  [Id(1)] EventStore: Cratis.Chronicle.Concepts.EventStoreName
+  [Id(2)] Namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+  [Id(3)] Access: Cratis.Chronicle.Security.StoreAccess
+orleans Cratis.Chronicle.Security.EventStoreAccessGrant
+  [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
+  [Id(1)] EventStore: Cratis.Chronicle.Concepts.EventStoreName
+  [Id(2)] Namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+  [Id(3)] Access: Cratis.Chronicle.Security.StoreAccess
+  [Id(4)] Source: Cratis.Chronicle.Security.EventStoreAccessGrantSource
+enum Cratis.Chronicle.Security.EventStoreAccessGrantSource : int
+  Command = 1
+  Configuration = 0
+orleans Cratis.Chronicle.Security.PrincipalKey
+  [Id(0)] Issuer: string
+  [Id(1)] Subject: string
+  [Id(2)] IsClient: bool
+enum Cratis.Chronicle.Security.StoreAccess : int
+  Append = 2
+  Manage = 4
+  None = 0
+  Read = 1
+orleans Cratis.Chronicle.Security.StoreEntitlementObservation
+  [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
+  [Id(1)] EventStore: Cratis.Chronicle.Concepts.EventStoreName
+  [Id(2)] Namespace: Cratis.Chronicle.Concepts.EventStoreNamespaceName
+  [Id(3)] Access: Cratis.Chronicle.Security.StoreAccess
+  [Id(4)] FirstSeen: System.DateTimeOffset
+  [Id(5)] LastSeen: System.DateTimeOffset
+  [Id(6)] Count: long
+orleans Cratis.Chronicle.Security.StoreEntitlementsState
+  [Id(0)] Version: long
+  [Id(1)] Grants: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Security.EventStoreAccessGrant>
 json Cratis.Chronicle.Seeding.SeedingEntry
   content: string
   eventSourceId: Cratis.Chronicle.Concepts.Events.EventSourceId
@@ -1070,6 +1441,10 @@ json Cratis.Chronicle.Seeding.SeedingEntry
   tags: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.Tag>
 json Cratis.Chronicle.Seeding.SeedingResult
   allEntriesSeeded: bool
+json Cratis.Chronicle.Sequences.Causation
+  occurred: System.DateTimeOffset
+  properties: System.Collections.Generic.IDictionary<string,string>
+  type: string
 json Cratis.Chronicle.Sequences.ConcurrencyScope
   eventSourceId: bool
   eventSourceType: string
@@ -1083,10 +1458,50 @@ json Cratis.Chronicle.Sequences.EventType
   generation: uint
   id: string
   tombstone: bool
+json Cratis.Chronicle.Sequences.Identity
+  name: string
+  onBehalfOf: Cratis.Chronicle.Sequences.Identity
+  subject: string
+  userName: string
+json Cratis.Chronicle.Sequences.NamedTag
+  name: string
+  value: string
 enum Cratis.Chronicle.Sequences.ReopenStreamScopeError : int
   ClosedByEvent = 2
   None = 0
   NotCompleted = 1
+json Cratis.Chronicle.Storage.Imports.ImportChunkSummary
+  chunkIndex: int
+  eventsReceived: int
+  eventsRejected: int
+  eventsStaged: int
+  firstEventIndex: long
+json Cratis.Chronicle.Storage.Imports.ImportCommittedRange
+  chunkIndex: int
+  first: ulong
+  last: ulong
+json Cratis.Chronicle.Storage.Imports.ImportRecord
+  alreadyAppended: long
+  commitStartedAt: ulong?
+  committedRanges: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportCommittedRange>
+  created: System.DateTimeOffset
+  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
+  eventsCommitted: long
+  eventsStaged: long
+  expectedChunks: int
+  expectedEvents: long
+  failureReason: string
+  id: Cratis.Chronicle.Concepts.Imports.ImportId
+  lastActivity: System.DateTimeOffset
+  lastCommittedChunk: int
+  onInvalid: Cratis.Chronicle.Concepts.Imports.OnInvalidEvent
+  rejectedCount: long
+  rejections: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Imports.ImportRejection>
+  state: Cratis.Chronicle.Concepts.Imports.ImportState
+json Cratis.Chronicle.Storage.Imports.ImportRejection
+  eventType: string
+  index: long
+  reasons: System.Collections.Generic.IEnumerable<string>
 concept Cratis.Chronicle.Storage.Observation.ClaimEpoch : ulong
 enum Cratis.Chronicle.Storage.Observation.ClaimHolderKind : int
   FailureRecovery = 3
@@ -1184,14 +1599,14 @@ concept Cratis.Chronicle.Storage.Observation.ObserverTypeSetRevision : long
 json Cratis.Chronicle.Storage.Observation.ObserverWideClaim
   epoch: Cratis.Chronicle.Storage.Observation.ClaimEpoch
   holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind
-  job: Cratis.Orleans.Jobs.JobId
+  job: Cratis.Choreography.Jobs.JobId
   pendingWork: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingPartitionWork>
   resumePosition: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 concept Cratis.Chronicle.Storage.Observation.OwnershipRevision : ulong
 json Cratis.Chronicle.Storage.Observation.PartitionClaim
   epoch: Cratis.Chronicle.Storage.Observation.ClaimEpoch
   holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind
-  job: Cratis.Orleans.Jobs.JobId
+  job: Cratis.Choreography.Jobs.JobId
   partition: Cratis.Chronicle.Concepts.Keys.Key
   pendingWork: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingPartitionWork>
   resumePosition: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
@@ -1264,6 +1679,33 @@ json Cratis.Chronicle.Storage.Sinks.FailedPartition
   outcomeUnknown: bool
   reason: string
 concept Cratis.Execution.CorrelationId : System.Guid
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.JobError>
+  case0: OneOf.Types.None
+  case1: Cratis.Choreography.Jobs.JobError
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.JobStepError>
+  case0: OneOf.Types.None
+  case1: Cratis.Choreography.Jobs.JobStepError
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.PrepareJobStepError>
+  case0: OneOf.Types.None
+  case1: Cratis.Choreography.Jobs.PrepareJobStepError
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.RemoveJobError>
+  case0: OneOf.Types.None
+  case1: Cratis.Choreography.Jobs.RemoveJobError
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.ResumeJobSuccess,Cratis.Choreography.Jobs.ResumeJobError>
+  case0: Cratis.Choreography.Jobs.ResumeJobSuccess
+  case1: Cratis.Choreography.Jobs.ResumeJobError
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.StartJobError>
+  case0: OneOf.Types.None
+  case1: Cratis.Choreography.Jobs.StartJobError
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.StartJobStepError>
+  case0: OneOf.Types.None
+  case1: Cratis.Choreography.Jobs.StartJobStepError
+oneof Cratis.Monads.Result<Cratis.Choreography.Jobs.StopJobError>
+  case0: OneOf.Types.None
+  case1: Cratis.Choreography.Jobs.StopJobError
+oneof Cratis.Monads.Result<Cratis.Choreography.Workers.PerformWorkResult<Cratis.Choreography.Jobs.JobStepResult>,Cratis.Choreography.Workers.WorkerGetResultError>
+  case0: Cratis.Choreography.Workers.PerformWorkResult<Cratis.Choreography.Jobs.JobStepResult>
+  case1: Cratis.Choreography.Workers.WorkerGetResultError
 oneof Cratis.Monads.Result<Cratis.Chronicle.Concepts.Events.EventSequenceNumber,Cratis.Chronicle.EventSequences.CompleteStreamError>
   case0: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   case1: Cratis.Chronicle.EventSequences.CompleteStreamError
@@ -1276,166 +1718,15 @@ oneof Cratis.Monads.Result<Cratis.Chronicle.Projections.Engine.ProjectionRegistr
 oneof Cratis.Monads.Result<Cratis.Chronicle.Sequences.ReopenStreamScopeError>
   case0: OneOf.Types.None
   case1: Cratis.Chronicle.Sequences.ReopenStreamScopeError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.JobError>
-  case0: OneOf.Types.None
-  case1: Cratis.Orleans.Jobs.JobError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.JobStepError>
-  case0: OneOf.Types.None
-  case1: Cratis.Orleans.Jobs.JobStepError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.PrepareJobStepError>
-  case0: OneOf.Types.None
-  case1: Cratis.Orleans.Jobs.PrepareJobStepError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.RemoveJobError>
-  case0: OneOf.Types.None
-  case1: Cratis.Orleans.Jobs.RemoveJobError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.ResumeJobSuccess,Cratis.Orleans.Jobs.ResumeJobError>
-  case0: Cratis.Orleans.Jobs.ResumeJobSuccess
-  case1: Cratis.Orleans.Jobs.ResumeJobError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.StartJobError>
-  case0: OneOf.Types.None
-  case1: Cratis.Orleans.Jobs.StartJobError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.StartJobStepError>
-  case0: OneOf.Types.None
-  case1: Cratis.Orleans.Jobs.StartJobStepError
-oneof Cratis.Monads.Result<Cratis.Orleans.Jobs.StopJobError>
-  case0: OneOf.Types.None
-  case1: Cratis.Orleans.Jobs.StopJobError
-oneof Cratis.Monads.Result<Cratis.Orleans.Workers.PerformWorkResult<Cratis.Orleans.Jobs.JobStepResult>,Cratis.Orleans.Workers.WorkerGetResultError>
-  case0: Cratis.Orleans.Workers.PerformWorkResult<Cratis.Orleans.Jobs.JobStepResult>
-  case1: Cratis.Orleans.Workers.WorkerGetResultError
 oneof Cratis.Monads.Result<OneOf.Types.None,System.Exception>
   case0: OneOf.Types.None
   case1: System.Exception
-oneof Cratis.Monads.Result<int,Cratis.Orleans.Jobs.RetryFailedStepsError>
+oneof Cratis.Monads.Result<int,Cratis.Choreography.Jobs.RetryFailedStepsError>
   case0: int
-  case1: Cratis.Orleans.Jobs.RetryFailedStepsError
-oneof Cratis.Monads.Result<object,Cratis.Orleans.Jobs.PerformJobStepError>
+  case1: Cratis.Choreography.Jobs.RetryFailedStepsError
+oneof Cratis.Monads.Result<object,Cratis.Choreography.Jobs.PerformJobStepError>
   case0: object
-  case1: Cratis.Orleans.Jobs.PerformJobStepError
-enum Cratis.Orleans.Jobs.CannotResumeJobError : int
-  JobCannotBeResumed = 2
-  JobIsNotPrepared = 1
-  MissingStepPlan = 4
-  NotAdmitted = 3
-  Unknown = 0
-json Cratis.Orleans.Jobs.FailedResumingJobSteps
-  failedJobSteps: System.Collections.Generic.IEnumerable<Cratis.Orleans.Jobs.JobStepId>
-enum Cratis.Orleans.Jobs.JobError : int
-  JobIsStoppedOrCompleted = 0
-  PersistStateError = 3
-  StorageError = 2
-  UnknownError = 1
-concept Cratis.Orleans.Jobs.JobId : System.Guid
-enum Cratis.Orleans.Jobs.JobStepError : int
-  FailedToPersistState = 1
-  FailedToReportToJob = 2
-  StopTimedOut = 3
-  Unknown = 0
-concept Cratis.Orleans.Jobs.JobStepId : System.Guid
-json Cratis.Orleans.Jobs.JobStepIdentifier
-  jobId: Cratis.Orleans.Jobs.JobId
-  jobStepId: Cratis.Orleans.Jobs.JobStepId
-concept Cratis.Orleans.Jobs.JobStepName : string
-concept Cratis.Orleans.Jobs.JobStepPercentage : int
-json Cratis.Orleans.Jobs.JobStepProgress
-  message: Cratis.Orleans.Jobs.JobStepProgressMessage
-  percentage: Cratis.Orleans.Jobs.JobStepPercentage
-concept Cratis.Orleans.Jobs.JobStepProgressMessage : string
-orleans Cratis.Orleans.Jobs.JobStepResult
-  [Id(0)] _result: Cratis.Monads.Result<object,Cratis.Orleans.Jobs.PerformJobStepError>
-enum Cratis.Orleans.Jobs.JobStepStatus : int
-  CompletedSuccessfully = 3
-  CompletedWithFailure = 4
-  Failed = 6
-  Removing = 7
-  Running = 2
-  Scheduled = 1
-  Stopped = 5
-  Unknown = 0
-  Unreachable = 8
-json Cratis.Orleans.Jobs.JobStepStatusChanged
-  exceptionMessages: System.Collections.Generic.IEnumerable<string>
-  exceptionStackTrace: string
-  occurred: System.DateTimeOffset
-  status: Cratis.Orleans.Jobs.JobStepStatus
-concept Cratis.Orleans.Jobs.JobStepType : string
-orleans Cratis.Orleans.Jobs.PerformJobStepError
-  [Id(0,Level=0,Constructor=true)] PartialResult: object
-  [Id(1,Level=0,Constructor=true)] ErrorMessages: System.Collections.Generic.IList<string>
-  [Id(2,Level=0,Constructor=true)] ExceptionStackTrace: string
-  [Id(3,Level=0,Constructor=true)] Cancelled: bool
-enum Cratis.Orleans.Jobs.PrepareJobStepError : int
-  CannotPrepare = 2
-  UnexpectedErrorPreparing = 3
-  Unknown = 0
-  WrongRequestType = 1
-enum Cratis.Orleans.Jobs.RemoveJobError : int
-  CouldNotPersistRemoval = 3
-  JobIsAlreadyBeingRemoved = 2
-  JobIsCompleted = 1
-  Unknown = 0
-oneof Cratis.Orleans.Jobs.ResumeJobError
-  case0: Cratis.Orleans.Jobs.CannotResumeJobError
-  case1: Cratis.Orleans.Jobs.FailedResumingJobSteps
-enum Cratis.Orleans.Jobs.ResumeJobSuccess : int
-  JobAlreadyRunning = 2
-  JobIsCompleted = 1
-  JobIsNotRunning = 3
-  Success = 0
-enum Cratis.Orleans.Jobs.RetryFailedStepsError : int
-  CouldNotPersist = 3
-  JobIsNotCompletedWithFailures = 2
-  NotSupported = 1
-  Unknown = 0
-concept Cratis.Orleans.Jobs.Stages.JobStepStage : int
-enum Cratis.Orleans.Jobs.StartJobError : int
-  AllJobStepsFailedStarting = 3
-  AlreadyBeenPrepared = 5
-  AlreadyCompleted = 6
-  CouldNotPrepareJobSteps = 1
-  FailedStartingSomeJobSteps = 2
-  InvalidStepPlan = 8
-  NoJobStepsToStart = 4
-  NotAdmitted = 7
-  Unknown = 0
-enum Cratis.Orleans.Jobs.StartJobStepError : int
-  AlreadyStarted = 2
-  Completed = 3
-  NotPrepared = 1
-  Unknown = 0
-  UnrecoverableFailedState = 4
-enum Cratis.Orleans.Jobs.StopJobError : int
-  CouldNotPersistStop = 4
-  JobIsCompleted = 1
-  JobIsNotRunning = 3
-  Unknown = 0
-json Cratis.Orleans.Storage.Jobs.JobStepLease
-  activationId: System.Guid
-  attempt: int
-  lastHeartbeat: System.DateTimeOffset
-  owner: string
-enum Cratis.Orleans.Workers.GrainWithBackgroundTaskStatus : int
-  Completed = 2
-  Failed = 3
-  NotStarted = 0
-  Running = 1
-  Stopped = 4
-enum Cratis.Orleans.Workers.PerformWorkError : int
-  Cancelled = 1
-  None = 0
-  PerformingWorkError = 3
-  WorkerError = 2
-json Cratis.Orleans.Workers.PerformWorkResult<Cratis.Orleans.Jobs.JobStepResult>
-  error: Cratis.Orleans.Workers.PerformWorkError
-  exception: System.Exception
-  hasException: bool
-  hasResult: bool
-  isSuccess: bool
-  result: Cratis.Orleans.Jobs.JobStepResult
-enum Cratis.Orleans.Workers.WorkerGetResultError : int
-  NotFinished = 1
-  NotStarted = 0
-  WorkCancelled = 2
+  case1: Cratis.Choreography.Jobs.PerformJobStepError
 orleans [Alias("FastForwardResult")] Cratis.Chronicle.Concepts.Observation.FastForwardResult
   [Id(0,Level=0,Constructor=true)] Outcome: Cratis.Chronicle.Concepts.Observation.FastForwardOutcome
   [Id(1,Level=0,Constructor=true)] PreviousNextEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber

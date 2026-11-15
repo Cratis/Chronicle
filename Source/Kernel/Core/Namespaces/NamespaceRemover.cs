@@ -16,11 +16,13 @@ namespace Cratis.Chronicle.Namespaces;
 /// <param name="storage">The <see cref="IStorage"/> for the event stores.</param>
 /// <param name="reminderTable">The <see cref="IReminderTable"/> holding the persistent reminders of the observers.</param>
 /// <param name="logger">The <see cref="ILogger{TCategoryName}"/>.</param>
+/// <param name="namespaceCasing">The namespace casing cache.</param>
 public class NamespaceRemover(
     IGrainFactory grainFactory,
     IStorage storage,
     IReminderTable reminderTable,
-    ILogger<NamespaceRemover> logger) : INamespaceRemover
+    ILogger<NamespaceRemover> logger,
+    INamespaceCasing namespaceCasing) : INamespaceRemover
 {
     const string ObserverGrainType = "observer";
     const int MaxRemovalAttempts = 5;
@@ -29,7 +31,9 @@ public class NamespaceRemover(
     /// <inheritdoc/>
     public async Task Remove(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
-        if (@namespace == EventStoreNamespaceName.Default)
+        // Storage may match names to an existing database regardless of case, so a case variant of the default
+        // namespace stands for it as well.
+        if (string.Equals(@namespace.Value, EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase))
         {
             throw new NamespaceCannotBeRemoved(eventStore, @namespace);
         }
@@ -64,6 +68,7 @@ public class NamespaceRemover(
 
         await eventStoreStorage.DropNamespace(@namespace);
         await eventStoreStorage.Namespaces.Delete(@namespace);
+        namespaceCasing.Forget(eventStore, @namespace);
 
         logger.RemovedNamespace(eventStore, @namespace);
     }

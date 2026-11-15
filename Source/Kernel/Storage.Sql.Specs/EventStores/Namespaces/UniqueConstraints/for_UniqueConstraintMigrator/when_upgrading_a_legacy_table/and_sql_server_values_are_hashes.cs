@@ -18,7 +18,7 @@ public class and_sql_server_values_are_hashes(SqlServerFixture fixture) : given.
     async Task Establish()
     {
         var connectionString = await fixture.CreateDatabase();
-        await CreateLegacyTable(connectionString, true, () => fixture.DropDatabase(connectionString));
+        await CreateLegacyTable(connectionString, true, () => fixture.QueueDatabaseDrop(connectionString));
         await AddClaim("owner", new string('a', 64));
     }
 

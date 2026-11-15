@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Diagnostics;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Clusters;
@@ -29,5 +30,6 @@ public class and_creating_an_index_fails : given.a_sink_with_indexes
 
     async Task Because() => _error = await Catch.Exception(_sink.EnsureIndexes);
 
-    [Fact] void should_propagate_the_failure() => _error.ShouldEqual(_failure);
+    [Fact] void should_propagate_the_failure() => _error.ShouldBeSame(_failure);
+    [Fact] void should_record_the_failure() => _authorizationDiagnostics.Received(1).Record(new StorageAuthorizationFailure("System", "EventTypeStatistics", "createIndexes"));
 }

@@ -4,6 +4,7 @@
 using System.Reflection;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Reducers.Validators;
 using Cratis.Chronicle.Registrations;
 
@@ -48,41 +49,8 @@ public static class ReducerTypeExtensions
     /// which is what lets <see cref="ReducerMethodCurrentReadModelMustBeNullable"/> report it instead of silently
     /// dropping it from dispatch.
     /// </remarks>
-    public static bool HasReducerMethodShape(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes)
-    {
-        if (methodInfo.IsSpecialName)
-        {
-            return false;
-        }
-
-        var returnType = methodInfo.ReturnType;
-        var isReducerMethod = returnType == readModelType ||
-                              returnType == typeof(Task<>).MakeGenericType(readModelType) ||
-                              returnType == typeof(Task) ||
-                              IsNullableType(returnType, readModelType) ||
-                              IsTaskWithNullableType(returnType, readModelType);
-
-        if (!isReducerMethod) return false;
-        var parameters = methodInfo.GetParameters();
-
-        if (parameters.Length > 3) return false;
-
-        if (parameters.Length >= 2 &&
-            parameters[0].ParameterType.IsEventType(eventTypes) &&
-            parameters[1].ParameterType.Equals(readModelType))
-        {
-            if (parameters.Length == 3)
-            {
-                if (parameters[2].ParameterType == typeof(EventContext)) return true;
-            }
-            else
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    public static bool HasReducerMethodShape(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes) =>
+        HasReducerMethodShape(methodInfo, readModelType, eventTypes, typeof(EventContext));
 
     /// <summary>
     /// Check whether a reducer-shaped <see cref="MethodInfo"/> declares its current read model parameter as non-nullable.
@@ -246,6 +214,21 @@ public static class ReducerTypeExtensions
             currentStore,
             () => ReducerInvoker.GetEventTypesFor(eventTypes, type, readModelType));
 
+    /// <summary>
+    /// Check if a <see cref="MethodInfo"/> is shaped like a reducer method, but takes a <see cref="BatchContext"/> where a reducer method takes the <see cref="EventContext"/>.
+    /// </summary>
+    /// <param name="methodInfo"><see cref="MethodInfo"/> to check.</param>
+    /// <param name="readModelType">Type of read model.</param>
+    /// <param name="eventTypes">Known event types in the process.</param>
+    /// <returns>True if it has that shape, false if not.</returns>
+    /// <remarks>
+    /// A reducer method is called once per event, and a <see cref="BatchContext"/> describes a page of events, so only a batch
+    /// method receives it. Without this the method is not a reducer method, and would be skipped without a word. In a reducer
+    /// that has a batch method the same shape is a helper the batch method calls, so callers only refuse it in a per-event reducer.
+    /// </remarks>
+    internal static bool TakesBatchContextAsReducerMethod(this MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes) =>
+        methodInfo.GetParameters().Length == 3 && HasReducerMethodShape(methodInfo, readModelType, eventTypes, typeof(BatchContext));
+
     static EventSequenceId InferEventSequenceIdFromHandlerMethods(Type reducerType, string? currentEventStoreName)
     {
         var eventParameterTypes = reducerType
@@ -303,5 +286,29 @@ public static class ReducerTypeExtensions
         }
 
         return false;
+    }
+
+    static bool HasReducerMethodShape(MethodInfo methodInfo, Type readModelType, IEnumerable<Type> eventTypes, Type third)
+    {
+        if (methodInfo.IsSpecialName)
+        {
+            return false;
+        }
+
+        var returnType = methodInfo.ReturnType;
+        var isReducerMethod = returnType == readModelType ||
+                              returnType == typeof(Task<>).MakeGenericType(readModelType) ||
+                              returnType == typeof(Task) ||
+                              IsNullableType(returnType, readModelType) ||
+                              IsTaskWithNullableType(returnType, readModelType);
+
+        if (!isReducerMethod) return false;
+        var parameters = methodInfo.GetParameters();
+
+        if (parameters.Length is not (2 or 3)) return false;
+
+        return parameters[0].ParameterType.IsEventType(eventTypes) &&
+               parameters[1].ParameterType.Equals(readModelType) &&
+               (parameters.Length == 2 || parameters[2].ParameterType == third);
     }
 }

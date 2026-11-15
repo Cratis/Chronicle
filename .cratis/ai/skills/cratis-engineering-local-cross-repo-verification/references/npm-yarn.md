@@ -6,18 +6,25 @@
 
 ## Pack the package, not a link
 
-Requires node, tar and Yarn 4. Run the producer's normal build first. The helper does
-not run a separate build; Yarn's normal pack lifecycle hooks still run.
+Requires node, npm and Yarn 4. Run the producer's normal build first. The helper does
+not build or run lifecycle scripts: it packs with `npm pack --ignore-scripts`, the publish
+workflows' tool, so the tarball matches the published one.
 
 ```bash
 stamp=$(bash "$local" stamp "$producer")
 bash "$local" pack-npm "$producer" "$stamp"
 ```
 
+Pass `--task ID` to pack/use, or set `CRATIS_LOCAL_TASK` (convention `owner/repo#number`),
+to associate the stamp with work. Successful packing records package IDs and producer
+HEAD; activation records the consumer after publication. See
+[Registry and list](dotnet-nuget.md#registry-and-list) for inventory and task completion.
+
 It requires clean tracked workspace manifests, temporarily changes all non-private
 workspace versions and packs actual tarballs. It restores those manifests on
-success and failure; inspect diffs for other lifecycle-generated output. Yarn's
-`%s-%v.tgz` output slugifies a scoped name (`@cratis/foo` becomes `@cratis-foo`).
+success and failure. Tarballs are named `<scope>-<name>-<version>.tgz` (`@cratis/foo` becomes
+`cratis-foo-<version>.tgz`). `verify-assets --npm [--dir REL]` reads installed copies under
+`node_modules`, or under `REL` when the consumer's Yarn project is a subfolder.
 Inspect dependency ranges in packed manifests: the helper changes versions, not
 arbitrary inter-package dependency constraints. Include every required workspace
 and verify the consumer resolves the intended tarballs.
@@ -77,3 +84,12 @@ consumer manifests. Reinstall released dependencies after restoration, then run
 Review `clean "$consumer" --stamp "$stamp"` before `--apply`. Passing the consumer
 allows Yarn cache discovery; no consumer or unavailable Yarn yields a reported
 skip. Unresolved backups block cleanup rather than silently losing recovery data.
+`restore` retains consumer history in the registry; stamp-scoped `clean --apply`
+removes the stamp's record directory together with its artifacts.
+Alternatively review `clean "$consumer" --expired`, then add `--apply`. Live manifest
+or overlay references and active compositions always retain the stamp; unrecorded
+stamps require explicit `--stamp`. Finished producing tasks or all consumers gone
+can expire npm stamps. npm has no offline release evidence: `--online` opts into
+registry release checks (10-second timeout); failed checks never remove a stamp.
+Kept stamps succeed (`0`). Applying also prunes gone consumers and missing sessions;
+`--expired` cannot combine with `--stamp` or `--all`.

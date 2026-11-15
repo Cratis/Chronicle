@@ -22,7 +22,7 @@ public class and_a_pinned_future_is_released : a_first_level_child_future
         _projectionFutures.AddPinnedFuture(_future).Returns(1);
         _tracker.HasPending = false;
         _context.AddDeferredFuture(_future);
-        _step = new ResolveFutures(_projectionFutures, _tracker, _typeFormats, new ObjectComparer(), _logger, _eventSequenceStorage, _sink);
+        _step = new ResolveFutures(_projectionFutures, _tracker, _typeFormats, new ObjectComparer(), _futureProtection, _logger, _eventSequenceStorage, _sink);
     }
 
     async Task Because()

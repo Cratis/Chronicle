@@ -4,7 +4,6 @@
         <RootNamespace>Cratis.Chronicle.Storage.Sql</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <OutputType>Exe</OutputType>
-        <CratisSpecificationsSharedLifecycle>false</CratisSpecificationsSharedLifecycle>
         <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
         <IsPackable>false</IsPackable>
         <!-- Microsoft.Data.SqlClient cannot connect in globalization-invariant mode. -->
@@ -23,6 +22,7 @@
         <Compile Include="../../../Integration/Client/DockerContainerEvidence.cs" Link="DockerContainerEvidence.cs" />
         <PackageReference Include="SSH.NET" />
         <ProjectReference Include="../Storage.Sql/Storage.Sql.csproj" />
+        <ProjectReference Include="../Storage.Specs/Storage.Specs.csproj" />
         <ProjectReference Include="../Concepts/Concepts.csproj" />
         <!-- The shared ISink contract specifications live here and run against this implementation. -->
         <ProjectReference Include="../Storage.Specs/Storage.Specs.csproj" />

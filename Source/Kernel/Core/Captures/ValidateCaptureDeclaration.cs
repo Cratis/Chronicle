@@ -6,6 +6,7 @@ using Cratis.Chronicle.Captures.Engine;
 using Cratis.Chronicle.Captures.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Captures;
 
@@ -17,6 +18,7 @@ namespace Cratis.Chronicle.Captures;
 /// <remarks>
 /// This is what an editor calls as somebody types, so the answer is always messages rather than a failure.
 /// </remarks>
+[StoreAccess(StoreAccess.Read)]
 [Command]
 [BelongsTo(WellKnownServices.Captures)]
 public record ValidateCaptureDeclaration(EventStoreName EventStore, string Declaration)

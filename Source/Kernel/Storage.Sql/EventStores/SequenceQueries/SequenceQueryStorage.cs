@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.SequenceQueries;
 using Cratis.Chronicle.Storage.SequenceQueries;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.SequenceQueries;
@@ -29,7 +30,10 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
             .OrderBy(_ => _.Name)
             .ToListAsync();
 
-        return definitions.Select(_ => _.ToKernel()).ToArray();
+        return definitions
+            .Where(_ => _.Scope == SequenceQueryScope.Everyone || string.Equals(_.Owner, ownerValue, StringComparison.Ordinal))
+            .Select(_ => _.ToKernel())
+            .ToArray();
     }
 
     /// <inheritdoc/>
@@ -42,25 +46,76 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
     }
 
     /// <inheritdoc/>
-    public async Task Save(Concepts.SequenceQueries.SequenceQueryDefinition definition)
-    {
-        await using var scope = await database.EventStore(eventStore);
-        await scope.DbContext.SequenceQueries.Upsert(definition.ToSql());
-        await NotifyChange();
-    }
-
-    /// <inheritdoc/>
-    public async Task Delete(SequenceQueryId id)
+    public async Task<Concepts.SequenceQueries.SequenceQueryDefinition?> Get(SequenceQueryId id)
     {
         await using var scope = await database.EventStore(eventStore);
         var value = id.Value;
-        var definition = await scope.DbContext.SequenceQueries.SingleOrDefaultAsync(_ => _.Id == value);
-        if (definition is not null)
+        var definition = await scope.DbContext.SequenceQueries.AsNoTracking().SingleOrDefaultAsync(_ => _.Id == value);
+
+        return definition?.ToKernel();
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryFolderDefinition?> GetFolder(SequenceQueryFolderId id)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var value = id.Value;
+        var folder = await scope.DbContext.SequenceQueryFolders.AsNoTracking().SingleOrDefaultAsync(_ => _.Id == value);
+
+        return folder?.ToKernel();
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryWriteOutcome> Insert(Concepts.SequenceQueries.SequenceQueryDefinition definition)
+    {
+        var outcome = await InsertOnce(context => context.SequenceQueries.Add(definition.ToSql()), async () => await Get(definition.Id) is not null);
+        if (outcome == SequenceQueryWriteOutcome.Applied) await NotifyChange();
+
+        return outcome;
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryWriteOutcome> Update(Concepts.SequenceQueries.SequenceQueryDefinition definition, SequenceQueryOwner expectedOwner)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var id = definition.Id.Value;
+        var sql = definition.ToSql();
+
+        // The owner is matched exactly and never written, so an update keeps the owner it is stored under.
+        var changed = await scope.DbContext.SequenceQueries
+            .Where(_ => _.Id == id)
+            .WhereExact(scope.DbContext, _ => _.Owner, expectedOwner.Value)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(_ => _.Name, sql.Name)
+                .SetProperty(_ => _.Scope, sql.Scope)
+                .SetProperty(_ => _.Folder, sql.Folder)
+                .SetProperty(_ => _.Namespace, sql.Namespace)
+                .SetProperty(_ => _.EventSequenceId, sql.EventSequenceId)
+                .SetProperty(_ => _.Filter, sql.Filter)
+                .SetProperty(_ => _.SortBy, sql.SortBy)
+                .SetProperty(_ => _.Descending, sql.Descending));
+        if (changed == 0) return SequenceQueryWriteOutcome.Conflict;
+
+        await NotifyChange();
+        return SequenceQueryWriteOutcome.Applied;
+    }
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryWriteOutcome> Delete(SequenceQueryId id, SequenceQueryOwner expectedOwner)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var value = id.Value;
+        var deleted = await scope.DbContext.SequenceQueries
+            .Where(_ => _.Id == value)
+            .WhereExact(scope.DbContext, _ => _.Owner, expectedOwner.Value)
+            .ExecuteDeleteAsync();
+        if (deleted > 0)
         {
-            scope.DbContext.SequenceQueries.Remove(definition);
-            await scope.DbContext.SaveChangesAsync();
             await NotifyChange();
+            return SequenceQueryWriteOutcome.Applied;
         }
+
+        return await Get(id) is null ? SequenceQueryWriteOutcome.Applied : SequenceQueryWriteOutcome.Conflict;
     }
 
     /// <inheritdoc/>
@@ -73,26 +128,47 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
             .OrderBy(_ => _.Path)
             .ToListAsync();
 
-        return folders.Select(_ => _.ToKernel()).ToArray();
+        return folders
+            .Where(_ => _.Scope == SequenceQueryScope.Everyone || string.Equals(_.Owner, ownerValue, StringComparison.Ordinal))
+            .Select(_ => _.ToKernel())
+            .ToArray();
     }
 
     /// <inheritdoc/>
-    public async Task SaveFolder(SequenceQueryFolderDefinition definition)
+    public Task<SequenceQueryWriteOutcome> InsertFolder(SequenceQueryFolderDefinition definition) =>
+        InsertOnce(context => context.SequenceQueryFolders.Add(definition.ToSql()), async () => await GetFolder(definition.Id) is not null);
+
+    /// <inheritdoc/>
+    public async Task<SequenceQueryWriteOutcome> UpdateFolder(SequenceQueryFolderDefinition definition, SequenceQueryOwner expectedOwner)
     {
         await using var scope = await database.EventStore(eventStore);
-        await scope.DbContext.SequenceQueryFolders.Upsert(definition.ToSql());
+        var id = definition.Id.Value;
+        var sql = definition.ToSql();
+
+        // The owner is matched exactly and never written, so an update keeps the owner it is stored under.
+        var changed = await scope.DbContext.SequenceQueryFolders
+            .Where(_ => _.Id == id)
+            .WhereExact(scope.DbContext, _ => _.Owner, expectedOwner.Value)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(_ => _.Scope, sql.Scope)
+                .SetProperty(_ => _.Namespace, sql.Namespace)
+                .SetProperty(_ => _.Path, sql.Path));
+
+        return changed == 0 ? SequenceQueryWriteOutcome.Conflict : SequenceQueryWriteOutcome.Applied;
     }
 
     /// <inheritdoc/>
-    public async Task DeleteFolder(SequenceQueryFolderId id)
+    public async Task<SequenceQueryWriteOutcome> DeleteFolder(SequenceQueryFolderId id, SequenceQueryOwner expectedOwner)
     {
         await using var scope = await database.EventStore(eventStore);
         var value = id.Value;
-        var folder = await scope.DbContext.SequenceQueryFolders.SingleOrDefaultAsync(_ => _.Id == value);
-        if (folder is null) return;
+        var deleted = await scope.DbContext.SequenceQueryFolders
+            .Where(_ => _.Id == value)
+            .WhereExact(scope.DbContext, _ => _.Owner, expectedOwner.Value)
+            .ExecuteDeleteAsync();
+        if (deleted > 0) return SequenceQueryWriteOutcome.Applied;
 
-        scope.DbContext.SequenceQueryFolders.Remove(folder);
-        await scope.DbContext.SaveChangesAsync();
+        return await GetFolder(id) is null ? SequenceQueryWriteOutcome.Applied : SequenceQueryWriteOutcome.Conflict;
     }
 
     /// <inheritdoc/>
@@ -105,6 +181,23 @@ public class SequenceQueryStorage(EventStoreName eventStore, IDatabase database)
 
         _subjects.Clear();
         GC.SuppressFinalize(this);
+    }
+
+    async Task<SequenceQueryWriteOutcome> InsertOnce(Action<EventStoreDbContext> add, Func<Task<bool>> isStored)
+    {
+        try
+        {
+            await using var scope = await database.EventStore(eventStore);
+            add(scope.DbContext);
+            await scope.DbContext.SaveChangesAsync();
+            return SequenceQueryWriteOutcome.Applied;
+        }
+        catch (DbUpdateException)
+        {
+            // A refused insert is only a conflict when the identifier is stored now; anything else is a real failure.
+            if (await isStored()) return SequenceQueryWriteOutcome.Conflict;
+            throw;
+        }
     }
 
     async Task NotifyOwner(SequenceQueryOwner owner, ReplaySubject<IEnumerable<Concepts.SequenceQueries.SequenceQueryDefinition>> subject) =>

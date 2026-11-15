@@ -5,6 +5,7 @@ using Cratis.Arc.Authorization;
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -20,6 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional caller-supplied causation chain.</param>
 /// <param name="CausedBy">Optional caller-supplied identity.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes, checked for the new remainder only.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyOnceWithNamedTags(

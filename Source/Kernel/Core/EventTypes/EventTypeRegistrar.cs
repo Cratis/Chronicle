@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences;
-using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
@@ -76,21 +75,10 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         if (!skipValidation)
         {
-            foreach (var eventType in typesList)
-            {
-                ValidateMigrationChain(eventType.Type.Id, eventType.Type.Generation, eventType.Migrations);
-                await ValidateSchemaNotChanged(eventType, StoredFor(stored, eventType));
-            }
+            await ValidateAll(typesList, stored);
         }
 
-        var eventTypesToRegister = new List<EventTypeToRegister>();
-        var newGenerationsPerEventType = new List<NewGenerations>();
-
-        foreach (var eventType in typesList)
-        {
-            newGenerationsPerEventType.Add(GetNewGenerations(eventType, StoredFor(stored, eventType)));
-            eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation, StoredFor(stored, eventType)));
-        }
+        var (eventTypesToRegister, newGenerationsPerEventType) = await BuildRegistrations(typesList, stored, skipValidation);
 
         // Evict the event type cache on every silo whenever a registration actually changed the stored
         // representation - a new generation, or a different owner, source, or tombstone. Idempotent
@@ -107,6 +95,83 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         await AppendSystemEventsForNewGenerations(eventStore, newGenerationsPerEventType);
         await CapturePatternsForNewEventTypes(patternCapture, eventStore, mutated);
+    }
+
+    /// <summary>
+    /// Checks whether registrations would be accepted by <see cref="Register"/>, without writing anything.
+    /// </summary>
+    /// <param name="eventStore">The event store to check against.</param>
+    /// <param name="types">The registrations to check.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the event types.</param>
+    /// <returns>One result per registration, in the order given.</returns>
+    /// <remarks>
+    /// Applies exactly the checks <see cref="Register"/> applies with validation on, against what is stored, and only reads:
+    /// no event type is written, no system event is appended and no cache is evicted.
+    /// </remarks>
+    public async Task<IReadOnlyList<EventTypeCheckResult>> Check(
+        EventStoreName eventStore,
+        IEnumerable<EventTypeRegistration> types,
+        IStorage storage)
+    {
+        var typesList = types.ToList();
+        var stored = (await storage.GetEventStore(eventStore).EventTypes.GetAllDefinitions()).ToDictionary(_ => _.Id);
+        var results = new List<EventTypeCheckResult>();
+
+        foreach (var eventType in typesList)
+        {
+            results.Add(await CheckRegistration(eventType, StoredFor(stored, eventType)));
+        }
+
+        return results;
+    }
+
+    static async Task<EventTypeCheckResult> CheckRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    {
+        try
+        {
+            return await CheckReadableRegistration(eventType, storedDefinition);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A schema or migration that cannot even be read must not abort the check for the other registrations.
+            return EventTypeCheckResult.Reject(eventType.Type.Id, eventType.Type.Generation, $"The event type could not be processed: {ex.Message}");
+        }
+    }
+
+    static async Task<EventTypeCheckResult> CheckReadableRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    {
+        var id = eventType.Type.Id;
+        var generation = eventType.Type.Generation;
+
+        if (EventTypeMigrationValidation.FindChainProblem(id, generation, eventType.Migrations) is { } chainProblem)
+        {
+            return EventTypeCheckResult.Reject(id, generation, chainProblem.Message);
+        }
+
+        if (await EventTypeSchemaComparison.FindProblem(eventType, storedDefinition) is { } schemaProblem)
+        {
+            return EventTypeCheckResult.Reject(
+                id,
+                schemaProblem.Generation,
+                new EventTypeSchemaChanged(id, schemaProblem.Generation).Message,
+                schemaProblem.Difference.Keyword,
+                schemaProblem.Difference.Path);
+        }
+
+        try
+        {
+            await CreateEventTypeToRegister(eventType, false, storedDefinition);
+        }
+        catch (EventTypeSchemaChanged ex)
+        {
+            return EventTypeCheckResult.Reject(id, generation, ex.Message, "protection", "$");
+        }
+        catch (InvalidMigrationPropertyForEventType ex)
+        {
+            return EventTypeCheckResult.Reject(id, generation, ex.Message);
+        }
+
+        return EventTypeCheckResult.Accept(id, generation);
     }
 
     /// <summary>
@@ -132,6 +197,32 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         await patternCapture.SubscribeAcrossNamespaces(eventStore);
     }
 
+    static async Task ValidateAll(List<EventTypeRegistration> types, Dictionary<EventTypeId, EventTypeDefinition> stored)
+    {
+        foreach (var eventType in types)
+        {
+            EventTypeMigrationValidation.ValidateChain(eventType.Type.Id, eventType.Type.Generation, eventType.Migrations);
+            await ValidateSchemaNotChanged(eventType, StoredFor(stored, eventType));
+        }
+    }
+
+    static async Task<(List<EventTypeToRegister> ToRegister, List<NewGenerations> NewGenerations)> BuildRegistrations(
+        List<EventTypeRegistration> types,
+        Dictionary<EventTypeId, EventTypeDefinition> stored,
+        bool skipValidation)
+    {
+        var eventTypesToRegister = new List<EventTypeToRegister>();
+        var newGenerationsPerEventType = new List<NewGenerations>();
+
+        foreach (var eventType in types)
+        {
+            newGenerationsPerEventType.Add(GetNewGenerations(eventType, StoredFor(stored, eventType)));
+            eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation, StoredFor(stored, eventType)));
+        }
+
+        return (eventTypesToRegister, newGenerationsPerEventType);
+    }
+
     static EventTypeDefinition? StoredFor(Dictionary<EventTypeId, EventTypeDefinition> stored, EventTypeRegistration eventType) =>
         stored.GetValueOrDefault(new EventTypeId(eventType.Type.Id));
 
@@ -155,36 +246,8 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
     static async Task<EventTypeToRegister> CreateEventTypeToRegister(EventTypeRegistration eventType, bool skipValidation, EventTypeDefinition? storedDefinition)
     {
-        var generations = new List<Concepts.Events.EventTypeGenerationDefinition>();
-        foreach (var genDef in eventType.Generations)
-        {
-            var genSchema = await JsonSchema.FromJsonAsync(genDef.Schema);
-            genSchema.EnsureComplianceMetadata();
-            generations.Add(new Concepts.Events.EventTypeGenerationDefinition(genDef.Generation, genSchema));
-        }
-
-        if (generations.Count == 0)
-        {
-            var schema = await JsonSchema.FromJsonAsync(eventType.Schema);
-            schema.EnsureComplianceMetadata();
-            generations.Add(new Concepts.Events.EventTypeGenerationDefinition(eventType.Type.ToChronicle().Generation, schema));
-        }
-
-        for (var index = 0; index < generations.Count; index++)
-        {
-            var incoming = generations[index];
-            var stored = storedDefinition?.Generations.FirstOrDefault(_ => _.Generation == incoming.Generation);
-            if (stored is null)
-            {
-                continue;
-            }
-            var refined = stored.Schema.MorePrecise(incoming.Schema);
-            if (!stored.Schema.HasCompatibleProtectionMetadata(refined))
-            {
-                throw new EventTypeSchemaChanged(eventType.Type.Id, incoming.Generation.Value);
-            }
-            generations[index] = incoming with { Schema = refined };
-        }
+        var generations = await ParseGenerations(eventType);
+        RefineAgainstStored(generations, storedDefinition, eventType.Type.Id);
 
         var migrations = eventType.Migrations
             .Where(m => m.FromGeneration != m.ToGeneration)
@@ -205,252 +268,122 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             eventType.EventStore ?? string.Empty);
     }
 
+    static async Task<List<Concepts.Events.EventTypeGenerationDefinition>> ParseGenerations(EventTypeRegistration eventType)
+    {
+        var generations = new List<Concepts.Events.EventTypeGenerationDefinition>();
+        foreach (var genDef in eventType.Generations)
+        {
+            generations.Add(new Concepts.Events.EventTypeGenerationDefinition(genDef.Generation, await ParseSchema(genDef.Schema)));
+        }
+
+        if (generations.Count == 0)
+        {
+            generations.Add(new Concepts.Events.EventTypeGenerationDefinition(eventType.Type.ToChronicle().Generation, await ParseSchema(eventType.Schema)));
+        }
+
+        return generations;
+    }
+
+    static async Task<JsonSchema> ParseSchema(string schemaJson)
+    {
+        var schema = await JsonSchema.FromJsonAsync(schemaJson);
+        schema.EnsureComplianceMetadata();
+        return schema;
+    }
+
+    static void RefineAgainstStored(List<Concepts.Events.EventTypeGenerationDefinition> generations, EventTypeDefinition? storedDefinition, string eventTypeId)
+    {
+        for (var index = 0; index < generations.Count; index++)
+        {
+            var incoming = generations[index];
+            var stored = storedDefinition?.Generations.FirstOrDefault(_ => _.Generation == incoming.Generation);
+            if (stored is null)
+            {
+                continue;
+            }
+
+            var refined = stored.Schema.MorePrecise(incoming.Schema);
+            if (!stored.Schema.HasCompatibleProtectionMetadata(refined))
+            {
+                throw new EventTypeSchemaChanged(eventTypeId, incoming.Generation.Value);
+            }
+
+            generations[index] = incoming with { Schema = refined };
+        }
+    }
+
+    static JsonObject ParseJmesPath(string? jmesPath) =>
+        string.IsNullOrEmpty(jmesPath)
+            ? new JsonObject()
+            : JsonNode.Parse(jmesPath)?.AsObject() ?? new JsonObject();
+
     static Concepts.Events.EventTypeMigrationDefinition CreateMigration(
         string eventTypeId,
         Contracts.Events.EventTypeMigrationDefinition migration,
         List<Concepts.Events.EventTypeGenerationDefinition> generations,
         bool skipValidation)
     {
-        var upcastJson = string.IsNullOrEmpty(migration.UpcastJmesPath)
-            ? new JsonObject()
-            : JsonNode.Parse(migration.UpcastJmesPath)?.AsObject() ?? new JsonObject();
-        var downcastJson = string.IsNullOrEmpty(migration.DowncastJmesPath)
-            ? new JsonObject()
-            : JsonNode.Parse(migration.DowncastJmesPath)?.AsObject() ?? new JsonObject();
-
-        if (!skipValidation)
-        {
-            ValidateMigrationProperties(eventTypeId, migration, upcastJson, downcastJson, generations);
-        }
-
-        return new Concepts.Events.EventTypeMigrationDefinition(
+        var definition = new Concepts.Events.EventTypeMigrationDefinition(
             migration.FromGeneration,
             migration.ToGeneration,
             [],
-            upcastJson,
-            downcastJson);
-    }
+            ParseJmesPath(migration.UpcastJmesPath),
+            ParseJmesPath(migration.DowncastJmesPath));
 
-    static void ValidateMigrationChain(string eventTypeId, uint currentGeneration, IList<Contracts.Events.EventTypeMigrationDefinition> migrations)
-    {
-        if (currentGeneration <= 1)
-            return;
-
-        var effectiveMigrations = migrations.Where(m => m.FromGeneration != m.ToGeneration).ToList();
-
-        if (effectiveMigrations.Count == 0)
-            throw new MissingEventTypeMigrators(eventTypeId, currentGeneration);
-
-        if (!effectiveMigrations.Exists(m => m.FromGeneration == 1))
-            throw new MissingFirstGenerationForEventType(eventTypeId, currentGeneration);
-
-        for (uint from = 1; from < currentGeneration; from++)
+        if (!skipValidation)
         {
-            if (!effectiveMigrations.Exists(m => m.FromGeneration == from))
-                throw new MissingMigrationForEventTypeGeneration(eventTypeId, currentGeneration, from);
-        }
-    }
-
-    static void ValidateMigrationProperties(
-        string eventTypeId,
-        Contracts.Events.EventTypeMigrationDefinition migration,
-        JsonObject upcastJson,
-        JsonObject downcastJson,
-        List<Concepts.Events.EventTypeGenerationDefinition> generations)
-    {
-        var fromSchema = generations.FirstOrDefault(g => g.Generation == migration.FromGeneration)?.Schema;
-        var toSchema = generations.FirstOrDefault(g => g.Generation == migration.ToGeneration)?.Schema;
-
-        if (toSchema is not null)
-        {
-            ValidatePropertyKeys(eventTypeId, upcastJson, toSchema, migration.ToGeneration, "upcast");
+            EventTypeMigrationValidation.ValidateProperties(eventTypeId, definition, generations);
         }
 
-        if (fromSchema is not null)
-        {
-            ValidatePropertyKeys(eventTypeId, downcastJson, fromSchema, migration.FromGeneration, "downcast");
-        }
-
-        if (fromSchema is not null)
-        {
-            ValidateExpressionSources(eventTypeId, upcastJson, fromSchema, migration.FromGeneration, "upcast");
-        }
-
-        if (toSchema is not null)
-        {
-            ValidateExpressionSources(eventTypeId, downcastJson, toSchema, migration.ToGeneration, "downcast");
-        }
-    }
-
-    static void ValidatePropertyKeys(string eventTypeId, JsonObject jmesPath, JsonSchema schema, uint generation, string direction)
-    {
-        foreach (var property in jmesPath)
-        {
-            // DefaultValue introduces a property to the target generation, and the auto-generated schema for that
-            // generation can be empty - so a key that resolves nowhere is only accepted when there is nothing to
-            // resolve it against. Skipping the check outright let a nested default through to a kernel that then
-            // dropped the value silently, which is worse than either outcome (#3949).
-            if (property.Value is JsonObject expr && expr.ContainsKey(WellKnownExpressions.DefaultValue) &&
-                schema.ActualProperties.Count == 0)
-            {
-                continue;
-            }
-
-            if (!SchemaDeclaresPath(schema, property.Key))
-            {
-                throw new InvalidMigrationPropertyForEventType(eventTypeId, property.Key, generation, direction);
-            }
-        }
-    }
-
-    static void ValidateExpressionSources(string eventTypeId, JsonObject jmesPath, JsonSchema sourceSchema, uint sourceGeneration, string direction)
-    {
-        foreach (var entry in jmesPath)
-        {
-            foreach (var prop in ExtractSourceProperties(entry.Value))
-            {
-                if (!SchemaDeclaresPath(sourceSchema, prop))
-                {
-                    throw new InvalidMigrationPropertyForEventType(eventTypeId, prop, sourceGeneration, direction);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Gets whether a schema declares the property a dotted path addresses.
-    /// </summary>
-    /// <param name="schema">The <see cref="JsonSchema"/> to resolve within.</param>
-    /// <param name="path">The dotted property path a migration carries.</param>
-    /// <returns><see langword="true"/> when every segment of the path is declared; otherwise <see langword="false"/>.</returns>
-    /// <remarks>
-    /// A migration built from a nested property expression carries a path rather than a name, so resolving it
-    /// against the top-level property map alone reported that the property did not exist when it existed one level
-    /// down (#3949).
-    /// </remarks>
-    static bool SchemaDeclaresPath(JsonSchema schema, string path)
-    {
-        var current = schema;
-
-        foreach (var segment in JsonPropertyPaths.Split(path))
-        {
-            var addressesElements = segment.EndsWith(JsonPropertyPaths.ElementMarker, StringComparison.Ordinal);
-            var name = addressesElements ? segment[..^JsonPropertyPaths.ElementMarker.Length] : segment;
-
-            if (!current.ActualProperties.TryGetValue(name, out var property))
-            {
-                return false;
-            }
-
-            current = property.ActualSchema;
-
-            if (addressesElements)
-            {
-                if (current.Item is null)
-                {
-                    return false;
-                }
-
-                current = current.Item.ActualSchema;
-            }
-        }
-
-        return true;
-    }
-
-    static IEnumerable<string> ExtractSourceProperties(JsonNode? value)
-    {
-        if (value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var stringValue))
-        {
-            // JmesPath expression like "@.propertyName" — extract the property name
-            if (stringValue.StartsWith("@."))
-            {
-                yield return stringValue[2..];
-            }
-        }
-        else if (value is JsonObject obj && obj.Count == 1)
-        {
-            using var enumerator = obj.GetEnumerator();
-            enumerator.MoveNext();
-            var entry = enumerator.Current;
-            switch (entry.Key)
-            {
-                case WellKnownExpressions.Rename when entry.Value is JsonValue renameVal && renameVal.TryGetValue<string>(out var oldName):
-                    yield return oldName;
-                    break;
-
-                case WellKnownExpressions.Split when entry.Value is JsonObject splitConfig:
-                    var source = splitConfig["source"]?.GetValue<string>();
-                    if (source is not null)
-                    {
-                        yield return source;
-                    }
-
-                    break;
-
-                case WellKnownExpressions.Combine when entry.Value is JsonObject combineConfig:
-                    if (combineConfig["sources"] is JsonArray combineArray)
-                    {
-                        foreach (var item in combineArray)
-                        {
-                            var propName = item?.GetValue<string>();
-                            if (propName is not null)
-                            {
-                                yield return propName;
-                            }
-                        }
-                    }
-
-                    break;
-
-                case WellKnownExpressions.MapValues when entry.Value is JsonObject mapConfig:
-                    var mapSource = mapConfig["source"]?.GetValue<string>();
-                    if (mapSource is not null)
-                    {
-                        yield return mapSource;
-                    }
-
-                    break;
-            }
-        }
+        return definition;
     }
 
     static async Task ValidateSchemaNotChanged(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
     {
-        if (storedDefinition is null)
+        if (await EventTypeSchemaComparison.FindProblem(eventType, storedDefinition) is { } problem)
         {
-            return;
+            throw new EventTypeSchemaChanged(eventType.Type.Id, problem.Generation);
         }
+    }
 
-        var definitions = eventType.Generations.Count > 0 ? eventType.Generations :
-            [new Contracts.Events.EventTypeGenerationDefinition { Generation = eventType.Type.Generation, Schema = eventType.Schema }];
-        foreach (var genDef in definitions)
+    static IEnumerable<(Concepts.Events.EventTypeGenerationDefinition Generation, string Path)> AddedProtectionPaths(
+        EventTypeToRegister registration,
+        Dictionary<EventTypeId, EventTypeDefinition> stored)
+    {
+        var previous = stored.GetValueOrDefault(registration.Definition.Id);
+        foreach (var generation in registration.Definition.Generations)
         {
-            var generation = new EventTypeGeneration(genDef.Generation);
-            var existingGeneration = storedDefinition.Generations.FirstOrDefault(_ => _.Generation == generation);
-            if (existingGeneration is null)
+            var existing = previous?.Generations.FirstOrDefault(item => item.Generation == generation.Generation);
+            if (existing is null)
             {
                 continue;
             }
 
-            var newSchema = await JsonSchema.FromJsonAsync(genDef.Schema);
-
-            // Storage applies EnsureComplianceMetadata() when deserializing a stored schema
-            // (in EventTypeConverters.ToDefinition). Apply the same transformation to the incoming
-            // schema so both sides go through identical normalization before comparison.
-            newSchema.EnsureComplianceMetadata();
-
-            // Compare for compatibility rather than equality. Two differences cannot change what an already
-            // stored payload means and must not be rejected: a nullability marker ('?' on a format value), which
-            // a Chronicle upgrade can introduce on a schema stored before the marker existed, and an enumeration
-            // that only gained members or had members renamed - neither moves an existing member off the
-            // underlying value a stored payload carries. Everything else, including a member that disappeared or
-            // was renumbered, still needs a new generation.
-            var refined = existingGeneration.Schema.MorePrecise(newSchema);
-            if (!existingGeneration.Schema.IsCompatibleWith(refined))
+            foreach (var path in existing.Schema.AddedProtectionMetadataPaths(generation.Schema))
             {
-                throw new EventTypeSchemaChanged(eventType.Type.Id, genDef.Generation);
+                yield return (generation, path);
             }
+        }
+    }
+
+    static async Task AppendFor(IEventSequence systemEventSequence, NewGenerations newGenerations)
+    {
+        var eventSourceId = (EventSourceId)newGenerations.EventTypeId.Value;
+
+        if (!newGenerations.EventTypeAlreadyStored)
+        {
+            var firstGeneration = newGenerations.Generations.OrderBy(_ => _.Generation.Value).First();
+            await systemEventSequence.Append(
+                eventSourceId,
+                new EventTypeAdded(newGenerations.EventTypeId, firstGeneration.Generation, firstGeneration.Schema));
+            return;
+        }
+
+        foreach (var (generation, schema) in newGenerations.Generations)
+        {
+            await systemEventSequence.Append(
+                eventSourceId,
+                new EventTypeGenerationAdded(newGenerations.EventTypeId, generation, schema));
         }
     }
 
@@ -458,18 +391,9 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
     {
         foreach (var registration in registrations)
         {
-            var previous = stored.GetValueOrDefault(registration.Definition.Id);
-            foreach (var generation in registration.Definition.Generations)
+            foreach (var (generation, path) in AddedProtectionPaths(registration, stored))
             {
-                var existing = previous?.Generations.FirstOrDefault(item => item.Generation == generation.Generation);
-                if (existing is null)
-                {
-                    continue;
-                }
-                foreach (var path in existing.Schema.AddedProtectionMetadataPaths(generation.Schema))
-                {
-                    _logger.ComplianceMetadataAddedToExistingGeneration(registration.Definition.Id.Value, generation.Generation.Value, path);
-                }
+                _logger.ComplianceMetadataAddedToExistingGeneration(registration.Definition.Id.Value, generation.Generation.Value, path);
             }
         }
     }
@@ -487,36 +411,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         foreach (var newGenerations in withNewGenerations)
         {
-            var eventSourceId = (EventSourceId)newGenerations.EventTypeId.Value;
-
-            if (!newGenerations.EventTypeAlreadyStored)
-            {
-                var firstGeneration = newGenerations.Generations.OrderBy(_ => _.Generation.Value).First();
-                await systemEventSequence.Append(
-                    eventSourceId,
-                    new EventTypeAdded(newGenerations.EventTypeId, firstGeneration.Generation, firstGeneration.Schema));
-                continue;
-            }
-
-            foreach (var (generation, schema) in newGenerations.Generations)
-            {
-                await systemEventSequence.Append(
-                    eventSourceId,
-                    new EventTypeGenerationAdded(newGenerations.EventTypeId, generation, schema));
-            }
+            await AppendFor(systemEventSequence, newGenerations);
         }
     }
-
-    /// <summary>
-    /// Represents the generations of an event type that are not yet stored, and whether the event type itself is
-    /// already stored - which is what decides between an <see cref="EventTypeAdded"/> and an
-    /// <see cref="EventTypeGenerationAdded"/> system event.
-    /// </summary>
-    /// <param name="EventTypeId">The <see cref="EventTypeId"/> the generations belong to.</param>
-    /// <param name="EventTypeAlreadyStored">Whether the event type is already stored.</param>
-    /// <param name="Generations">The generations that are not yet stored, with their schema as it came in.</param>
-    sealed record NewGenerations(
-        EventTypeId EventTypeId,
-        bool EventTypeAlreadyStored,
-        IReadOnlyList<(EventTypeGeneration Generation, string Schema)> Generations);
 }

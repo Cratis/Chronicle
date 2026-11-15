@@ -35,4 +35,9 @@ public record HandleEventsForPartitionArguments(
     /// Gets the deferral that owns the recovery, or null when not deferred.
     /// </summary>
     public Guid? DeferralId { get; init; }
+
+    /// <summary>
+    /// Gets the replay operation that scheduled the step, or null when it was not scheduled by a replay.
+    /// </summary>
+    public ReplayEpoch? ReplayEpoch { get; init; }
 }

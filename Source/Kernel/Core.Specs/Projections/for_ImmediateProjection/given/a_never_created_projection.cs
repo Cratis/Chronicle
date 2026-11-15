@@ -61,7 +61,8 @@ public class a_never_created_projection : an_immediate_projection
             Substitute.For<ILocalSiloDetails>(),
             compliance,
             Substitute.For<IMaterializedReadModelStore>(),
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            NamespaceCasingContext.Create());
     }
 
     protected async Task Read()

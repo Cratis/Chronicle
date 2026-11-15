@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Alerts;
 using Cratis.Chronicle.Storage.Changes;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Keys;
 using Cratis.Chronicle.Storage.Observation;
@@ -15,7 +17,6 @@ using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Recommendations;
 using Cratis.Chronicle.Storage.Seeding;
 using Cratis.Chronicle.Storage.Sinks;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Storage;
 
@@ -35,6 +36,12 @@ public interface IEventStoreNamespaceStorage
     /// </summary>
     /// <exception cref="Occurrences.OccurrencesStorageNotSupported">The custom provider has not implemented schedule storage.</exception>
     Occurrences.IScheduleStorage Schedules => throw new Occurrences.OccurrencesStorageNotSupported();
+
+    /// <summary>
+    /// Gets the staging storage for import sessions.
+    /// </summary>
+    /// <exception cref="Imports.ImportStorageNotSupported">The custom provider has not implemented import staging.</exception>
+    Imports.IImportStorage Imports => throw new Imports.ImportStorageNotSupported();
 
     /// <summary>
     /// Gets the <see cref="IEventSequenceStorage"/> for the event store namespace.
@@ -125,6 +132,11 @@ public interface IEventStoreNamespaceStorage
     /// Gets the <see cref="IProjectionFuturesStorage"/> for the event store namespace.
     /// </summary>
     IProjectionFuturesStorage ProjectionFutures { get; }
+
+    /// <summary>
+    /// Gets the namespace-scoped permanent event sequence mutation registry.
+    /// </summary>
+    IEventSequenceMutationRegistry EventSequenceMutations => UnsupportedEventSequenceMutationRegistry.Instance;
 
     /// <summary>
     /// Get the event sequences that exist for the event store namespace.

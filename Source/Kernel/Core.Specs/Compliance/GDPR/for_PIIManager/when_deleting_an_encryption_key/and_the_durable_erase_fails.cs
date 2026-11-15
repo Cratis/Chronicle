@@ -18,7 +18,7 @@ public class and_the_durable_erase_fails : given.a_pii_manager
 
     void Establish() =>
         _keyStore
-            .DeleteFor(EventStore, EventStoreNamespace, Identifier)
+            .DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>())
             .ThrowsAsync(new EncryptionKeyErasureIncomplete(Identifier, [new StoreUnreachable()]));
 
     async Task Because() => _error = await Catch.Exception(() => _manager.DeleteEncryptionKeyFor(Identifier));

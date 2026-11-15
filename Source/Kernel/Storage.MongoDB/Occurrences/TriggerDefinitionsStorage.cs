@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Occurrences;
 /// <param name="database">The event-store database.</param>
 public class TriggerDefinitionsStorage(IMongoDatabase database) : ITriggerDefinitionsStorage
 {
-    readonly IMongoCollection<BsonDocument> _definitions = database.GetCollection<BsonDocument>("trigger-definitions");
+    readonly IMongoCollection<BsonDocument> _definitions = database.GetCollection<BsonDocument>(WellKnownCollectionNames.TriggerDefinitions);
 
     /// <inheritdoc/>
     public async Task<TriggerDefinition?> Get(TriggerId id)

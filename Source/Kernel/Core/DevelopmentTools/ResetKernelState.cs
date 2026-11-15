@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.DevelopmentTools;
 /// </summary>
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Security.DestructiveOperation]
 public record ResetKernelState
 {
     /// <summary>

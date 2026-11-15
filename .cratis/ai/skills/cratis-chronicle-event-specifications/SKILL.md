@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-event-specifications
-description: Specify event-append behavior with EventScenario from Cratis.Chronicle.Testing — seeding prior events through Given, appending through When or the event log, and asserting on the append result including constraint violations. Use when the behavior under specification is what reaches the event store. Do not use for command handling or for read-model projection behavior.
+description: Use when specifying Chronicle event appends or constraint violations through the in-process append path. Not for command handling or how events become read-model state.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-event-specifications/SKILL.md -->
@@ -10,6 +10,11 @@ license: MIT
 `EventScenario` runs the append path in-process. No Chronicle server, no
 database, no network — an empty event log at sequence number zero, with the
 application's constraints discovered and active.
+
+Specify every constraint with an `EventScenario`: one class for the violation
+and one for the nearest non-violation. A constraint is enforced at append, so no
+plain call or substituted event store proves it. Pure decisions around it are
+plain calls; see the [decision table](../../rules/specs.scenarios.csharp.md).
 
 ## Verified product sources
 
@@ -53,10 +58,11 @@ version. Never translate an assertion name from memory.
   (`When`, or `EventLog.Append` without a `concurrencyScope`) can never report
   `HasConcurrencyViolations`. Only an append that passes an explicit scope on
   `scenario.EventLog.Append(...)` reaches the in-process validator at all — and
-  that is a spec of the scope you hand-built, not of the application's strategy. Specify concurrency against
-  the real kernel with an out-of-process integration specification, and do not
-  write a scenario specification that looks like it covers it — it would pass
-  vacuously, which is worse than not having one.
+  that is a spec of the scope you hand-built, not of the application's strategy. The platform concurrency/guard matrix belongs only in Arc/Chronicle specs,
+  with real-kernel integration where required. Application decisions use direct
+  `Handle()`/validator calls with supplied state plus the one cheap assembly-level
+  shape-admission spec in [specs.scenarios.csharp.md](../../rules/specs.scenarios.csharp.md).
+  A default scenario must not claim concurrency coverage — it would pass vacuously.
 
 ## Step 1 — Create the scenario
 
@@ -224,6 +230,6 @@ assert the value can be claimed again.
 ## How it is proven
 
 `dotnet build` in Debug (which compiles the `#if DEBUG` specification code) and
-`dotnet test`, both clean. A constraint specification is only meaningful if it
+the owning project's built spec executable (see [specs.csharp](../../rules/specs.csharp.md)), both clean. A constraint specification is only meaningful if it
 has been seen to fail: remove the seeding `Given` once and confirm the
 specification goes red before trusting it green.

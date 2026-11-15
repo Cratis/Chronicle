@@ -6,10 +6,16 @@
   href: appending.mdx
 - name: Appending with tags
   href: appending-with-tags.mdx
+- name: Tag enrichers
+  href: event-tag-enrichers.mdx
+- name: Audiences
+  href: audiences.mdx
 - name: Filtering
   href: filtering/toc.yml
 - name: Appending many
   href: appending-many.mdx
+- name: Importing
+  href: importing.mdx
 - name: Transactions
   href: transactions.mdx
 - name: Observing appends
@@ -28,7 +34,11 @@
   href: schema-representation.mdx
 - name: Revision
   href: revision.md
+- name: Compensation
+  href: compensation.md
 - name: Redaction
   href: redaction.mdx
+- name: Copying events
+  href: copying.mdx
 - name: Public events
   href: public-events.md

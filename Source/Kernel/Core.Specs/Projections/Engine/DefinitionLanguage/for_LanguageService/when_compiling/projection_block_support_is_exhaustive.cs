@@ -22,11 +22,22 @@ public class projection_block_support_is_exhaustive : for_LanguageService.given.
         [typeof(ProjectionVariantSyntax)] = "variant CompanyReadModel\n  enters on TestEvent"
     };
 
+    /// <summary>
+    /// The blocks of a graph projection. They are lowered by the graph projection path and never appear in a read model projection.
+    /// </summary>
+    static readonly HashSet<Type> _graphBlocks =
+    [
+        typeof(GraphNodeBlockSyntax),
+        typeof(GraphEdgeBlockSyntax),
+        typeof(GraphFromSyntax),
+        typeof(GraphRemoveSyntax)
+    ];
+
     [Fact]
     void should_classify_every_concrete_projection_block()
     {
         var concrete = typeof(ProjectionBlockSyntax).Assembly.GetTypes()
-            .Where(_ => _.IsSubclassOf(typeof(ProjectionBlockSyntax)) && !_.IsAbstract)
+            .Where(_ => _.IsSubclassOf(typeof(ProjectionBlockSyntax)) && !_.IsAbstract && !_graphBlocks.Contains(_))
             .ToHashSet();
         concrete.SetEquals(ProjectionValidator.ProjectionBlockSupport.Keys).ShouldBeTrue();
         concrete.SetEquals(_fixtures.Keys).ShouldBeTrue();

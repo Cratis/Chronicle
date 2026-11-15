@@ -1,19 +1,14 @@
 ---
-description: How Chronicle preserves each event's compliance identity and copies the subject's encryption key when subscriptions forward events between event stores.
+title: Chronicle subscriptions and PII protection
+description: Chronicle preserves subject identity when forwarding events and copies missing encryption keys without restoring keys for erased subjects.
 ---
-# Compliance and PII
-
-When subscriptions forward events from a source event store outbox to a target event store inbox, Chronicle preserves the compliance identity of every event — and copies the subject's encryption key along with it, unless that subject has been erased in the target. Both halves matter for right-to-erasure, and this page covers what each of them does.
+Cratis Chronicle preserves an event's subject when a subscription forwards it to another event store. For personally identifiable information (PII), Chronicle also copies the subject's encryption key if the target has no key and permits one. This keeps forwarding tied to the subject's identity without restoring a key after erasure.
 
 ## What is preserved during forwarding
 
-For each forwarded event, Chronicle preserves:
+The forwarded event retains `EventContext.Subject`. Chronicle derives the encryption key identifier from that subject in both stores, so the target protects personal data under the same subject identity.
 
-- **Subject** from `EventContext.Subject`
-- **Encryption key identity** derived from that subject
-- **Encryption key availability** in the target event store namespace when missing
-
-The subject travels with the event, so a person's data is keyed to the same identity in both event stores and every event that touches them is protected by the same compliance decisions.
+Key storage is scoped to an event store and namespace. Forwarding can therefore leave a subject's key in more than one store, even if your application only appended that subject's events to the source. Erasure must reach those copies too.
 
 ## Forwarding behavior
 
@@ -21,21 +16,20 @@ When an outbox event is forwarded to an inbox:
 
 1. Chronicle uses the event subject as the compliance identity.
 2. Chronicle checks whether the target store namespace already has a key for that identity.
-3. If the target key is missing, Chronicle checks whether the subject was **erased** there. If it was, no key is copied and the refusal is logged.
-4. Otherwise, if the source key exists, Chronicle copies it to the target store namespace and logs that it did so.
+3. If the target key is missing, Chronicle checks the subject's erasure record. If erasure blocks a new key, no key is copied and the refusal is logged.
+4. Otherwise, if the source key exists, Chronicle copies it to the target store namespace and logs the copy. An existing target key is kept.
 5. Chronicle appends the event to the inbox with the original subject preserved.
 
-Step 4 is what makes the two event stores share one key pair per subject. It is not what makes the forwarded payload readable: the forwarding subscriber receives events already decrypted, and the append in step 5 re-encrypts every `[PII]` value under whatever key the target store holds for that subject. Forwarding works either way; the copy is what keeps the *same* key on both sides.
+The forwarding subscriber receives events with protected values already decrypted. The inbox append encrypts each `[PII]` value again using the target's key for that subject. Copying supplies the source key when the target lacks one; it does not replace a key the target already holds or make the inbox append bypass PII protection.
 
 ## Why this matters for erasure
 
-The copy means a subject's key can live in more event stores than you ever appended to. Chronicle handles both consequences of that:
+Erasing a subject through one event store attempts erasure across every event store in that namespace. Chronicle records that new keys are blocked before deleting the keys, so forwarding cannot copy a surviving key back into an erased store. A partial failure is reported rather than treated as completed erasure; follow [Erasing a subject](../compliance/erasing-a-subject) to handle that result.
 
-- **An erasure covers every event store in the namespace**, which is exactly how far the copy can reach. Erasing through any one event store reaches them all — see [Erasing a subject](../compliance/erasing-a-subject).
-- **The copy cannot resurrect an erased key.** Step 3 above is the reason. Before the erasure was recorded in the target, "the target has no key" was indistinguishable from "the target never had one" — which is precisely the state an erasure creates, so a forwarded event copied the survivor back in and made already-shredded personal data readable again.
+This scope matters when deciding where to erase: request erasure once per namespace, not separately for each subscription. Data your consumers copied into read models or external systems still needs its own handling.
 
 > [!IMPORTANT]
-> A forwarded event that carries `[PII]` for an erased subject cannot be appended in the target event store: there is no key to protect it with, and Chronicle will not mint one for an erased subject. The observer partition for that event source enters a failed state and the rest of the subscription keeps flowing. Either stop producing that subject's personal data, or authorize a new key with `AllowNewEncryptionKeyFor`.
+> A forwarded event that carries `[PII]` for an erased subject cannot be appended in the target event store while new keys are blocked. The observer partition for that event source enters a failed state; other partitions can continue. Stop producing that subject's personal data, or deliberately authorize a new key with `AllowNewEncryptionKeyFor`. Authorization permits future protected values; it does not recover the erased key or old personal data.
 
 ## Observing the copy
 
@@ -54,14 +48,13 @@ Did not copy a subject's encryption key from event store 'Sales' to event store 
 namespace 'Default' while forwarding events, because that subject was erased in the target
 ```
 
-The subject is deliberately left out of both. It is the identity the personal data belongs to, and a log entry naming it is unencrypted personal data that outlives the erasure the key deletion performs.
+Neither message includes the subject. Logging that identity would create an unencrypted copy of personal data outside the protection of the deleted key. Use the store names and namespace to trace where key propagation occurred.
 
 ## Practical guidance
 
-- Always set an explicit subject for events that carry compliance-protected data.
-- Use stable subject values per real-world identity (for example, a person identifier).
-- Treat key propagation as a runtime safeguard, not a replacement for your compliance design.
-- Erase once per namespace, not once per event store — and quiesce or expect failed partitions for any subject still being forwarded.
+Set an explicit, stable subject for events that carry personal data, such as the identifier of the person the data belongs to. The subject connects protection and erasure across the stores that receive those events.
+
+Before erasing a subject, stop publishing their personal data or plan for the affected forwarding partitions to fail. If forwarding has already failed, use [Subscription recovery](recovery.mdx) to distinguish the source forwarding observer from the consumer's inbox observers before retrying or replaying.
 
 ## See also
 

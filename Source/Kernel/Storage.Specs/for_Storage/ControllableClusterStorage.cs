@@ -19,6 +19,8 @@ public sealed class ControllableClusterStorage : IClusterStorage, IDisposable
 
     public bool RendezvousOnGetEventStores { get; set; }
 
+    public bool RejectCreation { get; set; }
+
     public bool CallersWereReleased => _callersReleased.IsSet;
 
     public IEnumerable<IEventStoreStorage> CreatedStorages => _createdStorages;
@@ -46,6 +48,11 @@ public sealed class ControllableClusterStorage : IClusterStorage, IDisposable
 
     public IEventStoreStorage CreateStorageForEventStore(EventStoreName eventStore, SinksFactory sinksFactory)
     {
+        if (RejectCreation)
+        {
+            throw new InvalidOperationException("The name cannot be resolved.");
+        }
+
         if (!_available.TryDequeue(out var storage))
         {
             throw new InvalidOperationException("The spec did not provide enough event store storage instances.");

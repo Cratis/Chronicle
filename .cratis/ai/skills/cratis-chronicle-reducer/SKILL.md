@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-reducer
-description: Write a Chronicle IReducerFor reducer when model-bound projection attributes and the fluent IProjectionFor builder cannot express a read-model state transition. Covers the admission test, the exact accepted method signatures, the nullable-current requirement, deletion, passivity and event filtering. Use only after the projection options are genuinely exhausted; do not use for ordinary event-to-property mapping.
+description: Use when a Chronicle read-model transition needs branching, calculations or guards over prior state, or a reducer's discovery and delivery need diagnosis. Not for ordinary event-to-property mappings or external side effects.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-reducer/SKILL.md -->
@@ -246,6 +246,20 @@ same store catalog: `AmbiguousReadModelBuilder` rejects it. `[Passive]`, sequenc
 selection, filters and `[Reducer]` alone do not establish projection ownership.
 Remove the old builder when switching; registration is not a data migration.
 
+## Partition delivery
+
+Requires Chronicle 19.90.0 for concurrent .NET reducer partitions.
+
+Different partitions of one .NET reducer can run at the
+same time; batches for the same partition remain in arrival order. Keep shared
+collaborators thread-safe, or set
+`ChronicleOptions.Reducers.MaxConcurrentPartitions = 1`. The default is processor
+count capped at 8; values below 1 are refused. A global ordering assumption is
+not justified by per-partition ordering. Verified in the tagged sources listed
+by [connection options](../cratis-chronicle-client-dotnet/references/connection-options.md):
+`Source/Clients/DotNET/Reducers/ReducerOptions.cs`, `Reducers.cs` and
+`Observation/PartitionedDeliveryScheduler.cs`.
+
 ## Replay
 
 Read [references/replay-hooks-and-definition-changes.md](references/replay-hooks-and-definition-changes.md) when a self model needs `BeginReplay`/`EndReplay` hooks (they return exactly `Task`; do not assume delivery is exactly once) or when a code, key or filter change must replay (`observers.definitionEvolution`). Requires Chronicle 19.29.4 for method-fingerprint change detection; assembly versions are ignored.
@@ -258,8 +272,8 @@ Read [references/filtering.md](references/filtering.md) when restricting which e
 
 Start with `Specification` plus a direct call for pure reducer decisions:
 pass the event and current state explicitly and assert the returned next state.
-Add `ReadModelScenario<TReadModel>` only where event dispatch, filtering,
-metadata or read-model wiring contribute proof; drive the event sequence and
+Add one `ReadModelScenario<TReadModel>` per reducer for event dispatch, filtering,
+metadata and read-model wiring (the [decision table](../../rules/specs.scenarios.csharp.md)); drive the event sequence and
 assert on the resulting instance there. For the self example:
 
 Read [references/specification-example.md](references/specification-example.md) when you need a worked direct-call and `ReadModelScenario` spec.

@@ -5,7 +5,7 @@ One complete document with every construct family. Design mode, not executable. 
 
 Binding blockers in this legacy control without protected-read opt-in: unquoted
 import, legacy `reads` (PLAY0271), condition-only `starts with` (PLAY0268).
-Property/concept text rules bind v24; eligible protected reads bind v25. Caller-supplied collection equality filters bind as ESM v14; context and single-result filters remain blocked. Executable shapes are in the sibling examples. `RecordingAPayment` lists the `InvoiceClosed` cascade; an older bundled compiler rejected it with a false PLAY0285 ("outcome cannot be produced by 'RecordPayment'").
+Property/concept text rules bind v24; eligible protected reads bind v25. Caller-supplied collection equality filters bind as ESM v14; context and single-result filters remain blocked. Executable shapes are in the sibling examples. `RecordingAPayment` states only `PaymentRecorded`: a specification runs only its own slice (Screenplay decision 0115), so `ReconcilingAPayment` states the hand-over with `then invokes CloseInvoice` and `ClosingAnInvoice` states `InvoiceClosed`.
 
 Concept compliance itself binds as ESM v13; reasons remain report-only PLAY0270. Stage renders v13 concept
 protection. Binder-only PLAY0268 refusals and subject-lineage limits: command-surface `references/compliance.md`.
@@ -92,7 +92,10 @@ module Billing
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
           number    = "INV-000123"
           contact   = "ada@example.com"
-          lines     = [{"sku": "A-1", "quantity": 2}]
+          lines
+            item
+              sku      = "A-1"
+              quantity = 2
         then InvoiceRegistered
           for "9c858901-8a57-4791-81fe-4c455b099bc9"
           number       = "INV-000123"
@@ -106,7 +109,7 @@ module Billing
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
           number    = "INV-000000"
           contact   = "ada@example.com"
-          lines     = []
+          lines none
         then error "Reserved number"
 
       specification RefusingAGuest
@@ -117,7 +120,7 @@ module Billing
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
           number    = "INV-000123"
           contact   = "ada@example.com"
-          lines     = []
+          lines none
         then denied
 
       specification RejectingAnEmptyEmail          // one concept rejection spec, through this command
@@ -128,7 +131,7 @@ module Billing
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
           number    = "INV-000123"
           contact   = ""
-          lines     = []
+          lines none
         then error "An email is required"
 
     slice StateChange CancelInvoice
@@ -171,7 +174,8 @@ module Billing
         data InvoiceRow[] via query ListInvoices
         table InvoiceRow
           column number label "Number"
-        action RegisterInvoice
+        action RegisterInvoice for screen
+          label "Register invoice"
       specification ListingAnInvoice
         given caller                                  // module + feature gates apply to the query too
           authenticated
@@ -226,9 +230,7 @@ module Billing
         then PaymentRecorded
           for "0b6f3f7e-3c1e-4a53-9f7e-2a1c3b4d5e6f"
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
-          amount    = 100
-        then InvoiceClosed                            // ESM v6: the Reconciler cascade (amount > 0)
-          for "9c858901-8a57-4791-81fe-4c455b099bc9"
+          amount    = 100                             // the Reconciler's InvoiceClosed is another slice's fact (decision 0115)
 
 module Housekeeping                                   // no gates: this reaction declares no `runs as`, so its `invokes` has no caller
   description "Background follow-up"
@@ -286,8 +288,8 @@ module Housekeeping                                   // no gates: this reaction
           for "0b6f3f7e-3c1e-4a53-9f7e-2a1c3b4d5e6f"
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
           amount    = 100
-        then InvoiceClosed
-          for "9c858901-8a57-4791-81fe-4c455b099bc9"
+        then invokes CloseInvoice                     // ESM v34: the hand-over; CloseInvoice's slice proves InvoiceClosed
+          invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"
 
     slice Translate LegacySync
       capture LegacyInvoices

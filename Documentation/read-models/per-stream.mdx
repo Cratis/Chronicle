@@ -1,9 +1,9 @@
 ---
-title: Read models scoped to one event stream
-description: Declare a passive, source-keyed model for a monthly rule and read only its declared event stream.
+title: Scope a Cratis Chronicle read model to one event stream
+description: Declare a Cratis Chronicle read model for one account's monthly stream, read that stream's state, and guard a withdrawal against concurrent writes.
 ---
 
-Use a per-stream read model when a rule depends on folded state for one stream, such as withdrawals for one account in one month. A whole-account balance would mix months; keying only by month would collide across accounts. Keep the account as the model's `Id` and scope the fold to the stream instead.
+Use a per-stream read model in Cratis Chronicle when a rule depends on one stream instance, such as withdrawals for one account in one month. Each read folds that stream's events, applying them in order to compute state. Keep the account as the model's `Id` and select the month in the read: a whole-account total would mix months, while a model keyed only by month could collide across accounts.
 
 | Your rule needs | Use |
 |---|---|
@@ -21,11 +21,13 @@ This example limits withdrawals to 10,000 in `BankAccount/Transactions/2026-10`.
 
 <ChronicleClientTabs snippet="read-models/per-stream/monthly-limit" />
 
-The attribute makes both model-bound and fluent projections **passive**: there is no stored account instance that could accumulate several months. `MonthlyWithdrawals.Id` remains the account ID. Each read folds only that account, the declared event source type, the stream type and the requested month.
+The attribute makes both model-bound and fluent projections passive, so reads compute state from events rather than a stored account instance that could accumulate several months. `MonthlyWithdrawals.Id` remains the account ID. The read selects the account, declared event source type, stream type and requested month together.
 
-`Withdraw` checks the folded total and carries the decision read into the append. A matching withdrawal appended after the read makes the append fail with a concurrency violation; it writes nothing. A withdrawal in `2026-11` does not affect this fold or invalidate its guard. Check `WithdrawalOutcome.Append.IsSuccess` before treating the withdrawal as accepted; after a conflict, read again and re-evaluate the rule rather than resubmitting a stale decision.
+`Withdraw` checks the computed total and carries the decision read into the append. A matching withdrawal appended after the read makes the guarded append fail with a concurrency violation and write nothing. Appending a withdrawal in `2026-11` does not affect October's fold or invalidate its stream guard.
 
-`ForAccount` uses the stream-aware `IReadModels.GetInstanceById<T>(EventSourceId, EventStreamId)` overload. This is a **plain read**: it supplies the same stream instance for a query but guards no later append. When the stream has not created an instance, it returns null.
+If the method returns `LimitReached`, no append was attempted. Otherwise, check `WithdrawalOutcome.Append.IsSuccess` before treating the withdrawal as accepted. After a conflict, read again and re-evaluate the limit rather than resubmitting the old decision.
+
+`ForAccount` uses the stream-aware `IReadModels.GetInstanceById<T>(EventSourceId, EventStreamId)` overload. Use this plain read to display the same monthly state without guarding a later append. It returns `null` when the selected events have not created an instance.
 
 That overload throws `DecisionReadRefused` with `StreamScopeNotSupported` when the `IReadModels` implementation does not support stream scope. The interface's default implementation always throws it, so a custom or test double of `IReadModels` must override the overload. The client's own implementation also throws it when the kernel does not acknowledge stream scope.
 
@@ -47,6 +49,10 @@ Supply a specific month. `EventStreamId.Default` does **not** narrow by stream I
 
 The declaration's event source type is part of both the fold and the guard. An event written to `Transactions/2026-10` **without** the `BankAccount` source type is neither folded nor guarded. Every writer participating in this rule must use the definition's route and protect its decision. See [event source definitions](../event-sources/defining.mdx).
 
-Reading a whole-source model as well, or another stream for the same source, widens the merged guard to the whole source. Source-level declared concurrency can also widen it. That adds conflicts; it does not lose protection. A per-stream model does not promise a narrow guard when other enrolled reads or declared concurrency require more history.
+A decision can depend on more than one read. Adding a whole-source read, or a read of another stream for the same source, widens the merged guard to the whole source. Source-level declared concurrency can widen it too. That can produce more conflicts without losing protection; the per-stream declaration does not override the other state the decision depends on.
 
-Stream-scoped reads require a kernel that acknowledges stream scope. An older kernel refuses with `StreamScopeNotSupported` rather than returning a whole-source fold. Revision, redaction, external data and definition changes remain outside the guard. See [Costs and limits](../dynamic-consistency-boundary/limits.mdx#what-is-outside-the-guard). Keep histories short enough to fold on demand; this is not a replacement for materialized list or live queries.
+Stream-scoped reads require a kernel that acknowledges stream scope. An older kernel refuses with `StreamScopeNotSupported` rather than returning a whole-source fold.
+
+On a kernel that reports a mutation epoch, a sequence-wide marker for changes to existing history, revision or redaction can also invalidate the guard even outside the selected stream. Without that marker, the guard detects appends, not changes to existing events. External data and definition changes remain outside it; see [Costs and limits](../dynamic-consistency-boundary/limits.mdx#what-is-outside-the-guard).
+
+Each read processes the selected history again. Keep it short enough for on-demand use, and use [materialized paging](materialized-pagination.mdx) or [collection observation](observing-read-models.mdx) for stored lists rather than treating a per-stream model as a list query.

@@ -32,6 +32,8 @@ public class all_dependencies_with_configured_sink : Specification
 
     protected virtual SinkTypeId DefaultSinkTypeId => WellKnownSinkTypes.MongoDB;
 
+    protected virtual string DefaultSinkName => string.Empty;
+
     void Establish()
     {
         _eventStore = Substitute.For<IEventStore>();
@@ -72,7 +74,7 @@ public class all_dependencies_with_configured_sink : Specification
             _reducers,
             _eventTypes,
             _schemaGenerator,
-            Options.Create(new ChronicleOptions { DefaultSinkTypeId = DefaultSinkTypeId }),
+            Options.Create(new ChronicleOptions { DefaultSinkTypeId = DefaultSinkTypeId, DefaultSinkName = DefaultSinkName }),
             _jsonSerializerOptions,
             _readModelWatcherManager,
             _reducerObservers,

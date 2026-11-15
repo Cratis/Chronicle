@@ -29,6 +29,15 @@ public class Storage
     public string ConnectionDetails { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the path of a file holding the <see cref="ConnectionDetails"/>, for instance a mounted Kubernetes Secret.
+    /// </summary>
+    /// <remarks>
+    /// The file is read once at startup and trimmed of a trailing newline. Setting both this and <see cref="ConnectionDetails"/>
+    /// stops startup. See <see cref="ConnectionFiles"/>.
+    /// </remarks>
+    public string ConnectionDetailsFile { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the prefix prepended to every MongoDB database name. Empty preserves the default names.
     /// </summary>
     public string DatabaseNamePrefix { get; init; } = string.Empty;

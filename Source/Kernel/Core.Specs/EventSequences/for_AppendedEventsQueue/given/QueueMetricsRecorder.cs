@@ -10,8 +10,7 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 /// Records the suspected-undelivered measurements a queue reports on its meter, for the one observer the recorder was created for.
 /// </summary>
 /// <remarks>
-/// The queue keeps this counter in a static field bound to the first meter it is used with, so every recorder shares
-/// one <see cref="Meter"/> that is never disposed and tells specs apart by the observer id.
+/// Every recorder shares one <see cref="Meter"/> that is never disposed and tells specs apart by the observer id.
 /// </remarks>
 public sealed class QueueMetricsRecorder : IDisposable
 {
@@ -52,7 +51,7 @@ public sealed class QueueMetricsRecorder : IDisposable
         ObserverId = observerId ?? Guid.NewGuid().ToString();
         _listener.InstrumentPublished = (instrument, listener) =>
         {
-            if (ReferenceEquals(instrument.Meter, SharedMeter) && instrument.Name == instrumentName)
+            if (instrument.Meter.Name == SharedMeter.Name && instrument.Name == instrumentName)
             {
                 listener.EnableMeasurementEvents(instrument);
             }

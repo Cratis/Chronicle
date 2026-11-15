@@ -1,18 +1,19 @@
 ---
 uid: Chronicle.Compliance.PII
-description: Mark event properties, concepts and value objects as [PII] so Chronicle treats them as personally identifiable information and encrypts them per subject.
+title: Cratis Chronicle PII classification and encryption
+description: Mark personal values in Cratis Chronicle schemas for subject-key encryption. Choose property or concept declarations and account for historical plaintext.
 ---
 
-# Marking data as PII
+Cratis Chronicle encrypts personally identifiable information (PII) when you mark the values in the event schema. Use a C# `[PII]` attribute, Kotlin/Java `@Pii` annotation, TypeScript `@pii()` decorator or Elixir `pii` macro to declare which values need subject-key protection. The kernel encrypts them on append and releases, or decrypts, them on read.
 
-Marking a value `[PII]` tells Chronicle it holds personally identifiable information under GDPR — a C# attribute, a Kotlin/Java `@Pii` annotation, a TypeScript `@pii()` decorator, or an Elixir `pii` macro, depending on the client. When Chronicle sees the marker on an event property or a type, it encrypts the value automatically when the event is written to the event log and decrypts it transparently on read.
+For a reusable personal value, put the declaration on its concept type. For a single field, mark the property. In .NET, a marker on a composite value object reaches its declared leaf values: the individual values inside the object, rather than the object container. Collections have a different boundary, described below.
 
-Personal data rarely sits in a flat list of properties. A date of birth arrives wrapped in a `VerifiedDateOfBirth` value object alongside who verified it; a diagnosis carries the condition and the clinician together. Chronicle follows the marker down through that structure: whether you mark a concept nested inside a value object, or the value object type itself, encryption lands on the individual values at the bottom. The document keeps its shape, each value stays independently encrypted, and the release on read mirrors the encryption on write.
+PII declarations classify data; they do not authorize reads or establish GDPR compliance. Adding a declaration does not encrypt historical plaintext, and erasing a key cannot remove that plaintext or independently retained copies.
 
 <ChronicleClientTabs snippet="compliance/pii/import" />
 
 :::note[Client coverage]
-Chronicle resolves `[PII]` on a property through four paths, checked in this order: a marker on the property itself, a marker on the type that declares the property, a marker on the property's own type (the concept case), and a marker on a matching constructor parameter. C#'s `PIIMetadataProvider` implements all four.
+C#'s `PIIMetadataProvider` can find `[PII]` on the property, the type that declares it, the property's own type or a matching constructor parameter. Client support for these declaration paths differs:
 
 | Path | C# | Kotlin/Java | TypeScript | Elixir |
 |---|---|---|---|---|
@@ -21,11 +22,9 @@ Chronicle resolves `[PII]` on a property through four paths, checked in this ord
 | Property type (concept) | yes | yes | yes | yes |
 | Constructor parameter | yes | yes | no | n/a |
 
-Every client covers the **property** path, and every client resolves a marker on the property's **concept type** — declare it once on the concept and every event and read model using that type is covered. That is the preferred approach; see [Declaring PII on a concept](pii-with-concepts).
+Use a concept declaration for a value that is personal wherever it appears; see [Declaring PII on a concept](pii-with-concepts). Keep that type on each event and read-model property that needs its classification.
 
-Two gaps remain. Elixir has no way to mark a whole multi-field struct as PII in one declaration — a concept wraps a single value, so mark the fields you need. And the TypeScript decorator does not read a constructor parameter, which matters only for classes that take their values positionally rather than as declared properties.
-
-Whichever path applies, the marker lands on the individual **leaf** values in the schema, not on the object that contains them — so a concept nested inside a value object is still encrypted, and the document keeps its shape on release.
+Elixir declarations apply to fields or single-value concepts, not to a whole multi-field struct. TypeScript reads decorators on properties and classes, not constructor parameters. Select the matching client example rather than assuming identical annotation behavior.
 :::
 
 ## Adding PII to an existing event type
@@ -65,7 +64,7 @@ export function pii(details?: string): PropertyDecorator & ClassDecorator
 defmacro pii(field, details \\ "")
 ```
 
-The optional `details` parameter lets you record *why* the value is classified as PII — for example, the legal basis under which it is collected or the retention period. This information is stored in the event schema and can be used by compliance reporting tools.
+The optional text records why the value is classified as personal. It is stored in the schema as documentation, not as an enforced retention policy or proof of a legal basis.
 
 <ChronicleClientTabs snippet="compliance/pii/with-details" />
 
@@ -75,21 +74,20 @@ The optional `details` parameter lets you record *why* the value is classified a
 |---|---|---|
 | `ConceptAs<T>` class | Yes | Preferred approach — marks the concept type itself as PII |
 | Event property | Yes | Marks a single property of an event as PII |
-| Value object class | Yes | Marks every value the type holds as PII, however deeply nested |
+| Value object class | Yes | Marks declared leaf values, within the constraints below |
 | Property typed as a value object | Yes | Same effect, scoped to that one property |
 | Collection property | Yes | The collection is encrypted as a whole — see [Collections are encrypted as a whole](#collections-are-encrypted-as-a-whole) |
 | Geospatial (`Point`, `LineString`, `Polygon`) | **No** | Never classified inside, and marking one encrypts a value that cannot be materialized back after erasure — see [Geospatial values are not looked inside](#geospatial-values-are-not-looked-inside) |
-| Polymorphic base type or dictionary | **No** | Chronicle cannot classify values inside either and fails rather than store them unprotected |
+| Polymorphic value or dictionary | Schema-dependent | Protection needs a schema for the values being stored; a dictionary can use classified `additionalProperties` |
 | `EventSourceId` or `EventSourceId<T>` | **No** | Throws `PIINotSupportedOnEventSourceId` at runtime |
 
-This table describes what the C# client validates. The other clients do not perform every check:
+The `ConceptAs<T>` and value-object rows describe .NET schema generation; check the generated schema for other clients. Event source identifier validation also differs:
 
-- Kotlin/Java, TypeScript, and Elixir don't verify that a `[PII]`-marked type actually extends the client's `ConceptAs<T>` equivalent.
 - Kotlin/Java throw `PiiNotSupportedOnEventSourceId` when `@Pii` is applied to a subclass of `EventSourceId`.
 - Elixir raises an `ArgumentError` at compile time when `pii/0,1` is declared on a concept with `event_source_id: true`.
 - TypeScript throws `PIINotSupportedOnEventSourceId` when `@pii()` is applied to a property named `eventSourceId`, but not when an event-source identifier type is marked.
 
-Treat both restrictions as rules to follow across every client, not ones every client enforces for you today.
+Keep identifiers non-sensitive and readable in every client, whether or not its validation catches a particular declaration.
 
 ## Applying to an event property
 
@@ -101,7 +99,7 @@ When this event is written, `FirstName` and `LastName` are encrypted. `Departmen
 
 ## Applying to a ConceptAs type
 
-The preferred approach is to mark the `ConceptAs<T>` type itself as PII. Every property across every event that uses this type is then automatically encrypted — you declare the rule once and it applies everywhere.
+Mark a `ConceptAs<T>` type when its value is personal wherever it appears. The schema generator can then carry that classification to properties using the type without a repeated annotation. A property changed to an unmarked primitive loses that link.
 
 <ChronicleClientTabs snippet="compliance/pii/concept-level" />
 
@@ -110,11 +108,11 @@ The preferred approach is to mark the `ConceptAs<T>` type itself as PII. Every p
 
 ## Applying to a value object
 
-Not every piece of personal data is a single value. When a whole value object is personal — a diagnosis, a passport, a home address — mark the type itself. Every value it holds is then treated as PII wherever that type appears, without annotating each member.
+In .NET, mark a value object class when all its declared values are personal, such as the condition and clinician in a diagnosis. The schema generator applies the marker to those values wherever the type appears, without an annotation on each member.
 
 <ChronicleClientTabs snippet="compliance/pii/value-object-class" />
 
-Chronicle pushes the marker down to the individual values rather than encrypting the object as one blob. In storage you still see a `Diagnosis` sub-document with a `Condition` and a `DiagnosedBy` field; both hold ciphertext. That matters for more than tidiness: the shape is what lets the read model materialize back into its value-object type, and it keeps each value separately encrypted rather than fused into a single opaque string.
+The marker reaches the individual values rather than encrypting the object as one blob. The stored `Diagnosis` sub-document retains its `Condition` and `DiagnosedBy` fields, each holding ciphertext. Keeping that shape allows release to restore the individual values for materialization into the value-object type.
 
 The same happens when you mark a *property* whose type is a value object — the effect is identical, just scoped to that one property instead of to the type everywhere.
 
@@ -126,27 +124,27 @@ The marker does not have to sit at the top level. A `ConceptAs<T>` marked `[PII]
 
 Here only `dateOfBirth.dateOfBirth` is encrypted. `verifiedBy` sits beside it in the same value object and stays readable, because the concept carries the classification, not its container.
 
-This is what makes concept-level `[PII]` worth reaching for: you declare the rule once on the type, and it holds no matter how the value is later composed into events and read models.
+Keeping the concept type on nested properties lets the schema generator retain the classification as you compose events and read models. Check the resulting schema when converters or dynamic shapes are involved.
 
 ## PII on referenced schema definitions
 
 When a property's schema is a `$ref` to a shared definition, a `[PII]` marker on that definition applies to the property. Chronicle uses the definition's compliance metadata when it writes, releases and compares values.
 
-Pointer references such as `#/$defs/Name` resolve exactly as before. Only when a reference does not resolve that way does Chronicle look for an embedded `$id` resource or a `$anchor` in the same schema document. An anchor is scoped to the resource that declares it, so identically named anchors in different resources do not collide.
+Chronicle first resolves pointer references such as `#/$defs/Name`. If a reference does not resolve that way, it looks for an embedded `$id` resource or a `$anchor` in the same schema document. An anchor is scoped to the resource that declares it, so identically named anchors in different resources do not collide.
 
 Chronicle never fetches external or remote references. A reference that does not resolve inside the document is left unresolved, and an unresolved reference is not treated as protected: only metadata on the property itself applies.
 
 The referenced definition must have a single supported type. If it does not, Chronicle logs a warning, ignores the metadata on the definition and keeps the existing handling. It does not refuse the append.
 
-:::caution[Values written before this release]
-Values written as plaintext under a referenced definition before this release stay readable unchanged. Chronicle does not reject them retroactively and does not re-encrypt them. New writes are encrypted. When comparing, plaintext written earlier and ciphertext written now compare as the same value.
+:::caution[Existing plaintext remains plaintext]
+Values already written as plaintext under a referenced definition stay readable unchanged. Chronicle does not reject or re-encrypt them retroactively. A valid, supported PII reference protects new writes only. Comparison can match an earlier plaintext value with its encrypted equivalent; that does not mean the stored plaintext has been protected.
 :::
 
 ## Constraints
 
 ### EventSourceId is not supported
 
-Applying `[PII]` to a type that inherits from `EventSourceId` or `EventSourceId<T>` throws `PIINotSupportedOnEventSourceId` at runtime:
+In .NET, applying `[PII]` to a type that inherits from `EventSourceId` or `EventSourceId<T>` throws `PIINotSupportedOnEventSourceId` at runtime:
 
 <ChronicleClientTabs snippet="compliance/pii/event-source-id-restriction" />
 
@@ -154,20 +152,18 @@ Event source identifiers are used to look up encryption keys and group events. E
 
 ### Geospatial values are not looked inside
 
-One `[PII]` marker anywhere turns the compliance pass on for the **whole** document, so every other value in that event or read model is visited too. Most of them are ordinary properties the schema declares, and Chronicle walks straight through them looking for markers.
+The compliance pass walks a document's schema to find marked values, but it does not descend into the wire members of a geospatial value. `Point`, `LineString` and `Polygon` use GeoJSON objects with `type` and `coordinates` members; their schemas describe each as one formatted value handled by a converter.
 
-A geospatial value is different. `Point`, `LineString` and `Polygon` are objects on the wire — GeoJSON, a `type` and a `coordinates` pair — but Chronicle stores and materializes each as one typed value, so its schema is a leaf carrying only a `format` and those wire members belong to the type's own converter. The compliance pass stops there and leaves the value exactly as it is: written and read back verbatim, in the clear.
-
-That is normally what you want, because a venue sitting beside a `[PII]` organizer name is public data. Marking the geospatial property `[PII]` is **not** a supported alternative — see [Geospatial values alongside PII](../concepts/geospatial#geospatial-values-alongside-pii) for why.
+An unmarked geospatial property remains in the clear even when a neighboring property carries `[PII]`. Do not assume that location data is public merely because it is unmarked. Marking the geospatial property itself is not a supported alternative for erasure: the erased value cannot be materialized back into that type. See [Geospatial values alongside PII](../concepts/geospatial#geospatial-values-alongside-pii) before storing personal location data.
 
 > [!NOTE]
-> Two other shapes have members the schema does not declare: a polymorphic base type, kept open so a derived payload round-trips verbatim, and a dictionary, whose keys are runtime data rather than declared properties. Chronicle cannot classify values inside either — and rather than write values it was told are personal into the store unprotected, it **fails**: applying compliance to a document holding one raises `CompliancePropertyNotFoundInSchema`. Model the data as a value object with declared properties instead; the marker travels down through anything the schema declares, however deeply nested.
+> A polymorphic value may lack the declared members needed to classify its personal fields. Dictionary keys are also dynamic, but their values can be protected through classified `additionalProperties` metadata. If traversal reaches a property with neither a declared schema nor an additional-properties schema, it throws `SchemaPropertyNotFoundInSchema`. Use a concrete value object with declared members when it makes the protection boundary easier to inspect.
 
 ### Collections are encrypted as a whole
 
-A `[PII]` marker on a collection property behaves differently from one on a value object. The collection is encrypted as a single value rather than element by element, and its shape is restored when it is released. That keeps the data protected, but the individual elements are not separately encrypted and cannot be queried or indexed on the server.
+A `[PII]` marker on a collection property encrypts the collection as one opaque value rather than element by element. Release restores its array shape while the key is available. After key erasure, the whole protected collection is empty, including any non-personal fields inside it. Individual elements of the stored ciphertext cannot be queried or indexed.
 
-When you need per-element encryption, model the collection as its own person-scoped read model keyed by the subject and join at the query edge, rather than nesting it inside a larger document.
+Choose the boundary you need before marking the collection. For a collection-wide boundary, mark the property. For member-level protection, leave the collection unmarked and classify the personal members in its item schema. When ownership belongs to separate people, consider person-scoped read models queried and composed after release.
 
 ## Details parameter
 
@@ -181,4 +177,6 @@ In .NET, non-empty `[ComplianceDetails]` text takes precedence over the text in 
 
 The compliance gRPC `Release` operation remains best-effort by default. Set `ReleaseRequest.Strict` to `true` to fail the entire release when a protected value cannot be decrypted or its subject's key is missing without a recorded erasure. A failed strict release returns `HasError = true`, an empty `Payload`, and the failing property path in `FailedProperties` — never the value or a partially decrypted document. Traversal stops at the first failure, so this list is not an exhaustive inventory. Intentionally erased subjects still release to empty values without an error.
 
-Check that `ReleaseResponse.Strict` is `true` before accepting a strict result. An older server ignores the new request field and does not echo it; a false echo means strict release was not confirmed, even if `HasError` is false.
+Check that `ReleaseResponse.Strict` is `true` before accepting a strict result. A server that does not support strict release ignores the request field and does not echo it; a false echo means strict release was not confirmed, even if `HasError` is false.
+
+For projection storage and application query paths, continue with [Read models and PII](read-models). It explains where release happens automatically and where you must request it yourself.

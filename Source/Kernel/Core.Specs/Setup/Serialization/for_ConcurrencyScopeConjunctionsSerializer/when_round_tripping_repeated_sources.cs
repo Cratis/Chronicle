@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Choreography;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Orleans;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization;
 
@@ -17,7 +17,7 @@ public class when_round_tripping_repeated_sources : Specification
     {
         var services = new ServiceCollection();
         services.AddSingleton(new JsonSerializerOptions());
-        services.AddCratisOrleansSerializers();
+        services.AddCratisChoreographySerializers();
         services.AddSingleton(Substitute.For<Cratis.Chronicle.Json.IExpandoObjectConverter>());
         services.AddSingleton(Substitute.For<Storage.IStorage>());
         services.AddCustomSerializers();

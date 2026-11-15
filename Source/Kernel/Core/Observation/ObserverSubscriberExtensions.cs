@@ -88,6 +88,33 @@ public static class ObserverSubscriberExtensions
     }
 
     /// <summary>
+    /// Hands a page of events spanning partitions to a subscriber and waits for its answer within the timeout.
+    /// </summary>
+    /// <param name="subscriber">The <see cref="IObserverPartitionPageSubscriber"/> to hand the page to.</param>
+    /// <param name="timeout">How long to wait. Zero or less waits without a deadline.</param>
+    /// <param name="batches">The partition batches of the page.</param>
+    /// <param name="context">The <see cref="ObserverSubscriberContext"/> for the delivery.</param>
+    /// <returns>The <see cref="ObserverPageResult"/> with one result per partition.</returns>
+    /// <exception cref="SubscriberCallTimedOut">Thrown when the subscriber does not answer within the timeout.</exception>
+    public static async Task<ObserverPageResult> OnNextPartitionsWithin(
+        this IObserverPartitionPageSubscriber subscriber,
+        TimeSpan timeout,
+        IReadOnlyList<ObserverPartitionBatch> batches,
+        ObserverSubscriberContext context)
+    {
+        var call = subscriber.OnNextPartitions(batches, context);
+        try
+        {
+            return timeout <= TimeSpan.Zero ? await call : await call.WaitAsync(timeout);
+        }
+        catch (TimeoutException) when (timeout > TimeSpan.Zero)
+        {
+            _ = call.ContinueWith(static abandoned => _ = abandoned.Exception, TaskScheduler.Default);
+            throw new SubscriberCallTimedOut(ObserverSubscriberKey.AllPartitions, timeout);
+        }
+    }
+
+    /// <summary>
     /// Gets the keys for the subscriber.
     /// </summary>
     /// <param name="subscriber">The <see cref="IObserverSubscriber"/>.</param>

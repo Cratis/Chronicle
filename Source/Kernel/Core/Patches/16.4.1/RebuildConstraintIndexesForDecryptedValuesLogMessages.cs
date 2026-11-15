@@ -25,7 +25,4 @@ internal static partial class RebuildConstraintIndexesForDecryptedValuesLogMessa
 
     [LoggerMessage(LogLevel.Debug, "Completed RebuildConstraintIndexesForDecryptedValues patch")]
     internal static partial void PatchCompleted(this ILogger<RebuildConstraintIndexesForDecryptedValues> logger);
-
-    [LoggerMessage(LogLevel.Information, "RebuildConstraintIndexesForDecryptedValues cannot be rolled back - constraint values are hashed with SHA-256, which is a one-way transformation")]
-    internal static partial void RollbackNotSupported(this ILogger<RebuildConstraintIndexesForDecryptedValues> logger);
 }

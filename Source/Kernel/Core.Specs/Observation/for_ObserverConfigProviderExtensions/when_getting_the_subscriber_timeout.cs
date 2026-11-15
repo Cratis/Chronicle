@@ -7,6 +7,7 @@ using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Observation.for_ObserverConfigProviderExtensions;
 
+[PerFactSpecificationLifecycle]
 public class when_getting_the_subscriber_timeout : Specification
 {
     static readonly ObserverKey _observerKey = new("observer-id", "event-store", "namespace", EventSequenceId.Log);

@@ -14,11 +14,7 @@ namespace Cratis.Chronicle.Observation;
 internal sealed class SerializedMessages<TMessage>(TMessage initial) : IDisposable
 {
     readonly BehaviorSubject<TMessage> _subject = new(initial);
-#if NET8_0
-    readonly object _lock = new();
-#else
     readonly Lock _lock = new();
-#endif
     bool _disposed;
 
     /// <summary>

@@ -19,6 +19,18 @@ public record Key(object Value, ArrayIndexers ArrayIndexers)
     public static readonly Key Undefined = new(null!, ArrayIndexers.NoIndexers);
 
     /// <summary>
+    /// Gets the kind derived from the runtime type of <see cref="Value"/>, computed on read and not serialized.
+    /// </summary>
+    public KeyKind Kind => Value switch
+    {
+        Guid => KeyKind.Guid,
+        int => KeyKind.Int,
+        long => KeyKind.Long,
+        IDictionary<string, object?> => KeyKind.Composite,
+        _ => KeyKind.String
+    };
+
+    /// <summary>
     /// Implicitly convert from a <see cref="EventSourceId"/> to a <see cref="Key"/>.
     /// </summary>
     /// <param name="eventSourceId"><see cref="EventSourceId"/> to convert from.</param>

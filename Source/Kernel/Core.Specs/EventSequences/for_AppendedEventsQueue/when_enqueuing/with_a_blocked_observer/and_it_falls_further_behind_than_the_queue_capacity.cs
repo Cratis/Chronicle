@@ -24,6 +24,12 @@ public class and_it_falls_further_behind_than_the_queue_capacity : given.a_block
         {
             await _queue.Enqueue([EventFor("partition")]);
             await WaitTill(() => FreeObserverEventCount == batch + 1);
+
+            // The lagging observer holds the first batch before the backlog builds up behind it.
+            if (batch == 0)
+            {
+                await WaitTill(() => !_blockedObserverHandled.IsEmpty);
+            }
         }
 
         await WaitTill(() => _blockedObserver.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(IObserver.CatchUp)));

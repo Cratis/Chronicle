@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences.Concurrency;
 using Cratis.Chronicle.EventSources;
+using Cratis.Chronicle.Imports;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -664,6 +665,27 @@ public interface IEventSequence
     Task Revise(EventSequenceNumber sequenceNumber, object @event);
 
     /// <summary>
+    /// Appends a compensating event for an event that is already in the event sequence.
+    /// </summary>
+    /// <param name="compensationFor"><see cref="EventSequenceNumber"/> of the event to compensate for.</param>
+    /// <param name="event">The compensating event. Its type must be declared with <see cref="Events.CompensationForAttribute{TEventType}"/> for the type of the event being compensated.</param>
+    /// <param name="correlationId">Optional <see cref="CorrelationId"/> of the event. Defaults to <see cref="ICorrelationIdAccessor.Current"/>.</param>
+    /// <param name="tags">Optional collection of tags to associate with the event. Will be combined with any static tags from the event type.</param>
+    /// <param name="occurred">Optional <see cref="DateTimeOffset"/> specifying when the event occurred. If not set, the server will set it to approximately the time of append.</param>
+    /// <returns><see cref="AppendResult"/> with details about whether or not it succeeded and more.</returns>
+    /// <remarks>
+    /// Works like an append, except the event source, event stream and subject are taken from the event being compensated for.
+    /// The original event is never changed; the new event records the original's sequence number as <see cref="Events.EventContext.CompensationFor"/>.
+    /// </remarks>
+    /// <exception cref="CompensationsNotSupported">This implementation does not support compensations.</exception>
+    Task<AppendResult> Compensate(
+        EventSequenceNumber compensationFor,
+        object @event,
+        CorrelationId? correlationId = default,
+        IEnumerable<string>? tags = default,
+        DateTimeOffset? occurred = default) => throw new CompensationsNotSupported(GetType());
+
+    /// <summary>
     /// Redact an event at a specific sequence number.
     /// </summary>
     /// <param name="sequenceNumber"><see cref="EventSequenceNumber"/> to redact.</param>
@@ -679,6 +701,21 @@ public interface IEventSequence
     /// <param name="clrEventTypes">Optionally any specific event types.</param>
     /// <returns>Awaitable <see cref="Task"/>.</returns>
     Task Redact(EventSourceId eventSourceId, RedactionReason reason, params Type[] clrEventTypes);
+
+    /// <summary>
+    /// Copy events from one <see cref="EventSourceId"/> to another within this event sequence, as a durable background job.
+    /// </summary>
+    /// <param name="sourceId">The <see cref="EventSourceId"/> to copy events from.</param>
+    /// <param name="targetId">The <see cref="EventSourceId"/> to append the copies to.</param>
+    /// <param name="clrEventTypes">Optionally the specific event types to copy. When none are given, events of every type are copied.</param>
+    /// <returns>The identifier of the job performing the copy, which can be followed through the jobs service.</returns>
+    /// <remarks>
+    /// The copies are new events appended after the existing ones, so they get new sequence numbers and are observed like any other append.
+    /// The source events are left untouched. The job is durable and resumes after a restart without appending any copy twice.
+    /// </remarks>
+    /// <exception cref="EventCopyNotSupported">The implementation does not support copying events.</exception>
+    Task<Guid> Copy(EventSourceId sourceId, EventSourceId targetId, params Type[] clrEventTypes)
+        => throw new EventCopyNotSupported();
 
     /// <summary>
     /// Complete a stream so that no further events can be appended to it.
@@ -734,4 +771,53 @@ public interface IEventSequence
     /// <returns>The matching closed scopes.</returns>
     /// <exception cref="ClosedStreamScopesNotSupported">The implementation does not support scopes.</exception>
     Task<IImmutableList<ClosedStream>> GetClosedStreams(ClosedStreamScope? within = default) => throw new ClosedStreamScopesNotSupported();
+
+    /// <summary>
+    /// Imports events into the event sequence, reading them lazily as they are uploaded (decision 0023).
+    /// </summary>
+    /// <param name="events">The events, in the order they are to be committed. Each keeps its own occurred time, correlation, causation, caused-by identity, tags and generation.</param>
+    /// <param name="options">Optional <see cref="ImportOptions"/>; by default an invalid event fails the whole import and nothing is committed.</param>
+    /// <param name="progress">Optional <see cref="IProgress{T}"/> receiving the progress the kernel reports.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="ImportResult"/>.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<ImportResult> Import(
+        IAsyncEnumerable<EventForEventSourceId> events,
+        ImportOptions? options = default,
+        IProgress<ImportProgress>? progress = default,
+        CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
+
+    /// <summary>
+    /// Imports events into the event sequence, reading them lazily as they are uploaded (decision 0023).
+    /// </summary>
+    /// <param name="events">The events, in the order they are to be committed.</param>
+    /// <param name="options">Optional <see cref="ImportOptions"/>.</param>
+    /// <param name="progress">Optional <see cref="IProgress{T}"/> receiving the progress the kernel reports.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="ImportResult"/>.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<ImportResult> Import(
+        IEnumerable<EventForEventSourceId> events,
+        ImportOptions? options = default,
+        IProgress<ImportProgress>? progress = default,
+        CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
+
+    /// <summary>
+    /// Begins an import session, for producers that are not a single stream.
+    /// </summary>
+    /// <param name="options">Optional <see cref="ImportOptions"/>.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="IEventImport"/>.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<IEventImport> BeginImport(ImportOptions? options = default, CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
+
+    /// <summary>
+    /// Reattaches to an import session that was begun earlier, for example by a process that stopped while staging.
+    /// </summary>
+    /// <param name="importId">The <see cref="ImportId"/> of the import.</param>
+    /// <param name="options">Optional <see cref="ImportOptions"/>; the import keeps what it was begun with for invalid events.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="IEventImport"/>, continuing after the events the kernel already holds.</returns>
+    /// <exception cref="ImportsNotSupported">This event sequence does not support importing.</exception>
+    Task<IEventImport> BeginImport(ImportId importId, ImportOptions? options = default, CancellationToken cancellationToken = default) => throw new ImportsNotSupported();
 }

@@ -15,4 +15,10 @@ internal static partial class OccurrencesLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Renewal for occurrence {Occurrence} failed; cancelling the attempt")]
     internal static partial void OccurrenceLeaseRenewalFailed(this ILogger logger, Exception exception, string occurrence);
+
+    [LoggerMessage(LogLevel.Debug, "Renewal for occurrence {Occurrence} was unavailable; retrying (attempt {Attempt})")]
+    internal static partial void OccurrenceLeaseRenewalRetrying(this ILogger logger, Exception exception, string occurrence, int attempt);
+
+    [LoggerMessage(LogLevel.Warning, "Lease budget for occurrence {Occurrence} expired without a confirmed renewal; cancelling the attempt")]
+    internal static partial void OccurrenceLeaseBudgetExpired(this ILogger logger, string occurrence);
 }

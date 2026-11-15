@@ -26,7 +26,9 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var failedPartitions = storage.GetEventStore(observerKey.EventStore).GetNamespace(observerKey.Namespace).FailedPartitions;
-        actualGrainState.State = await failedPartitions.GetFor(observerKey.ObserverId);
+        var read = await failedPartitions.GetFor(observerKey.ObserverId);
+        read.MarkAllPersisted();
+        actualGrainState.State = read;
     }
 
     /// <inheritdoc/>
@@ -45,6 +47,12 @@ public class FailedPartitionGrainStorageProvider(IStorage storage) : IGrainStora
             failedPartition.ObserverId = observerKey.ObserverId;
         }
 
-        await failedPartitions.Save(observerKey.ObserverId, actualGrainState.State);
+        // Only what changed since it was last written goes to storage, so a save costs what changed rather than what is held.
+        var changes = actualGrainState.State.GetChangesSincePersisted();
+        if (changes.Partitions.Any() || changes.ResolvedPartitions.Any())
+        {
+            await failedPartitions.Save(observerKey.ObserverId, changes);
+            actualGrainState.State.MarkPersisted(changes);
+        }
     }
 }

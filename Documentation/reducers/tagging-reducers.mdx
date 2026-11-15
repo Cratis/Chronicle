@@ -1,20 +1,21 @@
 ---
-description: Label Chronicle reducers with the [Tag] attribute to organize and find them; tags describe the reducer and do not filter the events it handles.
+title: Cratis Chronicle reducer tags for organization
+description: Label Cratis Chronicle reducers by purpose or domain with descriptive tags. Reducer tags are registration metadata, not filters on incoming events.
 ---
-# Tagging Reducers
 
-Tags provide a way to organize and categorize your reducers for better discoverability and management. By applying the `[Tag]` attribute to your reducer classes, you can assign one or more tags that describe the purpose or domain of the reducer.
+<span id="tagging-reducers"></span>
 
-`[Tag]` and `[Tags]` label the reducer itself. They do not filter which appended events the reducer handles. For event filtering based on appended metadata, see [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), and [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
+Cratis Chronicle reducer tags describe a reducer's purpose or domain so related definitions share recognizable labels. Use them to organize reducers without changing which events update their read models.
 
-Kotlin and Java use repeatable `@Tag` annotations. TypeScript uses `@tag(...)` or `@tags(...)` on
-the reducer class; those labels are sent with its observer registration.
+In .NET, `[Tag]` and `[Tags]` label the reducer class. For a [self-reducing read model](self-reducing-read-models), put the labels on the model instead. Neither form filters incoming events.
 
-For [self reducers](self-reducing-read-models), place descriptive tags on the read model itself. They remain observer labels, not append-time event tags or delivery filters.
+Kotlin and Java use repeatable `@Tag` annotations. TypeScript uses `@tag(...)` or `@tags(...)` on the reducer class. These labels are sent with the reducer's observer registration, the definition that tells Chronicle what the reducer observes.
+
+If your goal is to limit delivery, use [Filter reducers and reactors by tag](../events/filtering/by-tag), [Filter reducers and reactors by event source type](../events/filtering/by-event-source-type), or [Filter reducers and reactors by event stream type](../events/filtering/by-event-stream-type).
 
 ## Adding Tags
 
-You can tag reducers in multiple ways:
+Choose the form that makes the reducer's labels easiest to read. In .NET, `[Tag]` and `[Tags]` can each carry several names, and repeated attributes contribute to the same set of labels.
 
 ### Single Tag
 
@@ -24,7 +25,7 @@ Apply a single tag to your reducer:
 
 ### Multiple Tags (Single Attribute)
 
-Use the params feature to specify multiple tags in a single attribute:
+Pass several tag names to one attribute when they belong together:
 
 <ChronicleClientTabs snippet="reducers/tagging-reducers/multiple-tags-single-attribute" />
 
@@ -42,22 +43,23 @@ Combine both approaches:
 
 ## Best Practices
 
-- **Use meaningful names**: Choose tag names that clearly describe the purpose or domain
-- **Be consistent**: Establish tag naming conventions across your organization
-- **Don't over-tag**: Apply only relevant tags; too many can reduce their usefulness
-- **Group related reducers**: Use tags to group reducers that serve similar purposes
+Choose names that a teammate would use to find related reducers, such as a business domain or a reporting purpose. Reuse the same spelling across those definitions; near-duplicate names split a group that readers expect to be together.
+
+Keep a tag only if it adds a useful distinction. Adding every possible category makes the labels harder to scan without making the reducer's role clearer.
 
 ## Common Tag Examples
 
-Here are some common patterns for tagging reducers:
+The following examples label reducers by their role, such as analytics or compliance. Use them as naming examples, not as categories Chronicle requires:
 
 <ChronicleClientTabs snippet="reducers/tagging-reducers/tag-categories" />
 
-## Querying by Tag
+<span id="querying-by-tag"></span>
 
-Reducer tags describe the reducer and are stored with its definition. Chronicle does not use them to activate or select reducers.
+## What reducer tags change
 
-A reducer can filter on **event** tags to receive only events that carry a given tag. See [Filtering by tag](../events/filtering/by-tag.mdx).
+Reducer tags are stored with the reducer definition. They do not activate a reducer, select it for execution, or change its read model's contents.
+
+To make a read model include only tagged events, use an event filter instead. Continue with [Filtering by tag](../events/filtering/by-tag.mdx) for the delivery rule and append-time metadata it matches.
 
 ## See Also
 

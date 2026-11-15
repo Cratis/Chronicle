@@ -19,7 +19,7 @@ public class when_stopping : Specification
         lifetime.ApplicationStopping.Returns(stopping.Token);
         await started.CancelAsync();
         await stopping.CancelAsync();
-        _result = await new KernelReadinessHealthCheck(new(lifetime)).CheckHealthAsync(new());
+        _result = await new KernelReadinessHealthCheck(given.startup_state.For(lifetime)).CheckHealthAsync(new());
     }
 
     [Fact] void should_report_unhealthy() => _result.Status.ShouldEqual(HealthStatus.Unhealthy);

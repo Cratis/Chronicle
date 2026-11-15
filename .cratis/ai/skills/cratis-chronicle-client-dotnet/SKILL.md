@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-dotnet
-description: Talk to a Chronicle server from a standalone .NET application with the Cratis.Chronicle client - connection strings, ChronicleClient construction outside any host, AddCratisChronicle for a worker or ASP.NET host, [EventType] records, IEventSequence.Append, reactors and reducers found by assembly scanning, the connection lifecycle and registration wait, and the client/server compatibility check. Use when a console, worker, or service app connects to Chronicle directly. Do not use for Arc applications, the Chronicle kernel, or the Kotlin, TypeScript, and Elixir clients.
+description: Use when connecting a standalone .NET console, worker or service directly to Chronicle or diagnosing its client lifecycle. Not for Arc integration, kernel implementation or another language's client.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-dotnet/SKILL.md -->
@@ -225,6 +225,10 @@ if (!result.IsSuccess)
 - The `IEnumerable<EventForEventSourceId>` overload is the way to append across
   several event sources in one batch.
 - **There is no `AppendAnonymous`.** It does not exist anywhere in the product.
+
+For unknown outcomes, `AppendOnce` / `AppendManyOnce`, keyed retry conflicts and
+several concurrency guards for one source, read
+[append outcomes and retry safety](references/append-outcomes.md).
 
 Reading back is on `IEventSequence`: `GetForEventSourceIdAndEventTypes`,
 `HasEventsFor`, `GetFromSequenceNumber`, `GetNextSequenceNumber`, and

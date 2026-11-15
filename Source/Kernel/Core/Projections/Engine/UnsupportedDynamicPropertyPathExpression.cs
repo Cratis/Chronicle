@@ -11,4 +11,4 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// </summary>
 /// <param name="propertyPath">The <see cref="PropertyPath"/> containing the unsupported dynamic segment.</param>
 public class UnsupportedDynamicPropertyPathExpression(PropertyPath propertyPath)
-    : Exception($"Property path '{propertyPath}' contains a dynamic segment that could not be resolved. Supported dynamic segments are of the form '.$eventContext.<property path>'.");
+    : Exception($"Property path '{propertyPath}' contains a dynamic segment that could not be resolved. Supported dynamic segments are of the form '.$eventContext.<event context path>', '.$eventContent.<event property path>' and '.$causedBy.(subject|name|userName)'.");

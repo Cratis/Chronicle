@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -8,7 +9,7 @@ using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
-using Cratis.Orleans.Jobs;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Events.Constraints;
@@ -57,6 +58,13 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<JobId> Reindex(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IReadOnlyCollection<ConstraintDefinitionChange> changes)
+    {
+        var result = await StartReindex(eventStore, @namespace, eventSequenceId, changes, grainFactory.GetJobsManager(eventStore, @namespace));
+        return result.Match(id => id, error => throw new Operator.ConstraintReindexCouldNotBeStarted($"Constraint reindex could not be started: {error}."));
+    }
+
     async Task RebuildStaleIndexes(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
@@ -80,20 +88,25 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
                     continue;
                 }
 
-                await RefreshConstraints(eventStore, @namespace, eventSequenceId);
-
-                logger.StartingReindex(eventStore, @namespace, eventSequenceId);
-                var result = await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(eventSequenceId, changes));
-                if (result.TryGetError(out var error))
-                {
-                    logger.FailedStartingReindex(eventStore, @namespace, eventSequenceId, error.ToString());
-                }
+                await StartReindex(eventStore, @namespace, eventSequenceId, changes, jobsManager);
             }
         }
         catch (Exception ex)
         {
             logger.FailedRebuildingStaleIndexes(eventStore, @namespace, ex);
         }
+    }
+
+    async Task<Result<JobId, StartJobError>> StartReindex(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IReadOnlyCollection<ConstraintDefinitionChange> changes, IJobsManager jobsManager)
+    {
+        await RefreshConstraints(eventStore, @namespace, eventSequenceId);
+        logger.StartingReindex(eventStore, @namespace, eventSequenceId);
+        var result = await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(eventSequenceId, changes));
+        if (result.TryGetError(out var error))
+        {
+            logger.FailedStartingReindex(eventStore, @namespace, eventSequenceId, error.ToString());
+        }
+        return result;
     }
 
     /// <summary>

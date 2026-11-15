@@ -7,6 +7,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 /// The commit never reaches the server: the retry must probe its receipt, find none, and apply the cycle once.
 /// </summary>
 /// <typeparam name="THarness">The database.</typeparam>
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class and_a_transient_failure_precedes_the_commit<THarness> : given.a_cycle_with_failure_injection<THarness>
     where THarness : ISqlSinkHarness
 {

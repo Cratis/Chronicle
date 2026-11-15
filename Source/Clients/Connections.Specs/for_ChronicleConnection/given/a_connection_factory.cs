@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Connections.for_ChronicleConnection.given;
 public class a_connection_factory : Specification
 {
     protected IConnectionLifecycle _lifecycle;
+    protected IChronicleServerAddressResolver _resolver;
     protected ChronicleConnection _connection;
 
     void Establish()
@@ -21,10 +22,13 @@ public class a_connection_factory : Specification
         _lifecycle.Connected().Returns(Task.CompletedTask);
     }
 
-    protected ChronicleConnection CreateConnection(ChronicleConnectionString connectionString)
+    protected ChronicleConnection CreateConnection(ChronicleConnectionString connectionString) =>
+        CreateConnection(connectionString, new Cratis.Tasks.TaskFactory());
+
+    protected ChronicleConnection CreateConnection(ChronicleConnectionString connectionString, Cratis.Tasks.ITaskFactory tasks)
     {
-        var resolver = Substitute.For<IChronicleServerAddressResolver>();
-        resolver
+        _resolver = Substitute.For<IChronicleServerAddressResolver>();
+        _resolver
             .Resolve(Arg.Any<ChronicleConnectionString>())
             .Returns(Task.FromResult<IReadOnlyList<ChronicleServerAddress>>([connectionString.ServerAddress]));
 
@@ -34,7 +38,7 @@ public class a_connection_factory : Specification
             null,
             null,
             _lifecycle,
-            new Cratis.Tasks.TaskFactory(),
+            tasks,
             Substitute.For<ICorrelationIdAccessor>(),
             NullLoggerFactory.Instance,
             CancellationToken.None,
@@ -42,7 +46,7 @@ public class a_connection_factory : Specification
             skipTlsValidation: true,
             skipCompatibilityCheck: true,
             skipKeepAlive: false,
-            serverAddressResolver: resolver);
+            serverAddressResolver: _resolver);
     }
 
     void Destroy() => _connection?.Dispose();

@@ -47,7 +47,7 @@ public class AllSetBuilder<TReadModel, TParentBuilder>(TParentBuilder parent, Pr
     }
 
     /// <inheritdoc/>
-    public string Build()
+    public virtual string Build()
     {
         ThrowIfMissingToExpression();
 

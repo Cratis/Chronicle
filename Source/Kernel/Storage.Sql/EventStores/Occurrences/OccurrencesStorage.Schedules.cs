@@ -130,7 +130,7 @@ public partial class OccurrencesStorage<TContext>
             // The entire transaction rolls back; the engine recomputes the bounded turn.
             if (StorageWriteConflicts.IsUnique(error))
             {
-                SqlStorageTelemetry.RecoveredCollision("schedule-turn");
+                _telemetry.RecoveredCollision("schedule-turn");
             }
 
             return false;
@@ -159,7 +159,7 @@ public partial class OccurrencesStorage<TContext>
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
             // Only these single-row inserts are attempted in this context; a primary-key race inserts nothing.
-            SqlStorageTelemetry.RecoveredCollision("schedule-insert");
+            _telemetry.RecoveredCollision("schedule-insert");
             return false;
         }
     }

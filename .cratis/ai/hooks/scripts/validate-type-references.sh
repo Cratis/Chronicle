@@ -271,9 +271,9 @@ AWK
 
 if [[ "$self_test" == 1 ]]; then
     flags="$(grep '^FLAG' "$tmp/out.txt" 2>/dev/null || true)"
-    printf '%s\n' "$flags" | grep -q $'\tReactorSideEffect\t' \
+    grep -q $'\tReactorSideEffect\t' <<<"$flags" \
         || { printf 'ai-corpus type-references self-test: FAILED - the seeded ReactorSideEffect fabrication was not flagged\n' >&2; exit 1; }
-    if printf '%s\n' "$flags" | grep -qE $'\t(EventForEventSourceId|IReactor|ReactorSideEffectFailure)\t'; then
+    if grep -qE $'\t(EventForEventSourceId|IReactor|ReactorSideEffectFailure)\t' <<<"$flags"; then
         printf 'ai-corpus type-references self-test: FAILED - a real Cratis type was flagged as unresolved\n' >&2; exit 1
     fi
     printf 'ai-corpus type-references self-test: passed - the seeded fabrication is named and the real types stay silent\n' >&2

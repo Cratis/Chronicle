@@ -1,6 +1,6 @@
 ---
 name: cratis-engineering-local-cross-repo-verification
-description: Proves lower-layer Cratis fixes in downstream repositories using local packages and images. Use when a lower-layer fix must be proven in a consumer, before the producer PR for a consumer bug, before requesting or waiting on a release, or when reproducing a consumer bug against lower-layer main. Not for single-repo changes, released-version pin bumps, CI changes, or shipping; use the ship-changes prompt for shipping and cratis-release-notes for release text.
+description: Use when a lower-layer Cratis fix needs proof in a downstream consumer before its producer PR or release. Not for single-repository checks, released-version pin bumps or shipping.
 license: LICENSE
 compatibility: Bash and git on macOS or Linux; Windows through WSL. Requires the ecosystem tools used by the selected recipe.
 ---
@@ -17,9 +17,20 @@ Use real locally built packages to prove a producer fix at its consumer's packag
 boundary. A **producer** builds the changed library or image; a **consumer** is the
 downstream repository that reproduces the bug. Start before opening the producer
 PR whose purpose is that consumer bug, rather than publishing just to find out.
-Also use this loop to compare the consumer against lower-layer main.
+Also use this loop for:
 
-**Local verification replaces waiting, not shipping.** After local proof, release
+- Consumer-blocking fixes, dependency features, and breaking-change trials.
+- Release candidates in their main consumer (Specifications in Fundamentals).
+- Cross-repository bisects and build/test timing comparisons against lower-layer main.
+- Chained upgrades (Specifications → Fundamentals → Arc/Chronicle) without releasing each hop.
+- Release blockers: trying Specifications in Fundamentals can expose a generator bug before publishing.
+
+Prefer a release/preview for trivial changes, external consumers unable to use
+the local feed, or CI-only behavior this loop cannot reproduce.
+
+**Local verification replaces waiting, not shipping.** Other waits a candidate
+can avoid are in [cratis-engineering-release-trains](../cratis-engineering-release-trains/SKILL.md).
+After local proof, release
 the producer through the normal authorized workflow and bump the consumer to the
 released version. Local feeds, pins and images never go into production or a PR.
 Single-repository work needs its own regression specs, not this overlay. Released
@@ -32,7 +43,7 @@ pin updates use ordinary dependency maintenance; CI changes use the
 
 Execute [scripts/cratis-local-packages.sh](scripts/cratis-local-packages.sh), not
 an improvised replacement. Run `bash "$local" <command> --help` for inputs and
-errors. Requires bash and git; add dotnet for NuGet, node and Yarn for npm, Docker
+errors. Requires bash, git and node for package registry operations; add dotnet for NuGet, Yarn and npm for npm packages, Docker
 for images, or the selected language toolchain. Check availability first:
 
 ```bash
@@ -56,14 +67,17 @@ commands before choosing the build, regression spec and full gate commands.
 ## Copy this checklist
 
 - [ ] Reproduce the consumer bug and select its regression spec/app action.
-- [ ] Generate one stamp; build and pack the producer's full dependency closure.
+- [ ] Read [references/dependency-map.md](references/dependency-map.md) for the chain between the named repositories, generate one stamp, then pack each producer in upstream order.
 - [ ] If needed, publish the kernel and assets, then build a matching local image.
-- [ ] Activate the consumer overlay and select the local image.
+- [ ] Run `closure` for the consumer and producers, follow the printed commands, and run its one `verify-pack` after the last pack.
+- [ ] Set a task ID (`--task ID` or `CRATIS_LOCAL_TASK`, convention `owner/repo#number`), activate the consumer overlay and select the local image.
+- [ ] Run `list` (or `list --json`) to inspect recorded producers, tasks and live consumers.
 - [ ] Build the consumer, run its regression specs/app action and required gates.
 - [ ] On failure, diagnose, fix the producer, create a distinct stamp and repeat.
-- [ ] Run `check` before every consumer commit and push, and on the producer.
+- [ ] Run `check` before every consumer commit and push, and on the producer; it must report 0 leaks.
+- [ ] Upstream first: a downstream ships only after the upstream has released and its pin is bumped to the released version.
 - [ ] Restore overlays, unset environment overrides, and run `check` again.
-- [ ] Review stamp-scoped `clean` dry-run targets, then apply cleanup.
+- [ ] Review `finish --task ID`, mark completed work with `--apply`, then review `clean --expired` (or explicit `--stamp`) targets before applying cleanup.
 
 ### 1. Stamp
 
@@ -77,6 +91,8 @@ Format: `<next-patch>-local.<12-digit-UTC-minute>.g<sha7>`, based on the highest
 downgrades. Confirm tags cover the consumer's released constraints. With no tag,
 the helper warns and falls back to a base that must be checked before proceeding.
 The `g` prefix keeps even an all-digit SHA nonnumeric in SemVer.
+On `release/5.0`, use `stamp --base-version 5.0.0 "$producer"` (also with `--train`);
+the strict SemVer core overrides tag discovery verbatim. Ensure it meets consumer minima.
 Use the identical stamp for packages and images. A changed build needs a distinct
 stamp; do not overwrite a cached version (the minute and commit determine it).
 
@@ -93,7 +109,16 @@ For npm, complete the repository build before
 exit `0`. Inspect package dependencies: every locally changed dependency ID must
 resolve to the stamp, not a published fallback. Chronicle's client solution filter
 can omit `Cratis.Chronicle.CodeAnalysis`; pack its code-analysis package project
-separately. A successful pack alone does not prove dependency closure.
+separately. The package IDs a producer should ship are listed in
+[dependency-map.tsv](scripts/dependency-map.tsv); `closure CONSUMER=PATH PRODUCER=PATH...` prints
+the stamp, every overlay, one `pack-*` command per map row (with its `--property` arguments) and
+ONE `verify-pack` for the whole plan (see [references/dependency-map.md](references/dependency-map.md)).
+Run the printed commands in order. A successful pack alone does not prove dependency closure;
+`verify-pack` does. After successful packing, the helper atomically records package IDs,
+producer worktree, branch and HEAD in `FEED/stamps/STAMP/record.json` (mode `0600`).
+Pass `--task ID` to `pack-*` and `use-*`, or set `CRATIS_LOCAL_TASK`; without either,
+the recorded task is null. IDs match `^[A-Za-z0-9][A-Za-z0-9._#:/-]{0,127}$` and
+are JSON values, never paths. Prefer `owner/repo#number`.
 
 ### 3. Build an image when needed
 
@@ -120,8 +145,17 @@ export CHRONICLE_KERNEL_VERSION="$stamp" # Studio integration specs, if used
 ```
 
 Pass: the helper reports overridden IDs and restore resolves them to local
-artifacts. Follow any printed `--configfile` instruction. Run Yarn install after
+artifacts. To isolate NuGet downloads per worktree, set the optional
+`NUGET_PACKAGES` export printed by `use-nuget` before restore and keep it set through
+`clean`; see [versions and cache](references/dotnet-nuget.md#versions-and-cache).
+Follow any printed `--configfile` instruction. Run Yarn install after
 `use-npm`; it adds file-tarball resolutions, not links to source folders.
+
+For independent NuGet producer versions, explicitly opt in with
+`verify-pack --composition FILE`, `use-nuget CONSUMER --composition FILE
+[--pin-transitive]`, then `verify-assets CONSUMER --composition FILE`. See the
+[manifest and native-validation workflow](references/dotnet-nuget.md#mixed-version-compositions-opt-in).
+No producer is rebuilt; restore before changing a composition or an active legacy overlay.
 
 ### 5. Build and exercise the consumer
 
@@ -129,9 +163,13 @@ From the consumer root, with the printed NuGet environment sourced:
 
 ```bash
 dotnet build path/to/consumer.slnx -c Release -warnaserror
-dotnet test path/to/Integration.csproj -c Release --no-build --filter '<regression>'
+./<integration-project-dir>/bin/Release/<TFM>/<AssemblyName> <runner-specific-filter>
 ```
 
+Resolve the integration project's actual built spec entrypoint and filter syntax with
+[running-specs](../cratis-specifications-csharp/references/running-specs.md); without
+apphost use `dotnet <TargetPath.dll>`. Only VSTest uses `dotnet test <project> -c Release
+--no-build --filter '<regression>'`. Keep the sourced local NuGet environment.
 Substitute the repository's actual commands; for frontend fixes run build, lint,
 specs and the previously broken UI action. Pass: the reproducing spec/action now
 succeeds, at least one intended filtered spec actually ran, and the consumer's
@@ -175,18 +213,65 @@ build output, not pre-existing work.
 
 ### 8. Clean
 
+`list [--json] [--stamp STAMP]` is a lock-free, read-only inventory, including legacy
+artifacts without records. It shows producer ownership, task state, live/total consumers
+and age, plus recorded state. Invalid records appear as `invalid` rows (JSON includes
+`error`); listing continues and exits `1`. `use-*` records each consumer, including every
+composition member stamp. `restore` restores overlays first, then updates only those
+stamps' consumer entries; an invalid selected record warns with its path and exits `1`.
+A registry-write failure after activation warns and exits `1`, keeping the overlay for restoration.
+
+```bash
+bash "$local" list
+bash "$local" finish --task owner/repo#number
+bash "$local" finish --task owner/repo#number --apply
+```
+
+`finish` is dry-run by default, marks task completion only, and succeeds with a message
+if no record names the task and all records are valid. It warns and skips invalid records
+without rewriting them, continues with valid matches, and exits `1` if any were skipped.
+It never restores consumers or cleans packages automatically.
+
 ```bash
 bash "$local" clean "$consumer" --stamp "$stamp"
 # Review listed subjects and stop task-owned containers first.
 bash "$local" clean "$consumer" --stamp "$stamp" --apply
 ```
 
+`clean --stamp STAMP` validates only that stamp's record; default clean and `--all`
+validate all selected records. An invalid selected record refuses cleanup (`2`).
+
+Use `clean --expired` for retention-based cleanup, then add `--apply` after review.
+It keeps unrecorded stamps, active compositions and live manifest/overlay references
+(in registered sessions or recorded consumer worktrees). Otherwise, a stamp expires
+when every non-null producing task is finished (at least one required), all recorded
+consumers are gone (at least one required), or a real release at or above its base exists,
+in that order. Offline evidence is NuGet `.nupkg.metadata` in the shared or registered
+private caches; npm has no offline release check. `--online` opts into NuGet/npm
+registry checks with a 10-second timeout; failures provide no evidence. Each stamp
+prints `expired STAMP: REASON` or `kept STAMP: REASON`; kept stamps succeed (`0`).
+`list --json` reports the same offline decision in `expiry:{expired,reasons,kept}`.
+`--expired` cannot combine with `--stamp` or `--all`. It retains the same lock, fuse
+and dry-run default. Applying also prunes gone consumers and missing session registrations.
+
 Pass: expected subjects listed, then removed without force. Cleanup covers local
 feed packages, NuGet version folders, discoverable Yarn cache entries, local image
-tags and registered sessions; unresolved npm backups block it. Missing Docker/Yarn
+tags, stamp record directories and registered sessions; unresolved npm backups block it. Missing Docker/Yarn
 probes are reported as skipped cleanup, not proof those stores are empty. Default
 fuse: 500 subjects; investigate an unexpectedly large list instead of raising it.
-Prefer `--stamp` to `--all` on shared machines.
+NuGet cleanup scans the active shared cache and every registered private cache.
+It removes only recognized local/train version folders. Missing or mismatched
+private-cache markers, symlinks and paths outside the consumer's Git directory
+refuse the entire request. `restore` keeps private caches. After restoring overlays
+and removing live stamps, use `clean "$consumer" --private-cache` to review whole-cache
+removal, then add `--apply` to remove the marked cache and its session registration.
+Prefer `--stamp` to `--all`. Legacy cleanup refuses the entire request (exit `2`,
+also in dry-run) for registered live overlay/manifest references; it reports kept
+stamps and paths. Restore/remove references, then retry. This is not an ownership
+registry; unregistered consumers need manual review. To retire a hand-rolled
+`-local.N` feed, restore released pins/sources and switch to helper stamps; review
+old artifacts separately because `clean` does not recognize them. See
+[migration](references/dotnet-nuget.md#retire-a-hand-rolled-feed).
 
 ## Configuration and results
 
@@ -197,7 +282,9 @@ is sourced before defaults. Do not put credentials in it. Environment settings:
 | --- | --- |
 | `CRATIS_LOCAL_FEED` | `${XDG_CACHE_HOME:-$HOME/.cache}/cratis/local-feed`; outside tracked files |
 | `CRATIS_LOCAL_SESSION_DIR` | `<absolute-git-dir>/cratis-local`; per-worktree overlays/backups |
-| `NUGET_PACKAGES` | `$HOME/.nuget/packages`; shared cache, unique version folders |
+| `NUGET_PACKAGES` | `$HOME/.nuget/packages`; active cache scanned by `clean` |
+| `CRATIS_LOCAL_TASK` | Optional task ID, convention `owner/repo#number`; `--task ID` on pack/use/finish overrides it |
+| `CRATIS_LOCAL_PRIVATE_CACHE` | `0`; `1` opts `use-nuget` into a marked worktree cache, also available with `--private-cache` |
 | `CRATIS_LOCAL_CLEAN_MAX` | `500`; cleanup subject fuse |
 | `CRATIS_LOCAL_RUN` | Optional executable wrapper receiving `build <label> -- <command...>` |
 
@@ -210,7 +297,7 @@ doing read-only discovery.
 Helper exit codes: `0` success, `1` findings/failed operation, `2` cannot run or
 invalid input. Neither `1` nor `2` is a pass. After script changes, execute
 `bash "$local" --self-test`; pass requires printed passed/skipped counts and exit
-`0`. npm overlay/restore tests run when node is on the inherited PATH; real packing
+`0`. Registry tests require node; npm overlay/restore tests use the inherited PATH. Real packing
 is not exercised by this hermetic self-test. Report any unrun ecosystem checks.
 
 ## Why the local loop
@@ -238,7 +325,8 @@ minutes, instead of after a release and a pin bump.
 - Read [references/npm-yarn.md](references/npm-yarn.md) when packing frontend libraries or restoring Yarn overlays.
 - Read [references/docker-images.md](references/docker-images.md) when publishing a kernel or selecting images in a consumer.
 - Read [references/go-jvm-python-elixir.md](references/go-jvm-python-elixir.md) when the boundary uses another language toolchain.
-- Read [references/worked-examples.md](references/worked-examples.md) when following Chronicle → Studio, Fundamentals → Arc or Components → Studio.
+- Read [references/worked-examples.md](references/worked-examples.md) when following Chronicle → Studio, Fundamentals → Arc, Components → Studio, Chronicle → Direct, Screenplay → Stage and Studio, Arc → Chronicle, or Fundamentals → Arc → Chronicle.
+- Read [references/train-mode.md](references/train-mode.md) when verifying a downstream repository against a local release train (`stamp --train`).
 - Read [references/other-environments.md](references/other-environments.md) when running on another developer machine or an agent host.
 
 Read `scripts/npm-restore-check.cjs` when inspecting the read-only npm restoration

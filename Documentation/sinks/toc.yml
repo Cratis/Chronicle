@@ -1,2 +1,4 @@
 - name: Sinks
   href: index.mdx
+- name: Neo4j graph sink
+  href: neo4j.mdx

@@ -20,6 +20,8 @@ public class DelegatingEventTypesStorage(IEventTypesStorage inner) : IEventTypes
 
     public Task<bool> Register(EventTypeDefinition definition) => inner.Register(definition);
 
+    public Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema) => inner.ReplaceSchema(eventTypeId, generation, schema);
+
     public Task<IEnumerable<EventTypeSchema>> GetLatestForAllEventTypes() => inner.GetLatestForAllEventTypes();
 
     public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => inner.ObserveLatestForAllEventTypes();

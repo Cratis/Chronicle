@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Storage.EventSequences.Mutations;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Types;
@@ -27,8 +28,14 @@ namespace Cratis.Chronicle.Storage.InMemory;
 /// </para>
 /// </remarks>
 /// <param name="sinkFactories">All discovered <see cref="ISinkFactory"/> instances.</param>
-/// <param name="jobsStorage">The <see cref="Cratis.Orleans.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
-public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories, Cratis.Orleans.Storage.IJobsStorage jobsStorage) : IDisposable
+/// <param name="jobsStorage">The <see cref="Cratis.Choreography.Storage.IJobsStorage"/> resolving jobs storage for a scope and namespace.</param>
+/// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
+/// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> resolving named sinks; none configured when omitted.</param>
+public sealed class EventStoreStorages(
+    IInstancesOf<ISinkFactory> sinkFactories,
+    Cratis.Choreography.Storage.IJobsStorage jobsStorage,
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null,
+    ISinkConfigurations? sinkConfigurations = null) : IDisposable
 {
     readonly ConcurrentDictionary<EventStoreName, IEventStoreStorage> _eventStores = new();
     readonly ConcurrentDictionary<EventStoreName, Generations.GenerationFloorStorage> _generationFloors = new();
@@ -44,11 +51,13 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     /// <param name="sinkFactories">The available sink factories.</param>
     /// <param name="jobsStorage">The jobs storage.</param>
     /// <param name="eventTypesFactory">The event-types storage factory.</param>
+    /// <param name="mutationDigestKeys">The source of mutation digest keys; without one, every mutation fails closed.</param>
     internal EventStoreStorages(
         IInstancesOf<ISinkFactory> sinkFactories,
-        Cratis.Orleans.Storage.IJobsStorage jobsStorage,
-        Func<EventStoreName, IEventTypesStorage> eventTypesFactory)
-        : this(sinkFactories, jobsStorage)
+        Cratis.Choreography.Storage.IJobsStorage jobsStorage,
+        Func<EventStoreName, IEventTypesStorage> eventTypesFactory,
+        IEventSequenceMutationDigestKeys mutationDigestKeys)
+        : this(sinkFactories, jobsStorage, mutationDigestKeys)
     {
         _eventTypesFactory = eventTypesFactory;
     }
@@ -107,8 +116,8 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
 
         var sinks = sinksFactory ?? CreateDefaultSinksFactory(eventStore);
         var created = _eventTypesFactory is null
-            ? new EventStoreStorage(eventStore, sinks, jobsStorage)
-            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory);
+            ? new EventStoreStorage(eventStore, sinks, jobsStorage, mutationDigestKeys)
+            : new EventStoreStorage(eventStore, sinks, jobsStorage, _eventTypesFactory, mutationDigestKeys);
         created.GenerationFloor = _generationFloors.GetOrAdd(eventStore, _ => new Generations.GenerationFloorStorage());
         var storage = _eventStores.GetOrAdd(eventStore, created);
 
@@ -160,5 +169,5 @@ public sealed class EventStoreStorages(IInstancesOf<ISinkFactory> sinkFactories,
     }
 
     SinksFactory CreateDefaultSinksFactory(EventStoreName eventStore) =>
-        @namespace => new Cratis.Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories);
+        @namespace => new Cratis.Chronicle.Storage.Sinks.Sinks(eventStore, @namespace, sinkFactories, sinkConfigurations);
 }

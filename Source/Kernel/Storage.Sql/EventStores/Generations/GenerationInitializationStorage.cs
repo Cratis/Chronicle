@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Generations.Enablement;
 using Cratis.Chronicle.Storage.Generations;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Generations;
@@ -46,10 +47,20 @@ public sealed class GenerationInitializationStorage(Func<Task<DbContextScope<Eve
     }
 
     /// <inheritdoc/>
-    public async Task RecordBlocker(GenerationInitializationBlocker blocker)
+    public Task RecordBlocker(GenerationInitializationBlocker blocker) => RecordBlocker(blocker, true);
+
+    /// <inheritdoc/>
+    public async Task ResolveBlocker(GenerationInitializationBlockerKind kind, string subject, DateTimeOffset at)
     {
         await using var scope = await open();
-        var rows = scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)blocker.Kind && row.Subject == blocker.Subject);
+        await scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)kind).WhereExact(scope.DbContext, row => row.Subject, subject).Where(row => row.ResolvedAt == null)
+            .ExecuteUpdateAsync(set => set.SetProperty(row => row.ResolvedAt, at));
+    }
+
+    async Task RecordBlocker(GenerationInitializationBlocker blocker, bool retryOnUniqueViolation)
+    {
+        await using var scope = await open();
+        var rows = scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)blocker.Kind).WhereExact(scope.DbContext, row => row.Subject, blocker.Subject);
         if (await rows.Where(row => row.ResolvedAt == null).ExecuteUpdateAsync(set => set.SetProperty(row => row.Detail, blocker.Detail)) == 1)
         {
             return;
@@ -65,15 +76,14 @@ public sealed class GenerationInitializationStorage(Func<Task<DbContextScope<Eve
         }
         catch (DbUpdateException error) when (error.IsUniqueViolation())
         {
-            await RecordBlocker(blocker);
-        }
-    }
+            // A concurrent writer of the same spelling is settled by one more pass. If the exact row is
+            // still absent afterwards, the key holds a differently spelled subject, and that row is not ours to change.
+            if (!retryOnUniqueViolation)
+            {
+                throw new GenerationBlockerSubjectSpellingConflict();
+            }
 
-    /// <inheritdoc/>
-    public async Task ResolveBlocker(GenerationInitializationBlockerKind kind, string subject, DateTimeOffset at)
-    {
-        await using var scope = await open();
-        await scope.DbContext.GenerationInitializationBlockers.Where(row => row.Kind == (int)kind && row.Subject == subject && row.ResolvedAt == null)
-            .ExecuteUpdateAsync(set => set.SetProperty(row => row.ResolvedAt, at));
+            await RecordBlocker(blocker, false);
+        }
     }
 }

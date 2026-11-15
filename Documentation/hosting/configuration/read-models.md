@@ -1,8 +1,7 @@
 ---
-description: Configure replay retention and fenced sink transaction batch sizes in Chronicle Server.
+title: Configure read models in Cratis Chronicle Server
+description: Configure Cratis Chronicle Server read model replay retention and write batch sizes, and understand retention behavior and generation limits.
 ---
-# Read Models
-
 Read model configuration controls how many revert containers Chronicle keeps after a read model is replayed, and the batch size read-model writes are split at. This page describes what Chronicle does today, including what it does not do.
 
 ## Example configuration
@@ -11,7 +10,8 @@ Read model configuration controls how many revert containers Chronicle keeps aft
 {
   "readModels": {
     "replayedVersionsToKeep": 1,
-    "maxBatchSize": 500
+    "maxBatchSize": 500,
+    "guardSinkWritesOnWatermark": true
   }
 }
 ```
@@ -20,6 +20,7 @@ Read model configuration controls how many revert containers Chronicle keeps aft
 | --- | --- | --- | --- |
 | replayedVersionsToKeep | number | 1 | Number of replay occurrences to keep per read model. `snapshotsToKeep` is an alias that sets the same value. |
 | maxBatchSize | number | 500 | Maximum number of items per read-model batch. Must be greater than zero |
+| guardSinkWritesOnWatermark | boolean | true | Makes a read model write conditional on the incoming event advancing the read model's last handled event sequence number, so a re-delivered event after a crash is a no-op instead of being folded in twice. Chronicle requests the guard only for read models keyed by event source id. A projection whose key collapses several event sources onto one document (a join, a constant key or a parent hierarchy) is never guarded. Set it to `false` only to restore the behavior of earlier versions. See [Step checkpoints](job-throttling.md#step-checkpoints) |
 
 There is no age-based setting. Chronicle counts occurrences; it does not look at how old they are.
 
@@ -68,7 +69,7 @@ Chronicle makes no promise about how long a revert container exists. Do not rely
 
 ## Fenced sink writes
 
-With `Features.ProjectionGenerations` enabled (experimental), each MongoDB sink transaction covers at most `maxBatchSize` documents. A bulk flush larger than that is split into several transactions whose writes are idempotent, so a retry of a part is safe.
+With `Features.ProjectionGenerations` enabled, each MongoDB sink transaction covers at most `maxBatchSize` documents. A bulk flush larger than that is split into several transactions whose writes are idempotent, so a retry of a part is safe.
 
 A single changeset that touches more documents than `maxBatchSize` and contains a non-idempotent operation, for example a child addition (`$push`), cannot be split safely and is refused. Chronicle raises `OversizedChangesetCannotBeSplit`, logs an error naming the read model, key, partition, collection, the blocking operations and `maxBatchSize`, and the partition fails.
 

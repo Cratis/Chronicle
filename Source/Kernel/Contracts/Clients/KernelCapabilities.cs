@@ -29,6 +29,11 @@ public static class KernelCapabilities
     public const string Occurrences = "occurrences";
 
     /// <summary>
+    /// The kernel accepts bulk event imports through resumable, chunked import sessions.
+    /// </summary>
+    public const string Imports = "imports";
+
+    /// <summary>
     /// The kernel validates several ordered guards for the same event source atomically.
     /// </summary>
     public const string ConcurrencyScopeConjunctions = "concurrency-scope-conjunctions";

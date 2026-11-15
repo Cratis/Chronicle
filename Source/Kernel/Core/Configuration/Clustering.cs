@@ -44,6 +44,15 @@ public class Clustering
     public bool GatewayEnabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether to opt into Orleans' experimental distributed grain directory,
+    /// which is strongly consistent and prevents duplicate activations. Every silo in the cluster
+    /// must use the same value. Changing it requires stopping every silo and starting them again,
+    /// never in a rolling upgrade, because silos on different directory implementations cannot
+    /// share a cluster. The default is false and keeps Orleans' default directory.
+    /// </summary>
+    public bool DistributedGrainDirectoryEnabled { get; set; }
+
+    /// <summary>
     /// Gets the cluster id - all nodes that should form one cluster must share it.
     /// </summary>
     public string ClusterId { get; set; } = "chronicle";

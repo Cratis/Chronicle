@@ -3,7 +3,10 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ClosedStreams;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.Mutations;
 using Microsoft.EntityFrameworkCore;
+using EventSequenceMutationCoverage = Cratis.Chronicle.Storage.EventSequences.Mutations.EventSequenceMutationCoverage;
+using EventSequenceMutationOrdinal = Cratis.Chronicle.Concepts.EventSequences.Mutations.EventSequenceMutationOrdinal;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 
@@ -64,6 +67,16 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<EventSequences.EventSequenceState> EventSequences { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the event sequence mutation heads DbSet.
+    /// </summary>
+    public DbSet<EventSequenceMutationHeadEntry> EventSequenceMutationHeads { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the event sequence mutation history DbSet.
+    /// </summary>
+    public DbSet<EventSequenceMutationHistoryEntry> EventSequenceMutationHistory { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the event seeding data DbSet.
     /// </summary>
     public DbSet<Seeding.EventSeedsEntity> EventSeeds { get; set; } = null!;
@@ -83,6 +96,17 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     /// </summary>
     public DbSet<Encryption.EncryptionKeyErasure> EncryptionKeyErasures { get; set; } = null!;
 
+    /// <summary>Gets or sets isolated request archives and silo protocol records.</summary>
+    public DbSet<Encryption.EncryptionKeyFenceRecord> EncryptionKeyFenceRecords { get; set; } = null!;
+
+    /// <summary>Gets or sets the authorities for external key-material stores.</summary>
+    public DbSet<Encryption.EncryptionKeyExternalFence> EncryptionKeyExternalFences { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the kernel-internal secrets DbSet.
+    /// </summary>
+    public DbSet<Encryption.InternalSecret> InternalSecrets { get; set; } = null!;
+
     /// <summary>
     /// Gets or sets the closed streams DbSet.
     /// </summary>
@@ -94,6 +118,16 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     public DbSet<InFlightEvents.InFlightEventEntry> InFlightEvents { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the import sessions DbSet.
+    /// </summary>
+    public DbSet<Imports.ImportEntity> Imports { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the staged import chunks DbSet.
+    /// </summary>
+    public DbSet<Imports.ImportChunkEntity> ImportChunks { get; set; } = null!;
+
+    /// <summary>
     /// Gets or sets the observer handled counts DbSet.
     /// </summary>
     public DbSet<ObserverHandledCounts.ObserverHandledCountEntry> ObserverHandledCounts { get; set; } = null!;
@@ -103,6 +137,11 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     {
         base.OnModelCreating(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
+        if (Database.IsSqlServer())
+        {
+            Namespaces.EventSequences.ExactIdentifiers.RegisterByteLength(modelBuilder);
+        }
+
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
         modelBuilder
             .Entity<Observers.ObserverDefinitionChangeEntry>(entity =>
@@ -129,6 +168,16 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
                 entity.HasKey(e => new { e.EventSequenceId, e.StreamType, e.StreamId, e.EventSourceId, e.EventSourceType, e.Owner, e.Dimensions });
                 entity.Property(e => e.SequenceNumber).HasPrecision(20, 0);
             })
+            .Entity<Imports.ImportEntity>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.Imports);
+                entity.HasKey(e => e.Id);
+            })
+            .Entity<Imports.ImportChunkEntity>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.ImportChunks);
+                entity.HasKey(e => new { e.ImportId, e.ChunkIndex });
+            })
             .Entity<InFlightEvents.InFlightEventEntry>(entity =>
             {
                 entity.ToTable(WellKnownTableNames.InFlightEvents);
@@ -146,6 +195,59 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             {
                 entity.ToTable(WellKnownTableNames.BehaviorPatterns);
                 entity.HasKey(e => new { e.GroupingKey, e.FacetSetHash });
+            })
+            .Entity<EventSequenceMutationHeadEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.EventSequenceMutationHeads);
+                entity.HasKey(e => e.EventSequenceId);
+                entity.Property(e => e.EventSequenceId).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Coverage).HasDefaultValue(EventSequenceMutationCoverage.Untracked).IsRequired();
+                entity.Property(e => e.LastAssignedOrdinal).HasDefaultValue(EventSequenceMutationOrdinal.NotSet).IsRequired();
+                entity.Property(e => e.ActiveMutationId).IsRequired(false);
+                entity.Property(e => e.ActiveOrdinal).IsRequired(false);
+                entity.Property(e => e.ActiveStateVersion).IsRequired(false);
+                entity.Property(e => e.ActiveOriginSequence).HasMaxLength(200).IsRequired(false);
+                entity.Property(e => e.ActiveOriginSequenceNumber).IsRequired(false);
+                entity.Property(e => e.ActiveKind).IsRequired(false);
+                entity.Property(e => e.ActiveCommandPayload).IsRequired(false);
+                entity.Property(e => e.ActiveCommandHash).HasMaxLength(64).IsRequired(false);
+                entity.Property(e => e.ActiveTargetStart).IsRequired(false);
+                entity.Property(e => e.ActiveTargetEndExclusive).IsRequired(false);
+                entity.Property(e => e.ActiveTargetExpectedCount).IsRequired(false);
+                entity.Property(e => e.ActiveDefinitionDigestV1)
+                    .HasConversion(d => EventSequenceMutationDigestColumns.DefinitionDigestToHex(d!), s => EventSequenceMutationDigestColumns.DefinitionDigestFromHex(s))
+                    .HasMaxLength(64)
+                    .IsRequired(false);
+                entity.Property(e => e.ActiveDefinitionDigestVersion).IsRequired(false);
+                entity.Property(e => e.ActivePhase).IsRequired(false);
+                entity.Property(e => e.ActiveBlockedFrom).IsRequired(false);
+                entity.Property(e => e.ActiveRepairState).IsRequired(false);
+            })
+            .Entity<EventSequenceMutationHistoryEntry>(entity =>
+            {
+                entity.ToTable(WellKnownTableNames.EventSequenceMutationHistory);
+                entity.HasKey(e => new { e.EventSequenceId, e.Ordinal });
+                entity.HasIndex(e => e.MutationId).IsUnique();
+                entity.Property(e => e.EventSequenceId).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Ordinal).IsRequired();
+                entity.Property(e => e.MutationId).IsRequired();
+                entity.Property(e => e.Kind).IsRequired();
+                entity.Property(e => e.TargetStart).IsRequired();
+                entity.Property(e => e.TargetEndExclusive).IsRequired();
+                entity.Property(e => e.TargetExpectedCount).IsRequired();
+                entity.Property(e => e.TerminalPhase).IsRequired();
+                entity.Property(e => e.RepairState).IsRequired();
+                entity.Property(e => e.DigestVersion).IsRequired();
+                entity.Property(e => e.ArchivedAt).IsRequired();
+                entity.Property(e => e.FinalStateVersion).IsRequired();
+                entity.Property(e => e.DefinitionDigestV1)
+                    .HasConversion(d => EventSequenceMutationDigestColumns.DefinitionDigestToHex(d), s => EventSequenceMutationDigestColumns.DefinitionDigestFromHex(s))
+                    .HasMaxLength(64)
+                    .IsRequired();
+                entity.Property(e => e.ReceiptDigestV1)
+                    .HasConversion(d => EventSequenceMutationDigestColumns.ReceiptDigestToHex(d), s => EventSequenceMutationDigestColumns.ReceiptDigestFromHex(s))
+                    .HasMaxLength(64)
+                    .IsRequired();
             })
             .Entity<ReplayedModels.ReplayedModelOccurrence>(entity =>
             {
@@ -167,6 +269,14 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             incidentCollation = "BINARY";
         }
 
+        if (Database.IsSqlServer())
+        {
+            modelBuilder.Entity<Encryption.EncryptionKey>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            modelBuilder.Entity<Encryption.EncryptionKeyErasure>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            modelBuilder.Entity<Encryption.EncryptionKeyExternalFence>().Property(e => e.Identifier).UseCollation(Encryption.EncryptionKeyIdentifierColumn.Collation);
+            UseExactClosedStreamColumns(modelBuilder);
+        }
+
         modelBuilder.Entity<Alerts.AlertIncidentEntity>(entity =>
         {
             entity.ToTable(WellKnownTableNames.AlertIncidents);
@@ -183,6 +293,18 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
             entity.HasIndex(row => new { row.IsOpen, row.EventStore, row.Namespace });
         });
 
+        // SQL Server text equality pads trailing spaces even under binary collations. Registry keys
+        // must preserve the canonical identity exactly, so use UTF-8 bytes rather than text keys there.
+        if (Database.IsSqlServer())
+        {
+            modelBuilder.Entity<EventSequenceMutationHeadEntry>().Property(e => e.EventSequenceId)
+                .HasConversion(id => System.Text.Encoding.UTF8.GetBytes(id.Value), bytes => new Concepts.EventSequences.EventSequenceId(System.Text.Encoding.UTF8.GetString(bytes)))
+                .HasColumnType("varbinary(600)").HasMaxLength(600);
+            modelBuilder.Entity<EventSequenceMutationHistoryEntry>().Property(e => e.EventSequenceId)
+                .HasConversion(id => System.Text.Encoding.UTF8.GetBytes(id.Value), bytes => new Concepts.EventSequences.EventSequenceId(System.Text.Encoding.UTF8.GetString(bytes)))
+                .HasColumnType("varbinary(600)").HasMaxLength(600);
+        }
+
         // Match the column mappings to the provider-native JSON type the migrations create
         // (jsonb on Npgsql), so EF Core sends parameters with the correct OID. PostgreSQL is
         // the only provider that requires this because its jsonb type rejects implicit
@@ -195,6 +317,15 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
         foreach (var (entityType, propertyName) in NamespaceJsonStringColumns.All)
         {
             modelBuilder.Entity(entityType).Property(propertyName).HasColumnType("jsonb");
+        }
+    }
+
+    static void UseExactClosedStreamColumns(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<ClosedStreamEntry>();
+        foreach (var column in new[] { nameof(ClosedStreamEntry.StreamType), nameof(ClosedStreamEntry.StreamId), nameof(ClosedStreamEntry.EventSourceId), nameof(ClosedStreamEntry.EventSourceType) })
+        {
+            entity.Property(column).HasMaxLength(ClosedStreamColumn.MaxLength).UseCollation(ClosedStreamColumn.Collation);
         }
     }
 }

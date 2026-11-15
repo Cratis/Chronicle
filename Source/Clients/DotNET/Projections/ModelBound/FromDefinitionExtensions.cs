@@ -22,11 +22,12 @@ static class FromDefinitionExtensions
     /// <param name="eventType">The event type to map from.</param>
     /// <param name="propertyName">The property name on the projection model.</param>
     /// <param name="eventPropertyName">The property name on the event.</param>
-    internal static void AddSetMapping(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string eventPropertyName)
+    /// <param name="setOnce">Whether the property is only assigned when it has no value yet.</param>
+    internal static void AddSetMapping(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string eventPropertyName, bool setOnce = false)
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
-        fromDefinition.Properties[propertyName] = ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy, ProjectionPathRole.Source);
+        fromDefinition.Properties[propertyName] = Once((string)ProjectionPropertyPaths.Resolve(eventPropertyName, namingPolicy, ProjectionPathRole.Source), setOnce);
     }
 
     /// <summary>
@@ -148,13 +149,23 @@ static class FromDefinitionExtensions
     /// <param name="eventType">The event type to map from.</param>
     /// <param name="propertyName">The property name on the projection model.</param>
     /// <param name="contextPropertyName">The property name on the event context.</param>
-    internal static void AddContextPropertyMapping(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string contextPropertyName)
+    /// <param name="setOnce">Whether the property is only assigned when it has no value yet.</param>
+    internal static void AddContextPropertyMapping(this IDictionary<EventType, FromDefinition> targetFrom, Func<Type, EventType> getOrCreateEventType, INamingPolicy namingPolicy, Type eventType, string propertyName, string contextPropertyName, bool setOnce = false)
     {
         var eventTypeId = getOrCreateEventType(eventType);
         var fromDefinition = targetFrom.GetOrCreateFromDefinition(eventTypeId);
         var convertedContextPropertyName = ProjectionPropertyPaths.RenderContextPath(contextPropertyName, namingPolicy);
-        fromDefinition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}({convertedContextPropertyName})";
+        fromDefinition.Properties[propertyName] = Once($"{WellKnownExpressions.EventContext}({convertedContextPropertyName})", setOnce);
     }
+
+    /// <summary>
+    /// Wraps a value expression so it only assigns the property when it has no value yet.
+    /// </summary>
+    /// <param name="expression">The value expression.</param>
+    /// <param name="setOnce">Whether to wrap the expression.</param>
+    /// <returns>The expression, wrapped when <paramref name="setOnce"/> is true.</returns>
+    internal static string Once(string expression, bool setOnce) =>
+        setOnce ? $"{WellKnownExpressions.SetOnce}({expression})" : expression;
 
     /// <summary>
     /// Converts a CLR value to an invariant string representation suitable for use in projection expressions.

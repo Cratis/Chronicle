@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.MongoDB.Serialization;
 using Cratis.Chronicle.Storage.Compliance;
-using Cratis.Orleans.Storage.MongoDB.Serialization;
 using MongoDB.Bson.Serialization;
 
 namespace Cratis.Compliance.MongoDB;

@@ -23,6 +23,7 @@ public class and_the_target_is_plain : Specification
         services.AddSingleton(Substitute.For<IGrainFactory>());
         services.AddSingleton(Substitute.For<IStorage>());
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
+        services.AddSingleton(Substitute.For<Storage.EventSequences.IReservedEventSequenceIds>());
         var factory = new EventSequenceSinkFactory(services.BuildServiceProvider());
         _type = factory.TypeId;
         var configuration = new EventSequenceSinkConfiguration(new EventType("Changed", EventTypeGeneration.First), null, true);

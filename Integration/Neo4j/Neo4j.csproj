@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Neo4j.Integration</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Neo4j.Integration</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../Source/Kernel/Storage.Neo4j/Storage.Neo4j.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Core/Core.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Neo4j.Driver" />
+        <PackageReference Include="Testcontainers" />
+        <PackageReference Include="NSubstitute" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The container is shared with the graph projection specifications of Integration/Client. -->
+        <Compile Include="../Shared/Neo4jGraphServer.cs" Link="Neo4jGraphServer.cs" />
+        <!-- The organization graph and the helpers that write and describe it are those of the Storage.Neo4j specifications. -->
+        <Compile Include="../../Source/Kernel/Storage.Neo4j.Specs/given/GraphDefinitions.cs" Link="Shared/GraphDefinitions.cs" />
+        <Compile Include="../../Source/Kernel/Storage.Neo4j.Specs/Integration/GraphScenarioRun.cs" Link="Shared/GraphScenarioRun.cs" />
+        <Compile Include="../../Source/Kernel/Storage.Neo4j.Specs/Integration/GraphDump.cs" Link="Shared/GraphDump.cs" />
+    </ItemGroup>
+</Project>

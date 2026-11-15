@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Orleans.Jobs;
 using context = Cratis.Chronicle.Kernel.Integration.Jobs.for_JobGrainStorageProvider.when_writing_and_reading_catch_up_observer_job_state.context;
 
 namespace Cratis.Chronicle.Kernel.Integration.Jobs.for_JobGrainStorageProvider;

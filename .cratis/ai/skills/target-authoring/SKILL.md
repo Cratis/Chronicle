@@ -1,6 +1,6 @@
 ---
 name: target-authoring
-description: 'Canonical patterns for writing custom MSBuild targets: DependsOnTargets versus BeforeTargets and AfterTargets, the Build-to-CoreBuild three-level pattern, and the XxxDependsOn chain-extension pattern. Use when diagnosing or fixing custom-target anti-patterns: Directory.Build.targets redefining SDK targets, targets that replace CompileDependsOn instead of extending it, Outputs versus Returns misuse that returns stale results, missing Inputs/Outputs causing needless rebuilds, or missing FileWrites registration. Not for incremental build tuning or general anti-pattern review (use the msbuild skill), or non-MSBuild build systems.'
+description: Use when writing or fixing custom MSBuild target chains, dependency extension, returns or cleanup contracts. Not for general build-performance tuning, import discovery or non-MSBuild systems.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/target-authoring/SKILL.md -->

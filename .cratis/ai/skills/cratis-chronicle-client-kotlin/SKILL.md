@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-kotlin
-description: Connect Kotlin and Java applications to Chronicle with the standalone client or Spring Boot starter, including events, reactors, reducers, projections and variants. Use when connecting standalone Kotlin coroutines or Java blocking calls to Chronicle through io.cratis:chronicle and classpath discovery. Do not use for Elixir OTP (use cratis-chronicle-client-elixir) or Node.js decorators (use cratis-chronicle-client-typescript); Arc commands belong to cratis-arc-command-kotlin, not this client skill.
+description: Use when connecting a standalone Kotlin or Java application to Chronicle, including client registration and lifecycle issues. Not for Arc commands, Elixir OTP or Node.js clients.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-kotlin/SKILL.md -->
@@ -11,6 +11,10 @@ license: MIT
 ordinary JVM application that happens to talk to a Chronicle server over gRPC.
 There is no framework to inherit from and no application architecture imposed:
 you construct a client, ask it for an event store, and append or observe.
+
+For Chronicle.Kotlin 7.x, first read the
+[Fundamentals migration and upgrade notes](references/fundamentals-migration.md):
+`ConceptAs.value()` and the shared correlation type are breaking changes.
 
 ## Verified product sources
 

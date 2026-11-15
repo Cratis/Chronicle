@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(6)]
+[Version(10)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -50,6 +50,17 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>The <see cref="ObserverState"/>.</returns>
     [AlwaysInterleave]
     Task<ObserverState> GetState();
+
+    /// <summary>
+    /// Get the definition, state, subscription flag and running state change time as one snapshot.
+    /// </summary>
+    /// <returns>The <see cref="ObserverInformationSnapshot"/>.</returns>
+    /// <remarks>
+    /// All values are read in a single grain turn, so they are mutually consistent, unlike separate calls to
+    /// <see cref="GetDefinition"/>, <see cref="GetState"/> and <see cref="IsSubscribed"/>.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task<ObserverInformationSnapshot> GetInformation();
 
     /// <summary>
     /// Set the handled stats for the observer.
@@ -259,6 +270,20 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>True if the client is known; otherwise false.</returns>
     [AlwaysInterleave]
     Task<bool> KnowsClient(ConnectionId connectionId);
+
+    /// <summary>
+    /// Checks whether a client is a target of this activation's subscription, which <see cref="KnowsClient"/> also
+    /// answers true for a superseded registration.
+    /// </summary>
+    /// <remarks>
+    /// An interleaved, read-only hint for the grain holding a client registration. A superseded registration is not a
+    /// target: it receives nothing until the client that replaced it leaves and it is promoted, and a failed promotion
+    /// leaves it unsubscribed, so its keeper keeps checking it as not confirmed.
+    /// </remarks>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
+    /// <returns>True if the client is a subscription target; otherwise false.</returns>
+    [AlwaysInterleave]
+    Task<bool> IsClientTarget(ConnectionId connectionId);
 
     /// <summary>
     /// Restore the subscription of a connected client that this activation does not know about.
@@ -536,6 +561,20 @@ public interface IObserver : IGrainWithStringKey
     Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind = FailureKind.Unknown, FailedPartitionId? episodeId = null, Guid? deferralId = null, WebhookDeliveryFailurePolicy failurePolicy = WebhookDeliveryFailurePolicy.Retry);
 
     /// <summary>
+    /// Report a partition failure that carries the internal recovery context, including the replay operation that made the delivery.
+    /// </summary>
+    /// <param name="partition">The partition that failed.</param>
+    /// <param name="sequenceNumber">The sequence number of the failure.</param>
+    /// <param name="exceptionMessages">All exception messages.</param>
+    /// <param name="exceptionStackTrace">The exception stacktrace.</param>
+    /// <param name="kind">What kind of thing went wrong.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="deferralId">The deferral that owned the recovery.</param>
+    /// <param name="context">The internal recovery policy, optional delivery identity and the replay operation.</param>
+    /// <returns>Awaitable task.</returns>
+    Task PartitionFailed(Key partition, EventSequenceNumber sequenceNumber, IEnumerable<string> exceptionMessages, string exceptionStackTrace, FailureKind kind, FailedPartitionId? episodeId, Guid? deferralId, PartitionFailureContext context);
+
+    /// <summary>
     /// Notify that the partition has failed with the original delivery fence.
     /// </summary>
     /// <param name="partition">The partition that failed.</param>
@@ -557,6 +596,18 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     [AlwaysInterleave]
     Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId = null, Guid? expectedDeferralId = null);
+
+    /// <summary>
+    /// Persist a delivery deadline made by a replay, recording the replay operation on the failed partition.
+    /// </summary>
+    /// <param name="partition">The partition to defer.</param>
+    /// <param name="deferral">The deadline and first unhandled event.</param>
+    /// <param name="episodeId">The recovery episode, or null for live delivery.</param>
+    /// <param name="expectedDeferralId">The deferral that owned the delivery.</param>
+    /// <param name="replayEpoch">The replay operation that made the delivery.</param>
+    /// <returns>Awaitable task.</returns>
+    [AlwaysInterleave]
+    Task PartitionDeferred(Key partition, PartitionDeferral deferral, FailedPartitionId? episodeId, Guid? expectedDeferralId, ReplayEpoch? replayEpoch);
 
     /// <summary>
     /// Check recovery ownership and the persisted deadline before delivering.
@@ -814,4 +865,12 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="events">Collection of <see cref="AppendedEvent"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Handle(Key partition, IEnumerable<AppendedEvent> events);
+
+    /// <summary>
+    /// Handle a page of events spanning several partitions. Each partition settles on its own: a partition that fails
+    /// is parked while the others in the page carry on. Handling a page of one partition is the same as <see cref="Handle(Key, IEnumerable{AppendedEvent})"/>.
+    /// </summary>
+    /// <param name="batches">The <see cref="ObserverPartitionBatch"/> of each partition in the page, each in sequence order.</param>
+    /// <returns>Awaitable task.</returns>
+    Task HandlePage(IReadOnlyList<ObserverPartitionBatch> batches);
 }

@@ -65,6 +65,11 @@ public record Event(
     public EventSourceName? EventSource { get; init; }
 
     /// <summary>
+    /// Gets the sequence number of the event this event compensates for. Missing, or null, for events that are not compensations.
+    /// </summary>
+    public EventSequenceNumber? CompensationFor { get; init; }
+
+    /// <summary>
     /// Gets the opaque publication identity, atomically stored with the event. Absent for ordinary appends.
     /// </summary>
     public string? PublicationId { get; init; }

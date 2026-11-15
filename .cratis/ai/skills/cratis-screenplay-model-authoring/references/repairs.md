@@ -15,9 +15,10 @@ from silently changing the reviewed candidate.
 
 - `PLAY0166` declares a missing produced event; `PLAY0478` is a routing decision
   (identifier destination, never fix-all); `PLAY0471` removes a redundant name-equal event pin.
-- `PLAY0516` repairs presentation order by moving a sibling or import, or pinning
-  a producer before a glob. It preserves semantics/identities and introduces no
-  new timeline findings; evidence pinning is unsupported for this repair.
+- `PLAY0516` repairs presentation order by moving a sibling or import, pinning
+  a producer before a glob, or replacing wildcard imports with ordered imports
+  ([timeline import order](#timeline-import-order)). It preserves semantics/identities
+  and introduces no new timeline findings; evidence pinning is unsupported for this repair.
 - `PLAY0469` removes an inline identifier payload copy: it **changes the event
   contract**, refuses consumer/opaque impact, has no fix-all, and the catalog does
   not prove events were persisted, so ask about stored contracts first. For a
@@ -31,6 +32,29 @@ from silently changing the reviewed candidate.
   from a no-input action: read [destination intent repair](destination-intent-repair.md).
 - Generation repairs PLAY0683/0684: [subjects, review and limits](mcp-tools.md#concept-generation).
 - Compliance repairs PLAY0565/0653: [MCP tool guide](mcp-tools.md).
+
+## Timeline import order
+
+Requires Screenplay 4.219.0 (`screenplay --version`) for wildcard-import expansion;
+older tools offer only the earlier safe moves/pins. When those cannot fix the
+edge safely, the discovered repair can replace a same-parent import span
+containing a wildcard with explicit imports in producer-before-consumer order.
+**New files need explicit imports** afterwards: the replaced glob no longer
+includes future files. Review and accept that inclusion-policy change before
+applying; do not manufacture a reorder if discovery offers no repair.
+
+The repair must preserve comments, catalog/identities, document set and placement,
+executable readiness and existing error/warning counts, remove the target finding
+and introduce no new timeline findings. Cycles, own-sub-feature edges, ambiguous
+or duplicate imports, placement mismatches and unproven moves remain refused.
+Rediscover diagnostics and repairs at the new revisions after applying.
+The TypeScript compiler also exposes PLAY0516 as a quick fix (including edits in
+the importing document); Monaco shows it as a code action. VS Code offers it as a
+reviewed saved-file code action with preview, drift checks and recovery. These
+editor routes share the safe repair, not permission to force a reorder.
+Source: [workspace timeline repairs](https://github.com/Cratis/Screenplay/blob/main/Source/DotNET/Screenplay/Workspaces/WorkspaceTimelineRepairs.Expansion.cs).
+
+## Enum numbering and event extraction
 
 `propose-number-enum-members` pins an unnumbered enum to current positions.
 Opt-in MCP `checks: "enum-pinning"` / `--check enum-pinning` (PLAY0671) hints at

@@ -20,6 +20,6 @@ public class when_building_redacted_connection_string_without_credentials : Spec
 
     void Because() => _url = _builder.BuildRedacted();
 
-    [Fact] void should_be_identical_to_the_unredacted_connection_string() => _url.ShouldEqual(_builder.Build());
-    [Fact] void should_keep_scheme_host_and_port() => _url.ShouldEqual("chronicle://host1:35001?loadBalancer=RoundRobin");
+    [Fact] void should_not_use_raw_option_serialization() => _url.ShouldNotEqual(_builder.Build());
+    [Fact] void should_use_opaque_diagnostics_for_options() => _url.ShouldEqual("REDACTED");
 }

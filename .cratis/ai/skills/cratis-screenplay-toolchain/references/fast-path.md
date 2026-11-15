@@ -21,5 +21,12 @@ Run these in order and stop at the first failure; each step catches what the one
 8. **Frontend:** in `<dir>`, `yarn` then `yarn dev` (npm: `npm install`, `npm run dev`); open the URL Vite
    prints. It proxies API calls to the backend.
 
+9. **Verify in a browser:** open the Vite URL, load every screen the model authored (sidebar and each screen title),
+   run one create command and one query, and read the console for errors. The check is the app, not the build:
+   a screen reported as `PLAY0269` (deferred from the backend profile, information only) is not evidence that
+   it was rendered. List any authored screen that is absent as not rendered; do not call it delivered.
+10. **Specs:** after the Debug build, `dotnet test <dir>/<Project>.csproj -c Debug --no-build` (Stage-rendered apps use VSTest) and `screenplay test <root>`; see
+    `cratis-screenplay-specifications`.
+
 The rendered `README.md` repeats steps 6-8 for the pinned scaffold. Re-render and gap-fill rules:
 `cratis-screenplay-render-and-gap-fill`.

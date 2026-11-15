@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { execFile, spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { CorpusServer } from './CorpusServer.ts';
 import { StdioConnection } from './StdioConnection.ts';
 
@@ -46,9 +48,19 @@ export function startConnection(project: string, launch: typeof spawn = spawn): 
     }));
 }
 
-/** Launch a corpus server verbatim (no shell, no interpolation): the default environment plus its declared literal env only. */
-export function startServer(project: string, server: CorpusServer, launch: typeof spawn = spawn): StdioConnection {
-    return new StdioConnection(launch(server.command, server.args, {
+/** Launch a corpus server without a shell or interpolation; Windows npx uses npm's JavaScript entry point. */
+export function startServer(project: string, server: CorpusServer, launch: typeof spawn = spawn, platform: NodeJS.Platform = process.platform, fileExists: (path: string) => boolean = existsSync): StdioConnection {
+    let command = server.command;
+    let args = server.args;
+    if (platform === 'win32' && /^npx(?:\.cmd)?$/i.test(command)) {
+        const entryPoint = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js');
+        if (!fileExists(entryPoint)) {
+            throw new Error(`MCP server '${server.id}' requires npm's npx-cli.js at '${entryPoint}'. Install Node.js with npm; Windows command shims cannot be launched without a shell.`);
+        }
+        command = process.execPath;
+        args = [entryPoint, ...args];
+    }
+    return new StdioConnection(launch(command, args, {
         cwd: project,
         env: { ...childEnvironment(), ...server.env },
         shell: false,

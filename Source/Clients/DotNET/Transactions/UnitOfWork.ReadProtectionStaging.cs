@@ -23,7 +23,7 @@ public partial class UnitOfWork
         var enrollments = CreateEnrollments(sequence, batch, true);
         var resolution = ResolveEnrollmentScopes(sequence, enrollments);
         var pending = CaptureStagedContributions(sequence, resolution.Scopes, origin, batch.Events.Count == 0);
-        var staged = batch.Events.Select(_ => _ with { NamedTags = NamedTagConverters.Merge(_.NamedTags, []) }).ToArray();
+        var staged = batch.Events.Select(_ => _ with { NamedTags = ResolveTags(sequence, _.EventSourceId, _.Event, _.NamedTags) }).ToArray();
         BindToEventSequence(sequence);
         _hasOrderedBatch = true;
         _currentLegacyEvents = null;

@@ -1,20 +1,15 @@
-projection Department => DepartmentReadModel
-  from DepartmentCreated
-    Name = name
-    CompanyId = companyId
+projection Task => TaskReadModel
+  from TaskCreated
+    Title = title
+    ProjectId = projectId
+    AssignedTo = assigneeId
 
-  join Company on CompanyId
-    with CompanyCreated
-      CompanyName = name
+  join Project on ProjectId
+    with ProjectCreated
+      ProjectName = name
 
-  children employees identified by employeeId
-    from EmployeeAssigned key employeeId
-      parent deptId
-      Name = name
+  join User on AssignedTo
+    with UserCreated
+      AssigneeName = name
 
-    remove with EmployeeUnassigned key employeeId
-      parent deptId
-
-  remove with DepartmentDisbanded
-
-  remove via join on CompanyDissolved
+  remove via join on ProjectDeleted

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Storage.Observation;
-using Cratis.Orleans.Jobs;
 
 namespace Cratis.Chronicle.Observation.Claims;
 
@@ -328,8 +328,13 @@ internal sealed class ShadowClaimLedger
 
     bool RemoveClaim(Key partition)
     {
+        if (!_claims.Remove(partition))
+        {
+            return false;
+        }
+
         _orderedClaims = null;
-        return _claims.Remove(partition);
+        return true;
     }
 
     void AddMissingClaims(ISet<Key> partitions, ClaimHolderKind coveringKind, List<(Key? Partition, ShadowClaimDivergence Divergence)> divergences)

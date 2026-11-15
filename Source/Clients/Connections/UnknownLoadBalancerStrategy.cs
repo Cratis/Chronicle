@@ -7,4 +7,4 @@ namespace Cratis.Chronicle.Connections;
 /// The exception that is thrown when a connection string specifies a load balancer strategy that is not known.
 /// </summary>
 /// <param name="name">The name of the unknown strategy.</param>
-public class UnknownLoadBalancerStrategy(string name) : Exception($"The load balancer strategy '{name}' is not known. Known strategies are '{RoundRobinLoadBalancerStrategy.StrategyName}' and '{RandomLoadBalancerStrategy.StrategyName}'");
+public class UnknownLoadBalancerStrategy(string name) : Exception($"The load balancer strategy '{ConnectionStringDiagnostics.Hide(name)}' is not known. Known strategies are '{RoundRobinLoadBalancerStrategy.StrategyName}' and '{RandomLoadBalancerStrategy.StrategyName}'");

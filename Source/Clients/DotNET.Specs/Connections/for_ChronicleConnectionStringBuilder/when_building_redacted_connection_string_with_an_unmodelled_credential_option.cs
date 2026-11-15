@@ -4,8 +4,7 @@
 namespace Cratis.Chronicle.Connections.for_ChronicleConnectionStringBuilder;
 
 /// <summary>
-/// A connection string carries arbitrary options, so redaction falls back to the option name to catch a
-/// credential the builder does not model - here the <c language="csharp">key</c> in <c language="csharp">auth=ApiKey&amp;key=...</c>.
+/// A connection string carrying unmodelled options has no proven diagnostic projection.
 /// </summary>
 public class when_building_redacted_connection_string_with_an_unmodelled_credential_option : Specification
 {
@@ -16,7 +15,7 @@ public class when_building_redacted_connection_string_with_an_unmodelled_credent
 
     void Because() => _url = _builder.BuildRedacted();
 
-    [Fact] void should_keep_the_non_sensitive_option() => _url.Contains("auth=ApiKey", StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_mask_the_sensitive_option() => _url.Contains("key=REDACTED", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_not_echo_unmodelled_options() => _url.Contains("auth=ApiKey", StringComparison.Ordinal).ShouldBeFalse();
+    [Fact] void should_use_opaque_diagnostics() => _url.ShouldEqual("REDACTED");
     [Fact] void should_not_expose_the_sensitive_option() => _url.Contains("testkey", StringComparison.Ordinal).ShouldBeFalse();
 }

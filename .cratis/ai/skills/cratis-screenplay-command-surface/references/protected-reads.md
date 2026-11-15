@@ -118,8 +118,9 @@ which is one more reason to keep refused shapes out of read keys.
 
 Decide records the unfiltered fact-log boundary, read key and handled event types.
 A matching fact after that boundary makes commit return Conflict /
-DecisionStateChanged with no command facts, including publications. Irrelevant
-facts do not conflict and remain in the committed world. Even a no-fact command is
+DecisionStateChanged with no command facts, including publications. Append constraints
+are checked first: if the same candidate violates a constraint and a protected read,
+the constraint rejection wins. Irrelevant facts do not conflict and remain in the committed world. Even a no-fact command is
 checked. Race cases are evaluator vectors, not a new `.play` specification construct.
 
 Specify present/absent state, rule refusal and denial. Assert no new facts and
@@ -153,6 +154,8 @@ hand-written enforcement through render-and-gap-fill; never remove the preamble.
 Stage's [protected reads rendering](https://github.com/Cratis/Stage/blob/main/Documentation/reference/protected-reads-rendering.md)
 for the rendered shape and where it differs from the reference (a race is an Arc
 validation failure, not `DecisionStateChanged`; only the first failing requirement is reported).
+
+When the same commit also violates a uniqueness constraint, the constraint refusal is the one observed, not the concurrency conflict; see the concurrency scenarios section of [consistency and concurrency](../../cratis-screenplay-streams-and-consistency/references/consistency-and-concurrency.md).
 
 Requires Stage 4.129.0 for semantic Host/specification-executor protected reads;
 older engines refuse STAGE-ESM-044. They require presence before requirements or

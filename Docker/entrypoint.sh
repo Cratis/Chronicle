@@ -12,6 +12,15 @@ if [ "${STORAGE_TYPE,,}" = "mongodb" ]; then
   /usr/bin/mongod --replSet "rs0" --bind_ip 0.0.0.0 > /dev/null &
   mongod_pid=$!
 
+  # The kernel requires explicit storage connection details. Point it at the embedded instance, but only as
+  # the lowest-priority default: never when the environment, a connection details file, or a chronicle.json
+  # in the working directory already supplies the connection (an environment variable would outrank the file).
+  if [ -z "${Cratis__Chronicle__Storage__ConnectionDetails:-}" ] \
+    && [ -z "${Cratis__Chronicle__Storage__ConnectionDetailsFile:-}" ] \
+    && ! { [ -f ./chronicle.json ] && grep -qi '"connectionDetails' ./chronicle.json; }; then
+    export Cratis__Chronicle__Storage__ConnectionDetails="mongodb://localhost:27017"
+  fi
+
   # Wait for MongoDB to start
   until mongosh --quiet --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
     sleep 1

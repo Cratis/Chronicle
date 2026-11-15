@@ -19,7 +19,7 @@ internal sealed class EventSequenceGrainStorage(
     Storage.IStorage storage,
     KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey key) : IStorage<EventSequenceState>
 {
-    readonly KernelSequences::EventSequencesStorageProvider _provider = new(storage);
+    readonly KernelSequences::EventSequencesStorageProvider _provider = new(storage, new global::Cratis.Chronicle.Storage.InMemory.InMemoryReservedEventSequenceIds());
     readonly GrainState<EventSequenceState> _state = new(new EventSequenceState());
     readonly GrainId _grainId = GrainId.Create("eventsequence", key.ToString());
 

@@ -1,23 +1,15 @@
 ---
-title: Observing artifact registration
-description: Ask an event store whether its declared artifacts registered, instead of re-driving discovery and registration to find out.
+title: Cratis Chronicle .NET artifact registration outcomes
+description: Read IEventStore.Registration to check projection registration, inspect failures, and wait for the current run without triggering registration again.
 ---
 
-Chronicle registers your artifacts for you. `RegisterAll` is wired to the connection lifecycle and runs whenever the connection comes up, which is the right default and stays the default.
-
-What `IEventStore.Registration` adds is a way to ask afterwards how it went.
+`IEventStore.Registration` reports whether Cratis Chronicle's .NET client registered its declared projection artifacts and what failed. Read it when you need to decide whether a service or test can proceed. With automatic registration enabled, `RegisterAll` runs when the connection comes up; inspecting the outcome does not trigger another run.
 
 ## Why you might need it
 
-A read model that cannot be built is isolated: it is logged and skipped, so one broken read model no longer costs the rest of your read side. That is a good trade, but it turns a loud failure into a quiet one. The broken read model is simply absent afterwards, and nothing throws.
+If a read model cannot be built, the client logs and skips it so the remaining projection artifacts can register. The registration call may therefore finish without throwing even though a model you need is absent.
 
-Without an outcome to read, these three situations look identical from outside:
-
-- every artifact registered
-- some registered, and the rest were dropped
-- registration has not run yet
-
-`Registration` tells them apart.
+Read `Registration` to distinguish a complete registration from a partial one or a run that has not finished. You can then choose whether the failure should stop startup, fail a test, or be tolerated.
 
 ## Reading the outcome
 
@@ -47,19 +39,19 @@ foreach (var failed in outcome.Failures)
 | `IsRegistering` | A registration run is in flight, or a disconnect is waiting for re-registration on reconnect |
 | `Artifacts` | Every declared projection artifact, with `IsRegistered` and the `Failure` that stopped it |
 | `Failure` | What stopped `RegisterAll` itself, or `null` when it finished |
-| `IsSuccess` | Registration ran, finished, and every declared artifact registered |
+| `IsSuccess` | Registration ran, finished, and every declared projection artifact registered |
 | `Failures` | Only the artifacts that did not register |
 | `Fingerprint` | The prepared artifact fingerprint from `RegisterDefinitions`; `NotSet` after `RegisterAll` |
 
 `RegistrationOutcome.NotRun` is the value before registration has finished.
 
-After a kernel restart, the client re-registers its artifacts when it reconnects. `IsRegistering` becomes `true` on disconnect when automatic registration is enabled, and stays true until re-registration finishes. Manual `RegisterAll` calls and background-retry attempts also set it while running. Between background attempts, the published failure has `IsRegistering` set to false. The other members retain the previous run's outcome, so `IsSuccess` can still be true while `IsRegistering` is true; check both before treating registration as ready.
+When automatic registration is enabled, a disconnect sets `IsRegistering` to `true` until re-registration finishes after reconnecting. Manual `RegisterAll` calls and background-retry attempts also set it while running. Between retry attempts, it is false and the last failure remains available. Other members retain the previous run's outcome during a new run, so check both `IsSuccess` and `IsRegistering` before treating registration as ready.
 
-There are two kinds of failure here and they are not the same. An artifact in `Failures` could not be built, so it was isolated and skipped and registration carried on without it — the rest of the read side is up. A `Failure` on the outcome itself ended the run, so registration stopped wherever it got to. A run that ends this way still reports itself rather than staying at `NotRun`, so waiting on it returns instead of timing out.
+Use `Failures` to find individual projection artifacts that could not be built; those are skipped while registration continues. Use the outcome's singular `Failure` to find an exception that ended the whole run. That run still publishes an outcome, so a consumer waiting for registration receives the failure instead of waiting until timeout.
 
 ## Waiting for it
 
-Registration runs on the connection lifecycle, so a consumer that has just constructed a client may simply be early. `WaitForRegistration` waits for it to have run, with the same timeout shape as the other Chronicle wait helpers:
+Immediately after constructing a client, registration may still be running. Use `WaitForRegistration` to wait for its outcome without starting another registration run:
 
 ```csharp
 using Cratis.Chronicle.Registrations;
@@ -72,26 +64,26 @@ if (!outcome.IsSuccess)
 }
 ```
 
-It waits for registration to have *run*, not to have succeeded — ask the returned outcome about that. During re-registration, it waits for the new outcome instead of returning the previous run's result. A run that failed returns here too, carrying its `Failure`; the timeout is for a registration that never finished, not for one that finished badly. If it has not finished within the timeout, the wait throws `TaskCanceledException`.
+The returned outcome can describe success or failure, which is why the example checks `IsSuccess`. During re-registration, the helper waits for the new outcome instead of returning the previous result. If registration does not finish within the timeout, it throws `TaskCanceledException`. A completed run that failed returns its outcome, carrying `Failure`.
 
 ## Discovery happens before registration
 
-Before Chronicle can register artifacts, `DefaultClientArtifactsProvider` discovers their types through `ICanProvideAssembliesForDiscovery`. The first access to any artifact collection initializes **all** collections. Concurrent readers wait for that discovery to finish rather than seeing an empty or partially populated collection. Later reads reuse the completed collections; they do not scan assemblies again.
+Before Chronicle can register artifacts, `DefaultClientArtifactsProvider` discovers their types through `ICanProvideAssembliesForDiscovery`. The first access to any artifact collection initializes all collections. Concurrent readers wait for discovery to finish, and later reads reuse the completed collections without scanning assemblies again.
 
 If assembly initialization or type discovery throws, that access fails with the original exception. The provider does not publish the incomplete collections, and the next access retries initialization. This is a retry on access, not an automatic background retry.
 
 If you supply custom assembly discovery, finish that work before reading the provider's artifact collections. Reading them again on the initializing thread throws `ReentrantClientArtifactsInitialization`: discovery cannot consume its own unfinished result. Avoid waiting inside discovery for another thread that reads artifacts too, because that reader waits for discovery to finish.
 
-A complete discovery result only says which types exist. It does **not** mean the kernel has registered them; use the registration outcome and observer-state helpers described here for that distinction.
+To inspect the types found during discovery, use the [discovery report](./discovery-report.md). Finding a type does not mean the kernel registered it; the outcome and observer-state helpers below answer that later question.
 
 ## What it covers
 
 `Registration` reports projection artifacts: the fluent `IProjectionFor<T>` implementations and the model-bound read models. Those are the artifacts whose registration round-trips to the kernel inside `RegisterAll`, so the outcome is observed rather than assumed.
 
-Reactors and reducers are deliberately not reported. Their registration only opens a duplex stream and returns before the kernel has answered, so the client has nothing to report about them that would be a fact. To know a reactor or reducer is live, wait on its observer state instead — `WaitTillSubscribed` or `WaitTillActive` — which the kernel answers.
+Reactor and reducer registration opens a two-way stream and returns before the kernel answers, so those observers are not included in the outcome. To check whether a reactor or reducer is live, wait for the kernel's observer state with `WaitTillSubscribed` or `WaitTillActive`.
 
-The outcome is read-only. Whether a failed artifact should abort start-up, fail a spec, or be tolerated is yours to decide. The ASP.NET Core [readiness health check](./health-checks.md) requires a live connection, `Registration.IsSuccess`, and `IsRegistering` to be false; it reports a failure status for in-progress, incomplete, or failed registration.
+The outcome is read-only. For automatic registration, the ASP.NET Core [readiness health check](./health-checks.md) requires a live connection, `Registration.IsSuccess`, and `IsRegistering` to be false. It reports a failure status for in-progress, incomplete, or failed registration; that page also covers hosts that turn automatic registration off.
 
 :::caution
-Do not use `IConnectionLifecycle.IsConnected` as a stand-in. It is set to `true` *before* the connected handlers run — registration is one of them — and only rolled back afterwards if one of them failed. Polling it races: it reads `true` while registration is still in flight, and while a registration about to be reported as failed is still running. It answers "connected", which is necessary and not sufficient.
+Do not use `IConnectionLifecycle.IsConnected` as a registration check. It becomes `true` before the connected handlers run, including registration, and is rolled back afterwards if a handler fails. Polling it can therefore report a connection while registration is still running or about to fail.
 :::

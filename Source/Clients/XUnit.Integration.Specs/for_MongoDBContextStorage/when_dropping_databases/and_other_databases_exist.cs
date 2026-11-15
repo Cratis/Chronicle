@@ -12,6 +12,10 @@ public class and_other_databases_exist : Specification
     string _firstDatabase;
     string _secondDatabase;
     string _unissuedDatabase;
+    IMongoDatabase _first;
+    IMongoDatabase _second;
+    string _firstProbe;
+    string _secondProbe;
 
     void Establish()
     {
@@ -25,6 +29,22 @@ public class and_other_databases_exist : Specification
         _client = Substitute.For<IMongoClient>();
         _client.ListDatabaseNamesAsync(Arg.Any<CancellationToken>()).Returns(cursor);
         _client.DropDatabaseAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        _first = Substitute.For<IMongoDatabase>();
+        _second = Substitute.For<IMongoDatabase>();
+        _client.GetDatabase(_firstDatabase, Arg.Any<MongoDatabaseSettings>()).Returns(_first);
+        _client.GetDatabase(_secondDatabase, Arg.Any<MongoDatabaseSettings>()).Returns(_second);
+        _first.CreateCollectionAsync(Arg.Any<string>(), Arg.Any<CreateCollectionOptions>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            _firstProbe = call.ArgAt<string>(0);
+            return Task.CompletedTask;
+        });
+        _second.CreateCollectionAsync(Arg.Any<string>(), Arg.Any<CreateCollectionOptions>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            _secondProbe = call.ArgAt<string>(0);
+            return Task.CompletedTask;
+        });
+        _first.DropCollectionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        _second.DropCollectionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
     }
 
     Task Because() => _storage.DropDatabases(_client);
@@ -37,4 +57,12 @@ public class and_other_databases_exist : Specification
     [Fact] void should_leave_an_unissued_prefix_untouched() => _client.DidNotReceive().DropDatabaseAsync(_unissuedDatabase, Arg.Any<CancellationToken>());
     [Fact] void should_leave_unprefixed_storage_untouched() => _client.DidNotReceive().DropDatabaseAsync("testing", Arg.Any<CancellationToken>());
     [Fact] void should_leave_system_databases_untouched() => _client.DidNotReceive().DropDatabaseAsync("admin", Arg.Any<CancellationToken>());
+    [Fact] void should_probe_the_previous_context_database() => _first.Received(1).CreateCollectionAsync(Arg.Any<string>(), Arg.Any<CreateCollectionOptions>(), Arg.Any<CancellationToken>());
+    [Fact] void should_probe_the_current_context_database() => _second.Received(1).CreateCollectionAsync(Arg.Any<string>(), Arg.Any<CreateCollectionOptions>(), Arg.Any<CancellationToken>());
+    [Fact] void should_remove_the_previous_context_probe() => _first.Received(1).DropCollectionAsync(_firstProbe, Arg.Any<CancellationToken>());
+    [Fact] void should_remove_the_current_context_probe() => _second.Received(1).DropCollectionAsync(_secondProbe, Arg.Any<CancellationToken>());
+    [Fact] void should_resolve_only_issued_databases() => _client.Received(2).GetDatabase(Arg.Any<string>(), Arg.Any<MongoDatabaseSettings>());
+    [Fact] void should_not_resolve_unissued_databases() => _client.DidNotReceive().GetDatabase(_unissuedDatabase, Arg.Any<MongoDatabaseSettings>());
+    [Fact] void should_not_resolve_unprefixed_databases() => _client.DidNotReceive().GetDatabase("testing", Arg.Any<MongoDatabaseSettings>());
+    [Fact] void should_not_resolve_system_databases() => _client.DidNotReceive().GetDatabase(Arg.Is<string>(name => name == "admin" || name == "config" || name == "local"), Arg.Any<MongoDatabaseSettings>());
 }

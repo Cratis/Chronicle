@@ -27,6 +27,8 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
     protected ObserverKey _blockedObserverKey;
     protected ObserverKey _freeObserverKey;
     protected IObserver _blockedObserver;
+    protected int _blockedObserverMostConcurrentDeliveries;
+    int _blockedObserverDeliveries;
     protected IObserver _freeObserver;
     protected AppendedEventsQueue _queue;
     readonly Lock _changedLock = new();
@@ -34,6 +36,8 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
     ulong _nextSequenceNumber;
 
     protected virtual int QueueBoundedCapacity => new Configuration.Events().QueueBoundedCapacity;
+
+    protected virtual int QueueBoundedEvents => new Configuration.Events().QueueBoundedEvents;
 
     protected int FreeObserverEventCount => _freeObserverHandled.Sum(handled => handled.Events.Count());
 
@@ -45,9 +49,12 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
             .Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>())
             .Returns(async callInfo =>
             {
+                var concurrent = Interlocked.Increment(ref _blockedObserverDeliveries);
+                InterlockedMax(ref _blockedObserverMostConcurrentDeliveries, concurrent);
                 _blockedObserverHandled.Enqueue(new(callInfo.Arg<Key>(), callInfo.Arg<IEnumerable<AppendedEvent>>().ToArray()));
                 Changed();
                 await _release.Task;
+                Interlocked.Decrement(ref _blockedObserverDeliveries);
             });
         _blockedObserver.CatchUp().Returns(_ =>
         {
@@ -74,7 +81,7 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
             Substitute.For<IMeter<AppendedEventsQueue>>(),
             Options.Create(new ChronicleOptions
             {
-                Events = new Configuration.Events { QueueBoundedCapacity = QueueBoundedCapacity }
+                Events = new Configuration.Events { QueueBoundedCapacity = QueueBoundedCapacity, QueueBoundedEvents = QueueBoundedEvents }
             }),
             Substitute.For<ILogger<AppendedEventsQueue>>());
 
@@ -125,6 +132,14 @@ public class a_blocked_observer_and_a_free_observer : all_dependencies
             {
                 return;
             }
+        }
+    }
+
+    static void InterlockedMax(ref int target, int value)
+    {
+        int current;
+        while (value > (current = Volatile.Read(ref target)) && Interlocked.CompareExchange(ref target, value, current) != current)
+        {
         }
     }
 

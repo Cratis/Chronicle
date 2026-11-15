@@ -17,6 +17,7 @@ namespace Cratis.Chronicle.Services.Recommendations;
 internal sealed class Recommendations(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
     global::Cratis.Chronicle.Storage.IStorage storage,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Recommendations.Recommendations> logger) : global::Cratis.Chronicle.Contracts.Recommendations.IRecommendations
 {
     /// <inheritdoc/>
@@ -41,19 +42,30 @@ internal sealed class Recommendations(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> AllRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.AllRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
-            () => global::Cratis.Chronicle.Recommendations.RecommendationDetails.AllRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
+            () => QueryExecutor.Canonicalize(async () =>
+            {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
+                return global::Cratis.Chronicle.Recommendations.RecommendationDetails.AllRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
-                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>)_.Select(ToRecommendationDetailsResponse).ToList()),
+                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>)_.Select(ToRecommendationDetailsResponse).ToList());
+            }, callContext.CancellationToken),
             exception => logger.QueryFailed(exception, "Recommendations", "AllRecommendations"));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> GetIgnoredRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.GetIgnoredRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Recommendations.RecommendationDetails.GetIgnoredRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
                 return result.Select(ToRecommendationDetailsResponse).ToList();
             },
@@ -63,9 +75,13 @@ internal sealed class Recommendations(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> GetRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.GetRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Recommendations.RecommendationDetails.GetRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage);
                 return result.Select(ToRecommendationDetailsResponse).ToList();
             },
@@ -75,10 +91,17 @@ internal sealed class Recommendations(
     public IObservable<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>> IgnoredRecommendations(global::Cratis.Chronicle.Contracts.Recommendations.IgnoredRecommendationsRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, request.Namespace),
-            () => global::Cratis.Chronicle.Recommendations.RecommendationDetails.IgnoredRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
+            () => QueryExecutor.Canonicalize(async () =>
+            {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
+                return global::Cratis.Chronicle.Recommendations.RecommendationDetails.IgnoredRecommendations((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, storage)
                 .CompletedBy(callContext.CancellationToken)
-                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>)_.Select(ToRecommendationDetailsResponse).ToList()),
+                .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse>)_.Select(ToRecommendationDetailsResponse).ToList());
+            }, callContext.CancellationToken),
             exception => logger.QueryFailed(exception, "Recommendations", "IgnoredRecommendations"));
 
     static global::Cratis.Chronicle.Contracts.Recommendations.RecommendationDetailsResponse ToRecommendationDetailsResponse(global::Cratis.Chronicle.Recommendations.RecommendationDetails source) =>

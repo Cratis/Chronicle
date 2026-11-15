@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.Projections;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Projections;
@@ -24,7 +25,8 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entity = await scope.DbContext.ProjectionFutures
-            .FirstOrDefaultAsync(f => f.ProjectionId == projectionId.Value && f.Id == future.Id.Value.ToString());
+            .WhereExact(scope.DbContext, f => f.ProjectionId, projectionId.Value)
+            .FirstOrDefaultAsync(f => f.Id == future.Id.Value.ToString());
 
         if (entity is null)
         {
@@ -56,7 +58,7 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entities = await scope.DbContext.ProjectionFutures
-            .Where(f => f.ProjectionId == projectionId.Value)
+            .WhereExact(scope.DbContext, f => f.ProjectionId, projectionId.Value)
             .ToListAsync();
 
         return entities.Select(entity => ProjectionFuturesConverters.ToProjectionFuture(entity, jsonSerializerOptions)).ToArray();
@@ -68,7 +70,8 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entity = await scope.DbContext.ProjectionFutures
-            .FirstOrDefaultAsync(f => f.ProjectionId == projectionId.Value && f.Id == futureId.Value.ToString());
+            .WhereExact(scope.DbContext, f => f.ProjectionId, projectionId.Value)
+            .FirstOrDefaultAsync(f => f.Id == futureId.Value.ToString());
 
         if (entity is not null)
         {
@@ -83,7 +86,7 @@ public class ProjectionFuturesStorage(EventStoreName eventStore, EventStoreNames
         await using var scope = await database.Namespace(eventStore, @namespace);
 
         var entities = await scope.DbContext.ProjectionFutures
-            .Where(f => f.ProjectionId == projectionId.Value)
+            .WhereExact(scope.DbContext, f => f.ProjectionId, projectionId.Value)
             .ToListAsync();
 
         if (entities.Count > 0)

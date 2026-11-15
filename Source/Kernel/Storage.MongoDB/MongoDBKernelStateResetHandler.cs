@@ -70,7 +70,7 @@ public class MongoDBKernelStateResetHandler(
             && (string.IsNullOrEmpty(prefix) || n.StartsWith(prefix, StringComparison.Ordinal))).ToList();
         foreach (var name in droppedNames)
         {
-            var receipts = client.GetDatabase(name).GetCollection<BsonDocument>("generation-initialization");
+            var receipts = client.GetDatabase(name).GetCollection<BsonDocument>(WellKnownCollectionNames.GenerationInitialization);
             if (await receipts.CountDocumentsAsync(Builders<BsonDocument>.Filter.Exists("receipt")) != 0)
             {
                 throw new InvalidOperationException("Kernel state reset is refused for an initialized generation store.");
@@ -83,10 +83,10 @@ public class MongoDBKernelStateResetHandler(
             var database = client.GetDatabase(name);
             using var collections = await database.ListCollectionNamesAsync();
             var names = await collections.ToListAsync();
-            if (names.Contains("generation-floor", StringComparer.Ordinal))
+            if (names.Contains(WellKnownCollectionNames.GenerationFloor, StringComparer.Ordinal))
             {
                 // Never drop and recreate a floor: even the reset window must retain admission.
-                foreach (var collection in names.Where(_ => _ != "generation-floor" && !_.StartsWith("system.", StringComparison.Ordinal)))
+                foreach (var collection in names.Where(_ => _ != WellKnownCollectionNames.GenerationFloor && !_.StartsWith("system.", StringComparison.Ordinal)))
                 {
                     await DropWithRetry(() => database.DropCollectionAsync(collection));
                 }

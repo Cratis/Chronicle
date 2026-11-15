@@ -1,17 +1,19 @@
 ---
-title: Get read models
-description: Retrieve read model instances — one, all, or a page — and observe them change live, picking the right consistency for each read.
+title: "Cratis Chronicle: query and watch read models"
+description: Read one instance, a collection, or a live page in Cratis Chronicle. Choose stored state for lists or passive reads when the latest events must be included.
 ---
 
-**Goal:** your events project into a read model — now you need it back out. One book, the whole catalog, a page for a grid, or a live stream that updates the UI as events arrive. `IReadModels` (on `IEventStore.ReadModels`) covers all of these; the choice is between **eventually consistent** reads served from the materialized sink — the default — and **strongly consistent** reads of a passive read model, computed from the event log on every call.
+Cratis Chronicle lets you retrieve a read model by key, load a collection, or subscribe to live changes. Use materialized state, stored by a projection or reducer, for lists that can tolerate a delay after an append. Use a passive read model when the read must compute state from the event log rather than wait for that stored state to catch up.
+
+The C# examples use `IReadModels` through `IEventStore.ReadModels`. Start with a registered read model and the projection or reducer that builds it. If you still need to choose that shape, read [Designing read models](../concepts/designing-read-models) first.
 
 :::note[Client coverage]
-Getting a single instance (below) is real in every client. Kotlin and Java currently only support that single-instance lookup — no bulk "get all", materialized paging, or live/observable read model API exists in the Kotlin SDK yet. Elixir supports both "get all" (`Chronicle.all/1`) and materialized paging (`Chronicle.ReadModels.query/2`, with `page`/`page_size`) — see [Designing read models](../concepts/designing-read-models) — and watches a read model's changes with `Chronicle.ReadModels.watch/2`. TypeScript exposes the live, observable read model query as `readModels.watch()`, in addition to the single/bulk/paged reads.
+The client tabs show each client's API, not identical capabilities. Kotlin's suspending API includes collection reads, materialized paging and live pages; the Java blocking wrapper exposes single-instance lookup. Elixir provides `Chronicle.all/1`, materialized paging through `Chronicle.ReadModels.query/2`, and change messages through `Chronicle.ReadModels.watch/2`. TypeScript streams individual changes through `readModels.watch()`, alongside its single, bulk and paged reads.
 :::
 
 ## Get one instance
 
-`GetInstanceById` returns the instance for one key. For a materialized read model — the default — it reads the stored instance from the sink, so it is eventually consistent. For a `[Passive]` read model it replays the key's events through the projection or reducer on demand, reflecting everything appended up to this moment:
+`GetInstanceById` returns the instance for one key. By default it reads materialized state from the sink, the storage used by the projection or reducer. That read is eventually consistent: the model may not yet include a recent append. Marking the read model `[Passive]` makes the lookup compute state from the key's events on demand instead:
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/get-one" />
 
@@ -19,53 +21,50 @@ Getting a single instance (below) is real in every client. Kotlin and Java curre
 
 ## Get all instances
 
-`GetInstances` returns every instance in one call — read from the sink for a materialized read model, replayed from the event log for a passive one. Either way the whole set comes back at once, so filter the result with LINQ and keep it for small sets:
+`GetInstances` returns every instance in one call. It reads the sink for a materialized model and computes from the event log for a passive one. Keep this for small collections: filtering the returned set with LINQ still loads the whole set first.
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/get-all" />
 
 ## Page through materialized state
 
-For list views and grids, skip the replay: `Materialized` reads the instances the projection has already persisted to the sink — eventually consistent (typically milliseconds behind), fast regardless of history, and paged:
+For a catalog or grid, use `Materialized` to fetch only the page you need from stored state. This avoids replaying event history for the read, but does not remove the delay between appending an event and the projection updating its sink:
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/materialized-page" />
 
 ## Watch every change
 
-`Watch<T>()` returns an `IObservable<ReadModelChangeset<T>>` that emits whenever **any** instance of that read model type changes — the changeset carries the key, the new state, and whether the instance was removed:
+Use `Watch<T>()` when you need individual changes rather than a replacement page. It returns an `IObservable<ReadModelChangeset<T>>`; each changeset identifies the key, carries the new state, and reports whether the instance was removed:
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/watch-changes" />
 
-Dispose the subscription when you're done. If you need explicit lifecycle control — for example awaiting the watcher's `Subscribed` before producing events — use `GetWatcherFor<Book>()` instead.
+Dispose the subscription when the consumer stops watching. For a projection-backed model, use `GetWatcherFor<Book>()` when you need to await the watcher's `Subscribed` signal before producing events.
 
 :::note
-During a rolling upgrade, change watches may not receive changes from silos still on the previous version; re-establish watches once all silos run this version.
+During a rolling kernel upgrade, change watches may miss changes from kernel nodes, or silos, still on the previous version. Re-establish watches once all nodes run the same version.
 :::
 
 ## Observe a live page
 
-`Materialized.ObserveInstances` pushes a fresh page snapshot whenever the stored data changes — a live dashboard or table with no polling:
+Use `Materialized.ObserveInstances` for a table that should replace its current page as stored data changes. It pushes page snapshots, so the consumer does not need to poll:
 
 <ChronicleClientTabs snippet="scenarios/real-time-query/observe-page" />
 
-When a command appends `BookBorrowed`, the projection updates the materialized `Book` and every subscriber receives the new page. The brief gap between append and push is the normal [eventual consistency](../read-models/consistency.md) window — usually imperceptible.
+After a command appends `BookBorrowed`, the projection updates the materialized `Book` and the subscription can receive a new page. The gap between append and push is the [eventual consistency](../read-models/consistency.md) window; do not treat subscribing as a guarantee that a just-appended event is already visible.
 
-:::note
-Serving these to a frontend? Arc turns read models into observable queries with generated TypeScript proxies — drop one straight into a live table with [Displaying data](/components/displaying-data/).
-:::
+To serve a live page to a frontend, Cratis Arc can expose observable queries with generated TypeScript proxies. [Displaying data](/components/displaying-data/) shows how to connect those queries to a table.
 
 ## Pick by consistency
 
 | You need | Use | Consistency |
 |---|---|---|
-| One instance, exact current state | `GetInstanceById<T>(key)` | Strong |
-| All instances, exact current state | `GetInstances<T>()` | Strong |
+| One instance | `GetInstanceById<T>(key)` | Eventual by default; strong for `[Passive]` models |
+| A small collection | `GetInstances<T>()` | Eventual by default; strong for `[Passive]` models |
 | A page for a list or grid | `Materialized.GetInstances<T>(skip, take)` | Eventual |
 | To react to every change of a type | `Watch<T>()` | Pushed as changes apply |
 | A live-updating page | `Materialized.ObserveInstances<T>(skip, take)` | Eventual, pushed |
 
 ## See also
 
-- [Consistency models](../read-models/consistency.md) — the strong-vs-eventual trade-off in depth.
-- [Getting a single instance](../read-models/getting-single-instance) and [Getting a collection of instances](../read-models/getting-collection-instances) — caching, performance, and the non-generic forms.
-- [Materialized read models](../read-models/materialized-pagination) — pagination details and when to query the sink directly.
-- [Watching read models](../read-models/watching-read-models) — changesets, filtering, and error handling.
+If the read feeds a business decision, use [Consistency models](../read-models/consistency.md) to choose between passive and materialized state. [Getting a single instance](../read-models/getting-single-instance) and [Getting a collection of instances](../read-models/getting-collection-instances) cover caching and non-generic forms.
+
+For a larger list, continue with [Materialized read models](../read-models/materialized-pagination). For a long-lived subscription, [Watching read models](../read-models/watching-read-models) covers changesets, filtering and error handling.

@@ -17,9 +17,12 @@ Martin Dilger and Nebulit GmbH's build-state-view (see `provenance.md`), with th
 migrations and projection specification harness replaced by `ReadModelScenario<TReadModel>`.
 
 Take the contract first (the `.play` read model, its projection and its specifications, or the
-agreed outline). Write one specification per contract specification, using its example values, and
-add the cases below only where the contract states the behavior; an uncontracted rule found in the
-projection is a proposal for the contract, not silent coverage.
+agreed outline). Give each contract specification assertions using its example
+values in **one shared scenario class per read model**, not a class per property
+or lifecycle event. Capture intermediate values or immutable snapshots in `Because`
+as the event sequence advances; facts only inspect them. Add the cases below only
+where the contract states the behavior; an uncontracted rule found in the projection
+is a proposal for the contract, not silent coverage.
 
 ## How to use this list
 For each read model, list its properties and its events in a small table (property, events that

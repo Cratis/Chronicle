@@ -6,6 +6,9 @@ namespace Cratis.Chronicle.Captures;
 /// <summary>
 /// Defines the builder for configuring webhook capture sources.
 /// </summary>
+/// <remarks>
+/// Webhook capture sources do not support authentication yet. These members will be removed in the next major version.
+/// </remarks>
 public interface IWebhookSourceBuilder
 {
     /// <summary>
@@ -14,6 +17,7 @@ public interface IWebhookSourceBuilder
     /// <param name="username">The username.</param>
     /// <param name="password">The password.</param>
     /// <returns>The builder continuation.</returns>
+    [Obsolete("Webhook capture sources do not support authentication: the kernel does not receive, store or enforce it. Remove this call - it has no effect and will be removed in the next major version. To authenticate an API capture, configure authentication on the External Service it references.")]
     IWebhookSourceBuilder WithBasicAuth(string username, string password);
 
     /// <summary>
@@ -21,6 +25,7 @@ public interface IWebhookSourceBuilder
     /// </summary>
     /// <param name="token">The bearer token.</param>
     /// <returns>The builder continuation.</returns>
+    [Obsolete("Webhook capture sources do not support authentication: the kernel does not receive, store or enforce it. Remove this call - it has no effect and will be removed in the next major version. To authenticate an API capture, configure authentication on the External Service it references.")]
     IWebhookSourceBuilder WithBearerToken(string token);
 
     /// <summary>
@@ -30,5 +35,6 @@ public interface IWebhookSourceBuilder
     /// <param name="clientId">The OAuth client ID.</param>
     /// <param name="clientSecret">The OAuth client secret.</param>
     /// <returns>The builder continuation.</returns>
+    [Obsolete("Webhook capture sources do not support authentication: the kernel does not receive, store or enforce it. Remove this call - it has no effect and will be removed in the next major version. To authenticate an API capture, configure authentication on the External Service it references.")]
     IWebhookSourceBuilder WithOAuth(string authority, string clientId, string clientSecret);
 }

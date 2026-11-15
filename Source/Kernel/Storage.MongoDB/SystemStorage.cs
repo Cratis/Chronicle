@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 /// <param name="database">The MongoDB <see cref="IDatabase"/>.</param>
 public class SystemStorage(IDatabase database) : ISystemStorage
 {
-    const string SystemInformationCollectionName = "system-information";
+    const string SystemInformationCollectionName = WellKnownCollectionNames.SystemInformation;
     const int SystemInformationId = 0;
     const int PatchingKernelVersionId = 1;
 

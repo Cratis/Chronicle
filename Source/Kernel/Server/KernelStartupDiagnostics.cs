@@ -25,6 +25,39 @@ internal static class KernelStartupDiagnostics
     }
 
     /// <summary>
+    /// Reports settings that only the development build honors when they are configured in another build.
+    /// The values are never logged.
+    /// </summary>
+    /// <param name="configuration">The application configuration.</param>
+    /// <param name="logger">The kernel logger.</param>
+    /// <param name="developmentBuild">Whether this is the development build.</param>
+    internal static void ReportIgnoredDevelopmentOnlySettings(IConfiguration configuration, ILogger<Kernel> logger, bool developmentBuild)
+    {
+        if (developmentBuild)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(configuration[$"{ChronicleOptions.SectionPath}:Authentication:DefaultAdminPassword"]))
+        {
+            logger.DefaultAdminPasswordIgnored();
+        }
+    }
+
+    /// <summary>
+    /// Reports the experimental grain directory and its cluster restart requirement when enabled.
+    /// </summary>
+    /// <param name="options">The Chronicle configuration.</param>
+    /// <param name="logger">The kernel logger.</param>
+    internal static void ReportGrainDirectory(ChronicleOptions options, ILogger<Kernel> logger)
+    {
+        if (options.Clustering.DistributedGrainDirectoryEnabled)
+        {
+            logger.DistributedGrainDirectoryEnabled();
+        }
+    }
+
+    /// <summary>
     /// Reports a subscriber timeout that the Orleans response timeout on subscriber calls bounds.
     /// </summary>
     /// <param name="options">The Chronicle configuration.</param>

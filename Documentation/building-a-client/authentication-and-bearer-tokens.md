@@ -67,6 +67,16 @@ are exactly equivalent. This is what makes local development work with no setup,
 those two values are not a secret worth protecting — they're baked into every Chronicle client and
 meaningless outside a server explicitly configured to accept them.
 
+### External token authority
+
+The token endpoint doesn't have to be on the Chronicle server. When a server sits behind an
+HTTPS-terminating proxy and trusts an external issuer, the client can request its token from that
+issuer instead. The .NET client takes an explicit `TokenEndpoint` first, then an `Authority` whose
+token endpoint it discovers from `/.well-known/openid-configuration`, and otherwise the Chronicle
+server. A new client should follow the same precedence. Both URLs must be https without user info,
+the external certificate must be fully validated, and the development credentials are never sent to
+the external issuer. See [ChronicleOptions](../configuration/chronicle-options.mdx#authentication).
+
 ## Attaching the token to a call
 
 Once a token exists, it goes on every outgoing gRPC call as a metadata header:

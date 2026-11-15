@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.ReadModels;
 public class ReadModelWatcherManager(IReadModelWatcherFactory readModelWatcherFactory) : IReadModelWatcherManager
 {
     readonly ConcurrentDictionary<Type, IReadModelWatcher> _watchers = [];
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     bool _released;
 
     /// <inheritdoc/>

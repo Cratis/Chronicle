@@ -37,5 +37,5 @@ In a spec, attempt an immediate append through both the current event log and a
 previously captured reference; assert that neither reaches transport. Assert
 that transactional work commits with its receipt, that an unsupported kernel
 fails closed, and that borrowed frames cannot complete another owner's unit.
-Run `dotnet test` on the owning project. In-process proof is not a substitute for
+Run the owning project's built spec executable (see [specs.csharp](../../../rules/specs.csharp.md)). In-process proof is not a substitute for
 integration coverage of the storage provider's transaction boundary.

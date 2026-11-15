@@ -30,7 +30,8 @@ Typed example/override forms: `cratis-screenplay-specifications`
 | `when query` -> `then result` / `then no result` | yes | yes | same as `then query`: only the query-only cases below |
 | `given clock` / `when clock`, `when trigger`, record-source `given`/`when capture` | yes | yes (standalone and any cratis whose compiler admits v6; an older bundle does not, see toolchain `references/executable-subset.md`) | no |
 | Event-source capture fixtures | `given <FromEvent>` / `when append <FromEvent>`, not capture records (PLAY0701) | admitted root capture behavior executes; see `public-event-coverage.md` for prerequisites and limits | separate target admission |
-| Command spec listing reaction cascade events | yes (v6 semantics) | false PLAY0285 on an older cratis bundle only; see SKILL.md "Version skew" | no: STAGE-ESM-011; generated CommandScenario does not settle reactions |
+| Command spec listing its own slice's reaction cascade events | yes (v6 semantics) | yes; another slice's event is PLAY0285 (decision 0115); see SKILL.md "Reaction chains" | no: STAGE-ESM-011; generated CommandScenario does not settle reactions |
+| `then invokes <Command>` in an Automation spec | yes | yes, ESM v34 | Stage spec runner compares it; the Cratis renderer refuses models after v33 (STAGE-ESM-016) |
 | `generated <name> = <value>` under `when`, `then returns` (ESM v7) | yes | yes on a compiler that admits v7 (PLAY0268 on an older bundle) | yes on Stage for supported UUID/String strategies and v15 freshness and scalar/named responses; unsupported types/combinations remain -028/-038 |
 | v15 generation strategy fixtures and used-source rejection | yes | strict encoding/size/case/version/variant; Contract for invalid pins, Concurrency for reused source | supported strategies/freshness render; invalid pins refuse -011, unpinned unordered/projected assertions -038; source: command-surface `references/generated-values-and-responses.md` |
 | `then events in any order` | yes | yes | yes |
@@ -45,13 +46,13 @@ Typed example/override forms: `cratis-screenplay-specifications`
 | Date rules using `today`, `$context`, mixed `Date`/`DateTime`, concept or reaction-`where` positions; nested paths | spec them in design | rule does not bind: `recorded` | `recorded` |
 | Bodied rules, code policies | spec them | spec reported **unsupported**, never passed | no |
 | Pending described command handlers (v23) | specify intent | binds; denial/validation execute, body-reaching specs Unsupported ImplementationBody; all-Unsupported is not green | STAGE-IMPL-002 even Stub mode |
-| Attached command handlers | spec them in design | blocked: PLAY0800, no spec runs (V3 blocked); permanent constrained-attachment requirement, gap-fill in code | no |
+| Attached command handlers | spec them in design | beside unconditional `produces` with a resolved body: binds v23, a spec reaching the body is Unsupported (`ImplementationBody`); otherwise PLAY0800, no spec runs | Stage renders a C# body; generated specifications execute verified synchronous C# handlers |
 | `file` constraints | spec them in design | blocked: PLAY0268 at binding, no spec runs (V3 blocked) | no |
 | Query `performer`s | spec them in design | opaque read: PLAY0270 information, left out of the executable model; a spec that reads it is left out, every other spec still runs ([version gate](../../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does); older compilers report PLAY0268) | no |
 | Atomic reaction mode (v22) | declare for new models | failed batch adds no facts or view changes; earlier batches/commands remain; `then error` alone is insufficient | v22 STAGE-ESM-016; mode in admitted v23–v27 STAGE-ESM-043 |
 | Protected command reads (v25) | declare opt-in for eligible reads | absence Validation; matching intervening facts Conflict; race vectors are not a new spec construct | Cratis C# rendering in a new enough bundle (STAGE-ESM-044 before, or for unpreservable shapes); semantic Host/executor execute admitted reads, non-Error protected requirements STAGE-ESM-045; v25 pair admitted |
 
-Requires Screenplay 4.210.0 (`screenplay --version`) for attached handlers to report PLAY0800; older binders use PLAY0268. Other PLAY0268 families are unchanged.
+Requires Screenplay 4.250.0 (`screenplay --version`) for attached handlers beside `produces` to bind; 4.210.0 to 4.249.x report PLAY0800 for every attached handler and older binders use PLAY0268. Other PLAY0268 families are unchanged.
 
 Requires Screenplay 4.105.0 or later (`screenplay --version`) for list-query specifications, and 4.143.0 or later for collection equality filters (ESM v14).
 

@@ -90,7 +90,7 @@ public class AuthenticationClientInterceptor(ITokenProvider tokenProvider, ILogg
             }
             catch (Exception retryEx)
             {
-                logger.RetryAfterTokenRefreshFailed(context.Method.FullName, retryEx);
+                logger.RetryAfterTokenRefreshFailed(context.Method.FullName, TokenDiagnostics.Label(TokenDiagnostics.Categorize(retryEx)));
                 throw;
             }
         }
@@ -129,7 +129,7 @@ public class AuthenticationClientInterceptor(ITokenProvider tokenProvider, ILogg
         }
         catch (Exception ex)
         {
-            logger.FailedToObtainToken(context.Method.FullName, ex);
+            logger.FailedToObtainToken(context.Method.FullName, TokenDiagnostics.Label(TokenDiagnostics.Categorize(ex)));
             return context;
         }
     }

@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Orleans.Storage.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -22,6 +22,11 @@ public class HandleEventsForPartitionState : JobStepState
     /// Gets or sets the deferral that owns the recovery.
     /// </summary>
     public Guid? DeferralId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the replay operation that scheduled the step, or null when it was not scheduled by a replay.
+    /// </summary>
+    public ReplayEpoch? ReplayEpoch { get; set; }
 
     /// <summary>
     /// The <see cref="ObserverKey"/> for the observer.

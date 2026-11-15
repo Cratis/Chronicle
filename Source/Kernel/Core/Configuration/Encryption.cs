@@ -8,6 +8,12 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 public class Encryption
 {
+    /// <summary>Gets the grace allowed for a release already holding key material before erasure confirmation.</summary>
+    public TimeSpan RevocationGrace { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Gets the longest a single encryption key fence read or write may wait for the key store.</summary>
+    public TimeSpan FenceTimeout { get; init; } = TimeSpan.FromSeconds(3);
+
     /// <summary>
     /// Gets the optional storage configuration for encryption keys.
     /// When not configured, the general <see cref="Storage"/> is used as the default.
@@ -38,4 +44,19 @@ public class Encryption
     /// </para>
     /// </remarks>
     public bool MigrateFromDefaultStorage { get; init; }
+
+    /// <summary>
+    /// Gets what the server does at startup when encryption keys stored under earlier names still need the key upgrade.
+    /// Defaults to <see cref="LegacyKeyHandling.Warn"/>.
+    /// </summary>
+    public LegacyKeyHandling LegacyKeyHandling { get; init; } = LegacyKeyHandling.Warn;
+
+    /// <summary>
+    /// Gets the event stores and namespaces that hold encryption keys stored under earlier names. Required to migrate an Azure Key Vault key store.
+    /// </summary>
+    /// <remarks>
+    /// Earlier names are lowercased and reduced to letters, digits and hyphens, so the scopes cannot be read off them. The migration ties a name to an
+    /// address only through this list, and every listed scope must have entries.
+    /// </remarks>
+    public IReadOnlyList<LegacyKeyScope> LegacyKeyScopes { get; init; } = [];
 }

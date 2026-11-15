@@ -43,7 +43,7 @@ public class when_reporting_erased_properties : Specification
         _otherSchema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"count":{"type":"integer","compliance":[{"metadataType":"PII","details":""}]}}}""");
         var otherContent = await manager.Apply("store", "tenant", _otherSchema, "subject", new JsonObject { ["count"] = 42 });
         _other = new(_stored.Context with { EventType = new("counter", 1) }, converter.ToExpandoObject(otherContent, _otherSchema));
-        _compliance = new(manager, converter);
+        _compliance = new(manager, converter, new OwnGenerationSchemaCache());
         await keys.RecordErasureFor("store", "tenant", "subject");
         await keys.DeleteFor("store", "tenant", "subject");
     }

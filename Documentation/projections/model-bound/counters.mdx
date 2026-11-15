@@ -1,63 +1,54 @@
 ---
-title: "Counters"
-description: "Increment, decrement, and count with model-bound projection attributes."
+title: "Cratis Chronicle model-bound projections: Count events"
+description: "Use Increment, Decrement, and Count in Cratis Chronicle model-bound projections to track current quantities and event totals on read models."
 ---
 
-Model-bound projections provide three counter operations for tracking occurrences and quantities: Increment, Decrement, and Count.
+Use counters in Cratis Chronicle model-bound projections to track how many times an event happened or how many items are currently active. `Increment` and `Count` add one to a numeric property; `Decrement` subtracts one. Choose the operation and property names to make clear whether the value represents a current quantity or an event total.
 
 ## Increment
 
-The `Increment` attribute increments a numeric property when an event occurs. This is useful for tracking counters that increase with specific events.
+Apply `Increment` to a numeric property when each matching event should increase its current value by one. It does not read an amount from the event payload.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/basic-increment" />
 
-Each time a `UserLoggedIn` event occurs, `LoginCount` is incremented by 1.
+Each login event adds one to `LoginCount` on the selected read model instance.
 
 ## Decrement
 
-The `Decrement` attribute decrements a numeric property when an event occurs. This is useful for tracking decreasing counters.
+Pair `Decrement` with `Increment` when a quantity can rise and fall, such as the number of active connections.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/increment-decrement" />
 
-When a `UserConnected` event occurs, `ActiveConnections` increases by 1. When a `UserDisconnected` event occurs, it decreases by 1.
+A connection event adds one to `ActiveConnections`; a disconnection event subtracts one. Both operations change the current value rather than keeping separate totals.
 
 ## Count
 
-The `Count` attribute adds one to the property for every matching event, starting from zero, so on its own it holds the number of times the event occurred. It is not a separate running tally: it adds to whatever the property currently holds, so another attribute that writes the same property changes the number it counts on from.
+Use `Count` to express that a property records occurrences of an event. If the property has no value yet, counting starts at zero, then adds one for each matching event.
+
+`Count` uses the property's current value, just as `Increment` does. It does not maintain a separate tally. If another mapping sets or changes that property, subsequent counts continue from the changed value.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/count" />
 
 ## Multiple Events
 
-You can use multiple attributes on the same property to respond to different events:
+Multiple event types can change the same property. Here, the creation event sets `Quantity` from `InitialQuantity`, restocking adds one, and a sale subtracts one. Separate properties count restocks and sales so those totals remain available even as the quantity changes:
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/combined" />
 
 ## Complete Example
 
-Here's a complete example tracking various metrics:
+This activity read model keeps event totals separate from current state. Login and logout counts record each kind of event, while `ActiveSessions` rises and falls. Purchase and refund counts track occurrences; `NetSpent` adds and subtracts the amounts carried by those events.
 
 <ChronicleClientTabs snippet="projections/model-bound/counters/full-example" />
 
 ## Counter vs Count
 
-**Increment/Decrement:**
+`Count` and `Increment` both add one to the stored property. Their distinction is intent: `Count` reads as an event total, while `Increment` paired with `Decrement` reads as a changing quantity. Neither protects the value from other mappings.
 
-- Modifies the current value
-- Useful for tracking active states (sessions, connections)
-- Can be combined with SetFrom to establish initial values
-- Changes are relative to current value
-
-**Count:**
-
-- Maintains absolute count of event occurrences
-- Useful for analytics and reporting
-- Independent of other operations
-- Always represents total occurrences
+To retain a total alongside a current quantity, declare separate properties, as in the examples above. Use [`AddFrom` or `SubtractFrom`](basic-mapping#add-and-subtract-values) when the event carries an amount instead of representing a change of one.
 
 ## Best Practices
 
-1. **Use Increment/Decrement** for tracking active/current states that change over time
-2. **Use Count** for analytics and metrics that track total occurrences
-3. **Combine operations** on the same property when tracking both current state and history
-4. **Initialize counters** with SetFrom when you have an initial value from a creation event
+Check which read model instance receives the counter event. By default, its event source id selects the instance, so events from different sources do not automatically contribute to one global total. Use a [constant key](constant-key) when they should.
+
+If a creation event supplies an initial quantity, set it with `SetFrom` before later events adjust it. Keep an event-total property dedicated to counting when it must not be reset by that initialization.

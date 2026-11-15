@@ -15,6 +15,8 @@ message EventStoreSubscriptionDefinition {
    string SourceEventStore = 2;
    repeated EventType EventTypes = 3;
    EventGenerationDelivery GenerationDelivery = 4;
+   repeated NamedTag NamedTags = 5;
+   repeated string SourceNamespaces = 6;
 }
 message EventType {
    string Id = 1;
@@ -26,6 +28,10 @@ message GetEventStoreSubscriptionsRequest {
 }
 message IEnumerable_EventStoreSubscriptionDefinition {
    repeated EventStoreSubscriptionDefinition items = 1;
+}
+message NamedTag {
+   string Name = 1;
+   string Value = 2;
 }
 message RemoveEventStoreSubscriptions {
    string TargetEventStore = 1;

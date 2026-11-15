@@ -34,6 +34,7 @@ public class RedundantSetToWithMatchingNamesAnalyzer : DiagnosticAnalyzer
         "IProjectionBuilder",
         "IFromBuilder",
         "IJoinBuilder",
+        "IChildrenJoinBuilder",
         "IChildrenBuilder",
         "IReadModelPropertiesBuilder",
         "ISetBuilder"

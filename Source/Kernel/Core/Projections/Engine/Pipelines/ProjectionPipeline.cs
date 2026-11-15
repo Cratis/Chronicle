@@ -62,13 +62,28 @@ public partial class ProjectionPipeline(
     /// </remarks>
     readonly ProjectionHandleLock _handleLock = handleLock;
 
+    long _activity;
+    bool _bulkOpen;
+    Action? _sessionOpened;
+
     ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
+
+    /// <inheritdoc/>
+    public long GetActivity() => Interlocked.Read(ref _activity);
+
+    /// <inheritdoc/>
+    public bool IsPinned() => Volatile.Read(ref _isReplaying) || Volatile.Read(ref _bulkOpen);
+
+    /// <inheritdoc/>
+    public void ObserveSessions(Action onSessionOpened) => _sessionOpened = onSessionOpened;
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
+        _sessionOpened?.Invoke();
         replayScopedCache.BeginReplaySession();
         if (generation is not null)
         {
@@ -82,8 +97,10 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public Task ResumeReplay(ReplayContext context)
     {
+        Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
+        _sessionOpened?.Invoke();
         replayScopedCache.BeginReplaySession();
         return generation is null ? sink.ResumeReplay(context) : Task.CompletedTask;
     }
@@ -133,10 +150,22 @@ public partial class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public Task BeginBulk() => sink.BeginBulk();
+    public Task BeginBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _bulkOpen, true);
+        _sessionOpened?.Invoke();
+        return sink.BeginBulk();
+    }
 
     /// <inheritdoc/>
-    public Task ResumeBulk() => sink.ResumeBulk();
+    public Task ResumeBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _bulkOpen, true);
+        _sessionOpened?.Invoke();
+        return sink.ResumeBulk();
+    }
 
     /// <inheritdoc/>
     public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
@@ -145,6 +174,7 @@ public partial class ProjectionPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk()
     {
         ClearPreparedPage();
+        Volatile.Write(ref _bulkOpen, false);
         return sink.EndBulk();
     }
 
@@ -152,12 +182,15 @@ public partial class ProjectionPipeline(
     public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
     {
         ClearPreparedPage();
+        Volatile.Write(ref _bulkOpen, false);
         return sink.EndBulk(cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
+        Interlocked.Increment(ref _activity);
+
         // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping
         // on the event source id is striping on the resolved key: same-key handling serializes, different-key
         // handling runs in parallel. Any projection that can collapse partitions keeps the coarse lock.

@@ -2,15 +2,16 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Occurrences;
+using Cratis.Chronicle.Occurrences.given;
 using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Occurrences.for_OccurrenceAttempt;
 
-public class when_the_handler_throws : given.an_occurrence_client
+public class when_the_handler_throws : an_occurrence_client
 {
     void Establish() => _handler.OnHandle = (_, _, _) => throw new InvalidOperationException("handler failed");
 
-    Task Because() => CreateAttempt(TimeProvider.System).Run(_claim, CancellationToken.None);
+    Task Because() => CreateAttempt(TimeProvider.System).Run(_claim, TimeProvider.System.GetTimestamp(), CancellationToken.None);
 
     [Fact] void should_fail_the_fenced_claim() => _service.Received(1).FailOccurrence(Arg.Is<FailOccurrenceRequest>(request => request.OccurrenceId == "occurrence" && request.Epoch == 3 && request.Error.Contains("handler failed")), Arg.Any<CallContext>());
     [Fact] void should_not_complete_the_claim() => _service.DidNotReceive().CompleteOccurrence(Arg.Any<CompleteOccurrenceRequest>(), Arg.Any<CallContext>());

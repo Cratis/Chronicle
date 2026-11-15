@@ -1,44 +1,41 @@
 ---
-title: Correlation, identity, and causation
-description: The three pieces of context Chronicle carries with every event — who caused it, what operation it belongs to, and why it happened.
+title: Cratis Chronicle event correlation, identity, and causation
+description: Cratis Chronicle records correlation, identity and causation with events so you can trace an operation, identify its actor and inspect what caused it.
 ---
 
-Every event Chronicle appends carries more than its own data. Three pieces of context travel alongside it, scoped to the current call and captured automatically on every append:
+Cratis Chronicle records correlation, identity and causation alongside each event so you can trace a change back to the operation and actor that produced it. When investigating an unexpected event, these answer different questions:
 
-- **Correlation ID** — ties together every event, command, and side effect that belong to the same logical operation (a single HTTP request, a message-bus handler invocation).
-- **Identity** — records *who* caused the change: a user, a system, or a service.
-- **Causation** — records *why*: the chain of operations, from a root action down to the specific command that triggered this event.
+- A correlation ID groups work belonging to one logical operation, such as an HTTP request or message handler invocation.
+- An identity records who caused the change: a user, system or service.
+- Causation records the chain of operations that led to the event.
 
-All three are set once at the start of an operation (a request, a background job) and flow into every event appended during it, without threading them through every function call.
+Establish this context at the start of a request or background job, then let the client attach it to appends within that context. Carry it explicitly when work crosses a boundary that does not preserve the client's context.
 
 ## Correlation ID
 
 <ChronicleClientTabs snippet="concepts/correlation-identity-causation/correlation" />
 
-Kotlin's correlation manager scopes the id per-thread (`ThreadLocal`); Elixir and TypeScript scope it per logical call context (Elixir's process dictionary, TypeScript's `AsyncLocalStorage`) — in both cases automatically, without extra code, as long as you don't spawn new threads/processes/async contexts without carrying the value across explicitly.
+Use the same correlation ID for work that belongs to one operation. The client scopes that value according to its runtime: Kotlin uses per-thread context (`ThreadLocal`), Elixir uses the process dictionary, and TypeScript uses `AsyncLocalStorage` for the active asynchronous call context. Starting a new thread, process or independent context requires you to carry the value across explicitly.
 
 ## Identity
 
 <ChronicleClientTabs snippet="concepts/correlation-identity-causation/identity" />
 
-Every client provides the same three sentinel identities for well-known cases — `System`, `NotSet`, and `Unknown` — and supports on-behalf-of delegation chains (an identity that acted *for* another identity) via a `withoutDuplicates()`/`without_duplicates/1` helper that collapses repeated subjects in a long chain.
+An identity has a stable subject and a display name. Use the subject to identify the actor, and the display name to present it to a reader. This identity subject identifies who caused the event; the event's [compliance subject](./subject.mdx) identifies who the event is about.
+
+The clients provide predefined identities, or sentinels, for `System`, `NotSet` and `Unknown`, with language-specific naming. An on-behalf-of chain records delegation when one identity acts for another. Helpers such as `withoutDuplicates()` and `without_duplicates/1` remove repeated subjects from that chain while retaining their first occurrence.
 
 ### Renaming an identity
 
-The name recorded alongside an identity is a display name, and people's names change. Renaming updates it in
-one place for every event that identity has ever caused — the events themselves are untouched, since the name
-is not part of the fact they record.
+When someone's display name changes, rename the identity instead of changing their past events. Events refer to the identity by its stable key, so metadata reads can show the updated name for existing history.
 
 <ChronicleClientTabs snippet="concepts/correlation-identity-causation/renaming-an-identity" />
 
-The subject is the identity's stable key. It is what events are recorded against, so it does not change.
+Keep the existing subject when renaming so earlier events continue to resolve to the same identity.
 
 ### Identity resolution on metadata reads
 
-[Metadata reads](../events/getting-events#read-metadata-by-sequence-locator) resolve caused-by
-identities directly from storage rather than a silo's identity cache. A rename is visible on
-the next metadata read, including for events appended before the rename. Each chain link has
-a `Resolution` status:
+[Metadata reads](../events/getting-events#read-metadata-by-sequence-locator) resolve caused-by identities directly from storage instead of a kernel node's identity cache. A rename is visible on the next metadata read, including for events appended before the rename. Each chain link has a `Resolution` status:
 
 | Status | Meaning | Name |
 | --- | --- | --- |
@@ -48,20 +45,15 @@ a `Resolution` status:
 | `NotSet` | No caused-by identity was set. | `null`. |
 | `System` | The subject is Chronicle's well-known system identity. | `null`. |
 
-Chronicle never substitutes the subject for an unavailable name. `OnBehalfOf` retains the
-chain order, resolving each link separately. The head's `InitiatorType` is `Agent` when a
-resolved identity acts on behalf of another identity, `User` for a resolved identity without
-that chain, `System` for Chronicle, and `Unknown` for a missing or unset head. An unavailable
-display name does not change whether that identity acts as an agent.
+Chronicle never substitutes the subject for an unavailable name. `OnBehalfOf` retains the chain order and resolves each link separately.
+
+`InitiatorType` classifies the first identity in the chain. A resolved identity is an `Agent` when acting on behalf of another identity, or a `User` without that chain. Chronicle's system identity is `System`; the well-known unknown identity and missing or unset identities are `Unknown`. An unavailable display name does not change whether an identity acts as an agent.
 
 Application-defined service identities are not automatically classified as systems. Recognize
 them by their subjects in your application, rather than relying on display names or the
 `User` classification.
 
-PII erasure removes encryption keys for protected event and read-model data; it does **not**
-erase identity display names. To make a name unavailable on metadata reads, rename that
-identity to an empty name. Its subject and username remain available. Your application owns
-authorization and must enforce it **before** calling the metadata API.
+Erasing personally identifiable information (PII) deletes encryption keys for protected event and read-model data, not identity display names. The rename API requires a non-empty display name and leaves the subject and username unchanged, so it is not an identity-erasure operation. Your application must authorize access before calling the metadata API.
 
 ### Caller-derived authorship
 
@@ -69,17 +61,17 @@ For a signed-in Chronicle user (an internal password token, Identity cookie, or 
 
 Application callers using client credentials may still supply an end-user identity and an `onBehalfOf` chain. When omitted, the application principal is recorded. Unmarked external-authority tokens and anonymous requests retain the same supplied-identity behavior; external authorities are responsible for their own identity and delegation policy. The `chronicle_principal_kind=user` claim is reserved for Chronicle user principals, not a delegation permission.
 
-Existing Chronicle user tokens and cookies issued before this claim was introduced retain their previous behavior until renewed by signing in again. In particular, an existing refresh token does not acquire the claim by being refreshed. End existing sessions and sign in again when adopting caller-derived authorship. Newly issued password tokens retain the claim when refreshed. Old and new server nodes may coexist, but uniform authorship requires all request-serving nodes to run the updated version. No request, protobuf, or grain contract changes are required.
+Existing Identity application cookies acquire the user marker during claims transformation. Refreshing an existing Chronicle user refresh token also adds the marker, and newly issued password tokens retain it when refreshed. An already-issued access token without the marker keeps its supplied-identity behavior until replaced. For uniform authorship, update every request-serving server node; older nodes do not enforce this rule. No request, protobuf, or grain contract changes are required.
 
 ## Causation
 
 <ChronicleClientTabs snippet="concepts/correlation-identity-causation/causation" />
 
-TypeScript also has a real `causationManager.add(type, properties)` — the client-specific pages linked below cover it, along with more Kotlin/Elixir/TypeScript causation detail than fits here (defining/redefining the root cause, reading the full chain, framework-integration examples for scoping context per request).
+Add causation entries as an operation progresses so the event records how it was reached. In TypeScript, `causationManager.add(type, properties)` adds an entry to the current chain. For root-cause setup, scoped entries and reading the chain, continue with your client's reference below.
 
 ## Client-specific reference
 
-Each client's own documentation covers the full API in depth — provider interfaces, framework-integration examples (Express middleware, and similar), and thread/process/async-context caveats specific to that runtime:
+Use your client's reference to wire context into request handling and check what happens when work crosses thread, process or asynchronous-context boundaries:
 
 - [.NET client](/chronicle/clients/dotnet/) — `Cratis.Execution.ICorrelationIdAccessor`/`ICorrelationIdModifier`, `Cratis.Chronicle.Identities.IIdentityProvider`, `Cratis.Chronicle.Auditing.ICausationManager`
 - [Kotlin client](/chronicle/clients/kotlin/) — `io.cratis.chronicle.correlation`, `io.cratis.chronicle.identity`, `io.cratis.chronicle.auditing`

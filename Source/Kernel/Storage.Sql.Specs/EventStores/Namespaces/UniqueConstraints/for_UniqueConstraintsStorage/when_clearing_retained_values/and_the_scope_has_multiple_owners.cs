@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorage.when_clearing_retained_values;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_the_scope_has_multiple_owners : given.a_per_value_constraint
 {
     async Task Establish()

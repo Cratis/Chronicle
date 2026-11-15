@@ -78,7 +78,8 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
                     NullLogger<JsonSchemaMetadataManager>.Instance),
                 _expandoObjectConverter),
             _materializedReadModels,
-            new JsonSerializerOptions());
+            new JsonSerializerOptions(),
+            NamespaceCasingContext.Create());
     }
 
     async Task Because()

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Subjects;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
@@ -17,6 +18,10 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Observers;
 /// <param name="database">The <see cref="IDatabase"/> to use for storage operations.</param>
 public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase database) : IObserverDefinitionsStorage
 {
+    /// <inheritdoc/>
+    public ISubject<IEnumerable<Observation.ObserverDefinition>> ObserveAll() =>
+        LiveQuery.Observe(GetAllRows, database, "observer-definitions", ObserverDefinitionRowComparer.Instance, MapAll);
+
     /// <inheritdoc/>
     public async Task<IEnumerable<Observation.ObserverDefinition>> GetAll()
     {
@@ -102,5 +107,13 @@ public class ObserverDefinitionsStorage(EventStoreName eventStore, IDatabase dat
             .Where(observer => observer.EventTypes.Any(et => eventTypeIds.Contains(et.EventType)))
             .Select(observer => observer.ToKernel())
             .ToArray();
+    }
+
+    static IEnumerable<Observation.ObserverDefinition> MapAll(ObserverDefinition[] rows) => rows.Select(row => row.ToKernel()).ToArray();
+
+    async Task<IEnumerable<ObserverDefinition>> GetAllRows()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.Observers.OrderBy(observer => observer.Id).ToListAsync();
     }
 }

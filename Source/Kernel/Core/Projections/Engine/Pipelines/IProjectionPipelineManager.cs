@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Generations;
@@ -14,6 +15,14 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// </summary>
 public interface IProjectionPipelineManager
 {
+    /// <summary>Tries to find a live pipeline and the graph it owns without compiling or replacing either.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The event store namespace.</param>
+    /// <param name="id">The projection identifier.</param>
+    /// <param name="binding">The pipeline and its graph, if registered.</param>
+    /// <returns>Whether the pipeline exists.</returns>
+    bool TryGetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out ProjectionPipelineBinding? binding);
+
     /// <summary>
     /// Create a projection pipeline for a given <see cref="EngineProjection"/>.
     /// </summary>

@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Security;
 /// <param name="UserId">The unique identifier of the user to remove.</param>
 [Command]
 [Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
+[DestructiveOperation]
 [BelongsTo(WellKnownServices.Users)]
 public record RemoveUser(UserId UserId)
 {

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Sql.Sinks;
 
 namespace Cratis.Chronicle.Storage.Sql.Generations.for_ReplayContextsStorage.when_getting_all;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(PostgreSqlCollection.Name)]
 public class on_postgresql(PostgreSqlFixture fixture) : for_Database.given.a_postgresql_database(fixture)
 {

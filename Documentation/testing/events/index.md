@@ -1,15 +1,18 @@
 ---
 uid: Chronicle.Testing.Events
-description: Test Chronicle event-appending behavior entirely in-process with EventScenario, with no server, database or network required.
+title: Cratis Chronicle event append testing
+description: Test event appends in Cratis Chronicle without a running server. Use EventScenario to seed history, act, and assert on append results and events.
 ---
-# Testing Events
+<a id="testing-events"></a>
 
-Chronicle provides the `EventScenario` utility for testing event-appending behavior entirely in-process, with no Chronicle server, database, or network required.
+Cratis Chronicle's `EventScenario` lets you test event-appending code in process without a server, database, or network. Seed the events that already happened, run the operation under test, then check what it appended. The client tabs show each client's supported workflow; their APIs and constraint coverage differ.
+
+Start with the [EventScenario guide](scenario) to set up a spec. Use the assertion guides when you need to check an append's outcome or inspect the events in the sequence.
 
 ## Topics
 
 | Guide | Description |
 |-------|-------------|
-| [EventScenario](scenario) | Append events and pre-seed state using `EventScenario` and the `Given` builder |
-| [Append Assertions](assertions) | Assert on `IAppendResult` using the built-in `Should*` extension methods |
-| [Event Sequence Assertions](event-sequence-assertions) | Assert on the event sequence itself and on `AppendedEventWithResult` entries |
+| [EventScenario](scenario) | Set up event history and exercise an append; .NET uses the `Given` and `When` builders |
+| [Append Assertions](assertions) | Check success or rejection; .NET provides `Should*` extensions on `IAppendResult` |
+| [Event Sequence Assertions](event-sequence-assertions) | Check event content and order, including .NET `AppendedEventWithResult` entries |

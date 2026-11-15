@@ -1,6 +1,6 @@
 ---
 name: cratis-technical-examples
-description: Design and verify developer-facing code samples, tutorial projects, and documentation snippets against real Cratis APIs. Use when adding or reviewing a runnable example, multi-client snippet, sample app, command/output pair, or migration before/after code. Do not invent API shapes or treat rendering as a compilation check.
+description: Use when adding or reviewing runnable Cratis examples, tutorial projects, multi-client snippets or command/output pairs. Not for page placement, release notes or treating rendering as compilation proof.
 license: MIT
 metadata:
   cratis-hint-paths: "**/Samples/**/*.{cs,ts,tsx}"
@@ -14,6 +14,29 @@ first attempt work, and show how to tell. A substantial tutorial should have a
 real project behind it; a five-line illustration need not become a new sample
 repository. This skill owns the example workflow, not the owning product's
 language-tab layout or documentation site implementation.
+
+## Explain the evidence and the handoff
+
+Make the scope and assumed setup clear for code, commands and configuration;
+shared setup can be established once for a sequence. During verification, ask
+which component owns the effect, which host runs it, how identifiers connect
+steps, and what result, defaults, limitations or recovery the source establishes.
+These are private verification questions, not an inventory to publish after
+every example. Explain a missing or consequential connection where the reader
+needs it, keeping important warnings before the affected action and limits
+beside the behavior they qualify. A plausible block followed by a product-name
+list is not a causal explanation.
+Preserve real package IDs, API names and wire types rather than translating
+them into umbrella branding. Follow the
+[documentation rule](../../rules/documentation.md) for naming and claims.
+
+Keep source checking, compilation, runtime observation and deployed behavior
+separate in the private change note. A source-verified command is not a command
+you ran; expected output is not observed output. For a new or materially changed
+journey, use **cratis-documentation-writing**'s
+[fresh-context reader review](../cratis-documentation-writing/references/reader-review.md).
+That comprehension check cannot replace any example gate, and an unavailable
+reader review must not be claimed as completed.
 
 ## Choose the right source
 
@@ -40,7 +63,7 @@ language-tab layout or documentation site implementation.
   one id type per concept across every page of a series. Shared frontend code
   that depends on those types must be backend-neutral or tabbed per backend.
 - **Sample application:** one realistic domain, explicit prerequisites and
-  package versions, a documented run command, a reproducible state to start
+  relevant version constraints, a documented run command, a reproducible state to start
   from, and a visible result. Keep it minimal enough for a new reader to finish.
   Link from the documentation step to the precise sample file, not just the
   repository root. State how to reset sample state safely, what resources the
@@ -78,10 +101,15 @@ language tabs. Never hand-edit a generated proxy or a synchronized docs copy.
 
 ## Version constraints belong in the page; the test log does not
 
-A reader needs the versions that change what they install or write. Published
-prose can say that a feature needs a minimum release ("This needs Chronicle
-<version> or later"), pin packages and images in the commands a reader runs, and
-name the one release where behavior changed.
+Follow the [documentation rule](../../rules/documentation.md): a reader needs
+versions that change what they install or write. State minimum, fixed or
+breaking releases and compatibility or peer ranges that affect the task.
+Ordinary installation follows the supported latest-release path, not universal
+exact-patch pinning; check compatibility rather than assuming every newest
+package works together. Maintained manifests/lockfiles can carry resolved
+versions without repeating them in prose. Pin a deliberately reproducible
+tutorial when needed, and preserve required security/deployment constraints
+and production image policy.
 
 Keep the author's verification record out of the page. Exact SDK builds, image
 digests or commit SHAs recorded for provenance, the date it was run, "tested
@@ -95,8 +123,10 @@ written. Put them in the change summary, the pull request comment or
 Test each version sentence: would a reader install or write something
 different because of it? If not, remove it. A real limitation stays, stated as
 a fact about the product ("the Kotlin client has no equivalent yet"), not as a
-record of what was and was not run. A digest in a command the reader runs is
-part of the command, not a note, and stays.
+record of what was and was not run. Keep a digest in a runnable command when
+reproducibility, security or deployment requires that artifact; its presence
+inside a command alone is not a reason to retain it. Removing provenance is
+not permission to float a production image or weaken a compatibility boundary.
 
 ## Know what the owning gate actually checks
 
@@ -111,7 +141,11 @@ every changed client snippet, or name a missing toolchain and rely on its
 required CI gate. These checks **do not** compile ordinary Markdown/MDX fences
 elsewhere in product documentation. For those, verify against real source and
 a runnable sample/spec or an explicit snippet comparison; do not claim
-coverage from a site build or a validator that never scans the page.
+coverage from a site build or a validator that never scans the page. In the
+private change note, map changed ordinary Markdown/MDX fences, commands,
+configuration and output to the source revision and validator or sample that
+actually covers each block. Mark uncovered blocks and unrun checks explicitly;
+source-equal, compiled and runtime-demonstrated are different results.
 
 A compiling tab is not a working tab. For each backend, confirm that the
 artifact is discovered and registered, that proxy generation emits the file

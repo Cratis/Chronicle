@@ -6,6 +6,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -22,6 +23,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="CausedBy">Optional identity.</param>
 /// <param name="ConcurrencyScopes">Optional per-source concurrency scopes.</param>
 /// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
+[StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
 public record AppendManyForEventSourcesWithNamedTags(

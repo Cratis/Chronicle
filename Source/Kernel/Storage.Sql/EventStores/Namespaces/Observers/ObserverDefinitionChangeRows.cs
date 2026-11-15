@@ -15,8 +15,11 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Observers;
 /// </summary>
 /// <typeparam name="T">The payload type.</typeparam>
 /// <param name="open">Opens the namespace's primary database.</param>
-public class ObserverDefinitionChangeRows<T>(Func<Task<DbContextScope<NamespaceDbContext>>> open) : IObserverDefinitionChangeRows<T>
+/// <param name="database">The configured database for telemetry, if any.</param>
+public class ObserverDefinitionChangeRows<T>(Func<Task<DbContextScope<NamespaceDbContext>>> open, IDatabase? database = null) : IObserverDefinitionChangeRows<T>
 {
+    readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
+
     /// <inheritdoc/>
     public async Task<ObserverDefinitionChangeRow<T>?> Get(ObserverDefinitionChangeRowKey key)
     {
@@ -51,7 +54,7 @@ public class ObserverDefinitionChangeRows<T>(Func<Task<DbContextScope<NamespaceD
         }
         catch (Exception error) when (StorageWriteConflicts.IsUnique(error))
         {
-            SqlStorageTelemetry.RecoveredCollision("observer-definition-change");
+            _telemetry.RecoveredCollision("observer-definition-change");
             return false;
         }
     }

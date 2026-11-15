@@ -1,13 +1,13 @@
 ---
-title: Public events
-description: Declare event types as public or private, and how the kernel keeps private events out of the outbox and public events out of the event log.
+title: Declare Chronicle public events and enforce visibility
+description: Declare Chronicle event types as public or private to expose a service contract while keeping private events out of the outbox and public events out of the log.
 ---
 
-An event type is either **public**, part of the contract an event store exposes to other services, or **private**, local to the event store that owns it. Chronicle records that visibility when a client registers its event types and enforces it when events are appended.
+Public events form the contract a Chronicle event store exposes to other services. Private events remain local to their owning event store. Declare visibility to keep internal events out of the outbox and public contract events out of the event log; Chronicle records it during event type registration and checks it when appending.
 
 ## Declaring visibility
 
-The .NET client derives the visibility of each event type when it registers:
+In the .NET client, attribute-based declarations determine visibility as follows:
 
 | Declaration | Registered as |
 | --- | --- |
@@ -15,33 +15,33 @@ The .NET client derives the visibility of each event type when it registers:
 | `[EventStore("name")]` on the event type or its assembly, naming this event store or another one | Public, with that event store as its origin |
 | Neither | Private |
 
-An event type that names another event store is a public event of *another* service, consumed through the inbox. Its origin is stored with the event type, so tooling can tell where it comes from.
+An event type that names another event store represents that service's public contract, consumed through the inbox. Chronicle stores the named event store as the type's origin so tooling can identify where it comes from.
+
+If you use explicit event type registration, `.Public()` and `.Private()` declare visibility directly. Without an explicit visibility declaration, a named event store makes the type public; a type with neither declaration is private.
 
 ## What the kernel enforces
 
-Every append to an event sequence looks up the registered visibility of the event type:
+The destination sequence determines which registered event types it accepts:
 
 | Event sequence | Private | Public | Unspecified |
 | --- | --- | --- | --- |
 | Outbox | Refused with `PrivateEventTypeCannotBeAppendedToOutbox` | Appended | Appended, with a warning |
-| Event log | Appended | Refused with `PublicEventTypeCannotBeAppendedToEventLog` | Appended |
+| Event log | Appended | Refused with `PublicEventTypeCannotBeAppendedToEventLog` | Appended, with a warning |
 | Any other sequence | Appended | Appended | Appended |
 
-A public event type is not tied to the outbox. It can be appended to, and published to, any other event sequence, and a sequence other than the outbox and the event log applies no visibility check. Only the event log refuses it.
+Record private facts in the event log, then produce public events from them, for example through a projection or reducer that publishes to the outbox. Public event types can also be appended or published to other sequences: sequences other than the outbox and event log apply no visibility check.
 
-Public events are *produced* from private events, for example by a projection or reducer that publishes to the outbox, rather than appended to the event log as facts. The rule applies to a single append and to appending many events; when any event in a batch is refused, none of the batch is written.
-
-The refusal is returned in the errors of the append result, the same way a schema violation is reported. Nothing is thrown.
+Visibility checks apply to single appends and batches. If any event in a batch fails the check, Chronicle writes none of the batch. Inspect the append result's errors for the refusal code shown above; a visibility refusal returns a failed result instead of throwing an exception.
 
 ## Clients that predate visibility
 
-A client that predates public events sends no visibility, which the kernel stores as **Unspecified**. Unspecified event types keep behaving as before so existing systems keep working: appending them to the outbox or the event log is allowed. The kernel logs a warning the first time such an event type is appended to the outbox or event log after a sequence is activated. Upgrade the client to have visibility enforced.
+Older clients send no visibility, so a newly registered type has `Unspecified` visibility. Chronicle allows these types in both the outbox and the event log for compatibility. The kernel logs a warning on the first such append per event type after a sequence is activated. Upgrade the client and declare visibility to enforce the public/private boundary.
 
-A registration that sends no visibility never overwrites a visibility that has already been stored. An older client reconnecting does not turn a public event type back into an unspecified one.
+A registration with no visibility preserves any visibility already stored. Reconnecting an older client therefore does not turn a public event type back into an unspecified one.
 
 ## Storage
 
-Visibility and origin are stored with the event type in every storage provider:
+Each storage provider keeps visibility and origin with the event type:
 
 | Provider | Stored as |
 | --- | --- |
@@ -51,5 +51,4 @@ Visibility and origin are stored with the event type in every storage provider:
 
 ## Related
 
-- [Sinks and event publication](../sinks/index.mdx)
-- [Implicit subscriptions](../subscriptions/implicit-subscriptions.mdx)
+To produce public events from private facts, continue with [Sinks and event publication](../sinks/index.mdx). For how another service consumes them through its inbox, see [Implicit subscriptions](../subscriptions/implicit-subscriptions.mdx).

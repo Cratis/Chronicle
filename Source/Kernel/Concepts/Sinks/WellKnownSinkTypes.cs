@@ -20,6 +20,16 @@ public static class WellKnownSinkTypes
     public static readonly SinkTypeId InMemory = "InMemory";
 
     /// <summary>
+    /// Gets the identifier of the InMemory graph sink, the executable reference for the graph sink semantics.
+    /// </summary>
+    public static readonly SinkTypeId InMemoryGraph = "InMemoryGraph";
+
+    /// <summary>
+    /// Gets the identifier of the Neo4j graph sink.
+    /// </summary>
+    public static readonly SinkTypeId Neo4j = "Neo4j";
+
+    /// <summary>
     /// Gets the identifier of the MongoDB projection sink.
     /// </summary>
     public static readonly SinkTypeId MongoDB = "MongoDB";

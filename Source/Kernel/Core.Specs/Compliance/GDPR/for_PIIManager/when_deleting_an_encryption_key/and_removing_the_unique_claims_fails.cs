@@ -32,6 +32,6 @@ public class and_removing_the_unique_claims_fails : given.a_pii_manager
     async Task Because() => _error = await Catch.Exception(() => _manager.DeleteEncryptionKeyFor(Identifier));
 
     [Fact] void should_try_to_remove_the_subjects_claims() => _uniqueConstraints.Received(1).RemoveForSubject(new Subject(Identifier.Value), Arg.Any<CancellationToken>());
-    [Fact] void should_still_delete_the_key() => _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+    [Fact] void should_still_delete_the_key() => _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
     [Fact] void should_report_the_incomplete_erasure_to_the_caller() => _error.ShouldBeOfExactType<EncryptionKeyErasureIncomplete>();
 }

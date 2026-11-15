@@ -1,9 +1,8 @@
 ---
-description: Chronicle exports OpenTelemetry signals over OTLP, configured with standard environment variables, for example to the Aspire Dashboard or Prometheus.
+title: Chronicle OpenTelemetry configuration
+description: Export Chronicle metrics, traces, and logs over OTLP, choose how traces expose event source ids, and connect a local or hosted telemetry backend.
 ---
-# Open Telemetry
-
-Chronicle exports telemetry signals through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/). Telemetry is always enabled and configured via standard OpenTelemetry environment variables.
+Chronicle exports metrics, traces, and logs through the [OpenTelemetry Protocol (OTLP)](https://opentelemetry.io/docs/specs/otlp/) so you can investigate event processing and observer failures in your telemetry backend. Instrumentation is always enabled; use standard OpenTelemetry environment variables to configure export.
 
 ## Signals
 
@@ -21,20 +20,22 @@ Telemetry is configured using standard OpenTelemetry environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | none | OTLP receiver endpoint (e.g. `http://localhost:4317`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | exporter default | OTLP receiver endpoint (e.g. `http://localhost:4317`) |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | Export protocol: `grpc` or `http/protobuf` |
 | `OTEL_EXPORTER_OTLP_HEADERS` | none | Additional headers (e.g. API keys for cloud backends) |
 | `OTEL_SERVICE_NAME` | `Chronicle` | Service name reported to the telemetry backend |
 
-When `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, Chronicle does not export telemetry but the instrumentation is still active.
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to the receiver you want Chronicle to use. Leaving it unset is not an opt-out: Chronicle registers OTLP exporters without requiring this variable.
 
 ## Event source ids and log levels
 
-Event source ids are `Raw` in traces by default. Opt into `Hashed` or `Omitted` separately in the kernel and clients. Orleans grain-instance ids are always removed before span export, and Chronicle append metrics do not use event source ids as dimensions. These settings do not redact logs. See [event source ids in telemetry](/chronicle/hosting/configuration/telemetry-identifiers/) for configuration, key rotation, metric dimensions, and observer log levels.
+Before exporting traces, decide whether your backend should receive original event source ids. Chronicle uses `Raw` by default; choose `Hashed` for keyed correlation or `Omitted` to leave the id out. Apply the choice separately in the kernel and each client.
+
+The kernel removes Orleans grain-instance id tags before span export, and Chronicle append metrics do not use event source ids as dimensions. Logs can still contain raw ids and exception details. Follow [event source ids in telemetry](/chronicle/hosting/configuration/telemetry-identifiers/) to configure the policy and plan key rotation; protect log access and retention separately.
 
 ## Local development with .NET Aspire Dashboard
 
-The Kernel ships with a `docker-compose.yml` that starts the [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) as a lightweight all-in-one OTLP receiver and telemetry viewer.
+For a local telemetry viewer, use the [.NET Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview) service in `Source/Kernel/Server/docker-compose.yml`. It receives OTLP data and displays metrics, traces, and logs. The example below allows anonymous access, so keep it local and do not expose its ports publicly.
 
 ```yaml
 aspire-dashboard:
@@ -47,13 +48,13 @@ aspire-dashboard:
     - 4317:18889    # OTLP/gRPC receiver
 ```
 
-Start the services:
+From `Source/Kernel/Server`, start the services:
 
 ```bash
 docker compose up -d
 ```
 
-Then set the endpoint environment variable before starting the Kernel:
+When running the kernel on your host machine, set the endpoint to the dashboard's published OTLP port:
 
 ```bash
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 dotnet run
@@ -63,7 +64,7 @@ Open the Aspire Dashboard at [http://localhost:18888](http://localhost:18888) to
 
 ## Example: Prometheus and Grafana
 
-For production-grade metric collection, connect Chronicle to a Prometheus-compatible OTLP receiver (for example the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)):
+To view Chronicle metrics in Grafana through Prometheus, send them to an OTLP receiver with Prometheus export configured, such as the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/):
 
 ```bash
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
@@ -78,11 +79,21 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.example.com
 OTEL_EXPORTER_OTLP_HEADERS=x-api-key=your-api-key
 ```
 
-## Generated instrument names
+## Instrument names and migration
 
-Chronicle consumes `Cratis.Metrics.Roslyn` 7.27.0, which includes the instrument-name fix released in 7.20.0. Generated counters and gauges now keep the description in the instrument's description metadata, not its unit. For example, the successful-observation counter has the instrument name `chronicle-observer-successful-observations`, no unit, and description `Number of successful observations per observer in a given event store and namespace`. A Prometheus exporter using default translation is expected to expose `chronicle_observer_successful_observations_total` with that description as its HELP text, rather than including the description in the metric name. Translation depends on the backend; OTLP serialization coverage alone does not verify Prometheus exposition or HELP text.
+Kernel metrics default to `Telemetry:MetricNames=Legacy`, preserving their existing names, units, descriptions, and dimension keys. The tables below describe these default series. Set `Telemetry:MetricNames=Convention` to opt into `cratis.chronicle.*` names, explicit UCUM units, and shared attribute keys. For example, `cratis.chronicle.observer.successful_observations` has unit `{observation}`. A Prometheus exporter using default translation is expected to expose it as `cratis_chronicle_observer_successful_observations_total`; descriptions remain HELP metadata, not part of the name. Chronicle consumes `Cratis.Metrics.Roslyn` 7.34.0, which includes the instrument-name fix released in 7.20.0. Translation depends on the backend: check the name exposed by your backend before writing a query, because OTLP serialization alone does not verify Prometheus exposition or HELP text.
 
-The observer failure counters and suspected-undelivered queue counter remain hand-written to preserve their failure-path initialization and observer tagging. They no longer need a workaround for generated names. Revisit that implementation with the [convention-name migration](https://github.com/Cratis/Chronicle/issues/4459), keeping the existing instrument names during this fix. That migration is separate and still pending; coordinate dashboard and alert changes with it rather than assuming the generator upgrade also renames instruments to the convention.
+Use `Telemetry:MetricNames=Both` only as a temporary migration mode. It creates both instrument sets at producer construction and records each measurement to each set with its own dimensions. The single modes publish only their selected set. No listener bridge translates measurements. Both increases telemetry volume and series count; never sum legacy and convention series.
+
+```json
+{
+  "Telemetry": {
+    "MetricNames": "Convention"
+  }
+}
+```
+
+Use the [telemetry name reference](telemetry-names.md) to migrate dashboard queries and alerts, changing names and dimensions together. Restart the kernel after changing the mode. Convention names are planned to become the default in the next major version, when legacy names and keys are planned for removal. The observer failure counters and the suspected-undelivered queue counter are hand-written to preserve their failure-path initialization and observer tagging. They retain their existing recording points and do not emit initial zero measurements.
 
 ## Metrics instrumented
 
@@ -103,6 +114,7 @@ SQL storage publishes these instruments on the `Cratis.Chronicle` meter:
 | --- | --- | --- | --- |
 | `chronicle-sql-schema-lock-wait` | Histogram (seconds) | `provider`, `outcome` | Elapsed database schema-lock acquisition time, including failed waits. Outcomes are `acquired` and `failed`. |
 | `chronicle-sql-upsert-collisions-recovered` | Counter | `operation` | Concurrent inserts handled by an existing SQL recovery or idempotency path. Unhandled conflicts and ordinary updates do not increment it. |
+| `chronicle-sql-encryption-key-identifiers-refused` | Counter | none | Encryption key operations refused because their identifier is under review. |
 | `chronicle-sql-live-query-poll-failures` | Counter | `query`, `kind` | A failed SQL live-query poll. The query is retried with backoff (polling interval doubling to 30 s, or the polling interval if longer) and the subscription stays open. `kind` is `transient` or `other`; a sustained `other` rate needs an operator. |
 
 Schema-lock timing excludes opening the connection, migration execution, and the
@@ -136,7 +148,58 @@ The Prometheus names are what the OpenTelemetry Collector's Prometheus exporter 
 
 An observer has a series on these instruments from its first failure, not before: Chronicle records nothing when an observer starts, so healthy observers add no series and the number of series follows the number of observers that fail. The first value a backend receives for an observer is therefore already `1`, and alerts on these counters should not depend on seeing a `0` first. The [alerting guide](../alerting-on-observer-failures.md) shows how.
 
-The SDK limits each instrument to 500 series. Beyond that it folds the excess into one series without the tags, which can no longer be attributed to an observer. That takes more than 500 observer instances in one process, counted across observers, namespaces and event stores.
+The SDK limits each instrument to `Telemetry:MetricSeriesLimit` series, 500 by default. Beyond that it folds the excess into one series without the tags, carrying only the attribute `otel.metric.overflow=true`, which can no longer be attributed to an observer. That takes more than 500 failing observer instances since the process started, counted across observers, namespaces and event stores. [How many series to expect](#how-many-series-to-expect) explains how to raise the limit.
+
+### Observer state, jobs and append latency
+
+The failure counters above say how often something went wrong. The gauges below say how things stand now: how many partitions an observer has failing at this moment, what state it is in, how far its catch-up or replay has come and how many observers a process keeps in memory. Each process reports only the observers and jobs it hosts. A per-observer series therefore comes from the one silo that hosts the observer; sum across silos for cluster totals.
+
+These instruments are new, so they have no legacy name. They are published under the names and attribute keys below whatever `Telemetry:MetricNames` selects.
+
+| Instrument | Kind | Tags | Meaning |
+| --- | --- | --- | --- |
+| `cratis.chronicle.observer.failed_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Failed partitions of the observer now, quarantined ones included. Reported only while above 0. |
+| `cratis.chronicle.observer.quarantined_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Quarantined partitions of the observer now. Reported only while above 0. |
+| `cratis.chronicle.observer.running_state` | Gauge `1` | event store, namespace, event sequence, observer, `cratis.chronicle.observer.state` | `1` while the observer is in the state named by `cratis.chronicle.observer.state`. Reported only for `quarantined` and `suspended`. |
+| `cratis.chronicle.observer.resident` | Gauge `{observer}` | event store, namespace, `cratis.observer.type`, `cratis.chronicle.observer.state` | Observers resident in the process, in every state. |
+| `cratis.chronicle.job.running` | Gauge `{job}` | event store, namespace, `cratis.chronicle.job.type` | Running catch-up and replay jobs. |
+| `cratis.chronicle.observer.job.handled_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Completed steps, successful or failed, of the observer's running jobs of that type. |
+| `cratis.chronicle.observer.job.total_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Steps of the observer's running jobs of that type. |
+| `cratis.chronicle.event_sequence.append.duration` | Histogram `s` | event store, namespace, event sequence | Duration of an append or append-many call, from validation to its outcome, rejected appends included. |
+
+The tags use the shared keys `cratis.event_store.name`, `cratis.event_store.namespace`, `cratis.event_sequence.id` and `cratis.observer.id`. No partition, event source or job id is ever a tag. `cratis.observer.type` is `reactor`, `reducer`, `projection`, `external` or `unknown`; `cratis.chronicle.observer.state` uses the lowercase state names, such as `active`, `quarantined` and `changing_definition`; `cratis.chronicle.job.type` is `catch_up` or `replay`.
+
+#### When the per-observer gauges report
+
+The three per-observer gauges report an observer only while it needs attention, so healthy observers cost no series:
+
+- `failed_partitions` and `quarantined_partitions` report an observer while its count is above 0.
+- `running_state` reports `1` for an observer while it is quarantined or suspended, with the state in `cratis.chronicle.observer.state`. Disconnected and replaying observers are normal during deployments and replays, so they appear only in `cratis.chronicle.observer.resident`.
+- When an observer recovers, or the process releases it while it is abnormal, its series reports `0` for three minutes and then stops. The first collection after the recovery reports the `0` even when the export or scrape interval is three minutes or longer. With several readers, such as an OTLP exporter and a Prometheus endpoint, only the first reader to collect after the recovery is certain to see that `0`, so a reader that collects less often than every three minutes can miss it. A backend therefore sees the value fall to `0` instead of keeping the last abnormal value until the series goes stale. Alert on the value, not on whether the series exists.
+
+`cratis.chronicle.observer.resident` and `cratis.chronicle.job.running` report `0` for a combination of event store, namespace, type and state they have reported before, rather than leaving it out once it empties.
+
+#### How many series to expect
+
+With cumulative temporality, the OpenTelemetry SDK keeps a series' slot until the process stops, even after the series is no longer reported. The number of series an instrument holds is therefore the number of distinct series it has reported since the process started, not the number it reports now:
+
+| Instrument | Series held per process |
+| --- | --- |
+| `observer.failed_partitions`, `observer.quarantined_partitions` | Observers that had failed or quarantined partitions at some point since the process started. |
+| `observer.running_state` | Observers that were quarantined or suspended since the process started, once per state. |
+| `observer.job.handled_steps`, `observer.job.total_steps` | Observers that ran a catch-up or replay since the process started, once per job type. |
+| `observer.successful_observations` | Observers that delivered at least one event since the process started, twice in `Convention` mode when they also replayed (`cratis.replay` `true` and `false`). |
+| `observer.resident`, `job.running` | Event stores × namespaces × types × states. Small whatever the number of observers. |
+
+Each instrument is limited to `Telemetry:MetricSeriesLimit` series, 500 by default. Beyond the limit, the SDK folds the excess into one series whose only attribute is `otel.metric.overflow=true`, which can no longer be attributed to an observer. A process with thousands of observers that deliver events needs a higher limit for `observer.successful_observations` and the job-progress gauges. A process where hundreds of observers fail at once needs a higher limit for the failure instruments. Raise the limit with `Cratis:Chronicle:Telemetry:MetricSeriesLimit`, or the environment variable `Cratis__Chronicle__Telemetry__MetricSeriesLimit`. The SDK reserves memory for the full limit on every instrument, so raise it only as far as needed. `cratis.chronicle.observer.resident` stays small whatever the number of observers, and is the one to use for memory planning.
+
+A catch-up whose observer delivers pages across partitions, projections among them, runs as one step, so its progress moves from 0 to 1 of 1. Partitioned observers have one step per partition.
+
+The append-duration histogram uses the explicit buckets 1, 2.5, 5, 10, 25, 50, 100, 250 and 500 milliseconds, and 1, 2.5, 5 and 10 seconds.
+
+#### Successful observations include recovery work
+
+The successful observations counter now counts catch-up, replay and retry deliveries as well as live ones. Earlier Kernels counted live deliveries only. Expect dashboards built on this counter to show throughput spikes after a deployment, during a replay and while failed partitions are retried. The convention series (`cratis.chronicle.observer.successful_observations`) carry `cratis.replay`, `true` for replay deliveries, so `cratis.replay="false"` excludes replays but still includes catch-up and retries. The legacy series (`chronicle-observer-successful-observations`) keep their four tags, so recovery work raises them without a way to tell it apart.
 
 ### Suspected skipped events
 
@@ -199,7 +262,7 @@ Aggregate across instances with `max`, never `sum`. A silo that is partitioned o
 
 When the silo that owns the snapshot dies, another silo re-activates the owner within about 30 seconds. The new owner starts with no memory of the buckets that were retiring, so a series can disappear without ever reporting `0`, and a backend's lookback can keep returning the last value briefly. Do not depend on seeing a `0` before a series ends.
 
-Like the other instruments, this gauge is limited to 500 series per process. The series count is the number of observers with incidents, times the conditions and severities they hold.
+Like the other instruments, this gauge is limited to `Telemetry:MetricSeriesLimit` series per process, 500 by default. The series count is the number of observers with incidents, times the conditions and severities they hold.
 
 To be alerted when an observer's partitions keep failing or run out of retries, see [Get alerted when observers stop processing](../alerting-on-observer-failures.md).
 
@@ -234,7 +297,8 @@ produce `cratis.chronicle.observer.handle` spans with `cratis.observer.id`, `cra
 `cratis.event.count` tags.
 
 Kernel gRPC client instrumentation is disabled by default to reduce trace volume. To opt in, set
-`Cratis:Chronicle:Telemetry:GrpcClientTracing` to `true`:
+`Cratis:Chronicle:Telemetry:GrpcClientTracing` to `true`. This example shows the full configuration
+hierarchy used in `appsettings.json`; in `chronicle.json`, use only the inner `telemetry` section:
 
 ```json
 {
@@ -254,14 +318,15 @@ exporter, endpoint, or resource configuration.
 
 ### Orleans trace volume
 
-Chronicle's own telemetry setup (`AddChronicleTelemetry`) **no longer exports Orleans runtime and grain-call spans by default**. These sources accounted
-for about 99% of kernel spans during replay. Chronicle spans remain enabled, and Orleans
-`AddActivityPropagation()` remains in place: trace context continues across grain calls without
-exporting their carrier activities. Chronicle spans in the called grain keep the caller's trace id,
+Chronicle's telemetry setup (`AddChronicleTelemetry`) leaves Orleans runtime and grain-call spans
+out of exports by default to reduce trace volume. Chronicle spans remain enabled, and Orleans
+`AddActivityPropagation()` keeps trace context flowing across grain calls without exporting the
+Orleans activities that carry it. Chronicle spans in the called grain keep the caller's trace id,
 but their direct parent is an unexported Orleans span, so a trace viewer may show a missing
 intermediate parent. Calls outside an existing trace do not create carrier activities.
 
-To restore Orleans spans, set `Cratis:Chronicle:Telemetry:OrleansTracing=true`:
+To include Orleans spans, set `Cratis:Chronicle:Telemetry:OrleansTracing=true`. As above, this is the
+full configuration hierarchy; omit the `cratis` and `chronicle` wrappers in `chronicle.json`:
 
 ```json
 {

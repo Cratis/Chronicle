@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -20,6 +21,15 @@ namespace Cratis.Chronicle.Observation;
 /// So a request to recover is remembered rather than acted on immediately, however many times it is made, and the
 /// work is done a bounded batch per turn, letting whatever else is waiting for the observer in between.
 /// </para>
+/// <para>
+/// Each batch also takes the silo's <see cref="ISubscriptionAdmission"/>, the same bound every event store's projection
+/// subscriptions share, so a cold start does not run recoveries for thousands of observers at once on top of the
+/// subscriptions. A batch never waits for admission inside the turn - that would hold the observer while it queues for
+/// the silo - it tries, and when none is free comes back in a later turn. Recoveries only get their share of the
+/// admission (<see cref="ISubscriptionAdmission.RecoveryLimit"/>), so however long a batch runs, projection
+/// subscriptions still find room. Every subscribe asks for a retry-job sweep, so on a cold start every observer is
+/// turned away at once; the delay before trying again is jittered so they do not all come back in the same second.
+/// </para>
 /// </remarks>
 public partial class Observer
 {
@@ -27,6 +37,18 @@ public partial class Observer
     /// The most failed partitions the observer starts recovering in a single turn.
     /// </summary>
     internal const int MaxPartitionRecoveriesPerTurn = 10;
+
+    /// <summary>
+    /// The shortest wait before a recovery batch tries again when the silo's subscription admission is fully taken.
+    /// </summary>
+    internal static readonly TimeSpan MinRecoveryAdmissionRetryDelay = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// The longest wait before a recovery batch tries again when the silo's subscription admission is fully taken.
+    /// </summary>
+    internal static readonly TimeSpan MaxRecoveryAdmissionRetryDelay = TimeSpan.FromMilliseconds(1500);
+
+    static readonly TimeSpan _recoveryStartFailureDelay = TimeSpan.FromSeconds(5);
 
     readonly Queue<FailedPartitionId> _partitionsAwaitingRecovery = new();
     readonly HashSet<FailedPartitionId> _partitionsAwaitingRecoveryLookup = [];
@@ -45,7 +67,15 @@ public partial class Observer
         SchedulePartitionRecoveryTurn();
     }
 
-    void SchedulePartitionRecoveryTurn()
+    /// <summary>
+    /// Gets the jittered wait before a recovery batch turned away by the silo's admission tries again.
+    /// </summary>
+    /// <param name="jitter">A value in [0, 1) choosing where between the shortest and the longest wait this one lands.</param>
+    /// <returns>The wait.</returns>
+    internal static TimeSpan NextRecoveryAdmissionRetryDelay(double jitter) =>
+        MinRecoveryAdmissionRetryDelay + ((MaxRecoveryAdmissionRetryDelay - MinRecoveryAdmissionRetryDelay) * Math.Clamp(jitter, 0, 1));
+
+    void SchedulePartitionRecoveryTurn(TimeSpan delay = default)
     {
         if (_partitionRecoveryTurnScheduled)
         {
@@ -53,7 +83,7 @@ public partial class Observer
         }
 
         _partitionRecoveryTurnScheduled = true;
-        this.ScheduleInSeparateTurn(RecoverNextBatchOfFailedPartitions);
+        this.ScheduleInSeparateTurn(RecoverNextBatchOfFailedPartitions, delay);
     }
 
     async Task RecoverNextBatchOfFailedPartitions()
@@ -62,6 +92,14 @@ public partial class Observer
         if (IsRetired || _removed || !CanRecoverFailedPartitions())
         {
             ForgetPartitionsAwaitingRecovery();
+            return;
+        }
+
+        var admission = ServiceProvider.GetRequiredService<ISubscriptionAdmission>();
+        if (!admission.TryEnterForRecovery())
+        {
+            logger.DeferringRecoveryOfFailedPartitionsForAdmission();
+            SchedulePartitionRecoveryTurn(NextRecoveryAdmissionRetryDelay(Random.Shared.NextDouble()));
             return;
         }
 
@@ -74,6 +112,7 @@ public partial class Observer
         finally
         {
             _retryJobDropBudget = null;
+            admission.ReleaseRecovery();
         }
     }
 
@@ -95,6 +134,8 @@ public partial class Observer
 
         var config = await GetRetryConfiguration();
         var started = 0;
+        var failedToStart = false;
+        var notStarted = new List<FailedPartitionId>();
         while (started < MaxPartitionRecoveriesPerTurn && _partitionsAwaitingRecovery.TryDequeue(out var failedPartitionId))
         {
             _partitionsAwaitingRecoveryLookup.Remove(failedPartitionId);
@@ -118,14 +159,32 @@ public partial class Observer
                 logger.StartingRecoveryWithExistingAttempts(partition.Partition, attemptCount, config.MaxRetryAttempts);
             }
 
-            await StartRecoverJobForFailedPartition(partition);
+            try
+            {
+                await StartRecoverJobForFailedPartition(partition);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !IsRetired)
+            {
+                // A job that cannot be started - its grain could not activate while the silo was busy - must not end the
+                // turn: the partitions still queued would wait for the next subscription, which may never come.
+                logger.CouldNotStartRecoveryOfFailedPartition(ex, partition.Partition);
+                notStarted.Add(failedPartitionId);
+                failedToStart = true;
+            }
+
             started++;
+        }
+
+        // Tried again in a later turn, not in this one: it would only fail the same way again straight away.
+        foreach (var failedPartitionId in notStarted.Where(_partitionsAwaitingRecoveryLookup.Add))
+        {
+            _partitionsAwaitingRecovery.Enqueue(failedPartitionId);
         }
 
         if (_partitionsAwaitingRecovery.Count > 0 || _retryJobSweepRequested)
         {
             logger.DeferringRecoveryOfFailedPartitions(_partitionsAwaitingRecovery.Count);
-            SchedulePartitionRecoveryTurn();
+            SchedulePartitionRecoveryTurn(failedToStart ? _recoveryStartFailureDelay : TimeSpan.Zero);
         }
     }
 

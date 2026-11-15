@@ -1,35 +1,39 @@
 ---
-title: Close the books
-description: End a period, version or batch with a domain fact, then continue in the next stream without a rollover race.
+title: "Cratis Chronicle: close the books"
+description: Close an accounting period with a recorded event in Cratis Chronicle, carry its balance into the next stream, and handle writes that race with closing.
 ---
 
-**Goal:** a ledger, a monthly report or a billing run works in periods. When a period is finished, nothing more may be appended to it, and new facts must go to the next period.
+To close an accounting period in Cratis Chronicle, append a closing event that prevents further writes to that period's stream. Then record the opening balance in the next period. The history retains both decisions, and the kernel enforces the closed scope for every client.
 
-This recipe uses closing streams and gives the kernel no rollover policy. You decide what the next stream is called. The kernel guarantees that the old one stays closed.
+This recipe uses one event source per ledger and one stream per period. A stream groups that ledger's events for a period, such as `2026-04`. Start with a configured event log and a way to calculate the closing balance. Your application chooses the next period; Chronicle does not rotate streams for you.
 
 ## The shape
 
-1. The closing fact (or a carry-over fact) ends the old scope. It is an event type declared with `[ClosesStream]`, so the append and the closure happen in the same step.
-2. The application derives the next stream id. It can come from the period itself (`2026-05`), from a counter, or from a read model that tracks the current open instance.
-3. The first fact in the new stream carries over what the old one ended with, for example the closing balance.
+1. Append an event declared with `[ClosesStream]` to end the old period. The kernel accepts the closing fact and writes its closure before another append can interleave.
+2. Derive the next stream id in the application, for example `2026-05`.
+3. Append an opening fact to the new stream with the balance carried over from the old period.
 
 ## Close the period and open the next
 
-The closing event takes the stream id from its `Period` property, so it closes the period it names whichever stream it is appended to:
+The closing event takes the stream id from its `Period` property. The event source id and stream type still come from the append, so the closure applies to this ledger's named period:
 
 <ChronicleClientTabs snippet="scenarios/close-the-books/close-and-open-next" />
 
-After the first append succeeds, every append to `ledger` / `2026-04` for that ledger is refused with `StreamClosed`. Other ledgers and the `2026-05` stream are unaffected. The two appends are separate calls. If the process stops between them, the old period is closed and the new one is not open yet. Make the second step safe to repeat: before opening the new period, check whether it already has its opening fact.
+After the first append succeeds, further appends to `ledger` / `2026-04` for that ledger are refused with `StreamClosed`. Other ledgers and the `2026-05` stream are unaffected. On success, the second append records May's opening balance as April's closing balance.
+
+These are separate calls. If the second append fails or the application stops between them, April remains closed without May's opening fact. Check the returned result before treating the rollover as complete, and make opening the new period safe to repeat.
+
+The closing event and its closure prevent interleaving, but are not crash-atomic. If the kernel stops after writing the event and before writing the closure, the scope remains open until a constraint reindex rebuilds it. See [Closing streams](../closing-streams/index.mdx#guarantees-and-limits) for the recovery boundary.
 
 ## Keep appending to the right period
 
-Producers that post entries need the current period. Take it from a read model of the open instance rather than from the clock, so a late-closing period keeps accepting entries until it is actually closed.
+Producers that post entries need the current period. Read it from a model of the open period rather than from the clock, so a late-closing period keeps accepting entries until it is actually closed.
 
-A read model lags the log slightly. Right after a rollover, a producer can still read the old period and append to it. The kernel then rejects the append with `StreamClosed`. Treat that as a normal outcome: read the current period again and retry.
+A materialized read model can lag the log. Right after a rollover, a producer may still read April as the current period. If April is closed, the kernel rejects the append with `StreamClosed`. Read the current period again before retrying; sending the same append to the same closed stream cannot succeed.
 
 <ChronicleClientTabs snippet="scenarios/close-the-books/retry-on-closed" />
 
-The rejection is the safety net. Without the closure the late entry would be committed to a period that is already final.
+The C# example tries at most three appends and returns the last result. If the current-period read model is still behind, all three may fail. Let the caller handle that result instead of retrying indefinitely. The closure keeps those late entries out of the finalized period.
 
 ## Allow a correction
 
@@ -37,10 +41,8 @@ If a closed period sometimes needs a correction, declare a reopening event with 
 
 ## Carry-over and mementos
 
-Today the carry-over is an ordinary event, as in the first example. A memento, a snapshot of the old stream's state written as the first event of the new one, is planned and tracked in [Chronicle issue 1370](https://github.com/Cratis/Chronicle/issues/1370). It will replace the hand-written carry-over fact, not the closing step.
+The carry-over in this recipe is an ordinary event that your application defines and appends. A memento would capture the old stream's state as the first event of the new one; [Chronicle issue 1370](https://github.com/Cratis/Chronicle/issues/1370) discusses that approach. This recipe does not depend on it.
 
 ## See also
 
-- [Closing events](../closing-streams/closing-events.mdx): dimensions, `EventStreamIdFrom`, reopening.
-- [Closing streams](../closing-streams/index.mdx): the guarantees and limits.
-- [Enforce a unique value](enforce-a-unique-value.md): the other constraint recipe.
+Use [Closing events](../closing-streams/closing-events.mdx) to change the dimensions or configure `EventStreamIdFrom`. [Closing streams](../closing-streams/index.mdx) explains the guarantees and limits. If the next rule you need is uniqueness across event sources, continue with [Enforce a unique value](enforce-a-unique-value.md).

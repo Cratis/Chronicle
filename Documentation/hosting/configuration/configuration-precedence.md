@@ -1,8 +1,7 @@
 ---
+title: Configuration precedence in Cratis Chronicle
 description: Chronicle configuration precedence from built-in defaults through chronicle.json to Cratis__Chronicle__ environment variable overrides.
 ---
-# Configuration Precedence
-
 Chronicle combines built-in defaults, an optional `chronicle.json` file, and prefixed environment variables. Use the file for shared deployment settings and environment variables for values that differ between environments.
 
 ## Precedence Order

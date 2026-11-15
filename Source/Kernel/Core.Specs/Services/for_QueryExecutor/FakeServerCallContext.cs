@@ -12,13 +12,16 @@ namespace Cratis.Chronicle.Services.for_QueryExecutor;
 public class FakeServerCallContext : ServerCallContext
 {
     readonly Dictionary<object, object> _userState = [];
+    readonly CancellationToken _cancellationToken;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FakeServerCallContext"/> class.
     /// </summary>
     /// <param name="httpContext">The request, or null for a call that is not served over HTTP.</param>
-    public FakeServerCallContext(HttpContext? httpContext)
+    /// <param name="cancellationToken">The optional token that ends the call.</param>
+    public FakeServerCallContext(HttpContext? httpContext, CancellationToken cancellationToken = default)
     {
+        _cancellationToken = cancellationToken;
         if (httpContext is not null)
         {
             _userState["__HttpContext"] = httpContext;
@@ -41,7 +44,7 @@ public class FakeServerCallContext : ServerCallContext
     protected override Metadata RequestHeadersCore => [];
 
     /// <inheritdoc/>
-    protected override CancellationToken CancellationTokenCore => CancellationToken.None;
+    protected override CancellationToken CancellationTokenCore => _cancellationToken;
 
     /// <inheritdoc/>
     protected override Metadata ResponseTrailersCore => [];

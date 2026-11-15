@@ -1,8 +1,7 @@
 ---
+title: "CHR0041: Event filter attribute on a projection has no effect"
 description: Chronicle analyzer rule CHR0041 reports event metadata filter attributes on a projection, which has no effect, and how to narrow a projection instead.
 ---
-# CHR0041: Event filter attribute on a projection has no effect
-
 ## Rule Description
 
 An event-metadata filter attribute — `[EventStreamType]`, `[EventSourceType]`, or `[FilterEventsByTag]` — is applied to a projection, where it does nothing. A projection observes *every* event of the types its definition declares; there is no field for a metadata filter anywhere in a projection's definition, so no client can express one and no kernel could honor it.

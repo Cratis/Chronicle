@@ -2,22 +2,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Orleans.Jobs;
+using Cratis.Choreography.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
 /// <summary>
 /// Gives a job step under specification the run its background work has in a silo, so that
 /// TryInvokeOnActivation admits callbacks, runs them on a stand-in activation scheduler, and refuses them
-/// once the run is closed. The run is internal to Cratis.Orleans, so it is reached by reflection.
+/// once the run is closed. The run is internal to Cratis.Choreography, so it is reached by reflection.
 /// </summary>
 public sealed class StepRunForTesting
 {
-    static readonly Type _runType = typeof(IJobStep).Assembly.GetType("Cratis.Orleans.Jobs.JobStepRun", throwOnError: true)!;
+    static readonly Type _runType = typeof(IJobStep).Assembly.GetType("Cratis.Choreography.Jobs.JobStepRun", throwOnError: true)!;
     static readonly PropertyInfo _currentProperty = _runType.GetProperty("Current", BindingFlags.Public | BindingFlags.Static)!;
     static readonly MethodInfo _closeAdmission = _runType.GetMethod("CloseAdmission")!;
     static readonly MethodInfo _beginDrain = _runType.GetMethod("BeginDrain")!;
-    static readonly object _stopping = Enum.Parse(_runType.Assembly.GetType("Cratis.Orleans.Jobs.JobStepRunPhase", throwOnError: true)!, "Stopping");
+    static readonly object _stopping = Enum.Parse(_runType.Assembly.GetType("Cratis.Choreography.Jobs.JobStepRunPhase", throwOnError: true)!, "Stopping");
 
     readonly object _run;
 

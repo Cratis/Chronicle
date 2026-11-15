@@ -1,6 +1,6 @@
 ---
 name: cratis-arc-command-validation
-description: Add a rejection rule to an existing Arc command — choosing between ConceptValidator, CommandValidator, a short-circuiting Provide, and a read-model-injected Handle returning a Result of either the event or a ValidationResult. Use when placing a C# business rejection in ConceptValidator, CommandValidator, Provide() or a Handle() result containing ValidationResult. Do not use for JVM validators (use cratis-arc-validation-kotlin), Node.js ruleFor (use cratis-arc-validation-typescript), new commands (use cratis-arc-command), or append-time uniqueness (use cratis-chronicle-event-constraints).
+description: Use when adding a business rejection or value invariant to an existing C# Arc command. Not for Kotlin or TypeScript validators, defining a new command or enforcing append-time uniqueness.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-arc-command-validation/SKILL.md -->
@@ -143,6 +143,11 @@ public class TransferFundsValidator : CommandValidator<TransferFunds>
 - A validator that itself throws does not become a 500 — Arc catches it and
   emits a validation error with reason `ValidatorFailed`, returning 400.
 
+Read [protected validator construction](references/protected-validator-construction.md)
+for plain read-model constructor inputs under `On`, the separate untrimmed-JIT
+provider opt-in for decision tokens outside `On`, and generated composite-key
+metadata. Do not conflate metadata coverage with validator certification.
+
 ## Step 4 — Data the handler needs: `Provide()`
 
 `Provide()` runs after authorization and validation and before `Handle()`. Its
@@ -262,15 +267,19 @@ authorization and camelCase member paths are separate contracts.
 
 ## Step 6 — Specify the rejection
 
-Every rule gets a specification of its failure case, using
-`CommandScenario<TCommand>`. For guarded reads, `new CommandScenario<T>()`
-selects the in-process log from the command's mode and dependencies (do not call
-`UseDecisionReads()`). Seed real events with `Given.ForEventSource(id).Events(...)`
-(pinned read models cannot supply a guard), queue a competing
-`AppendConcurrently(id, events...)` and assert
-`ShouldHaveValidationErrorBecauseOf(ValidationResultReason.ConcurrencyViolation)`.
-For the ordinary rejection, assert **both** that the command did not succeed
-and that it failed *as a validation*:
+Every rule gets a failure specification: instantiate the validator with its
+read-model state and validate directly, asserting the specific rejection. Add
+`CommandScenario<TCommand>` only for pipeline/authorization wiring, constraints.
+Follow the
+[scenario rule](../../rules/specs.scenarios.csharp.md): application specs never
+configure read-protection modes, call `UseDecisionReads`, simulate competing appends, seed events solely for
+infrastructure, or re-prove platform guards. Keep the single cheap assembly-level
+application-shape admission spec specified by that rule; it is the application's
+only decision-read spec obligation. Report harness gaps upstream; never weaken
+production guards for speed.
+
+For a pipeline validation rejection, assert **both** that the command did not
+succeed and that it failed *as a validation*:
 
 ```csharp
 [Fact] void should_not_succeed() => _result.ShouldNotBeSuccessful();
@@ -305,6 +314,8 @@ the fact. See
 
 `dotnet build` in Debug and in Release, zero warnings and zero errors — the
 analyzers above are how `ARC0005`, `ARC0006` and `ARC0013` surface. Then
-`dotnet test` with a specification per rule, each asserting both
-`ShouldNotBeSuccessful()` and `ShouldHaveValidationErrors()`. A rule with no
-red-first specification has not been shown to reject anything.
+run the specification project using its runner, with a direct validation
+specification per rule and focused pipeline specs where wiring matters. Pipeline
+validation specs assert both `ShouldNotBeSuccessful()` and
+`ShouldHaveValidationErrors()`. A rule with no red-first specification has not
+been shown to reject anything.

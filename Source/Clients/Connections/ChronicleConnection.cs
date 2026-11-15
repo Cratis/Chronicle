@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Captures;
@@ -27,6 +28,7 @@ using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Execution;
 using Cratis.Tasks;
+using DnsClient;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
@@ -41,6 +43,11 @@ namespace Cratis.Chronicle.Connections;
 /// </summary>
 public sealed class ChronicleConnection : IChronicleConnection, IChronicleServicesAccessor, IGetServicesAsynchronously, IKernelCapabilities, IConnectionKeepAlive
 {
+    /// <summary>
+    /// How many times in a row resolving the servers fails before it is logged as an error rather than a warning.
+    /// </summary>
+    internal const int ResolutionFailuresBeforeError = 10;
+
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
@@ -53,6 +60,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     readonly string? _certificatePassword;
     readonly ITokenProvider _tokenProvider;
     readonly bool _skipTlsValidation;
+    readonly X509Certificate2Collection? _certificateAuthorities;
     readonly bool _skipCompatibilityCheck;
     readonly bool _skipKeepAlive;
     readonly IChronicleServerAddressResolver _serverAddressResolver;
@@ -68,6 +76,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     TaskCompletionSource? _connectTcs;
     ChronicleServerAddress? _lastDroppedAddress;
     DateTimeOffset? _lastConnectFailure;
+    int _consecutiveResolutionFailures;
     bool _hasEverConnected;
 
     /// <summary>
@@ -92,7 +101,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses. Defaults to <see cref="ChronicleServerAddressResolver"/>.</param>
     /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers. Defaults to the strategy named by the connection string, or least-connections.</param>
     /// <param name="timeProvider">Optional <see cref="TimeProvider"/> used to time the back-off after a failed connect. Defaults to the system clock.</param>
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+    /// <remarks>
+    /// Certificate authorities set by the connection string's <see cref="ChronicleConnectionString.CaCertificatePath"/> are loaded here, once for the connection.
+    /// </remarks>
+    /// <exception cref="CertificateAuthorityDoesNotExist">Thrown when the connection string's CA certificate file does not exist.</exception>
+    /// <exception cref="InvalidCertificateAuthority">Thrown when the connection string's CA certificate file cannot be read or contains no certificates.</exception>
 #pragma warning disable CA1068 // CancellationToken parameters must come last
     public ChronicleConnection(
         ChronicleConnectionString connectionString,
@@ -114,6 +127,75 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         IChronicleServerAddressResolver? serverAddressResolver = null,
         ILoadBalancerStrategy? loadBalancerStrategy = null,
         TimeProvider? timeProvider = null)
+        : this(
+            connectionString,
+            connectTimeout,
+            maxReceiveMessageSize,
+            maxSendMessageSize,
+            connectionLifecycle,
+            tasks,
+            correlationIdAccessor,
+            loggerFactory,
+            cancellationToken,
+            logger,
+            skipTlsValidation,
+            certificatePath,
+            certificatePassword,
+            tokenProvider,
+            skipCompatibilityCheck,
+            skipKeepAlive,
+            serverAddressResolver,
+            loadBalancerStrategy,
+            timeProvider,
+            string.IsNullOrEmpty(connectionString.CaCertificatePath) ? null : CertificateLoader.LoadCertificateAuthorities(connectionString.CaCertificatePath))
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChronicleConnection"/> class with already loaded certificate authorities.
+    /// </summary>
+    /// <param name="connectionString"><see cref="ChronicleConnectionString"/> to connect with.</param>
+    /// <param name="connectTimeout">Timeout when connecting in seconds.</param>
+    /// <param name="maxReceiveMessageSize">Maximum receive message size in bytes.</param>
+    /// <param name="maxSendMessageSize">Maximum send message size in bytes.</param>
+    /// <param name="connectionLifecycle"><see cref="IConnectionLifecycle"/> for when connection state changes.</param>
+    /// <param name="tasks"><see cref="ITaskFactory"/> to create tasks with.</param>
+    /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> to access the correlation ID.</param>
+    /// <param name="loggerFactory">Logger factory for creating loggers.</param>
+    /// <param name="cancellationToken">The clients <see cref="CancellationToken"/>.</param>
+    /// <param name="logger"><see cref="ILogger{TCategoryName}"/> for diagnostics.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation for the connection.</param>
+    /// <param name="certificatePath">Optional path to the certificate file.</param>
+    /// <param name="certificatePassword">Optional password for the certificate file.</param>
+    /// <param name="tokenProvider"><see cref="ITokenProvider"/> for authentication.</param>
+    /// <param name="skipCompatibilityCheck">Whether to skip the server compatibility check on connect.</param>
+    /// <param name="skipKeepAlive">Whether to skip the keep-alive handshake on connect.</param>
+    /// <param name="serverAddressResolver">Optional <see cref="IChronicleServerAddressResolver"/> for resolving server addresses.</param>
+    /// <param name="loadBalancerStrategy">Optional <see cref="ILoadBalancerStrategy"/> for selecting among multiple servers.</param>
+    /// <param name="timeProvider">Optional <see cref="TimeProvider"/> used to time the back-off after a failed connect.</param>
+    /// <param name="certificateAuthorities">Certificate authorities the server certificate must chain to when validation is enabled; <see langword="null"/> uses the system trust store.</param>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+    internal ChronicleConnection(
+        ChronicleConnectionString connectionString,
+        int connectTimeout,
+        int? maxReceiveMessageSize,
+        int? maxSendMessageSize,
+        IConnectionLifecycle connectionLifecycle,
+        ITaskFactory tasks,
+        ICorrelationIdAccessor correlationIdAccessor,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken,
+        ILogger<ChronicleConnection> logger,
+        bool skipTlsValidation,
+        string? certificatePath,
+        string? certificatePassword,
+        ITokenProvider? tokenProvider,
+        bool skipCompatibilityCheck,
+        bool skipKeepAlive,
+        IChronicleServerAddressResolver? serverAddressResolver,
+        ILoadBalancerStrategy? loadBalancerStrategy,
+        TimeProvider? timeProvider,
+        X509Certificate2Collection? certificateAuthorities)
     {
         if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
         {
@@ -122,8 +204,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
+        _certificateAuthorities = certificateAuthorities;
         _skipCompatibilityCheck = skipCompatibilityCheck;
-        _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive;
+#pragma warning disable CHRX0001 // The serverless switch is experimental; the connection honours it internally.
+        _skipKeepAlive = skipKeepAlive || connectionString.SkipKeepAlive || connectionString.Serverless;
+#pragma warning restore CHRX0001
         _connectionString = connectionString;
         _connectTimeout = connectTimeout;
         _maxReceiveMessageSize = maxReceiveMessageSize;
@@ -135,14 +220,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _loggerFactory = loggerFactory;
         if (ServerCertificateValidationWarning.AppliesTo(skipTlsValidation, connectionString))
         {
-            _logger.ServerCertificateValidationDisabled(string.Join(", ", connectionString.ServerAddresses));
+            _logger.ServerCertificateValidationDisabled(connectionString.Redacted);
         }
 
         _certificatePath = certificatePath;
         _certificatePassword = certificatePassword;
         _tokenProvider = tokenProvider ?? new NoOpTokenProvider();
         _serverAddressResolver = serverAddressResolver ?? new ChronicleServerAddressResolver();
-        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls);
+        _loadBalancerStrategy = loadBalancerStrategy ?? LoadBalancerStrategies.Create(connectionString.LoadBalancer, skipTlsValidation, connectionString.DisableTls, _certificateAuthorities);
         _watchDog = new ConnectionWatchdog(
             tasks,
             OnSessionDropped,
@@ -267,7 +352,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             throw new ConnectionTimedOut();
         }
 
-        _logger.NotAcceptingConnectionsYet(CurrentServerAddress.ToString(), _connectTimeout);
+        _logger.NotAcceptingConnectionsYet(DescribeEndpoint(CurrentServerAddress), _connectTimeout);
     }
 
     /// <summary>
@@ -309,21 +394,21 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
         {
             // The connect attempt's own outcome (warning, error or connected) reports the transport state.
-            _logger.CompatibilityCheckUnreachable(ex.Message);
+            _logger.CompatibilityCheckUnreachable(ex.GetType().Name);
             return;
         }
         catch (RpcException ex)
         {
             // Not being able to ask says nothing about whether the two sides agree, and a transport problem here
             // would surface again on the very next call with a better message than this one could give.
-            _logger.FailedToCheckCompatibility(ex.Message);
+            _logger.FailedToCheckCompatibility(ex.GetType().Name);
             return;
         }
 
         if (!response.IsCompatible)
         {
             var message = IncompatibilityMessage.Build(
-                _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                DescribeCurrentEndpoint(),
                 response.ServerVersion,
                 response.ServerProtocolVersion,
                 response.Incompatibilities);
@@ -416,7 +501,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         var lastFailure = _lastConnectFailure;
         if (lastFailure is not null && _timeProvider.GetUtcNow() - lastFailure.Value < TimeSpan.FromSeconds(_connectTimeout))
         {
-            throw new ConnectionUnavailable(_connectionString.Redacted);
+            throw new ConnectionUnavailable(_connectionString);
         }
     }
 
@@ -425,8 +510,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _logger.Connecting(_connectionString.Redacted);
         DisposeCurrentAttempt();
 
-        var untried = (await _serverAddressResolver.Resolve(_connectionString)).ToList();
-        var connected = await TryConnectToAnyCandidate(untried);
+        var untried = await ResolveCandidates();
+        var connected = untried.Count > 0 && await TryConnectToAnyCandidate(untried);
 
         if (_skipKeepAlive)
         {
@@ -459,6 +544,46 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
             // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
             HandleConnectTimedOut();
+        }
+    }
+
+    /// <summary>
+    /// Resolves the servers to try for this attempt.
+    /// </summary>
+    /// <returns>The servers, or none when they could not be resolved and the watchdog will try again.</returns>
+    /// <remarks>
+    /// Resolving is done afresh for every attempt, so a replaced server is found once its records are. While none are
+    /// published - every pod of a rollout not yet ready, for a <c language="text">chronicle+srv</c> connection string - the kernel is as
+    /// unreachable as one that does not answer, and is treated the same way: the attempt fails, and the watchdog keeps
+    /// resolving in the background instead of the failure taking the host down on its first connect. Without the
+    /// watchdog nothing would try again, so the failure is surfaced as it is.
+    /// <para>
+    /// A misspelled name looks exactly like one whose records are not published yet. So once resolving has failed
+    /// <see cref="ResolutionFailuresBeforeError"/> times in a row, that is logged as an error, making a lasting
+    /// configuration error visible as one rather than as one more warning.
+    /// </para>
+    /// </remarks>
+    async Task<List<ChronicleServerAddress>> ResolveCandidates()
+    {
+        try
+        {
+            List<ChronicleServerAddress> candidates = [.. await _serverAddressResolver.Resolve(_connectionString)];
+            Interlocked.Exchange(ref _consecutiveResolutionFailures, 0);
+            return candidates;
+        }
+        catch (Exception ex) when (!_skipKeepAlive && ex is NoSrvRecordsFound or DnsResponseException or SocketException)
+        {
+            var failures = Interlocked.Increment(ref _consecutiveResolutionFailures);
+            if (failures == ResolutionFailuresBeforeError)
+            {
+                _logger.StillCouldNotResolveServers(_connectionString.Redacted, failures, ex.Message);
+            }
+            else
+            {
+                _logger.CouldNotResolveServers(_connectionString.Redacted, ex.Message);
+            }
+
+            return [];
         }
     }
 
@@ -558,7 +683,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             }
             catch (TimeoutException)
             {
-                _logger.EndpointHandshakeFailed(address.ToString(), "the compatibility check timed out");
+                _logger.EndpointHandshakeFailed(DescribeEndpoint(address), "the compatibility check timed out");
                 return false;
             }
         }
@@ -614,7 +739,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IEventSources>(clientFactory))
         {
             Administrators = callInvoker.CreateGrpcService<Contracts.Security.IAdministrators>(clientFactory),
-            Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory)
+            Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory),
+            Imports = callInvoker.CreateGrpcService<Contracts.Imports.IImports>(clientFactory),
+            Federation = callInvoker.CreateGrpcService<Contracts.Federation.IFederation>(clientFactory)
         };
     }
 
@@ -650,7 +777,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         catch (Exception ex) when (ex is TimeoutException or ConnectionUnavailable or RpcException)
         {
-            _logger.EndpointHandshakeFailed(address.ToString(), ex.Message);
+            _logger.EndpointHandshakeFailed(DescribeEndpoint(address), ex is RpcException rpc ? rpc.StatusCode.ToString() : ex.Message);
             return false;
         }
     }
@@ -674,7 +801,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             if (!result.IsCompatible)
             {
                 var message = IncompatibilityMessage.Build(
-                    _currentServerAddress?.ToString() ?? _connectionString.Redacted,
+                    DescribeCurrentEndpoint(),
                     serverVersion: string.Empty,
                     serverProtocolVersion: string.Empty,
                     result.Errors);
@@ -687,9 +814,25 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
         catch (RpcException ex)
         {
-            _logger.FailedToRetrieveServerDescriptorSet(ex.Message);
+            _logger.FailedToRetrieveServerDescriptorSet(ex.GetType().Name);
         }
     }
+
+    /// <summary>
+    /// Describes a server for diagnostics. When the connection string's attribution is uncertain the address could
+    /// really be user information, so the opaque replacement is used instead of the address.
+    /// </summary>
+    /// <param name="address">The server to describe.</param>
+    /// <returns>The address, or the opaque replacement.</returns>
+    string DescribeEndpoint(ChronicleServerAddress address) =>
+        _connectionString.Redacted == ConnectionStringDiagnostics.Redacted ? ConnectionStringDiagnostics.Redacted : address.ToString();
+
+    /// <summary>
+    /// Describes the server currently in use, or the connection, for diagnostics.
+    /// </summary>
+    /// <returns>The safe description.</returns>
+    string DescribeCurrentEndpoint() =>
+        _currentServerAddress is null ? _connectionString.Redacted : DescribeEndpoint(_currentServerAddress);
 
     void ConnectIfNotConnected()
     {
@@ -709,7 +852,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // still connects over TLS (server-authenticated) — it simply does not present a client
             // certificate for mutual TLS. This is the common case against a TLS server with no mutual-TLS.
             certificate = !string.IsNullOrEmpty(_certificatePath)
-                ? CertificateLoader.LoadCertificate(_certificatePath!, _certificatePassword)
+                ? CertificateLoader.LoadCertificate(_certificatePath, _certificatePassword)
                 : null;
             var httpHandler = new SocketsHttpHandler
             {
@@ -722,12 +865,12 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             if (certificate is not null)
             {
                 httpHandler.SslOptions.ClientCertificates = new X509CertificateCollection { certificate };
-                _logger.UsingClientCertificate(_certificatePath!);
+                _logger.UsingClientCertificate(ConnectionStringDiagnostics.Redacted);
             }
 #pragma warning restore CA2000
 
             httpHandler.SslOptions.RemoteCertificateValidationCallback =
-                CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString());
+                CertificateLoader.CreateServerCertificateValidationCallback(_skipTlsValidation, certificate?.GetCertHashString(), _certificateAuthorities);
 
             // With TLS disabled the server speaks HTTP/2 without TLS (h2c); an http:// address makes the gRPC channel
             // use HTTP/2 with prior knowledge.
@@ -760,7 +903,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     }
                 });
 
-            _logger.ChannelCreated(address);
+            _logger.ChannelCreated(_connectionString.Redacted);
             return channel;
         }
         catch
@@ -813,7 +956,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (handshake.Task.IsCompletedSuccessfully)
         {
             _lastDroppedAddress = address;
-            _logger.KeepAliveStreamEnded(address.ToString());
+            _logger.KeepAliveStreamEnded(DescribeEndpoint(address));
             _watchDog.RequestReconnect();
         }
     }

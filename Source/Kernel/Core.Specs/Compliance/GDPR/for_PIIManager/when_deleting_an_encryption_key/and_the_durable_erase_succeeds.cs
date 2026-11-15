@@ -17,13 +17,14 @@ public class and_the_durable_erase_succeeds : given.a_pii_manager
 {
     Task Because() => _manager.DeleteEncryptionKeyFor(Identifier);
 
-    [Fact] void should_record_the_erasure() => _keyStore.Received(1).RecordErasureFor(EventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_erase_the_key_from_storage() => _keyStore.Received(1).DeleteFor(EventStore, EventStoreNamespace, Identifier);
+    [Fact] void should_record_the_erasure() => _keyStore.Received(1).RecordErasureFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+    [Fact] void should_erase_the_key_from_storage() => _keyStore.Received(1).DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
     [Fact] void should_evict_the_key_from_every_silo() => _cacheClient.Received(1).Evict(EventStore, EventStoreNamespace, Identifier);
-    [Fact] void should_fence_the_key_before_erasing_and_evicting_it() => Received.InOrder(() =>
+    [Fact]
+    void should_fence_the_key_before_erasing_and_evicting_it() => Received.InOrder(() =>
     {
-        _keyStore.RecordErasureFor(EventStore, EventStoreNamespace, Identifier);
-        _keyStore.DeleteFor(EventStore, EventStoreNamespace, Identifier);
+        _keyStore.RecordErasureFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<Storage.Compliance.EncryptionKeyErasureRequest>());
+        _keyStore.DeleteThroughFor(EventStore, EventStoreNamespace, Identifier, Arg.Any<string>());
         _cacheClient.Evict(EventStore, EventStoreNamespace, Identifier);
     });
 }

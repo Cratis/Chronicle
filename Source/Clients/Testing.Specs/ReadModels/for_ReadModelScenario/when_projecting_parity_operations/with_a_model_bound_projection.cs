@@ -1,0 +1,42 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Events;
+
+namespace Cratis.Chronicle.Testing.ReadModels.for_ReadModelScenario.when_projecting_parity_operations;
+
+public class with_a_model_bound_projection : Specification
+{
+    ReadModelScenario<ModelBoundParityBoard> _scenario;
+    EventSourceId _id;
+    Guid _first;
+    Guid _second;
+    Guid _third;
+
+    void Establish()
+    {
+        _scenario = new ReadModelScenario<ModelBoundParityBoard>();
+        _id = new EventSourceId(Guid.NewGuid());
+        _first = Guid.NewGuid();
+        _second = Guid.NewGuid();
+        _third = Guid.NewGuid();
+    }
+
+    async Task Because() =>
+        await _scenario.Given
+            .ForEventSource(_id)
+            .Events(
+                new ParityBoardTitled("Draft"),
+                new ParityBoardTitled("Final"),
+                new ParityEntryAdded(_first, "Bravo", 2),
+                new ParityEntryAdded(_second, "Charlie", 3),
+                new ParityEntryAdded(_third, "Alpha", 1),
+                new ParityRankedEntryAdded(_first, "Bravo", 2),
+                new ParityRankedEntryAdded(_second, "Charlie", 3),
+                new ParityRankedEntryAdded(_third, "Alpha", 1));
+
+    [Fact] void should_keep_the_first_title_set_once() => _scenario.Instance!.FirstTitle.ShouldEqual("Draft");
+    [Fact] void should_keep_the_latest_title() => _scenario.Instance!.Title.ShouldEqual("Final");
+    [Fact] void should_keep_prepended_entries_newest_first() => _scenario.Instance!.Entries.Select(_ => _.EntryId).ToArray().ShouldEqual([_third, _second, _first]);
+    [Fact] void should_keep_entries_sorted_by_name() => _scenario.Instance!.EntriesByName.Select(_ => _.Name).ToArray().ShouldEqual(["Alpha", "Bravo", "Charlie"]);
+}

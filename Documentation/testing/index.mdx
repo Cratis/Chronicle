@@ -1,41 +1,45 @@
 ---
-title: Testing
-description: Test event appends, read models, and reactor side effects in process without running infrastructure.
+title: Cratis Chronicle testing boundaries and setup
+description: Choose a Cratis Chronicle test boundary, set up .NET testing packages, and check event appends, read models, or reactors before adding infrastructure.
 ---
 
-Chronicle provides in-process scenarios for testing event appends and read models without a running kernel. The .NET and TypeScript testing libraries also cover reactor side effects, and .NET offers integration fixtures. `Cratis.Chronicle.XUnit.Integration` exercises the full client and kernel stack against MongoDB via Testcontainers when you need to prove storage, network, or full-stack behavior.
+Cratis Chronicle's testing helpers let you check event appends and read model state without starting a separate kernel. Start with the in-process scenario your client supports, then use an integration test against a running kernel for behavior that depends on a connection, delivery to observers (event consumers), or persistent storage. In .NET, `Cratis.Chronicle.XUnit.Integration` provides that integration boundary with a running kernel and MongoDB through Testcontainers.
 
 :::note[Client coverage]
-The clients offer different in-process boundaries:
+Choose helpers for your client rather than assuming the same APIs or kernel behavior in every language:
 
-- **.NET:** `Cratis.Chronicle.Testing` provides `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` and `OccurrenceScenario<THandler>` for C# specs, alongside the separate integration fixtures described below.
-- **Kotlin:** `io.cratis:chronicle-testing` provides `EventScenario` for appends and `ReadModelScenario` for reducers, but not projection or reactor scenarios. See the [Kotlin testing guide](/chronicle/clients/kotlin/guides/testing/).
-- **Java:** `EventScenario` from `io.cratis.chronicle.testing` covers appends; the read-model examples call reducers directly.
-- **TypeScript:** `@cratis/chronicle/testing` exports `EventScenario` for appends and `ReadModelScenario` for reducers and supported projections, and `ReactorScenario` for reactor side effects. Some .NET-only workflows below have explicit unsupported tabs.
-- **Elixir:** `Chronicle.Testing` starts a real `Chronicle.Client` against an in-memory kernel (`start_supervised_client/1`, or `use Chronicle.Testing.Case`) and provides `Chronicle.Testing.Assertions` such as `assert_appended/3`; `Chronicle.Testing.Integration` runs specs against a live kernel. Unsupported tabs mark workflows it does not cover.
+| Client | In-process testing support |
+|---|---|
+| .NET | `Cratis.Chronicle.Testing` provides `EventScenario`, `ReadModelScenario<T>`, `ReactorScenario<T>` and `OccurrenceScenario<THandler>`. Integration fixtures are a separate package. |
+| Kotlin | `io.cratis:chronicle-testing` provides `EventScenario` for appends and `ReadModelScenario` for reducers, not projection or reactor scenarios. See the [Kotlin testing guide](/chronicle/clients/kotlin/guides/testing/). |
+| Java | `EventScenario` from `io.cratis.chronicle.testing` covers appends; the read-model examples call reducers directly. |
+| TypeScript | `@cratis/chronicle/testing` exports `EventScenario` for appends, `ReadModelScenario` for reducers and supported projections, and `ReactorScenario` for reactor side effects. |
+| Elixir | `Chronicle.Testing` starts a real `Chronicle.Client` against an in-memory kernel with `start_supervised_client/1` or `use Chronicle.Testing.Case`. `Chronicle.Testing.Assertions` provides helpers such as `assert_appended/3`. Use `Chronicle.Testing.Integration` for a live kernel. |
 
-Examples in this section use client tabs where the workflow is supported. Package instructions, named fixture APIs, and other .NET-only details are labeled as such.
+Examples use client tabs; unsupported tabs identify limits of that client's helper. The package and fixture setup below is for .NET.
 :::
 
-In .NET applications, Chronicle tests usually sit inside [Cratis Specifications](/testing-with-cratis/). That makes the event-sourced shape explicit: `Establish()` or a scenario's `Given` builder seeds facts that already happened, `Because()` appends or provides the event under test, and each `[Fact]` asserts the new facts, read model state, or side effect.
+In .NET, use [Cratis Specifications](/testing-with-cratis/) to separate setup, the operation under test, and its expected outcome. Seed existing events in `Establish()` or a scenario's `Given` builder. Run the operation in `Because()`, then use each `[Fact]` to check an appended event, read model value, or side effect.
 
 ## Choosing the right test boundary
 
-Start with the in-process scenarios your client supports. They test the slice without infrastructure; use a kernel-backed test when you need to prove behavior the client's scenario does not cover. The table below names the .NET scenarios and integration fixtures:
+Choose the boundary from the question the spec needs to answer. A read model calculation does not need a database, but checking that its sink, the component that stores the model, wrote a document does. These are the .NET starting points:
 
 | What to prove | Start with | What it does not prove |
 |---|---|---|
-| Event appends, constraint violations, sequencing | `EventScenario` | Network serialization, kernel connection, storage write |
+| Event appends, constraint violations, sequencing | `EventScenario` | Network serialization, kernel connection, persistent storage writes |
 | Read model projection or reducer logic | `ReadModelScenario<T>` | Sink writes, MongoDB queries, change stream subscription |
-| Reactor side effects and event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch, redelivery — each event is handed to the reactor once, so a repeated delivery (and the idempotence it requires) needs a spec that delivers the event twice |
-| Actual storage writes, kernel connectivity, change streams | `ChronicleInProcessFixture` / `ChronicleOutOfProcessFixture` | Client isolation—the kernel is shared across tests |
+| Reactor side effects and event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch, automatic redelivery |
+| Actual storage writes, kernel connectivity, change streams | `ChronicleInProcessFixture` / `ChronicleOutOfProcessFixture` | Isolation from other tests that share the same fixture host |
+
+`ReactorScenario<T>` delivers each supplied event once. To check idempotence, meaning that handling the same event again does not repeat an unwanted side effect, write a spec that supplies the event twice.
 
 The .NET integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:
 
-- `ChronicleInProcessFixture` — an in-process Chronicle kernel with MongoDB via Testcontainers.
-- `ChronicleOutOfProcessFixture` — a Chronicle kernel in a separate container, also using Testcontainers.
-- `ChronicleClientFixture` — a base for integration tests that only need a Chronicle client reference.
-- `ChronicleOrleansFixture` — an Orleans-based Chronicle kernel for testing Chronicle's own kernel internals.
+- `ChronicleInProcessFixture`: runs the kernel in the test process and MongoDB through Testcontainers.
+- `ChronicleOutOfProcessFixture`: runs the kernel in a separate container, also using Testcontainers.
+- `ChronicleClientFixture`: provides the client-side base for integration tests.
+- `ChronicleOrleansFixture`: hosts an Orleans-based kernel for testing Chronicle's own internals.
 
 Only the in-process and out-of-process fixtures are documented here; the others are for framework or advanced scenarios.
 
@@ -46,45 +50,53 @@ Only the in-process and out-of-process fixtures are documented here; the others 
 <PackageReference Include="Cratis.Chronicle.Testing" />
 ```
 
-`Cratis.Chronicle.Testing` brings in `Cratis.Arc` and `Cratis.Arc.Core`, including the ASP.NET Core shared framework. You do not need to reference Arc separately for Chronicle-only tests.
+Use these references for Chronicle-only specs. `Cratis.Chronicle.Testing` brings in `Cratis.Arc` and `Cratis.Arc.Core`, including the ASP.NET Core shared framework, so you do not need separate Arc references unless you are overriding their versions.
 
 ### Application hosts that reference Testing
 
-When an application host references `Cratis.Chronicle.Testing`, registering the Chronicle client automatically keeps kernel commands and queries out of the application's Arc endpoints. This works whether Arc or Chronicle is registered first. Application commands, queries, and authorization policies are unchanged; the isolated in-process kernel pipeline still dispatches kernel commands.
+If your application host references `Cratis.Chronicle.Testing`, register the Chronicle client as usual. Testing keeps kernel commands and queries out of the application's Arc endpoints without changing application commands, queries, or authorization policies. Registration order between Arc and Chronicle does not matter.
 
-A host that also runs the kernel in the same container, such as the in-process silo of the xUnit integration fixtures, keeps every kernel command and query, because the kernel dispatches its own commands through that container's Arc pipeline. Chronicle recognizes such a host by the administrator authorization policy the kernel registers, whichever order the kernel and the client are registered in.
+A dependency-injection container that also hosts the kernel keeps its kernel commands and queries. The kernel still needs them to dispatch its own work through Arc. This includes the in-process silo used by the xUnit fixtures. Chronicle identifies that host through the kernel's administrator authorization policy, regardless of registration order.
 
-Register individual Arc command-handler and query-performer providers rather than replacing the closed `IInstancesOf<ICommandHandlerProvider>` or `IInstancesOf<IQueryPerformerProvider>` collections. Testing rejects those custom collections with instructions for registering individual providers instead: during client registration when they come first, and when the host starts when they are registered after the client.
+For custom Arc providers, register individual `ICommandHandlerProvider` and `IQueryPerformerProvider` implementations. Do not replace the `IInstancesOf<ICommandHandlerProvider>` or `IInstancesOf<IQueryPerformerProvider>` collections. Testing rejects a replacement during client registration if it is already present, or at host startup if added afterward. The error explains how to register individual providers instead.
 
-Chronicle client integrations can implement `IChronicleClientServices` with a public parameterless constructor to add container-local registrations. Chronicle discovers these implementations through its type universe and invokes them during both web and non-web client registration. Implementations must be idempotent, because they run on every client registration and a host can register the client more than once; they do not run in the isolated kernel pipeline.
+To add services during Chronicle client registration, implement `IChronicleClientServices` with a public parameterless constructor. Chronicle discovers it through the type universe and calls it for both web and non-web clients. Make its registrations safe to repeat: a host can register the client more than once. These hooks apply to the client container, not the isolated kernel pipeline.
 
 ### Matching versions
 
-Chronicle and Arc have independent release numbers. Match `Cratis.Chronicle.Testing` to your Chronicle client release; its NuGet dependency list identifies the Arc version that release targets. For example, in the Chronicle.Testing 19.26.x version line, 19.26.0 targets Arc 22.30.0. Check each release's dependency list rather than assuming all releases in that line target the same Arc version. A `Cratis` meta-package release can target an earlier Chronicle client, so its version alone does not identify a matching Chronicle.Testing package.
+Match `Cratis.Chronicle.Testing` to your Chronicle client release. Chronicle and Arc have independent release numbers, so check that Testing release's NuGet dependencies for its Arc requirements rather than matching the numbers. If you use the `Cratis` meta-package, check its dependencies too.
 
-To use a newer compatible Arc 22.x release with an older Chronicle.Testing release, pin both `Cratis.Arc` and `Cratis.Arc.Core` to the same version in `Directory.Packages.props` and reference them directly in the test project. Alternatively, enable `CentralPackageTransitivePinningEnabled` in that file to apply the central pins to transitive dependencies. Align any other Arc runtime packages your application uses with that version. Do not downgrade below Chronicle.Testing's declared dependencies; verify your scenarios after overriding them.
+If you need to override the Arc dependency with a compatible newer release, pin both `Cratis.Arc` and `Cratis.Arc.Core` to the same version in `Directory.Packages.props` and reference them directly in the test project. Alternatively, enable `CentralPackageTransitivePinningEnabled` there so the central pins apply to transitive dependencies. Align any other Arc runtime packages with that version, do not go below Testing's declared dependencies, and verify your scenarios after an override.
 
 Use `Cratis.Testing` instead of `Cratis.Chronicle.Testing` when the same spec also tests Arc commands.
 
-Application command execution scopes, including Chronicle transactions, belong to the outer Arc command pipeline. The in-process scenario helpers do not discover or invoke your application's `ICommandExecutionScope` implementations when processing an event append. Your application scopes still run around the application command; you do not need to register their dependencies with the scenario harness.
+Application command execution scopes, including Chronicle transactions, wrap the application command in the outer Arc pipeline. The scenario's internal append pipeline excludes your application's `ICommandExecutionScope` implementations; they do not run again for each append. You therefore do not need to register their dependencies with the scenario harness.
 
 ## Explicit artifacts and lifetime
 
-The .NET scenarios accept per-run `Defaults` with `ChronicleOptions.ExplicitArtifacts`. The same nominated event types, reducers, reactors, constraints and migrations feed actual scenario processing. A plain `ReactorScenario<T>` requires explicit reactor nomination; it does not discover arbitrary classes by shape.
+Artifacts are the event types, reducers, reactors, constraints, and migrations that a scenario needs to find. To choose them for one .NET run, pass `Defaults` configured with `ChronicleOptions.ExplicitArtifacts`. Those registrations feed scenario processing, not just discovery. A plain `ReactorScenario<T>` requires explicit reactor nomination; it does not discover an arbitrary class by its method signatures.
 
 <ChronicleClientTabs snippet="testing/explicit-artifacts/scenarios" />
 
-Create independent defaults/options for independent runs. Each scenario store captures its original recipes; changing shared options afterward does not rewrite an existing store. Do not mutate `Defaults.Instance` or the default artifact provider to configure a run.
+Create separate defaults and options for independent runs. Each scenario store captures its artifact registrations when created; changing shared options later does not change that store. Do not mutate `Defaults.Instance` or the default artifact provider to configure one run.
 
-XUnit integration options are **host-lifetime**, matching `ChronicleOptions`: configure explicit artifacts before the fixture host/client/store is created. Reuse of that host keeps its first snapshot, even after rediscovery. Separate fixture hosts have isolated snapshots. The existing sharing boundary is the closed `ChronicleClientFixture<TChronicleFixture>` family; derived scenarios in the same family share its host. A fixture that overrides `ChronicleFixture.UsesPerContextMongoDBHost` to return `true` starts a fresh host for each test context, so each context captures its own snapshot. `AutoDiscoverArtifacts = false` disables assembly discovery, not explicit nominations or automatic client registration. It is different from `AutoDiscoverAndRegister = false`, which requires manual discovery and registration.
+For xUnit integration tests, configure explicit artifacts before creating the fixture host, client, or store. The registrations live as long as the host: reusing it keeps the first snapshot, even after rediscovery. Derived fixtures in the same closed `ChronicleClientFixture<TChronicleFixture>` family share that host; separate hosts capture independent snapshots.
+
+A fixture that overrides `ChronicleFixture.UsesPerContextMongoDBHost` to return `true` creates a fresh host for each test context. Each context then captures its own artifact snapshot.
+
+Use `AutoDiscoverArtifacts = false` to disable assembly discovery while keeping explicit nominations and automatic client registration. `AutoDiscoverAndRegister = false` is different: it requires you to discover and register manually.
 
 See the [.NET explicit registration reference](../clients/dotnet/explicit-artifacts) for peer conflicts, migration binding and custom-provider limits.
 
 ## .NET testing store identity
 
-When code under test distinguishes stores by identity, construct `EventStoreForTesting(serviceProvider, artifacts, options, time, eventStore, @namespace, capabilities: null)` or `Defaults(artifacts, serviceProvider, options, time, eventStore, @namespace)`. The `eventStore` and `@namespace` arguments are `EventStoreName` and `EventStoreNamespaceName`. `EventStoreForTesting` requires a `ScenarioTime`; `Defaults` accepts a null clock.
+If your code distinguishes event stores or namespaces, give the test store the identity it expects. Construct `EventStoreForTesting(serviceProvider, artifacts, options, time, eventStore, @namespace, capabilities: null)` or `Defaults(artifacts, serviceProvider, options, time, eventStore, @namespace)`.
 
-The resulting store's `Name`, `Namespace`, event log and unit-of-work operations use that identity. Pass those defaults to `ReadModelScenario`, `ReactorScenario` or `OccurrenceScenario` to give the scenario's store the same identity. A reactor scenario supplied with an explicit event store uses that store's identity instead, including in delivered event contexts. `EventScenario` keeps its own identity parameters and does not inherit the defaults' store identity.
+Pass an `EventStoreName` for `eventStore` and an `EventStoreNamespaceName` for `@namespace`. `EventStoreForTesting` requires a `ScenarioTime` clock; `Defaults` accepts a null clock.
+
+The resulting store uses that identity for its `Name`, `Namespace`, event log, and unit-of-work operations. Pass the defaults to `ReadModelScenario`, `ReactorScenario` or `OccurrenceScenario` to use the same identity there. If you supply an explicit store to a reactor scenario, it uses that store's identity, including in delivered event contexts.
+
+`EventScenario` has separate identity parameters; it does not inherit the defaults' store identity. See [EventScenario](events/scenario.mdx#per-run-artifacts-and-constraints) for its constructors.
 
 Each store instance has isolated in-memory storage, even when identities match. Existing `EventStoreForTesting` and `Defaults` overloads still create their store as `testing` in namespace `default`.
 
@@ -96,20 +108,18 @@ Each store instance has isolated in-memory storage, even when identities match. 
 | [Read Models](read-models/index.md) | Test projections and reducers in-process using `ReadModelScenario<TReadModel>` |
 | [Reactors](reactors/index.md) | Test reactor side-effects in-process using `ReactorScenario<TReactor>` |
 | [Occurrences and receipts](../occurrences/testing.mdx) | Drive leased trigger deliveries, retry time and commit-then-drop-reply recovery |
-| [Event append collection](event-append-collection) | Integration testing: capture every appended event in a scoped collector with `IEventAppendCollection` |
+| [Event append collection](event-append-collection) | Capture this client's event-log append outcomes with `IEventAppendCollection` in an integration test |
 
 ## A specification-shaped example
 
 <ChronicleClientTabs snippet="testing/index/example-spec" />
 
-The read-model logic runs in-process — a projection or reducer, depending on the client — and the assertion stays close to the domain: given the `AuthorRegistered` fact, the `Author` read model should contain the name the screen needs.
+This spec asks whether the `Author` read model contains the name the screen needs after `AuthorRegistered`. The projection or reducer runs in process, depending on the client. No database is needed to check that calculation.
 
 ## What the harness stands in for
 
-The .NET in-process scenario helpers run the real projection and reducer engines, constraint evaluation, and reactor dispatch on Chronicle's production in-memory storage. Each scenario owns an isolated store shared by its event log, named sequences, and in-process services. They bypass gRPC and the observer lifecycle, so they remain fast without proving network delivery or persistent storage behavior.
+The .NET helpers use Chronicle's projection and reducer engines, constraint evaluation, and reactor dispatch with its in-memory storage. By default, each scenario owns a store shared by its event log, named sequences, and in-process services. They bypass gRPC and the observer lifecycle, so a passing scenario does not establish network delivery or persistent storage behavior.
 
-When a .NET test needs to prove behavior **across** that boundary — that a projection's sink writes actually landed in MongoDB, that a reactor registered its observer subscription with a running kernel, that change streams fired and advanced the checkpoint — reach for the [integration fixtures](#choosing-the-right-test-boundary) and `IEventAppendCollection` instead. Those exercise the full client-to-kernel-to-storage stack.
+Use the [integration fixtures](#choosing-the-right-test-boundary) to check MongoDB sink writes, observer registration, or change stream checkpoints against a running kernel. In those tests, `IEventAppendCollection` records the client's append outcomes; it does not replace assertions on stored documents or observer state. Follow [Event append collection](event-append-collection) to set up a fixture and wait for a reactor's follow-up append.
 
-For a worked example of `IEventAppendCollection` and the integration fixtures, see [Event append collection](event-append-collection). For the full slice testing story — how `/chronicle/scenarios/test-a-slice/` fits with the in-process helpers and the integration boundary — see [Test a slice](/chronicle/scenarios/test-a-slice/).
-
-For the bigger testing model across Specifications, Arc, Chronicle, and full stack slices, see [Testing with Cratis](/testing-with-cratis/).
+Continue with [Test a slice](/chronicle/scenarios/test-a-slice/) to combine these boundaries in a slice, or [Testing with Cratis](/testing-with-cratis/) for the testing model across Specifications, Arc, and full stack slices.

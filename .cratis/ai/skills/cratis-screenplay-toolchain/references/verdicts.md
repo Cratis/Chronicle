@@ -228,7 +228,7 @@ results, plus runtime when it was exercised:
 2. **Publication**: what was written, unchanged or refused (`.cratis-render.json`,
    `.cratis-render/journal.json`; `recovered: true` means stop and reconcile).
 3. **Build**: Debug build of the destination (`dotnet build`).
-4. **Tests**: Debug tests of the destination (`dotnet test`). Generated specifications are
+4. **Tests**: After the Debug build, run `dotnet test <destination>/<Project>.csproj -c Debug --no-build` for Stage-rendered apps (VSTest). Use a built spec executable only in repositories whose spec projects really are executables (see [specs.csharp](../../../rules/specs.csharp.md)); never start the rendered app's web-server executable to run specs. Generated specifications are
    compiled in Debug only; map results by generated spec class (`when_<snake>` in namespace
    `<Slice ns>.when_<snake>`, `when_<snake>_is_queried`, `when_<snake>_is_projected`) back to
    the `.play` specification, not by test counts.

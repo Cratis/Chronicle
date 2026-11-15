@@ -29,14 +29,31 @@
 The standalone MCP server lists 46 tools from Screenplay 4.228.0 (including the MCP-Apps visualization tool); `tools/list` is the authority for the installed server, and the CLI-bundled MCP (`cratis screenplay mcp`) can be an older Screenplay that lacks newer tools.
 
 The supported CLI launch is `cratis screenplay mcp <model-root>`, or `cratis screenplay mcp`
-alone inside a project, where the CLI locates the model (the project's `.play` files, else
-`Source/` or `src/`, else a new `Screenplay/` folder). The standalone form is `screenplay mcp <model-folder>`. A
+alone inside a project, where the CLI reuses existing model/workspace roots.
+A code-only `Source/` or `src/` is not a model root; without model/workspace state,
+use repository-root `Screenplay/`. Requires Cratis CLI 3.93.1 (`cratis --version`)
+and Screenplay 4.236.1 (`screenplay --version`) for their respective discovery
+paths; older versions can select code-only folders. See [root selection](../../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model).
+The standalone form is `screenplay mcp <model-folder>`. A
 server started with no root at all binds one on first use from `open-workspace`'s
 `path`, the client's roots, or the working directory; that dynamic form depends on the client supplying roots (see the [MCP loop](mcp-loop.md#dynamic-roots-and-the-workaround)),
 so prefer a fixed root. Without a project the server works in `Documents/Screenplay`. Model files never go under `.cratis/`. AI distribution provides the
 profile-selected declaration and guidance; the CLI owns executable hosting and
 client registration. Installation must preserve user-owned MCP servers and
 report unsupported adapters or drift.
+
+From Screenplay 4.236.1, a fixed root at a code-only `Source/` or `src/` can admit
+an explicitly requested direct sibling model folder via `open-workspace path`. The
+configured code root must have no model or workspace state. The sibling must be
+missing, empty, or already model/workspace-bearing; an unrelated nonempty folder,
+a file or a symlink is refused. Existing model/workspace roots stay protected;
+this is not permission to switch to arbitrary roots. Nested targets are refused;
+an empty fixed root named `data` cannot rebind merely because it is empty.
+`semantic-diff` path sources use the same admission checks. Inspect the returned
+root and reuse its workspace/revisions. Path selection alone creates no directory.
+For example, a Java project `/project` with code in `/project/src` but no model or
+Screenplay state selects `/project/Screenplay`, not `/project/src`.
+Source: [sibling admission](https://github.com/Cratis/Screenplay/blob/v4.236.1/Source/DotNET/Screenplay.Mcp/McpWorkspaces.ModelFolder.cs).
 
 ## Tool groups
 
@@ -66,6 +83,7 @@ A declaration move follows these rules:
 
 - A specification that covers only the moved declaration moves with it. A specification covers a declaration when it is a matching specification of one of its `find-specification-obligations` obligations, or when its `when` step names it; a `given` or `then` reference alone is not coverage.
 - The move is refused when a specification also covers a declaration that stays, when an obligation the source slice met would no longer be met or the move would introduce an unmet obligation, on a name collision, for an inline declaration (such as an inline `produces event`), a declaration written in more than one fragment, a standalone specification, screen, constraint or module, and when an unqualified reference would resolve differently. Qualify that reference first.
+- The C# workspace API refuses the same cases as `propose-move`; a refusal in either surface reports the standard `ProposalRejected` failure kind with the usual rejection fields. Carried specifications are computed automatically; a supplied list must match them (Requires Screenplay 4.241.0, `screenplay --version`).
 - Screen `execute`, `refresh` and `navigate to` targets that name the declaration are repaired, not moved.
 - Slice-level events named by `produces` do not travel with a command, and a projection's `from` may name an event declared in another slice; move such an event with its own `propose-move` only when it should change slices. A command's inline events go with it.
 - Event names and pins stay untouched, and assigned identities follow the declaration.
@@ -328,7 +346,11 @@ with `view: "diagnostics"`, then `view: "repairs"` at the current revision.
 | `PLAY0688` | Replace a refuted generated-concept rule with the strategy-derived `matches`; review every concept use affected by the changed rule. |
 | `PLAY0683/0684` | Raise NanoID size/bytes count using the concept subject; PLAY0683 also offers uniqueness using the command-property subject. Individual review, canonical formatting, no pinned evidence; see [concept generation](#concept-generation). |
 | `PLAY0664` | Remove an override identical to the command's complete source/stream/id route. |
-| `PLAY0516` | Move a producing sibling declaration/import before its consumer, or pin an already placed file before a retained glob. Preserve catalogs, comments, placement and executable readiness; introduce no timeline findings. Own-sub-feature edges, cycles, unranked members and mixed/different-parent boundaries have no repair. Rediscover after each move; pinned evidence is unsupported. |
+| `PLAY0516` | Move a producing sibling declaration/import before its consumer, pin an already placed file before a retained glob, or, when those cannot safely fix the edge, replace a same-parent wildcard-import span with explicit ordered imports. The last repair changes future inclusion: new files need explicit imports. Preserve catalogs, comments, placement and executable readiness; introduce no timeline findings. Own-sub-feature edges, cycles, unranked members and mixed/different-parent boundaries have no repair. Rediscover after each move; pinned evidence is unsupported. |
+
+Requires Screenplay 4.219.0 (`screenplay --version`) for wildcard-import expansion;
+older tools do not offer that repair. Read [timeline repair](repairs.md#timeline-import-order)
+for the future-import decision and refusal boundaries.
 
 These discoveries verify acceptance before listing a repair. Only compact
 acceptance/conflict verdicts are cached on the immutable snapshot, not diagnostics,
@@ -703,6 +725,31 @@ structure, identities and direct indexed dependants, not equivalence, execution
 or transitive/runtime impact. Use `read-proposal` with `view: "semantic-diff"`
 for a retained proposal against its disk baseline without applying it; changed
 baseline bytes or pending recovery refuse that view too.
+
+### Enum numeric identity
+
+Requires Screenplay 4.214.0 (`screenplay --version`); older comparison tools do not
+report these enum-specific changes. Inspect `enum-*` items in `members`, especially
+`stored: true`: the baseline enum is reachable from an event property (including
+nested composite types), not proof that events were persisted. `beforeNumber`,
+`afterNumber`, `beforeNumbering`, `afterNumbering` and `afterMember` expose the
+numeric change; implicit numbers are zero-based declaration positions.
+
+`enum-number-changed`, `enum-member-removed` and `enum-number-reused` are
+contract-breaking. `enum-member-renamed` retains an explicit number on both sides
+and is not breaking for default numeric storage, but renames generated C#/TypeScript
+members and schema metadata; a name-based converter can still break. Explicit
+removal/reuse is indistinguishable from that rename, so review intent. Positional
+renames report number reuse. Appending members, reordering stable explicit numbers,
+or pinning existing positions adds no enum records; structural hashes still change.
+Before reordering a stored positional enum, use `propose-number-enum-members` to pin
+its current values. Never migrate stored numbers automatically.
+
+Duplicate names/numbers or inconsistent member/number counts report
+`EnumerationNotComparable`; absence of enum items is not a clean comparison when
+coverage is incomplete. Neither comparison view proves behavioral compatibility
+or waives the separate release-baseline equality check.
+Source: [model comparison](https://github.com/Cratis/Screenplay/blob/v4.214.0/Documentation/screenplay/model-comparison.md).
 
 Authority: `Source/DotNET/Screenplay.Mcp/{McpRevisionDiff,McpWorkspaces.Comparison,McpToolSchemas,McpToolCatalog}.cs`
 and `Documentation/screenplay/mcp/reference.md`.

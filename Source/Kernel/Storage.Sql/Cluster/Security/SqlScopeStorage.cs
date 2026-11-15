@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Chronicle.Storage.Security;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.Security;
@@ -27,7 +28,7 @@ public class SqlScopeStorage(IDatabase database, JsonSerializerOptions jsonSeria
     public async Task<Scope?> GetByName(string name, CancellationToken cancellationToken = default)
     {
         await using var dbScope = await database.Cluster();
-        var entity = await dbScope.DbContext.Scopes.FirstOrDefaultAsync(s => s.Name == name, cancellationToken);
+        var entity = await dbScope.DbContext.Scopes.WhereExact(dbScope.DbContext, s => s.Name, name).FirstOrDefaultAsync(cancellationToken);
         return entity is null ? null : ToScope(entity);
     }
 
@@ -105,7 +106,7 @@ public class SqlScopeStorage(IDatabase database, JsonSerializerOptions jsonSeria
     {
         var nameSet = names.ToHashSet();
         await using var dbScope = await database.Cluster();
-        return (await dbScope.DbContext.Scopes.Where(s => s.Name != null && nameSet.Contains(s.Name)).ToListAsync(cancellationToken)).Select(ToScope).ToArray();
+        return (await dbScope.DbContext.Scopes.Where(s => s.Name != null && nameSet.Contains(s.Name)).ToListAsync(cancellationToken)).Where(s => s.Name is not null && nameSet.Contains(s.Name)).Select(ToScope).ToArray();
     }
 
     static ScopeEntity ToEntity(Scope scope) => new()
