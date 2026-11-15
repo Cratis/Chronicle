@@ -44,7 +44,7 @@ The development image ships two configuration files that change defaults. The pr
 Two of these change behavior you can observe in a test:
 
 - A subscriber that takes longer than 5 seconds is reported as timed out on the development image but would have succeeded within the 30-second default. Raise it to the production value when you want the development image to match. See [Observers](configuration/observers.md).
-- With `replayOnDefinitionChange` on, changing a handler or an event type definition replays the observer automatically in development. In production it does not, so plan the replay explicitly. See [Observers](configuration/observers.md).
+- With `replayOnDefinitionChange` on, a detected change to a reactor or webhook definition (for a reactor, the event types it subscribes to) replays it automatically in development. It does not detect changes to handler code or event type schemas. In production the flag is off, so plan the replay explicitly. Projection and reducer definition changes are governed by `observers.definitionEvolution`, which is `Automatic` on both images. See [Observers](configuration/observers.md).
 
 To make the development image behave like production for these two settings, set them in your Compose file:
 

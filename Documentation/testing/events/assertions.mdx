@@ -60,6 +60,6 @@ For asserting on the event sequence itself (tail sequence number, event types, a
 
 ## Example: testing a constraint violation end-to-end
 
-Pre-seed state with `Given`, act with `When`, then assert on the captured `scenario.AppendResult` — including constraints declared on `ConceptAs<T>` properties:
+Pre-seed state with `Given`, act with `When`, then assert on the `AppendResult` returned by `When` — including constraints declared on `ConceptAs<T>` properties:
 
 <ChronicleClientTabs snippet="testing/events/assertions/constraint-e2e" />
