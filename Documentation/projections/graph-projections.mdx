@@ -125,7 +125,7 @@ projection OrganizationGraph => graph Organization
     from GroupNested source childId target parentId
 ```
 
-The server reads the events the projection reacts to from the event sequence, up to the first 1,000, and runs them through the same graph projection engine a registered projection uses: the same keys, the same property expressions, counters and removals. It applies the operations to an in-memory graph sink and discards the graph when the request completes. The event types the declaration names must be registered, as for every projection. Protected values in the events are released the way they are for an observer.
+The server reads the events the projection reacts to from the event sequence, up to the first 1,000, and runs them through the same graph projection engine a registered projection uses: the same keys, the same property expressions, counters and removals. It applies the operations to an in-memory graph sink and discards the graph when the request completes. The event types the declaration names must be registered, as for every projection, and the declaration names their properties as the event types declare them: a client that registers camelCase event types is previewed with `personId`, not `PersonId`. Protected values in the events are released the way they are for an observer.
 
 The preview has three tabs:
 

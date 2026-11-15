@@ -25,7 +25,7 @@ export const useGraphPreview = (eventStore: string, namespace: string) => {
         view?: string,
         clauses?: GraphViewClauseDeclaration[]): Promise<GraphProjectionPreview | null> => {
         clearValues();
-        setValues({ eventStore, namespace, declaration: text, views, view, clauses });
+        setValues({ eventStore, namespace, declaration: text, views, view, clauses, firstOnly: false });
         const result = await command.execute();
         return result.response ?? null;
     }, [command, eventStore, namespace, setValues, clearValues]);
