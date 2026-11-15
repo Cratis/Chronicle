@@ -741,6 +741,7 @@ public class Projection(
             {
                 ObserverId = key.ProjectionId,
                 ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
+                ChangeId = DefinitionChangeIdentity.For(currentDefinition),
                 Reasons = [replayRecommendation.Reason]
             });
     }

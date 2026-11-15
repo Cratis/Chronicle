@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Recommendations;
 using Orleans.TestKit;
@@ -36,6 +37,7 @@ public class all_dependencies : Specification
         _namespaceStorage.Recommendations.Returns(_recommendationStorage);
 
         _recommendationStorage.GetAll().Returns(_ => Task.FromResult<IImmutableList<RecommendationState>>([.. _storedRecommendations]));
+        _recommendationStorage.Get(Arg.Any<RecommendationId>()).Returns(call => _storedRecommendations.FirstOrDefault(row => row.Id == call.Arg<RecommendationId>()));
 
         _silo.AddService(_storage);
         _silo.AddProbe(_ => _theRecommendation);
