@@ -69,6 +69,7 @@ public static class administrator_surface_policy
         ["Cratis.Chronicle.Occurrences.RetryQuarantinedOccurrence"] = "existing plain Authorize requirement is preserved; not in the P3 administrator rollout",
         ["Cratis.Chronicle.ProjectionEditor.GenerateDeclarativeCode"] = "read-only code generation",
         ["Cratis.Chronicle.ProjectionEditor.GenerateModelBoundCode"] = "read-only code generation",
+        ["Cratis.Chronicle.ProjectionEditor.PreviewGraphProjection"] = "read-only preview in memory, nothing is persisted",
         ["Cratis.Chronicle.ProjectionEditor.PreviewProjection"] = "read-only preview without persisted definitions",
         ["Cratis.Chronicle.Recommendations.PerformRecommendation"] = "existing recommendation workflow; not in the P3 administrator rollout",
         ["Cratis.Chronicle.Recommendations.IgnoreRecommendation"] = "existing recommendation workflow; not in the P3 administrator rollout",
