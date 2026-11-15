@@ -86,6 +86,8 @@ The rule is about **claims of absence**, not about describing differences. It is
 
 When a client does not support a workflow at all, leave the shared prose alone and let the tab carry it.
 
+`Documentation/verify-authoring.mjs`, run by `bash Documentation/verify-markdown.sh`, checks common absence phrases with per-file counts in `.github/scripts/docs-verification/client-capability-claims-baseline.json` that may only decrease: lower the count when removing a match, remove entries at zero, and never raise counts to admit new claims.
+
 ### Validation and CI
 
 Each client repo must also keep `Documentation/validate-client-snippets.py` wired into its `Client Snippet Verification` workflow. That workflow compiles the snippets against the client source when either `Documentation/client-snippets/**` or `Source/**` changes, so a client API change cannot silently leave the shared Chronicle docs stale.

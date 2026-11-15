@@ -1,0 +1,14 @@
+{
+    "Documentation/building-a-client/starting-points.md": 1,
+    "Documentation/concepts/event-type-migrations.mdx": 1,
+    "Documentation/concepts/event-type.md": 1,
+    "Documentation/dynamic-consistency-boundary/limits.mdx": 1,
+    "Documentation/events/observing-appends.mdx": 1,
+    "Documentation/projections/model-bound/clearing.mdx": 1,
+    "Documentation/reactors/replay-notifications.mdx": 1,
+    "Documentation/read-models/materialized-pagination.mdx": 1,
+    "Documentation/read-models/observing-read-models.mdx": 1,
+    "Documentation/read-models/querying.md": 1,
+    "Documentation/reducers/event-sequence.mdx": 1,
+    "Documentation/reducers/index.mdx": 1
+}
