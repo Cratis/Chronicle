@@ -18,6 +18,8 @@ on:
       - "**/yarn.lock"
       - "**/package.json"
       - ".github/workflows/workbench-yarn-cache.yml"
+      # The consumer's restore defines the key and paths this workflow must save.
+      - ".github/workflows/pull-requests.yml"
   workflow_dispatch:
 
 permissions:
