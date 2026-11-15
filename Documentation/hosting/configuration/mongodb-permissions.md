@@ -29,7 +29,7 @@ The kernel's own event store is named `System` in the API. Its MongoDB databases
 
 With a prefix, each name starts with the prefix. With `chr_`, they are `chr__system`, `chr__system+es` and `chr__system+es+Default`.
 
-Kernels before 19.117 named these databases `System`, `System+es` and `System+es+Default`. Version 19.117 moves them to the configured name on its first start, unless `storage.systemDatabaseName` is set to `System`. Use the old names in the grants below if you keep that setting. The environment variable is `Cratis__Chronicle__Storage__SystemDatabaseName`.
+Kernels before 19.117 named these databases `System`, `System+es` and `System+es+Default`. A current kernel moves them to the configured name when it starts against them, unless `storage.systemDatabaseName` is set to `System`; see [Upgrading from the old System names](#upgrading-from-the-old-system-names). Use the old names in the grants below if you keep that setting. The environment variable is `Cratis__Chronicle__Storage__SystemDatabaseName`.
 
 ### Worked example
 
@@ -56,9 +56,9 @@ Creating an event store or a namespace at runtime adds databases to this list. T
 | find, insert, update, delete | Yes | Yes | Yes | Yes |
 | aggregate (including `$lookup` in the same database) | | Yes | Yes | |
 | listIndexes, createIndexes, dropIndexes | Yes | Yes | Yes | Yes |
-| listCollections | | | Yes | Yes |
-| createCollection | | | | Yes |
-| dropCollection | | | | Yes |
+| listCollections | Startup probe | | Yes | Yes |
+| createCollection | Startup probe | | | Yes |
+| dropCollection | Startup probe | | | Yes |
 | renameCollection (same database only) | | | | Yes |
 | Change streams (database-level watch) | Yes | Yes | Yes | Yes |
 | Sessions and multi-document transactions | | Yes | Yes | Yes |
@@ -67,8 +67,23 @@ Creating an event store or a namespace at runtime adds databases to this list. T
 Also:
 
 - **Cluster-level `listDatabases`**: event store discovery and the MongoDB health check list database names. Without the `listDatabases` action, MongoDB 4.0.5 and later returns only the databases the user has privileges on. Discovery and the health check still work, but see only the databases you granted.
-- **Not used**: `$out`, `$merge`, `collMod`, cross-database rename, and commands other than `hello` run through `runCommand`.
+- **Startup probe**: with the default `storage.schemaMode` of `Migrate`, the kernel checks at startup that the server supports change streams and index collation. It watches the cluster database, creates a temporary collection there with one index, drops it, and lists collections to remove leftovers from earlier runs. In `Verify` mode it only watches and reads. A refused probe is logged as a warning and does not stop the kernel.
+- **Not used**: `$out`, `$merge`, `collMod` and cross-database rename. Besides `hello`, `runCommand` is used only to move the System databases, for `create` and `createIndexes`.
+- **Offline index provisioning**: `--migrate-only` and `--verify-schema` can run under a separate schema identity. Its permissions, and the jobs database that ignores connection resolution, are covered in [MongoDB index operations](mongodb-index-operations.md#scope-and-permissions).
 - **Development only**: the kernel reset in the development tools drops databases and collections and creates a `_ready_probe` collection. Production credentials do not need that.
+
+### Upgrading from the old System names
+
+A kernel that finds a database named `P` + `System+es`, or one starting with `P` + `System+es+`, moves the System event store to the configured name. Without any such database, which is the case for a new installation, it moves nothing and needs no access to the old names. A database named just `System`, such as one a hosted service owns, does not trigger the move.
+
+The kernel finds the old databases by listing database names. Without the `listDatabases` action, MongoDB lists only the databases the credential is granted, so grant the old names before you upgrade. Otherwise the kernel does not see them, moves nothing and starts against empty `_system` databases.
+
+The move copies every collection with its indexes and documents, then drops the old database. For it to complete, the credential needs:
+
+- On the old databases (`System`, `System+es`, `System+es+<namespace>`, with the prefix): `find`, `listCollections`, `listIndexes`, and `dropDatabase` or `dropCollection`.
+- On the new databases (`_system`, `_system+es`, `_system+es+<namespace>`, with the prefix): `listCollections`, `createCollection`, `createIndex` and `insert`.
+
+`readWrite` on both sets covers this; it drops the old databases collection by collection, because `readWrite` has `dropCollection` but not `dropDatabase`. Without either drop action, the content is still moved and the old databases remain as stale copies, with a warning on every start. Remove the grants on the old names once they are gone. See [System event store database name](storage.mdx#system-event-store-database-name) for the move itself and for downgrading.
 
 ## Recommended roles
 
@@ -129,12 +144,13 @@ use admin
 db.createRole({
   role: "chronicleKernel",
   privileges: [
-    // Cluster database
+    // Cluster database; listCollections, createCollection and dropCollection are for the startup probe
     {
       resource: { db: "chr_chronicle+main", collection: "" },
       actions: [
         "find", "insert", "update", "remove",
         "createIndex", "dropIndex", "listIndexes",
+        "listCollections", "createCollection", "dropCollection",
         "changeStream", "killCursors"
       ]
     },
@@ -181,9 +197,13 @@ Change streams, used for live read model queries and event store observation, an
 
 ## Managed tiers and the System databases
 
-Some managed tiers restrict which databases a user can be granted. A reported case on MongoDB Atlas Flex is that a user could not be granted access to a database named `System`, which is the name kernels before 19.117 used. The default `_system` avoids that name. This is reported behaviour; it is not confirmed against the Atlas documentation, and Atlas Flex support for custom roles, database-specific grants and change streams has not been verified here.
+Some managed tiers restrict which databases a user can be granted. MongoDB Atlas Flex owns a database named `System` that an application user cannot be granted or read. Kernels before 19.117 kept the System event store in `System`, `System+es` and `System+es+Default`, so on Flex they failed with `not authorized on System`.
 
-On kernels before 19.117, or if you set `storage.systemDatabaseName` to `System`, the workaround is to set `storage.databaseNamePrefix` (environment variable `Cratis__Chronicle__Storage__DatabaseNamePrefix`) before the first start. Every database, including the System ones, then gets a prefixed name such as `chr_System`, which can be granted like any other. A prefix is still an option on newer kernels. The prefix does not change names in the API, collection names or names returned by connection resolution.
+The kernel's default `storage.systemDatabaseName` of `_system` is the supported way around this: the System event store then lives in `_system`, `_system+es` and `_system+es+Default`, which you grant like any other database. Leave the setting at its default on Flex. A new installation never touches the `System` database, and the [upgrade move](#upgrading-from-the-old-system-names) is triggered only by `System+es` databases, not by `System` itself.
+
+On kernels before 19.117, or if you set `storage.systemDatabaseName` to `System`, set `storage.databaseNamePrefix` (environment variable `Cratis__Chronicle__Storage__DatabaseNamePrefix`) before the first start instead. Every database, including the System ones, then gets a prefixed name such as `chr_System`, which can be granted like any other. A prefix is still an option on newer kernels, for example to share a server. The prefix does not change names in the API, collection names or names returned by connection resolution.
+
+The Atlas Flex limits on custom roles, database-specific grants and change streams have not been verified here. Change streams and transactions need a replica set, as [above](#replica-set-requirement).
 
 :::caution
 Changing the prefix later points Chronicle at different, empty databases. It does not rename or migrate data. Decide the prefix before the first start. See [Database-name prefix](storage.mdx#database-name-prefix).
@@ -210,6 +230,8 @@ not authorized on <db> to execute command { <command>: ... }
    | `listIndexes` | `listIndexes` |
    | `createIndexes` | `createIndex` |
    | `listCollections` | `listCollections` |
+   | `create` | `createCollection` |
+   | `drop` | `dropCollection` |
    | `renameCollection` | `renameCollectionSameDB` |
    | `dropDatabase` | `dropDatabase` |
    | `listDatabases` | `listDatabases` (cluster level) |
