@@ -351,6 +351,7 @@ public static class SurfaceInventory
         ["Arc:Patterns.PatternScope.AllPatternScopes"] = new(StoreRead),
         ["Arc:ProjectionEditor.GenerateDeclarativeCode.Handle"] = new(StoreRead),
         ["Arc:ProjectionEditor.GenerateModelBoundCode.Handle"] = new(StoreRead),
+        ["Arc:ProjectionEditor.PreviewGraphProjection.Handle"] = new(StoreRead),
         ["Arc:ProjectionEditor.PreviewProjection.Handle"] = new(StoreRead),
         ["Arc:ProjectionEditor.Projection.AllProjections"] = new(StoreRead),
         ["Arc:ProjectionEditor.ProjectionWithDeclaration.AllProjectionsWithDeclarations"] = new(StoreRead),

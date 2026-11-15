@@ -97,6 +97,7 @@ public static class system_store_command_policy
         ["Cratis.Chronicle.Occurrences.RetryQuarantinedOccurrence"] = "operational retry of an existing quarantined occurrence, no event or definition write; administrator policy in P3",
         ["Cratis.Chronicle.ProjectionEditor.GenerateDeclarativeCode"] = "read-only declarative code generation",
         ["Cratis.Chronicle.ProjectionEditor.GenerateModelBoundCode"] = "read-only model-bound code generation",
+        ["Cratis.Chronicle.ProjectionEditor.PreviewGraphProjection"] = "read-only preview; the graph is built in memory and discarded",
         ["Cratis.Chronicle.ProjectionEditor.PreviewProjection"] = "read-only preview; preview definitions are not persisted",
         ["Cratis.Chronicle.Recommendations.PerformRecommendation"] = "operational action on an existing recommendation (for example an observer replay), no event or definition write; administrator policy in P3",
         ["Cratis.Chronicle.Recommendations.IgnoreRecommendation"] = "operational dismissal of an existing recommendation, no event or definition write; administrator policy in P3",
