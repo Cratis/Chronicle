@@ -593,29 +593,31 @@ public partial class Reducers : IReducers
         }
     }
 
+    bool IsCurrentHandler(IReducerHandler handler) =>
+        (_handlersByType.TryGetValue(handler.ReducerType, out var current) || _handlersByModelType.TryGetValue(handler.ReadModelType, out current)) &&
+        ReferenceEquals(current, handler);
+
+    bool IsStaleReconnect(IReducerHandler handler, CancellationToken cancellationToken) =>
+        cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler);
+
     void ReconnectIfCurrent(IReducerHandler handler, CancellationToken cancellationToken)
     {
         // Resolve outside the ownership lock: connecting can wait for lifecycle work that needs that lock.
         var services = _servicesAccessor.Services;
         lock (ReadModelBuilderOwnership.SyncFor(_eventStore, ReadModelOwnershipSync))
         {
-            if (!CanReconnect(handler, cancellationToken))
+            if (IsStaleReconnect(handler, cancellationToken))
             {
+                _logger.SkippingStaleReducerReconnect(handler.Id);
                 return;
             }
 
+            _logger.ReconnectingReducer(handler.Id);
             ThrowIfDeliveredOverHttp(handler);
             ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reducer", () => handler.Id.Value);
             RegisterReducer(handler, services, cancellationToken);
         }
     }
-
-    bool CanReconnect(IReducerHandler handler, CancellationToken cancellationToken) =>
-        !_released && !cancellationToken.IsCancellationRequested && IsCurrent(handler);
-
-    bool IsCurrent(IReducerHandler handler) =>
-        (_handlersByType.TryGetValue(handler.ReducerType, out var current) || _handlersByModelType.TryGetValue(handler.ReadModelType, out current)) &&
-        ReferenceEquals(current, handler);
 
     void RegisterReducer(IReducerHandler handler, IServices services, CancellationToken cancellationToken)
     {
@@ -729,12 +731,6 @@ public partial class Reducers : IReducers
             {
                 await scheduler.DrainAndDispose();
                 await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                _logger.ReconnectingReducer(handler.Id);
                 ReconnectIfCurrent(handler, cancellationToken);
             }
             catch (OperationCanceledException) { }

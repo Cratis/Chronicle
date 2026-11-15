@@ -37,6 +37,9 @@ internal static partial class ReducersLogMessages
     [LoggerMessage(LogLevel.Information, "Reconnecting Reducer '{ReducerId}' after stream failure")]
     internal static partial void ReconnectingReducer(this ILogger<Reducers> logger, ReducerId reducerId);
 
+    [LoggerMessage(LogLevel.Debug, "Skipping reconnect of Reducer {ReducerId} because its handler is no longer current or was cancelled")]
+    internal static partial void SkippingStaleReducerReconnect(this ILogger<Reducers> logger, ReducerId reducerId);
+
     [LoggerMessage(LogLevel.Debug, "Reducer observation stream for '{ReducerId}' was cancelled")]
     internal static partial void ReducerStreamCancelled(this ILogger<Reducers> logger, ReducerId reducerId, Exception exception);
 
