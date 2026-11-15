@@ -40,6 +40,7 @@ public record RetryFailedPartitions(string EventStore, string Namespace, string 
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
     /// <param name="storage">The storage containing observer definitions.</param>
     /// <returns>The <see cref="RetryFailedPartitionsResult"/> telling how many partitions were failed.</returns>
+    /// <exception cref="FailedPartitionsRecoveryCouldNotStart">No failed partition recovery could be started.</exception>
     public async Task<RetryFailedPartitionsResult> Handle(IGrainFactory grainFactory, IStorage storage)
     {
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
@@ -55,6 +56,12 @@ public record RetryFailedPartitions(string EventStore, string Namespace, string 
         return new RetryFailedPartitionsResult(failedPartitions.Length);
     }
 
+    /// <summary>
+    /// Requests operator recovery for every partition, continuing past partitions that cannot start.
+    /// </summary>
+    /// <param name="observer">The observer whose partitions should be retried.</param>
+    /// <param name="partitions">The failed partitions to retry.</param>
+    /// <returns>The number of partitions whose recovery was accepted.</returns>
     internal static async Task<int> Start(IObserver observer, IEnumerable<Key> partitions)
     {
         var started = 0;

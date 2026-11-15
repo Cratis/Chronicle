@@ -8,6 +8,11 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    static bool HasExhaustedAutomaticRetries(FailedPartition failure, int maximumAttempts) =>
+        failure.IsQuarantined && failure.AttemptsInCurrentBudget >= maximumAttempts;
+
+    bool CanStartRecovery() => !IsRetired && !_removed && !IsQuarantined && KeyOwnsDefinition;
+
     async Task<(PartitionRecoveryOutcome Outcome, bool StartFailed)> TryRecoverFailedPartitionForOperator(Key partition)
     {
         var releasedFailure = await ReleaseAutomaticRetryLimit(partition);
@@ -46,7 +51,7 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (!Failures.TryGetPartition(partition, out var failure))
+            if (!Failures.TryGet(partition, out var failure))
             {
                 return null;
             }
@@ -81,15 +86,12 @@ public partial class Observer
         }
     }
 
-    static bool HasExhaustedAutomaticRetries(FailedPartition failure, int maximumAttempts) =>
-        failure.IsQuarantined && failure.AttemptsInCurrentBudget >= maximumAttempts;
-
     async Task RestoreExhaustionQuarantine(FailedPartition failure)
     {
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (Failures.TryGetPartition(failure.Partition, out var current) && ReferenceEquals(current, failure))
+            if (Failures.TryGet(failure.Partition, out var current) && ReferenceEquals(current, failure))
             {
                 current.IsQuarantined = true;
                 ChangeAlertState();
