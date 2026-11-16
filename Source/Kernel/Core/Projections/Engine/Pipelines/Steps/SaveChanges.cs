@@ -77,33 +77,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
         {
             _logger.SavingResult(context.Event.Context.SequenceNumber);
 
-            // Sinks that serialize a whole document per ApplyChanges call (the SQL sink does;
-            // MongoDB instead uses field-level $set operators that compose naturally) cannot
-            // safely process the main changeset plus several pendingSaves for the same key as
-            // separate operations — each pendingSave starts from its own InitialState clone,
-            // so later pendingSaves serialize on top of the unmutated initial document and
-            // overwrite earlier pendingSaves' mutations. Fold same-key pendingSaves whose
-            // changes are *purely* PropertiesChanged into the main changeset so the sink sees
-            // one composite write per key.
-            //
-            // PendingSaves containing ChildAdded / ChildRemoved are left for their own
-            // ApplyChanges call: MongoDB cannot push a child into an array element that is
-            // being pushed in the same update (see the comment in ResolveFutures), and the
-            // per-call write also keeps SQL correct because the separate call reads the just-
-            // written document state via the same key.
-            var pendingSavesToFold = context.HasPendingFutureSaves
-                ? context.PendingFutureSaves
-                    .Where(p => Equals(p.Key.Value, context.Key.Value)
-                        && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>))
-                    .ToArray()
-                : [];
-            foreach (var pendingSave in pendingSavesToFold)
-            {
-                foreach (var change in pendingSave.Changeset.Changes)
-                {
-                    context.Changeset.Add(change);
-                }
-            }
+            var pendingSavesToFold = FoldPendingSaves(context);
 
             // TODO: Return the number of affected records and pass this along to the changeset storage
             var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
@@ -136,6 +110,34 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
         return context;
     }
 
+    static PendingFutureSave[] FoldPendingSaves(ProjectionEventContext context)
+    {
+        // Whole-document sinks need one composite write for same-key property changes: separate pending
+        // saves start from their own InitialState clone and could overwrite earlier mutations.
+        // Child additions/removals retain their separate writes: MongoDB cannot push a child into an
+        // array element being pushed in the same update, and SQL reads the just-written document state.
+        var pendingSavesToFold = context.HasPendingFutureSaves
+            ? context.PendingFutureSaves.Where(p => CanFold(p, context)).ToArray()
+            : [];
+        foreach (var pendingSave in pendingSavesToFold)
+        {
+            FoldChanges(context.Changeset, pendingSave);
+        }
+
+        return pendingSavesToFold;
+    }
+
+    static void FoldChanges(IChangeset<AppendedEvent, ExpandoObject> changeset, PendingFutureSave pendingSave)
+    {
+        foreach (var change in pendingSave.Changeset.Changes)
+        {
+            changeset.Add(change);
+        }
+    }
+
+    static bool CanFold(PendingFutureSave pendingSave, ProjectionEventContext context) =>
+        Equals(pendingSave.Key.Value, context.Key.Value) && pendingSave.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>);
+
     static bool HasFailedOwnPartition(IEnumerable<FailedPartition> failedPartitions, IChangeset<AppendedEvent, ExpandoObject> changeset, Key key)
     {
         var ownPartition = changeset.Incoming is { } incoming ? incoming.Context.EventSourceId.Value : key.Value;
@@ -155,9 +157,7 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
         if (!context.HasPendingFutureSaves) return;
 
         var foldedSet = context.Changeset.HasChanges
-            ? new HashSet<PendingFutureSave>(context.PendingFutureSaves
-                .Where(p => Equals(p.Key.Value, context.Key.Value)
-                    && p.Changeset.Changes.All(c => c is PropertiesChanged<ExpandoObject>)))
+            ? new HashSet<PendingFutureSave>(context.PendingFutureSaves.Where(p => CanFold(p, context)))
             : [];
         foreach (var pendingSave in context.PendingFutureSaves.Where(p => !foldedSet.Contains(p)))
         {
