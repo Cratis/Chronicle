@@ -47,7 +47,7 @@ public sealed class UnrecoverableProtectedValueReporter
         _count = count;
     }
 
-    /// <summary>Finds the classified cause through metadata action wrappers.</summary>
+    /// <summary>Finds the classified cause through metadata wrappers and compatible PII unwrap failures.</summary>
     /// <param name="exception">The failure chain.</param>
     /// <returns>The unrecoverable cause, if present.</returns>
     internal static EncryptionKeyUnrecoverable? Find(Exception? exception)
@@ -55,6 +55,10 @@ public sealed class UnrecoverableProtectedValueReporter
         for (var current = exception; current is not null; current = current.InnerException)
         {
             if (current is EncryptionKeyUnrecoverable failure) return failure;
+            if (current is EncryptionKeyUnwrapFailed { UnrecoverableAttempts: { } attempts } unwrap)
+            {
+                return new(attempts, unwrap);
+            }
         }
 
         return null;

@@ -24,4 +24,6 @@ public class when_trying_to_release_and_key_unwrap_fails : given.a_property_hand
     async Task Because() => _error = await Catch.Exception(() => _handler.TryRelease(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, Identifier, _value));
 
     [Fact] void should_preserve_the_original_unwrap_failure() => _error.ShouldBeSame(_failure);
+    [Fact] void should_keep_the_unrecoverable_revision_count() => _failure.UnrecoverableAttempts.ShouldEqual((int?)1);
+    [Fact] void should_preserve_the_cryptographic_cause() => _error.InnerException.ShouldBeOfExactType<CryptographicException>();
 }

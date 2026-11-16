@@ -10,4 +10,8 @@ namespace Cratis.Chronicle.Compliance;
 /// </summary>
 /// <param name="innerException">The RSA decryption failure.</param>
 public class EncryptionKeyUnwrapFailed(CryptographicException innerException)
-    : Exception("The encryption key could not unwrap the protected value.", innerException);
+    : Exception("The encryption key could not unwrap the protected value.", innerException)
+{
+    /// <summary>Gets or sets the attempted revision count when recovery has been exhausted.</summary>
+    internal int? UnrecoverableAttempts { get; set; }
+}

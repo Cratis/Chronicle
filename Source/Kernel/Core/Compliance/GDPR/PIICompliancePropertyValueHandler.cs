@@ -129,7 +129,8 @@ public class PIICompliancePropertyValueHandler(
         }
         catch (EncryptionKeyUnrecoverable failure) when (failure.InnerException is EncryptionKeyUnwrapFailed original)
         {
-            // Revision probing is internal. PII callers retain the original cryptographic failure contract.
+            // Preserve diagnostic classification without changing the caller-visible exception or its cause.
+            original.UnrecoverableAttempts = failure.AttemptedRevisions;
             ExceptionDispatchInfo.Throw(original);
             throw;
         }
