@@ -20,6 +20,7 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
     protected TestKitSilo _silo;
     protected ReducerDefinition _definition;
     protected IObserver _observer;
+    protected IOptions<ChronicleOptions> _options;
 
     async Task Establish()
     {
@@ -35,10 +36,12 @@ public class a_reducer_grain_with_replay_on_definition_change : Specification
         localSiloDetails.SiloAddress.Returns(SiloAddress.FromParsableString("127.0.0.1:11111@1"));
         _silo.AddService(localSiloDetails);
 
-        _silo.AddService(Options.Create(new ChronicleOptions
+        _options = Substitute.For<IOptions<ChronicleOptions>>();
+        _options.Value.Returns(new ChronicleOptions
         {
             Observers = new Observers { DefinitionEvolution = DefinitionEvolutionPolicy.Automatic }
-        }));
+        });
+        _silo.AddService(_options);
         _silo.AddService(Substitute.For<Storage.IStorage>());
 
         var namespacesGrain = Substitute.For<INamespaces>();

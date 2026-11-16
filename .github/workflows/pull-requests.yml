@@ -78,6 +78,7 @@ jobs:
           node-version: 24.x
           registry-url: "https://registry.npmjs.org"
 
+      # Saved on main by workbench-yarn-cache.yml; keep the path and key identical to that workflow.
       - uses: actions/cache/restore@v4
         id: yarn-cache
         with:

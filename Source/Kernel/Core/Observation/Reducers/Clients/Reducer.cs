@@ -379,7 +379,7 @@ public class Reducer(
                     this.ScheduleInSeparateTurn(() => ReplayReducer(key, @namespace));
                     break;
                 default:
-                    await AddReplayRecommendation(key, @namespace);
+                    await AddReplayRecommendation(key, @namespace, currentDefinition);
                     break;
             }
         }
@@ -407,7 +407,7 @@ public class Reducer(
         }
     }
 
-    async Task AddReplayRecommendation(ReducerKey key, EventStoreNamespaceName @namespace)
+    async Task AddReplayRecommendation(ReducerKey key, EventStoreNamespaceName @namespace, ReducerDefinition currentDefinition)
     {
         var recommendationsManager = GrainFactory.GetGrain<IRecommendationsManager>(0, new RecommendationsManagerKey(key.EventStore, @namespace));
         await recommendationsManager.Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
@@ -417,6 +417,7 @@ public class Reducer(
                 ObserverId = key.ReducerId,
                 ObserverKey = new(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId),
                 ObserverType = ObserverType.Reducer,
+                ChangeId = DefinitionChangeIdentity.For(currentDefinition),
                 Reasons = [new ReducerDefinitionChangedReplayCandidateReason()]
             });
     }

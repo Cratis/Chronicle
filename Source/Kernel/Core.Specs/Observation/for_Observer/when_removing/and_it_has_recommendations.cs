@@ -10,11 +10,13 @@ using Cratis.Chronicle.Storage.Recommendations;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_removing;
 
-public class and_it_has_ignored_recommendations : given.an_observer
+public class and_it_has_recommendations : given.an_observer
 {
     readonly RecommendationId _replayId = RecommendationId.New();
     readonly RecommendationId _projectionId = RecommendationId.New();
     readonly RecommendationId _activeId = RecommendationId.New();
+    readonly RecommendationId _activeProjectionId = RecommendationId.New();
+    readonly RecommendationId _otherProjectionId = RecommendationId.New();
     readonly RecommendationId _otherObserverId = RecommendationId.New();
     readonly RecommendationId _otherSequenceId = RecommendationId.New();
     readonly RecommendationId _nullRequestId = RecommendationId.New();
@@ -49,13 +51,25 @@ public class and_it_has_ignored_recommendations : given.an_observer
             IsIgnored = true,
             Request = new ReplayCandidateRequest { ObserverId = _observerId, ObserverKey = _observerKey with { EventSequenceId = EventSequenceId.Outbox } }
         },
+        new RecommendationState
+        {
+            Id = _activeProjectionId,
+            Request = new IgnoredProjectionRegistrationRequest { ProjectionId = _observerId.Value }
+        },
+        new RecommendationState
+        {
+            Id = _otherProjectionId,
+            Request = new IgnoredProjectionRegistrationRequest { ProjectionId = "another-projection" }
+        },
         new RecommendationState { Id = _nullRequestId, IsIgnored = true, Request = null! }));
 
     Task Because() => _observer.Remove();
 
     [Fact] void should_remove_the_ignored_replay_recommendation() => _recommendationStorage.Received(1).Remove(_replayId);
     [Fact] void should_remove_the_ignored_projection_registration() => _recommendationStorage.Received(1).Remove(_projectionId);
-    [Fact] void should_keep_the_non_ignored_recommendation() => _recommendationStorage.DidNotReceive().Remove(_activeId);
+    [Fact] void should_remove_the_non_ignored_recommendation() => _recommendationStorage.Received(1).Remove(_activeId);
+    [Fact] void should_remove_the_non_ignored_projection_registration() => _recommendationStorage.Received(1).Remove(_activeProjectionId);
+    [Fact] void should_keep_the_other_projections_non_ignored_registration() => _recommendationStorage.DidNotReceive().Remove(_otherProjectionId);
     [Fact] void should_keep_the_other_observers_recommendation() => _recommendationStorage.DidNotReceive().Remove(_otherObserverId);
     [Fact] void should_keep_the_other_event_sequences_recommendation() => _recommendationStorage.DidNotReceive().Remove(_otherSequenceId);
     [Fact] void should_keep_the_unknown_request() => _recommendationStorage.DidNotReceive().Remove(_nullRequestId);

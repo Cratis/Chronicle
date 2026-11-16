@@ -1,0 +1,73 @@
+name: Workbench Yarn Cache
+
+# Pull-request workflows only restore caches; they never save them (#5604). This workflow is the one that
+# writes the Workbench yarn cache, from main, so the restore in pull-requests.yml hits. A cache saved on
+# main is readable from every pull request, while one saved by a pull request is visible only to that
+# pull request. The path and key below must stay identical to the restore step in pull-requests.yml,
+# including the order of steps that resolve the yarn cache directory: GitHub matches on both.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/yarn.lock"
+      - "**/package.json"
+      - ".github/workflows/workbench-yarn-cache.yml"
+      # The consumer's restore defines the key and paths this workflow must save.
+      - ".github/workflows/pull-requests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  save-yarn-cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.x
+          registry-url: "https://registry.npmjs.org"
+
+      # Caches are immutable per key, so skip the install when main already holds this one.
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: yarn-cache
+        with:
+          path: |
+            **/node_modules
+            **/.eslintcache
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          lookup-only: true
+
+      - name: Yarn install
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        working-directory: ./Source/Workbench
+        run: yarn
+
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            **/node_modules
+            **/.eslintcache
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          # The key computed before the install, so an install that touches a lockfile cannot shift it.
+          key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
