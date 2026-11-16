@@ -169,6 +169,7 @@ Hosted federation is served on the federation listener, so enable that first. Th
 | `Hosted:MaxConcurrentEnrollmentRequests` | 16 | How many pre-authentication enrollment requests are served at once. More are refused with `503`. |
 | `Hosted:KeyEncryptionKeyPath` | none | A file holding the key-encryption key that wraps the authority key. Required, see [Provision the key-encryption key](#provision-the-key-encryption-key). |
 | `Hosted:PreviousKeyEncryptionKeyPath` | none | The previous key-encryption key, kept readable while keys wrapped under it exist. |
+| `Hosted:Applications` | empty | Client ids of applications that may manage hosted federation (enrollments, issued certificates, subject policies and links) and nothing else. See [Let an operator application manage hosted federation](#let-an-operator-application-manage-hosted-federation). |
 
 The first time hosted federation is enabled, the kernel creates the authority: a P-384 key pair and a self-signed certificate that can only sign leaf certificates. The private key is stored only wrapped by the key-encryption key you provision (next section), as a kernel-internal secret kept apart from subject keys. It is never in configuration, logs, events or audit entries, and never in the clear anywhere. Several silos converge on one authority.
 
@@ -232,7 +233,7 @@ Redeeming a code makes the kernel connect to the endpoint in the code, so the ke
 | `AllowRestrictedAddresses` | `false` | Allow the endpoint to resolve to the internal-only addresses above. A `Development` environment allows it regardless. |
 | `FailureDuration` | 10 seconds | How long every failed attempt to reach the authority takes. |
 
-To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. Creating, revoking and listing enrollments and certificates needs administrator rights.
+To see where things stand, use `client.Federation.GetEnrollments()` and `GetIssuedCertificates()` on the authority, and `GetStatus()` on an enrolled kernel. To cut a customer off, call `client.Federation.Revoke(enrollmentId)`. It revokes the enrollment and every certificate issued from it, and takes effect at once. Creating, revoking and listing enrollments and certificates needs the `chronicle.federation.manage` capability, which administrators hold and an operator application can be given (see [Let an operator application manage hosted federation](#let-an-operator-application-manage-hosted-federation)).
 
 `GetStatus()` returns a `FederationEnrollmentStatus`. Besides the certificate (`Enrolled`, `Identity`, `Serial`, `NotAfter`, `RenewAfter`, `Endpoint`, `AuthorityFingerprint`, `Expired`) it reports the session the kernel dialed to the authority, so an application can prove that the link is established and has worked, not only that a certificate is held:
 
@@ -262,6 +263,26 @@ To let a product redeem a code with its own client credential, list its client i
 
 An application on the list is granted this one capability and nothing else. It can redeem a code and read the enrollment status, but it cannot create or revoke enrollments, list issued certificates, or do anything else an administrator can. The list is the only way to grant it: nothing else can make an application hold the capability, and the default (an empty list) changes nothing. The check reads the validated token and this configuration only, so it is the same over gRPC, HTTP and in-process calls, and a change to the list takes effect when the kernel is restarted.
 
+### Let an operator application manage hosted federation
+
+Creating, listing and revoking enrollments, listing issued certificates, and setting and reading subject policies and links are decided by one kernel-scope capability, `chronicle.federation.manage`, which the administrator role includes. A platform that hands out enrollment codes to its customers, such as an operator console, does that with its own client credential, so list its client id in `Federation:Hosted:Applications` on the authority kernel:
+
+```json
+{
+  "Chronicle": {
+    "Federation": {
+      "Hosted": {
+        "Applications": [ "operator-console" ]
+      }
+    }
+  }
+}
+```
+
+An application on the list is granted this one capability and nothing else. It cannot redeem a code (that is `Federation:Enrollment:Applications`), manage pinned grants and bindings, administer users or operate event stores. The default (an empty list) changes nothing. As with the enrollment list, the check reads the validated token and this configuration only: with Chronicle's own authority the client id is the application's name, with an external authority it is the `client_id` or `azp` claim. A change to the list takes effect when the kernel is restarted.
+
+These operations are enforced for every caller: a caller that is neither an administrator nor on the list is refused, whether or not `EnforceAdministratorPolicyForOperations` is set.
+
 ### Renewal
 
 A certificate lasts 14 days by default. After half of its lifetime the kernel renews it over mutual TLS with a new key, and the response can carry an updated endpoint, so the authority can move without re-enrolling customers. The kernel only follows an `https` endpoint, and the new endpoint still has to present a certificate that chains to the pinned authority and names that host, so a moved endpoint cannot be used to reach anything else. A renewed certificate must carry the same identity as the one it replaces, and is refused before it is stored if it does not. A kernel that stopped renewing and let its certificate expire is refused and has to be enrolled again. `Federation:Enrollment:RenewalCheckInterval` (default 1 hour) controls how often the kernel checks.
@@ -274,7 +295,7 @@ The unauthenticated surface is kept small: a request body of at most 8 KiB, a ra
 
 ### Policy per subject
 
-A certificate says who a peer is. A policy says what that peer may do. The policy is keyed by the opaque subject in the identity, so a subject with many links, for example one per product environment, has one policy. Set it on the authority kernel with these commands (administrator only):
+A certificate says who a peer is. A policy says what that peer may do. The policy is keyed by the opaque subject in the identity, so a subject with many links, for example one per product environment, has one policy. Set it on the authority kernel with these commands (administrators, and applications listed in `Federation:Hosted:Applications`):
 
 | Command | Effect |
 | --- | --- |
@@ -301,7 +322,7 @@ Pinned grants and bindings are unaffected. A client certificate that matches a p
 
 ### Manage policies from the .NET client
 
-An operator application can manage the policy of every subject through the client alone, without reaching into the generated contracts. `IChronicleClient.FederationPolicies` returns an `IFederationPolicies` (namespace `Cratis.Chronicle.Federation`) for the kernel the client is connected to. Every member needs administrator rights on that kernel, the same as the commands above, and a command the kernel refuses throws, so a policy that was not changed is never reported as changed.
+An operator application can manage the policy of every subject through the client alone, without reaching into the generated contracts. `IChronicleClient.FederationPolicies` returns an `IFederationPolicies` (namespace `Cratis.Chronicle.Federation`) for the kernel the client is connected to. Every member needs the `chronicle.federation.manage` capability on that kernel, the same as the commands above, and a command the kernel refuses throws, so a policy that was not changed is never reported as changed.
 
 | Member | Effect |
 | --- | --- |
