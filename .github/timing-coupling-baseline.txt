@@ -23,7 +23,6 @@
 # Regenerate after a rename with `python3 .github/scripts/assert-timing-coupling-ratchet.py
 # --report`, then carry the annotations back over - `--report` prints counts only.
 
-1 Integration/Api/for_PIIManager/when_erasing_a_subject_key_in_the_development_image.cs  # readiness: bounded persisted-erasure confirmation poll
 2 Integration/Client/ChronicleConfigurableFixture.cs  # readiness
 1 Integration/Client/Projections/Scenarios/ModelBound/when_projecting_with_nested_in_children/clearing_the_nested_object.cs
 1 Integration/Client/Projections/Scenarios/given/a_projection_and_events_appended_to_it.cs
