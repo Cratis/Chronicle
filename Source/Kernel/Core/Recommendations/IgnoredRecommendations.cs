@@ -23,12 +23,20 @@ internal static class IgnoredRecommendations
     /// <param name="eventSequenceId">The observer's event sequence.</param>
     /// <returns>The recommendations about the removed observer.</returns>
     internal static IEnumerable<RecommendationState> ForRemovedObserver(IEnumerable<RecommendationState> all, ObserverId observerId, EventSequenceId eventSequenceId) =>
-        all.Where(row => row.Request switch
-        {
-            ReplayCandidateRequest request => request.ObserverId == observerId && request.ObserverKey.EventSequenceId == eventSequenceId,
-            IgnoredProjectionRegistrationRequest request => request.ProjectionId.Value == observerId.Value,
-            _ => false
-        });
+        all.Where(row => Subject(row) is { } subject && subject == observerId &&
+            (row.Request is not ReplayCandidateRequest request || request.ObserverKey.EventSequenceId == eventSequenceId));
+
+    /// <summary>
+    /// Gets the observer or projection a recommendation concerns, if known.
+    /// </summary>
+    /// <param name="row">The recommendation.</param>
+    /// <returns>The subject identifier, or null for other request types.</returns>
+    internal static ObserverId? Subject(RecommendationState row) => row.Request switch
+    {
+        ReplayCandidateRequest request => request.ObserverId,
+        IgnoredProjectionRegistrationRequest request => (ObserverId)request.ProjectionId.Value,
+        _ => null
+    };
 
     /// <summary>
     /// Gets ignored registrations superseded by a newer stored version and replay recommendations superseded by a definition change.

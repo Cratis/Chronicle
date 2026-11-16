@@ -20,6 +20,7 @@ using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Kernel;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
@@ -117,6 +118,11 @@ internal sealed class ChronicleServerStartupTask(
     /// How many observers are activated at once while startup rehydrates them.
     /// </summary>
     const int MaxConcurrentObserverActivations = 32;
+
+    /// <summary>
+    /// How many hours a recommendation is protected while its subject registers.
+    /// </summary>
+    const int OrphanGracePeriodHours = 1;
 
     /// <summary>
     /// How many times a required step waits for a busy silo before the wait is reported as an error rather than a warning.
@@ -230,45 +236,7 @@ internal sealed class ChronicleServerStartupTask(
             await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
 
             // Bound the namespace fan-out so starting a store with many tenants does not flood the cluster.
-            await Parallel.ForEachAsync(await namespaces.GetAll().WaitAsync(cancellationToken), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, async (namespaceName, token) =>
-            {
-                // The steps here run on the per-namespace token. Parallel.ForEachAsync cancels it when another
-                // namespace fails and then waits for every body to finish, so a body still waiting on a busy silo
-                // with the outer token would keep the failure from ever reaching the host.
-                Task NamespaceStep(string step, Func<Task> action) => RunStep(step, action, token);
-
-                var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
-                var hasData = await namespaceStorage.HasData().WaitAsync(token);
-
-                // Capture must be ready for the first append even in a namespace created before this restart.
-                // There will be no new NamespaceAdded broadcast for an already registered namespace.
-                try
-                {
-                    await RunStep("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName), token, maxRounds: 1, waitForBusySilos: false);
-                }
-                catch (Exception exception) when (!token.IsCancellationRequested)
-                {
-                    // Analytics must not fail the Active lifecycle stage. The event log reconciles a missed
-                    // subscription on its timer, including namespaces whose first append happens after startup.
-                    logger.FailedSubscribingPatternCapture(exception, eventStore, namespaceName);
-                }
-
-                await RehydrateOccurrences(eventStore, namespaceName, token);
-
-                if (!hasData)
-                {
-                    // There are no persisted jobs, application observers or event sequences to rehydrate.
-                    return;
-                }
-
-                await NamespaceStep("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, token));
-
-                var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
-                await NamespaceStep("RehydrateJobs", jobsManager.Rehydrate);
-                await NamespaceStep("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
-                await NamespaceStep("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
-                await NamespaceStep("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
-            });
+            await Parallel.ForEachAsync(await namespaces.GetAll().WaitAsync(cancellationToken), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, (namespaceName, token) => new ValueTask(RehydrateNamespace(eventStore, namespaceName, token)));
         }
 
         await EnsureAdministrator(cancellationToken);
@@ -281,6 +249,67 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
+    }
+
+    async Task RehydrateNamespace(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken token)
+    {
+        // The steps here run on the per-namespace token. Parallel.ForEachAsync cancels it when another
+        // namespace fails and then waits for every body to finish, so a body still waiting on a busy silo
+        // with the outer token would keep the failure from ever reaching the host.
+        Task NamespaceStep(string step, Func<Task> action) => RunStep(step, action, token);
+
+        var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
+        var hasData = await namespaceStorage.HasData().WaitAsync(token);
+
+        // Capture must be ready for the first append even in a namespace created before this restart.
+        // There will be no new NamespaceAdded broadcast for an already registered namespace.
+        try
+        {
+            await RunStep("SubscribePatternCapture", () => patternCapture.Subscribe(eventStore, namespaceName), token, maxRounds: 1, waitForBusySilos: false);
+        }
+        catch (Exception exception) when (!token.IsCancellationRequested)
+        {
+            // Analytics must not fail the Active lifecycle stage. The event log reconciles a missed
+            // subscription on its timer, including namespaces whose first append happens after startup.
+            logger.FailedSubscribingPatternCapture(exception, eventStore, namespaceName);
+        }
+
+        await RehydrateOccurrences(eventStore, namespaceName, token);
+        await PruneOrphanedRecommendations(eventStore, namespaceName, token);
+
+        if (!hasData)
+        {
+            // There are no persisted jobs, application observers or event sequences to rehydrate.
+            return;
+        }
+
+        await NamespaceStep("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, token));
+
+        var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
+        await NamespaceStep("RehydrateJobs", jobsManager.Rehydrate);
+        await NamespaceStep("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
+        await NamespaceStep("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
+        await NamespaceStep("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
+    }
+
+    async Task PruneOrphanedRecommendations(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken token)
+    {
+        try
+        {
+            token.ThrowIfCancellationRequested();
+            var eventStoreStorage = storage.GetEventStore(eventStore);
+            var cutoff = _timeProvider.GetUtcNow() - TimeSpan.FromHours(OrphanGracePeriodHours);
+            var count = await OrphanedRecommendations.Prune(eventStoreStorage, eventStoreStorage.GetNamespace(namespaceName), cutoff).WaitAsync(token);
+            if (count > 0)
+            {
+                logger.PrunedOrphanedRecommendations(eventStore, namespaceName, count);
+            }
+        }
+        catch (Exception exception) when (!token.IsCancellationRequested)
+        {
+            // Hygiene is best effort. A later startup can retry without delaying this silo's readiness.
+            logger.PruningOrphanedRecommendationsFailed(exception, eventStore, namespaceName);
+        }
     }
 
     /// <summary>
