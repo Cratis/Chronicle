@@ -191,7 +191,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         // The channel is bounded in batches, and a batch can hold any number of events, so it is bounded in events too.
         // A batch that arrives while nothing else waits is always taken: it can only be spilled by the lanes.
         var queuedEvents = Interlocked.Add(ref _channelEvents, batch.Length);
-        var withinEventCapacity = _laneEventCapacity <= 0 || queuedEvents == batch.Length || queuedEvents <= _laneEventCapacity;
+        var withinEventCapacity = WithinEventCapacity(queuedEvents, batch.Length);
         if (withinEventCapacity && _channel.Writer.TryWrite(batch))
         {
             _metrics?.EventsEnqueued(batch.Length);
@@ -208,6 +208,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         SpillSubscribersMatchingToCatchup(batch);
         _metrics?.EventsSpilledToCatchup(batch.Length);
         return Task.CompletedTask;
+    }
+
+    bool WithinEventCapacity(int queuedEvents, int batchLength)
+    {
+        if (_laneEventCapacity <= 0) return true;
+        if (queuedEvents == batchLength) return true;
+        return queuedEvents <= _laneEventCapacity;
     }
 
     /// <inheritdoc/>
@@ -344,34 +351,36 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// This method will block until the queue is depleted. This is useful for testing purposes.
     /// It is not exposed on the interface as it is not intended for production use.
     /// </remarks>
-    public async Task AwaitQueueDepletion(int periodNum = 10, int periodDelay = 10)
+    public Task AwaitQueueDepletion(int periodNum = 10, int periodDelay = 10) =>
+        Task.Run(() => WaitForQueueDepletion(periodNum, periodDelay));
+
+    async Task WaitForQueueDepletion(int periodNum, int periodDelay)
     {
-        await Task.Run(async () =>
+        if (Debugger.IsAttached)
         {
-            if (Debugger.IsAttached)
+            while (_pendingItems > 0)
             {
-                while (_pendingItems > 0)
-                {
-                    await Task.Delay(periodDelay);
-                }
-
-                await _queueEmptyEvent.WaitAsync();
+                await Task.Delay(periodDelay);
             }
-            else
+
+            await _queueEmptyEvent.WaitAsync();
+            return;
+        }
+
+        await WaitForPendingItems(periodNum, periodDelay);
+        await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs), TimeProvider.System);
+    }
+
+    async Task WaitForPendingItems(int count, int periodDelay)
+    {
+        while (_pendingItems > 0)
+        {
+            await Task.Delay(periodDelay);
+            if (--count == 0)
             {
-                var count = periodNum;
-                while (_pendingItems > 0)
-                {
-                    await Task.Delay(periodDelay);
-                    if (--count == 0)
-                    {
-                        break;
-                    }
-                }
-
-                await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs), TimeProvider.System);
+                break;
             }
-        });
+        }
     }
 
     /// <summary>
@@ -526,14 +535,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         AppendedEventsQueueObserverSubscription subscription)
     {
         var eventTypeIds = subscription.EventTypeIdSet;
-        var numberOfMatchingEvents = 0;
-        foreach (var @event in events)
-        {
-            if (MatchesSubscription(subscription, @event, eventTypeIds))
-            {
-                numberOfMatchingEvents++;
-            }
-        }
+        var numberOfMatchingEvents = CountMatchingEvents(events, subscription, eventTypeIds);
 
         if (numberOfMatchingEvents == 0)
         {
@@ -546,7 +548,25 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             return events;
         }
 
-        var matchingEvents = new AppendedEvent[numberOfMatchingEvents];
+        return CopyMatchingEvents(events, subscription, eventTypeIds, numberOfMatchingEvents);
+    }
+
+    static int CountMatchingEvents(IReadOnlyList<AppendedEvent> events, AppendedEventsQueueObserverSubscription subscription, FrozenSet<EventTypeId> eventTypeIds)
+    {
+        var count = 0;
+        foreach (var @event in events)
+        {
+            if (MatchesSubscription(subscription, @event, eventTypeIds))
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    static AppendedEvent[] CopyMatchingEvents(IReadOnlyList<AppendedEvent> events, AppendedEventsQueueObserverSubscription subscription, FrozenSet<EventTypeId> eventTypeIds, int count)
+    {
+        var matchingEvents = new AppendedEvent[count];
         var next = 0;
         foreach (var @event in events)
         {
@@ -673,12 +693,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 // Coalesce the queued backlog: drain up to MaxCoalescedBatchesPerDispatch batches and dispatch them as
                 // one unit, turning a burst of single-event appends into one Handle call per partition instead of many.
                 List<AppendedEvent> coalesced = [];
-                var batchesDrained = 0;
-                while (batchesDrained < MaxCoalescedBatchesPerDispatch && _channel.Reader.TryRead(out var events))
-                {
-                    coalesced.AddRange(events);
-                    batchesDrained++;
-                }
+                var batchesDrained = DrainQueuedBatches(coalesced);
 
                 if (batchesDrained == 0)
                 {
@@ -687,21 +702,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
                 Interlocked.Add(ref _channelEvents, -coalesced.Count);
 
-                try
-                {
-                    if (!_isResetting)
-                    {
-                        Route(coalesced, batchesDrained);
-                        _metrics?.EventsHandled(coalesced.Count);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Log and move on — the observer's own partition-failure and catchup mechanism handles recovery.
-                    // Retrying here would cause an unbounded tight loop that exhausts memory.
-                    _logger.NotifyingObserversFailed(ex);
-                    _metrics?.EventsHandlingFailures();
-                }
+                DispatchCoalescedBatch(coalesced, batchesDrained);
 
                 if (Interlocked.Add(ref _pendingItems, -batchesDrained) == 0)
                 {
@@ -712,6 +713,36 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         catch (Exception exception)
         {
             _logger.QueueHandlerFailed(exception);
+        }
+    }
+
+    int DrainQueuedBatches(List<AppendedEvent> coalesced)
+    {
+        var batchesDrained = 0;
+        while (batchesDrained < MaxCoalescedBatchesPerDispatch && _channel.Reader.TryRead(out var events))
+        {
+            coalesced.AddRange(events);
+            batchesDrained++;
+        }
+        return batchesDrained;
+    }
+
+    void DispatchCoalescedBatch(List<AppendedEvent> coalesced, int batchesDrained)
+    {
+        try
+        {
+            if (!_isResetting)
+            {
+                Route(coalesced, batchesDrained);
+                _metrics?.EventsHandled(coalesced.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log and move on — the observer's own partition-failure and catchup mechanism handles recovery.
+            // Retrying here would cause an unbounded tight loop that exhausts memory.
+            _logger.NotifyingObserversFailed(ex);
+            _metrics?.EventsHandlingFailures();
         }
     }
 
@@ -745,29 +776,20 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
     void RouteToLane(AppendedEventsQueueObserverSubscription subscription, IReadOnlyList<AppendedEvent> events, int batches)
     {
-        var observerKey = subscription.ObserverKey;
         lock (_subscriptionsLock)
         {
             // The subscription may have been removed or replaced since the snapshot was taken.
-            if (_isDisposed || _isResetting || !_subscriptions.Exists(candidate => ReferenceEquals(candidate, subscription)))
+            if (!CanRouteSubscription(subscription))
             {
                 return;
             }
 
-            if (!_lanes.TryGetValue(observerKey, out var lane) || lane.IsClosed)
-            {
-                // Resolved once, under the lock, rather than for every partition run.
-                var observer = _grainFactory.GetGrain<IObserver>(observerKey);
-                _retiredLanes.TryGetValue(observerKey, out var retired);
-                lane = new AppendedEventsQueueObserverLane(subscription, observer, DeliverToObserver, LaneSettled, LaneFailed, work => _taskFactory.Run(work), retired);
-                _lanes[observerKey] = lane;
-            }
+            var lane = GetOrCreateLane(subscription);
 
             // A re-subscription keeps the lane and what it holds; it delivers on behalf of the current subscription.
             lane.Subscription = subscription;
 
-            if ((_laneCapacity > 0 && lane.PendingBatches + batches > _laneCapacity) ||
-                (_laneEventCapacity > 0 && lane.PendingEvents + events.Count > _laneEventCapacity))
+            if (ExceedsLaneCapacity(lane, batches, events.Count))
             {
                 SpillLaggingSubscriptionToCatchup(subscription);
                 Observe(() => _metrics?.EventsSpilledToCatchup(events.Count));
@@ -783,6 +805,31 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
+    bool CanRouteSubscription(AppendedEventsQueueObserverSubscription subscription)
+    {
+        if (_isDisposed || _isResetting) return false;
+        return _subscriptions.Exists(candidate => ReferenceEquals(candidate, subscription));
+    }
+
+    AppendedEventsQueueObserverLane GetOrCreateLane(AppendedEventsQueueObserverSubscription subscription)
+    {
+        var observerKey = subscription.ObserverKey;
+        if (_lanes.TryGetValue(observerKey, out var lane) && !lane.IsClosed) return lane;
+
+        // Resolved once, under the caller's lock, rather than for every partition run.
+        var observer = _grainFactory.GetGrain<IObserver>(observerKey);
+        _retiredLanes.TryGetValue(observerKey, out var retired);
+        lane = new AppendedEventsQueueObserverLane(subscription, observer, DeliverToObserver, LaneSettled, LaneFailed, work => _taskFactory.Run(work), retired);
+        _lanes[observerKey] = lane;
+        return lane;
+    }
+
+    bool ExceedsLaneCapacity(AppendedEventsQueueObserverLane lane, int batches, int events)
+    {
+        if (_laneCapacity > 0 && lane.PendingBatches + batches > _laneCapacity) return true;
+        return _laneEventCapacity > 0 && lane.PendingEvents + events > _laneEventCapacity;
+    }
+
     /// <summary>
     /// Delivers one observer's events in consecutive same-partition runs, in sequence order. Never across partitions
     /// in parallel: handling a higher-numbered partition first would advance the observer's NextEventSequenceNumber
@@ -795,14 +842,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     {
         var runs = SplitIntoPartitionRuns(events);
         var deliversPages = await DeliversPages(lane);
-        if (!deliversPages && runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))
+        if (SpillFragmentedLane(lane, deliversPages, runs.Count))
         {
             return;
         }
 
-        if (deliversPages && runs.Count > 1)
+        if (ShouldDispatchPage(deliversPages, runs.Count))
         {
-            if (_isResetting || lane.IsClosed)
+            if (CannotDeliver(lane))
             {
                 return;
             }
@@ -823,7 +870,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         foreach (var (partition, partitionEvents) in runs)
         {
             // A spill or unsubscribe closes the lane: nothing after a hole may reach the observer.
-            if (_isResetting || lane.IsClosed)
+            if (CannotDeliver(lane))
             {
                 return;
             }
@@ -838,6 +885,17 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 LaneFailed(ex);
             }
         }
+    }
+
+    static bool ShouldDispatchPage(bool deliversPages, int runs) => deliversPages && runs > 1;
+
+    bool CannotDeliver(AppendedEventsQueueObserverLane lane) => _isResetting || lane.IsClosed;
+
+    bool SpillFragmentedLane(AppendedEventsQueueObserverLane lane, bool deliversPages, int runs)
+    {
+        if (deliversPages) return false;
+        if (runs <= MaxPartitionRunsPerLiveDispatch) return false;
+        return SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane));
     }
 
     /// <summary>
