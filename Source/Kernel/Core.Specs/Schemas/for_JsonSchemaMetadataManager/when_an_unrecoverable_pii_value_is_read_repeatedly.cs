@@ -19,7 +19,7 @@ public class when_an_unrecoverable_pii_value_is_read_repeatedly : given.an_unrec
         }
     }
 
-    [Fact] void should_keep_returning_an_empty_property() => (_result[PropertyName]?.GetValue<int>()).ShouldEqual((int?)0);
+    [Fact] void should_keep_returning_an_empty_property() => (_result[PropertyName]?.GetValue<int>()).ShouldEqual(0);
     [Fact] void should_report_the_failure_once() => _count.ShouldEqual(1);
     [Fact] void should_log_once_without_generic_duplicates() => _logger.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(ILogger.Log)).ShouldEqual(1);
 
