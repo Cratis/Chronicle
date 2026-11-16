@@ -421,7 +421,7 @@ When an Orleans client needs the gateway, set `Cratis__Chronicle__Clustering__Ga
           port: 30000
 ```
 
-Neither Orleans port uses Chronicle's authentication, and neither is encrypted. A NetworkPolicy restricts who can connect; it does not encrypt or authenticate the traffic.
+Neither Orleans port uses Chronicle's authentication. When a TLS certificate file is configured and clustering is MongoDB or SQL, Chronicle encrypts both ports with that certificate and requires peers to present it; see [Cluster traffic](configuration/tls.md#cluster-traffic). Without a certificate the traffic is not encrypted. A NetworkPolicy restricts who can connect; it does not encrypt or authenticate the traffic.
 
 ## Running with TLS and authentication off
 
