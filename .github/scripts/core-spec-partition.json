@@ -415,7 +415,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.",
-            "weight": 0.1323368968160366
+            "weight": 0.1281368968160366
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ScreenplayConformance.",
@@ -436,6 +436,10 @@
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.StructuredLiteralPrototype.",
             "weight": 0.0008432324252328064
+        },
+        {
+            "prefix": "Cratis.Chronicle.Projections.Engine.for_ChangesetChildRemovals.",
+            "weight": 0.0012
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_EventTypeSchemasExtensions.",
@@ -522,6 +526,10 @@
             "weight": 0.0009033819366889898
         },
         {
+            "prefix": "Cratis.Chronicle.Projections.SettableTimeProvider.",
+            "weight": 0.0003
+        },
+        {
             "prefix": "Cratis.Chronicle.Projections.for_IProjection.",
             "weight": 0.0006104732185188725
         },
@@ -564,6 +572,14 @@
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionFutures.",
             "weight": 0.0006104732185188725
+        },
+        {
+            "prefix": "Cratis.Chronicle.Projections.for_ProjectionWatchGate.",
+            "weight": 0.002
+        },
+        {
+            "prefix": "Cratis.Chronicle.Projections.for_ProjectionWatchGates.",
+            "weight": 0.0007
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionFuturesStorageProvider.",

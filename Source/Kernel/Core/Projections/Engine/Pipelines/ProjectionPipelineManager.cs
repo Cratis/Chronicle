@@ -38,6 +38,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="meter">The pipeline manager meter.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> used to judge idleness.</param>
+/// <param name="watchGates">The <see cref="IProjectionWatchGates"/> telling whether a projection is watched; without it no projection is considered watched.</param>
 [Singleton]
 public class ProjectionPipelineManager(
     IStorage storage,
@@ -48,7 +49,8 @@ public class ProjectionPipelineManager(
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ProjectionPipelineManager>? meter = null,
-    TimeProvider? timeProvider = null) : IProjectionPipelineManager
+    TimeProvider? timeProvider = null,
+    IProjectionWatchGates? watchGates = null) : IProjectionPipelineManager
 {
     /// <summary>How often, at most, idle pipelines are looked for.</summary>
     internal static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(5);
@@ -312,6 +314,9 @@ public class ProjectionPipelineManager(
             new StoreFutures(futuresTracker, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,
             new SaveChanges(projectionFutures, sink, changesetStorage, options.Value.ReadModels.GuardSinkWritesOnWatermark, loggerFactory.CreateLogger<SaveChanges>(), generation?.Destination)
+            {
+                WatchGate = watchGates?.GateFor(new ProjectionChangesetNotifierKey(projection.Identifier.Value, eventStore, @namespace)) ?? ProjectionWatchGate.Closed
+            }
         ];
 
         var handleLock = _handleLocks.GetFor(key);
