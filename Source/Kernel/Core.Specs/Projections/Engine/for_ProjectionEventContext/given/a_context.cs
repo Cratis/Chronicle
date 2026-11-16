@@ -13,8 +13,15 @@ public class a_context : Specification
     protected ProjectionEventContext _context;
 
     protected ProjectionFuture FutureFor(EventType eventType) => new(
-        Guid.NewGuid(), "projection", _context.Event with { Context = _context.Event.Context with { EventType = eventType } },
-        "parents", "parents.children", "id", "id", _context.Key, DateTimeOffset.UnixEpoch);
+        Guid.NewGuid(),
+        "projection",
+        _context.Event with { Context = _context.Event.Context with { EventType = eventType } },
+        "parents",
+        "parents.children",
+        "id",
+        "id",
+        _context.Key,
+        DateTimeOffset.UnixEpoch);
 
     protected IChangeset<AppendedEvent, ExpandoObject> Changeset() => Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
 

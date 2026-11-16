@@ -16,5 +16,5 @@ public class when_filtering_a_wildcard_subscription_by_source_type : given.subsc
 
     void Because() => Filter();
 
-    [Fact] void should_still_apply_source_type_filters() => _result.ShouldEqual([_events[1]]);
+    [Fact] void should_still_apply_source_type_filters() => _result.ShouldEqual(_events[1]);
 }
