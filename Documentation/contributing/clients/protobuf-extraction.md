@@ -56,10 +56,11 @@ dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
 
 **Output location:** `Source/Kernel/Protobuf/*.proto`
 
-The tool generates the following proto files:
+The tool generates one proto file per service namespace. The list below is illustrative, not exhaustive. See the [Source/Kernel/Protobuf](https://github.com/Cratis/Chronicle/tree/main/Source/Kernel/Protobuf) folder for the complete set:
 
 - `clients.proto` - Client connection services
-- `cratis_chronicle_contracts.proto` - Event stores and namespaces
+- `eventstores.proto` - Event store services
+- `namespaces.proto` - Namespace services
 - `eventtypes.proto` - Event type services
 - `events_constraints.proto` - Event constraint services
 - `eventsequences.proto` - Event sequence services

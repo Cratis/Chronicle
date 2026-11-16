@@ -98,6 +98,8 @@ The spec starts collecting only after the reactor is active:
 `TimeoutException` if the expected count is not reached in time. `WaitTillActive()` ensures the
 reactor is registered and listening on the server before the test appends the triggering event.
 
+The 5-second default also applies to the `WaitTillActive` helpers. Set the `CHRONICLE_TEST_TIMEOUT_SECONDS` environment variable to a positive number of seconds to change it, for example on slow CI machines. While a debugger is attached the default wait is infinite.
+
 ## Checking Violations
 
 A collected event does not necessarily mean an event was stored. When a reactor's direct append is rejected by a constraint, the collector records the violation in `AppendedEventWithResult.Result`. The append returns that result instead of throwing.

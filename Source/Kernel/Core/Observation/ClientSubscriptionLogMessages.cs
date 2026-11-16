@@ -12,6 +12,6 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 internal static partial class ClientSubscriptionLogMessages
 {
-    [LoggerMessage(LogLevel.Debug, "Observer {ObserverId} does not know client {ConnectionId}, which is still connected. Restoring its subscription")]
+    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} does not know client {ConnectionId}, which is still connected. Restoring its subscription")]
     internal static partial void RestoringLostClientSubscription(this ILogger logger, ObserverId observerId, ConnectionId connectionId);
 }

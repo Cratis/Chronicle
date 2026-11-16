@@ -1,0 +1,23 @@
+---
+title: "CHR0061: Read model builder ownership must be unambiguous"
+description: "CHR0061 reports a self-reducing read model that also has another builder, or that conflicts with itself."
+---
+
+## Rule description
+
+A self-reducing read model is its own builder. The rule reports it in two situations:
+
+- The model also implements a reactor, carries a projection mapping attribute (on the type, a public property or a constructor parameter), or implements `IReducerFor<T>` or `IProjectionFor<T>` for itself. This is an error.
+- Another type in the same assembly implements `IReducerFor<T>` or `IProjectionFor<T>` for the model. This is a warning, because both could try to build it. It is not proof of a conflict, since different clients can own different registrations.
+
+## Severity
+
+Warning when another type in the assembly builds the model. Error when the model is also a reactor, has a projection mapping, or targets itself.
+
+## How to fix
+
+Choose one owner for the read model. Either keep the model as a self reducer and remove the other builder or the conflicting mapping, or move the folding into a separate reducer or projection and remove the `Reduce` methods from the model.
+
+## Related topics
+
+- [Self-reducing read models](../reducers/self-reducing-read-models.mdx)

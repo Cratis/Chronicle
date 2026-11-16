@@ -111,7 +111,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
-        var (outcome, startFailed) = await TryRecoverFailedPartition(partition);
+        var (outcome, startFailed) = await TryRecoverFailedPartitionForOperator(partition);
         if (startFailed)
         {
             throw new FailedPartitionRecoveryCouldNotStart(partition, _observerKey);
@@ -228,7 +228,7 @@ public partial class Observer
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
-    async Task<(PartitionRecoveryOutcome Outcome, bool StartFailed)> TryRecoverFailedPartition(Key partition)
+    async Task<(PartitionRecoveryOutcome Outcome, bool StartFailed)> TryRecoverFailedPartition(Key partition, Action? onJobStarted = null)
     {
         ThrowIfSealed();
         await ThrowIfKeyDoesNotOwnDefinition();
@@ -275,6 +275,7 @@ public partial class Observer
         {
             return (PartitionRecoveryOutcome.Started, ReportJobNotStarted());
         }
+        onJobStarted?.Invoke();
         return (PartitionRecoveryOutcome.Started, false);
 
         bool ReportJobNotStarted()
