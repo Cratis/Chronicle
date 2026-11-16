@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Microsoft.Extensions.Logging;
 using Orleans.TestKit;
@@ -13,6 +14,10 @@ public class a_subscribed_notifier : Specification
 {
     protected TestKitSilo _silo;
     protected ProjectionChangesetNotifier _notifier;
+    protected IProjectionsServiceClient _projectionsServiceClient;
+    protected SettableTimeProvider _timeProvider;
+    protected readonly ObserverId _projection = "the-projection";
+    protected readonly EventStoreName _eventStore = "the-store";
     protected readonly EventStoreNamespaceName _namespace = "the-namespace";
     protected IReadModelChangesetSubscriber[] _subscribers;
     protected ReadModelChangeNotification[] _notifications;
@@ -21,7 +26,10 @@ public class a_subscribed_notifier : Specification
     {
         var silo = _silo = new TestKitSilo();
         silo.AddService(Substitute.For<ILogger<ProjectionChangesetNotifier>>());
-        _notifier = await silo.CreateGrainAsync<ProjectionChangesetNotifier>("the-projection");
+        _projectionsServiceClient = silo.AddService(Substitute.For<IProjectionsServiceClient>());
+        _timeProvider = new SettableTimeProvider();
+        silo.AddService<TimeProvider>(_timeProvider);
+        _notifier = await silo.CreateGrainAsync<ProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(_projection, _eventStore, _namespace).ToString());
         _subscribers = [Substitute.For<IReadModelChangesetSubscriber>(), Substitute.For<IReadModelChangesetSubscriber>()];
         foreach (var subscriber in _subscribers)
         {

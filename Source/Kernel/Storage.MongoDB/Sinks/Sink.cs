@@ -1209,6 +1209,48 @@ public partial class Sink(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved)
+    {
+        await SettleGuardedBulkReads();
+        var keys = new HashSet<Key>(FindBulkKeysHoldingChild(childRemoved));
+
+        var names = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments)
+            .Select(segment => segment.Value.ToMongoDBPropertyName());
+        var filter = Builders<BsonDocument>.Filter.Eq(string.Join('.', names), childRemoved.Key.ToBsonValue());
+
+        using var cursor = await Collection.FindAsync(
+            filter,
+            new FindOptions<BsonDocument> { Projection = Builders<BsonDocument>.Projection.Include("_id") });
+
+        foreach (var document in await cursor.ToListAsync())
+        {
+            if (document.TryGetValue("_id", out var idValue))
+            {
+                keys.Add(new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers));
+            }
+        }
+
+        return keys;
+    }
+
+    IEnumerable<Key> FindBulkKeysHoldingChild(ChildRemovedFromAll childRemoved)
+    {
+        if (!_isBulkMode)
+        {
+            yield break;
+        }
+
+        var pathSegments = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments).ToArray();
+        foreach (var (cacheKey, cachedState) in _bulkStateCache)
+        {
+            if (TryFindValueInDocument(cachedState, pathSegments, 0, childRemoved.Key) && _bulkKeysByCacheKey.TryGetValue(cacheKey, out var cachedKey))
+            {
+                yield return cachedKey;
+            }
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task EnsureIndexes()
     {
         var collection = Collection;
@@ -2010,6 +2052,18 @@ public partial class Sink(
         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
         var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
         await DirectWrites.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+
+        if (_isBulkMode && !_bulkStateCache.IsEmpty)
+        {
+            lock (_bulkLock)
+            {
+                // Dirty parents own queued writes that MongoDB cannot answer yet; preserve their state in place.
+                foreach (var state in _bulkStateCache.Values)
+                {
+                    CachedChildRemoval.Remove(state, childRemoved);
+                }
+            }
+        }
     }
 
     static (List<string> Path, List<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, FilterDefinition<BsonDocument> Filter) BuildChildPath(IPropertyPathSegment[] segments)
