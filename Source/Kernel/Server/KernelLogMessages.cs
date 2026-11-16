@@ -16,6 +16,12 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Information, "TLS certificate loaded successfully. Server will use HTTPS")]
     internal static partial void TlsCertificateLoaded(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Information, "TLS certificate reloaded from disk. Subject {Subject}, thumbprint {Thumbprint}, valid until {NotAfter}")]
+    internal static partial void TlsCertificateReloaded(this ILogger<Kernel> logger, string subject, string thumbprint, DateTimeOffset notAfter);
+
+    [LoggerMessage(LogLevel.Error, "The TLS certificate file changed but could not be loaded. Keeping the current certificate")]
+    internal static partial void TlsCertificateReloadFailed(this ILogger<Kernel> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "No TLS certificate configured. Generated a self-signed development certificate (Development mode only)")]
     internal static partial void DevelopmentCertificateGenerated(this ILogger<Kernel> logger);
 
