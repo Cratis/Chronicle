@@ -66,7 +66,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
         IPatternCapture patternCapture)
     {
         var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
-        var allowEvolution = !_strictEventStores.Contains(eventStore.Value);
+        var allowEvolution = !skipValidation && !_strictEventStores.Contains(eventStore.Value);
 
         // The gRPC-deserialized sequence backing a repeated field is not guaranteed to support more than
         // one enumeration - and this method enumerates it twice, once to validate and once to build what
