@@ -23,6 +23,16 @@ public interface IEventTypesStorage
     Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema);
 
     /// <summary>
+    /// Replaces a generation only if its current schema is exactly the expected schema.
+    /// </summary>
+    /// <param name="eventTypeId">The registered event type.</param>
+    /// <param name="generation">The registered generation.</param>
+    /// <param name="expected">The schema used to make the evolution decision.</param>
+    /// <param name="schema">The replacement schema.</param>
+    /// <returns>Whether the conditional replacement succeeded.</returns>
+    Task<bool> TryReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema expected, JsonSchema schema) => Task.FromResult(false);
+
+    /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to register for.</param>

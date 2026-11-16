@@ -4,6 +4,7 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Events.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences;
@@ -12,6 +13,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.EventTypes;
 
@@ -24,18 +26,21 @@ namespace Cratis.Chronicle.EventTypes;
 /// under a generation that already exists, and a new generation is a fact the system event log records. The
 /// artifacts state what is being asked for; this decides whether it is allowed and what it means.
 /// </remarks>
-public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
+public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
 {
     readonly ILogger<EventTypeRegistrar> _logger = NullLogger<EventTypeRegistrar>.Instance;
+    readonly HashSet<string> _additiveEvolutionEventStores = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a registrar with structured warnings for protection changes.
     /// </summary>
     /// <param name="grainFactory">The grain factory.</param>
     /// <param name="logger">The logger.</param>
-    public EventTypeRegistrar(IGrainFactory grainFactory, ILogger<EventTypeRegistrar> logger) : this(grainFactory)
+    /// <param name="options">The server-side schema evolution policy.</param>
+    public EventTypeRegistrar(IGrainFactory grainFactory, ILogger<EventTypeRegistrar> logger, IOptions<ChronicleOptions>? options = null) : this(grainFactory)
     {
         _logger = logger;
+        _additiveEvolutionEventStores = new(options?.Value.AdditiveEventTypeSchemaEvolutionEventStores ?? [], StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -61,6 +66,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         IPatternCapture patternCapture)
     {
         var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
+        var allowEvolution = _additiveEvolutionEventStores.Contains(eventStore.Value);
 
         // The gRPC-deserialized sequence backing a repeated field is not guaranteed to support more than
         // one enumeration - and this method enumerates it twice, once to validate and once to build what
@@ -75,16 +81,31 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         if (!skipValidation)
         {
-            await ValidateAll(typesList, stored);
+            await ValidateAll(typesList, stored, allowEvolution);
         }
 
-        var (eventTypesToRegister, newGenerationsPerEventType) = await BuildRegistrations(typesList, stored, skipValidation);
+        var (eventTypesToRegister, newGenerationsPerEventType) = await BuildRegistrations(typesList, stored, skipValidation, allowEvolution);
+
+        var registrationsWithSchemas = eventTypesToRegister;
+        if (allowEvolution)
+        {
+            eventTypesToRegister = await EvolveExistingSchemas(eventTypesToRegister, stored, eventTypesStorage, async evolution =>
+            {
+                await eventTypesCacheClient.Invalidate(eventStore, evolution.EventTypeId);
+                if (evolution.Classification == nameof(SchemaEvolutionKind.Additive))
+                {
+                    var sequence = grainFactory.GetSystemEventSequence(eventStore);
+                    await sequence.Append(evolution.EventTypeId.Value, evolution);
+                    _logger.EventTypeSchemaEvolved(evolution.EventTypeId.Value, evolution.Generation.Value, evolution.Classification);
+                }
+            });
+        }
 
         // Evict the event type cache on every silo whenever a registration actually changed the stored
         // representation - a new generation, or a different owner, source, or tombstone. Idempotent
         // re-registrations report no change, so client reconnects do not trigger cluster-wide eviction.
         var mutated = await eventTypesStorage.Register(eventTypesToRegister);
-        LogAddedProtectionMetadata(eventTypesToRegister, stored);
+        LogAddedProtectionMetadata(registrationsWithSchemas, stored);
 
         foreach (var eventTypeId in mutated)
         {
@@ -119,17 +140,17 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
 
         foreach (var eventType in typesList)
         {
-            results.Add(await CheckRegistration(eventType, StoredFor(stored, eventType)));
+            results.Add(await CheckRegistration(eventType, StoredFor(stored, eventType), _additiveEvolutionEventStores.Contains(eventStore.Value)));
         }
 
         return results;
     }
 
-    static async Task<EventTypeCheckResult> CheckRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    static async Task<EventTypeCheckResult> CheckRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition, bool allowEvolution)
     {
         try
         {
-            return await CheckReadableRegistration(eventType, storedDefinition);
+            return await CheckReadableRegistration(eventType, storedDefinition, allowEvolution);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -138,7 +159,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         }
     }
 
-    static async Task<EventTypeCheckResult> CheckReadableRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    static async Task<EventTypeCheckResult> CheckReadableRegistration(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition, bool allowEvolution)
     {
         var id = eventType.Type.Id;
         var generation = eventType.Type.Generation;
@@ -148,19 +169,20 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             return EventTypeCheckResult.Reject(id, generation, chainProblem.Message);
         }
 
-        if (await EventTypeSchemaComparison.FindProblem(eventType, storedDefinition) is { } schemaProblem)
+        var classification = await ClassifyRegistration(eventType, storedDefinition);
+        if (await EventTypeSchemaComparison.FindProblem(eventType, storedDefinition, CanEvolve(eventType, storedDefinition, allowEvolution)) is { } schemaProblem)
         {
             return EventTypeCheckResult.Reject(
                 id,
                 schemaProblem.Generation,
                 new EventTypeSchemaChanged(id, schemaProblem.Generation).Message,
                 schemaProblem.Difference.Keyword,
-                schemaProblem.Difference.Path);
+                schemaProblem.Difference.Path) with { Classification = classification };
         }
 
         try
         {
-            await CreateEventTypeToRegister(eventType, false, storedDefinition);
+            await CreateEventTypeToRegister(eventType, false, storedDefinition, allowEvolution);
         }
         catch (EventTypeSchemaChanged ex)
         {
@@ -171,7 +193,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
             return EventTypeCheckResult.Reject(id, generation, ex.Message);
         }
 
-        return EventTypeCheckResult.Accept(id, generation);
+        return EventTypeCheckResult.Accept(id, generation) with { Classification = classification };
     }
 
     /// <summary>
@@ -197,19 +219,20 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         await patternCapture.SubscribeAcrossNamespaces(eventStore);
     }
 
-    static async Task ValidateAll(List<EventTypeRegistration> types, Dictionary<EventTypeId, EventTypeDefinition> stored)
+    static async Task ValidateAll(List<EventTypeRegistration> types, Dictionary<EventTypeId, EventTypeDefinition> stored, bool allowEvolution)
     {
         foreach (var eventType in types)
         {
             EventTypeMigrationValidation.ValidateChain(eventType.Type.Id, eventType.Type.Generation, eventType.Migrations);
-            await ValidateSchemaNotChanged(eventType, StoredFor(stored, eventType));
+            await ValidateSchemaNotChanged(eventType, StoredFor(stored, eventType), allowEvolution);
         }
     }
 
     static async Task<(List<EventTypeToRegister> ToRegister, List<NewGenerations> NewGenerations)> BuildRegistrations(
         List<EventTypeRegistration> types,
         Dictionary<EventTypeId, EventTypeDefinition> stored,
-        bool skipValidation)
+        bool skipValidation,
+        bool allowEvolution)
     {
         var eventTypesToRegister = new List<EventTypeToRegister>();
         var newGenerationsPerEventType = new List<NewGenerations>();
@@ -217,7 +240,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         foreach (var eventType in types)
         {
             newGenerationsPerEventType.Add(GetNewGenerations(eventType, StoredFor(stored, eventType)));
-            eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation, StoredFor(stored, eventType)));
+            eventTypesToRegister.Add(await CreateEventTypeToRegister(eventType, skipValidation, StoredFor(stored, eventType), allowEvolution));
         }
 
         return (eventTypesToRegister, newGenerationsPerEventType);
@@ -244,10 +267,10 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         return new(eventTypeId, storedDefinition is not null, generations);
     }
 
-    static async Task<EventTypeToRegister> CreateEventTypeToRegister(EventTypeRegistration eventType, bool skipValidation, EventTypeDefinition? storedDefinition)
+    static async Task<EventTypeToRegister> CreateEventTypeToRegister(EventTypeRegistration eventType, bool skipValidation, EventTypeDefinition? storedDefinition, bool allowEvolution)
     {
         var generations = await ParseGenerations(eventType);
-        RefineAgainstStored(generations, storedDefinition, eventType.Type.Id);
+        RefineAgainstStored(generations, storedDefinition, eventType.Type.Id, CanEvolve(eventType, storedDefinition, allowEvolution));
 
         var migrations = eventType.Migrations
             .Where(m => m.FromGeneration != m.ToGeneration)
@@ -291,7 +314,7 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         return schema;
     }
 
-    static void RefineAgainstStored(List<Concepts.Events.EventTypeGenerationDefinition> generations, EventTypeDefinition? storedDefinition, string eventTypeId)
+    static void RefineAgainstStored(List<Concepts.Events.EventTypeGenerationDefinition> generations, EventTypeDefinition? storedDefinition, string eventTypeId, bool allowEvolution)
     {
         for (var index = 0; index < generations.Count; index++)
         {
@@ -302,7 +325,8 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
                 continue;
             }
 
-            var refined = stored.Schema.MorePrecise(incoming.Schema);
+            var subset = allowEvolution && SchemaEvolution.Classify(stored.Schema, incoming.Schema) == SchemaEvolutionKind.Subset;
+            var refined = subset ? stored.Schema : stored.Schema.MorePrecise(incoming.Schema);
             if (!stored.Schema.HasCompatibleProtectionMetadata(refined))
             {
                 throw new EventTypeSchemaChanged(eventTypeId, incoming.Generation.Value);
@@ -338,9 +362,9 @@ public sealed class EventTypeRegistrar(IGrainFactory grainFactory)
         return definition;
     }
 
-    static async Task ValidateSchemaNotChanged(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition)
+    static async Task ValidateSchemaNotChanged(EventTypeRegistration eventType, EventTypeDefinition? storedDefinition, bool allowEvolution)
     {
-        if (await EventTypeSchemaComparison.FindProblem(eventType, storedDefinition) is { } problem)
+        if (await EventTypeSchemaComparison.FindProblem(eventType, storedDefinition, CanEvolve(eventType, storedDefinition, allowEvolution)) is { } problem)
         {
             throw new EventTypeSchemaChanged(eventType.Type.Id, problem.Generation);
         }
