@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Storage.Events.Constraints;
 /// </para>
 /// </remarks>
 public class DuplicateUniqueConstraintValue(ConstraintName constraintName, EventSourceId eventSourceId)
-    : Exception($"Event source '{eventSourceId}' cannot claim the value it holds for unique constraint '{constraintName}' - another event source already holds it.")
+    : Exception($"Cannot claim the value for unique constraint '{constraintName}' - another event source already holds it.")
 {
     /// <summary>
     /// Gets the <see cref="ConstraintName"/> that was violated.

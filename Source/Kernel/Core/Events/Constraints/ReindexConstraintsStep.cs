@@ -284,7 +284,7 @@ public partial class ReindexConstraintsStep(
             catch (DuplicateUniqueConstraintValue error)
             {
                 tracking.Progress.RecordCollision(definition.Name, claimedValue, @event.Context.SequenceNumber);
-                logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.EventSourceId, @event.Context.SequenceNumber, error);
+                logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.SequenceNumber, error);
             }
         }
     }
