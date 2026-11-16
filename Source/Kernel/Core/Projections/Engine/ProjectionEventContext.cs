@@ -118,8 +118,7 @@ public record ProjectionEventContext(
     public void AddDeferredFuture(ProjectionFuture future)
     {
         // One physical event can reach clauses pinned to different generations. Retain both futures.
-        if (_deferredFutures.Exists(f => f.Event.Context.SequenceNumber == future.Event.Context.SequenceNumber &&
-            (GenerationDelivery != Concepts.Observation.EventGenerationDelivery.Pinned || f.Event.Context.EventType == future.Event.Context.EventType)))
+        if (_deferredFutures.Exists(f => HasSameDeferredIdentity(f, future)))
         {
             return;
         }
@@ -192,4 +191,19 @@ public record ProjectionEventContext(
         new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
         ProjectionOperationType.None,
         false);
+
+    bool HasSameDeferredIdentity(ProjectionFuture existing, ProjectionFuture future)
+    {
+        if (existing.Event.Context.SequenceNumber != future.Event.Context.SequenceNumber)
+        {
+            return false;
+        }
+
+        if (GenerationDelivery != Concepts.Observation.EventGenerationDelivery.Pinned)
+        {
+            return true;
+        }
+
+        return existing.Event.Context.EventType == future.Event.Context.EventType;
+    }
 }
