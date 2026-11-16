@@ -33,9 +33,7 @@ internal static class EventContentBson
         var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(json));
         while (reader.Read())
         {
-            if (reader.TokenType is JsonTokenType.Number &&
-                ((reader.TryGetUInt64(out var unsigned) && unsigned > long.MaxValue) ||
-                 RequiresDecimal(Encoding.UTF8.GetString(reader.ValueSpan))))
+            if (RequiresDecimal(ref reader))
             {
                 return BsonDocument.Parse(PrepareForBson(JsonNode.Parse(json), schema)!.ToJsonString());
             }
@@ -69,8 +67,7 @@ internal static class EventContentBson
         var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(schema.ToJson()));
         while (reader.Read())
         {
-            if (reader.TokenType is JsonTokenType.PropertyName && reader.ValueTextEquals("format") &&
-                reader.Read() && reader.TokenType is JsonTokenType.String && IsDecimalFormat(reader.GetString()))
+            if (IsDecimalFormatToken(ref reader))
             {
                 return true;
             }
@@ -78,7 +75,23 @@ internal static class EventContentBson
         return false;
     }
 
+    static bool IsDecimalFormatToken(ref Utf8JsonReader reader)
+    {
+        if (reader.TokenType is not JsonTokenType.PropertyName || !reader.ValueTextEquals("format"))
+        {
+            return false;
+        }
+        return reader.Read() && reader.TokenType is JsonTokenType.String && IsDecimalFormat(reader.GetString());
+    }
+
     static bool IsDecimalFormat(string? format) => format?.TrimEnd('?') == "decimal";
+
+    static bool RequiresDecimal(ref Utf8JsonReader reader) =>
+        reader.TokenType is JsonTokenType.Number &&
+        (IsLargeUnsignedInteger(ref reader) || RequiresDecimal(Encoding.UTF8.GetString(reader.ValueSpan)));
+
+    static bool IsLargeUnsignedInteger(ref Utf8JsonReader reader) =>
+        reader.TryGetUInt64(out var unsigned) && unsigned > long.MaxValue;
 
     static bool ContainsDecimals(BsonValue value) => value switch
     {
@@ -95,39 +108,64 @@ internal static class EventContentBson
 
     static JsonNode? PrepareForBson(JsonNode? node, JsonSchema? schema = null)
     {
+        var actual = ResolveTypeSchema(schema);
+        return node switch
+        {
+            JsonObject document => PrepareDocument(document, schema, actual),
+            JsonArray array => new JsonArray(array.Select(item => PrepareForBson(item, actual?.Item)).ToArray()),
+            JsonValue value => PrepareValue(value, schema, actual),
+            null => null,
+            _ => node.DeepClone()
+        };
+    }
+
+    static JsonSchema? ResolveTypeSchema(JsonSchema? schema)
+    {
         var actual = schema?.ActualTypeSchema;
         if (actual?.OneOf.Count > 0)
         {
-            actual = actual.OneOf.FirstOrDefault(alternative => alternative.Type != JsonObjectType.Null)?.ActualTypeSchema ?? actual;
+            return actual.OneOf.FirstOrDefault(alternative => alternative.Type != JsonObjectType.Null)?.ActualTypeSchema ?? actual;
         }
-        if (node is JsonObject document)
-        {
-            var properties = actual?.GetFlattenedProperties().ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
-            return new JsonObject(document.Select(property => new KeyValuePair<string, JsonNode?>(
-                property.Key,
-                PrepareForBson(property.Value, properties?.GetValueOrDefault(property.Key) ?? actual?.AdditionalPropertiesSchema))));
-        }
-        if (node is JsonArray array)
-        {
-            return new JsonArray(array.Select(item => PrepareForBson(item, actual?.Item)).ToArray());
-        }
-        if (node is JsonValue value)
-        {
-            if (IsDecimalFormat(actual?.Format ?? schema?.Format) && value.GetValueKind() == JsonValueKind.Number)
-            {
-                return new JsonObject { ["$numberDecimal"] = value.ToJsonString() };
-            }
-            if (schema is null && value.GetValueKind() == JsonValueKind.Number && RequiresDecimal(value.ToJsonString()))
-            {
-                return new JsonObject { ["$numberDecimal"] = value.ToJsonString() };
-            }
-            if (value.TryGetValue<ulong>(out var unsigned) && unsigned > long.MaxValue)
-            {
-                return new JsonObject { ["$numberDecimal"] = unsigned.ToString(CultureInfo.InvariantCulture) };
-            }
-        }
-        return node?.DeepClone();
+        return actual;
     }
+
+    static JsonObject PrepareDocument(JsonObject document, JsonSchema? schema, JsonSchema? actual)
+    {
+        // Flatten the full composition, not just the branch selected by ActualTypeSchema.
+        var declared = schema?.Reference ?? schema;
+        var objectSchema = declared?.AllOf.Count > 0 ? declared : actual;
+        var properties = objectSchema?.GetFlattenedProperties()
+            .DistinctBy(property => property.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(property => property.Name, StringComparer.OrdinalIgnoreCase);
+        return new JsonObject(document.Select(property => new KeyValuePair<string, JsonNode?>(
+            property.Key,
+            PrepareForBson(property.Value, properties?.GetValueOrDefault(property.Key) ?? actual?.AdditionalPropertiesSchema))));
+    }
+
+    static JsonNode PrepareValue(JsonValue value, JsonSchema? schema, JsonSchema? actual)
+    {
+        if (IsDecimalValue(value, schema, actual))
+        {
+            return new JsonObject { ["$numberDecimal"] = value.ToJsonString() };
+        }
+        if (value.TryGetValue<ulong>(out var unsigned) && unsigned > long.MaxValue)
+        {
+            return new JsonObject { ["$numberDecimal"] = unsigned.ToString(CultureInfo.InvariantCulture) };
+        }
+        return value.DeepClone();
+    }
+
+    static bool IsDecimalValue(JsonValue value, JsonSchema? schema, JsonSchema? actual)
+    {
+        if (value.GetValueKind() != JsonValueKind.Number)
+        {
+            return false;
+        }
+        return IsDecimalFormat(actual?.Format ?? schema?.Format) || RequiresUndescribedDecimal(value, schema);
+    }
+
+    static bool RequiresUndescribedDecimal(JsonValue value, JsonSchema? schema) =>
+        schema is null && RequiresDecimal(value.ToJsonString());
 
     static bool RequiresDecimal(string literal) =>
         !long.TryParse(literal, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) &&
@@ -135,47 +173,55 @@ internal static class EventContentBson
         (!double.TryParse(literal, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ||
          !string.Equals(literal, value.ToString("R", CultureInfo.InvariantCulture), StringComparison.Ordinal));
 
-    static JsonNode? RestoreDecimals(BsonValue bson, JsonNode? node)
+    static JsonNode? RestoreDecimals(BsonValue bson, JsonNode? node) => (bson, node) switch
     {
-        if (bson is BsonDecimal128 number)
+        (BsonDecimal128 number, _) => RestoreNumber(number),
+        (BsonDocument document, JsonObject jsonObject) => RestoreDocument(document, jsonObject),
+        (BsonArray array, JsonArray jsonArray) => RestoreArray(array, jsonArray),
+        _ => node
+    };
+
+    static JsonValue? RestoreNumber(BsonDecimal128 number)
+    {
+        try
         {
-            try
+            return IsLargeUnsignedInteger(number)
+                ? JsonValue.Create(Decimal128.ToUInt64(number.Value))
+                : JsonValue.Create(Decimal128.ToDecimal(number.Value));
+        }
+        catch (OverflowException)
+        {
+            // Imported BSON can carry values outside CLR decimal's range, including non-finite values.
+            return JsonValue.Create(number.Value.ToString());
+        }
+    }
+
+    static JsonObject RestoreDocument(BsonDocument document, JsonObject jsonObject)
+    {
+        foreach (var element in document)
+        {
+            var original = jsonObject[element.Name];
+            var restored = RestoreDecimals(element.Value, original);
+            if (!ReferenceEquals(restored, original))
             {
-                return IsLargeUnsignedInteger(number)
-                    ? JsonValue.Create(Decimal128.ToUInt64(number.Value))
-                    : JsonValue.Create(Decimal128.ToDecimal(number.Value));
-            }
-            catch (OverflowException)
-            {
-                // Imported BSON can carry values outside CLR decimal's range, including non-finite values.
-                return JsonValue.Create(number.Value.ToString());
+                jsonObject[element.Name] = restored;
             }
         }
-        if (bson is BsonDocument document && node is JsonObject jsonObject)
+        return jsonObject;
+    }
+
+    static JsonArray RestoreArray(BsonArray array, JsonArray jsonArray)
+    {
+        for (var index = 0; index < array.Count; index++)
         {
-            foreach (var element in document)
+            var original = jsonArray[index];
+            var restored = RestoreDecimals(array[index], original);
+            if (!ReferenceEquals(restored, original))
             {
-                var original = jsonObject[element.Name];
-                var restored = RestoreDecimals(element.Value, original);
-                if (!ReferenceEquals(restored, original))
-                {
-                    jsonObject[element.Name] = restored;
-                }
+                jsonArray[index] = restored;
             }
         }
-        else if (bson is BsonArray array && node is JsonArray jsonArray)
-        {
-            for (var index = 0; index < array.Count; index++)
-            {
-                var original = jsonArray[index];
-                var restored = RestoreDecimals(array[index], original);
-                if (!ReferenceEquals(restored, original))
-                {
-                    jsonArray[index] = restored;
-                }
-            }
-        }
-        return node;
+        return jsonArray;
     }
 
     sealed record DecimalSchema(bool HasDecimal);
