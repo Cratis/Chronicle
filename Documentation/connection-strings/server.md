@@ -103,11 +103,21 @@ so credentials always go to a fixed destination. Credentials are only sent over 
 
 Short-lived clients, such as command line tools, can cache tokens between runs with
 `FileSystemCachingTokenProvider`, which stores them in a file at a path the host application chooses (keep
-it in the user's own profile). The file is created readable and writable by the current user only (mode `0600` on Unix, in a
-directory with mode `0700`) and replaced atomically. On Windows no permission bits are set; the file inherits
-the access control list of its directory, so keep it under the user's profile. A cached token is reused until the expiry the issuer
-put in the token (its `exp` claim) less a short safety margin, or for 55 minutes when the token carries no
-expiry. Delete the file to force a new token request.
+it in the user's own profile). The cache path must be unique per server and client identity. Prefer the
+four-parameter overload `(innerProvider, cacheFilePath, tokenLifetime, cacheScope)`, supplying a scope
+that combines the server address and client id. Only the scope's SHA-256 hash is stored; entries with a
+missing or different hash are ignored and replaced. The original overload does not check a scope, so the
+caller remains responsible for keeping its cache path unique.
+
+The file is created readable and writable by the current user only (mode `0600` on Unix, in a directory
+with mode `0700`) and replaced atomically. Existing Unix directories owned by the current user are also
+restricted to `0700`; cache files owned by another user or accessible to group or others are not trusted.
+On Windows the directory and temporary file are created with protected access control lists granting
+FullControl only to the current user. The replacement retains the temporary file's protection.
+
+A cached token is reused for at most the configured lifetime (55 minutes by default). A JWT's issuer
+expiry (`exp`) less a 30-second safety margin can shorten that lifetime, but never extend it. Delete the
+file to force a new token request.
 
 ## Authentication modes
 

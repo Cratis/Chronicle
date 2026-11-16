@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using System.Text.Json;
 
 namespace Cratis.Chronicle.Connections.for_FileSystemCachingTokenProvider.given;
 
@@ -11,6 +12,8 @@ public class a_caching_provider : Specification
     protected FileSystemCachingTokenProvider _provider;
     protected string _directory;
     protected string _cacheFile;
+
+    protected string CacheDirectory => Path.GetDirectoryName(_cacheFile)!;
 
     void Establish()
     {
@@ -27,6 +30,12 @@ public class a_caching_provider : Specification
         {
             Directory.Delete(_directory, true);
         }
+    }
+
+    protected string CacheProperty(string name)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(_cacheFile));
+        return document.RootElement.GetProperty(name).GetString()!;
     }
 
     protected static string JwtExpiringIn(TimeSpan lifetime)

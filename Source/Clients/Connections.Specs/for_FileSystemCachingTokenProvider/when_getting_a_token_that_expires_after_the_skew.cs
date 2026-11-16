@@ -10,6 +10,8 @@ public class when_getting_a_token_that_expires_after_the_skew : given.a_caching_
 
     void Establish()
     {
+        _provider.Dispose();
+        _provider = new(_inner, _cacheFile, TimeSpan.FromMilliseconds(-1));
         _token = JwtExpiringIn(TimeSpan.FromHours(2));
         _inner.GetAccessToken(Arg.Any<CancellationToken>()).Returns(_token, "fresh-token");
     }
@@ -20,5 +22,5 @@ public class when_getting_a_token_that_expires_after_the_skew : given.a_caching_
         _result = await _provider.GetAccessToken();
     }
 
-    [Fact] void should_keep_using_the_cached_token_beyond_the_default_lifetime() => _result.ShouldEqual(_token);
+    [Fact] void should_not_let_the_issuer_extend_the_configured_lifetime() => _result.ShouldEqual("fresh-token");
 }
