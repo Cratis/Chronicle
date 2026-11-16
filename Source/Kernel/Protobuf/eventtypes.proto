@@ -58,6 +58,7 @@ message EventTypeCheckResult {
    string Reason = 4;
    string Keyword = 5;
    string Path = 6;
+   string Classification = 7;
 }
 message EventTypeDetailsResponse {
    EventType Type = 1;

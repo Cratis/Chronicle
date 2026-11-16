@@ -35,6 +35,11 @@ public class when_stopping_a_node_gracefully : Specification
         await node.StopAsync(deadline.Token);
         _shutdownDuration = clock.Elapsed;
         _exitCode = await node.GetExitCodeAsync();
+        if (_exitCode != 0)
+        {
+            await _cluster.DumpLogs();
+        }
+
         _membership = await _cluster.WaitForMembership(
             entries => entries.Contains(_stoppedSilo) && _remainingSilos.All(entries.Contains),
             TimeSpan.FromMinutes(3));

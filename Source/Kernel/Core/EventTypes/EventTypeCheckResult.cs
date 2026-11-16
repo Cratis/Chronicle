@@ -15,6 +15,11 @@ namespace Cratis.Chronicle.EventTypes;
 public record EventTypeCheckResult(string EventType, uint Generation, bool Accepted, string Reason, string Keyword, string Path)
 {
     /// <summary>
+    /// Gets the schema relationship independently of whether the server policy accepts it.
+    /// </summary>
+    public string Classification { get; init; } = string.Empty;
+
+    /// <summary>
     /// Creates the result of a registration that would be accepted.
     /// </summary>
     /// <param name="eventType">The event type identifier.</param>

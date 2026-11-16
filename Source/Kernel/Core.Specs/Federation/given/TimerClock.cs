@@ -13,6 +13,7 @@ public class TimerClock : TimeProvider
     readonly object _gate = new();
     readonly List<ClockTimer> _timers = [];
     readonly Channel<bool> _scheduled = Channel.CreateUnbounded<bool>();
+    readonly Channel<bool> _released = Channel.CreateUnbounded<bool>();
     long _ticks;
 
     /// <inheritdoc/>
@@ -72,6 +73,18 @@ public class TimerClock : TimeProvider
     }
 
     /// <summary>
+    /// Waits until every timer has been disposed, which is the moment a cancelled delay has finished releasing its timer.
+    /// </summary>
+    /// <returns>A task that completes when no timer is pending.</returns>
+    public async Task WaitForNoPendingTimers()
+    {
+        while (PendingTimers > 0)
+        {
+            await _released.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+        }
+    }
+
+    /// <summary>
     /// Move the clock forward and fire every timer that came due.
     /// </summary>
     /// <param name="duration">How far.</param>
@@ -107,18 +120,29 @@ public class TimerClock : TimeProvider
 
         public void Fire()
         {
-            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            if (MarkDisposed())
             {
                 callback(state);
             }
         }
 
-        public void Dispose() => Interlocked.Exchange(ref _disposed, 1);
+        public void Dispose() => MarkDisposed();
 
         public ValueTask DisposeAsync()
         {
-            Interlocked.Exchange(ref _disposed, 1);
+            MarkDisposed();
             return ValueTask.CompletedTask;
+        }
+
+        bool MarkDisposed()
+        {
+            var first = Interlocked.Exchange(ref _disposed, 1) == 0;
+            if (first)
+            {
+                owner._released.Writer.TryWrite(true);
+            }
+
+            return first;
         }
     }
 }
