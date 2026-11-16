@@ -20,6 +20,7 @@
         <Project Path="Source/Clients/Testing/Testing.csproj" />
         <Project Path="Source/Clients/Testing.Specs/Testing.Specs.csproj" />
         <Project Path="Source/Clients/Workbench/Workbench.csproj" />
+        <Project Path="Source/Clients/Workbench.Specs/Workbench.Specs.csproj" />
         <Project Path="Source/Clients/XUnit.Integration/XUnit.Integration.csproj" />
         <Project Path="Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj" />
         <Project Path="Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj" />

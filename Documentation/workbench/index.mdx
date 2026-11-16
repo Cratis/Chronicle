@@ -67,6 +67,38 @@ Studio to use Workbench or build with Chronicle.
 
 </Steps>
 
+## Host the standalone Workbench
+
+The standalone Workbench host registered by `UseCratisChronicleWorkbench()`
+uses port `9876` and listens on all interfaces by default. Unlike the Workbench
+bundled with the kernel, this host has no authentication of its own. Use
+`localhost` for local development. When exposing it beyond your machine, put
+it behind a reverse proxy or authenticating gateway that restricts access.
+
+Configure the listener in code:
+
+<ChronicleClientTabs snippet="workbench/listener" />
+
+Or configure the same options in `appsettings.json`:
+
+```json
+{
+  "Cratis": {
+    "Chronicle": {
+      "Workbench": {
+        "Address": "localhost",
+        "Port": 9876
+      }
+    }
+  }
+}
+```
+
+A null or empty `Address` keeps the all-interface default. `localhost` binds
+both IPv4 and IPv6 loopback. Any other value must be an IP address, such as
+`127.0.0.1` or `::1`; hostnames and invalid values fail options validation on
+startup. `Port` changes the standalone listener port, not the kernel's port.
+
 ## What to inspect
 
 Confirm the selected event store and namespace before interpreting read-model

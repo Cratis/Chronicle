@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Chronicle.Workbench.Specs</AssemblyName>
+        <RootNamespace>Cratis.Chronicle.Workbench</RootNamespace>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Workbench/Workbench.csproj" />
+    </ItemGroup>
+</Project>
