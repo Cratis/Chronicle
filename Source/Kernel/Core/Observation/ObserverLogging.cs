@@ -215,13 +215,13 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
     internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
-    [LoggerMessage(LogLevel.Information, "Client {ConnectionId} disconnected; subscribed to {SubscribedConnectionIds}: {Outcome}")]
+    [LoggerMessage(LogLevel.Debug, "Client {ConnectionId} disconnected; subscribed to {SubscribedConnectionIds}: {Outcome}")]
     internal static partial void ClientDisconnectedFromObserver(this ILogger<Observer> logger, ConnectionId connectionId, string subscribedConnectionIds, string outcome);
 
-    [LoggerMessage(LogLevel.Information, "Observer unsubscribed; it is now disconnected and receives no events until a client subscribes again")]
+    [LoggerMessage(LogLevel.Debug, "Observer unsubscribed; it is now disconnected and receives no events until a client subscribes again")]
     internal static partial void Unsubscribed(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
+    [LoggerMessage(LogLevel.Debug, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
     internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
 
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]

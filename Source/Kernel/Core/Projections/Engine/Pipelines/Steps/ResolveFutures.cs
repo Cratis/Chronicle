@@ -296,6 +296,8 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
 
     async Task<bool> TryResolveFuture(IProjection projection, ProjectionEventContext context, ProjectionFuture future, HashSet<ProjectionFutureId> queuedFutures)
     {
+        // A stored future holds the event as read back from storage, not as the projection received it.
+        future = future with { Event = projection.ForProjection(future.Event) };
         try
         {
             var parentKey = ConvertParentKey(projection, future);

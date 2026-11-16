@@ -53,7 +53,7 @@ models in the graph sink (Neo4j).
 - Properties an event shares by name with a node or edge are mapped automatically, as for a model-bound graph.
 - An `every` block is applied to each `from` of its block, so a rendered declaration writes the mappings out
   under every `from` instead of in an `every`.
-- Previewing a graph projection is not supported.
+- The `Preview` request of the projections service does not preview a graph projection. The Workbench previews one in memory, see [Graph projections](../graph-projections.mdx#preview-in-the-workbench).
 - Rendering a registered graph projection, whichever client registered it, produces a declaration that
   saves unchanged.
 

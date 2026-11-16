@@ -431,7 +431,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.Pipelines.",
-            "weight": 0.012977347024332881
+            "weight": 0.01236687380581401
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.StructuredLiteralPrototype.",
@@ -460,6 +460,10 @@
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_Projection.",
             "weight": 0.0008432324252328064
+        },
+        {
+            "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDateTimes.",
+            "weight": 0.0006104732185188725
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDefinitionComparer.",

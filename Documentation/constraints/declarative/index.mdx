@@ -7,7 +7,7 @@ Declarative constraints keep an append-time rule in a dedicated class rather tha
 For a rule that belongs directly on an event type or property, start with [Model-bound constraints](../model-bound/). Both approaches send definitions to the Chronicle Kernel, where the append is checked.
 
 :::note[Client coverage]
-Kotlin and Java provide `IConstraint`/`IConstraintBuilder` and can combine different event types in one property constraint. They do not provide `RemovedWith` to release a claim, `WithName` for a custom name, or a dynamic message callback. Their unique event type API is `uniqueFor`.
+Kotlin and Java provide `IConstraint`/`IConstraintBuilder` and can combine different event types in one property constraint. Their unique event type API is `uniqueFor`.
 
 Elixir uses a standalone module with `use Chronicle.Events.Constraint`, or event-type-attribute macros in the model-bound form. Both forms support name-based grouping and releasing claims. Use the client tabs for the syntax and limits of the selected client; the .NET method names below do not imply matching APIs in every language.
 :::

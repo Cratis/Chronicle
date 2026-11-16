@@ -110,6 +110,7 @@ public class GraphProjectionPipeline(
 
         // Operations on one node or edge can come from events of many event sources, so handling is serialized per projection.
         using var handleScope = await handleLock.AcquireCoarse();
+        @event = projection.ForProjection(@event);
         var context = ProjectionEventContext.Empty(objectComparer, @event);
         var changeset = await builder.Build(@event);
         if (!changeset.HasChanges)

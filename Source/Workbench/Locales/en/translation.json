@@ -352,6 +352,7 @@
                 "empty": "No projections",
                 "actions": {
                     "new": "New",
+                    "newGraph": "New graph",
                     "save": "Save",
                     "preview": "Preview",
                     "timeMachine": "Time Machine",
@@ -367,6 +368,36 @@
                 "previewDisabledReasons": {
                     "emptyContent": "Editor is empty",
                     "validationErrors": "Fix validation errors first"
+                },
+                "graphPreview": {
+                    "notPreviewed": "Press Preview to run the events through the graph projection in memory. Nothing is saved and no graph database is needed",
+                    "summary": "{graph}: {nodes} nodes and {edges} edges from {events} events",
+                    "eventErrors": "Events the projection could not apply",
+                    "emptyNodes": "No nodes. Check that the events the projection reacts to are in the event store",
+                    "emptyEdges": "No edges",
+                    "tabs": {
+                        "nodes": "Nodes",
+                        "edges": "Edges",
+                        "view": "View"
+                    },
+                    "columns": {
+                        "label": "Label",
+                        "key": "Key",
+                        "type": "Type",
+                        "source": "Source",
+                        "target": "Target",
+                        "identity": "Identity",
+                        "properties": "Properties"
+                    },
+                    "view": {
+                        "root": "Start at",
+                        "depth": "Levels",
+                        "filterProperty": "Where",
+                        "anyProperty": "(no filter)",
+                        "filterValue": "equals",
+                        "read": "Read view",
+                        "errors": "The view could not be read"
+                    }
                 },
                 "dialogs": {
                     "unsavedChanges": {
