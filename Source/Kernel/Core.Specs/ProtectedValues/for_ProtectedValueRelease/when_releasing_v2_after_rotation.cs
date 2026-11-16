@@ -9,7 +9,7 @@ public class when_releasing_v2_after_rotation : given.a_rotated_key
 
     async Task Because() => await Release();
 
-    [Fact] void should_use_the_recorded_revision() => _released.GetValue<string>().ShouldEqual("value");
-    [Fact] void should_not_read_the_latest_key() => _storage.DidNotReceiveWithAnyArgs().TryGetLatestFor(default, default, default);
-    [Fact] void should_read_only_one_revision() => _storage.ReceivedWithAnyArgs(1).TryGetAtRevisionFor(default, default, default, default);
+    [Fact] void should_use_the_recorded_revision() => _released.GetValue<string>().ShouldEqual("\"value\"");
+    [Fact] void should_not_read_the_latest_key() => _storage.DidNotReceiveWithAnyArgs().TryGetLatestFor(Address.Item1, Address.Item2, Address.Item3);
+    [Fact] void should_read_only_one_revision() => _storage.ReceivedWithAnyArgs(1).TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, _old.Revision);
 }

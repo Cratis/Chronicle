@@ -12,5 +12,5 @@ public class when_the_key_read_fails_operationally : given.a_rotated_key
     async Task Because() => _failure = await Catch.Exception(Release);
 
     [Fact] void should_keep_the_operational_failure() => _failure.ShouldEqual(_storageFailure);
-    [Fact] void should_not_probe_older_keys() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(default, default, default, default);
+    [Fact] void should_not_probe_older_keys() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, _old.Revision);
 }

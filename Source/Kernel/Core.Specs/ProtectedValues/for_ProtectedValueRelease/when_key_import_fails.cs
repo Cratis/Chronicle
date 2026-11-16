@@ -13,5 +13,5 @@ public class when_key_import_fails : given.a_rotated_key
     async Task Because() => _failure = await Catch.Exception(Release);
 
     [Fact] void should_preserve_the_import_failure() => _failure.ShouldBeOfExactType<CryptographicException>();
-    [Fact] void should_not_try_other_revisions() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(default, default, default, default);
+    [Fact] void should_not_try_other_revisions() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, _old.Revision);
 }

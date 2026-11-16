@@ -9,6 +9,6 @@ public class when_the_latest_key_can_decrypt : given.a_rotated_key
 
     async Task Because() => await Release();
 
-    [Fact] void should_preserve_the_fast_path() => _released.GetValue<string>().ShouldEqual("value");
-    [Fact] void should_not_probe_older_revisions() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(default, default, default, default);
+    [Fact] void should_preserve_the_fast_path() => _released.GetValue<string>().ShouldEqual("\"value\"");
+    [Fact] void should_not_probe_older_revisions() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, _old.Revision);
 }

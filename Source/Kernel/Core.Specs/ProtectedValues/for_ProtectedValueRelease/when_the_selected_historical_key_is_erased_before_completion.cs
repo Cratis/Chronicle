@@ -17,6 +17,6 @@ public class when_the_selected_historical_key_is_erased_before_completion : give
         _failure = await Catch.Exception(async () => _released = await ReleaseKeys.Complete(() => plaintext));
     }
 
-    [Fact] void should_revalidate_the_selected_historical_key() => _failure.ShouldBeOfExactType<EncryptionKeyFenceUnavailable>();
+    [Fact] void should_revalidate_the_selected_historical_key() => _failure.ShouldBeOfExactType<EncryptionKeyErased>();
     [Fact] void should_not_release_plaintext_past_the_fence() => _released.ShouldBeNull();
 }

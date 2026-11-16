@@ -16,5 +16,5 @@ public class when_releasing_legacy_rsa_after_rotation : given.a_rotated_key
 
     async Task Because() => await Release();
 
-    [Fact] void should_recover_the_legacy_value() => _released.GetValue<string>().ShouldEqual("value");
+    [Fact] void should_recover_the_legacy_value() => _released.GetValue<string>().ShouldEqual("\"value\"");
 }

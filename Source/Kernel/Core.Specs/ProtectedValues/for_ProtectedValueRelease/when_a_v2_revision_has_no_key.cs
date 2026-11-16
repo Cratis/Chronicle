@@ -14,5 +14,5 @@ public class when_a_v2_revision_has_no_key : given.a_rotated_key
     async Task Because() => await Release();
 
     [Fact] void should_preserve_missing_key_semantics() => _released.ShouldBeNull();
-    [Fact] void should_not_fall_back_to_latest() => _storage.DidNotReceiveWithAnyArgs().TryGetLatestFor(default, default, default);
+    [Fact] void should_not_fall_back_to_latest() => _storage.DidNotReceiveWithAnyArgs().TryGetLatestFor(Address.Item1, Address.Item2, Address.Item3);
 }

@@ -27,7 +27,7 @@ public class and_real_key_unwrapping_fails_without_erasure : Specification
 
     async Task Because() => _error = await Catch.Exception(() => _handler.ReleaseStrict(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "owner", _value));
 
-    [Fact] void should_rethrow_the_classified_unwrap_failure() => _error.ShouldBeOfExactType<EncryptionKeyUnrecoverable>();
-    [Fact] void should_preserve_the_cryptographic_cause() => (_error!.InnerException?.InnerException is CryptographicException).ShouldBeTrue();
+    [Fact] void should_rethrow_the_original_unwrap_failure() => _error.ShouldBeOfExactType<EncryptionKeyUnwrapFailed>();
+    [Fact] void should_preserve_the_cryptographic_cause() => (_error?.InnerException is CryptographicException).ShouldBeTrue();
     [Fact] async Task should_have_no_recorded_erasure() => (await _keys.GetErasureFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "owner")).ShouldBeNull();
 }

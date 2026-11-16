@@ -67,6 +67,7 @@ internal sealed record EncryptionEnvelope
     /// <summary>Reads a prefixed envelope without falling back to raw RSA on malformed input.</summary>
     /// <param name="bytes">The prefixed value.</param>
     /// <returns>The parsed envelope.</returns>
+    /// <exception cref="CryptographicException">The envelope header, payload, or key revision is invalid.</exception>
     internal static EncryptionEnvelope Read(byte[] bytes)
     {
         if (bytes.Length < 7 || bytes[4] is not (1 or 2))

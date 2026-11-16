@@ -16,5 +16,5 @@ public class when_v1_authentication_fails : given.a_rotated_key
     async Task Because() => _failure = await Catch.Exception(Release);
 
     [Fact] void should_preserve_the_authentication_failure() => _failure.ShouldBeOfExactType<AuthenticationTagMismatchException>();
-    [Fact] void should_not_try_other_revisions() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(default, default, default, default);
+    [Fact] void should_not_try_other_revisions() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, _old.Revision);
 }

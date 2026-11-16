@@ -15,6 +15,6 @@ public class when_the_recorded_revision_is_erased : given.a_rotated_key
 
     async Task Because() => await Release();
 
-    [Fact] void should_not_fetch_erased_material() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(default, default, default, default);
+    [Fact] void should_not_fetch_erased_material() => _storage.DidNotReceiveWithAnyArgs().TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, _old.Revision);
     [Fact] void should_preserve_erased_semantics() => _released.ShouldBeNull();
 }

@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 
 namespace Cratis.Chronicle.ProtectedValues.for_EncryptedNamespaceValueHandler;
 

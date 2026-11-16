@@ -16,7 +16,7 @@ public class when_the_fallback_budget_is_exhausted : given.a_rotated_key
 
     async Task Because() => _failure = await Catch.Exception(Release);
 
-    [Fact] void should_stop_at_sixteen_older_revisions() => _storage.ReceivedWithAnyArgs(16).TryGetAtRevisionFor(default, default, default, default);
+    [Fact] void should_stop_at_sixteen_older_revisions() => _storage.ReceivedWithAnyArgs(16).TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, _old.Revision);
     [Fact] void should_not_probe_beyond_the_cap() => _storage.DidNotReceive().TryGetAtRevisionFor(Address.Item1, Address.Item2, Address.Item3, (EncryptionKeyRevision)3u);
     [Fact] void should_report_seventeen_attempts() => ((EncryptionKeyUnrecoverable)_failure).AttemptedRevisions.ShouldEqual(17);
 }

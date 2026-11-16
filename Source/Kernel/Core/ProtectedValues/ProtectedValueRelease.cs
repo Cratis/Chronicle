@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
@@ -67,7 +66,7 @@ internal sealed class ProtectedValueRelease(
         {
             return Decrypt(pair);
         }
-        catch (Exception failure) when (failure is EncryptionKeyUnwrapFailed or AuthenticationTagMismatchException)
+        catch (EncryptionKeyUnwrapFailed failure)
         {
             throw new EncryptionKeyUnrecoverable(1, failure);
         }

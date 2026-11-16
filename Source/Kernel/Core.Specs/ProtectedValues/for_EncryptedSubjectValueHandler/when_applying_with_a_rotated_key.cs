@@ -12,7 +12,7 @@ public class when_applying_with_a_rotated_key : given.a_property_handler
 {
     void Establish()
     {
-        _store.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.Default, "subject").Returns(new EncryptionKeyAtRevision(_key, 8));
+        _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.Default, EncryptedValueKeyIdentifiers.ForSubject("subject")).Returns(new EncryptionKeyAtRevision(_key, 8));
         _encryption.Encrypt(Arg.Any<byte[]>(), _key, (EncryptionKeyRevision)8u).Returns([1]);
     }
 
