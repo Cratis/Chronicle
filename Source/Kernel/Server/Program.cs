@@ -388,6 +388,7 @@ hostBuilder
        }
 
        ClusterEndpointConfiguration.Configure(_, clustering);
+       ClusterTransportSecurity.Configure(_, clustering, chronicleOptions.Tls, reloadingCertificate, logger);
 
        // Applies to all clustering types, and to calls a silo makes to itself as well as to a
        // sibling. Startup work that fans out across everything the server holds grows with the

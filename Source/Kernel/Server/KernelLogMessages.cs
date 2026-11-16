@@ -16,6 +16,15 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Information, "TLS certificate loaded successfully. Server will use HTTPS")]
     internal static partial void TlsCertificateLoaded(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Information, "Silo and gateway traffic is encrypted and authenticated with the TLS certificate")]
+    internal static partial void ClusterTrafficEncrypted(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Silo and gateway traffic is not encrypted because no TLS certificate file is configured (Tls:CertificatePath)")]
+    internal static partial void ClusterTrafficNotEncrypted(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Information, "Silo and gateway traffic is not encrypted by Chronicle because Clustering:TlsEnabled is false")]
+    internal static partial void ClusterTrafficTlsDisabled(this ILogger<Kernel> logger);
+
     [LoggerMessage(LogLevel.Information, "TLS certificate reloaded from disk. Subject {Subject}, thumbprint {Thumbprint}, valid until {NotAfter}")]
     internal static partial void TlsCertificateReloaded(this ILogger<Kernel> logger, string subject, string thumbprint, DateTimeOffset notAfter);
 
