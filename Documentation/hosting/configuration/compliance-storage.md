@@ -171,6 +171,14 @@ Every path written by this version starts with the root `k1`, so it can never be
 
 Each revision is an independent secret, which means individual revisions can be deleted without affecting others (for example, when rotating keys or when the full key history is required for a limited time).
 
+The kernel's own secrets, such as the hosted federation authority key and the secret mutation receipts are keyed from, are stored apart from encryption keys, at:
+
+```text
+secret/k1/~internal/<event-store>/<purpose>
+```
+
+No event store segment can be `~internal`, so no encryption key address reaches them, and the compliance surface can neither read nor erase them. Each is written once and never replaced. The policy below already covers them.
+
 Each of `<event-store>`, `<namespace>` and `<identifier>` is a single path segment. Letters, digits and `- _ . @ + = , : $` are kept as they are. Every other character, including `/`, `~` and every non-ASCII character, is written as `~XX` for each of its UTF-8 bytes in uppercase hexadecimal, and so is a trailing `.`. Ordinary identifiers such as GUIDs are therefore unchanged. A segment must not be empty and is at most 1,024 bytes of UTF-8.
 
 Keys stored by earlier versions, at `secret/<event-store>/<namespace>/<identifier>/<revision>`, are still read, and removed together with the key, when each of the three parts is made of the characters that are kept as they are, `~`, and letters, marks and digits outside ASCII, and does not end in `.`. A path of that kind has exactly three segments, so it belongs to one address only. For any other address, an earlier key is not read: see [Upgrading keys stored under earlier names](#upgrading-keys-stored-under-earlier-names). New keys are always written under `k1`.

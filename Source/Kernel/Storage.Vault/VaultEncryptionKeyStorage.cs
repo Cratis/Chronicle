@@ -32,8 +32,7 @@ namespace Cratis.Chronicle.Storage.Vault;
 /// that can belong to one address only. Earlier paths are never written.
 /// </para>
 /// <para>
-/// Kernel-internal secrets are not supported yet: <see cref="IEncryptionKeyStorage.GetOrAddInternalSecretFor"/> keeps its
-/// default and throws <see cref="InternalSecretsNotSupported"/>, so features that depend on one fail closed.
+/// Kernel-internal secrets are stored apart from subject keys, under <see cref="VaultPathSegments.InternalSecretPath"/>.
 /// </para>
 /// </remarks>
 public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
@@ -264,6 +263,32 @@ public class VaultEncryptionKeyStorage : IEncryptionKeyStorage
         }
 
         await WriteErasure(locations, erasure with { NewKeyAllowed = true });
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The secret is stored at <see cref="VaultPathSegments.InternalSecretPath"/>, under a segment no encoded event store can be, so
+    /// no subject key address reaches it. It is written with a KV v2 check-and-set of zero: concurrent creators converge on the
+    /// secret that was written first, and a stored secret is never replaced.
+    /// </remarks>
+    public async Task<EncryptionKey> GetOrAddInternalSecretFor(EventStoreName eventStore, InternalSecretPurpose purpose, EncryptionKey candidate)
+    {
+        var path = VaultPathSegments.InternalSecretPath(eventStore.Value, purpose.Value);
+        if (await ReadKey(path) is { } existing)
+        {
+            return existing;
+        }
+
+        await EnsureLayoutProven();
+        try
+        {
+            await _vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(path, KeyData(candidate), checkAndSet: 0, mountPoint: _mountPoint);
+            return candidate;
+        }
+        catch (VaultApiException ex) when (IsCheckAndSetMismatch(ex))
+        {
+            return await ReadKey(path) ?? throw new InternalSecretProvisioningConflict(purpose);
+        }
     }
 
     /// <summary>
