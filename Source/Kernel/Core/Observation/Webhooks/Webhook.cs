@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Recommendations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Providers;
@@ -56,7 +57,7 @@ public class Webhook(
             }
             else
             {
-                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames, definition);
             }
         }
     }
@@ -91,7 +92,7 @@ public class Webhook(
         }
     }
 
-    async Task AddReplayRecommendationForAllNamespaces(WebhookKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    async Task AddReplayRecommendationForAllNamespaces(WebhookKey key, IEnumerable<EventStoreNamespaceName> namespaces, WebhookDefinition definition)
     {
         foreach (var @namespace in namespaces)
         {
@@ -104,6 +105,7 @@ public class Webhook(
                 {
                     ObserverId = key.WebhookId,
                     ObserverKey = new(key.WebhookId, key.EventStore, @namespace, State.EventSequenceId),
+                    ChangeId = DefinitionChangeIdentity.For(definition),
                     Reasons = [new WebhookDefinitionChangedReplayCandidateReason()]
                 });
         }

@@ -161,6 +161,45 @@ class ArtifactHandoff(unittest.TestCase):
         self.assertIn("runtimeconfig.json", failure.stdout)
 
 
+class WorkbenchYarnCacheOnMain(unittest.TestCase):
+    """Pull requests only restore the yarn cache, so main must save one they can hit."""
+
+    def setUp(self):
+        workflow = yaml.load((ROOT / ".github/workflows/workbench-yarn-cache.yml").read_text(), Loader=yaml.BaseLoader)
+        self.trigger = workflow["on"]
+        self.steps = workflow["jobs"]["save-yarn-cache"]["steps"]
+        self.restore = action_steps("workbench", "actions/cache/restore")[0]
+
+    def uses(self, action):
+        return [step for step in self.steps if step.get("uses", "").startswith(action + "@")]
+
+    def test_runs_on_pushes_to_main_only(self):
+        self.assertEqual(["main"], self.trigger["push"]["branches"])
+        self.assertNotIn("pull_request", self.trigger)
+        self.assertNotIn("pull_request_target", self.trigger)
+
+    def test_saves_exactly_the_paths_and_key_pull_requests_restore(self):
+        lookup, = self.uses("actions/cache/restore")
+        save, = self.uses("actions/cache/save")
+        self.assertEqual(self.restore["with"]["key"], lookup["with"]["key"])
+        self.assertEqual("${{ steps.%s.outputs.cache-primary-key }}" % lookup["id"], save["with"]["key"])
+        self.assertEqual(self.restore["with"]["path"], lookup["with"]["path"])
+        self.assertEqual(self.restore["with"]["path"], save["with"]["path"])
+
+    def test_resolves_the_yarn_cache_directory_the_same_way(self):
+        def directory_step(steps):
+            return next(step for step in steps if step.get("id") == "yarn-cache-dir-path")
+
+        def setup_node_index(steps):
+            return next(index for index, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
+
+        pull_request = JOBS["workbench"]["steps"]
+        self.assertEqual(directory_step(pull_request)["run"], directory_step(self.steps)["run"])
+        self.assertNotIn("working-directory", directory_step(self.steps))
+        self.assertLess(self.steps.index(directory_step(self.steps)), setup_node_index(self.steps))
+        self.assertLess(pull_request.index(directory_step(pull_request)), setup_node_index(pull_request))
+
+
 class NightlyFeedHandoff(unittest.TestCase):
     def setUp(self):
         (ROOT / '.ai-work').mkdir(exist_ok=True)
