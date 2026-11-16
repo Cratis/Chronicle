@@ -2,7 +2,7 @@
     "version": 1,
     "units": "seconds",
     "date": "2026-11-12",
-    "method": "Train 8 run 43190307308: explicit Spec project completed seconds including validation from all three ordinary shards. Core namespace weights are calibrated within each old part by (wall seconds - 55) / predicted weight, then normalized. Core variable time is conserved; each new part pays 55 seconds fixed overhead. Shard overhead is the mean coverage-step duration minus logged project wall times. Predictions are hypotheses, not observed savings.",
+    "method": "Train 8 run 43190307308: explicit Spec project completed seconds including validation from all three ordinary shards. Core namespace weights are calibrated within each old part by (wall seconds - 55) / predicted weight, then normalized. Core variable time is conserved; each new part pays 55 seconds fixed overhead. Shard overhead is the mean coverage-step duration minus logged project wall times. Predictions are hypotheses, not observed savings. Workbench.Specs measured locally on 2026-11-16 with the executable runner and TRX validation, without coverage.",
     "samples": [
         {
             "run": "43190307308",
@@ -69,6 +69,10 @@
         {
             "project": "Source/Clients/Testing.Specs/Testing.Specs.csproj",
             "seconds": 48.04
+        },
+        {
+            "project": "Source/Clients/Workbench.Specs/Workbench.Specs.csproj",
+            "seconds": 0.337
         },
         {
             "project": "Source/Clients/XUnit.Integration.Specs/XUnit.Integration.Specs.csproj",

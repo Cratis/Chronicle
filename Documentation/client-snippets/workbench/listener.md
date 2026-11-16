@@ -1,9 +1,16 @@
 ```csharp
 using Cratis.Chronicle.Workbench;
+using Microsoft.AspNetCore.Builder;
 
-builder.UseCratisChronicleWorkbench(options =>
+public static class WorkbenchListenerConfiguration
 {
-    options.Address = "localhost";
-    options.Port = 9876;
-});
+    public static void Configure(WebApplicationBuilder builder)
+    {
+        builder.UseCratisChronicleWorkbench(options =>
+        {
+            options.Address = "localhost";
+            options.Port = 9876;
+        });
+    }
+}
 ```
