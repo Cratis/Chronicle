@@ -55,14 +55,3 @@ public class a_reloading_certificate : Specification
         return X509CertificateLoader.LoadPkcs12(created.Export(X509ContentType.Pkcs12, "pw"), "pw", X509KeyStorageFlags.Exportable);
     }
 }
-
-public class ManualTime : TimeProvider
-{
-    long _timestamp;
-
-    public override long TimestampFrequency => 1000;
-
-    public override long GetTimestamp() => _timestamp;
-
-    public void Advance(TimeSpan span) => _timestamp += (long)span.TotalMilliseconds;
-}
