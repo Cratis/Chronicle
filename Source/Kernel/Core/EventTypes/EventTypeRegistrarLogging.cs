@@ -7,6 +7,9 @@ namespace Cratis.Chronicle.EventTypes;
 
 internal static partial class EventTypeRegistrarLogging
 {
+    [LoggerMessage(LogLevel.Information, "Event type {EventTypeId} generation {Generation} schema evolved in place ({Classification}).")]
+    internal static partial void EventTypeSchemaEvolved(this ILogger<EventTypeRegistrar> logger, string eventTypeId, uint generation, string classification);
+
     [LoggerMessage(LogLevel.Warning, "Protection metadata added to event type {EventTypeId} generation {Generation} at {PropertyPath}. Earlier events remain plaintext and must be redacted if required.")]
     internal static partial void ComplianceMetadataAddedToExistingGeneration(this ILogger<EventTypeRegistrar> logger, string eventTypeId, uint generation, string propertyPath);
 }

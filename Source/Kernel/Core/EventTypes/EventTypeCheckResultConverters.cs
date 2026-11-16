@@ -21,6 +21,7 @@ public static class EventTypeCheckResultConverters
             Accepted = result.Accepted,
             Reason = result.Reason,
             Keyword = result.Keyword,
-            Path = result.Path
+            Path = result.Path,
+            Classification = result.Classification
         };
 }

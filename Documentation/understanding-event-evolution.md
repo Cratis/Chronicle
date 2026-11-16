@@ -7,6 +7,16 @@ Cratis Chronicle event generations let readers use different versions of an even
 
 Use generations for a schema change to the same business fact. The migration defines the translation; it cannot infer information the original event did not record. For example, splitting a person's name requires a deliberate rule for names that do not fit a first-name/last-name pattern.
 
+## Optional in-place additions
+
+By default, a schema change requires a new generation. A server administrator can opt an event store into [additive schema evolution](hosting/configuration/root-properties.md#additive-event-type-schema-evolution). This policy is server-side, applies only to the named event stores, and never applies to kernel-owned event types.
+
+With the policy enabled, a client can add properties to an existing generation when each new property is optional, nullable, or has an explicit default. Optional properties can also be added inside existing objects. Existing properties, their types, required status, constraints, formats, array items, and protection metadata cannot be removed or changed. Existing tolerated changes, including annotations, nullability markers, enum additions and protection metadata additions, remain tolerated.
+
+The kernel conditionally replaces the registered schema, invalidates schema caches across the cluster, and records an `EventTypeSchemaEvolved` system event and log entry. It does not rewrite historical payloads, create a generation, or start a backfill. Readers must handle missing values in older events. A repeated registration does not evolve the schema again. An older client may register a compatible subset missing only optional properties without removing them from the stored schema, but only in an opted-in event store.
+
+The read-only registration check reports `Identical`, `Tolerated`, `Additive`, or `Breaking` independently of whether the policy accepts the change. Breaking changes still require a new generation. Concurrent conflicting registrations are rejected rather than overwriting another client's change.
+
 ## Translate, never edit
 
 Each schema version of an event type is a generation. You define translations between adjacent generations in both directions: an upcast turns an older shape into a newer one, and a downcast turns the newer shape back into the older one. These mappings determine what each reader receives; do not assume that an automatically reversible transformation exists for every change.

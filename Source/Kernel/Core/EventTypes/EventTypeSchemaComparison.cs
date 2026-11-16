@@ -17,8 +17,9 @@ static class EventTypeSchemaComparison
     /// </summary>
     /// <param name="eventType">The incoming registration.</param>
     /// <param name="storedDefinition">The stored definition, if any.</param>
+    /// <param name="allowEvolution">Whether additive evolution and older-client subsets are allowed.</param>
     /// <returns>The <see cref="SchemaProblem"/>, or <see langword="null"/> when nothing stored would change.</returns>
-    internal static async Task<SchemaProblem?> FindProblem(EventTypeRegistration eventType, Concepts.Events.EventTypeDefinition? storedDefinition)
+    internal static async Task<SchemaProblem?> FindProblem(EventTypeRegistration eventType, Concepts.Events.EventTypeDefinition? storedDefinition, bool allowEvolution = false)
     {
         if (storedDefinition is null)
         {
@@ -29,7 +30,7 @@ static class EventTypeSchemaComparison
             [new Contracts.Events.EventTypeGenerationDefinition { Generation = eventType.Type.Generation, Schema = eventType.Schema }];
         foreach (var genDef in definitions)
         {
-            if (await FindDifferenceInGeneration(storedDefinition, genDef) is { } problem)
+            if (await FindDifferenceInGeneration(storedDefinition, genDef, allowEvolution) is { } problem)
             {
                 return problem;
             }
@@ -38,7 +39,7 @@ static class EventTypeSchemaComparison
         return null;
     }
 
-    static async Task<SchemaProblem?> FindDifferenceInGeneration(Concepts.Events.EventTypeDefinition storedDefinition, Contracts.Events.EventTypeGenerationDefinition genDef)
+    static async Task<SchemaProblem?> FindDifferenceInGeneration(Concepts.Events.EventTypeDefinition storedDefinition, Contracts.Events.EventTypeGenerationDefinition genDef, bool allowEvolution)
     {
         var generation = new EventTypeGeneration(genDef.Generation);
         var existingGeneration = storedDefinition.Generations.FirstOrDefault(_ => _.Generation == generation);
@@ -60,6 +61,11 @@ static class EventTypeSchemaComparison
         // that only gained members or had members renamed - neither moves an existing member off the
         // underlying value a stored payload carries. Everything else, including a member that disappeared or
         // was renumbered, still needs a new generation.
+        if (allowEvolution && SchemaEvolution.Classify(existingGeneration.Schema, newSchema) is SchemaEvolutionKind.Additive or SchemaEvolutionKind.Subset)
+        {
+            return null;
+        }
+
         var refined = existingGeneration.Schema.MorePrecise(newSchema);
         return existingGeneration.Schema.DifferingKeywords(refined) is { } difference
             ? new SchemaProblem(genDef.Generation, difference)

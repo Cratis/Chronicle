@@ -37,7 +37,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
 
-        var existingEventType = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == type.Id);
+        var existingEventType = await scope.DbContext.EventTypes.AsNoTracking().FirstOrDefaultAsync(_ => _.Id == type.Id);
 
         // Unspecified means the client said nothing, which must not undo what a newer client declared.
         if (visibility == EventTypeVisibility.Unspecified && existingEventType is not null)
@@ -45,26 +45,17 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             visibility = existingEventType.Visibility;
         }
 
-        if (existingEventType is not null &&
-            existingEventType.Owner == owner && existingEventType.Source == source && existingEventType.Tombstone == type.Tombstone &&
-            existingEventType.Visibility == visibility && existingEventType.Origin == origin &&
+        var eventSchema = new EventTypeSchema(type, owner, source, schema, visibility, origin);
+        var eventType = PreserveStoredContent(existingEventType, eventSchema.ToSql());
+        if (existingEventType is not null && HasSameMetadata(existingEventType, eventType) &&
             existingEventType.Schemas.TryGetValue(type.Generation, out var storedSchema) &&
             JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(storedSchema, schema.ToJson()))
         {
             return false;
         }
 
-        var eventSchema = new EventTypeSchema(type, owner, source, schema, visibility, origin);
-        if (_eventTypes.Any(_ => _.Id == type.Id))
-        {
-            _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type.Id));
-        }
-        var eventType = PreserveStoredContent(existingEventType, eventSchema.ToSql());
         eventType.MigrationVersionsJson = existingEventType?.MigrationVersionsJson ?? "{}";
-        _eventTypes.Add(eventType);
-
-        await scope.DbContext.EventTypes.Upsert(eventType);
-        InvalidateDefinition(eventType.Id);
+        await SaveRegistration(scope.DbContext, existingEventType, eventType);
         return true;
     }
 
@@ -73,7 +64,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
 
-        var existing = await scope.DbContext.EventTypes.FirstOrDefaultAsync(_ => _.Id == definition.Id);
+        var existing = await scope.DbContext.EventTypes.AsNoTracking().FirstOrDefaultAsync(_ => _.Id == definition.Id);
         var migrationsJson = PrepareMigrations(existing, definition.Migrations);
 
         // Serialize the effective chain before ToSql's legacy fallback can turn a failed write into an empty list.
@@ -88,8 +79,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
 
             eventType.Schemas = MergeSchemas(existing.Schemas, eventType.Schemas);
 
-            if (existing.Owner == eventType.Owner && existing.Source == eventType.Source &&
-                existing.Tombstone == eventType.Tombstone && existing.MigrationsJson == eventType.MigrationsJson &&
+            if (HasSameMetadata(existing, eventType) && existing.MigrationsJson == eventType.MigrationsJson &&
                 existing.Schemas.Count == eventType.Schemas.Count &&
                 eventType.Schemas.All(_ => existing.Schemas.TryGetValue(_.Key, out var storedSchema) && storedSchema == _.Value))
             {
@@ -97,11 +87,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
             }
         }
 
-        _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != definition.Id));
-        _eventTypes.Add(eventType);
-
-        await scope.DbContext.EventTypes.Upsert(eventType);
-        InvalidateDefinition(definition.Id);
+        await SaveRegistration(scope.DbContext, existing, eventType);
         return true;
     }
 
@@ -285,6 +271,10 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         incoming.MigrationsJson = existing.MigrationsJson;
         return incoming;
     }
+
+    static bool HasSameMetadata(EventType left, EventType right) =>
+        (left.Owner, left.Source, left.Tombstone, left.Visibility, left.Origin) ==
+        (right.Owner, right.Source, right.Tombstone, right.Visibility, right.Origin);
 
     static Dictionary<uint, string> MergeSchemas(IDictionary<uint, string> stored, IDictionary<uint, string> incoming)
     {

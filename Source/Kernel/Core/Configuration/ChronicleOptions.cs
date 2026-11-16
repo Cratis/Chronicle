@@ -81,6 +81,13 @@ public class ChronicleOptions : IValidatableObject
     public Events Events { get; init; } = new Events();
 
     /// <summary>
+    /// Gets the event stores where client-owned event types may evolve additively in an existing generation.
+    /// Empty by default. Kernel and system event types always retain strict generation validation.
+    /// Configure array entries through Cratis__Chronicle__AdditiveEventTypeSchemaEvolutionEventStores__0.
+    /// </summary>
+    public IEnumerable<string> AdditiveEventTypeSchemaEvolutionEventStores { get; init; } = [];
+
+    /// <summary>
     /// Gets the shared shutdown drain configuration.
     /// </summary>
     public Shutdown Shutdown { get; init; } = new();
