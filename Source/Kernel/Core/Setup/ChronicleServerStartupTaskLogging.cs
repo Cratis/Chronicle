@@ -13,6 +13,12 @@ namespace Orleans.Hosting;
 /// </summary>
 internal static partial class ChronicleServerStartupTaskLogging
 {
+    [LoggerMessage(LogLevel.Information, "Pruned {Count} orphaned recommendation(s) for event store '{EventStore}' namespace '{Namespace}'")]
+    internal static partial void PrunedOrphanedRecommendations(this ILogger<ChronicleServerStartupTask> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, int count);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to prune orphaned recommendations for event store '{EventStore}' namespace '{Namespace}'")]
+    internal static partial void PruningOrphanedRecommendationsFailed(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
     [LoggerMessage(LogLevel.Error, "Kernel projection registration for event store '{EventStore}' exhausted {MaxAttempts} startup attempts. The silo will start and keep retrying in the background; registration health stays degraded until it succeeds.")]
     internal static partial void DeferringKernelProjectionRegistration(this ILogger<ChronicleServerStartupTask> logger, EventStoreName eventStore, int maxAttempts);
 
