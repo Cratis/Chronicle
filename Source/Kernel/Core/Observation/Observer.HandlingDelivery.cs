@@ -180,6 +180,19 @@ public partial class Observer
     bool CanRetryDisconnectedClient(ObserverSubscriberResult result, ObserverSubscriberTarget target) =>
         result.State == ObserverSubscriberState.Disconnected && target.ConnectedClient is not null && _subscription.Targets.Count > 1;
 
+    static Dictionary<EventTypeId, EventCount> CountHandledByEventType(AppendedEvent[] events, EventSequenceNumber lastHandled)
+    {
+        var counts = new Dictionary<EventTypeId, EventCount>();
+        foreach (var @event in events)
+        {
+            if (@event.Context.SequenceNumber > lastHandled) continue;
+            var eventTypeId = @event.Context.EventType.Id;
+            counts[eventTypeId] = counts.GetValueOrDefault(eventTypeId, EventCount.Zero) + 1UL;
+        }
+
+        return counts;
+    }
+
     void RecordHandledProgress(ObserverSubscriberResult result, AppendedEvent[] decryptedEvents, EventSequenceNumber observedTail, ref HandlingOutcome outcome)
     {
         State = State with
@@ -193,8 +206,7 @@ public partial class Observer
         {
             LastHandledEventSequenceNumber = shouldSetLastHandled ? result.LastSuccessfulObservation : previousLastHandled,
         };
-        var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
-        outcome.HandledCounts = handledEvents.CountByEventType();
+        outcome.HandledCounts = CountHandledByEventType(decryptedEvents, result.LastSuccessfulObservation);
         State = WithIncrementedRunningTotals(State, outcome.HandledCounts);
         RecordedHandlingState();
     }

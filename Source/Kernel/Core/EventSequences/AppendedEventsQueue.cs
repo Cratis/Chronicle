@@ -810,7 +810,12 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     bool CanRouteSubscription(AppendedEventsQueueObserverSubscription subscription)
     {
         if (_isDisposed || _isResetting) return false;
-        return _subscriptions.Exists(candidate => ReferenceEquals(candidate, subscription));
+        foreach (var candidate in _subscriptions)
+        {
+            if (ReferenceEquals(candidate, subscription)) return true;
+        }
+
+        return false;
     }
 
     AppendedEventsQueueObserverLane GetOrCreateLane(AppendedEventsQueueObserverSubscription subscription)
