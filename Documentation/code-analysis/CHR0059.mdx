@@ -1,0 +1,24 @@
+---
+title: "CHR0059: Self reducer lifecycle hook signature must match allowed signatures"
+description: "CHR0059 reports a replay hook on a self-reducing read model that has an invalid or duplicated declaration."
+---
+
+## Rule description
+
+A self-reducing read model can declare the optional static replay hooks `BeginReplay`, `EndReplay`, `BeginReplayPartition` and `EndReplayPartition`. Each hook must be unique, `public static`, non-generic and return `Task`. Its parameters must be ordinary parameters without modifiers such as `ref` or `out`.
+
+The two `Partition` hooks take `Partition` as the first parameter. Every other parameter is a service, so it must be a class or interface type other than the read model, `Partition`, `EventContext` or an event type.
+
+The rule reports each hook that breaks one of these requirements, and every overload when a hook name is declared more than once.
+
+## Severity
+
+Error
+
+## How to fix
+
+Declare each hook once as `public static Task`. Keep `Partition` as the first parameter of the partition hooks, and limit the remaining parameters to services.
+
+## Related topics
+
+- [Self-reducing read models](../reducers/self-reducing-read-models.mdx)

@@ -90,14 +90,14 @@ The server and its generated password are shared with the Client suite through `
 
 ```bash
 dotnet build Integration/Neo4j/Neo4j.csproj -p:DisableDockerBuild=true
-dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+dotnet Integration/Neo4j/bin/Debug/net11.0/Cratis.Chronicle.Neo4j.Integration.dll
 ```
 
 It runs against `neo4j:5-community` in single database mode, where every namespace shares one database and is stamped on every node and edge. To run it with a database per namespace, point it at an Enterprise image, which accepts the Neo4j Evaluation Agreement for now (see [Cratis/Chronicle#5739](https://github.com/Cratis/Chronicle/issues/5739)):
 
 ```bash
 CHRONICLE_NEO4J_IMAGE=neo4j:5-enterprise CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace \
-    dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+    dotnet Integration/Neo4j/bin/Debug/net11.0/Cratis.Chronicle.Neo4j.Integration.dll
 ```
 
 Asking for `PerNamespace` on an image with one database fails the fixture with a message naming the image. Specifications whose outcome depends on the mode assert the outcome of the mode they run in, so both lanes run the same specifications.

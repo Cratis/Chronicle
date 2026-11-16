@@ -1,0 +1,21 @@
+---
+title: "CHR0058: Self reducer method signature must match allowed signatures"
+description: "CHR0058 warns when a Reduce method on a self-reducing read model has a signature Chronicle does not accept."
+---
+
+## Rule description
+
+A self-reducing read model folds events with public static methods named `Reduce`. Chronicle only accepts `Reduce(event, current)` or `Reduce(event, current, EventContext)`, where `current` is the nullable read model type and the return type is the read model or `Task` of the read model. The rule reports a `Reduce` method that is declared on such a model, or is close to that shape, but does not match, so Chronicle would not use it.
+
+## Severity
+
+Warning
+
+## How to fix
+
+Make the method `public static`, put the event first, the nullable current model second and an optional `EventContext` third, and return the read model or `Task` of the read model. Batch methods have their own rule, [CHR0076](CHR0076.mdx).
+
+## Related topics
+
+- [Self-reducing read models](../reducers/self-reducing-read-models.mdx)
+- [CHR0065](CHR0065.mdx)
