@@ -30,7 +30,7 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="LastError">The last error of the inbound direction, empty when there is none.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Federation)]
-[Authorize(Policy = WellKnownAuthorizationPolicies.Administrator)]
+[Authorize(Policy = WellKnownAuthorizationPolicies.FederationManagement)]
 public record FederationSubjectLink(
     string Subject,
     bool Connected,

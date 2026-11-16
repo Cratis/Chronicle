@@ -42,6 +42,13 @@ public class FederationHostedOptions
     public TimeSpan ListenerCertificateLifetime { get; init; } = TimeSpan.FromDays(30);
 
     /// <summary>
+    /// Gets or inits the client ids of applications that are granted only the kernel capability to manage this kernel's hosted federation:
+    /// creating, listing and revoking enrollments, listing issued certificates, and managing and reading subject policies and links.
+    /// Nothing else an administrator can do is granted. Defaults to none.
+    /// </summary>
+    public IEnumerable<string> Applications { get; init; } = [];
+
+    /// <summary>
     /// Gets or inits how many enrollment and renewal requests one source address may make per minute. Defaults to 10.
     /// </summary>
     public int RequestsPerMinutePerSource { get; init; } = 10;

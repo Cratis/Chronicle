@@ -83,6 +83,7 @@ public static class ServiceCollectionExtensions
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.FederationEnrollment);
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.FederationManagement);
 
             // The sign-in controllers need the Identity stack skipped above, so they are left out of MVC rather
             // than mapped and failing with a 500 when activated. Their routes answer 404, like the Identity API.
@@ -191,7 +192,8 @@ public static class ServiceCollectionExtensions
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder
         .AddPolicy(WellKnownAuthorizationPolicies.Administrator, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new AdministratorRequirement()))
         .AddPolicy(WellKnownAuthorizationPolicies.AdministratorOperations, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new SystemStoreOperationRequirement()))
-        .AddPolicy(WellKnownAuthorizationPolicies.FederationEnrollment, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new FederationEnrollmentRequirement()));
+        .AddPolicy(WellKnownAuthorizationPolicies.FederationEnrollment, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new FederationEnrollmentRequirement()))
+        .AddPolicy(WellKnownAuthorizationPolicies.FederationManagement, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new FederationManagementRequirement()));
 
     /// <summary>
     /// Shapes an administrator policy. With authentication disabled there are no schemes and the handlers decide alone;

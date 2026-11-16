@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="AllPublic">Whether the entry covers every public event type.</param>
 /// <param name="EventTypes">The specific event types allowed when <paramref name="AllPublic"/> is false.</param>
 [Command]
-[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.FederationManagement)]
 [BelongsTo(WellKnownServices.Federation)]
 public record SetFederationPolicy(string Subject, FederationDirection Direction, string EventStore, string Namespace, bool AllPublic, IEnumerable<string> EventTypes)
 {

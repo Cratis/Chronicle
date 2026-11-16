@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="Subject">The opaque subject.</param>
 /// <param name="Direction">The direction to revoke, seen from this kernel.</param>
 [Command]
-[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.FederationManagement)]
 [BelongsTo(WellKnownServices.Federation)]
 public record RevokeFederationPolicyDirection(string Subject, FederationDirection Direction)
 {

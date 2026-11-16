@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="Subject">The opaque subject the enrollment is for. It becomes the customer part of the identity.</param>
 /// <param name="Instance">The kernel instance the identity is issued for. Empty to generate one.</param>
 [Command]
-[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.FederationManagement)]
 [BelongsTo(WellKnownServices.Federation)]
 public record CreateFederationEnrollment(string Subject, string Instance)
 {

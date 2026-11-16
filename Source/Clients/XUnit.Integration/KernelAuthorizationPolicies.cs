@@ -29,5 +29,6 @@ static class KernelAuthorizationPolicies
         services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
         services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
         services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.FederationEnrollment);
+        services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.FederationManagement);
     }
 }

@@ -33,11 +33,13 @@ public static class AdministratorAuthorizationServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, AdministratorAuthorizationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, SystemStoreOperationAuthorizationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, FederationEnrollmentAuthorizationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAuthorizationHandler, FederationManagementAuthorizationHandler>());
         services.PostConfigure<AuthorizationOptions>(options =>
         {
             EnsurePolicy<AdministratorRequirement>(options, WellKnownAuthorizationPolicies.Administrator);
             EnsurePolicy<SystemStoreOperationRequirement>(options, WellKnownAuthorizationPolicies.AdministratorOperations);
             EnsurePolicy<FederationEnrollmentRequirement>(options, WellKnownAuthorizationPolicies.FederationEnrollment);
+            EnsurePolicy<FederationManagementRequirement>(options, WellKnownAuthorizationPolicies.FederationManagement);
         });
         return services;
     }
