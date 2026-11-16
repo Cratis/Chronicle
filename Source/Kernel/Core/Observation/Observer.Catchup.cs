@@ -18,6 +18,7 @@ public partial class Observer
     const int MinimumZeroWorkLapsBeforeBackingOff = 2;
     static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
     static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
+    static readonly TimeSpan[] _shortCatchUpRetryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5)];
 
     int _partitionHoldsVersion;
 
@@ -227,8 +228,7 @@ public partial class Observer
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.ExceptWith(releasable);
-        if (lastScannedEventSequenceNumber.IsActualValue &&
-            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber))
+        if (HasScannedUpToNext(lastScannedEventSequenceNumber))
         {
             State = State with { NextEventSequenceNumber = lastScannedEventSequenceNumber.Next() };
         }
@@ -240,19 +240,20 @@ public partial class Observer
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
-        var settleInObserving = NoteCatchUpLap(madeProgress);
+        await ContinueAfterCatchUpLap(await NoteCatchUpLap(madeProgress));
+    }
 
-        if (IsRetired || _removed) return;
-        if (!IsQuarantined)
+    async Task ContinueAfterCatchUpLap(bool settleInObserving)
+    {
+        if (IsCatchUpEnded()) return;
+
+        if (settleInObserving)
         {
-            if (settleInObserving)
-            {
-                await SettleCatchUpInObserving();
-            }
-            else
-            {
-                await TransitionTo<Routing>();
-            }
+            await SettleCatchUpInObserving();
+        }
+        else
+        {
+            await TransitionTo<Routing>();
         }
     }
 
@@ -265,8 +266,11 @@ public partial class Observer
     bool CatchUpMadeProgress(EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber) =>
         (lastHandledEventSequenceNumber.IsActualValue &&
             (!State.LastHandledEventSequenceNumber.IsActualValue || lastHandledEventSequenceNumber > State.LastHandledEventSequenceNumber)) ||
-        (lastScannedEventSequenceNumber.IsActualValue &&
-            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber));
+        HasScannedUpToNext(lastScannedEventSequenceNumber);
+
+    bool HasScannedUpToNext(EventSequenceNumber lastScannedEventSequenceNumber) =>
+        lastScannedEventSequenceNumber.IsActualValue &&
+            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber);
 
     /// <summary>
     /// Records the outcome of a concluded catch-up lap.
@@ -276,20 +280,29 @@ public partial class Observer
     /// <remarks>
     /// A lap that moved nothing reaches the same verdict when routed again, so it neither resets the consecutive
     /// recovery count nor gets to start the next lap right away: from the second consecutive one the observer settles
-    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed.
+    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed. When that lap would
+    /// settle while events of the observer's types still exist from where it is, a few short retries come first (#5351):
+    /// they hold the observer in observing for the length of the retry delay and are not counted towards the backoff.
     /// </remarks>
-    bool NoteCatchUpLap(bool madeProgress)
+    async Task<bool> NoteCatchUpLap(bool madeProgress)
     {
+        CancelShortCatchUpRetry();
         if (madeProgress)
         {
             _catchupRecoveryAttempts = 0;
             _zeroWorkCatchUps = 0;
+            _shortCatchUpRetries = 0;
             _catchUpBackoffUntil = default;
             return false;
         }
 
-        _zeroWorkCatchUps++;
         _metrics?.ZeroWorkCatchUp();
+        if (_zeroWorkCatchUps + 1 >= MinimumZeroWorkLapsBeforeBackingOff && await ScheduleShortCatchUpRetry())
+        {
+            return true;
+        }
+
+        _zeroWorkCatchUps++;
         logger.CatchUpProducedNoWork(_zeroWorkCatchUps);
         if (_zeroWorkCatchUps < MinimumZeroWorkLapsBeforeBackingOff)
         {
@@ -301,6 +314,85 @@ public partial class Observer
         _catchUpBackoffUntil = DateTimeOffset.UtcNow + backoff;
         return true;
     }
+
+    void CancelShortCatchUpRetry()
+    {
+        _shortCatchUpRetryTimer?.Dispose();
+        _shortCatchUpRetryTimer = null;
+    }
+
+    /// <summary>
+    /// Schedules a short retry of a catch-up that moved nothing, when events of the observer's types exist from where it is.
+    /// </summary>
+    /// <returns>True if a retry was scheduled; false to use the zero-work backoff.</returns>
+    /// <remarks>
+    /// The decision is read from the event sequence storage, the same lookup the watchdog uses, with the types the
+    /// observer is subscribed with. A failed lookup is not an answer: the zero-work backoff applies as before.
+    /// The observer settles in observing for the delay, so the pending retry keeps the backoff mechanics - and the
+    /// watchdog - as the fallback if the timer never fires.
+    /// </remarks>
+    async Task<bool> ScheduleShortCatchUpRetry()
+    {
+        var next = State.NextEventSequenceNumber;
+        var epoch = _catchUpOwnershipEpoch;
+        try
+        {
+            var lookup = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(next, _subscription.EventTypes.ToList());
+            if (lookup.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
+            {
+                logger.CatchUpEventLookupErrored(next, error);
+                return false;
+            }
+
+            if (!lookup.Match(number => number.IsActualValue, _ => false))
+            {
+                _shortCatchUpRetries = 0;
+                return false;
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.CatchUpEventLookupFailed(next, exception);
+            return false;
+        }
+
+        // CaughtUp interleaves, so catch-up may have changed hands while the lookup was awaited. This lap is obsolete then.
+        if (epoch != _catchUpOwnershipEpoch) return false;
+
+        if (_shortCatchUpRetries >= _shortCatchUpRetryDelays.Length)
+        {
+            logger.StaleCatchUpRetriesExhausted(_shortCatchUpRetries, next);
+            return false;
+        }
+
+        var delay = _shortCatchUpRetryDelays[_shortCatchUpRetries++];
+        logger.RetryingStaleCatchUp(next, _shortCatchUpRetries, delay);
+        _catchUpBackoffUntil = DateTimeOffset.UtcNow + delay;
+        CancelShortCatchUpRetry();
+        _shortCatchUpRetryTimer = this.RegisterGrainTimer(
+            cancellationToken => RetryCatchUpAfterDelay(epoch, cancellationToken),
+            new GrainTimerCreationOptions { DueTime = delay, Period = Timeout.InfiniteTimeSpan });
+        return true;
+    }
+
+    async Task RetryCatchUpAfterDelay(int ownershipEpoch, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return;
+
+        CancelShortCatchUpRetry();
+        if (!CanRetryCatchUp(ownershipEpoch)) return;
+
+        _catchUpBackoffUntil = default;
+        await TransitionTo<Routing>();
+    }
+
+    bool CanRetryCatchUp(int ownershipEpoch) =>
+        IsObservingOwnedCatchUp(ownershipEpoch) && State.RunningState != ObserverRunningState.Replaying && _subscription.IsSubscribed;
+
+    bool IsObservingOwnedCatchUp(int ownershipEpoch) =>
+        !IsCatchUpEnded() && ownershipEpoch == _catchUpOwnershipEpoch;
+
+    bool IsCatchUpEnded() => IsRetired || _removed || IsQuarantined;
 
     /// <summary>
     /// Waits for any catch-up job acquisition already in flight and adopts the job it produced.
