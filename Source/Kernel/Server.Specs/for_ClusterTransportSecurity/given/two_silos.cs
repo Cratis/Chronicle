@@ -59,17 +59,22 @@ public class two_silos : Specification
     protected async Task<int> WaitForActiveSilos(int expected, TimeSpan timeout)
     {
         var membership = _first.Services.GetRequiredService<IClusterMembershipService>();
-        var deadline = DateTime.UtcNow + timeout;
-        var active = 0;
-        while (DateTime.UtcNow < deadline)
+        var active = CountActive(membership.CurrentSnapshot);
+        using var cts = new CancellationTokenSource(timeout);
+        try
         {
-            active = membership.CurrentSnapshot.Members.Values.Count(member => member.Status == SiloStatus.Active);
-            if (active >= expected)
+            await foreach (var snapshot in membership.MembershipUpdates.WithCancellation(cts.Token))
             {
-                break;
+                active = CountActive(snapshot);
+                if (active >= expected)
+                {
+                    break;
+                }
             }
-
-            await Task.Delay(100);
+        }
+        catch (OperationCanceledException)
+        {
+            // The wait is over: report how many silos are active.
         }
 
         return active;
@@ -82,6 +87,8 @@ public class two_silos : Specification
         using var created = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
         return X509CertificateLoader.LoadPkcs12(created.Export(X509ContentType.Pkcs12, "pw"), "pw", X509KeyStorageFlags.Exportable);
     }
+
+    static int CountActive(ClusterMembershipSnapshot snapshot) => snapshot.Members.Values.Count(member => member.Status == SiloStatus.Active);
 
     static int FreePort()
     {

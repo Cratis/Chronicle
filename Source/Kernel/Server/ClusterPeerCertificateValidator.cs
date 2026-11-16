@@ -46,10 +46,7 @@ internal static class ClusterPeerCertificateValidator
 
         if (authorities is not null)
         {
-            foreach (var authority in authorities)
-            {
-                chain.ChainPolicy.CustomTrustStore.Add(authority);
-            }
+            chain.ChainPolicy.CustomTrustStore.AddRange(authorities);
         }
 
         if (presentedChain is not null)
