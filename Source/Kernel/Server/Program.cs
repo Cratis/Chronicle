@@ -230,7 +230,7 @@ var reloadingCertificate = certificate is not null && !string.IsNullOrEmpty(chro
         TimeProvider.System,
         reloaded => logger.TlsCertificateReloaded(reloaded.Subject, reloaded.Thumbprint, new DateTimeOffset(reloaded.NotAfter)),
         logger.TlsCertificateReloadFailed)
-    : (ReloadingCertificate?)null;
+    : null;
 var listeners = new List<(int Port, HttpProtocols Protocols, X509Certificate2? Certificate)>();
 KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocols, listenerCertificate) =>
     listeners.Add((port, protocols, listenerCertificate)));
