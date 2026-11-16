@@ -91,7 +91,7 @@ public class Reactor(
             }
             else
             {
-                await AddReplayRecommendationForAllNamespaces(key, namespaceNames);
+                await AddReplayRecommendationForAllNamespaces(key, namespaceNames, definition);
             }
         }
 
@@ -343,7 +343,7 @@ public class Reactor(
         }
     }
 
-    async Task AddReplayRecommendationForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces)
+    async Task AddReplayRecommendationForAllNamespaces(ReactorKey key, IEnumerable<EventStoreNamespaceName> namespaces, ReactorDefinition definition)
     {
         foreach (var @namespace in namespaces)
         {
@@ -355,6 +355,7 @@ public class Reactor(
                     ObserverId = key.ReactorId,
                     ObserverKey = new(key.ReactorId, key.EventStore, @namespace, key.EventSequenceId),
                     ObserverType = ObserverType.Reactor,
+                    ChangeId = DefinitionChangeIdentity.For(definition),
                     Reasons = [new ReactorDefinitionChangedReplayCandidateReason()]
                 });
         }

@@ -11,19 +11,19 @@ using Cratis.Chronicle.Storage.Recommendations;
 namespace Cratis.Chronicle.Recommendations;
 
 /// <summary>
-/// Identifies and removes ignored recommendations that can no longer match a future request.
+/// Identifies and removes recommendations for removed observers and superseded requests.
 /// </summary>
 internal static class IgnoredRecommendations
 {
     /// <summary>
-    /// Gets ignored recommendations for an observer removed from this namespace.
+    /// Gets recommendations for an observer removed from this namespace.
     /// </summary>
     /// <param name="all">The namespace's recommendations.</param>
     /// <param name="observerId">The removed observer.</param>
     /// <param name="eventSequenceId">The observer's event sequence.</param>
-    /// <returns>The ignored recommendations about the removed observer.</returns>
+    /// <returns>The recommendations about the removed observer.</returns>
     internal static IEnumerable<RecommendationState> ForRemovedObserver(IEnumerable<RecommendationState> all, ObserverId observerId, EventSequenceId eventSequenceId) =>
-        all.Where(row => row.IsIgnored && row.Request switch
+        all.Where(row => row.Request switch
         {
             ReplayCandidateRequest request => request.ObserverId == observerId && request.ObserverKey.EventSequenceId == eventSequenceId,
             IgnoredProjectionRegistrationRequest request => request.ProjectionId.Value == observerId.Value,
@@ -31,18 +31,14 @@ internal static class IgnoredRecommendations
         });
 
     /// <summary>
-    /// Gets ignored projection registration recommendations superseded by a newer stored version.
+    /// Gets ignored registrations superseded by a newer stored version and replay recommendations superseded by a definition change.
     /// </summary>
     /// <param name="all">The namespace's recommendations.</param>
     /// <param name="type">The incoming recommendation type.</param>
     /// <param name="incoming">The incoming request.</param>
-    /// <returns>The ignored recommendations whose stored version can no longer recur.</returns>
+    /// <returns>The superseded recommendations.</returns>
     internal static IEnumerable<RecommendationState> SupersededBy(IEnumerable<RecommendationState> all, RecommendationType type, IRecommendationRequest incoming) =>
-        all.Where(row => row.IsIgnored && row.Type == type &&
-            incoming is IgnoredProjectionRegistrationRequest request &&
-            row.Request is IgnoredProjectionRegistrationRequest ignored &&
-            ignored.ProjectionId == request.ProjectionId &&
-            ProjectionVersions.IsOlder(ignored.StoredVersion, request.StoredVersion));
+        all.Where(row => row.Type == type && IsSuperseded(row, incoming));
 
     /// <summary>
     /// Removes the selected recommendations, propagating any storage failure.
@@ -60,4 +56,15 @@ internal static class IgnoredRecommendations
         }
         return count;
     }
+
+    static bool IsSuperseded(RecommendationState row, IRecommendationRequest incoming) => (row.Request, incoming) switch
+    {
+        (IgnoredProjectionRegistrationRequest ignored, IgnoredProjectionRegistrationRequest request) =>
+            row.IsIgnored && ignored.ProjectionId == request.ProjectionId && ProjectionVersions.IsOlder(ignored.StoredVersion, request.StoredVersion),
+        (ReplayCandidateRequest previous, ReplayCandidateRequest request) =>
+            request.ChangeId.Length > 0 && previous.ChangeId != request.ChangeId &&
+            previous.ObserverId == request.ObserverId && previous.ObserverKey == request.ObserverKey &&
+            previous.Reasons.Select(reason => reason.Type).ToHashSet().SetEquals(request.Reasons.Select(reason => reason.Type)),
+        _ => false
+    };
 }

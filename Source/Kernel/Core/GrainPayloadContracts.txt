@@ -1329,6 +1329,7 @@ json Cratis.Chronicle.Observation.PartitionFailureContext
   policy: Cratis.Chronicle.Observation.WebhookDeliveryFailurePolicy
   replayEpoch: Cratis.Chronicle.Concepts.Observation.ReplayEpoch
 json Cratis.Chronicle.Observation.States.ReplayCandidateRequest
+  changeId: string
   observerId: Cratis.Chronicle.Concepts.Observation.ObserverId
   observerKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   observerType: Cratis.Chronicle.Concepts.Observation.ObserverType

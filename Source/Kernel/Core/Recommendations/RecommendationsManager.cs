@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Chronicle.Concepts.Recommendations;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -18,6 +17,8 @@ namespace Cratis.Chronicle.Recommendations;
 /// <param name="logger">The logger.</param>
 public class RecommendationsManager(IStorage storage, ILogger<RecommendationsManager> logger) : Grain, IRecommendationsManager
 {
+    RecommendationIndex? _index;
+
     /// <inheritdoc/>
     public async Task<RecommendationId> Add<TRecommendation, TRequest>(RecommendationDescription description, TRequest request)
         where TRecommendation : IRecommendation<TRequest>
@@ -26,21 +27,20 @@ public class RecommendationsManager(IStorage storage, ILogger<RecommendationsMan
         var key = GetRecommendationKey();
         var recommendationStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).Recommendations;
         var recommendationType = (RecommendationType)typeof(TRecommendation);
-        var existingRecommendations = await recommendationStorage.GetAll();
-        var requestAsJson = JsonSerializer.Serialize((object)request);
-
-        // Ignored recommendations are kept while they can still match, so an identical request is not raised again.
-        // Once superseded by a newer stored version, ignored projection registration recommendations are pruned below.
-        var existing = existingRecommendations.FirstOrDefault(r =>
-            r.Type == recommendationType &&
-            JsonSerializer.Serialize((object)r.Request) == requestAsJson);
-
+        var index = _index ??= new RecommendationIndex(recommendationStorage);
+        var existing = await index.Find(recommendationType, request);
         if (existing is not null)
         {
-            return existing.Id;
+            return existing;
         }
 
-        var pruned = await IgnoredRecommendations.Remove(recommendationStorage, IgnoredRecommendations.SupersededBy(existingRecommendations, recommendationType, request));
+        var candidates = await index.CandidatesFor(request);
+        var superseded = IgnoredRecommendations.SupersededBy(candidates, recommendationType, request).ToArray();
+        var pruned = await IgnoredRecommendations.Remove(recommendationStorage, superseded);
+        foreach (var row in superseded)
+        {
+            index.Remove(row.Id);
+        }
         if (pruned > 0)
         {
             logger.PrunedIgnoredRecommendations(pruned);
@@ -49,6 +49,7 @@ public class RecommendationsManager(IStorage storage, ILogger<RecommendationsMan
         var id = RecommendationId.New();
         var recommendation = GrainFactory.GetGrain<TRecommendation>(id, keyExtension: GetRecommendationKey());
         await recommendation.Initialize(description, request);
+        index.Add(id, recommendationType, request);
         return id;
     }
 

@@ -33,4 +33,16 @@ public class ReplayCandidateRequest : IRecommendationRequest
     /// Gets or sets the reasons for why this is a replay candidate.
     /// </summary>
     public IEnumerable<ReplayCandidateReason> Reasons { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the identity of the specific definition change this request was raised for.
+    /// </summary>
+    /// <remarks>
+    /// Empty for requests raised before this property existed or for causes that carry their own identity.
+    /// Stored rows and payloads without this property deserialize with an empty identity and still suppress
+    /// identical empty-identity requests. A request with a real identity is not suppressed by a legacy ignored
+    /// row; it supersedes that row when the observer key and reason types match. Older silos ignore the additive
+    /// property, so a rolling upgrade may raise one extra recommendation.
+    /// </remarks>
+    public string ChangeId { get; set; } = string.Empty;
 }

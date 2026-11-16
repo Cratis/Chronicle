@@ -26,7 +26,8 @@ public class and_an_ignored_replay_candidate_for_the_same_observer_has_other_rea
             {
                 ObserverId = _observerKey.ObserverId,
                 ObserverKey = _observerKey,
-                Reasons = [new ProjectionUpdateAvailableReplayCandidateReason()]
+                Reasons = [new ProjectionUpdateAvailableReplayCandidateReason()],
+                ChangeId = "a"
             },
             IsIgnored = true
         });
@@ -36,7 +37,8 @@ public class and_an_ignored_replay_candidate_for_the_same_observer_has_other_rea
     {
         ObserverId = _observerKey.ObserverId,
         ObserverKey = _observerKey,
-        Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()]
+        Reasons = [new ProjectionDefinitionChangedReplayCandidateReason()],
+        ChangeId = "b"
     });
 
     [Fact] void should_keep_the_ignored_recommendation() => _recommendationStorage.DidNotReceive().Remove(Arg.Any<RecommendationId>());
