@@ -10,6 +10,17 @@ namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager;
 public class when_an_unrecoverable_pii_value_is_read_repeatedly : given.an_unrecoverable_pii_value
 {
     JsonObject _result;
+    int? _attemptedRevisions;
+
+    void Establish()
+    {
+        _logger.WhenForAnyArgs(logger => logger.Log<object>(LogLevel.Error, default, string.Empty, null, (_, _) => string.Empty))
+            .Do(call =>
+            {
+                var state = call.ArgAt<IEnumerable<KeyValuePair<string, object?>>>(2);
+                _attemptedRevisions = state.Single(entry => entry.Key == "AttemptedRevisions").Value as int?;
+            });
+    }
 
     async Task Because()
     {
@@ -23,11 +34,5 @@ public class when_an_unrecoverable_pii_value_is_read_repeatedly : given.an_unrec
     [Fact] void should_report_the_failure_once() => _count.ShouldEqual(1);
     [Fact] void should_log_once_without_generic_duplicates() => _logger.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(ILogger.Log)).ShouldEqual(1);
 
-    [Fact]
-    void should_report_the_exact_attempted_revision_count()
-    {
-        var state = _logger.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(ILogger.Log)).GetArguments()[2]
-            as IEnumerable<KeyValuePair<string, object?>> ?? [];
-        state.Single(entry => entry.Key == "AttemptedRevisions").Value.ShouldEqual(2);
-    }
+    [Fact] void should_report_the_exact_attempted_revision_count() => _attemptedRevisions.ShouldEqual(2);
 }
