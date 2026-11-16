@@ -10,6 +10,7 @@ public class when_a_configured_application_requests_any_other_capability : given
         WellKnownCapabilities.AdministerSecurity.Value,
         WellKnownCapabilities.OperateEventStore.Value,
         WellKnownCapabilities.AccessSystemStore.Value,
+        WellKnownCapabilities.ManageFederation.Value,
         WellKnownCapabilities.ReleaseCompliance.Value,
         WellKnownCapabilities.ManageComplianceKeys.Value,
         WellKnownCapabilities.ReadAlerts.Value

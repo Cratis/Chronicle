@@ -22,4 +22,9 @@ public static class WellKnownAuthorizationPolicies
     /// Authorizes redeeming a federation enrollment code and reading the enrollment status of this kernel.
     /// </summary>
     public const string FederationEnrollment = "Chronicle.Federation.Enroll";
+
+    /// <summary>
+    /// Authorizes managing the hosted federation this kernel is the authority for: enrollments, issued certificates, subject policies and links.
+    /// </summary>
+    public const string FederationManagement = "Chronicle.Federation.Manage";
 }

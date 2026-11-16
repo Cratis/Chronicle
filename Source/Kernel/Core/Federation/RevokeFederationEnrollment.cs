@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Federation;
 /// </summary>
 /// <param name="Id">The enrollment id.</param>
 [Command]
-[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
+[Cratis.Arc.Authorization.Authorize(Policy = WellKnownAuthorizationPolicies.FederationManagement)]
 [BelongsTo(WellKnownServices.Federation)]
 public record RevokeFederationEnrollment(string Id)
 {

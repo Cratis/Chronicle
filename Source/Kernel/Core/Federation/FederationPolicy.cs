@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="ChangedBy">The identity that last acted on the policy.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Federation)]
-[Authorize(Policy = WellKnownAuthorizationPolicies.Administrator)]
+[Authorize(Policy = WellKnownAuthorizationPolicies.FederationManagement)]
 public record FederationPolicy(
     string Subject,
     FederationPolicyStatus Status,

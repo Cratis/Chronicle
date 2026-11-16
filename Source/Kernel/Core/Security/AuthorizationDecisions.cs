@@ -53,7 +53,7 @@ public class AuthorizationDecisions(
             if (IsUnenrolled(capability, scope)) return Allow(AuthorizationReason.NotEnrolled, capability, scope);
             if (!options.Value.Authentication.Enabled) return Allow(AuthorizationReason.AuthenticationDisabled, capability, scope);
             if (principal?.Identity?.IsAuthenticated is not true) return Deny(AuthorizationReason.NoPrincipal, capability, scope);
-            if (capability == WellKnownCapabilities.EnrollFederation && IsEnrollingApplication(principal))
+            if (IsConfiguredApplicationCapability(principal, capability))
             {
                 return Allow(AuthorizationReason.Granted, capability, scope);
             }
@@ -84,7 +84,23 @@ public class AuthorizationDecisions(
         && !string.Equals(scope.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Gets whether the principal is an application whose client id the operator configured to enroll this kernel.
+    /// Gets whether the principal is an application the operator configured for exactly this capability: enrolling this kernel
+    /// (<c language="text">Federation:Enrollment:Applications</c>) or managing the hosted federation it is the authority for
+    /// (<c language="text">Federation:Hosted:Applications</c>). Each list grants its one capability and nothing else.
+    /// </summary>
+    /// <param name="principal">The authenticated caller.</param>
+    /// <param name="capability">The requested capability.</param>
+    /// <returns>True when the caller is configured for the capability.</returns>
+    bool IsConfiguredApplicationCapability(ClaimsPrincipal principal, Capability capability)
+    {
+        var federation = options.Value.Federation;
+        if (capability == WellKnownCapabilities.EnrollFederation) return IsConfiguredApplication(principal, federation.Enrollment.Applications);
+        if (capability == WellKnownCapabilities.ManageFederation) return IsConfiguredApplication(principal, federation.Hosted.Applications);
+        return false;
+    }
+
+    /// <summary>
+    /// Gets whether the principal is an application whose client id is in the configured list.
     /// </summary>
     /// <remarks>
     /// Decided from the already-validated claims and the configuration alone: no I/O and no cached result. A principal that carries
@@ -92,10 +108,10 @@ public class AuthorizationDecisions(
     /// into the token; with an external authority it is the client id or authorized-party claim of that authority's token.
     /// </remarks>
     /// <param name="principal">The authenticated caller.</param>
-    /// <returns>True when the caller is a configured enrolling application.</returns>
-    bool IsEnrollingApplication(ClaimsPrincipal principal)
+    /// <param name="configured">The client ids of the configured applications.</param>
+    /// <returns>True when the caller is a configured application.</returns>
+    bool IsConfiguredApplication(ClaimsPrincipal principal, IEnumerable<string>? configured)
     {
-        var configured = options.Value.Federation.Enrollment.Applications;
         if (configured?.Any() is not true)
         {
             return false;

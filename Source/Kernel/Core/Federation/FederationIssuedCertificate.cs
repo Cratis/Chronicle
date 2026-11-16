@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="Status">The status: <c language="text">active</c>, <c language="text">expired</c> or <c language="text">revoked</c>.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.Federation)]
-[Authorize(Policy = WellKnownAuthorizationPolicies.Administrator)]
+[Authorize(Policy = WellKnownAuthorizationPolicies.FederationManagement)]
 public record FederationIssuedCertificate(
     string Serial,
     string EnrollmentId,

@@ -16,6 +16,7 @@ public class a_decision_point : Specification
     protected RecordingLogger _logger;
     protected bool _authenticationEnabled;
     protected string[] _enrollingApplications = [];
+    protected string[] _managingApplications = [];
     protected bool _internalAuthority = true;
     protected AuthorizationDecision _decision;
 
@@ -24,14 +25,19 @@ public class a_decision_point : Specification
         WellKnownCapabilities.AdministerSecurity.Value,
         WellKnownCapabilities.OperateEventStore.Value,
         WellKnownCapabilities.AccessSystemStore.Value,
-        WellKnownCapabilities.EnrollFederation.Value
+        WellKnownCapabilities.EnrollFederation.Value,
+        WellKnownCapabilities.ManageFederation.Value
     };
 
     protected AuthorizationDecisions CreateDecisions() => new(
         Options.Create(new ChronicleOptions
         {
             Authentication = new Authentication { Enabled = _authenticationEnabled, Authority = _internalAuthority ? null : "https://idp.example" },
-            Federation = new Configuration.Federation { Enrollment = new FederationEnrollmentOptions { Applications = _enrollingApplications } }
+            Federation = new Configuration.Federation
+            {
+                Enrollment = new FederationEnrollmentOptions { Applications = _enrollingApplications },
+                Hosted = new FederationHostedOptions { Applications = _managingApplications }
+            }
         }),
         _logger,
         httpContextAccessor: Security.given.caller_services.For(_administrators));

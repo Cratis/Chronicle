@@ -106,7 +106,7 @@ internal sealed class Federation(
             exception => logger.QueryFailed(exception, "Federation", "AllBindings"));
 
     /// <inheritdoc/>
-    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Federation.Manage")]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentResponse>>> AllEnrollments(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationEnrollmentResponse>>(
             async () =>
@@ -139,7 +139,7 @@ internal sealed class Federation(
             exception => logger.QueryFailed(exception, "Federation", "AllGrants"));
 
     /// <inheritdoc/>
-    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Federation.Manage")]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationIssuedCertificateResponse>>> AllIssuedCertificates(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationIssuedCertificateResponse>>(
             async () =>
@@ -150,7 +150,7 @@ internal sealed class Federation(
             exception => logger.QueryFailed(exception, "Federation", "AllIssuedCertificates"));
 
     /// <inheritdoc/>
-    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Federation.Manage")]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse>>> AllPolicies(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationPolicyResponse>>(
             async () =>
@@ -161,7 +161,7 @@ internal sealed class Federation(
             exception => logger.QueryFailed(exception, "Federation", "AllPolicies"));
 
     /// <inheritdoc/>
-    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Administrator")]
+    [global::Microsoft.AspNetCore.Authorization.Authorize(Policy = "Chronicle.Federation.Manage")]
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationSubjectLinkResponse>>> AllSubjectLinks(global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Federation.FederationSubjectLinkResponse>>(
             async () =>

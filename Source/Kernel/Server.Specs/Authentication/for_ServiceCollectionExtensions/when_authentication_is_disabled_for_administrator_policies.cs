@@ -17,6 +17,7 @@ public class when_authentication_is_disabled_for_administrator_policies : given.
     bool _administratorAllowed;
     bool _operationAllowed;
     bool _enrollmentAllowed;
+    bool _managementAllowed;
     bool _plainAuthorizeAllowed;
     IServiceCollection _services;
 
@@ -37,6 +38,7 @@ public class when_authentication_is_disabled_for_administrator_policies : given.
         _administratorAllowed = (await authorization.AuthorizeAsync(principal, new object(), WellKnownAuthorizationPolicies.Administrator)).Succeeded;
         _operationAllowed = (await authorization.AuthorizeAsync(principal, new object(), WellKnownAuthorizationPolicies.AdministratorOperations)).Succeeded;
         _enrollmentAllowed = (await authorization.AuthorizeAsync(principal, new object(), WellKnownAuthorizationPolicies.FederationEnrollment)).Succeeded;
+        _managementAllowed = (await authorization.AuthorizeAsync(principal, new object(), WellKnownAuthorizationPolicies.FederationManagement)).Succeeded;
         var accessor = Substitute.For<ICurrentPrincipalAccessor>();
         accessor.Current.Returns(principal);
         var evaluator = new AuthorizationEvaluator(
@@ -49,7 +51,8 @@ public class when_authentication_is_disabled_for_administrator_policies : given.
     [Fact] void should_allow_anonymous_administrator_management_in_authentication_off_mode() => _administratorAllowed.ShouldBeTrue();
     [Fact] void should_allow_anonymous_operational_recovery_in_authentication_off_mode() => _operationAllowed.ShouldBeTrue();
     [Fact] void should_allow_anonymous_federation_enrollment_in_authentication_off_mode() => _enrollmentAllowed.ShouldBeTrue();
+    [Fact] void should_allow_anonymous_federation_management_in_authentication_off_mode() => _managementAllowed.ShouldBeTrue();
     [Fact] void should_not_make_an_existing_plain_authorize_declaration_anonymous() => _plainAuthorizeAllowed.ShouldBeFalse();
     [Fact] void should_explicitly_opt_all_named_policies_into_arc_anonymous_execution() => _services
-        .Count(descriptor => descriptor.ServiceType == typeof(AnonymousAspNetAuthorizationPolicyRegistration)).ShouldEqual(3);
+        .Count(descriptor => descriptor.ServiceType == typeof(AnonymousAspNetAuthorizationPolicyRegistration)).ShouldEqual(4);
 }
