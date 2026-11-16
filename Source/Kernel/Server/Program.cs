@@ -221,6 +221,16 @@ KernelStartupDiagnostics.ReportIgnoredDevelopmentOnlySettings(builder.Configurat
 // Kestrel keeps the selected certificate alive for every TLS handshake until process shutdown.
 var certificate = KernelCertificateSelection.Select(chronicleOptions, logger, developmentBuild);
 
+// A certificate read from a file is served through a holder that picks up a renewed file, so cert-manager renewals need no restart.
+var reloadingCertificate = certificate is not null && !string.IsNullOrEmpty(chronicleOptions.Tls.CertificatePath) && File.Exists(chronicleOptions.Tls.CertificatePath)
+    ? new ReloadingCertificate(
+        chronicleOptions.Tls,
+        certificate,
+        TimeSpan.FromSeconds(30),
+        TimeProvider.System,
+        reloaded => logger.TlsCertificateReloaded(reloaded.Subject, reloaded.Thumbprint, new DateTimeOffset(reloaded.NotAfter)),
+        logger.TlsCertificateReloadFailed)
+    : null;
 var listeners = new List<(int Port, HttpProtocols Protocols, X509Certificate2? Certificate)>();
 KernelListeners.Configure(chronicleOptions, certificate, logger, (port, protocols, listenerCertificate) =>
     listeners.Add((port, protocols, listenerCertificate)));
@@ -247,7 +257,14 @@ builder.WebHost.UseKestrel(options =>
             listenOptions.Protocols = listener.Protocols;
             if (listener.Certificate is not null)
             {
-                listenOptions.UseHttps(listener.Certificate);
+                if (reloadingCertificate is not null && ReferenceEquals(listener.Certificate, certificate))
+                {
+                    listenOptions.UseHttps(https => https.ServerCertificateSelector = (_, _) => reloadingCertificate.Current);
+                }
+                else
+                {
+                    listenOptions.UseHttps(listener.Certificate);
+                }
             }
         });
     }
