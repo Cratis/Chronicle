@@ -82,6 +82,16 @@ With default TLS, health probes may have trouble validating a self-signed certif
 
 - [Identity Provider Certificate Configuration](identity-provider-certificate.md) explains why the legacy `identityProvider.certificate` setting is ignored.
 
+## Certificate renewal
+
+Chronicle reloads the TLS certificate when the file at `certificatePath` changes, so a renewed certificate needs no restart. The file is checked on a TLS handshake, at most once every 30 seconds, and a changed file is read with the configured `certificatePassword`. The log records `TLS certificate reloaded from disk` with the subject, thumbprint and expiry. New connections use the new certificate; connections already open keep the one they started with.
+
+- **A broken file never replaces a good one.** If the changed file cannot be read, is half written or has the wrong password, Chronicle logs `The TLS certificate file changed but could not be loaded` once and keeps serving the current certificate. The next change to the file is tried again.
+- **The password is not reloaded.** It is read at startup, so a renewal must keep the same password. A new password needs a restart.
+- **Kubernetes Secrets.** A Secret mounted as a directory or with `items` updates in place, and Chronicle sees it after the kubelet syncs it, which can take a minute or so. A Secret mounted with `subPath` is never updated by Kubernetes, so mount the whole Secret or use `items` without `subPath`.
+- **The encryption certificate is not reloaded.** It is deliberately fixed for the life of the data it protects. See [Encryption certificate](../encryption-certificate.md).
+- **The development certificate** is generated in memory and does not change.
+
 ## Certificate requirements
 
 When TLS is enabled, Chronicle requires certificates in PFX (PKCS#12) format that include a private key and, if applicable, the certificate chain.
