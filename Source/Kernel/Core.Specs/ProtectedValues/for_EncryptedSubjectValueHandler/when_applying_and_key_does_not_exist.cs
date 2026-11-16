@@ -24,7 +24,7 @@ public class when_applying_and_key_does_not_exist : given.a_property_handler
         _keyStore.GetOrAddWithRevisionFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, KeyIdentifier, Arg.Any<EncryptionKey>()).Returns(new EncryptionKeyAtRevision(_generatedKey, EncryptionKeyRevision.Initial));
 
         _encryptedBytes = Encoding.UTF8.GetBytes("encrypted");
-        _encryption.Encrypt(Arg.Any<byte[]>(), _generatedKey).Returns(_encryptedBytes);
+        _encryption.Encrypt(Arg.Any<byte[]>(), _generatedKey, Arg.Any<EncryptionKeyRevision>()).Returns(_encryptedBytes);
         _input = JsonValue.Create("sensitive");
     }
 

@@ -20,7 +20,7 @@ public class and_a_provisioned_key_was_deleted_without_erasure : Specification
         var keys = new InMemoryEncryptionKeyStorage();
         _handler = new(new ManagedEncryptionKeyProvisioner(keys, encryption), keys, encryption);
         var key = encryption.GenerateKey();
-        _value = ProtectedValueCodec.Encrypt(encryption, key, JsonValue.Create("protected value"));
+        _value = ProtectedValueCodec.Encrypt(encryption, key, JsonValue.Create("protected value"), EncryptionKeyRevision.Initial);
         await keys.GetOrAddFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "owner", key);
         await keys.DeleteFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, "owner");
     }

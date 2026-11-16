@@ -21,7 +21,7 @@ public class and_the_protected_type_is_ambiguous : given.a_protected_event
         };
         _storage.GetEventStore("store").EventTypes.GetFor("event", 1U).Returns(new EventTypeSchema(new("event", 1), EventTypeOwner.Client, EventTypeSource.Code, schema));
         var key = await _keys.TryGetFor("store", "tenant", _stored.Context.Subject.Value);
-        var encrypted = new JsonObject { ["value"] = ProtectedValueCodec.Encrypt(_encryption, key!, JsonValue.Create(42)) };
+        var encrypted = new JsonObject { ["value"] = ProtectedValueCodec.Encrypt(_encryption, key!, JsonValue.Create(42), EncryptionKeyRevision.Initial) };
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = encrypted.ToJsonString() } };
         _command = _command with { Content = "{\"value\":\"42\"}" };
     }

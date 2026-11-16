@@ -34,7 +34,7 @@ static class EncryptedValueOperations
         EventStoreName eventStore,
         EventStoreNamespaceName eventStoreNamespace,
         EncryptionKeyIdentifier keyIdentifier,
-        JsonNode value) => ProtectedValueCodec.Encrypt(encryption, await provisioner.EnsureKeyFor(eventStore, eventStoreNamespace, keyIdentifier), value);
+        JsonNode value) => (await Apply(provisioner, encryption, eventStore, eventStoreNamespace, keyIdentifier, value, ProtectionKind.EncryptedSubject)).Value;
 
     /// <summary>
     /// Encrypt a value under the given key identity, reporting its key and revision.
@@ -57,7 +57,7 @@ static class EncryptedValueOperations
         ProtectionKind kind)
     {
         var pair = await provisioner.EnsureKeyWithRevisionFor(eventStore, eventStoreNamespace, keyIdentifier);
-        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value), new(kind, keyIdentifier, pair.Key, pair.Revision));
+        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value, pair.Revision), new(kind, keyIdentifier, pair.Key, pair.Revision));
     }
 
     /// <summary>
@@ -85,9 +85,9 @@ static class EncryptedValueOperations
         }
 
         using var scope = ReleaseKeys.BeginScope();
-        var key = await ReleaseKeys.TryGetForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, keyIdentifier)
+        var released = await new ProtectedValueRelease(encryptionKeyStore, encryption, (eventStore, eventStoreNamespace, keyIdentifier), encrypted).Release()
             ?? throw new MissingEncryptionKey(keyIdentifier);
-        return await ReleaseKeys.Complete(() => new ReleasedProtectedValue(ProtectedValueCodec.Decrypt(encryption, key, encrypted), ProtectedValueReleaseStatus.Decrypted));
+        return await ReleaseKeys.Complete(() => new ReleasedProtectedValue(released, ProtectedValueReleaseStatus.Decrypted));
     }
 
     /// <summary>
@@ -119,15 +119,15 @@ static class EncryptedValueOperations
             return value;
         }
 
-        var key = strict
-            ? await ReleaseKeys.TryGetForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, keyIdentifier)
-            : await ReleaseKeys.TryGetForReleaseOrEmpty(encryptionKeyStore, eventStore, eventStoreNamespace, keyIdentifier);
+        using var scope = ReleaseKeys.BeginScope();
+        var release = new ProtectedValueRelease(encryptionKeyStore, encryption, (eventStore, eventStoreNamespace, keyIdentifier), encrypted);
+        var released = strict ? await release.Release() : await release.ReleaseOrEmpty();
 
         // Unlike PII, an [Encrypted] key is never deleted, so a missing key here is not an erasure outcome - it
         // means the value was encrypted by a process this store has no record of (a restored backup pointed at a
         // different key store, for example). Surfacing it as empty rather than throwing keeps a query over the
         // rest of the document working, exactly as the PII path already does for its own missing-key case.
-        if (key is null)
+        if (released is null)
         {
             if (strict)
             {
@@ -137,6 +137,6 @@ static class EncryptedValueOperations
             return JsonValue.Create(string.Empty);
         }
 
-        return ProtectedValueCodec.Decrypt(encryption, key, encrypted);
+        return await ReleaseKeys.Complete(() => released);
     }
 }
