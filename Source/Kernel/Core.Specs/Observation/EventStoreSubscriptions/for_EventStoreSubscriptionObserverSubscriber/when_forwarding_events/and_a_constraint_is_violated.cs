@@ -19,5 +19,6 @@ public class and_a_constraint_is_violated : given.a_subscriber_with_events
     [Fact] void should_fail() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_name_the_failure_kind() => _result.ExceptionMessages.Single().ShouldContain("constraint violation");
     [Fact] void should_name_the_event_type() => _result.ExceptionMessages.Single().ShouldContain("event-type-1");
+    [Fact] void should_name_the_constraint_type_and_name() => _result.ExceptionMessages.Single().ShouldContain("Unique 'unique'");
     [Fact] void should_not_expose_the_constraint_message() => string.Join(' ', _result.ExceptionMessages).ShouldNotContain("private-");
 }

@@ -11,7 +11,7 @@ public class after_failure_with_a_successful_prefix : given.a_pinned_subscriber
     void Establish()
     {
         _events = [_events[0], _events[0] with { Context = _events[0].Context with { SequenceNumber = 43UL } }];
-        _storage.GetEventStore("Lobby").EventTypes.HasFor("event-type-1", 1).Returns(true, false, true);
+        _storage.GetEventStore("Lobby").EventTypes.HasFor("event-type-1", 1).Returns(true, true, false, true, true); // Per event: pin validation, then the casing lookup.
     }
     async Task Because()
     {
