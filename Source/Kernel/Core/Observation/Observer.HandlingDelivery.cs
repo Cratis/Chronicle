@@ -116,7 +116,12 @@ public partial class Observer
         }
     }
 
-    // A disconnected batch is not advanced, so the next subscription catches up from the same position.
+    /// <summary>
+    /// Applies the subscriber state for a batch that was not handled. A disconnected batch is not advanced, so the next subscription catches up from the same position.
+    /// </summary>
+    /// <param name="partition">The partition the batch belongs to.</param>
+    /// <param name="result">The subscriber result.</param>
+    /// <returns>Awaitable task.</returns>
     Task ApplySubscriberState(Key partition, ObserverSubscriberResult result) =>
         result.State == ObserverSubscriberState.Deferred
             ? PartitionDeferred(partition, result.Deferral!)

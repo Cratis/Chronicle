@@ -623,6 +623,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         return count;
     }
 
+    static bool ShouldDispatchPage(bool deliversPages, int runs) => deliversPages && runs > 1;
+
     AppendedEventsQueueObserverSubscription[] GetSubscriptionsSnapshot()
     {
         lock (_subscriptionsLock)
@@ -630,8 +632,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             return [.. _subscriptions];
         }
     }
-
-    static bool ShouldDispatchPage(bool deliversPages, int runs) => deliversPages && runs > 1;
 
     bool WithinEventCapacity(int queuedEvents, int batchLength)
     {
