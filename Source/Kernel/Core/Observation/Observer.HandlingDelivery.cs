@@ -7,13 +7,21 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
-using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    static string FailureKindCode(FailureKind kind) => kind switch
+    {
+        FailureKind.Handling => "handling",
+        FailureKind.Timeout => "timeout",
+        FailureKind.Disconnected => "disconnected",
+        FailureKind.WaitingForHandler => "waiting_for_handler",
+        _ => "unknown"
+    };
+
     async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
         var observedTail = events.Last().Context.SequenceNumber;
@@ -72,7 +80,7 @@ public partial class Observer
                     RemoveSubscriberTarget(target);
                 }
 
-                EventCount numberHandled = result.HandledAnyEvents
+                var numberHandled = result.HandledAnyEvents
                     ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
                     : EventCount.Zero;
                 outcome.RecordResult(result, firstEvent.Context.SequenceNumber);
@@ -108,10 +116,10 @@ public partial class Observer
         }
     }
 
+    // A disconnected batch is not advanced, so the next subscription catches up from the same position.
     Task ApplySubscriberState(Key partition, ObserverSubscriberResult result) =>
         result.State == ObserverSubscriberState.Deferred
             ? PartitionDeferred(partition, result.Deferral!)
-            // The batch is not advanced, so the next subscription catches up from the same position.
             : PromoteSupersededRegistrationOrUnsubscribe();
 
     bool ShouldSkipPartition(IEnumerable<AppendedEvent> events)
@@ -198,13 +206,4 @@ public partial class Observer
         else activity?.RecordFailure(FailureKindCode(outcome.FailureKind));
         return RecordPartitionFailure(partition, outcome.Tail, outcome.ExceptionMessages, outcome.ExceptionStackTrace, outcome.FailureKind, null, null, new(outcome.FailurePolicy, outcome.DeliveryFence));
     }
-
-    static string FailureKindCode(FailureKind kind) => kind switch
-    {
-        FailureKind.Handling => "handling",
-        FailureKind.Timeout => "timeout",
-        FailureKind.Disconnected => "disconnected",
-        FailureKind.WaitingForHandler => "waiting_for_handler",
-        _ => "unknown"
-    };
 }

@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation;
 

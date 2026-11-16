@@ -15,6 +15,8 @@ public partial class Observer
     ObserverSubscription? _eventTypeSubscription;
     FrozenSet<EventTypeId> _subscribedEventTypeIds = [];
 
+    bool CannotHandleEvents => IsRetired || _removed || !_observerExists;
+
     /// <inheritdoc/>
     public Task SetHandledStats(EventSequenceNumber lastHandledEventSequenceNumber)
     {
@@ -65,8 +67,6 @@ public partial class Observer
             EvaluateSuspectedSkips();
         }
     }
-
-    bool CannotHandleEvents => IsRetired || _removed || !_observerExists;
 
     bool HasSubscribedEvent(IEnumerable<AppendedEvent> events)
     {

@@ -9,9 +9,6 @@ namespace Cratis.Chronicle.Observation.for_Observer.given;
 
 public class running_totals : Specification
 {
-    protected ObserverState _state;
-    protected ObserverState _result;
-
     protected static readonly Func<ObserverState, IReadOnlyDictionary<EventTypeId, EventCount>, ObserverState> Increment =
         typeof(Observer).GetMethod("WithIncrementedRunningTotals", BindingFlags.Static | BindingFlags.NonPublic)!
             .CreateDelegate<Func<ObserverState, IReadOnlyDictionary<EventTypeId, EventCount>, ObserverState>>();
@@ -19,6 +16,9 @@ public class running_totals : Specification
     protected static readonly Func<ObserverState, Dictionary<EventTypeId, EventCount>, ObserverState> Subtract =
         typeof(Observer).GetMethod("WithSubtractedPartitionHandledEventCounts", BindingFlags.Static | BindingFlags.NonPublic)!
             .CreateDelegate<Func<ObserverState, Dictionary<EventTypeId, EventCount>, ObserverState>>();
+
+    protected ObserverState _state;
+    protected ObserverState _result;
 
     void Establish() => _state = ObserverState.Empty with
     {

@@ -210,13 +210,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         return Task.CompletedTask;
     }
 
-    bool WithinEventCapacity(int queuedEvents, int batchLength)
-    {
-        if (_laneEventCapacity <= 0) return true;
-        if (queuedEvents == batchLength) return true;
-        return queuedEvents <= _laneEventCapacity;
-    }
-
     /// <inheritdoc/>
     public async Task ResetForDevelopment()
     {
@@ -353,35 +346,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </remarks>
     public Task AwaitQueueDepletion(int periodNum = 10, int periodDelay = 10) =>
         Task.Run(() => WaitForQueueDepletion(periodNum, periodDelay));
-
-    async Task WaitForQueueDepletion(int periodNum, int periodDelay)
-    {
-        if (Debugger.IsAttached)
-        {
-            while (_pendingItems > 0)
-            {
-                await Task.Delay(periodDelay);
-            }
-
-            await _queueEmptyEvent.WaitAsync();
-            return;
-        }
-
-        await WaitForPendingItems(periodNum, periodDelay);
-        await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs), TimeProvider.System);
-    }
-
-    async Task WaitForPendingItems(int count, int periodDelay)
-    {
-        while (_pendingItems > 0)
-        {
-            await Task.Delay(periodDelay);
-            if (--count == 0)
-            {
-                break;
-            }
-        }
-    }
 
     /// <summary>
     /// Moves the observers a batch was meant for to catch-up, because the batch cannot be queued.
@@ -667,6 +631,44 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         }
     }
 
+    static bool ShouldDispatchPage(bool deliversPages, int runs) => deliversPages && runs > 1;
+
+    bool WithinEventCapacity(int queuedEvents, int batchLength)
+    {
+        if (_laneEventCapacity <= 0) return true;
+        if (queuedEvents == batchLength) return true;
+        return queuedEvents <= _laneEventCapacity;
+    }
+
+    async Task WaitForQueueDepletion(int periodNum, int periodDelay)
+    {
+        if (Debugger.IsAttached)
+        {
+            while (_pendingItems > 0)
+            {
+                await Task.Delay(periodDelay);
+            }
+
+            await _queueEmptyEvent.WaitAsync();
+            return;
+        }
+
+        await WaitForPendingItems(periodNum, periodDelay);
+        await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs), TimeProvider.System);
+    }
+
+    async Task WaitForPendingItems(int count, int periodDelay)
+    {
+        while (_pendingItems > 0)
+        {
+            await Task.Delay(periodDelay);
+            if (--count == 0)
+            {
+                break;
+            }
+        }
+    }
+
     void StartQueueHandler()
     {
         if (_isDisposed)
@@ -886,8 +888,6 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             }
         }
     }
-
-    static bool ShouldDispatchPage(bool deliversPages, int runs) => deliversPages && runs > 1;
 
     bool CannotDeliver(AppendedEventsQueueObserverLane lane) => _isResetting || lane.IsClosed;
 

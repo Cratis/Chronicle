@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
-using NJsonSchema;
 
 namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventContentBson;
 
@@ -13,7 +13,7 @@ public class when_parsing_empty_and_null_content : Specification
     BsonDocument _null;
     BsonDocument _unknown;
 
-    async Task Establish() => _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"amount":{"type":["number","null"],"format":"decimal"}}}""");
+    void Establish() => _schema = JsonSchema.FromJson("""{"type":"object","properties":{"amount":{"type":["number","null"],"format":"decimal"}}}""");
 
     void Because()
     {

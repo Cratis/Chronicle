@@ -15,6 +15,8 @@ public partial class Observer
 
     readonly HandledEventsReportDeduplication _handledEventsReports = new();
 
+    bool HasPendingCoalescedWrites => _pendingHandledCounts.Count > 0 || _pendingLivePartitionCounts.Count > 0 || _failureStateWritePending;
+
     /// <inheritdoc/>
     /// <remarks>
     /// The counts are merged into what is pending for the partition and event type and the call returns, so a burst of
@@ -56,6 +58,14 @@ public partial class Observer
         await FlushOrScheduleHandledCounts();
     }
 
+    static void MergeCounts(Dictionary<EventTypeId, EventCount> pending, IReadOnlyDictionary<EventTypeId, EventCount> counts)
+    {
+        foreach (var (eventTypeId, count) in counts)
+        {
+            pending[eventTypeId] = pending.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
+        }
+    }
+
     void MergeHandledCounts(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {
         if (countsPerEventType.Count == 0) return;
@@ -65,14 +75,6 @@ public partial class Observer
             _pendingHandledCounts[partition] = pending;
         }
         MergeCounts(pending, countsPerEventType);
-    }
-
-    static void MergeCounts(Dictionary<EventTypeId, EventCount> pending, IReadOnlyDictionary<EventTypeId, EventCount> counts)
-    {
-        foreach (var (eventTypeId, count) in counts)
-        {
-            pending[eventTypeId] = pending.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
-        }
     }
 
     async Task FlushOrScheduleHandledCounts()
@@ -164,8 +166,6 @@ public partial class Observer
             FlushCoalescedWritesFromTimer,
             new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
     }
-
-    bool HasPendingCoalescedWrites => _pendingHandledCounts.Count > 0 || _pendingLivePartitionCounts.Count > 0 || _failureStateWritePending;
 
     void EnsureCoalescedWriteTimer()
     {
