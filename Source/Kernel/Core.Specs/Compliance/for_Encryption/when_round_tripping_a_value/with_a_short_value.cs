@@ -13,7 +13,7 @@ public class with_a_short_value : given.a_key
 
     void Because()
     {
-        _encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(Original), _key);
+        _encrypted = _encryption.Encrypt(Encoding.UTF8.GetBytes(Original), _key, EncryptionKeyRevision.Initial);
         _decrypted = _encryption.Decrypt(_encrypted, _key);
     }
 

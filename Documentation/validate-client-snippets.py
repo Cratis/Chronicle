@@ -495,6 +495,7 @@ def generate_project() -> str:
         <ProjectReference Include="../../Source/Clients/Aspire/Aspire.csproj" />
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Source/Clients/Testing/Testing.csproj" />
+        <ProjectReference Include="../../Source/Clients/Workbench/Workbench.csproj" />
         <ProjectReference Include="../../Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">

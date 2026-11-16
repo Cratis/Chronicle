@@ -229,8 +229,8 @@ test('three-shard workflow matches the planner and refreshed timing samples', as
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));
     const projects = plan.flatMap(shard => shard.projects);
-    assert.equal(projects.length, 24 + CORE_PARTS);
-    assert.equal(new Set(projects).size, 24 + CORE_PARTS);
+    assert.equal(projects.length, 25 + CORE_PARTS);
+    assert.equal(new Set(projects).size, 25 + CORE_PARTS);
     assert.equal(projects.filter(project => project.includes('#core-part-')).length, CORE_PARTS);
     assert.ok(!projects.includes('Source/Kernel/Core.Specs/Core.Specs.csproj'));
     // Train 8 wall calibration includes 55 seconds per Core part and mean shard overhead.
