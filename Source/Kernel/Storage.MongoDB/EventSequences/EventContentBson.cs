@@ -113,7 +113,7 @@ internal static class EventContentBson
             JsonObject document => PrepareDocument(document, actual),
             JsonArray array => new JsonArray(array.Select(item => PrepareForBson(item, actual?.Item)).ToArray()),
             JsonValue value => PrepareValue(value, schema, actual),
-            _ => node?.DeepClone()
+            _ => null
         };
     }
 
@@ -178,7 +178,7 @@ internal static class EventContentBson
         return node;
     }
 
-    static JsonNode? RestoreNumber(BsonDecimal128 number)
+    static JsonValue? RestoreNumber(BsonDecimal128 number)
     {
         try
         {
