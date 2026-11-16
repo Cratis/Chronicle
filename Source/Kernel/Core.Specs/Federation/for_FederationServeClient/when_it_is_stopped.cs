@@ -18,6 +18,7 @@ public class when_it_is_stopped : given.a_serve_client
         await _serve.WhenCalls(1);
         await _clock.WaitForPendingTimer();
         _client.Stop();
+        await _clock.WaitForNoPendingTimers();
         _callsAtStop = _serve.Calls;
         _pendingAfterStop = _clock.PendingTimers;
         _clock.Advance(Timing.DeniedBackoff);
