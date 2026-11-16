@@ -260,9 +260,9 @@ internal sealed class Observers(
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
         var observer = await grainFactory.GetObserver(command, storage, namespaceCasing);
-        var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
-        await observer.TryRecoverAllFailedPartitions();
-        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions };
+        var failedPartitions = (await observer.GetFailedPartitionKeys()).ToArray();
+        await Chronicle.Observation.RetryFailedPartitions.Start(observer, failedPartitions);
+        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions.Length };
     }
 
     /// <inheritdoc/>
