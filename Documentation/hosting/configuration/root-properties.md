@@ -24,7 +24,8 @@ These properties live at the root of `chronicle.json`.
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | port | number | 35000 | By default, gRPC (HTTP/2) and Workbench/API/OAuth/health (HTTP/1.1) over TLS; HTTP/2-only h2c when `tls.enabled=false` |
-| additiveEventTypeSchemaEvolutionEventStores | string array | `[]` | Event stores that accept additive, in-place schema evolution for client-owned event types. Matching is case-sensitive. |
+| strictEventTypeSchemaEventStores | string array | `[]` | Event stores that reject in-place additive schema evolution. Matching is case-sensitive. Client-owned event types can evolve additively in every other store. |
+| additiveEventTypeSchemaEvolutionEventStores | string array | `[]` | Deprecated and ignored. Retained for configuration compatibility; use `strictEventTypeSchemaEventStores` to opt out instead. |
 | bindTimeout | time span | 00:00:30 | How long to retry a port bind that fails with EADDRINUSE |
 | healthCheckEndpoint | string | /health | Health check endpoint path |
 | maxReceiveMessageSize | number | 104857600 | The largest gRPC message in bytes the kernel accepts from a client, 100 MB by default. Remove the limit with `null` |
@@ -34,15 +35,17 @@ These properties live at the root of `chronicle.json`.
 
 ## Additive event type schema evolution
 
-The default empty `additiveEventTypeSchemaEvolutionEventStores` array keeps strict generation validation everywhere. To enable in-place additions for one event store, configure the following at the root of `chronicle.json` on every kernel silo:
+Client-owned event types accept compatible in-place additions in every event store by default. To keep strict generation validation for one event store, configure the following at the root of `chronicle.json` on every kernel silo:
 
 ```json
 {
-  "additiveEventTypeSchemaEvolutionEventStores": ["Orders"]
+  "strictEventTypeSchemaEventStores": ["Orders"]
 }
 ```
 
-The environment-variable equivalent is `Cratis__Chronicle__AdditiveEventTypeSchemaEvolutionEventStores__0=Orders`. Add further entries using `__1`, `__2`, and so on. Event store names match exactly. Clients cannot enable this policy through registration payloads, and kernel-owned event types are always excluded. Changing the configuration requires the normal server configuration rollout; applying an allowed schema addition afterward does not require a restart.
+The environment-variable equivalent is `Cratis__Chronicle__StrictEventTypeSchemaEventStores__0=Orders`. Add further entries using `__1`, `__2`, and so on. Event store names match exactly, including case. An empty array (the default) opts no stores out. Clients cannot override this policy through registration payloads, and kernel-owned system event types are always excluded from in-place evolution. Changing the configuration requires the normal server configuration rollout; applying an allowed schema addition afterward does not require a restart.
+
+The former `additiveEventTypeSchemaEvolutionEventStores` option is deprecated and ignored. Existing configurations still bind, but that list no longer restricts evolution to the named stores and cannot override the strict list. A populated legacy list produces a startup warning. When upgrading, add any stores that must retain strict validation to `strictEventTypeSchemaEventStores`.
 
 See [Evolving event schemas](../../understanding-event-evolution.md#optional-in-place-additions) for the compatibility rules, audit trail, and historical-data limitations.
 

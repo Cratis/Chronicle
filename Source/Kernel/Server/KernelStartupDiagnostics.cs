@@ -25,6 +25,21 @@ internal static class KernelStartupDiagnostics
     }
 
     /// <summary>
+    /// Reports the ignored additive schema evolution opt-in list when it is populated.
+    /// </summary>
+    /// <param name="options">The Chronicle configuration.</param>
+    /// <param name="logger">The kernel logger.</param>
+    internal static void ReportLegacySchemaEvolution(ChronicleOptions options, ILogger<Kernel> logger)
+    {
+#pragma warning disable CS0618 // Read the deprecated option only to warn that it is ignored.
+        if (options.AdditiveEventTypeSchemaEvolutionEventStores.Any())
+#pragma warning restore CS0618
+        {
+            logger.AdditiveSchemaEvolutionOptInIgnored();
+        }
+    }
+
+    /// <summary>
     /// Reports settings that only the development build honors when they are configured in another build.
     /// The values are never logged.
     /// </summary>

@@ -14,15 +14,16 @@ namespace Cratis.Chronicle.EventTypes.for_EventTypeRegistrar;
 public class when_checking_evolution_eligibility : given.additive_evolution_enabled
 {
     [Theory]
-    [InlineData(false, EventTypeOwner.Client, Contracts.Events.EventTypeOwner.Client)]
-    [InlineData(true, EventTypeOwner.Server, Contracts.Events.EventTypeOwner.Client)]
-    [InlineData(true, EventTypeOwner.Client, Contracts.Events.EventTypeOwner.Server)]
-    public async Task should_reject_additions_without_permission(bool enabled, EventTypeOwner storedOwner, Contracts.Events.EventTypeOwner incomingOwner)
+    [InlineData(true, EventTypeOwner.Client, Contracts.Events.EventTypeOwner.Client)]
+    [InlineData(false, EventTypeOwner.Server, Contracts.Events.EventTypeOwner.Client)]
+    [InlineData(false, EventTypeOwner.Client, Contracts.Events.EventTypeOwner.Server)]
+    [InlineData(false, EventTypeOwner.Server, Contracts.Events.EventTypeOwner.Server)]
+    public async Task should_reject_additions_without_permission(bool strict, EventTypeOwner storedOwner, Contracts.Events.EventTypeOwner incomingOwner)
     {
         _subject = new EventTypeRegistrar(
             _grainFactory,
             NullLogger<EventTypeRegistrar>.Instance,
-            Options.Create(new ChronicleOptions { AdditiveEventTypeSchemaEvolutionEventStores = enabled ? ["test-store"] : [] }));
+            Options.Create(new ChronicleOptions { StrictEventTypeSchemaEventStores = strict ? ["test-store"] : [] }));
         _definition = _definition with { Owner = storedOwner };
         var registration = Registration();
         registration.Owner = incomingOwner;
@@ -44,21 +45,42 @@ public class when_checking_evolution_eligibility : given.additive_evolution_enab
         _eventTypesCacheClient.ReceivedCalls().ShouldBeEmpty();
     }
 
-    [Fact]
-    async Task should_reject_additions_in_another_event_store()
+    [Theory]
+    [InlineData("test-store")]
+    [InlineData("another-store")]
+    public async Task should_accept_additions_by_default(string eventStore)
     {
-        var results = await _subject.Check("another-store", [Registration()], _storage);
-        results.Single().Accepted.ShouldBeFalse();
+        var results = await _subject.Check(eventStore, [Registration()], _storage);
+        results.Single().Accepted.ShouldBeTrue();
+        results.Single().Classification.ShouldEqual("Additive");
+        await Register(eventStore: eventStore);
+        _definition.Generations.Single().Schema.Properties.Keys.ShouldContain("age");
+    }
+
+    [Theory]
+    [InlineData("Test-Store", false)]
+    [InlineData("test-store", true)]
+    [InlineData("another-store", true)]
+    public async Task should_match_strict_event_store_names_exactly(string eventStore, bool accepted)
+    {
+        _subject = new EventTypeRegistrar(
+            _grainFactory,
+            NullLogger<EventTypeRegistrar>.Instance,
+            Options.Create(new ChronicleOptions { StrictEventTypeSchemaEventStores = ["Test-Store"] }));
+        var results = await _subject.Check(eventStore, [Registration()], _storage);
+        results.Single().Accepted.ShouldEqual(accepted);
+        var error = await Catch.Exception(() => Register(eventStore: eventStore));
+        (error is null).ShouldEqual(accepted);
     }
 
     [Fact]
     void should_bind_the_server_policy()
     {
-        new ChronicleOptions().AdditiveEventTypeSchemaEvolutionEventStores.ShouldBeEmpty();
+        new ChronicleOptions().StrictEventTypeSchemaEventStores.ShouldBeEmpty();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Cratis:Chronicle:AdditiveEventTypeSchemaEvolutionEventStores:0"] = "test-store"
+            ["Cratis:Chronicle:StrictEventTypeSchemaEventStores:0"] = "test-store"
         }).Build();
-        configuration.GetSection("Cratis:Chronicle").Get<ChronicleOptions>().AdditiveEventTypeSchemaEvolutionEventStores.ShouldContain("test-store");
+        configuration.GetSection("Cratis:Chronicle").Get<ChronicleOptions>().StrictEventTypeSchemaEventStores.ShouldContain("test-store");
     }
 }

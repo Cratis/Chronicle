@@ -9,5 +9,5 @@ public class and_a_legacy_client_supplies_default_only : given.a_registration
 
     Task Because() => Register(DefaultOnly);
 
-    [Fact] void should_keep_the_precise_schema() => _registered.Definition.Generations.Single().Schema.ToJson().ShouldEqual(Typed);
+    [Fact] void should_keep_the_precise_schema() => RegisteredDefinition.Generations.Single().Schema.ToJson().ShouldEqual(Typed);
 }

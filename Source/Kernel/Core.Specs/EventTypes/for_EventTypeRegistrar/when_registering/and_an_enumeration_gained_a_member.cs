@@ -40,7 +40,5 @@ public class and_an_enumeration_gained_a_member : given.all_dependencies
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
 
-    [Fact] void should_store_the_wider_member_list() =>
-        _eventTypesStorage.Received(1).Register(Arg.Is<IEnumerable<Concepts.Events.EventTypeToRegister>>(
-            _ => _.Single().Definition.Generations.Single().Schema.ToJson().Contains("Revoked")));
+    [Fact] void should_store_the_wider_member_list() => _storedDefinitions.Single().Generations.Single().Schema.ToJson().ShouldContain("Revoked");
 }

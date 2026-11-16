@@ -191,6 +191,7 @@ catch (InvalidSinkConfiguration exception)
 }
 
 KernelStartupDiagnostics.ReportIdentityProviderCertificate(chronicleOptions, logger);
+KernelStartupDiagnostics.ReportLegacySchemaEvolution(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportSubscriberTimeout(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportGrainDirectory(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
