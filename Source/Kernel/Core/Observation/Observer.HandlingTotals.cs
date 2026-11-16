@@ -26,11 +26,11 @@ public partial class Observer
         }
 
         var perEventType = new Dictionary<EventTypeId, EventCount>(state.HandledEventCountPerEventType);
-        var total = EventCount.Zero;
+        var total = 0UL;
         foreach (var (eventTypeId, count) in countsPerEventType)
         {
+            total += count.Value;
             perEventType[eventTypeId] = perEventType.GetValueOrDefault(eventTypeId, EventCount.Zero) + count.Value;
-            total += count;
         }
 
         return state with
