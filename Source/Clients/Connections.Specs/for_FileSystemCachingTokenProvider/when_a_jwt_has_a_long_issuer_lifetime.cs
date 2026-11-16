@@ -16,7 +16,7 @@ public class when_a_jwt_has_a_long_issuer_lifetime : given.a_caching_provider
     {
         await _provider.GetAccessToken();
         _latestExpiry = DateTimeOffset.UtcNow.AddMinutes(55);
-        using var document = JsonDocument.Parse(File.ReadAllText(_cacheFile));
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_cacheFile));
         _expiry = document.RootElement.GetProperty("Expiry").GetDateTimeOffset();
     }
 

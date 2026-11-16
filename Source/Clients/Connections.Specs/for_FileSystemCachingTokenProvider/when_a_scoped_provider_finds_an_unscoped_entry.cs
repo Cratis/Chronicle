@@ -13,9 +13,9 @@ public class when_a_scoped_provider_finds_an_unscoped_entry : given.a_caching_pr
     {
         _inner.GetAccessToken(Arg.Any<CancellationToken>()).Returns("unscoped-token", "fresh-token");
         await _provider.GetAccessToken();
-        var entry = JsonNode.Parse(File.ReadAllText(_cacheFile))!.AsObject();
+        var entry = JsonNode.Parse(await File.ReadAllTextAsync(_cacheFile))!.AsObject();
         entry.Remove("ScopeHash");
-        File.WriteAllText(_cacheFile, entry.ToJsonString());
+        await File.WriteAllTextAsync(_cacheFile, entry.ToJsonString());
     }
 
     async Task Because()

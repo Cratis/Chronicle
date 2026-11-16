@@ -11,7 +11,7 @@ public class when_the_cache_is_malformed : given.a_caching_provider
     {
         _inner.GetAccessToken(Arg.Any<CancellationToken>()).Returns("first-token", "fresh-token");
         await _provider.GetAccessToken();
-        File.WriteAllText(_cacheFile, "{truncated");
+        await File.WriteAllTextAsync(_cacheFile, "{truncated");
     }
 
     async Task Because() => _result = await _provider.GetAccessToken();

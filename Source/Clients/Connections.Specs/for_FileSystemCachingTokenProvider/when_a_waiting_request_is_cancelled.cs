@@ -16,7 +16,7 @@ public class when_a_waiting_request_is_cancelled : given.a_caching_provider
         var first = _provider.GetAccessToken();
         using var cancellation = new CancellationTokenSource();
         var waiting = _provider.GetAccessToken(cancellation.Token);
-        cancellation.Cancel();
+        await cancellation.CancelAsync();
         try
         {
             await waiting;
