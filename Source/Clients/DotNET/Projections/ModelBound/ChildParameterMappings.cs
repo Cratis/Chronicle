@@ -184,30 +184,43 @@ static class ChildParameterMappings
         parameter.GetCustomAttributes().Any(attribute => _explicitMappingAttributes.Any(attribute.IsClosedFormOf));
 
     /// <summary>
-    /// If this is the identified property and has no explicit mapping, map it to the key - but skip when the key
-    /// expression matches the parameter name and it has no [Key] attribute. That prevents auto-mapping properties that
-    /// are only identifiers, not actual fields needing values.
+    /// Maps the identified property, and an independent [Key] parameter, to the key of the creating event.
     /// </summary>
     /// <param name="scope">The scope describing the children collection being populated.</param>
     /// <param name="parameter">The constructor parameter.</param>
     /// <param name="propertyName">The projection property name the parameter maps to.</param>
     static void ApplyIdentifierMapping(ChildMappingScope scope, ParameterInfo parameter, string propertyName)
     {
-        if (!scope.ShouldAutoMap ||
-            HasExplicitMapping(parameter) ||
-            !parameter.Name!.Equals(scope.Identity.IdentifiedBy, StringComparison.OrdinalIgnoreCase))
+        if (!scope.ShouldAutoMap || HasExplicitMapping(parameter))
         {
             return;
         }
 
+        if (parameter.Name!.Equals(scope.Identity.IdentifiedBy, StringComparison.OrdinalIgnoreCase))
+        {
+            MapIdentifiedProperty(scope, parameter, propertyName);
+        }
+        else if (scope.Identity.Key == WellKnownExpressions.EventSourceId && parameter.GetCustomAttribute<KeyAttribute>() is not null)
+        {
+            scope.FromDefinition.Properties[propertyName] = $"{WellKnownExpressions.EventContext}(EventSourceId)";
+        }
+    }
+
+    /// <summary>
+    /// Skips the mapping when the key expression matches the parameter name and it has no [Key] attribute. That prevents
+    /// auto-mapping properties that are only identifiers, not actual fields needing values.
+    /// </summary>
+    /// <param name="scope">The scope describing the children collection being populated.</param>
+    /// <param name="parameter">The constructor parameter.</param>
+    /// <param name="propertyName">The projection property name the parameter maps to.</param>
+    static void MapIdentifiedProperty(ChildMappingScope scope, ParameterInfo parameter, string propertyName)
+    {
         var keyExpressionMatchesParameter = propertyName.Equals(scope.Identity.KeyExpression, StringComparison.OrdinalIgnoreCase);
         if (keyExpressionMatchesParameter && parameter.GetCustomAttribute<KeyAttribute>() is null)
         {
             return;
         }
 
-        // If key is EventSourceId, use event context, otherwise use the key property from the event
-        // (the key expression already has the naming policy applied)
         scope.FromDefinition.Properties[propertyName] = scope.Identity.Key == WellKnownExpressions.EventSourceId
             ? $"{WellKnownExpressions.EventContext}(EventSourceId)"
             : scope.Identity.KeyExpression;
