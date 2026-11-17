@@ -9,5 +9,5 @@ public class and_a_legacy_client_supplies_default_only_for_a_protected_property 
 
     Task Because() => Register(DefaultOnly);
 
-    [Fact] void should_keep_the_protected_schema() => _registered.Definition.Generations.Single().Schema.ToJson().ShouldEqual(Protected);
+    [Fact] void should_keep_the_protected_schema() => RegisteredDefinition.Generations.Single().Schema.ToJson().ShouldEqual(Protected);
 }

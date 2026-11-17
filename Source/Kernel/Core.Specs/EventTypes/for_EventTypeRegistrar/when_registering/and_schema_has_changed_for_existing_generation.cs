@@ -9,7 +9,7 @@ public class and_schema_has_changed_for_existing_generation : given.all_dependen
 {
     Exception _exception;
     const string OriginalSchema = """{"type":"object","properties":{"name":{"type":"string"}}}""";
-    const string ModifiedSchema = """{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"integer"}}}""";
+    const string ModifiedSchema = """{"type":"object","properties":{"name":{"type":"integer"},"age":{"type":"integer"}}}""";
 
     void Establish() => StoredEventTypes(StoredEventType("some-event", (1, OriginalSchema)));
 

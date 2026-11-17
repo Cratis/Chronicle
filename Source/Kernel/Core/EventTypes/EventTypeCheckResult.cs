@@ -9,13 +9,13 @@ namespace Cratis.Chronicle.EventTypes;
 /// <param name="EventType">The event type identifier.</param>
 /// <param name="Generation">The generation the finding is about.</param>
 /// <param name="Accepted">Whether registering would be accepted.</param>
-/// <param name="Reason">Why registering would be rejected; empty when accepted.</param>
-/// <param name="Keyword">The schema keyword that differs, when the rejection is a schema difference; otherwise empty.</param>
-/// <param name="Path">The JSON path of the declaration holding the difference, when the rejection is a schema difference; otherwise empty.</param>
+/// <param name="Reason">Why registering would be rejected, or a warning when an accepted registration adds protection; otherwise empty.</param>
+/// <param name="Keyword">The incompatible schema keyword, or protection when an accepted registration adds protection to an existing property; otherwise empty.</param>
+/// <param name="Path">The JSON path of the incompatible declaration or existing property gaining protection; otherwise empty.</param>
 public record EventTypeCheckResult(string EventType, uint Generation, bool Accepted, string Reason, string Keyword, string Path)
 {
     /// <summary>
-    /// Gets the schema relationship independently of whether the server policy accepts it.
+    /// Gets the schema relationship (Identical, Tolerated, Additive, Subset or Breaking) independently of whether the server policy accepts it.
     /// </summary>
     public string Classification { get; init; } = string.Empty;
 

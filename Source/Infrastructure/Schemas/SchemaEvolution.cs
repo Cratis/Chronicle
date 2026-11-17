@@ -40,7 +40,7 @@ public static class SchemaEvolution
     {
         var original = JsonNode.Parse(stored.ToJson())!.AsObject();
         var candidate = JsonNode.Parse(incoming.ToJson())!.AsObject();
-        var additions = PruneAdditions(original, candidate, !subset);
+        var additions = PruneAdditions(original, candidate, subset);
         if (additions is null or <= 0)
         {
             return false;
@@ -54,9 +54,9 @@ public static class SchemaEvolution
         return baseline.DifferingKeywords(baseline.MorePrecise(proposed)) is null;
     }
 
-    static int? PruneAdditions(JsonObject stored, JsonObject incoming, bool allowRequiredAdditions)
+    static int? PruneAdditions(JsonObject stored, JsonObject incoming, bool allowDefault)
     {
-        var additions = PruneProperties(stored, incoming, allowRequiredAdditions);
+        var additions = PruneProperties(stored, incoming, allowDefault);
         foreach (var keyword in new[] { "$defs", "definitions" })
         {
             if (incoming[keyword] is not JsonObject definitions)
@@ -65,7 +65,7 @@ public static class SchemaEvolution
             }
 
             var storedDefinitions = stored[keyword] as JsonObject;
-            additions += PruneDefinitions(storedDefinitions, definitions, allowRequiredAdditions);
+            additions += PruneDefinitions(storedDefinitions, definitions, allowDefault);
 
             if (storedDefinitions is null && definitions.Count == 0)
             {
@@ -76,14 +76,14 @@ public static class SchemaEvolution
         return additions;
     }
 
-    static int? PruneDefinitions(JsonObject? stored, JsonObject incoming, bool allowRequiredAdditions)
+    static int? PruneDefinitions(JsonObject? stored, JsonObject incoming, bool allowDefault)
     {
         int? additions = 0;
         foreach (var definition in incoming.ToArray())
         {
             if (stored?[definition.Key] is JsonObject existing && definition.Value is JsonObject candidate)
             {
-                additions += PruneAdditions(existing, candidate, allowRequiredAdditions);
+                additions += PruneAdditions(existing, candidate, allowDefault);
             }
             else if (stored?.ContainsKey(definition.Key) != true)
             {
@@ -94,7 +94,7 @@ public static class SchemaEvolution
         return additions;
     }
 
-    static int? PruneProperties(JsonObject stored, JsonObject incoming, bool allowRequiredAdditions)
+    static int? PruneProperties(JsonObject stored, JsonObject incoming, bool allowDefault)
     {
         if (incoming["properties"] is not JsonObject properties)
         {
@@ -105,7 +105,7 @@ public static class SchemaEvolution
         int? additions = 0;
         foreach (var property in properties.ToArray())
         {
-            additions += PruneProperty(storedProperties, incoming, property, allowRequiredAdditions);
+            additions += PruneProperty(storedProperties, incoming, property, allowDefault);
         }
 
         if (storedProperties is null && properties.Count == 0)
@@ -121,15 +121,15 @@ public static class SchemaEvolution
         return additions;
     }
 
-    static int? PruneProperty(JsonObject? stored, JsonObject incoming, KeyValuePair<string, JsonNode?> property, bool allowRequiredAdditions)
+    static int? PruneProperty(JsonObject? stored, JsonObject incoming, KeyValuePair<string, JsonNode?> property, bool allowDefault)
     {
         if (stored?.ContainsKey(property.Key) == true)
         {
             return stored[property.Key] is JsonObject existing && property.Value is JsonObject candidate
-                ? PruneAdditions(existing, candidate, allowRequiredAdditions) : 0;
+                ? PruneAdditions(existing, candidate, allowDefault) : 0;
         }
 
-        if (IsRequired(incoming, property.Key) && !RemoveSafeRequiredAddition(incoming, property, allowRequiredAdditions))
+        if (IsRequired(incoming, property.Key) && !RemoveSafeRequiredAddition(incoming, property, allowDefault))
         {
             return null;
         }
@@ -138,15 +138,9 @@ public static class SchemaEvolution
         return 1;
     }
 
-    static bool RemoveSafeRequiredAddition(JsonObject schema, KeyValuePair<string, JsonNode?> property, bool allowed)
+    static bool RemoveSafeRequiredAddition(JsonObject schema, KeyValuePair<string, JsonNode?> property, bool allowDefault)
     {
-        if (!allowed || property.Value is not JsonObject definition)
-        {
-            return false;
-        }
-
-        var nullable = definition["type"] is JsonArray types && types.Any(_ => _?.GetValue<string>() == "null");
-        if (!definition.ContainsKey("default") && !nullable)
+        if (!CanOmitRequiredProperty(property.Value, allowDefault))
         {
             return false;
         }
@@ -154,6 +148,23 @@ public static class SchemaEvolution
         var required = schema["required"]!.AsArray();
         required.Remove(required.First(_ => _?.GetValue<string>() == property.Key));
         return true;
+    }
+
+    static bool CanOmitRequiredProperty(JsonNode? property, bool allowDefault)
+    {
+        if (property is not JsonObject definition)
+        {
+            return false;
+        }
+
+        // Legacy stored-side defaults remain compatible with older registrations. New required,
+        // non-nullable additions are unsafe: payload validation does not materialize defaults.
+        if (allowDefault && definition.ContainsKey("default"))
+        {
+            return true;
+        }
+
+        return definition["type"] is JsonArray types && types.Any(_ => _?.GetValue<string>() == "null");
     }
 
     static bool IsRequired(JsonObject schema, string property) =>

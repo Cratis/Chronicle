@@ -81,10 +81,18 @@ public class ChronicleOptions : IValidatableObject
     public Events Events { get; init; } = new Events();
 
     /// <summary>
-    /// Gets the event stores where client-owned event types may evolve additively in an existing generation.
-    /// Empty by default. Kernel and system event types always retain strict generation validation.
-    /// Configure array entries through Cratis__Chronicle__AdditiveEventTypeSchemaEvolutionEventStores__0.
+    /// Gets the event stores that retain strict event type schema validation instead of allowing additive evolution.
+    /// Empty by default, allowing client-owned event types to evolve additively in every event store.
+    /// Kernel and system event types always retain strict generation validation.
+    /// Configure array entries through Cratis__Chronicle__StrictEventTypeSchemaEventStores__0.
     /// </summary>
+    public IEnumerable<string> StrictEventTypeSchemaEventStores { get; init; } = [];
+
+    /// <summary>
+    /// Gets the deprecated additive schema evolution opt-in list. This option is ignored.
+    /// Additive evolution is enabled by default; use <see cref="StrictEventTypeSchemaEventStores"/> to opt out.
+    /// </summary>
+    [Obsolete("Ignored. Additive schema evolution is enabled by default. Use StrictEventTypeSchemaEventStores to opt out.")]
     public IEnumerable<string> AdditiveEventTypeSchemaEvolutionEventStores { get; init; } = [];
 
     /// <summary>

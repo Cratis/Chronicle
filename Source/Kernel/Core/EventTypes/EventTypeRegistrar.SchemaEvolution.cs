@@ -27,7 +27,27 @@ public sealed partial class EventTypeRegistrar
             }
         }
 
-        return classification == SchemaEvolutionKind.Subset ? nameof(SchemaEvolutionKind.Tolerated) : classification.ToString();
+        return classification.ToString();
+    }
+
+    static async Task<EventTypeCheckResult> FlagAddedProtection(EventTypeCheckResult result, EventTypeRegistration incoming, EventTypeDefinition? stored)
+    {
+        foreach (var generation in await ParseGenerations(incoming))
+        {
+            var existing = stored?.Generations.FirstOrDefault(_ => _.Generation == generation.Generation);
+            var path = existing?.Schema.AddedProtectionMetadataPaths(generation.Schema).FirstOrDefault();
+            if (path is not null)
+            {
+                return result with
+                {
+                    Reason = "Protection was added to an existing property. Previously stored events are not retroactively protected.",
+                    Keyword = "protection",
+                    Path = path
+                };
+            }
+        }
+
+        return result;
     }
 
     static async Task<List<EventTypeToRegister>> EvolveExistingSchemas(

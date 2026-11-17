@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.EventTypes;
 public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
 {
     readonly ILogger<EventTypeRegistrar> _logger = NullLogger<EventTypeRegistrar>.Instance;
-    readonly HashSet<string> _additiveEvolutionEventStores = new(StringComparer.Ordinal);
+    readonly HashSet<string> _strictEventStores = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a registrar with structured warnings for protection changes.
@@ -40,7 +40,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
     public EventTypeRegistrar(IGrainFactory grainFactory, ILogger<EventTypeRegistrar> logger, IOptions<ChronicleOptions>? options = null) : this(grainFactory)
     {
         _logger = logger;
-        _additiveEvolutionEventStores = new(options?.Value.AdditiveEventTypeSchemaEvolutionEventStores ?? [], StringComparer.Ordinal);
+        _strictEventStores = new(options?.Value.StrictEventTypeSchemaEventStores ?? [], StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
         IPatternCapture patternCapture)
     {
         var eventTypesStorage = storage.GetEventStore(eventStore).EventTypes;
-        var allowEvolution = _additiveEvolutionEventStores.Contains(eventStore.Value);
+        var allowEvolution = !skipValidation && !_strictEventStores.Contains(eventStore.Value);
 
         // The gRPC-deserialized sequence backing a repeated field is not guaranteed to support more than
         // one enumeration - and this method enumerates it twice, once to validate and once to build what
@@ -140,7 +140,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
 
         foreach (var eventType in typesList)
         {
-            results.Add(await CheckRegistration(eventType, StoredFor(stored, eventType), _additiveEvolutionEventStores.Contains(eventStore.Value)));
+            results.Add(await CheckRegistration(eventType, StoredFor(stored, eventType), !_strictEventStores.Contains(eventStore.Value)));
         }
 
         return results;
@@ -193,7 +193,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
             return EventTypeCheckResult.Reject(id, generation, ex.Message);
         }
 
-        return EventTypeCheckResult.Accept(id, generation) with { Classification = classification };
+        return await FlagAddedProtection(EventTypeCheckResult.Accept(id, generation) with { Classification = classification }, eventType, storedDefinition);
     }
 
     /// <summary>

@@ -5,6 +5,9 @@ namespace Cratis.Chronicle.Server;
 
 internal static partial class KernelConfigurationLogging
 {
+    [LoggerMessage(LogLevel.Warning, "AdditiveEventTypeSchemaEvolutionEventStores is deprecated and ignored. Additive schema evolution is enabled by default in every event store; use StrictEventTypeSchemaEventStores to opt out")]
+    internal static partial void AdditiveSchemaEvolutionOptInIgnored(this ILogger<Kernel> logger);
+
     [LoggerMessage(LogLevel.Warning, "identityProvider.certificate is configured but ignored. With the internal authority, /connect/token uses the top-level tls certificate. With authentication enabled, tls.enabled=false requires an external HTTPS authority; Chronicle does not serve /connect/token in that mode. Remove identityProvider.certificate")]
     internal static partial void IdentityProviderCertificateIgnored(this ILogger<Kernel> logger);
 

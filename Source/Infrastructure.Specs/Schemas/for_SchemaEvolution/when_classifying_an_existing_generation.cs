@@ -11,7 +11,7 @@ public class when_classifying_an_existing_generation : Specification
     [InlineData(Stored, SchemaEvolutionKind.Identical)]
     [InlineData("""{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"integer"}}}""", SchemaEvolutionKind.Additive)]
     [InlineData("""{"type":"object","required":["age"],"properties":{"name":{"type":"string"},"age":{"type":"integer"}}}""", SchemaEvolutionKind.Breaking)]
-    [InlineData("""{"type":"object","required":["age"],"properties":{"name":{"type":"string"},"age":{"type":"integer","default":0}}}""", SchemaEvolutionKind.Additive)]
+    [InlineData("""{"type":"object","required":["age"],"properties":{"name":{"type":"string"},"age":{"type":"integer","default":0}}}""", SchemaEvolutionKind.Breaking)]
     [InlineData("""{"type":"object","required":["age"],"properties":{"name":{"type":"string"},"age":{"type":["integer","null"]}}}""", SchemaEvolutionKind.Additive)]
     [InlineData("""{"type":"object","properties":{"name":{"type":"string","description":"annotation"}}}""", SchemaEvolutionKind.Identical)]
     [InlineData("""{"type":"object","properties":{"name":{"type":["string","null"]}}}""", SchemaEvolutionKind.Breaking)]
@@ -27,6 +27,12 @@ public class when_classifying_an_existing_generation : Specification
     void should_recognize_an_older_client() => SchemaEvolution.Classify(
         JsonSchema.FromJson("""{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"integer"}}}"""),
         JsonSchema.FromJson(Stored)).ShouldEqual(SchemaEvolutionKind.Subset);
+
+    [Theory]
+    [InlineData("""{"type":"object","required":["age"],"properties":{"name":{"type":"string"},"age":{"type":["integer","null"]}}}""")]
+    [InlineData("""{"type":"object","required":["age"],"properties":{"name":{"type":"string"},"age":{"type":"integer","default":0}}}""")]
+    public void should_recognize_an_older_client_after_a_required_nullable_or_defaulted_addition(string stored) => SchemaEvolution.Classify(
+        JsonSchema.FromJson(stored), JsonSchema.FromJson(Stored)).ShouldEqual(SchemaEvolutionKind.Subset);
 
     [Fact]
     void should_reject_missing_protection_on_a_subset() => SchemaEvolution.Classify(

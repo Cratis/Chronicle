@@ -21,7 +21,7 @@ public class additive_evolution_enabled : all_dependencies
         _subject = new EventTypeRegistrar(
             _grainFactory,
             NullLogger<EventTypeRegistrar>.Instance,
-            Options.Create(new ChronicleOptions { AdditiveEventTypeSchemaEvolutionEventStores = ["test-store"] }));
+            Options.Create(new ChronicleOptions()));
         _definition = StoredEventType("some-event", (1, Original));
         _eventTypesStorage.GetAllDefinitions().Returns(_ => new[] { _definition });
         _eventTypesStorage.TryReplaceSchema(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration>(), Arg.Any<JsonSchema>(), Arg.Any<JsonSchema>())
@@ -45,5 +45,5 @@ public class additive_evolution_enabled : all_dependencies
         Schema = schema
     };
 
-    protected Task Register(string schema = Extended) => _subject.Register("test-store", [Registration(schema)], false, _storage, _eventTypesCacheClient, _patternCapture);
+    protected Task Register(string schema = Extended, string eventStore = "test-store") => _subject.Register(eventStore, [Registration(schema)], false, _storage, _eventTypesCacheClient, _patternCapture);
 }
