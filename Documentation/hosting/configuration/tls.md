@@ -45,6 +45,26 @@ Cratis__Chronicle__Tls__CertificatePassword=your-password
 
 The dedicated health port has independent `health.tls` configuration. When `health.tls` is true it still requires a TLS certificate even if the main port has TLS disabled. Set `health.tls` to false for a private plaintext probe port. See [Health Endpoint](health-endpoint.md).
 
+## Cluster traffic
+
+The certificate that secures the main port also secures the traffic between Chronicle nodes: the silo protocol on port 11111 and the Orleans client gateway on port 30000. It works the same way as the main port: when a certificate file is configured it is used, and without one the traffic is not encrypted, as before.
+
+Chronicle secures cluster traffic when all of these hold:
+
+- Clustering is `MongoDB` or `Sql`. Localhost clustering is a single node and has no silo traffic to protect.
+- `tls.certificatePath` points at a certificate file. The development self-signed certificate is not used, because every node would generate a different one.
+- `clustering.tlsEnabled` is true, which is the default.
+
+Nodes authenticate each other with the certificate. A node accepts a peer that presents the same certificate, or one issued by an authority stored in the same PFX file, such as the CA a cert-manager keystore carries. Silos connect by IP address, so the certificate name is not checked. Certificate renewals are picked up without a restart, as on the main port.
+
+An Orleans client that connects through the gateway must use TLS with a certificate the node accepts. Set `clustering.gatewayEnabled` to `false` when only Chronicle gRPC and HTTP clients connect.
+
+:::caution
+A node that encrypts cannot talk to one that does not. Turning cluster TLS on or off, including by upgrading a cluster that already has a certificate configured, means stopping every node and starting them again. A rolling upgrade splits the cluster for as long as both kinds of node run.
+:::
+
+Set `clustering.tlsEnabled` to `false` to leave encryption to the network, for instance a service mesh with mutual TLS or an encrypting network plugin. Chronicle then logs that it is not encrypting cluster traffic.
+
 ## Trusted reverse proxies
 
 Chronicle accepts `X-Forwarded-For` and `X-Forwarded-Proto` only from loopback by default. To trust a proxy connecting over another address (for example, an ingress pod or a proxy on a Docker network), configure its **immediate** IP address or CIDR range under top-level `forwardedHeaders`:
