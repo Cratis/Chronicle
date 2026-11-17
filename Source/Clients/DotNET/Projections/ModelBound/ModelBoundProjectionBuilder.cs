@@ -44,8 +44,11 @@ internal class ModelBoundProjectionBuilder(
     /// <returns>The <see cref="ProjectionDefinition"/>.</returns>
     public ProjectionDefinition Build(Type modelType)
     {
+        var projectionId = ArtifactIdentity.ModelProjectionIdFor(modelType);
+        var readModelIdentifier = modelType.GetReadModelIdentifier();
         var fromEventSequenceAttr = modelType.GetCustomAttribute<EventSequenceAttribute>();
-        var definition = CreateDefinition(modelType, fromEventSequenceAttr);
+        var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
+        var definition = CreateDefinition(modelType, projectionId, readModelIdentifier, fromEventSequenceAttr, notRewindableAttr is null);
 
         var classLevelFromEvents = modelType.GetCustomAttributes()
             .Where(attr => attr.GetType().IsGenericType &&
@@ -121,17 +124,15 @@ internal class ModelBoundProjectionBuilder(
         definition.IncludeChildren = true;
     }
 
-    static ProjectionDefinition CreateDefinition(Type modelType, EventSequenceAttribute? fromEventSequenceAttr)
+    static ProjectionDefinition CreateDefinition(Type modelType, ProjectionId projectionId, ReadModelIdentifier readModelIdentifier, EventSequenceAttribute? fromEventSequenceAttr, bool isRewindable)
     {
-        var notRewindableAttr = modelType.GetCustomAttribute<NotRewindableAttribute>();
-
         return new ProjectionDefinition
         {
             EventSequenceId = fromEventSequenceAttr?.Sequence ?? EventSequenceId.Log,
-            Identifier = ArtifactIdentity.ModelProjectionIdFor(modelType),
-            ReadModel = modelType.GetReadModelIdentifier(),
+            Identifier = projectionId,
+            ReadModel = readModelIdentifier,
             IsActive = !modelType.IsPassive(),
-            IsRewindable = notRewindableAttr is null,
+            IsRewindable = isRewindable,
             InitialModelState = "{}",
             From = new Dictionary<EventType, FromDefinition>(),
             Join = new Dictionary<EventType, JoinDefinition>(),
