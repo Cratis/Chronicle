@@ -301,11 +301,13 @@ public class ChronicleOptions : IValidatableObject
             ValidateReadModels,
             ValidateSingleWriterLeaseAndAlerts,
             () => ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key)),
-            ConstraintIndexRepair.Validate,
+            ValidateConstraintIndexRepair,
             ValidateSinksAsEnumerable,
             ValidateStartup,
             ValidateWebhooks
         }.SelectMany(_ => _());
+
+    IEnumerable<ValidationResult> ValidateConstraintIndexRepair() => ConstraintIndexRepair.Validate();
 
     IEnumerable<ValidationResult> ValidateTelemetry()
     {
