@@ -32,19 +32,16 @@ public class ChronicleInProcessFixture : ChronicleFixture
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
-        // Start mongod as a single-node replica set and initialize it so tests can use transactions.
-        // We run a small shell command that starts mongod with replSet enabled, waits for it
-        // to be available and then runs rs.initiate(). The container is kept running afterwards.
+        // Keep initialization output in the logs and readiness probe, including rs.initiate failures.
         var builder = new ContainerBuilder(ImageName)
-            .WithCommand("/bin/sh", "-c", "mongod --replSet rs0 --bind_ip_all > /proc/1/fd/1 2>/proc/1/fd/2 & until mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1; do sleep 0.1; done; mongosh --eval 'rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]})' || true; tail -f /dev/null")
+            .WithCommand("/bin/sh", "-c", MongoReplicaSetWait.StartupCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
             .WithPortBinding(27017, assignRandomHostPort: true)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
             .WithNetwork(network)
             .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilInternalTcpPortIsAvailable(27017)
-                .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"));
+                .AddCustomWaitStrategy(new MongoReplicaSetWait(), strategy => strategy.WithTimeout(MongoReplicaSetWait.StrategyTimeout)));
         return builder.Build();
     }
 }
