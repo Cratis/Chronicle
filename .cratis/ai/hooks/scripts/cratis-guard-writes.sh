@@ -3,12 +3,10 @@
 # PreToolUse hook — hard block on writes that must never happen.
 #
 # Exits 2 (block the tool call, stderr goes back to the model) for:
-#   1. Generated files      — anything whose header marks it as Cratis-generated output
-#                             (.cratis/ai/rules/general.md rule 15 [contract])
-#   2. Dependency manifests — Directory.Packages.props, global.json, lockfiles, NuGet config
+#   1. Dependency manifests — Directory.Packages.props, global.json, lockfiles, NuGet config
 #                             (allowed by default for a github.com/Cratis origin)
-#   3. Environment files    — .env and friends (secrets)
-#   4. Agent controls       — permissions, hooks and installed managed corpus/adapters
+#   2. Environment files    — .env and friends (secrets)
+#   3. Agent controls       — permissions, hooks and installed managed corpus/adapters
 #
 # While jq is missing the guard cannot read the tool call, so it refuses every call.
 #
@@ -194,30 +192,66 @@ control_patterns=('.claude/settings.json' '.claude/settings.local.json' '.mcp.js
 
 # Glob-language intersection, not expansion/eval. A star has an epsilon transition and
 # a character loop. The product automaton accepts iff the two patterns share a spelling.
-# Braces conservatively become a star; bracket classes retain their ordinary meaning.
+# In a reference, everything from the first '{' to the last '}' becomes one star: brace
+# expansion, however nested, quoted or escaped, only rewrites text inside that span. A
+# reference bracket is never parsed: it is either a literal '[' or one any-character step
+# to any later ']' in the same segment. Bash's reading is always one of those alternatives,
+# so the class contents can only widen the match. References that mix braces with brackets,
+# whose brace span holds '/', with anything but plain path characters outside the brace
+# span (quoting, substitution and expansion syntax), or with dense brackets are not modeled at all: they fail closed (exit 2) so the work stays
+# bounded.
 IFS= read -r -d '' glob_program <<'AWK' || true
-function tokens(s, side,    i, c, j, t, n) {
+function tokens(s, side,    i, c, j, k, t, copy, jumps, first, closing) {
     s = tolower(s)
+    if (side == 1) {
+        copy = s
+        if (s ~ /[@?*+!]\(/) exit 2
+        if (index(s, "{") && index(s, "[")) exit 2
+        if (gsub(/\[/, "[", copy) > 64) exit 2
+        first = index(s, "{")
+        for (k = length(s); k > first; k--) if (substr(s, k, 1) == "}") { closing = k; break }
+        if (first && closing) {
+            if (index(substr(s, first, closing - first + 1), "/")) exit 2
+            if (substr(s, first, closing - first + 1) ~ /[$`'"\\]/) exit 2
+            if (substr(s, 1, first - 1) substr(s, closing + 1) ~ /[^a-z0-9._\/*?,+=:@%-]/) exit 2
+            s = substr(s, 1, first) substr(s, closing)
+        }
+    }
     for (i = 1; i <= length(s); i++) {
-        c = substr(s, i, 1); t = c
-        if (c == "{") { j = index(substr(s, i), "}"); if (j) i += j - 1; t = "*" }
-        else if (c == "[") {
-            j = index(substr(s, i + 1), "]")
-            if (j) { t = substr(s, i, j + 1); i += j; sub(/^\[!/, "[^", t) }
+        c = substr(s, i, 1); t = c; j = i
+        if (c == "{") {
+            j = index(substr(s, i), "}")
+            if (j) { j = i + j - 1; t = "*" } else j = i
+            if (side == 1 && index(substr(s, i, j - i + 1), "/")) exit 2
         }
         N[side]++; A[side, N[side]] = t
+        for (k = i; k <= j; k++) TOKEN[side, k] = N[side]
+        if (c == "[" && side == 1) START[N[side]] = i
+        i = j
+    }
+    TOKEN[side, length(s) + 1] = N[side] + 1
+    for (t = 1; t <= N[side]; t++) {
+        if (side != 1 || !(t in START)) continue
+        for (k = START[t] + 2; k <= length(s); k++) {
+            c = substr(s, k, 1)
+            if (c == "/") break
+            if (c != "]") continue
+            # A ']' inside a brace star re-enters that star, which covers the rest of it.
+            j = TOKEN[1, k] == TOKEN[1, k + 1] ? TOKEN[1, k] : TOKEN[1, k + 1]
+            if (++jumps > 4096) exit 2
+            JUMP[t, ++JUMPS[t]] = j
+        }
     }
 }
 function push(i, j,    key) { key = i SUBSEP j; if (!(key in seen)) { seen[key] = 1; L[++last] = i; R[last] = j } }
 function accepts(t, c, side) {
-    if (side == 1 && c == "/" && (t == "*" || t == "?" || length(t) > 1)) return 0
-    return t == "*" || t == "?" || (length(t) > 1 && substr(t, 1, 1) == "[" ? c ~ ("^" t "$") : t == c)
+    if (side == 1 && c == "/" && (t == "*" || t == "?")) return 0
+    return t == "*" || t == "?" || t == c
 }
-function compatible(a, b,    k, c) {
-    if (length(a) == 1 && a != "*" && a != "?") return accepts(b, a, 2)
-    if (length(b) == 1 && b != "*" && b != "?") return accepts(a, b, 1)
-    for (k = 1; k < 256; k++) { c = sprintf("%c", k); if (accepts(a, c, 1) && accepts(b, c, 2)) return 1 }
-    return 0
+function compatible(a, b) {
+    if (a != "*" && a != "?") return accepts(b, a, 2)
+    if (b != "*" && b != "?") return accepts(a, b, 1)
+    return 1
 }
 BEGIN {
     tokens(ENVIRON["REF_LEFT"], 1); tokens(ENVIRON["REF_RIGHT"], 2); push(1, 1)
@@ -229,6 +263,7 @@ BEGIN {
         if (a == "*") push(i + 1, j)
         if (b == "*") push(i, j + 1)
         if (i <= N[1] && j <= N[2] && compatible(a, b)) push(i + (a != "*"), j + (b != "*"))
+        if (i <= N[1] && j <= N[2] && compatible("?", b)) for (k = 1; k <= JUMPS[i]; k++) push(JUMP[i, k], j + (b != "*"))
     }
     exit 1
 }
@@ -311,23 +346,7 @@ agent_control_target() {
     control_match "$target_rel" "${control_patterns[@]}"
 }
 
-# ── 1. Generated files ────────────────────────────────────────────────────────
-# The marker must be a real header: a comment opener at the start of one of the first few lines.
-# Merely *mentioning* the string — documentation, a rule file, this corpus — is not a match.
-marker='^[[:space:]]*(//|/\*|#|<!--)[[:space:]]*@generated by Cratis'
-
-# True when one of the first five lines of stdin carries the marker (head -n 5 | grep -E, without forks).
-first_lines_carry_marker() {
-    local LC_ALL=C line count=0
-    while [ "$count" -lt 5 ] && { IFS= read -r line || [ -n "$line" ]; }; do
-        count=$((count + 1))
-        # shellcheck disable=SC2034
-        [[ "$line" =~ $marker ]] && return 0
-    done
-    return 1
-}
-
-# ── 2. Dependency manifests, lockfiles, SDK and NuGet configuration ───────────
+# ── Dependency manifests, lockfiles, SDK and NuGet configuration ──────────────
 manifest_writes_allowed() {
     local setting="" directory policy_root start="$PWD"
     # Authorization belongs to the write target, which may be outside the session's checkout.
@@ -366,10 +385,6 @@ classify_file() {
     if agent_control_target "$file" || { [ -n "$physical_file" ] && agent_control_target "$physical_file"; }; then
         classification=controls; return 0
     fi
-    if [ -f "$file" ] && first_lines_carry_marker 2>/dev/null <"$file" && LC_ALL=C grep -Iq . "$file" 2>/dev/null; then
-        classification=generated; return 0
-    fi
-    if [ -n "$new_content" ] && first_lines_carry_marker <<<"$new_content"; then classification=content; return 0; fi
     if names_match "$base" "${manifest_patterns[@]}"; then
         if manifest_writes_allowed; then return 1; fi
         classification=manifest; return 0
@@ -392,9 +407,9 @@ if [ "$reference_mode" = 1 ]; then
     new_content=""
     for candidate in "${candidates[@]}"; do
         reference_pattern=0
-        case "$candidate" in *'*'* | *'?'* | *'['* | *'{'*) reference_pattern=1 ;; esac
+        case "$candidate" in *'*'* | *'?'* | *'['* | *'{'* | *'@('* | *'+('* | *'!('*) reference_pattern=1 ;; esac
         if classify_file "$candidate" "$reference_pattern"; then printf '%s\n' "$candidate"; continue; fi
-        # Existing generated files can have arbitrary names; inspect actual glob matches too.
+        # Inspect actual glob matches too, including symlinks to protected targets.
         if [ "$reference_pattern" = 1 ]; then
             count=0
             while IFS= read -r expanded; do
@@ -412,12 +427,6 @@ case "$classification" in
     controls) block \
         "This target controls the agent's permissions or extensions, or belongs to an installed managed corpus/adapter tree. Agent Write/Edit calls may not alter their own controls or managed instructions." \
         "Instead: report the intended change. Use 'cratis ai update' for managed files, or let a person change settings. An explicitly authorized protected write requires CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1 in the harness environment. Do not retry through a shell write." ;;
-    generated) block \
-        "This file is generated output (its header marks it as generated by Cratis). Rule 15 [contract] in .cratis/ai/rules/general.md: never edit a generated file — the next build overwrites it." \
-        "Instead: change the C# source it is generated from (the [Command] / [ReadModel] record) and rebuild with 'dotnet build -c Debug' to regenerate the proxy." ;;
-    content) block \
-        "The content being written opens with a Cratis generated-file header. Proxies are produced by the Cratis proxy generator, never hand-written." \
-        "Instead: write the C# source and run 'dotnet build -c Debug' to generate the proxy." ;;
     manifest) block \
         "'$base' is a dependency manifest / lockfile / SDK or NuGet configuration file. .cratis/ai/rules/general.md (Source-of-Truth Discipline): don't change these unless explicitly asked." \
         "To allow dependency updates for this repository, set allowDependencyManifestWrites to true in .cratis/ai.json. If the user explicitly asked for this change, re-run the tool call with CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1 exported. Otherwise take the dependency as given and solve the problem in source." ;;

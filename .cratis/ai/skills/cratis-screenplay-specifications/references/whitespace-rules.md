@@ -54,6 +54,8 @@ module Names
           name = name
       event NameRegistered
         name Name
+      screen RegisterConcept
+        action RegisterConcept for screen
       specification RejectingWhitespaceOnAConcept
         when RegisterConcept
           id = "name-1"
@@ -91,6 +93,8 @@ module Names
           name = name
       event TextRegistered
         name String
+      screen RegisterProperty
+        action RegisterProperty for screen
       specification RejectingWhitespaceOnAProperty
         when RegisterProperty
           id = "name-1"

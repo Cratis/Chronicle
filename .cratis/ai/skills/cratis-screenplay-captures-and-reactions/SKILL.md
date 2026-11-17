@@ -114,6 +114,12 @@ the input selection or not; nested paths and read aliases fail binding): keep th
 the invoked command or the implementation. A compiler that stops before ESM v6 binds none of this
 (`PLAY0268`).
 
+A top-level `trigger` that fails to bind does not refuse the whole model when a host uses
+admissible compilation (Screenplay 5.2.0): the trigger is excluded, the reactions and
+specifications that depend on it are excluded after it, and independent slices still bind. Strict
+binding still refuses the whole model. Read toolchain
+[executable subset](../cratis-screenplay-toolchain/references/executable-subset.md).
+
 ## Refusals and recovery redelivery
 
 Invocation refusal selectors, `$refusal` branch values and `acknowledge`
@@ -144,7 +150,7 @@ Read [references/capture-map-and-example.md](references/capture-map-and-example.
 
 ## `reaction`
 
-Read [reaction forms](references/reaction-forms.md) when choosing a trigger,
+Read [reaction forms](references/reaction-forms.md) (including how a host provider runs a reaction body) when choosing a trigger,
 selecting occurrence values or mapping `produces` and `invokes`; complete documents
 remain in `references/complete-examples.md`.
 

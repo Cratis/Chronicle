@@ -81,6 +81,13 @@ and exhaustion never imply approval. Verify cancellation before replacement; esc
 unresolved disputes instead of looping. Suggestions alone do not justify another round.
 See `cratis-engineering-review-rounds` for dispatch and writer-pause mechanics.
 
+An uncited behavior change on a trust-boundary or wire/protocol surface is a blocker (`published-contracts.md`).
+
+Code Health (`code-health.md`) never earns a round of its own: flag a touched file below
+9.5 with no reported reason only together with the round's other findings. A file below 9.5
+with a reason and an uplift entry is closed; a second Code Health round is a finding that
+names its cause.
+
 ## Reviewer independence
 
 - **[contract]** Run a reviewer on a different provider family than the author's model

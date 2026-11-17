@@ -62,7 +62,7 @@ For a new canonical application this usually creates or changes:
 - module/feature/slice documents;
 - read models and queries that supply screen data;
 - screen declarations with Level 1 data/actions;
-- templates, components, forms, toolbar items, outlets and navigation bindings;
+- templates and their slots, components, forms, toolbar items, outlets, `fits` and navigation bindings;
 - localized `$strings` keys referenced by labels.
 
 Use `referencePolicy: "Safe"` unless unresolved debt is explicitly part of the
@@ -145,55 +145,70 @@ edit.
 Requires cratis CLI 3.44.0 or later (`cratis --version`) for `cratis render --check`.
 
 For screens-release parity, the smoke check must assert that every authored
-screen, template, component, form, toolbar, outlet, route and package/icon use is
+screen, template, slot, component, form, toolbar, outlet, hook, route and package/icon use is
 represented in the generated plan or runtime diagnostics. A consumer that cannot
 implement one reports a blocking diagnostic. Silent fallback to the default screen
 composition is a failure.
 
 ## Edit the application shell
 
-Navigation regions, toolbar buttons, blueprint template references and sample data are typed nodes and follow the same
-open, read, propose, review, apply, reopen loop; the syntax and rules are in
+Requires Screenplay 6.0 or later. Slots, outlets, hooks, blueprint template references and sample data are typed nodes
+and follow the same open, read, propose, review, apply, reopen loop; the syntax and rules are in
 `cratis-screenplay-ui-composition` (`references/application-shell.md`). The vectors to replay against are the
-`screen-shell-navigation-positive` source case and its rejection vectors in `Cratis.Screenplay.CanonicalCorpus`.
+`screen-shell-navigation-positive` source case and its rejection vectors in `Cratis.Screenplay.CanonicalCorpus`. A model
+still written for Screenplay 5 is migrated first (`screenplay migrate --from 5 --to 6`, or the MCP `migrate` tool); never
+hand-edit the old forms into the new ones through proposals.
 
-1. `read-ast` with `kind` `NavigationRegionSyntax`, `NavigationItemSyntax`, `ToolbarButtonSyntax`,
-   `TemplateAssignmentSyntax`, `ScreenTemplateReferenceSyntax` or `SampleDataPackSyntax`, `includeContent: true`.
-   Select the occurrence by its parent: a region belongs to the `LayoutSyntax` or a `ModuleSyntax`, and the same item id
-   can appear in several regions.
-2. `propose-ast` with `replace` (copy the returned node, change `mode`, `items`, `slice`, `version` or a row value),
-   `add` to a member the node kind declares (`navigation`, `items`, `children`, `buttons`) or `remove`. A member that
-   holds nothing is not in the node JSON; `add` still accepts it.
+1. `read-ast` with `kind` `OutletSyntax`, `NavigationItemSyntax`, `ToolbarButtonSyntax`, `TemplateAssignmentSyntax`,
+   `ScreenTemplateReferenceSyntax` or `SampleDataPackSyntax`, `includeContent: true`. Select the occurrence by its
+   parent: an outlet sits in the `outlets` member of a `LayoutSyntax`, `ScreenTemplateSyntax`, `DialogTemplateSyntax`,
+   `ModuleSyntax`, `FeatureSyntax` or `ScreenSyntax`, and the same outlet name and item id appear at several levels.
+2. `propose-ast` with `replace` (copy the returned node, change its `mode`, `items`, `hides`, a button's `slice`,
+   `opens` or `enabledWhen`, a screen's `fits`, a `version` or a row value), `add` to a member the node kind declares
+   (`outlets`, `items`, `children`) or `remove`. A member that holds nothing is not in the node JSON; `add` still
+   accepts it. Resolve member names with `syntax-schema`, not from this prose.
 3. Read the proposal's diagnostics before applying. A refusal such as `PLAY0750` (a module item targeting another
-   module), `PLAY0762` (a button on a State View slice), `PLAY0722` (a blueprint no profile lists) or `PLAY0714` (an
-   unknown active pack) is the answer; change the proposal, not the rule.
+   module), `PLAY0903` (an outlet nothing declares), `PLAY0905` (a repeated item id), `PLAY0762` (a hook on a State
+   View slice), `PLAY0911` (a slot the slice's screen does not fit), `PLAY0722` (a blueprint no profile lists) or
+   `PLAY0714` (an unknown active pack) is the answer; change the proposal, not the rule.
 4. `apply` with both revisions. A `StaleRevision` means the model moved: reopen, re-read the nodes and propose again.
-5. Switching a module from inherit to override copies the application's items; retarget each copy to the module's own
-   features first or the proposal is refused.
+5. Switching a module's outlet from inherit to override copies the inherited items; retarget each copy to the module's
+   own features first or the proposal is refused.
 
-### Feature and module toolbars
+### Buttons shared by a feature's screens
 
-A feature (or module) toolbar is a `ScreenToolbarSyntax` in the `toolbars` member of its `FeatureSyntax` (or `ModuleSyntax`);
-`syntax-schema` for `FeatureSyntax` lists `toolbars`. `add` a `ScreenToolbarSyntax` with `name`, `items` and `buttons` to the
-feature, and `replace` a `ToolbarButtonSyntax` or `ToolbarItemSyntax` to set its `confirm` text; `remove` takes a button away.
-Read the proposal's diagnostics: a warning says an `item ... action` names a command no slice of that feature (or module)
-declares. The syntax, the `confirm` rule and when to prefer the feature toolbar are in `cratis-screenplay-ui-composition`
-(`references/application-shell.md`, "Feature and module toolbars"; Screenplay 4.238.0 or later).
+Buttons shared by every screen of a feature extend the template's actions outlet: `add` an `OutletSyntax` with the
+outlet's `name`, mode `extends` and its `ToolbarButtonSyntax` items to the feature's `outlets`, and `replace` a button to
+set its `confirm`, `runs`, `opens` or `enabledWhen`; `remove` takes one away. `PLAY0903` means the template declares no
+such outlet. The syntax and when to choose an outlet over a screen toolbar are in `cratis-screenplay-ui-composition`
+(`references/application-shell.md`, "Outlets of actions, filters, tabs and stats" and "Hooks").
 
 ### The profile's shell
 
-`ui-profiles` (Screenplay 4.201.0 or later) reads each `ui profile`'s root template, shell options, appearance, new screens default and
+`ui-profiles` (Screenplay 4.201.0 or later) reads each `ui profile`'s root template, shell options, appearance, theme (and `resolvedTheme`, the theme and mode it resolves to), new screens default and
 shell diagnostics, and lists the own templates that could be the root template (`applicableRootTemplates`) or the new screens
 default (`applicableNewScreenTemplates`); pick from those instead of guessing. Edit `RootTemplateSyntax` (`name`, `blueprint`,
 `version`), `ShellOptionSyntax` (`add` to the root's `options`; `syntaxKind` is `Word`, `Text`, `Number` or `Flag`),
-`ProfileAppearanceSyntax` (`colorScheme`, `accent`) and `NewScreenTemplateSyntax` with `propose-ast`. A refusal is the answer:
+`ProfileAppearanceSyntax` (`colorScheme`; `accent`, `corners` and `font` are deprecated, `PLAY0929`) and `NewScreenTemplateSyntax` with `propose-ast`. A refusal is the answer:
 `PLAY0790` (a template nothing declares), `PLAY0792` (a blueprint the profile does not list), `PLAY0794` (a template that cannot
-be the shell), `PLAY0795` (no `content` slot), `PLAY0797` (a bad color scheme, accent, corners or identity value), `PLAY0799` (a new screens default that
+be the shell), `PLAY0795` (no `content` slot), `PLAY0797` (a bad color scheme or identity value), `PLAY0799` (a new screens default that
 cannot start a screen). `PLAY0796` (an option the shell does not expose) and `PLAY0791` (the legacy `layout` line) are warnings:
 the proposal is accepted and `ui-profiles` shows them. Replay against the `ui-profile-root-positive` vector and its rejection
 vectors (`ui-profile-root-unknown`, `ui-profile-root-not-a-shell`, `ui-profile-root-invalid`) in `Cratis.Screenplay.CanonicalCorpus`.
 
-Requires Screenplay 4.188.0 or later (`screenplay --version`) to `add` the first region, button or sub-item to a member
+### The design system and its themes
+
+The same `ui-profiles` read (no new tool; the tool count is unchanged) also returns the application's `design system` (modes, tokens,
+components, words, rules), every theme with its palette, values and per-mode values, each theme's resolved tokens and components per mode,
+the design diagnostics `PLAY0916` to `PLAY0930` and the closed vocabulary of token categories, component parts and states: choose from
+those, do not guess. Edit with `propose-ast` on `DesignSystemSyntax`, `DesignTokenCategorySyntax`, `DesignTokenSyntax`,
+`DesignComponentSyntax`, `DesignVariantSyntax`, `DesignStateSyntax`, `DesignAssignmentSyntax`, `DesignWordsSyntax`,
+`DesignContrastRuleSyntax` and `ThemeModeValuesSyntax`; `ThemeSyntax` gains `implements`, `palette`, `values` and `modeValues`. A refusal is
+the answer (`PLAY0916` a malformed design, `PLAY0920` an undeclared token, `PLAY0921` a color token without a value in a mode,
+`PLAY0925` or `PLAY0926` a theme that does not implement the design system); `PLAY0928` (contrast below a rule) and `PLAY0929`
+(deprecated `appearance` member) are warnings. Grammar and examples: the ui-composition skill's `design-system-and-themes.md`.
+
+Requires Screenplay 4.188.0 or later (`screenplay --version`) to `add` the first outlet, item or sub-item to a member
 the node JSON omits while empty; an older MCP server answers "Unknown typed syntax member".
 
 ## 6. Use Screenplay-owned fixtures

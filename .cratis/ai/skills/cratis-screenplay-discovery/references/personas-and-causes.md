@@ -155,6 +155,8 @@ module Moorings
         authorize IsHarbourmaster
         produces event BerthAssigned
           berthNumber BerthNumber = berthNumber
+      screen AssignBerth
+        action AssignBerth for screen
       specification AssigningABerthAsHarbourmaster
         given caller
           authenticated

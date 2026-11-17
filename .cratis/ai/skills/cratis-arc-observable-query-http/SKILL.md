@@ -146,7 +146,7 @@ Sources: `Arc.Core/Queries/ObservableQueryHttp.cs`,
 ### Local `cratis` template ports
 
 The `cratis` template still publishes MongoDB on host port `27017` and configures
-`mongodb://localhost:27017` for the app (`Templates/Cratis/docker-compose.yml`,
+the MongoDB connection string for host `localhost`, port `27017` for the app (`Templates/Cratis/docker-compose.yml`,
 `appsettings.json`). Its Vite dev server runs on `9000` and proxies `/api`,
 `/.cratis` and `/swagger` to `http://localhost:5000`
 (`Templates/Cratis/.frontend/vite.config.ts`). A backend started on another

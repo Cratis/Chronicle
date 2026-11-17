@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-projection
-description: Use when populating an existing Chronicle read model through event mappings, structured joins or lifecycle variants, or diagnosing projection startup failures. Not for new query surfaces or external side effects.
+description: Use when populating an existing Chronicle read model through event mappings, structured joins or lifecycle variants, projecting events onto a graph with nodes and edges, or diagnosing projection startup failures. Not for new query surfaces or external side effects.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-projection/SKILL.md -->
@@ -263,6 +263,35 @@ or a reactor rather than annotating the projection.
 
 Their two optional arguments are in **opposite order**: `[FromAll(contextProperty,
 property)]` and `[FromEvery(property, contextProperty)]`. Name them.
+
+## Dictionary keys, set once and ordering
+
+Requires Chronicle 19.150.0 (check the installed `Cratis.Chronicle` package). Fluent `.SetOnce(...)`, keyed `.Set/.Add/.Subtract/.Increment/.Decrement/.Count(m => m.Dict, e => key)`, `.RemoveKey(...)`, and children `.Prepend()`, `.OrderBy(...)`, `.OrderByDescending(...)`; model-bound `SetOnce = true`, `Prepend = true`, `OrderBy`/`OrderByDescending`. See [dictionaries, set once and ordering](references/dictionaries-set-once-ordering.md).
+
+## Graph projections — nodes and edges
+
+A graph projection turns events into idempotent operations on a property graph
+instead of folding them into a document. It uses the same observer, event routing,
+key and property expressions, replay and failed-partition handling. Requires
+Chronicle 19.129.0 (check the installed `Cratis.Chronicle` package version).
+
+Choose a graph when the questions are traversals (membership, nesting, paths) and a
+document read model when they are lookups by key. Design it by reading the graph
+backwards: write each question as a path, make hops edge types and stops node labels,
+then name the event that creates and removes each. Mark types with `[Node]` and
+`[Edge("TYPE")]` (an edge's `[Source<T>]` and `[Target<T>]` members hold the end keys),
+or declare the same definition with `IGraphProjection`. A type is never both a graph
+element and a read model (CHR0068). Read
+[references/graph-projections.md](references/graph-projections.md) for the attributes,
+fluent builder, operation model, replay and idempotency, and the sinks.
+
+## Where the output is stored
+
+A projection never names a sink: it writes to its read model's sink, chosen by `[Sink("name")]` on
+the read-model type (or `DefaultSinkName`, then the Kernel default). Moving a read model to another
+sink replays its projections there under the `observers.definitionEvolution` policy. Read
+[read-model sinks](../cratis-chronicle-read-model/references/sinks.md) for the attribute, client
+defaults and `CHR0069`, and [graph projections](references/graph-projections.md#sinks) for graphs.
 
 ## Definition changes replay
 

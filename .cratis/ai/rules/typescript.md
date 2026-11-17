@@ -88,9 +88,13 @@ const [result, perform] = AllProjects.use();
 // result.isSuccess — true when query completed without errors
 ```
 
-Paginated queries:
+Paginated queries — the tuples differ, so skip the right number of slots:
 ```tsx
-const [result, , setPage] = AllProjects.useWithPaging(10);
+// Plain query: [result, perform, setSorting, setPage, setPageSize]
+const [result, , , setPage] = AllProjects.useWithPaging(10);
+
+// Observable query has no perform: [result, setSorting, setPage, setPageSize]
+const [liveResult, , setLivePage] = ObservedProjects.useWithPaging(10);
 ```
 
 ### CommandScope

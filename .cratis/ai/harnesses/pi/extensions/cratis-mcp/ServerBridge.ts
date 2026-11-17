@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
+import { createActivation, enabledText, type Activation, type Enabler } from './activation.ts';
 import { object } from './configuration.ts';
 import type { CorpusServer } from './CorpusServer.ts';
 import { startServer } from './process.ts';
@@ -26,10 +27,12 @@ export interface ServerBridge {
     dispose(): void;
 }
 
-export function createServerBridge(pi: ExtensionAPI, corpus: string, connect: (project: string, server: CorpusServer) => StdioConnection = startServer, deadlineMilliseconds = 15_000): ServerBridge {
+export function createServerBridge(pi: ExtensionAPI, corpus: string, connect: (project: string, server: CorpusServer) => StdioConnection = startServer, deadlineMilliseconds = 15_000, activation: Activation = createActivation(pi)): ServerBridge {
     const connections = new Map<string, StdioConnection>();
+    const toolsByServer = new Map<string, string[]>();
     const registered = new Set<string>();
     const paused = new Set<string>();
+    const owner = 'servers';
     let selectionKey: string | undefined;
 
     const notify = (context: ExtensionContext, messages: string[]): void => {
@@ -43,6 +46,7 @@ export function createServerBridge(pi: ExtensionAPI, corpus: string, connect: (p
     const dispose = (): void => {
         connections.forEach(connection => connection.dispose());
         connections.clear();
+        toolsByServer.clear();
         deactivate();
     };
     interface Started { server: CorpusServer; connection?: StdioConnection; catalog?: ServerCatalog; messages: string[] }
@@ -61,8 +65,10 @@ export function createServerBridge(pi: ExtensionAPI, corpus: string, connect: (p
             return { server, connection, messages: [`MCP server '${server.id}' is unavailable: ${error instanceof Error ? error.message : String(error)}`] };
         }
     };
-    const register = ({ server, connection, catalog, messages }: Started, claimed: Set<string>): void => {
-        if (!connection) return;
+    /** Registers the server's tools and returns the native names it won; conflicts are reported in `messages`. */
+    const register = ({ server, connection, catalog, messages }: Started, claimed: Set<string>): string[] => {
+        if (!connection) return [];
+        const added: string[] = [];
         const existing = new Set(pi.getAllTools().map(tool => tool.name));
         for (const tool of catalog?.tools ?? []) {
             if (claimed.has(tool.nativeName) || (existing.has(tool.nativeName) && !registered.has(tool.nativeName))) {
@@ -70,6 +76,7 @@ export function createServerBridge(pi: ExtensionAPI, corpus: string, connect: (p
                 continue;
             }
             claimed.add(tool.nativeName);
+            added.push(tool.nativeName);
             pi.registerTool({
                 name: tool.nativeName,
                 label: `${server.id} ${tool.name}`,
@@ -87,11 +94,37 @@ export function createServerBridge(pi: ExtensionAPI, corpus: string, connect: (p
                 },
             });
         }
+        toolsByServer.set(server.id, added);
+        return added;
+    };
+    /** Never re-enable a user-disabled tool. SDK allow/exclude restrictions still filter registration. */
+    const restoreActive = (added: Iterable<string>, oldNames: Set<string>, previouslyActive: Set<string>): void => {
+        const fresh = new Set(added);
+        const next = pi.getActiveTools().filter(name => !fresh.has(name) || !oldNames.has(name) || previouslyActive.has(name));
+        for (const name of fresh) if (oldNames.has(name) && previouslyActive.has(name)) next.push(name);
+        pi.setActiveTools([...new Set(next)]);
+    };
+    /** On-demand start of one deferred server; the other servers' connections and tools are untouched. */
+    const enable = async (context: ExtensionContext, server: CorpusServer): Promise<string> => {
+        const label = `MCP server '${server.id}'`;
+        const current = connections.get(server.id);
+        if (current && !current.stopped) return enabledText(label, toolsByServer.get(server.id) ?? [], true);
+        current?.dispose();
+        connections.delete(server.id);
+        const previouslyActive = new Set([...pi.getActiveTools(), ...paused]);
+        const oldNames = new Set(registered);
+        const outcome = await start(context, server);
+        if (!outcome.catalog) throw new Error(outcome.messages.join(' '));
+        const claimed = new Set([...toolsByServer].filter(([id]) => id !== server.id).flatMap(([, names]) => names));
+        const added = register(outcome, claimed);
+        added.forEach(name => { registered.add(name); paused.delete(name); });
+        restoreActive(added, oldNames, previouslyActive);
+        return [enabledText(label, added, false), ...outcome.messages].join('\n');
     };
     const refresh = async (context: ExtensionContext, newSession: boolean): Promise<void> => {
         let selection: ReturnType<typeof selectedCorpusServers>;
         try { selection = selectedCorpusServers(context.cwd, corpus); }
-        catch (error) { dispose(); selectionKey = undefined; throw error; }
+        catch (error) { dispose(); selectionKey = undefined; activation.publish(owner, new Map()); throw error; }
         const key = JSON.stringify(selection);
         if (!newSession && key === selectionKey) return;
         const previouslyActive = new Set([...pi.getActiveTools(), ...paused]);
@@ -100,17 +133,17 @@ export function createServerBridge(pi: ExtensionAPI, corpus: string, connect: (p
         selectionKey = key;
         const messages = [...selection.messages];
         const claimed = new Set<string>();
-        // Servers start in parallel; a slow or hung one is abandoned at its own deadline and never delays the others.
-        const outcomes = await Promise.all(selection.servers.map(server => start(context, server)));
+        // Deferred servers only publish an enabler; nothing starts or registers until `cratis_enable_mcp` asks for it.
+        activation.publish(owner, new Map(selection.servers.filter(server => !server.eager).map(server => [server.id, (enableContext: ExtensionContext) => enable(enableContext, server)] satisfies [string, Enabler])));
+        // Eager servers start in parallel; a slow or hung one is abandoned at its own deadline and never delays the others.
+        const outcomes = await Promise.all(selection.servers.filter(server => server.eager).map(server => start(context, server)));
         for (const outcome of outcomes) { register(outcome, claimed); messages.push(...outcome.messages); }
         claimed.forEach(name => registered.add(name));
-        // Never re-enable a user-disabled tool. SDK allow/exclude restrictions still filter registration.
-        const next = pi.getActiveTools().filter(name => !registered.has(name) || (claimed.has(name) && (!oldNames.has(name) || previouslyActive.has(name))));
-        for (const name of claimed) if (oldNames.has(name) && previouslyActive.has(name)) next.push(name);
-        pi.setActiveTools([...new Set(next)]);
-        paused.clear();
+        restoreActive(claimed, oldNames, previouslyActive);
+        // Only names restored above leave `paused`; deferred servers keep theirs until `enable` reactivates them.
+        claimed.forEach(name => paused.delete(name));
         notify(context, messages);
     };
 
-    return { refresh, dispose: () => { dispose(); selectionKey = undefined; } };
+    return { refresh, dispose: () => { dispose(); selectionKey = undefined; activation.publish(owner, new Map()); } };
 }

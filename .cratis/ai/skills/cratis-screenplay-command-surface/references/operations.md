@@ -65,6 +65,8 @@ module Projects
         projectId ProjectId identifier
         produces OpenCostCenter
           projectId = projectId
+      screen Register
+        action RegisterProject for screen
       specification Compensating
         given operation OpenCostCenter fails
         when RegisterProject

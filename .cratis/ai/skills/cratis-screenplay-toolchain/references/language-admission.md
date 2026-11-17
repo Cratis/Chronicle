@@ -7,6 +7,7 @@
 ## Contents
 
 - Version selection
+- ESM JSON Schemas
 - Compiler and target minimums
 - Construct guidance
 - Stage admission and execution
@@ -34,8 +35,20 @@ exact language/semantic pairs; binding, reference execution and rendering are se
 | v34 | A specification `then invokes <Command>` (decision 0115; PLAY0815/PLAY0816) | Writes `thenInvocations` only when present. When one is stated, the slice's recorded invocations must match in count and order, comparing only stated values; a refused invocation counts | Stage spec runner compares it; the Cratis renderer refuses models after v33 with `STAGE-ESM-016` |
 | v35 | Reserved for handler result contract v2 (decision 0119); no construct selects it | | |
 | v36 | `statemachine` and `workflow` declarations (decision 0124; PLAY0834-PLAY0851) | Serializes `stateMachines` and `workflows`; specifications run them; earlier models keep their version and bytes | Stage refuses v36 models with `STAGE-ESM-016` |
+| v37 | Application `time zone` and `context` time-zone members, a command `calendar`, a specification `given time zone`, and clock operands (`today`, `now`, `date of ...` with offsets) in command conditions (decisions 0106, 0107, 0132; PLAY0812-PLAY0814, PLAY0852-PLAY0857) | Serializes the calendars, zones and clock operands; the reference evaluator runs them, with no UTC fallback for a missing or unknown zone; earlier models keep their version and bytes | Stage admits 37.0 with member scanning and refuses clock members per scope with `STAGE-ESM-016`: its sandbox refuses each command with a calendar or clock operand and each specification in a slice with a clock member, every specification when an application zone or context member exists, and the renderer refuses the model (Stage `Documentation/reference/esm-feature-matrix.md`). A consumer must admit the exact 37.0 pair itself. Executing clock conditions is not clock-trigger realization: `every`/`at` triggers stay refused by Stage's Host and rendered applications. Typed-context contract revision: Screenplay writes 1 normally, 2 when a descriptor reads `$context.timeZone` (TimeZone token), 3 when a declared application context member is read, and 4 for provided values (v53); Studio admits only revision 1 and refuses the others with `UnsupportedTypedContextContractRevision`, so such models are not Studio-admitted |
+| v42 | Screens admitted on request with `screenplay export --screens` (decision 0149) | Adds optional `screens` to each slice (data, actions, navigation, layout); screens are not a version selector by default and earlier models keep their bytes | Admission by Stage is separate; screens are not evidence a target renders them |
+| v43 | `set once` or a `children` ordering line (PLAY0956-PLAY0963) | Serializes the `setOnce` operation and `ordering`; earlier models keep their version and bytes | Admission by Stage is separate; a refusal means the model is not renderable yet |
+| v53 | `audience`, `availability` and `available` gates (decision 0162; PLAY1130-PLAY1141) | Serializes the gates; specifications and the reference evaluator treat every gate as available and report opaque `provide` sources as unsupported; earlier models keep their version and bytes | Admission by Stage is separate: a refusal such as `STAGE-ESM-016` means the model is not renderable yet, never a reason to drop the gate. See `../../cratis-screenplay-availability/SKILL.md` |
+| v54 | A graph query `collect` (decision 0163; PLAY1144-PLAY1147) | Serializes the collects on the query; earlier models keep their version and bytes | Admission by Stage is separate: a refusal means the model is not renderable yet, never a reason to drop the collect. Check `cratis render` |
 
-Constructs of decision 0098 with no executable-model content need no version: application-level toolbar buttons in the layout's `navigation topbar` region (`button <id> title "..." slice <Slice>` with an optional indented `authorize <Policy>`), and a capture over events that copies a list (`lines = $.lines`) or fans out with `children lines identified by sku`. Check `screenplay --version` against the release that admitted v29 and v30 before relying on them. Decision 0115 withdrew 0098's command specification that states the public event its outbound Translate slice publishes: a specification runs only its own slice, so the Translate slice states the public event in its own `when append` specification.
+Constructs of decision 0098 with no executable-model content need no version: application-level hooks in a layout's actions outlet (`default <id> title "..." slice <Slice>` with an optional indented `authorize <Policy>`), and a capture over events that copies a list (`lines = $.lines`) or fans out with `children lines identified by sku`. Check `screenplay --version` against the release that admitted v29 and v30 before relying on them. Decision 0115 withdrew 0098's command specification that states the public event its outbound Translate slice publishes: a specification runs only its own slice, so the Translate slice states the public event in its own `when append` specification.
+
+Read-model property order is opt-in ESM 37.1 metadata: see
+[read-model property order](read-model-property-order.md).
+
+## ESM JSON Schemas
+
+Requires Screenplay 6.2.0 or later (`screenplay --version`). A JSON Schema (draft 2020-12) is published per released ESM version from 1.0 (v39 was never released) at `https://raw.githubusercontent.com/Cratis/Screenplay/main/Documentation/screenplay/esm/esm-v<major>.schema.json` (`.0` versions) or `.../esm-v<major>.<minor>.schema.json` (minors); pick it from the document's `semanticVersion`. A schema checks shape, not admission: a document that validates is well-formed, but only the Screenplay reader (and a consumer's admission rules) accepts it. Ajv needs `allowUnionTypes`. In .NET, `EsmJsonSchema.For(version)` returns the same text.
 
 ## Compiler and target minimums
 
@@ -54,6 +67,16 @@ Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`) for date compariso
 Requires Screenplay 4.204.0 (ESM v27; `screenplay --version`) for composite read-model keys; older binders report PLAY0268.
 
 Requires Screenplay 4.205.0 (ESM v28; `screenplay --version`) for Uuid equality in command conditions; older binders report PLAY0268.
+
+Requires Screenplay 6.8.0 (ESM v42; `screenplay --version`) for screens in the executable model via `export --screens`.
+
+Requires Screenplay 6.9.0 (ESM v43; `screenplay --version`) for `set once` and children ordering.
+
+Requires Screenplay 6.26.0 (ESM v53; `screenplay --version`) for audiences, availabilities and gates, and 6.25.0 for `provide`; older compilers report the lines as unknown.
+
+Requires Screenplay 6.29.0 (ESM v54; `screenplay --version`) for graph query `collect`; older compilers do not admit it.
+
+Requires Screenplay 5.5.0 (ESM v37; `screenplay --version`) for clock operands, calendars and time zones; older binders report PLAY0268.
 
 Current renderer versus semantic-execution support is owned by
 [Stage target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md),
@@ -90,7 +113,7 @@ seven-fractional-digit tick precision. Participating DateTime inputs without an
 offset or `Z` reject with Validation before any rule, even if a comparison is skipped.
 `then` matching, keys, constraints and freshness remain ordinal. PLAY0268 retains
 mixed Date/DateTime, optional condition operands, `$context` (including occurred),
-`today`, protected read paths, concept date rules and reaction `where`. In admitted
+protected read paths, concept date rules and reaction `where`. In admitted
 positions, invalid date literals or offset-less DateTime literals use PLAY0273.
 Read [date comparisons](../../cratis-screenplay-command-surface/references/date-comparisons.md)
 for the complete interval example and input/target boundaries.
@@ -109,8 +132,10 @@ the model with the `screenplay` MCP server and call `read-workspace` with `view`
 
 ## Stage admission and execution
 
-Stage's reviewed semantic engines admit matched 1.0–30.0 and 32.0 pairs, not
-31.0, mixed or unknown pairs (STAGE-ESM-016). CLI v3.100.0 render checks only the
+The reviewed Stage baseline's semantic engines admit matched 1.0–30.0
+and 32.0 pairs, not 31.0, mixed or unknown pairs (STAGE-ESM-016). Current Stage
+also admits 37.0 with per-scope clock refusals (see the v37 row); check the
+target's own admission rather than assuming this baseline. CLI v3.100.0 render checks only the
 semantic version and admits through v30; bundled Stage 4.196.0 then applies
 matched-pair and construct gates. V32 needs a direct caller of the reviewed Stage
 baseline in [current target boundaries](../../cratis-stage-rendering-and-sandbox/references/current-boundaries.md#version-admission).
@@ -129,3 +154,5 @@ Requires Stage 4.145.0 for reach-scoped reducer/validation-body refusals
 handlers retain STAGE-IMPL-002; renderer implementation admission is unchanged.
 Read [sandbox boundaries](../../cratis-stage-rendering-and-sandbox/references/sandbox-and-specrunner.md)
 when a semantic run reaches a body or uses an authored reaction clock.
+Read [unknown-preserving reader](unknown-preserving-reader.md) when a consumer
+must retain unknown additions of a minor it does not register, without executing them.

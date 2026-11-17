@@ -235,7 +235,7 @@ connection. Passing `open-workspace.path` does **not** avoid it, because the err
 | Repair | `PLAY0166`, `0478`, `0469`, `0471`, `0479`, `0516`, `0563`, `0564`, `0565`, `0614`, `0653`, `0683`, `0684` (and recipe-only `0397`); `PLAY0470` only with author intent ([destination intent repair](destination-intent-repair.md)) | `propose-repair` with `formatting`; PLAY0166/0478 may pin attachment evidence (`pinRepairEvidence` and `expectedRepairEvidenceRevision`), never fix-all PLAY0478 |
 | Inline event extraction | `produces event ...` to a declared event | `propose-extract-inline-event` |
 | Parser-invalid document | no editable handles | `propose-source` `replace-document` with corrected source, or typed `propose-ast` document replacement |
-| Unadmitted constructs | systems/operations, the `numbers exact` source mode | reviewed Authoring `propose-source` (whole documents) or `propose-ast` (typed edits); preserve intent and report PLAY0268 |
+| Unadmitted constructs | operations, systems when no system declares an ability, the `numbers exact` source mode | reviewed Authoring `propose-source` (whole documents) or `propose-ast` (typed edits); preserve intent and report PLAY0268 |
 | Admitted source/stream routing | ESM v8 | typed `propose-ast`; `propose-rename` repairs proven route references; target admission separate |
 
 PLAY0683/PLAY0684 repairs raise NanoID size or bytes count to at least 64 random

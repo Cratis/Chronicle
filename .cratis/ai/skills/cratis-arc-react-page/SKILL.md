@@ -319,6 +319,7 @@ props handling, or teardown.
 - The backend command or read model behind the page: `cratis-arc-command`,
   `cratis-chronicle-read-model`.
 - Specifying page behavior with specs: `cratis-application-react-specifications`.
+- Judging the rendered page against the user's goal: `cratis-ux-review`.
 
 ## Lineage
 

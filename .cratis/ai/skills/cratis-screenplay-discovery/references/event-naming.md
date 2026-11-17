@@ -90,6 +90,8 @@ module Moorings
         damage      DamageDescription
         produces event HullDamageReported
           damage DamageDescription = damage
+      screen ReportHullDamage
+        action ReportHullDamage for screen
       specification ReportingScratchedBow
         when ReportHullDamage
           berthNumber = "A-12"

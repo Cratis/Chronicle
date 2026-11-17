@@ -204,6 +204,8 @@ module Invoicing
           invoiceNumber not empty message "Invoice number is required"
         produces event InvoiceRegistered
           invoiceNumber InvoiceNumber = invoiceNumber
+      screen RegisterInvoice
+        action RegisterInvoice for screen
       specification RejectingAnEmptyInvoiceNumber
         when RegisterInvoice
           invoiceId     = "9c858901-8a57-4791-81fe-4c455b099bc9"

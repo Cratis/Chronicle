@@ -100,7 +100,7 @@ remain unadmitted. Compile and test each relevant fixture with the chosen tool.
   at most once. Canonical printing may place it first, but the parser does not
   require that position. Source preambles precede declarations.
 - Strings: `"..."`, escapes `\" \\ \n \r \t`; other backslashes kept (regex `"^INV-\d{6}$"` works).
-- Structured values: single-line JSON, quoted keys (`[{"sku": "A-1", "quantity": 2}]`).
+- Structured values: the property name, then an indented `item` block per list row; `<property> none` for an empty list. Screenplay has no JSON (`PLAY0833`).
 - Literal property/concept text rules use `contains`, `not contains`, `starts with`,
   `ends with` with quoted operands (v24, ordinal UTF-16). Portable `matches` refuses
   nonportable constructs with PLAY0699; exact Studio patterns warn PLAY0787.
@@ -172,6 +172,22 @@ Use bare `pii`/`secret` on concepts (`personal` aliases `pii`); legacy markers
 are PLAY0565 information and repeated markers are PLAY0653 warning. Event `subject`
 is report-only lineage; processing purposes/checks/reports declare use, not lawful
 processing or runtime retention. See command-surface `references/compliance.md`.
+
+`audiences` and provided names are also `$context.` paths beneath their level. Syntax (6.25.0 and 6.26.0; see command-surface and availability skills):
+
+```text
+audience Plus
+  description "Plus package"
+availability Sold
+  for Plus
+  when $context.vessel.hasReported == true
+provide vessel Vessel optional from query VesselByKey by $context.arguments.vesselId
+available for Plus or (Preview and Early)
+available when $context.region == "Nordics"
+available with Sold
+```
+
+`available` is allowed on a module, feature, slice, command, query and screen; `provide` at application, module, feature and slice. Specifications run with every gate available.
 
 ## `$eventContext.` (projections)
 `eventType{.id,.generation,.tombstone}`, `eventSourceType`, `eventSourceId`, `eventStreamType`,

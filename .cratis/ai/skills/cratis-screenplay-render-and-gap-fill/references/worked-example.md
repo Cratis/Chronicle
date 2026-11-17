@@ -39,6 +39,8 @@ module Berths
         authorize IsHarbourMaster
         produces event BerthReserved
           boatName BoatName = boatName
+      screen ReserveBerth
+        action ReserveBerth for screen
       specification ReservingABerth
         given caller
           authenticated

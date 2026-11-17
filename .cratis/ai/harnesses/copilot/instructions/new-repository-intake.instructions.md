@@ -12,9 +12,10 @@ Cratis organization. It does not apply to applications built on Cratis.
 
 When a repository is created in the Cratis organization, prepare one transient,
 no-effect Strategy intake proposal. Do not create, comment on, assign, mention,
-link, or otherwise mutate a GitHub issue unless a current repository profile and
-the exact operation are separately accepted. Tool access and a request to create
-the repository do not supply that issue-effect authority.
+link, or otherwise mutate a GitHub issue unless the user directly names that
+issue operation or an accepted policy scopes it. Do not require another profile
+or confirmation once either is present. Tool access and a request to create the
+repository do not supply that issue-effect authority.
 
 The proposal should include only the bounded facts needed for Strategy triage:
 

@@ -84,10 +84,15 @@ generation. There is no id argument, which is the point: the event type id is
 resolved from the current record's `[EventType]`, so the two generations cannot
 end up with mismatched ids.
 
+Persisted event type ids are immutable identity, and an explicit id is a house
+exception (decision 152): new events use plain `[EventType]`, and an id string is
+written only to retain an already-persisted id after a rename (below) or to
+resolve a cross-package short-name collision. Never change or "normalize" one.
+
 The older style — giving the prior record its own
 `[EventType("<explicit-id>", generation: 1)]` with an id string identical to the
-current generation's — is still supported and still works. Prefer
-`[EventTypeGenerationFor<T>]` for anything new: with the explicit-id style, an
+current generation's — is still supported and still works, as a retained id.
+Prefer `[EventTypeGenerationFor<T>]` for anything new: with the explicit-id style, an
 omitted or mistyped id silently defaults to the CLR type name, Chronicle then
 treats the two as unrelated event types, and the migration never applies.
 
@@ -184,7 +189,7 @@ Adding/removing an **optional** property at any depth still needs a migration
 class to complete the new generation chain, but no property operations: the
 target schema supplies absence/drops undeclared properties. That is a migration
 fact, not a reason to put nullable facts on newly authored events. Schema `title`
-is ignored, so renaming a CLR record with a pinned `[EventType("id")]` does not
+is ignored, so renaming a CLR record whose persisted id is retained with `[EventType("id")]` does not
 raise `EventTypeSchemaChanged`. A property described only by `default` may gain
 `type`/`format` without that error. Source:
 `Documentation/migrations/dotnet-client.mdx` and the kernel event-type schema comparison.
@@ -298,6 +303,7 @@ is expected, since the prior generation records history rather than new intent.
 | Adding a nullable property to represent "missing on old events" | CHR0012; supply a `DefaultValue` instead |
 | Splitting one event into two inside `Upcast` | a migration produces one event; model a split as a reactor or a command |
 | Adding a new generation for a renamed enum member | not needed; only removal or renumbering requires one |
+| Deriving an operational identity from the event type id (outbox deduplication key, derived fact id, fence-log key, replay receipt) and then renaming | generations do not cover it; keep the old id value or migrate that store |
 
 ## Verify
 
@@ -308,6 +314,8 @@ is expected, since the prior generation records history rather than new intent.
   implements both `Upcast` and `Downcast` with the correct generic order.
 - `MapValues` is overridden only where a value's meaning changed.
 - No nullable property was added to an `[EventType]` record.
+- Any explicit id retains a persisted id or resolves a collision, and no store
+  keyed by an event type id (deduplication keys, receipts) was left behind.
 - The build is clean with no `CHR0012`, `CHR0037`, `CHR0049`, or `CHR0050`
   outstanding.
 - Old-generation events replay into the current shape through the read-model

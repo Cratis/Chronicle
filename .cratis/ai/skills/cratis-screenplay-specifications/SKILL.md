@@ -1,6 +1,6 @@
 ---
 name: cratis-screenplay-specifications
-description: Use when writing Screenplay specification syntax or checking fixture, outcome-comparison, rejection and denial semantics. Not for choosing scenario coverage or writing C# and TypeScript tests.
+description: Use when writing Screenplay specification syntax, including graph steps, or checking fixture, outcome-comparison, rejection and denial semantics. Not for choosing scenario coverage or writing C# and TypeScript tests.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-screenplay-specifications/SKILL.md -->
@@ -29,7 +29,7 @@ reference execution. Use `screenplay test` or MCP `run-specifications` for V4; S
 tests are separate evidence. Propose → review → `run-specifications` with `proposalId` → apply.
 PLAY0285 (an impossible `then`) unbinds the whole model and blocks every spec.
 Unsupported/unbound is never a pass. Typed examples and
-route assertions are in [examples and routes](references/examples-and-routes.md).
+routes: [examples](references/examples-and-routes.md); [producerless events](references/producerless-events.md).
 
 Requires Screenplay 4.145.0 or later (`screenplay --version`) for `run-specifications` with `proposalId`.
 
@@ -99,21 +99,18 @@ or target tests; name engine, version and expected/discovered selection.
   UnsupportedValidation, not a successful check. Read
   [text and match rules](../cratis-screenplay-command-surface/references/text-and-match-rules.md)
   for boundary values and PLAY0699/0787. Reference success is not Stage admission.
+- Opaque rule, validation and reducer bodies run only when a host supplies a body execution
+  provider; the standalone tool never does. Read
+  [host body execution](references/host-body-execution.md).
 
 ## Chronological command date comparisons
 
 Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`); older binders refuse
-these comparisons with PLAY0268. DateTime conditions compare UTC instants at tick
-precision: cover equal instants with different offsets, increasing endpoints,
-an inverted interval and a one-tick boundary. Every participating DateTime input
-without an offset or `Z` rejects with Validation before rules, even when its
-comparison is skipped; add a missing-offset rejection, not a clock fixture workaround.
-`then` matching stays ordinal: expected event values keep the exact produced text,
-not an equivalent offset. Read the complete [retention-window specifications](../cratis-screenplay-command-surface/references/date-comparisons.md)
-for `require to >= from`, PLAY0268/0273 and Stage's v26 refusal. The missing-offset
-runtime case needs an evaluator-request or target input test: putting the invalid
-value in a typed `.play` fixture instead fails binding with PLAY0273; `then error`
-does not exercise runtime validation.
+these comparisons with PLAY0268.
+
+DateTime conditions compare UTC instants at tick precision, and an input without an
+offset rejects with Validation before rules. Read [date comparisons](references/date-comparisons.md)
+for the cases to cover, ordinal `then` matching and the runtime-validation test.
 
 ## Descriptions, persona callers and case tables
 
@@ -141,9 +138,7 @@ Rules the binder enforces:
 - **`then result` and `then no result` need `when query`**, and `when query`
   needs one of them, `then denied` or a sole validation `then error` (`PLAY0465`). Each argument is a `by` or
   `filter` parameter of the query (`PLAY0468`).
-- **A clock instant is ISO 8601 with an offset or `Z`** (PLAY0461); one `given clock` maximum.
-- **`given time zone "<id>"` is parsed, not runnable.** Executable binding refuses it with PLAY0268;
-  a repeated or malformed line is PLAY0814. Do not author it into an executable model.
+- **A clock instant is ISO 8601 with an offset or `Z`** (PLAY0461); one `given clock` maximum. `given time zone` is admitted from ESM v37: read `references/vocabulary.md`.
 - **`then` contains either events or an error — never both.** A rejection
   specification has exactly one rejection and no success outcome.
 - **`then denied` stands alone**: not with events, errors or state assertions
@@ -154,18 +149,25 @@ Rules the binder enforces:
 - **`null` only in optional read-model values.** A `null` in a command or event
   value is `PLAY0350`: an optional fact is a separate event.
 
-V1 does not report binding-only outcome errors; read `references/vocabulary.md`
-for parse-versus-bind diagnostics and check executable diagnostics too.
+Read `references/vocabulary.md` for parse-versus-bind diagnostics and check executable diagnostics too.
+
+## Graph specifications
+
+`given graph <Graph>` seeds nodes and edges before the action (`has node`, `has edge`
+only); `then graph <Graph>` asserts them and also states absence (`no node`,
+`no edge`). A `has` step lists only the properties it checks. Use them with
+`when append <Event>` for a graph projection. Requires
+Screenplay 5.7.0 (`screenplay --version`). Read
+[references/graph-steps.md](references/graph-steps.md) for the grammar and `PLAY0868`, `PLAY0875`, `PLAY0876`.
 
 ## How outcomes are compared
 
 Events compare as the complete new set in authored order (exact count). Read models and query rows: only the asserted properties must match (add `exactly` for all). Rejections: `then error "<message>"` matches the message, never severity. Bare `then error` never matches
-  a denial. Read [references/outcome-comparison.md](references/outcome-comparison.md) when asserting events, rows, ordering or a localized rejection key.
+  a denial. Read [references/outcome-comparison.md](references/outcome-comparison.md) for events, rows, ordering or a localized rejection key.
 
 ## Worked example
 
-A command with an authorization gate, a validation rule and a uniqueness constraint, specified in full with inline events, optional-aware queries and read-model assertions.
-Read [references/worked-example.md](references/worked-example.md) when writing or checking a complete command, view or constraint specification and you need the full compiled model to copy the shape from.
+Read [references/worked-example.md](references/worked-example.md) for a complete command, view or constraint specification (authorization, validation, uniqueness, queries) to copy the shape from.
 
 ## Choosing a strategy
 
@@ -190,7 +192,9 @@ Read [references/actions-beyond-commands.md](references/actions-beyond-commands.
 From ESM v6 every action sets reactions off. A specification runs only the slice that declares it: only that slice's reactions, captures and publications run, and `then` events compare the new facts of that slice. A specification whose action is a command goes in the slice that declares the command and states the command's own events. Another slice's event is `PLAY0285` (unreachable): state it in the slice that produces it. An automation states a command it invokes in another slice with `then invokes <Command>` (ESM v34).
 Read [references/reactions-and-cascades.md](references/reactions-and-cascades.md) when a specification's expected events include what a reaction appends, when a cascade, clock tick or invoked command is involved, or when a compiler reports `PLAY0285` (it holds the "Version skew and `PLAY0285`" section).
 
-A `statemachine` or `workflow` (ESM v36) carries its own specifications with `then is`, `then sends`, `then starts`, `outcome`, `then completes`, `then fails at` and `then waits at`. Read automations-and-translations [state machines and workflows](../cratis-screenplay-automations-and-translations/references/statemachines-and-workflows.md) when specifying either.
+Ability answers (`given <System>.<Ability> returns|answers|fails`): [references/ability-answers.md](references/ability-answers.md).
+
+A `statemachine` or `workflow` (ESM v36) carries its own specifications with `then is`, `then invokes`, `then starts`, `outcome`, `then completes`, `then fails at` and `then waits at`. Read automations-and-translations [state machines and workflows](../cratis-screenplay-automations-and-translations/references/statemachines-and-workflows.md) when specifying either.
 
 ## Published-event specifications (released ESM v9)
 
@@ -240,20 +244,16 @@ concept rules to follow the general format-rule convention.
 
 ## Application-boundary coverage
 
-Every slice should carry at least one specification whose action is what a real
-caller does and whose `then` is observable at that same boundary — produced
-events, read-model state, query results, a rejection or a denial. A specification
-satisfiable only by an internal function describes a unit, not a slice acceptance
-criterion.
+Every slice carries at least one specification whose action is what a real caller
+does and whose `then` is observable at that boundary (events, read-model state, query
+results, a rejection or a denial), not only through an internal function.
 
 ## Quality checklist
 
 For every specification:
 
-- [ ] Concrete, realistic values — never "valid user" or "some amount".
-- [ ] The values the outcome depends on are visible in the body, at the edge that matters.
-- [ ] Tests exactly one behavior, independent of other specifications.
-- [ ] Business language matching the event-model vocabulary.
+- [ ] Concrete, realistic values, visible in the body where the outcome depends on them.
+- [ ] Tests exactly one behavior, in the event-model vocabulary, independent of other specifications.
 
 For command specifications:
 
@@ -284,11 +284,12 @@ For view specifications:
 
 ## Run the specs before calling the work done
 
-Symptom: a model delivered with specifications that were never run. `screenplay test <root>` runs the
-reference evaluator; after rendering and building in Debug, run `dotnet test <destination>/<Project>.csproj -c Debug --no-build`
-for the generated specification classes (Stage-rendered apps use VSTest). Run a built spec executable only where spec projects are executables
-(see [specs.csharp](../../rules/specs.csharp.md)). Report both results separately (`cratis-screenplay-toolchain` V4 and V5.tests); a
-build that succeeds is not a test run, and `unbound`/`unsupported` is not a pass.
+`screenplay test <root>` runs the reference evaluator. After rendering and building in Debug,
+run `dotnet test <destination>/<Project>.csproj -c Debug --no-build` for the generated
+specification classes (Stage-rendered apps use VSTest); run a built spec executable only where
+spec projects are executables (see [specs.csharp](../../rules/specs.csharp.md)). Report both
+results separately (`cratis-screenplay-toolchain` V4 and V5.tests); a build that succeeds is not a
+test run, and `unbound`/`unsupported` is not a pass.
 
 ## Verify
 

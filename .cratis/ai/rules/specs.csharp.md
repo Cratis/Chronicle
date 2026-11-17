@@ -101,7 +101,7 @@ async Task Because() => _error = await Catch.Exception(_sut.DoSomething);
 
 Since 5.0 assertions live in `Cratis.Specifications`, with types forwarded by each framework package (namespace `Cratis.Specifications`); recompile and keep core/framework packages on the same version: `.ShouldEqual(expected)`, `.ShouldBeTrue()`, `.ShouldBeFalse()`, `.ShouldBeNull()`, `.ShouldNotBeNull()`, `.ShouldBeEmpty()`, `.ShouldNotBeEmpty()`, `.ShouldContain(item)`, `.ShouldNotContain(item)`, `.ShouldContainOnly(items)`, `.ShouldBeOfExactType<T>()`, `.ShouldBeGreaterThan(n)`, `.ShouldBeLessThan(n)`.
 
-Additional helpers include `ShouldNotEqual`, `ShouldBeSame`/`ShouldNotBeSame`, `ShouldMatch(Func<T, bool>)`, `ShouldBeInRange`, inclusive comparisons `ShouldBeGreaterThanOrEqual`/`ShouldBeLessThanOrEqual`, `ShouldContainSingleItem`, `ShouldEachConformTo`, ordered collection `ShouldEqual(IEnumerable<T>)`, collection `ShouldContain(Predicate<T>)`, `ShouldBeAssignableFrom<T>`, and string `ShouldContain(substring, StringComparison)`. `Catch.Exception` accepts `Action` or `Func<Task>`; `Catch.Exception<T>(Action)` catches only T.
+Additional helpers include `ShouldNotEqual`, `ShouldBeSame`/`ShouldNotBeSame`, `ShouldMatch(Func<T, bool>)`, `ShouldBeInRange`, inclusive comparisons `ShouldBeGreaterThanOrEqual`/`ShouldBeLessThanOrEqual`, `ShouldContainSingleItem`, `ShouldEachConformTo`, ordered collection `ShouldEqual(IEnumerable<T>)`, collection `ShouldContain(Func<T, bool>)` (adapt a typed `Predicate<T>` with `x => predicate(x)`), `ShouldBeAssignableFrom<T>`, and string `ShouldContain(substring, StringComparison)`. `Catch.Exception` accepts `Action` or `Func<Task>`; `Catch.Exception<T>(Action)` catches only T.
 
 ## Conventions
 

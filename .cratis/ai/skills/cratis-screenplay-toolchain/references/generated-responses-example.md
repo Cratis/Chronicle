@@ -25,6 +25,8 @@ module Projects
         returns
           projectId = projectId
           receiptId ReceiptId = receiptId
+      screen Register
+        action RegisterProject for screen
       specification RegisteringReturnsIdentifiers
         when RegisterProject
           for "11111111-1111-1111-1111-111111111111"
@@ -42,6 +44,8 @@ module Projects
         produces event ProjectRenamed
           name ProjectName = name
         returns projectId
+      screen Rename
+        action RenameProject for screen
       specification RenamingReturnsIdentifier
         when RenameProject
           projectId = "11111111-1111-1111-1111-111111111111"
