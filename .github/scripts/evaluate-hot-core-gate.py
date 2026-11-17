@@ -330,17 +330,23 @@ def gate_runs(repo, head_sha, runs_json):
     return runs
 
 
+def refresh_evidence_error(repo, head_sha, arguments):
+    if os.environ.get("SOURCE_WORKFLOW", "").rsplit("/", 1)[-1] == BUILD_WORKFLOW:
+        build = latest_build(repo, head_sha, arguments.build_runs_json)
+        if not build or build["status"] != "completed":
+            return "Nothing to do: no completed specs evidence for this head commit."
+    elif not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):
+        return "Nothing to do: no green requested-integration evidence for this head commit."
+    return None
+
+
 def refresh(arguments):
     repo, head_sha = os.environ["REPO"], os.environ["HEAD_SHA"]
     pr = current_pr(repo, head_sha, arguments.pr_json)
     if not pr or pr["head"]["sha"] != head_sha:
         return True, "Nothing to do: the pull request head has moved or no matching pull request exists."
-    if os.environ.get("SOURCE_WORKFLOW", "").rsplit("/", 1)[-1] == BUILD_WORKFLOW:
-        build = latest_build(repo, head_sha, arguments.build_runs_json)
-        if not build or build["status"] != "completed":
-            return True, "Nothing to do: no completed specs evidence for this head commit."
-    elif not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):
-        return True, "Nothing to do: no green requested-integration evidence for this head commit."
+    if error := refresh_evidence_error(repo, head_sha, arguments):
+        return True, error
     runs = gate_runs(repo, head_sha, arguments.gate_runs_json)
     latest = latest_run(runs, head_sha)
     if latest and latest["status"] != "completed":
