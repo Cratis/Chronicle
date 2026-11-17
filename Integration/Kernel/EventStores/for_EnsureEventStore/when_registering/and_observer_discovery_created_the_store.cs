@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
@@ -32,6 +33,7 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
         string _storeName;
         public bool StoreExistedAfterDiscovery;
         public bool CompletionSucceeded;
+        public string CompletionDiagnostics;
         public bool StatisticsHandledFirstAppend;
         public bool DefinitionsAreUnique;
         public bool Initialized;
@@ -74,7 +76,12 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
 
             var append = await _store.EventLog.Append("customer", new CustomerNamed("First"));
             append.IsSuccess.ShouldBeTrue();
-            CompletionSucceeded = (await append.WaitForCompletion(TimeSpan.FromSeconds(30))).IsSuccess;
+            var completion = await append.WaitForCompletion(TimeSpan.FromSeconds(30));
+            CompletionSucceeded = completion.IsSuccess;
+            if (!CompletionSucceeded)
+            {
+                CompletionDiagnostics = await DescribeIncompleteAppend(completion, append.SequenceNumber.Value);
+            }
             var observerStorage = (SignalingObserverStorage)Services.GetRequiredKeyedService<IGrainStorage>(WellKnownGrainStorageProviders.ObserverState);
             var key = new KernelObserverKey("$system.statistics.event-types", _storeName, _store.Namespace.Value, KernelEventSequenceId.Log);
             StatisticsHandledFirstAppend = await observerStorage.WaitForHandled(key, append.SequenceNumber.Value) == append.SequenceNumber.Value;
@@ -86,10 +93,30 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
             Initialized = await Services.GetRequiredService<IStorage>().GetEventStore(_storeName).IsInitialized();
             ProjectionRegistrations = ((given.CountingKernelProjections)Services.GetRequiredService<IKernelProjections>()).CallsFor(_storeName);
         }
+
+        async Task<string> DescribeIncompleteAppend(AppendResultWaitForCompletionResult completion, ulong sequenceNumber)
+        {
+            var diagnostic = $"Store={_storeName}, Namespace={_store.Namespace.Value}, SequenceNumber={sequenceNumber}, Completion={JsonSerializer.Serialize(completion)}";
+            try
+            {
+                // A post-wait snapshot distinguishes a stalled observer from a client-side deadline.
+                // Bound this diagnostic read independently; never replace the completion failure with its failure.
+                var observers = await _services.Services.Observers.GetObservers(new AllObserversRequest
+                {
+                    EventStore = _storeName,
+                    Namespace = _store.Namespace.Value
+                }).WaitAsync(TimeSpan.FromSeconds(5));
+                return $"{diagnostic}, ObserversAfterWait={JsonSerializer.Serialize(observers)}";
+            }
+            catch (Exception exception)
+            {
+                return $"{diagnostic}, ObserverSnapshotFailed={exception.GetType().Name}";
+            }
+        }
     }
 
     [Fact] void should_have_provisioned_the_store_through_discovery() => Context.StoreExistedAfterDiscovery.ShouldBeTrue();
-    [Fact] void should_complete_the_first_append() => Context.CompletionSucceeded.ShouldBeTrue();
+    [Fact] void should_complete_the_first_append() => Assert.True(Context.CompletionSucceeded, Context.CompletionDiagnostics);
     [Fact] void should_have_statistics_handle_the_first_append() => Context.StatisticsHandledFirstAppend.ShouldBeTrue();
     [Fact] void should_keep_one_definition_per_observer_after_concurrent_ensures() => Context.DefinitionsAreUnique.ShouldBeTrue();
     [Fact] void should_initialize_projections_once_despite_concurrent_ensures_and_reconnects() => Context.ProjectionRegistrations.ShouldEqual(1);
