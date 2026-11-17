@@ -58,6 +58,20 @@ Every rule here reduces noise. `var` avoids redundant type repetition. Expressio
 - The `Cratis.Architecture.CodeAnalysis` analyzer package (26 diagnostics, `CRARCH0001`–`CRARCH0026`; verified at `v1.0.2`) enforces these and others: `CRARCH0003` postfixes, `0004` `.Features.` namespaces, `0005` regions, `0006`/`0024` `LoggerMessage`, `0007` `IServiceProvider` injection, `0008` `is null`, `0017` namespace matches folder, `0019` `Async` suffix, `0022` explicit `private`, `0023` typed logger category; `0012` (`async void`) and `0014` (test types in production) are errors. When a repository has the package, a `CRARCH` warning is the house convention, not noise.
 - For types with no implementation body, omit the braces (e.g. `public interface IMyInterface;`).
 - Prefer `record` types for immutable data structures (events, commands, read models, concepts) — they give you value equality, immutability, and concise syntax for free.
+- Set `LangVersion` to `latest` in every repository. Language-only features of newer C# versions are safe on every target of a multi-targeted library; a new runtime or library API needs `#if NET11_0_OR_GREATER` with a net10 fallback.
+- Use collection expression arguments (`[with(capacity: n), .. items]`, `[with(comparer), ..]`) instead of constructor calls, and labeled `break`/`continue` instead of Boolean flags or `goto` in nested loops (IDE0410).
+- Do not introduce `union` types, runtime-async, or the memory-safety preview features, and do not retrofit `closed` onto an existing public type — a public API change is a major version.
+- Keep IDE style rule severities at `suggestion`, never `warning`: Release builds treat warnings as errors.
+- Under the .NET 11 SDK, IDE0370 (unnecessary null-forgiving operator) and IDE0001/IDE0002 (simplify names and member access) surface wherever code style is enforced: `dotnet format --verify-no-changes`, or `EnforceCodeStyleInBuild` with warnings as errors and `dotnet_analyzer_diagnostic.severity = warning`. IDE0001/IDE0002 are `EnforceOnBuild=Never`, so only `dotnet format` and the IDE surface them; IDE0370 is `WhenExplicitlyEnabled`, so the build enforces it only when something enables it explicitly, such as an all-analyzers severity line. A repository that already enforces style at `warning` keeps that severity and fixes these findings in its .NET 11 change.
+- Exception for multi-target libraries only (for example `net10.0;net11.0`): IDE0370 is analyzed per compilation and can flag a `!` another target still needs ([roslyn#81632](https://github.com/dotnet/roslyn/issues/81632), [roslyn#82003](https://github.com/dotnet/roslyn/issues/82003)). Remove every `!` that is unnecessary on all targets. If target-dependent ones remain, add this to that repository's `.editorconfig`, with a tracking issue, and verify with a build of all target frameworks:
+
+  ```ini
+  # IDE0370 is analyzed per target framework and flags null-forgiving operators another target still needs.
+  # See https://github.com/dotnet/roslyn/issues/81632 and https://github.com/dotnet/roslyn/issues/82003. Tracked in <issue>.
+  dotnet_diagnostic.IDE0370.severity = suggestion
+  ```
+
+  Never `none`, never in shared or global config, and never for `net11.0`-only executables.
 
 ## Nullable Reference Types
 
@@ -332,7 +346,7 @@ These are the building blocks. Each type has a specific role in the vertical sli
 | --- | --- |
 | `ConceptAs<T>` | Strongly-typed domain *value* wrapper (see [concepts.md](./concepts.md)) |
 | `EventSourceId<T>` | Strongly-typed *identity* base — derive event-source ids from this, not `ConceptAs<T>` |
-| `[EventType]` | Marks a record as a Chronicle event — **never** pass arguments for a new event |
+| `[EventType]` | Marks a record as a Chronicle event — plain for a new event (explicit id only per application-profile.md item 7) |
 | `[Command]` | Marks a record as a model-bound command — define `Handle()` directly on the record |
 | `[ReadModel]` | Marks a record as a model-bound query — define static query methods on the record |
 | `CommandValidator<T>` | FluentValidation validator for commands |

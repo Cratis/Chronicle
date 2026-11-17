@@ -27,8 +27,9 @@ When the agent finishes a session, verify the work against **fresh signals** bef
    ```
 3. **Build Release** from repository root — build-only check; skip re-running proxy generation:
    ```
-   dotnet build -c Release -p:CratisProxiesOutputPath=
+   dotnet build -c Release -p:CratisProxiesSkip=true -p:CratisProxiesOutputPath=
    ```
+   (`CratisProxiesSkip` is Arc 22.185.1+; the empty output path covers older Arc.)
 4. **Run specs/tests for every affected project** — use the project's test command; if you cannot isolate the affected scope, run the repository-level test command.
 5. **Frontend** (when frontend files changed) — run lint, the type/build check, and frontend tests.
 

@@ -9,11 +9,14 @@ probe reports and choosing what to do. Do not copy the code table here.
 
 ## Pipeline that produces the codes
 1. The CLI compiles and binds the **whole** model with its **bundled** Screenplay (the ESM level it renders is bounded by the bundle; older bundles bound less). Binding is never scoped:
-   any binding error blocks even a `--scope` render. Binding errors are `PLAY0268` (outside the admitted vertical), `PLAY0269`
+   any binding error blocks even a `--scope` render. That is strict `Compile` and the standalone tool;
+   a host that opts in to `CompileAdmissible` (Requires Screenplay 4.254.0) excludes the refused
+   specifications, slices, imports and policies and reports them instead, which does not establish
+   runtime identity safety. Binding errors are `PLAY0268` (outside the admitted vertical), `PLAY0269`
    (deferred), `PLAY0270` (report-only information), `PLAY0271` (legacy semantics) and `PLAY0273`
    (a specification shape). A file/inline command handler without unconditional `produces`
-   or a resolved body instead reports PLAY0800 (`CommandHandlerRequiresAttachment`); beside
-   unconditional `produces` with a resolved body it binds as the v23 result contract.
+   (or a `may produce` block, ESM v35), or without a resolved body, instead reports PLAY0800 (`CommandHandlerRequiresAttachment`); beside
+   unconditional `produces` with a resolved body it binds as the v23 result contract, and beside `may produce` as v35.
    Requires Screenplay 4.250.0 (`screenplay --version`); 4.210.0 to 4.249.x refuse every
    attached handler with PLAY0800 and older bundled binders use PLAY0268 for these handlers. Hosts read the required typed `arguments.subject`
    to identify the command, never the message.
@@ -38,7 +41,7 @@ ESM). Only the probe answers renderability. `PLAY0270` entries are information, 
 | --- | --- | --- | --- |
 | **Model fix (in mode)** | the model is in, or the user chose, renderable mode and breaks its own subset in a way that has a renderable equivalent with the same meaning | a `produces` whose `for` is not the command identifier; two projections for one read model (`-007`); a policy Stage cannot express portably (`-015`; role-only and opaque pure policies render) | edit request to the modeler session with address, change and rationale |
 | **Capability gap** | the intended meaning needs a construct Stage does not render yet | DateTime equality filters and required parameters after optional filters (`-010`); context/single-result filters, opaque `scoped to` and a list-query `by` block remain PLAY0268; an unsupported query performer (observable, a non-C# body, or a missing, changed or non-compiling body) becomes an explicit implementation gap, while a verified C# body renders ([performer bodies](../../cratis-screenplay-read-surface/SKILL.md#performer-bodies-are-rendered)); a read model with several key parts or a projection keyed by parts (v27) refuses `STAGE-ESM-048` (always for a DateTime or decimal key part; the decimal refusal lifts with Stage#847 once Chronicle#5427 lands) and a single-instance query by parts `STAGE-ESM-047` (Chronicle#4265); Translate, clocks, captures, non-event triggers and opaque reaction bodies (`-024`); claim-reading/opaque `runs as` gates (`-034`), legacy `from` (`-035`), mixed effects in one handler (`-037`, retries can duplicate events; keep it whole), unsupported reaction mappings (`-039`); unsupported generated types/result combinations (`-028`/`-038`); `then no readmodel` (`-027`); evolved events (`STAGE-ESM-026`); unsupported expression/enum production conditions (`-006`; supported conditional productions render); legacy reads (`PLAY0271`), protected reads the renderer cannot preserve, or any protected read in an older CLI bundle (STAGE-ESM-044 despite v25 admission; semantic Host/executor support is separate); code validation (`-005`); protected identities/enums (`-040`) or unadmitted explicit subject lineage (`PLAY0268`); described handlers (v23, STAGE-IMPL-002 even Stub mode), atomic mode (STAGE-ESM-043; v22 admission Requires Stage 4.139.0, older Stage reports -016) | keep the model; fallback record entry; options a to c in `SKILL.md`; link the Stage issue |
-| **Implementation attachment** | the handler shape, not future ESM admission | file/inline command handlers without unconditional `produces` or a resolved body (PLAY0800; typed `subject` names the command) | declare unconditional `produces` beside a resolved body, split variable outcomes into separate commands, or keep the model contract and gap-fill the slice in code |
+| **Implementation attachment** | the handler shape, not future ESM admission | file/inline command handlers without unconditional `produces` or `may produce`, or without a resolved body (PLAY0800; typed `subject` names the command) | declare unconditional `produces` or a `may produce` block beside a resolved body, split variable outcomes into separate commands, or keep the model contract and gap-fill the slice in code |
 | **Tool skew** | the bundled compiler disagrees with documented semantics | the false `PLAY0285` on reaction cascades from an older bundle; codes the standalone compiler does not raise | record in the session state and the fallback record; never "fix" a correct model |
 | **Environment** | not the model | restore failures, missing SDK, a destination that is not writable | fix the environment or report blocked |
 
@@ -77,6 +80,14 @@ Stage#120; per-persona screens Stage#194; evolved events Stage#204; mixed reacti
 generated values/responses Stage#175 (now render on the pinned bundle). Closed: event generation Stage#165, descriptions as code docs
 Stage#178, ESM v7 Stage#201. Check that an issue is still open before citing
 it, and cite only numbers you have just read. A closed issue is a trigger to probe again.
+
+## CLI exports and diffs
+
+- `screenplay diff <before> <after> --format json` finds what changed between two model versions; `screenplay export --scope <slice>` hands one slice's ESM to a builder ([CLI reference](../../cratis-screenplay-toolchain/references/model-export-diff-rename.md)).
+- After a model change, read `slices` (MCP `semantic-diff`, `ModelDifference.Slices` or `screenplay diff --format json`) to choose the slices to re-render or re-gap-fill; a non-empty `modelWide` may affect every slice.
+- A builder for another stack can read screens from an ESM v42 export (`screenplay export --screens`; .NET `UiContractBuilder.For(model)`); refresh, state, notifications and dialogs are not carried.
+- A builder for another stack reads routes and payloads from `screenplay export --format openapi` and screens from `--format ui` instead of copying a renderer's conventions ([formats](../../cratis-screenplay-toolchain/references/model-export-diff-rename.md#openapi-and-ui-contract-formats)).
+- A graph query that `collect`s nested rows is ESM v54: Stage must admit v54 before it renders it. A refusal is a drift event, so keep the query ([graphs](../../cratis-stage-rendering-and-sandbox/references/graphs.md)).
 
 ## Reference outcomes
 - The complete marina model of `cratis-stage-rendering-and-sandbox` `references/render-example.md`:

@@ -5,6 +5,13 @@
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
+/** `mcpServers.screenplay.eager`: absent is false; a non-boolean is a configuration error. */
+function readEager(screenplay: unknown): boolean {
+    const eager = object(screenplay) ? screenplay.eager : undefined;
+    if (eager !== undefined && typeof eager !== 'boolean') throw new Error('Screenplay MCP eager must be a boolean.');
+    return eager === true;
+}
+
 export function object(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -113,6 +120,8 @@ export function selectedServer(project: string, corpus: string) {
     if (screenplay !== undefined && !object(screenplay)) throw new Error('Invalid Screenplay MCP configuration.');
     if (object(screenplay) && screenplay.enabled === false) return undefined;
     if (object(screenplay) && screenplay.enabled !== undefined && screenplay.enabled !== true) throw new Error('Screenplay MCP enabled must be a boolean.');
+    // Deferred by default: `eager: true` registers the tools at session start instead of on demand.
+    const eager = readEager(screenplay);
     const descriptor = readJson(join(corpus, 'mcp-servers.json'));
     // Any 1.x descriptor is accepted; another major loads no corpus MCP servers (the generic bridge reports it once).
     if (!supportedSchema(descriptor.schemaVersion)) return undefined;
@@ -132,5 +141,6 @@ export function selectedServer(project: string, corpus: string) {
         project: physicalProject,
         root: root === undefined ? undefined : physicalRoot(physicalProject, root),
         composedOnly: !nonApplicationSelection && root === undefined,
+        eager,
     };
 }

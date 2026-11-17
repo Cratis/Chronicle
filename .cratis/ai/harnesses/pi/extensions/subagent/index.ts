@@ -1,4 +1,7 @@
 // cratis-ai-managed: harnesses/pi/extensions/subagent/index.ts
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 /**
  * Cratis Subagent tool for the Pi coding agent.
  *
@@ -24,11 +27,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CONFIG_DIR_NAME, type ExtensionAPI, getAgentDir } from "@earendil-works/pi-coding-agent";
+import { CONFIG_DIR_NAME, type ExtensionAPI, type ExtensionContext, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { Type } from "typebox";
+import { Type, type Static } from "typebox";
 import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
 import { foreignDelegationTool, standDownNotice, SUBAGENT_TOOL_NAME } from "./delegation.ts";
+import { readModelTierConfig, resolveModel, type ModelResolution, type ModelTierInputs } from "./modelTiers.ts";
 
 const extensionPath = fileURLToPath(import.meta.url);
 const isPackagedExtension = extensionPath.includes(`${path.sep}package${path.sep}corpus${path.sep}`);
@@ -44,6 +48,8 @@ interface SingleResult {
 	finalText: string;
 	stderr: string;
 	model?: string;
+	modelOutcome?: ModelResolution['outcome'];
+	modelNotice?: string;
 	stopReason?: string;
 	errorMessage?: string;
 	step?: number;
@@ -53,9 +59,10 @@ function isFailed(r: SingleResult): boolean {
 	return r.exitCode !== 0 || r.stopReason === "error" || r.stopReason === "aborted";
 }
 
-function resultOutput(r: SingleResult): string {
-	if (isFailed(r)) return r.errorMessage || r.stderr || r.finalText || "(no output)";
-	return r.finalText || "(no output)";
+function resultOutput(r: SingleResult, results: SingleResult[] = [r]): string {
+	const output = isFailed(r) ? r.errorMessage || r.stderr || r.finalText || "(no output)" : r.finalText || "(no output)";
+	const notices = [...new Set(results.map(result => result.modelNotice).filter(Boolean))];
+	return [...notices, output].join("\n\n");
 }
 
 function capOutput(output: string): string {
@@ -77,9 +84,30 @@ function piInvocation(args: string[]): { command: string; args: string[] } {
 	return { command: "pi", args };
 }
 
+type OutputEvent = { type?: string; message?: { role?: string; content?: { type?: string; text?: string }[]; model?: string; stopReason?: string; errorMessage?: string } };
+
+function assistantMessage(line: string): OutputEvent['message'] {
+	let event: OutputEvent;
+	try { event = JSON.parse(line); } catch { return undefined; }
+	if (event.type !== "message_end") return undefined;
+	return event.message?.role === "assistant" ? event.message : undefined;
+}
+
+function updateAssistantResult(result: SingleResult, message: NonNullable<OutputEvent['message']>, onText?: (text: string) => void): void {
+	for (const part of message.content ?? []) {
+		if (part.type === "text" && typeof part.text === "string") {
+			result.finalText = part.text;
+			onText?.(part.text);
+		}
+	}
+	if (!result.model && message.model) result.model = message.model;
+	if (message.stopReason) result.stopReason = message.stopReason;
+	if (message.errorMessage) result.errorMessage = message.errorMessage;
+}
+
 async function runSingleAgent(
 	defaultCwd: string,
-	dispatch: { model?: string; thinkingLevel?: string },
+	dispatch: Omit<ModelTierInputs, 'agent' | 'dispatchModel'> & { model?: string; thinkingLevel?: string; onNotice: (notice: string) => void },
 	agents: AgentConfig[],
 	agentName: string,
 	task: string,
@@ -116,11 +144,12 @@ async function runSingleAgent(
 		};
 	}
 
-	// An agent that pins no model inherits the dispatching session's model + thinking level.
-	const model = agent.model ?? dispatch.model;
+	const resolution = resolveModel({ ...dispatch, agent, dispatchModel: dispatch.model });
+	const { model } = resolution;
+	if (resolution.notice) dispatch.onNotice(resolution.notice);
 	const args: string[] = ["--mode", "json", "-p", "--no-session"];
 	if (model) args.push("--model", model);
-	if (!agent.model && dispatch.thinkingLevel) args.push("--thinking", dispatch.thinkingLevel);
+	if (resolution.thinkingInherited && dispatch.thinkingLevel) args.push("--thinking", dispatch.thinkingLevel);
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
 
 	const result: SingleResult = {
@@ -131,6 +160,8 @@ async function runSingleAgent(
 		finalText: "",
 		stderr: "",
 		model,
+		modelOutcome: resolution.outcome,
+		modelNotice: resolution.notice,
 		step,
 	};
 
@@ -156,24 +187,8 @@ async function runSingleAgent(
 			let buffer = "";
 			const processLine = (line: string) => {
 				if (!line.trim()) return;
-				let event: any;
-				try {
-					event = JSON.parse(line);
-				} catch {
-					return;
-				}
-				if (event.type === "message_end" && event.message?.role === "assistant") {
-					const msg = event.message;
-					for (const part of msg.content ?? []) {
-						if (part.type === "text" && typeof part.text === "string") {
-							result.finalText = part.text;
-							onText?.(part.text);
-						}
-					}
-					if (!result.model && msg.model) result.model = msg.model;
-					if (msg.stopReason) result.stopReason = msg.stopReason;
-					if (msg.errorMessage) result.errorMessage = msg.errorMessage;
-				}
+				const message = assistantMessage(line);
+				if (message) updateAssistantResult(result, message, onText);
 			};
 			proc.stdout.on("data", (data) => {
 				buffer += data.toString();
@@ -251,6 +266,91 @@ const SubagentParams = Type.Object({
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
 });
 
+type AgentTask = Static<typeof TaskItem>;
+type RunTask = (task: AgentTask, step?: number) => Promise<SingleResult>;
+
+function modelDispatch(ctx: ExtensionContext) {
+	let modelNoticeShown = false;
+	return {
+		...readModelTierConfig(getAgentDir()),
+		model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+		thinkingLevel: ctx.thinkingLevel,
+		available: ctx.modelRegistry.getAvailable().map(model => `${model.provider}/${model.id}`),
+		onNotice: (notice: string) => {
+			if (ctx.hasUI && !modelNoticeShown) {
+				modelNoticeShown = true;
+				ctx.ui.notify(notice, 'warning');
+			}
+		},
+	};
+}
+
+function needsProjectConfirmation(params: Static<typeof SubagentParams>, ctx: ExtensionContext): boolean {
+	if (params.agentScope === 'user') return false;
+	return (params.confirmProjectAgents ?? false) && Boolean(ctx.hasUI);
+}
+
+async function approveProjectAgents(params: Static<typeof SubagentParams>, ctx: ExtensionContext, discovery: ReturnType<typeof discoverAgents>): Promise<boolean> {
+	if (!needsProjectConfirmation(params, ctx)) return true;
+	const requested = new Set<string>();
+	for (const task of params.chain ?? []) requested.add(task.agent);
+	for (const task of params.tasks ?? []) requested.add(task.agent);
+	if (params.agent) requested.add(params.agent);
+	const projectRequested = Array.from(requested)
+		.map(name => discovery.agents.find(agent => agent.name === name))
+		.filter((agent): agent is AgentConfig => agent?.source === 'project');
+	if (projectRequested.length === 0) return true;
+	return ctx.ui.confirm(
+		"Run project-local agents?",
+		`Agents: ${projectRequested.map(agent => agent.name).join(", ")}\nSource: ${discovery.projectAgentsDir ?? "(unknown)"}\n\nProject agents are repo-controlled. Only continue for trusted repositories.`,
+	);
+}
+
+function exactlyOneMode(params: Static<typeof SubagentParams>): boolean {
+	const hasChain = (params.chain?.length ?? 0) > 0;
+	const hasTasks = (params.tasks?.length ?? 0) > 0;
+	const hasSingle = Boolean(params.agent && params.task);
+	return Number(hasChain) + Number(hasTasks) + Number(hasSingle) === 1;
+}
+
+async function runChain(chain: AgentTask[], run: RunTask) {
+	const results: SingleResult[] = [];
+	let previous = "";
+	for (let i = 0; i < chain.length; i++) {
+		const stepDef = chain[i];
+		const task = stepDef.task.replace(/\{previous\}/g, previous);
+		const result = await run({ ...stepDef, task }, i + 1);
+		results.push(result);
+		if (isFailed(result)) {
+			return {
+				content: [{ type: "text" as const, text: `Chain stopped at step ${i + 1} (${stepDef.agent}): ${resultOutput(result, results)}` }],
+				details: { mode: "chain", results },
+				isError: true,
+			};
+		}
+		previous = result.finalText;
+	}
+	return { content: [{ type: "text" as const, text: resultOutput(results[results.length - 1], results) }], details: { mode: "chain", results } };
+}
+
+function parallelSummary(result: SingleResult): string {
+	const reason = result.stopReason && result.stopReason !== "end" ? ` (${result.stopReason})` : "";
+	const status = isFailed(result) ? `failed${reason}` : "completed";
+	return `### [${result.agent}] ${status}\n\n${capOutput(resultOutput(result))}`;
+}
+
+async function runParallel(tasks: AgentTask[], run: RunTask) {
+	if (tasks.length > MAX_PARALLEL_TASKS) {
+		return { content: [{ type: "text" as const, text: `Too many parallel tasks (${tasks.length}). Max is ${MAX_PARALLEL_TASKS}.` }], details: {} };
+	}
+	const results = await mapLimit(tasks, MAX_CONCURRENCY, task => run(task));
+	const ok = results.filter(result => !isFailed(result)).length;
+	return {
+		content: [{ type: "text" as const, text: `Parallel: ${ok}/${results.length} succeeded\n\n${results.map(parallelSummary).join("\n\n---\n\n")}` }],
+		details: { mode: "parallel", results },
+	};
+}
+
 export default function (pi: ExtensionAPI) {
 	if (isPackagedExtension && fs.existsSync(path.join(process.cwd(), ".cratis", "ai.manifest.json"))) return;
 	// Discover once at registration so the tool description can name the valid agents — the model
@@ -296,16 +396,11 @@ export default function (pi: ExtensionAPI) {
 
 		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
 			const agentScope: AgentScope = (params.agentScope as AgentScope) ?? "both";
-			const dispatch = {
-				model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
-				thinkingLevel: ctx.thinkingLevel,
-			};
-			const { agents, projectAgentsDir } = discoverAgents(ctx.cwd, agentScope);
+			const dispatch = modelDispatch(ctx);
+			const discovery = discoverAgents(ctx.cwd, agentScope);
+			const { agents } = discovery;
 
-			const hasChain = (params.chain?.length ?? 0) > 0;
-			const hasTasks = (params.tasks?.length ?? 0) > 0;
-			const hasSingle = Boolean(params.agent && params.task);
-			if (Number(hasChain) + Number(hasTasks) + Number(hasSingle) !== 1) {
+			if (!exactlyOneMode(params)) {
 				const available = agents.map((a) => `${a.name} (${a.source})`).join(", ") || "none";
 				return {
 					content: [{ type: "text", text: `Provide exactly one mode (single, parallel, or chain).\nAvailable agents: ${available}` }],
@@ -314,68 +409,13 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			// Optional security gate for callers that want an extra confirmation for project agents.
-			if ((agentScope === "project" || agentScope === "both") && (params.confirmProjectAgents ?? false) && ctx.hasUI) {
-				const requested = new Set<string>();
-				for (const s of params.chain ?? []) requested.add(s.agent);
-				for (const t of params.tasks ?? []) requested.add(t.agent);
-				if (params.agent) requested.add(params.agent);
-				const projectRequested = Array.from(requested)
-					.map((n) => agents.find((a) => a.name === n))
-					.filter((a): a is AgentConfig => a?.source === "project");
-				if (projectRequested.length > 0) {
-					const ok = await ctx.ui.confirm(
-						"Run project-local agents?",
-						`Agents: ${projectRequested.map((a) => a.name).join(", ")}\nSource: ${projectAgentsDir ?? "(unknown)"}\n\nProject agents are repo-controlled. Only continue for trusted repositories.`,
-					);
-					if (!ok) return { content: [{ type: "text", text: "Canceled: project-local agents not approved." }], details: {} };
-				}
+			if (!await approveProjectAgents(params, ctx, discovery)) {
+				return { content: [{ type: "text", text: "Canceled: project-local agents not approved." }], details: {} };
 			}
 
-			// ── chain ──
-			if (params.chain && params.chain.length > 0) {
-				const results: SingleResult[] = [];
-				let previous = "";
-				for (let i = 0; i < params.chain.length; i++) {
-					const stepDef = params.chain[i];
-					const task = stepDef.task.replace(/\{previous\}/g, previous);
-					const r = await runSingleAgent(ctx.cwd, dispatch, agents, stepDef.agent, task, stepDef.cwd, i + 1, signal, undefined);
-					results.push(r);
-					if (isFailed(r)) {
-						return {
-							content: [{ type: "text", text: `Chain stopped at step ${i + 1} (${stepDef.agent}): ${resultOutput(r)}` }],
-							details: { mode: "chain", results },
-							isError: true,
-						};
-					}
-					previous = r.finalText;
-				}
-				return {
-					content: [{ type: "text", text: resultOutput(results[results.length - 1]) }],
-					details: { mode: "chain", results },
-				};
-			}
-
-			// ── parallel ──
-			if (params.tasks && params.tasks.length > 0) {
-				if (params.tasks.length > MAX_PARALLEL_TASKS) {
-					return {
-						content: [{ type: "text", text: `Too many parallel tasks (${params.tasks.length}). Max is ${MAX_PARALLEL_TASKS}.` }],
-						details: {},
-					};
-				}
-				const results = await mapLimit(params.tasks, MAX_CONCURRENCY, (t) =>
-					runSingleAgent(ctx.cwd, dispatch, agents, t.agent, t.task, t.cwd, undefined, signal, undefined),
-				);
-				const ok = results.filter((r) => !isFailed(r)).length;
-				const summaries = results.map((r) => {
-					const status = isFailed(r) ? `failed${r.stopReason && r.stopReason !== "end" ? ` (${r.stopReason})` : ""}` : "completed";
-					return `### [${r.agent}] ${status}\n\n${capOutput(resultOutput(r))}`;
-				});
-				return {
-					content: [{ type: "text", text: `Parallel: ${ok}/${results.length} succeeded\n\n${summaries.join("\n\n---\n\n")}` }],
-					details: { mode: "parallel", results },
-				};
-			}
+			const run: RunTask = (task, step) => runSingleAgent(ctx.cwd, dispatch, agents, task.agent, task.task, task.cwd, step, signal, undefined);
+			if (params.chain && params.chain.length > 0) return runChain(params.chain, run);
+			if (params.tasks && params.tasks.length > 0) return runParallel(params.tasks, run);
 
 			// ── single ──
 			const r = await runSingleAgent(ctx.cwd, dispatch, agents, params.agent!, params.task!, params.cwd, undefined, signal, undefined);

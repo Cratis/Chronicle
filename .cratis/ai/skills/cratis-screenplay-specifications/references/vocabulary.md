@@ -75,3 +75,13 @@ An enumeration value binds whether it is written bare
 An older compiler binds only the quoted member and the full round-trip instant
 (`"2026-10-05T08:00:00.0000000Z"`) although it accepts all forms - quote members when a
 model must bind on older versions.
+
+## Time zones
+
+- `given time zone "<id>"` binds and runs from ESM v37 (Screenplay 5.5.0; an older binder
+  refuses it with `PLAY0268`). It supplies the scenario zone to the command's calendar, to
+  clock operands and to a command a reaction invokes; a `calendar from $context.<member>` command
+  fails without it. A repeated or malformed line is `PLAY0814`, an unknown IANA id `PLAY0852`. Pair it
+  with `given clock`. Stage's sandbox refuses specifications in a slice that uses the clock, and every
+  specification when the model declares an application zone or context member
+  (`STAGE-ESM-016`), so these specifications run on the standalone tool. See command-surface `references/date-comparisons.md`.

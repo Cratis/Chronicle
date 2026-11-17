@@ -26,6 +26,8 @@ module Moorings
           for berthId
           name      BerthName   = name
           maxLength BoatLength  = maxLength
+      screen RegisterBerth
+        action RegisterBerth for screen
       specification RegisteringABerth
         given caller
           authenticated

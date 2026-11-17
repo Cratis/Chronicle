@@ -66,6 +66,8 @@ module Billing
             message "The amount must be positive"
         produces event AmountRecorded
           amount Int = amount
+      screen RecordAmount
+        action RecordAmount for screen
       specification RecordingAmounts
         description "An accountant can record a positive amount"
         parameter amount Int

@@ -11,6 +11,7 @@ code only as XML doc comments (Stage#178): a rule that exists only in prose is u
 | this command's own inputs | command `validate` / `require` | a rule that applies only sometimes is an implication: `require a == false or b > c` |
 | who may ask | `authorize` with a policy (role, claim, authenticated) | enclosing gates combine with AND and run first. Gates every command and query in a feature shares go on the feature or module so a new path inherits them |
 | whose instance | policy `claim "x" matches subject` (the command identifier) or `matches <command property>` | executable; renders for text, Uuid, Date and DateTime subjects; an authorized command needs exactly one identifier (STAGE-ESM-015 otherwise) |
+| whether the caller may act, decided from recorded state (the asset's plan, the article's author) | policy with `reads <Model> [as alias] [by property]` and a state condition in `require`, attached with `authorize` | executable (ESM v44+); an absent read denies. See "State-reading policy or refusal rule" below |
 | uniqueness, once-only facts | `constraint` (`unique ... on`, `unique event`) | append-time; the constraint name is its identity |
 | stored state (record exists, balance, current status) | `reads <View>` + `require` with an indented message | opt eligible reads into `command reads protected` (v25); absence Validation, matching intervening facts Conflict. Legacy/refused shapes stay stated intent with a named target mechanism |
 
@@ -23,6 +24,26 @@ target enforcement separate from reference semantics until target tests verify i
 Read [protected command reads](../../cratis-screenplay-command-surface/references/protected-reads.md)
 for admission and protected-read rendering (Stage 4.138.0; STAGE-ESM-044 otherwise); never remove protection to obtain rendering. Forbidden: caller-supplied copies of state in `require`, boolean attestation
 inputs (`confirmsX == true`), rules in `handler` / implementation-hint prose.
+
+## State-reading policy or refusal rule
+
+Both read recorded state; they answer different questions. Choose by the question and the outcome the caller sees.
+
+| Question | Use | Outcome |
+|---|---|---|
+| May this caller act at all, given the state (plan includes the feature, caller is the recorded author, tenant is enabled)? | `policy` with `reads` + `authorize` | `Unauthorized` (`then denied`), before validation and the handler; absent state denies |
+| Is this request acceptable in the current state (balance sufficient, status allows the transition, record exists)? | command `reads <View>` + `require` with an indented message | `Validation` refusal the caller can act on; matching intervening facts are `Conflict` |
+| A list should show each caller only some rows | `narrow <Policy>` on the query | disallowed rows are dropped, not refused |
+
+Rules of thumb:
+
+- If the denial must not reveal anything about the business state or must apply to every command and query that uses the gate, use the policy. If the user needs an explanation and can fix it, use a refusal rule with a message.
+- The policy is an admission check on a read model that may lag the events; it revokes nothing later. A rule that must hold under concurrent writers (a balance, a capacity, a status transition) is a refusal rule with a protected command read, not a policy.
+- Use `$identity.id` for "only the author" ownership of a recorded entity; use `claim "x" matches subject` when the identifier is on the command and no recorded state is needed.
+- A policy has no write effects and no message; put the business wording in a refusal rule. Declare the read model and projection it reads in the model; a `reads` target that no projection fills always denies.
+- Every state-reading gate gets specifications for: allowed, denied by state, and no recorded state (`then denied`); with `$identity.id`, also another caller and a caller without an identifier.
+
+Syntax and fail-closed behavior: `cratis-screenplay-command-surface`, `references/policy-persona-seed.md`. Hand-written counterpart: `StateAwareAuthorizationPolicy<TState>` in `cratis-arc-authentication-authorization-and-identity`.
 
 ## Authorization is executable
 

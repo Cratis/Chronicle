@@ -35,6 +35,7 @@ Reverify product sources before claiming support for another version.
 
 - Direct property mapping, counters and sums usually read best as projections.
   Fluent definitions add mapping structure, not arbitrary per-event code.
+- If the reducer would only key a dictionary, keep a first value or order children, use a projection (see [dictionaries, set once and ordering](../cratis-chronicle-projection/references/dictionaries-set-once-ordering.md)).
 - Prior-state branches and guarded calculations often read best as reducers.
   Explain the state-transition rule, rather than proving both projection APIs
   incapable. Reducers fold per event source: no native cross-source joins,

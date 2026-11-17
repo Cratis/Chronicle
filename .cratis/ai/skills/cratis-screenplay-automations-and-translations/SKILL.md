@@ -33,6 +33,9 @@ pending-work contracts when changing each reaction/capture, not at final review.
   a refused construct. Run `screenplay test` or MCP `run-specifications` for V4.
 - Read [realization and gap-fill](references/realization-and-gap-fill.md) before
   promising Automation/Translate delivery (STAGE-ESM-024).
+- Read [systems and abilities](references/systems-and-abilities.md) before
+  declaring an external `system` or `ability`, choosing its effect class, or
+  writing `invokes`/`starts` (never the deprecated `sends`, `send`, `start`).
 - Invokes have no caller without `runs as`. Read captures-and-reactions
   [invocation identity](../cratis-screenplay-captures-and-reactions/references/invocation-identity.md)
   for the ESM v10 actor and role/authenticated versus claim/opaque admission.

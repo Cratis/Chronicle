@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-client-elixir
-description: Use when adding Chronicle to an Elixir OTP application, defining its event structs or handling client append outcomes. Not for JVM or Node.js clients; use the corresponding Chronicle client sibling.
+description: Use when adding Chronicle to an Elixir OTP application, defining its event structs, declaring a graph with the node and edge DSL, or handling client append outcomes. Not for JVM or Node.js clients; use the corresponding Chronicle client sibling.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-client-elixir/SKILL.md -->
@@ -276,6 +276,17 @@ Use `Chronicle.ReadModels.query(MyApp.ReadModels.AccountBalance, page: 0)` for p
 registered definitions.
 
 **Live updates arrive as messages, not as a stream.** `ReadModels.watch/2` and `subscribe/2` send `{:chronicle_read_model_changed, module, %Changeset{}}` and error messages to the calling process, which needs a `handle_info` for each. Read [references/read-models.md](references/read-models.md) when subscribing, filtering, observing collections, previewing or waiting for a projection.
+
+#### Graph projections — `node` and `edge`
+
+A graph is a module with `use Chronicle.Graphs.Graph, id: "Organization"`; its nodes
+and edges are structs with `use Chronicle.Graphs.Node` and `use Chronicle.Graphs.Edge,
+type: "MEMBER_OF"`. Inside the graph, `node Mod, key: :field do ... end` and
+`edge Mod, source: A, target: B do ... end` hold `from/2` and `removed_with/2`
+(`detach: true` on a node). Register it with `graphs: [Mod]` on `Chronicle.Client`.
+Requires cratis_chronicle 3.20.0 (check `mix deps`). Read
+[references/graphs.md](references/graphs.md) for the options, counters, edge identity,
+compiler checks and sink choice. Pin `id:`; renaming it registers a different projection.
 
 ## Guarding decisions, testing and more
 

@@ -63,6 +63,8 @@ module Membership
       constraint UniqueMemberEmail
         unique email on MemberRegistered
         ignore casing
+      screen RegisterMember
+        action RegisterMember for screen
       specification RegisteringAMember
         given caller
           authenticated
@@ -108,6 +110,8 @@ module Courses
         seats    Int
         produces event CourseOpened
           seats Int = seats
+      screen OpenCourse
+        action OpenCourse for screen
       specification OpeningACourse
         given caller
           authenticated
@@ -185,6 +189,8 @@ module Courses
         released by EnrolmentWithdrawn
       constraint EnrolOnce
         unique event MemberEnrolled
+      screen EnrolMember
+        action EnrolMember for screen
       specification EnrollingAMember
         given caller
           authenticated
@@ -277,6 +283,8 @@ module Courses
           courseId CourseId = courseId
       constraint WithdrawOnce
         unique event EnrolmentWithdrawn
+      screen WithdrawEnrolment
+        action WithdrawEnrolment for screen
       specification WithdrawingAnEnrolment
         given caller
           authenticated

@@ -30,9 +30,22 @@ default) per [`general.md`](../../../rules/general.md).
 - **[contract] Analyzers and generators are cheap or they are not added.** A slow one is an
   upstream issue; see [`framework.md`](./framework.instructions.md) for how analyzers are written for speed.
 - **[convention] Specify with the cheapest proof that is real.** Call a pure decision directly;
-  use a scenario for what only the framework pipeline or engine proves. The per-artifact table is in
+  use the in-memory scenario helpers for slice behavior through the Arc/Chronicle pipeline, which
+  cost milliseconds. The per-artifact table is in
   [`specs.scenarios.csharp.md`](./specs.scenarios.csharp.instructions.md); the universal base is in
   [`specs.md`](./specs.instructions.md).
+- **[convention] Hosts, kernels, containers and browsers prove only contracts this repository
+  owns:** storage format, wire protocol, migration, generated proxy or package, deploy image, or a
+  real third-party integration. Never start one to re-prove Arc or Chronicle behavior. Build it once
+  per class or collection, never per fact, and keep it out of the default pull-request lane unless
+  that contract changed.
+- **[contract] Consumer routing/e2e and service-boundary regression tests stay in the
+  pull-request lane.** A consumer's test of its own routing, or of a boundary between its services,
+  protects a contract the repository owns; the previous bullet is not a reason to move it off pull
+  requests or retire it.
+- **[contract] Retiring a consumer assertion needs a named upstream spec** in the owning
+  repository that fails when the consumer behavior breaks. Without that mapping the assertion
+  stays.
 
 A cold full-suite run under a minute is the target for a repository's spec gate. It is a budget to
 protect, not a reason to delete coverage.

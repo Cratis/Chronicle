@@ -12,7 +12,7 @@
 - Exposed template configuration
 - Forms and columns
 - Packages, icons and template catalogs
-- Routes, outlets, toolbars and dialogs
+- Routes, slots, toolbars and dialogs
 - Design-time generation results
 - Canonical fixture ownership
 
@@ -76,7 +76,7 @@ component <Package.Component> <instanceName>
   icon <IconName>
   presentation <key> "value"
   exposes <name> from component <stable-id>.<outputPath>
-  outlet <name>
+  slot <name>
     ...nested screen directives...
   on click
     open dialog <DialogTemplate>
@@ -102,9 +102,13 @@ Rules for agents:
 - `presentation` keys are renderer/package inputs. They are authoring data, not a
   styling escape hatch; unknown keys must be surfaced by the consumer contract,
   not ignored.
-- An `outlet` is a nested replacement surface; it can hold screen directives and
+- A `slot` is a nested replacement surface; it can hold screen directives and
   can be targeted by navigation or a dialog route when the runtime contract
-  supports it.
+  supports it. Screenplay 5 wrote it `outlet <name>`; that form is `PLAY0890`
+  since Screenplay 6 (run `screenplay migrate --from 5 --to 6`).
+- A component on a slice screen bound to nothing and given no value can only show
+  sample text, so it warns (`PLAY0912`): bind it, or give it static text with
+  `property <path> = "..."`.
 
 ## Guarded actions
 
@@ -128,16 +132,17 @@ unsupported screen actions with STAGE-SCENE-ACTION-001; a current Stage evaluate
 
 ## Exposed template configuration
 
-Reusable templates can expose configuration and typed outlets:
+Reusable templates can expose configuration, recursive slots and outlets:
 
 ```screenplay excerpt
 screen template MasterDetail
   category workflow
   type master-detail
   exposes selectedInvoice InvoiceId
-  outlet toolbar
-  sidebar
-  main
+  slot details
+  sidebar pane routed by invoiceId optional
+  main panel
+  outlet toolbar of actions in main
 ```
 
 - `category` is used for template discovery and scope-aware catalogs. Suggested
@@ -145,8 +150,13 @@ screen template MasterDetail
 - `type` is the template kind a runtime/package recognizes.
 - `exposes` declares values that slot bodies or nested components may bind to; a
   use site must provide or derive each required exposed value.
-- `outlet` declares an addressable child surface. It is different from a static
-  slot such as `sidebar` or `main`.
+- `slot <name>` declares an addressable, recursive child surface for package
+  components and design-time tools. A plain line such as `sidebar` or `main` is a
+  static slot; its role (`page`, `pane`, `panel`), `routed [by <param>]`,
+  `primary` and `optional` say what goes in it.
+- `outlet <name> of actions|filters|tabs|stats|navigation` declares a list of items
+  the template offers; lower levels inherit, extend or override it (see
+  `application-shell.md`). Screenplay 5's kindless `outlet <name>` is `PLAY0893`.
 
 A template may also declare `content <slot>` (screen directives the template renders in that slot itself;
 the slot must be declared, `PLAY0629`; templates may not nest in a cycle, `PLAY0656`), `display` and
@@ -155,7 +165,7 @@ the slot must be declared, `PLAY0629`; templates may not nest in a cycle, `PLAY0
 top-level **exposure** (`exposure for <Owner>`, owner a layout or template, `PLAY0622`; `reexposes <Owner>`,
 `PLAY0623`/`PLAY0624`), and a screen or template configures it with a top-level `instance <Screen>`
 (`set <component>.<path> = <value>`, `items <component>.<path>` with `item <id>` lines; `PLAY0626` to
-`PLAY0628`). Layouts take `category`, `type`, `exposes` and `outlet` too.
+`PLAY0628`). Layouts take `category`, `type`, `exposes`, `slot` and `outlet` too.
 
 A module, feature or slice may select a default template for contained screens:
 
@@ -217,24 +227,29 @@ ui profile Desktop
 - Template categories are scope-aware: application templates, module templates and
   package templates can share labels. Qualify where the tool reports ambiguity.
 
-## Routes, outlets, toolbars and dialogs
+## Routes, slots, toolbars and dialogs
 
 Navigation and toolbar items target the same typed destination contract: screen,
-named outlet, optional route parameters, and optionally a dialog.
+named slot, optional route parameters, and optionally a dialog. A State Change
+slice's hook instead lets the slice's `fits` choose the place (see
+`application-shell.md`).
 
 ```screenplay excerpt
-toolbar InvoiceToolbar
-  item register action RegisterInvoice
-    label "Register"
-    icon Add
-  item details navigate to InvoiceDetails
-    parameter invoiceId from component invoices.selectedItem.id
-  item compose dialog InvoiceComposer
+screen InvoiceList
+  toolbar InvoiceToolbar
+    item register action RegisterInvoice for screen
+      label "Register"
+      icon Add
+    item details navigate to InvoiceDetails
+      parameter invoiceId from component invoices.selectedItem.id
+    item compose dialog InvoiceComposer
 ```
 
-A toolbar item is `item <name> action <Command>`, `item <name> navigate to <Screen>` or
-`item <name> dialog <DialogTemplate>`. Use a toolbar for reusable groups of actions; use inline `action`
-when a single screen owns the button. A parameter that reads a selection is a typed
+A screen's toolbar item is `item <name> action <Command>`, `item <name> navigate to <Screen>` or
+`item <name> dialog <DialogTemplate>`. Use a screen toolbar for a group of actions one screen owns, and
+inline `action` for a single button. A group of actions a layout or template offers to every screen below
+it is an `outlet <name> of actions` instead (see `application-shell.md`); a feature or module `toolbar` is
+the Screenplay 5 form and reports `PLAY0896`. A parameter that reads a selection is a typed
 `from component <stableId>.<path>` binding (the bare `selected.invoiceId` form parses only as a legacy
 data-context path). A dialog destination must state every input with a typed `with`/`parameter`
 binding; a runtime default is not an authored contract.
@@ -262,13 +277,13 @@ release. The current Stage scaffold pins a newer Scene release (Stage skill
   announce `cratis.scene.command` with resolved parameters; Navigate/Dialog
   items execute through the navigation host (or announce a navigation event
   outside one). This is not a promise that the command executes without a host.
-- **Nested outlets.** A `core:outlet` component declares a named nested outlet on a
-  screen. A destination into it opens its screen there and keeps the declaring
-  screen on the page; the opened screen may declare outlets of its own, so
-  composition nests to any depth. A deep link to the innermost level composes
-  every level above it, and back closes the innermost level only. An outlet
-  declares the template types it accepts; a destination into a missing or
-  incompatible outlet is a navigation diagnostic, not a fallback.
+- **Nested slots.** A `core:slot` component (Scene 4 named it `core:outlet`)
+  declares a named nested slot on a screen. A destination into it opens its screen
+  there and keeps the declaring screen on the page; the opened screen may declare
+  slots of its own, so composition nests to any depth. A deep link to the innermost
+  level composes every level above it, and back closes the innermost level only. A
+  slot declares the template types it accepts; a destination into a missing or
+  incompatible slot is a navigation diagnostic, not a fallback.
 - **Toolbar buttons open destinations.** The Cratis Components toolbar button runs
   its attached interactions and opens its authored `destination` (a dialog or a
   slice screen) through the enclosing navigation host. Label, icon, text and
@@ -319,7 +334,7 @@ an agent:
 
 Generated design-time output is evidence only when it is compared with the model:
 
-- every screen, template, form, toolbar, component instance and outlet has an
+- every screen, template, form, toolbar, component instance, slot and outlet has an
   entry in the generated plan/report;
 - every unsupported construct is reported as a blocking diagnostic, not silently
   dropped;

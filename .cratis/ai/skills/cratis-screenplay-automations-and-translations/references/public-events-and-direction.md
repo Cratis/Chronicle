@@ -50,6 +50,27 @@ The reference fold admits only root-property set/clear from literals or event
 properties; other mappings block planning. Publication is unrouted and reactions
 can observe the new public fact. A route filter therefore cannot select publication.
 
+Events an outbound projection publishes count as producers: a routed fact, an
+`every`/`all` scope and compile-time source-type inference all see them, and a
+published instance keeps the event source and context of the fact that produced it.
+An `every` scope folds every producible event type, so inference needs those facts to
+share one source type. A projection that combines `from` and `every` over different
+producible event types is refused as ambiguous (`InvalidSemanticContract`, no `PLAY`
+code), because the published event would have no single source type:
+
+```screenplay excerpt
+// Refused: PackOrder produces OrderPacked keyed by an OrderId, while another
+// producer's event is keyed by a different type; `every` folds both.
+projection OrderShippedPublisher => OrderShipped
+  every
+    status = "packed"
+  from OrderPacked
+    carrier = carrier
+```
+
+Fold one source type, or map each event in its own `from` and drop `every`.
+Requires Screenplay 5.2.0 (`screenplay --version`).
+
 This complete source uses the released publication specification form:
 
 ```screenplay
@@ -64,6 +85,8 @@ module Integration
         carrier String
         produces event OrderPacked
           carrier String = carrier
+      screen PackOrder
+        action PackOrder for screen
     slice Translate PublishOrderShipped
       direction outbound
       public event OrderShipped

@@ -1,6 +1,6 @@
 ---
 name: cratis-orleans-jobs
-description: Use when authoring or recovering Cratis.Orleans jobs, configuring their storage or changing job-step lifecycle transitions. Not for operating live Chronicle jobs or validating application commands.
+description: Use when authoring or recovering Cratis.Choreography jobs, configuring their storage or changing job-step lifecycle transitions. Not for operating live Chronicle jobs or validating application commands.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-orleans-jobs/SKILL.md -->
@@ -8,9 +8,15 @@ license: MIT
 <!-- Copyright (c) Cratis. All rights reserved. -->
 <!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
 
-# Recoverable Orleans jobs
+# Recoverable Choreography jobs
 
 For services and kernel contributors using Orleans. This is library-consumer guidance, not the application vertical-slice architecture. For live Chronicle operations use **cratis-chronicle-cli-operations** instead. Co-hosting conventions are in [orleans.md](../../rules/orleans.md).
+
+Use `Cratis.Choreography` 2.0.0 or newer. When upgrading from `Cratis.Orleans`, replace the package/namespace prefix and `AddCratisOrleans` registration prefix with `Cratis.Choreography` and `AddCratisChoreography`, including `CratisChoreographyOptions`. The 1.x prerequisites below and in the references describe the pre-rename compatibility baseline; Choreography 2.0.0 includes them.
+
+## Verified product sources
+
+Packages are pinned to 2.0.0, the `Cratis.Choreography` rename baseline. Names are verified against `Cratis/Orleans` origin/main: `Source/Choreography/Hosting/CratisChoreographySiloBuilderExtensions.cs`, `CratisChoreographyOptions.cs`, and the jobs-storage extensions in `Source/Choreography.Storage.MongoDB/Setup/`, `Source/Choreography.Storage.Sql/Setup/` and `Source/Choreography.Storage/InMemory/`.
 
 ## 1. Choose a job, not a detached task
 
@@ -23,7 +29,7 @@ A job plans recoverable work; each step is a grain and does the work. Use it for
 
 `PerformStep` runs **outside the activation context** with a deep-copied state snapshot. Mutating that snapshot does not persist it; do not access/write grain `State` directly from background work. A specification host such as Orleans.TestKit must register `DeepCopier<TState>`.
 
-Requires Cratis.Orleans 1.19.0 for `TryInvokeOnActivation` to coordinate state/checkpoints on the current activation, including during deactivation. Call it only from the run's background work. Keep callbacks local: capture copied inputs, call remote systems outside the callback, then commit in a second callback. Never call another grain, nest and await another callback, or start unawaited work inside it. Inspect `ActivationCallbackRejected` (`NoRun`, `StaleRun`, `Closed`, `Cancelled`); exceptions propagate. The optional `queueCancellationToken` cancels waiting callbacks only; started callbacks finish. Stop/deactivation waits for started callbacks and work to settle; `JobsOptions.StepStopTimeout` defaults to 10 seconds and `JobStepError.StopTimedOut` is not proof of quiescence. Requires 1.16.2 for framework-owned stop reporting: do not report cancellation again from a `PerformWork` override.
+Requires 1.19.0 for `TryInvokeOnActivation` to coordinate state/checkpoints on the current activation, including during deactivation. Call it only from the run's background work. Keep callbacks local: capture copied inputs, call remote systems outside the callback, then commit in a second callback. Never call another grain, nest and await another callback, or start unawaited work inside it. Inspect `ActivationCallbackRejected` (`NoRun`, `StaleRun`, `Closed`, `Cancelled`); exceptions propagate. The optional `queueCancellationToken` cancels waiting callbacks only; started callbacks finish. Stop/deactivation waits for started callbacks and work to settle; `JobsOptions.StepStopTimeout` defaults to 10 seconds and `JobStepError.StopTimedOut` is not proof of quiescence. Requires 1.16.2 for framework-owned stop reporting: do not report cancellation again from a `PerformWork` override.
 
 ## 2. Plan dependencies as stages
 
@@ -43,23 +49,23 @@ protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(RecoveryReq
     ]);
 ```
 
-Import `System.Collections.Immutable` and `Cratis.Orleans.Jobs` in that job file. `CreateStep<TStep>` takes the **grain interface**, not the implementation. Its stage overload accepts `JobStepStage`, with implicit integer conversion.
+Import `System.Collections.Immutable` and `Cratis.Choreography.Jobs` in that job file. `CreateStep<TStep>` takes the **grain interface**, not the implementation. Its stage overload accepts `JobStepStage`, with implicit integer conversion.
 
 Every step in a stage reaches an outcome before later stages start; steps within a stage run in parallel. All steps are prepared up front, so later-stage preparation cannot read the effects of earlier-stage execution. Read such dependencies in `PerformStep`.
 
-A failed stage stops the pipeline by default: later steps become `Unreachable`, and the job completes with failures. A best-effort stage may override `GetFailureBehaviorFor(JobStepStage)` to return `JobStageFailureBehavior.ContinueWithNextStage` (namespace `Cratis.Orleans.Jobs.Stages`). Do not silently continue when a later stage relies on the failed output.
+A failed stage stops the pipeline by default: later steps become `Unreachable`, and the job completes with failures. A best-effort stage may override `GetFailureBehaviorFor(JobStepStage)` to return `JobStageFailureBehavior.ContinueWithNextStage` (namespace `Cratis.Choreography.Jobs.Stages`). Do not silently continue when a later stage relies on the failed output.
 
 Requires 1.25.0 for durable step plans: preparation requests must round-trip through the host's JSON options. Invalid plans return `StartJobError.InvalidStepPlan`. Recovery reuses identities and requests, prepares only unsaved steps, and never calls `PrepareSteps` again. Put retry-safe initialization needed before start **and** resume in `OnBeforeDispatchingJobSteps(JobStepDispatchContext)`, after the respective start/resume hook. `InitializationMayBeIncomplete` flags recovery from preparing/starting, not exactly-once initialization. A failed hook dispatches nothing; recovery never replays the start hook. A legacy preparing/starting job without a saved plan returns `CannotResumeJobError.MissingStepPlan` rather than inventing identities.
 
 ## 3. Start locally and recover every scope
 
-Requires 1.18.0 for the singleton local service `Cratis.Orleans.Jobs.IJobs`, registered by `AddCratisOrleans`. Prefer `Start<TJob,TRequest>(new JobKey(scope, namespace), request)` (or its explicit job-id overload), `Stop(key, jobId)` and `Delete(key, jobId)` during rolling upgrades. Generic `IJobsManager.Start`/`GetJobsOfType` send types through a manager that may run an older release and cannot decode them.
+Requires 1.18.0 for the singleton local service `Cratis.Choreography.Jobs.IJobs`, registered by `AddCratisChoreography`. Prefer `Start<TJob,TRequest>(new JobKey(scope, namespace), request)` (or its explicit job-id overload), `Stop(key, jobId)` and `Delete(key, jobId)` during rolling upgrades. Generic `IJobsManager.Start`/`GetJobsOfType` send types through a manager that may run an older release and cannot decode them.
 
 Inspect `Result<JobId, StartJobError>` before telling a caller that work started. `FailedStartingSomeJobSteps` means remaining work is still running, not that nothing started; `AllJobStepsFailedStarting` means no step started. Start success is not completion. Match `StopJobResult`/`DeleteJobResult`: accepted, `NotFound`, `UnknownJobType`, or `Refused` with the job's error. Unknown types require a release that knows the type; exceptions propagate. Deletion acceptance is not completed removal. Third-party storage should override `IJobStorage.GetJobType` with a metadata-only read; its fallback reads the request too.
 
 `IGrainFactory.GetJobsManager(scope, namespace)` remains available. `IJobsManager.Resume(JobId)` returns **`Task<bool>`**; false means nothing took the job: do not wait for a completion callback as though resumption succeeded. True may also mean already running or finalized. `IJobsManager.Stop` returns `Result<StopJobError>`; preserve a persistence refusal. `Rehydrate()` returns after loading/preparing interrupted jobs, before its bounded background drain resumes them all. `StartStepsInBackground = true` moves step preparation/start to the next turn after durability; later failures belong to the job, not Start.
 
-Requires 1.17.0 for automatic recovery on silo activation/member death. Provide singleton `IJobsManagerKeys` implementations on **every silo**, enumerating all host-owned scope/namespace pairs through `GetKeys(CancellationToken)`. The default remembers only keys used in this process: it is not a durable catalog. Providers run outside request scope; never inject a current tenant/user or scoped database. Requires 1.23.3 (1.24.2 for provider construction failures) for automatic recovery retries of failed providers/managers, from 1 second doubling to 60 seconds until success or silo shutdown. There is no periodic sweep by default. `AddCratisOrleans` registers recovery; separately configured silos need `AddCratisOrleansJobsRecovery()` (`Cratis.Orleans.Hosting`).
+Requires 1.17.0 for automatic recovery on silo activation/member death. Provide singleton `IJobsManagerKeys` implementations on **every silo**, enumerating all host-owned scope/namespace pairs through `GetKeys(CancellationToken)`. The default remembers only keys used in this process: it is not a durable catalog. Providers run outside request scope; never inject a current tenant/user or scoped database. Requires 1.23.3 (1.24.2 for provider construction failures) for automatic recovery retries of failed providers/managers, from 1 second doubling to 60 seconds until success or silo shutdown. There is no periodic sweep by default. `AddCratisChoreography` registers recovery; separately configured silos need `AddCratisChoreographyJobsRecovery()` (`Cratis.Choreography.Hosting`).
 
 Read [lifecycle and placement](references/lifecycle-and-placement.md) for drain/admission, bounded attempts, placement, custom storage compatibility and step test runs.
 
@@ -71,13 +77,13 @@ Keeping a job does not keep successful step state: successful **steps delete the
 
 ## 5. Register storage and budget concurrency
 
-`IJobsStorage.GetFor(scope, namespace)` returns `JobsStorage`. Scope and namespace are opaque host-owned storage coordinates, not authorization checks. Choose one storage registration alongside `AddCratisOrleans`:
+`IJobsStorage.GetFor(scope, namespace)` returns `JobsStorage`. Scope and namespace are opaque host-owned storage coordinates, not authorization checks. Choose one storage registration alongside `AddCratisChoreography`:
 
 | Registration | Package / namespace | Use |
 | --- | --- | --- |
-| `AddCratisOrleansMongoDBJobsStorage` | `.Storage.MongoDB` / `Cratis.Orleans.Setup` | Durable MongoDB; default database `{scope}+jobs[+{namespace}]`, overridable |
-| `AddCratisOrleansSqlJobsStorage` | `.Storage.Sql` / `Cratis.Orleans.Setup` | Durable EF Core; `OptionsResolver(scope, namespace)` selects `DbContextOptions<JobsDbContext>` |
-| `AddCratisOrleansInMemoryJobsStorage` | `.Storage` / `Cratis.Orleans.Storage` | Specs/development; restart loses state |
+| `AddCratisChoreographyMongoDBJobsStorage` | `.Storage.MongoDB` / `Cratis.Choreography.Setup` | Durable MongoDB; default database `{scope}+jobs[+{namespace}]`, overridable |
+| `AddCratisChoreographySqlJobsStorage` | `.Storage.Sql` / `Cratis.Choreography.Setup` | Durable EF Core; `OptionsResolver(scope, namespace)` selects `DbContextOptions<JobsDbContext>` |
+| `AddCratisChoreographyInMemoryJobsStorage` | `.Storage` / `Cratis.Choreography.Storage` | Specs/development; restart loses state |
 
 The SQL provider calls `dbContext.Database.Migrate()` automatically before constructing storage. Do not substitute `EnsureCreated` or hand-create tables; grant migration permissions and choose scope-to-database mapping deliberately. `IJobsStorage.Reset()` clears the cache; the next resolution migrates again. There is no MySQL/MariaDB jobs provider.
 

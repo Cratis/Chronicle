@@ -31,6 +31,8 @@ module Collections
           invoiceId = invoiceId
       event InvoiceSent
         invoiceId InvoiceId
+      screen SendInvoice
+        action SendInvoice for screen
       specification SendingAnInvoice
         when SendInvoice
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"

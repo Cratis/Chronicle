@@ -35,6 +35,10 @@ Your responsibility is to perform a structured **security review** of all change
 
 ## What to check
 
+### Published contracts
+
+- [ ] **[BLOCKING]** A behavior change at a trust boundary or wire/protocol surface cites the governing published contract and its vectors (or says none exists), and conforms to them; an uncited change, or one that conflicts with a vector, is blocking (`published-contracts.md`)
+
 ### Input Validation & Injection
 
 - [ ] All command properties are validated before use (null, empty, range, format)

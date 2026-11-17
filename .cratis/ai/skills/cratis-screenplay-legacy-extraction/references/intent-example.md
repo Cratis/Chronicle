@@ -66,6 +66,8 @@ module Cloakroom
         unique ticketNumber on CoatTakenIn
         released by CoatHandedBack
         message "That ticket number is already in use"
+      screen TakeInCoat
+        action TakeInCoat for screen
       specification TakingInACoat
         given caller
           authenticated
@@ -123,6 +125,8 @@ module Cloakroom
           require CoatStatus.onHook == true
             message "That coat is not on a hook"
         produces event CoatHandedBack
+      screen HandBackCoat
+        action HandBackCoat for screen
       specification HandingBackACoat
         given caller
           authenticated

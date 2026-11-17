@@ -59,7 +59,8 @@ implication rule. Never leave it implicit.
 
 After every edit that adds, renames or removes a field, run the opt-in structural checks on
 the model root rather than waiting for the audit: `field-origins` (a read-model field with no
-origin), `input-surfaces` (a command nothing issues), `data-bindings`, `query-keys` and
+origin), `input-surfaces` (an action with no issuing screen or form; a command nothing issues is
+`PLAY0533` on every check since Screenplay 6), `data-bindings`, `query-keys` and
 `event-consumers`. Use `--check` on the standalone tool or the MCP `diagnostics` `checks`;
 flags and versions are in `cratis-screenplay-toolchain`. They run only when the whole model
 has no source errors, so fix those first and never read a skipped check as clean.

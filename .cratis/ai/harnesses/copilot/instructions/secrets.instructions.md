@@ -6,10 +6,9 @@ applyTo: "**/*"
 
 # Secrets never enter agent transcripts
 
-A transcript is saved, summarized and shared, so a credential that is printed once is leaked.
-Every line is tagged **[contract]** (binding) per the Three Levels of Authority in
-[`general.md`](../../../rules/general.md). The `cratis-guard-secrets` hook blocks the commands below
-(see [`.cratis/ai/hooks/README.md`](../../../hooks/README.md)); the rule holds where no hook runs.
+Printed credentials leak into saved transcripts. All lines are **[contract]** (binding;
+see [`general.md`](../../../rules/general.md)). The [hook](../../../hooks/README.md) enforces these rules;
+they also hold without it.
 
 ## Commands
 
@@ -22,10 +21,11 @@ Every line is tagged **[contract]** (binding) per the Three Levels of Authority 
 - **[contract] Project the field you need and say which one:** `-o jsonpath='{.spec.containers[*].image}'`,
   `-o custom-columns=…`, `kubectl get … -o name`, status fields, `kubectl logs`, `docker inspect --format`.
   Read a `.env.example`, never the `.env`.
-- **[contract] The hook reads command text only.** It cannot see a command piped into a shell
-  (`… | sh`, `bash -c "$(…)"`), a recursive search with no named file (`grep -r PASSWORD .`), or a
-  value reached through a variable, alias or script. These stay your rule to keep; output redaction
-  is the only backstop.
+- **[contract] Command-text checks cannot see** shell-piped code (`… | sh`, `bash -c "$(…)"`),
+  recursive searches without filenames (`grep -r PASSWORD .`), or paths hidden in variables,
+  aliases or scripts. The rules still apply; output redaction is the backstop.
+- **[contract] After a guard block, narrowing to literal non-credential files is supported remediation,
+  not a workaround.** Follow `Use instead`; never disguise the same secret read.
 
 ## Values
 

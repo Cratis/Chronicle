@@ -56,7 +56,7 @@ Load **cratis-application-slice-conformance** when it is installed; read the ski
 1. **Determine the namespace root** by reading an existing source file to identify the convention (e.g. `Studio`, `Library`, `MyApp`).
 2. **Read existing slices** in the same feature to understand naming, existing concepts, and events you may reference.
 3. **Create a single `.cs` file** at `<Feature>/<Slice>/<Slice>.cs` (under the app source root; an optional `<Module>/` may group the feature — there is **no** top-level `Features/` wrapper).
-4. **Validate** by building Debug *and* Release (Debug regenerates the TypeScript proxies and compiles `#if DEBUG` spec code; build Release with `-p:CratisProxiesOutputPath=` to skip re-running proxy generation).
+4. **Validate** by building Debug *and* Release (Debug regenerates the TypeScript proxies and compiles `#if DEBUG` spec code; build Release with `-p:CratisProxiesSkip=true -p:CratisProxiesOutputPath=` (Skip needs Arc 22.185.1 or later) to skip re-running proxy generation).
 5. Fix all compiler errors and warnings before handing back.
 
 ---
@@ -98,7 +98,7 @@ public record RegisterProject(ProjectName Name)
 
 ## Events — critical rules
 
-- Record decorated with `[EventType]` (from `Cratis.Chronicle.Events`) with **no arguments** for new events — the type name is the identifier.
+- Record decorated with `[EventType]` (from `Cratis.Chronicle.Events`) plain for new events — the type name is the identifier; an explicit id only to retain an already-persisted id or resolve a cross-package short-name collision, never to change a persisted id.
 - Past-tense, one purpose, never nullable, never carries the event-source id. Add an XML `<summary>`.
 
 ```csharp
@@ -129,7 +129,7 @@ Before handing back:
 - [ ] Namespace mirrors the folder path under the source root
 - [ ] File header present; no separate handler classes
 - [ ] Business rejection returns a `ValidationResult`/`Result<,>` — never thrown
-- [ ] `[EventType]` has no arguments; events carry no event-source id and no nullable properties
+- [ ] New events use plain `[EventType]` (explicit id only to retain a persisted id or resolve a cross-package collision); events carry no event-source id and no nullable properties
 - [ ] No `.AutoMap()` call anywhere (it is on by default)
 
 ---

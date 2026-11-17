@@ -71,6 +71,8 @@ module Courses
       constraint OneResultPerEnrolment
         unique event CoursePassed
         unique event CourseFailed
+      screen RecordCompletion
+        action RecordCompletion for screen
       specification RecordingAPass
         given caller
           authenticated

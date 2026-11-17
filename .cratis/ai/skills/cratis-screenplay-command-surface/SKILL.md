@@ -9,31 +9,21 @@ license: MIT
 
 Read [preferred syntax](../cratis-screenplay-toolchain/references/preferred-syntax.md) when writing or reviewing `.play`.
 
-Everything that changes the system: the `command` that expresses intent, the
-`event` it appends, the rules that can refuse it, and the strongly-typed values
-they are all built from.
+Everything that changes the system: the `command` (intent), the `event` it appends,
+the rules that can refuse it, and the strongly-typed values they are built from.
 
 ## Locate the model
 
-Look first for the project's existing `.play` files: their folder is the model.
-Reuse existing model/workspace roots; code-only `Source/` or `src/` does not
-qualify. Otherwise use repository-root `Screenplay/` ([discovery/version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)). Never put a model under `.cratis/` or hand-copy it between repositories.
-`cratis ai install` manages `.cratis/ai/`, never model files. Keep explanatory
-Markdown in project documentation; `.play` is the single flow model.
+The folder of the project's existing `.play` files is the model; code-only `Source/` or `src/` does not qualify. Otherwise use repository-root `Screenplay/`
+([discovery/version gates](../cratis-screenplay-event-modeling/references/file-layout.md#locate-the-model)).
+Never put a model under `.cratis/` or hand-copy it.
 
 ## Product sources
 
-Tool versions: toolchain `SKILL.md`; sources below. Compilation is not execution.
-
-- Examples and executable boundaries; inline events, repairs, canonical `optional`.
-- `handler`, code attachments, `persona` and compliance binding (`Semantics/SemanticModelBinder*.cs`, `Diagnostics/DiagnosticCodes.cs`).
-- Generated-value and response rules (ESM v7).
-- Identity and compliance syntax (`identity.md`, `context.md`, `concepts.md`, `purposes.md`, `events.md`, `diagnostics.md`); v13 compliance admission: `references/compliance.md`.
-- v15 generation strategies, strict fixtures and freshness; Stage realization: `references/generated-values-and-responses.md`; shop: `references/shop-generation.md`.
-
-"Parses" and "runs" are different claims. The executable profile, and what
-each construct binds to, is in the `cratis-screenplay-model-authoring` language
-reference.
+Versions: toolchain `SKILL.md`. Binding lives in `Semantics/SemanticModelBinder*.cs` and
+`Diagnostics/DiagnosticCodes.cs`; syntax docs are `identity.md`, `context.md`, `concepts.md`,
+`purposes.md`, `events.md` and `diagnostics.md`. "Parses" is not "runs": see the
+`cratis-screenplay-model-authoring` language reference.
 
 ## `concept` and `type`
 
@@ -43,37 +33,13 @@ concept DiscountPercentage : Decimal
   validate
     >= 0    message "A discount cannot be negative"
     <= 100  message "A discount cannot exceed 100 percent"
-concept PersonName : String pii
-  pii reason "Identifies the billing contact."
-concept InvoiceStatus : Enum
-  draft
-  sent
-  paid
 ```
 
-Primitives: `Uuid`, `String`, `Int`, `Decimal`, `Bool`, `Date`, `DateTime`.
-`Enum` is a separate concept kind; details: `references/enum-numbers.md`.
-Use bare `pii` (`personal` alias) and `secret` on concepts; **Compliance is inherited**.
-Keep protection even when a compiler or renderer refuses it. Read
-[compliance and purposes](references/compliance.md) for ESM v13, binder-only refusals,
-consumer ceilings, marker repairs, reasons, scopes and provider limits.
-
-**Identifiers cannot be personal data or secrets.** PLAY0515 is a source error
-for command identifiers, typed `for` destinations, event-source identities,
-scalar/composite stream-id types and nested route mapping sources, including legacy
-markers. Keep a surrogate identity and carry protected data in the payload.
-Chronicle likewise rejects `[PII]`/`[Encrypted]` identifiers (CHR0034/CHR0052).
-
-Read [enum numbers](references/enum-numbers.md) for `draft = 1`, unique int32
-all-or-none pins, stored/public identity safety, `enum-pinning`, ESM v12 and the
-CLI/Stage gap. Unnumbered enums keep positions; specifications use names.
-
-⚠️ **Enum trap.** A value literally named `validate` is read as an empty validate
-block. Write `@validate` for the value; the compiler warns when it sees the
-ambiguity.
-
-Use `type <Name>` for a composite shape (several properties) that events and
-commands reference; use `concept` for a single wrapped primitive.
+Primitives: `Uuid`, `String`, `Int`, `Decimal`, `Bool`, `Date`, `DateTime`; `Enum` is a separate kind. Use bare `pii` and `secret` on concepts (**compliance is inherited**) and
+`type <Name>` for a composite shape. **Identifiers cannot be personal data or secrets** (PLAY0515).
+⚠️ A value literally named `validate` in an enum is read as an empty validate block; write `@validate`.
+Read [concepts and types](references/concepts-and-types.md) for pii/secret, enum numbers and the
+links to [compliance](references/compliance.md) and [enum numbers](references/enum-numbers.md).
 
 ## The command block
 
@@ -108,14 +74,12 @@ Keep to it.
 
 A file/code `handler` beside unconditional `produces`, with a resolved nonempty body,
 binds as the v23 result contract: `produces` fixes the
-events and the body owns their property values. Without `produces`, with `produces ... when`,
-or with an unresolved body it fails binding with PLAY0800 (`CommandHandlerRequiresAttachment`).
-Read the required typed `subject` argument for the command, never parse the message.
-Requires Screenplay 4.250.0 (`screenplay --version`); 4.210.0 to 4.249.x refuse every attached handler with PLAY0800 and older binders use PLAY0268. A pending `handler implementation` beside unconditional `produces`
-is a described command (ESM v23): the body owns payload values only. Prefer plain
-`produces` for declarative logic. Read [described handlers](references/described-handlers.md)
-when logic needs prose, for the result contract, PLAY0695–0698, Unsupported
-ImplementationBody and Stage's STAGE-IMPL-002 refusal (no stubs, even in Stub mode).
+events and the body owns their property values. Without `produces` or a `may produce` block
+(ESM v35: the body returns an ordered subset of the declared events), with `produces ... when`,
+or with an unresolved body (even with `may produce`) it fails binding with PLAY0800. A pending
+`handler implementation` beside unconditional `produces` is a described command (ESM v23).
+Prefer plain `produces` for declarative logic. Read [described handlers](references/described-handlers.md)
+for the result contract, version gates, PLAY0695–0698 and Stage's STAGE-IMPL-002 refusal.
 
 ## `identifier` — the stream boundary decision
 
@@ -127,28 +91,14 @@ something whose identity the caller does not supply); for a create command prefe
 `generated identifier` below, which also keeps the id out of the rendered form.
 
 **A command that creates something has no caller-supplied id.** Declare
-`<id> <IdConcept> generated identifier` (ESM v7, Screenplay 4.68.0 or later) and `returns <id>` when the
-caller needs it back. Symptom of getting it wrong: `organizationId OrganizationId identifier` on a create
-command makes the rendered form ask the user to type an Organization Id. Keep plain `identifier` for
-commands that act on an existing stream (the id comes from the selected row). Specifications pin the
-allocated value with `for "<value>"` in `when` and `then` (see the generated-values reference). Read
-[generated values](references/generated-values-and-responses.md) before writing one.
+`<id> <IdConcept> generated identifier` (ESM v7) and `returns <id>` when the
+caller needs it back; plain `identifier` on a create command makes the rendered form ask the user to type
+the id. Keep plain `identifier` for commands that act on an existing stream. Specifications pin the
+allocated value with `for "<value>"`. Read
+[generated values](references/generated-values-and-responses.md) before writing one;
+the shared model is [shop generation](references/shop-generation.md).
 
-```screenplay excerpt
-command RegisterOrganization
-  organizationId OrganizationId generated identifier
-  name           OrganizationName
-  produces event OrganizationRegistered
-    name OrganizationName = name
-  returns organizationId
-specification RegistersAnOrganization
-  when RegisterOrganization
-    for "11111111-1111-1111-1111-111111111111"
-    name = "Acme"
-  then OrganizationRegistered
-    for "11111111-1111-1111-1111-111111111111"
-    name = "Acme"
-```
+The complete create-command example with its specification is in that reference.
 
 - A second `identifier` on the same command is an error: *only one property can be
   the identifier*.
@@ -178,12 +128,10 @@ alias on **every** read (`PLAY0410`), aliases are unique (`PLAY0411`) and must n
 match a command property (`PLAY0412`). A `require` path uses the alias, or the
 view name when that view is read once.
 
-Opt eligible state reads into application-root `command reads protected` (v25).
-Absence rejects; matching intervening facts conflict. Read [protected reads](references/protected-reads.md)
-for strict admission, paths and PLAY0780–0786. Legacy reads stay unprotected;
-reads/concurrency cannot combine (PLAY0783). Semantic Host/executor support is separate.
-Requires Stage 4.138.0 to render protected reads as Arc read protection (shapes it cannot preserve stay STAGE-ESM-044); `cratis render` gets it from the first CLI that bundles it, and CLI 3.75.0 refuses every protected read with STAGE-ESM-044.
-Uniqueness still uses a constraint; reference success is not target realization.
+Opt eligible state reads into application-root `command reads protected` (v25); legacy reads stay
+unprotected and reads/concurrency cannot combine (PLAY0783). Read [protected reads](references/protected-reads.md)
+for admission, paths and PLAY0780–0786.
+Rendering needs a recent Stage (the protected-reads reference has the CLI versions). Uniqueness still uses a constraint; reference success is not target realization.
 
 Do not use `reads` to fetch data the caller could supply. A composite-key view's `by` block in a
 command read is `PLAY0271`, or `PLAY0781` reason `by-parts` under `command reads protected`
@@ -209,24 +157,16 @@ optional `severity`, sharing the condition grammar with `produces … when`:
 `and` binds tighter than `or`, parentheses group. A conditional rule is an
 implication: `require isExtension == false or newEndDate > endDate`.
 
-Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`) for Date/DateTime
-comparisons; older binders report PLAY0268. Read [date comparisons](references/date-comparisons.md)
-when ordering a retention window with `require to >= from`, comparing instants
-across offsets, or rejecting offset-less inputs before rules. It covers admitted
-positions, PLAY0268/0273, ordinal `then` matching and Stage's STAGE-ESM-046 renderer refusal.
-The same file lists the parsed-but-not-runnable calendar and clock forms (`time zone`, `calendar`,
-`today - 7 days`, `date of occurred`; PLAY0812 to PLAY0814): do not author them into executable models.
+Date/DateTime comparisons need ESM v26 and Uuid `==`/`!=` needs
+ESM v28; older binders report PLAY0268 (`screenplay --version`). Read
+[date comparisons](references/date-comparisons.md) for ordering a retention window with
+`require to >= from`, offsets and the parsed-but-not-runnable calendar and clock forms
+(PLAY0812 to PLAY0814; do not author them into executable models), and
+[Uuid equality](references/uuid-equality.md) for the same-concept rule and refused shapes.
 
-Requires Screenplay 4.205.0 (ESM v28; `screenplay --version`) for `==`/`!=` between Uuid
-values (properties, concepts, identities, canonical literals, and read paths in `require`);
-older binders report PLAY0268. Read [Uuid equality](references/uuid-equality.md) for the same-concept
-rule, PLAY0268/0273 and the refused shapes (ordering, Uuid validation rules, Uuid concept rules).
-
-**Rules whose logic is code.** A bare `rule <Name>` has no portable meaning (`PLAY0268`) and a bodied rule binds only as
+**Rules whose logic is code.** A bare `rule <Name>` has no portable meaning (`PLAY0268`); a bodied rule binds only as
 opaque code. Read [references/validate-rules.md](references/validate-rules.md) when a rule's logic must live in a `file`
-or fenced code body. Built-in inline languages are `csharp`, `typescript`, `react`, `html`, `sql` and `java`;
-the body is opaque and travels unchanged, and the Cratis render target refuses `java` bodies.
-Requires Screenplay 4.244.0 (`screenplay --version`) for that refusal.
+or fenced code body (the Cratis render target refuses `java` bodies).
 
 **Put format rules on the `concept`, not the command** (except date comparisons,
 which bind only on command properties, not as concept rules). A concept carries its own
@@ -247,16 +187,12 @@ authorize (IsAccountant or IsFinance) and OwnsInvoice
 Policy names are PascalCase. `and` binds tighter than `or`; parentheses group.
 A continuation line extends the clause.
 
-⚠️ **Two adjacent policies synthesize an implicit `and`.** `authorize A B` means
-`A and B`. Write the operator explicitly so the reader does not have to know this.
+⚠️ Two adjacent policies synthesize an implicit `and` (`authorize A B` means `A and B`); write the operator.
 
 - Several `authorize` lines on one command or query combine with AND, in authored
-  order.
-- `authorize` on an enclosing `module` or `feature` is ANDed with the command's
-  own gate; an `or` inside one gate never bypasses another gate.
-- Evaluation short-circuits left to right, module → feature → command. If it
-  reaches a policy implemented in code, the reference runner reports the outcome
-  unsupported; it never guesses allow or deny.
+  order; a `module` or `feature` gate is ANDed too, so an `or` never bypasses another gate.
+- Evaluation short-circuits left to right, module → feature → command. A policy implemented
+  in code makes the reference runner report the outcome unsupported, never allow or deny.
 
 ## Inline events and destinations
 
@@ -274,7 +210,7 @@ Mapping sources that bind: a command property, a literal, `$context.occurred` an
 
 ## Routes and external operations
 
-Commands never produce public events; external work stays unadmitted (`PLAY0268`). Read [references/routes-and-external-operations.md](references/routes-and-external-operations.md) when choosing routes, `stream` overrides, public or foreign events, or `system`/`uses`/`operation` declarations (see also [operation intent](references/operations.md)).
+Commands never produce public events; external operations stay unadmitted (`PLAY0268`); systems are admitted once any declares an ability (ESM v50). Read [references/routes-and-external-operations.md](references/routes-and-external-operations.md) when choosing routes, `stream` overrides, public or foreign events, or `system`/`uses`/`operation` declarations (see also [operation intent](references/operations.md)).
 
 ## `concurrency`
 
@@ -282,19 +218,14 @@ One `concurrency` block per command; it is not bound (`PLAY0271`) and does not p
 
 ## Generated values and responses (ESM v7 and v15)
 
-UUID generation/responses bind as v7; serialized concept `generate` selects v15:
-UUIDv7/ULID/TypeID/NanoID/bytes, strict fixtures and whole-source freshness.
-Reuse rejects Concurrency, no append/retry. Rules select v20 (Requires Screenplay
-4.164.0, `screenplay --version`); pattern/checksum, Int random and attached rules
-select v21 (Requires 4.172.0). Older compilers refuse PLAY0268. Secrets and sequences
-remain refused. Patterns are readable references, not gapless allocators or secrets;
-check digits catch typos, not forgery. Keep uniqueness/freshness enforcement.
-Read [references/generated-values-and-responses.md](references/generated-values-and-responses.md)
-for `generated`, `generate`, `returns`, strict fixtures/freshness and renderer limits.
+UUID generation and responses bind as v7; concept `generate` strategies select v15, rules v20 and pattern/checksum rules v21; older
+compilers refuse PLAY0268 (`screenplay --version`). Secrets and sequences remain refused;
+keep uniqueness and freshness enforcement. Read
+[references/generated-values-and-responses.md](references/generated-values-and-responses.md)
+for `generated`, `generate`, `returns`, strict fixtures, freshness and renderer limits.
 
-Requires Screenplay 4.147.0 or later (`screenplay --version`) for concept generation strategies (ESM v15), 4.150.0 or later for the stored stream `All` refusal, 4.141.0 or later for compliance (ESM v13) and 4.139.0 or later for non-positional enum numbers (ESM v12).
-Complete example: `cratis-screenplay-toolchain/references/generated-responses-example.md`.
-Routes and realization: `cratis-screenplay-toolchain/references/sources-and-streams.md`.
+Further gates: stored stream `All` refusal, compliance (ESM v13), enum numbers (ESM v12).
+Example: `cratis-screenplay-toolchain/references/generated-responses-example.md`; routes: `cratis-screenplay-toolchain/references/sources-and-streams.md`.
 
 ## `constraint` — uniqueness at append time
 
@@ -304,6 +235,12 @@ Chronicle's constraints enforce **uniqueness only**; use one when two concurrent
 
 A policy has **exactly one** `require` line (`PLAY0441`) **or** one implementation, never both (`PLAY0440`). Read [references/policy-persona-seed.md](references/policy-persona-seed.md) when
 declaring a policy (including `require anonymous` for a deliberately public command or query), a persona, or a `seed` block.
+A policy that decides from recorded state declares `reads <Model> [as alias] [by property]` and a state condition in `require`
+(`plan.dataQuality == true`, `article.author == $identity.id`); an absent read denies. See the same reference, "Policies that decide from recorded state".
+
+A `user` line names a development session identity and the personas it plays; see the same reference, "Users".
+
+`authorize` says who may act; whether the command exists for the caller at all is `available`, with `provide` for `$context` values: `cratis-screenplay-availability`.
 
 ## Event data subject
 
@@ -325,23 +262,19 @@ Four contexts, and **what each omits is load-bearing** — when writing a code b
 ## Verify
 
 - [ ] Validate the complete model root with warnings as errors; name the tool,
-      version and result. Tool versions: toolchain `SKILL.md`;
-      bundle compatibility and execution are separate checks.
+      version and result (versions: toolchain `SKILL.md`).
 - [ ] No unintended `PLAY0478` or `PLAY0479` information remains.
 - [ ] At most one command property carries `identifier`, and no event property does.
 - [ ] Format rules live on the `concept` except command-only date comparisons;
       state-dependent rules are specifications. DateTime comparisons preserve UTC
       ticks; specs include missing-offset Validation rejection.
 - [ ] Every `authorize` combining policies writes `and`/`or` explicitly.
-- [ ] Protected reads opt in, meet admission and distinguish reference protection
-      from target realization; legacy reads and `concurrency` imply no protection.
+- [ ] Protected reads opt in and meet admission; legacy reads and `concurrency` imply no protection.
 - [ ] Constraints are `unique` forms; no `file` constraint stands in for another rule.
 - [ ] Each policy has one `require` or one implementation, not both.
 - [ ] Personal data is `pii` on the concept; operational secrets are `secret`;
-      no identifier or subject concept carries either. Reasons explain the value,
-      while purposes declare basis/retention; run `--check purposes` separately.
-- [ ] Described handlers distinguish binding from Unsupported body execution and
-      Stage refusal; attached handlers remain unbound. Name the admitting tool.
+      no identifier or subject concept carries either; run `--check purposes` separately.
+- [ ] Described handlers distinguish binding from Unsupported body execution and Stage refusal.
 - [ ] No event carries an optional property covering two situations.
 
 Compiler versions and admission: `cratis-screenplay-toolchain/SKILL.md`.
