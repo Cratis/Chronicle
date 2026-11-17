@@ -105,11 +105,12 @@ public partial class Changeset<TSource, TTarget>
     {
         if (!addition.IdentifiedByProperty.IsSet)
         {
+            var item = NewChild<TChild>(childInitialState);
             var indexers = new ArrayIndexers(
             [
                 addition.ArrayIndexers.All.First() with { Identifier = items.Count }
             ]);
-            return (NewChild<TChild>(childInitialState), indexers);
+            return (item, indexers);
         }
 
         return (CreateIdentifiedChild<TChild>(items, addition, childInitialState), addition.ArrayIndexers);
