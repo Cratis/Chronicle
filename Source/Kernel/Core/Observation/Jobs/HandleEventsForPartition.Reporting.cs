@@ -35,15 +35,18 @@ public partial class HandleEventsForPartition
             : _observer.PartitionDeferred(currentState.Partition, deferral, currentState.EpisodeId, currentState.DeferralId);
 
     Task ReportPartitionFailed(HandleEventsForPartitionState currentState, EventSequenceNumber failedAt, BatchFailure failure) =>
+        ReportPartitionFailed(currentState, failedAt, failure.Messages, failure);
+
+    Task ReportPartitionFailed(HandleEventsForPartitionState currentState, EventSequenceNumber failedAt, IEnumerable<string> messages, BatchFailure failure) =>
         currentState.ReplayEpoch is { } replayEpoch
-            ? _observer.PartitionFailed(_eventSourceId, failedAt, failure.Messages, failure.StackTrace, failure.Kind, currentState.EpisodeId, currentState.DeferralId, new PartitionFailureContext(failure.Policy, null, replayEpoch))
-            : _observer.PartitionFailed(_eventSourceId, failedAt, failure.Messages, failure.StackTrace, failure.Kind, currentState.EpisodeId, currentState.DeferralId, failure.Policy);
+            ? _observer.PartitionFailed(_eventSourceId, failedAt, messages, failure.StackTrace, failure.Kind, currentState.EpisodeId, currentState.DeferralId, new PartitionFailureContext(failure.Policy, null, replayEpoch))
+            : _observer.PartitionFailed(_eventSourceId, failedAt, messages, failure.StackTrace, failure.Kind, currentState.EpisodeId, currentState.DeferralId, failure.Policy);
 
     async Task<bool> TryReportPartitionFailed(HandleEventsForPartitionState currentState, EventSequenceNumber failedAt, Exception error)
     {
         try
         {
-            await ReportPartitionFailed(currentState, failedAt, new(error.GetAllMessages().ToArray(), error.StackTrace ?? string.Empty, error.ToFailureKind()));
+            await ReportPartitionFailed(currentState, failedAt, error.GetAllMessages(), new([], error.StackTrace ?? string.Empty, error.ToFailureKind()));
             return true;
         }
         catch (Exception reportError)
