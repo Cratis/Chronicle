@@ -17,7 +17,7 @@ public partial class EventSequenceStorage
         IEnumerable<Tag>? tags = null)
     {
         var snapshot = Events;
-        var filtered = Filter(snapshot, null, null, null, null, eventTypes, tags);
+        var filtered = Filter(snapshot, new() { EventTypes = eventTypes, Tags = tags });
         if (lastEventSequenceNumber is not null)
         {
             filtered = filtered.Where(_ => _.Context.SequenceNumber <= lastEventSequenceNumber);
@@ -58,7 +58,7 @@ public partial class EventSequenceStorage
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
-        var filtered = Filter(Events, eventSourceId, null, null, null, eventTypes).ToList();
+        var filtered = Filter(Events, new() { EventSourceId = eventSourceId, EventTypes = eventTypes }).ToList();
         return filtered.Count == 0
             ? Task.FromResult(EventSequenceNumber.Unavailable)
             : Task.FromResult(filtered.Min(_ => _.Context.SequenceNumber)!);
@@ -72,7 +72,7 @@ public partial class EventSequenceStorage
         EventStreamId? eventStreamId = null,
         EventStreamType? eventStreamType = null)
     {
-        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes).ToList();
+        var filtered = Filter(Events, new() { EventSourceId = eventSourceId, EventSourceType = eventSourceType, EventStreamType = eventStreamType, EventStreamId = eventStreamId, EventTypes = eventTypes }).ToList();
         return filtered.Count == 0
             ? Task.FromResult(EventSequenceNumber.Unavailable)
             : Task.FromResult(filtered.Max(_ => _.Context.SequenceNumber)!);
@@ -84,7 +84,7 @@ public partial class EventSequenceStorage
         var snapshot = Events;
         var eventTypeList = eventTypes.ToImmutableList();
         var tail = snapshot.Count == 0 ? EventSequenceNumber.Unavailable : snapshot.Max(_ => _.Context.SequenceNumber)!;
-        var filtered = Filter(snapshot, null, null, null, null, eventTypeList).ToList();
+        var filtered = Filter(snapshot, new() { EventTypes = eventTypeList }).ToList();
         var tailForEventTypes = filtered.Count == 0 ? EventSequenceNumber.Unavailable : filtered.Max(_ => _.Context.SequenceNumber)!;
         return Task.FromResult(new TailEventSequenceNumbers(eventSequenceId, eventTypeList, tail, tailForEventTypes));
     }
@@ -113,7 +113,7 @@ public partial class EventSequenceStorage
         IEnumerable<EventType>? eventTypes = null,
         EventSourceId? eventSourceId = null)
     {
-        var filtered = Filter(Events, eventSourceId, null, null, null, eventTypes)
+        var filtered = Filter(Events, new() { EventSourceId = eventSourceId, EventTypes = eventTypes })
             .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
             .MinBy(_ => _.Context.SequenceNumber);
 
@@ -176,7 +176,7 @@ public partial class EventSequenceStorage
         IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
-        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags)
+        var filtered = Filter(Events, new() { EventSourceId = eventSourceId, EventSourceType = eventSourceType, EventStreamType = eventStreamType, EventStreamId = eventStreamId, EventTypes = eventTypes, Tags = tags })
             .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
             .OrderBy(_ => _.Context.SequenceNumber)
             .ToList();
@@ -217,7 +217,7 @@ public partial class EventSequenceStorage
         EventStreamType? eventStreamType,
         CancellationToken cancellationToken)
     {
-        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, null, eventTypes, tags)
+        var filtered = Filter(Events, new() { EventSourceId = eventSourceId, EventSourceType = eventSourceType, EventStreamType = eventStreamType, EventTypes = eventTypes, Tags = tags })
             .Where(_ => _.Context.SequenceNumber >= start && _.Context.SequenceNumber <= end)
             .OrderBy(_ => _.Context.SequenceNumber)
             .ToList();
@@ -236,7 +236,7 @@ public partial class EventSequenceStorage
         IEnumerable<Tag>? tags = default,
         CancellationToken cancellationToken = default)
     {
-        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes, tags)
+        var filtered = Filter(Events, new() { EventSourceId = eventSourceId, EventStreamType = eventStreamType, EventStreamId = eventStreamId, EventTypes = eventTypes, Tags = tags })
             .Where(_ => _.Context.SequenceNumber >= start)
             .OrderBy(_ => _.Context.SequenceNumber)
             .Take(limit)

@@ -16,11 +16,19 @@ public partial class EventSequenceStorage
     /// <returns>The ordered events - by sequence number for any dimension not otherwise recognized.</returns>
     static IOrderedEnumerable<AppendedEvent> Sorted(IEnumerable<AppendedEvent> events, EventSequenceQuerySort order) => order.By switch
     {
-        EventSequenceQuerySortBy.Occurred => OrderBy(events, _ => _.Context.Occurred, order.Descending),
-        EventSequenceQuerySortBy.EventType => OrderBy(events, _ => _.Context.EventType.Id.Value, order.Descending),
-        EventSequenceQuerySortBy.EventSourceId => OrderBy(events, _ => _.Context.EventSourceId.Value, order.Descending),
-        _ => OrderBy(events, _ => _.Context.SequenceNumber.Value, order.Descending)
+        EventSequenceQuerySortBy.Occurred => OrderBy(events, OccurredOf, order.Descending),
+        EventSequenceQuerySortBy.EventType => OrderBy(events, EventTypeOf, order.Descending),
+        EventSequenceQuerySortBy.EventSourceId => OrderBy(events, EventSourceOf, order.Descending),
+        _ => OrderBy(events, SequenceNumberOf, order.Descending)
     };
+
+    static DateTimeOffset OccurredOf(AppendedEvent @event) => @event.Context.Occurred;
+
+    static string EventTypeOf(AppendedEvent @event) => @event.Context.EventType.Id.Value;
+
+    static string EventSourceOf(AppendedEvent @event) => @event.Context.EventSourceId.Value;
+
+    static ulong SequenceNumberOf(AppendedEvent @event) => @event.Context.SequenceNumber.Value;
 
     /// <summary>
     /// Order events by a key in either direction.
@@ -53,57 +61,31 @@ public partial class EventSequenceStorage
     /// sentinel as a value to match on would narrow every event away.
     /// </remarks>
     /// <param name="events">The events to narrow.</param>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to narrow by, or its unspecified sentinel.</param>
-    /// <param name="eventSourceType">The <see cref="EventSourceType"/> to narrow by, or its default/unspecified sentinel.</param>
-    /// <param name="eventStreamType">The <see cref="EventStreamType"/> to narrow by, or <see cref="EventStreamType.All"/>.</param>
-    /// <param name="eventStreamId">The <see cref="EventStreamId"/> to narrow by, or its default sentinel.</param>
-    /// <param name="eventTypes">The event types to narrow by, or an empty set.</param>
-    /// <param name="tags">The tags to narrow by - an event matches when it carries any of them; null or an empty set means no narrowing.</param>
+    /// <param name="criteria">The <see cref="FilterCriteria"/> to narrow by.</param>
     /// <returns>The narrowed events.</returns>
-    static IEnumerable<AppendedEvent> Filter(
-        IEnumerable<AppendedEvent> events,
-        EventSourceId? eventSourceId,
-        EventSourceType? eventSourceType,
-        EventStreamType? eventStreamType,
-        EventStreamId? eventStreamId,
-        IEnumerable<EventType>? eventTypes,
-        IEnumerable<Tag>? tags = null)
+    static IEnumerable<AppendedEvent> Filter(IEnumerable<AppendedEvent> events, FilterCriteria criteria)
     {
-        events = NarrowByEventSource(events, eventSourceId, eventSourceType);
-        events = NarrowByEventStream(events, eventStreamType, eventStreamId);
-        events = NarrowByEventTypes(events, eventTypes);
-        return NarrowByTags(events, tags);
+        events = NarrowByEventSource(events, criteria.EventSourceId, criteria.EventSourceType);
+        events = NarrowByEventStream(events, criteria.EventStreamType, criteria.EventStreamId);
+        events = NarrowByEventTypes(events, criteria.EventTypes);
+        return NarrowByTags(events, criteria.Tags);
     }
 
     static IEnumerable<AppendedEvent> NarrowByEventSource(IEnumerable<AppendedEvent> events, EventSourceId? eventSourceId, EventSourceType? eventSourceType)
     {
-        if (eventSourceId?.IsSpecified == true)
-        {
-            events = events.Where(_ => _.Context.EventSourceId == eventSourceId);
-        }
-
-        if (eventSourceType?.IsDefaultOrUnspecified == false)
-        {
-            events = events.Where(_ => _.Context.EventSourceType == eventSourceType);
-        }
-
-        return events;
+        events = NarrowBy(events, eventSourceId?.IsSpecified == true, eventSourceId, _ => _.Context.EventSourceId);
+        return NarrowBy(events, eventSourceType?.IsDefaultOrUnspecified == false, eventSourceType, _ => _.Context.EventSourceType);
     }
 
     static IEnumerable<AppendedEvent> NarrowByEventStream(IEnumerable<AppendedEvent> events, EventStreamType? eventStreamType, EventStreamId? eventStreamId)
     {
-        if (eventStreamType?.IsAll == false)
-        {
-            events = events.Where(_ => _.Context.EventStreamType == eventStreamType);
-        }
-
-        if (eventStreamId?.IsDefault == false)
-        {
-            events = events.Where(_ => _.Context.EventStreamId == eventStreamId);
-        }
-
-        return events;
+        events = NarrowBy(events, eventStreamType?.IsAll == false, eventStreamType, _ => _.Context.EventStreamType);
+        return NarrowBy(events, eventStreamId?.IsDefault == false, eventStreamId, _ => _.Context.EventStreamId);
     }
+
+    static IEnumerable<AppendedEvent> NarrowBy<TValue>(IEnumerable<AppendedEvent> events, bool narrows, TValue? value, Func<AppendedEvent, TValue> selector)
+        where TValue : class =>
+        narrows ? events.Where(_ => Equals(selector(_), value)) : events;
 
     static IEnumerable<AppendedEvent> NarrowByEventTypes(IEnumerable<AppendedEvent> events, IEnumerable<EventType>? eventTypes)
     {
@@ -119,5 +101,41 @@ public partial class EventSequenceStorage
         return tagSet?.Count > 0
             ? events.Where(_ => _.Context.Tags.Any(tagSet.Contains))
             : events;
+    }
+
+    /// <summary>
+    /// The criteria <see cref="Filter"/> narrows by; every member left unset does not narrow.
+    /// </summary>
+    readonly record struct FilterCriteria
+    {
+        /// <summary>
+        /// Gets the <see cref="EventSourceId"/> to narrow by, or its unspecified sentinel.
+        /// </summary>
+        public EventSourceId? EventSourceId { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="EventSourceType"/> to narrow by, or its default/unspecified sentinel.
+        /// </summary>
+        public EventSourceType? EventSourceType { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="EventStreamType"/> to narrow by, or <see cref="EventStreamType.All"/>.
+        /// </summary>
+        public EventStreamType? EventStreamType { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="EventStreamId"/> to narrow by, or its default sentinel.
+        /// </summary>
+        public EventStreamId? EventStreamId { get; init; }
+
+        /// <summary>
+        /// Gets the event types to narrow by, or an empty set.
+        /// </summary>
+        public IEnumerable<EventType>? EventTypes { get; init; }
+
+        /// <summary>
+        /// Gets the tags to narrow by - an event matches when it carries any of them; null or an empty set means no narrowing.
+        /// </summary>
+        public IEnumerable<Tag>? Tags { get; init; }
     }
 }
