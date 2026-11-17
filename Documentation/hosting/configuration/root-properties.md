@@ -70,13 +70,13 @@ Timeouts against a silo the cluster does not report as active still count as att
 
 ## Graceful shutdown
 
-`shutdown.drainTimeout` gives all local observers and appended-event queues one shared shutdown deadline, rather than a separate timeout per observer. Chronicle caps the budget at the host shutdown timeout minus two seconds; the server's default ten-second host timeout therefore permits at most eight seconds of draining. The effective budget is logged at startup.
+`shutdown.drainTimeout` gives all local observers and appended-event queues one shared shutdown deadline, rather than a separate timeout per observer. It defaults to eight seconds. `shutdown.hostShutdownReserve` adds five seconds by default for Orleans silo stop, reminders, and hosted services after draining. The server derives its host shutdown timeout from their sum: thirteen seconds by default. Chronicle caps the effective drain budget at the host shutdown timeout minus the configured reserve, and logs it at startup.
 
-Set `Cratis__Chronicle__Shutdown__DrainTimeout=00:00:05` to use a five-second budget. A zero timeout skips waiting. Leave your orchestrator enough termination grace for the host shutdown timeout.
+Set `Cratis__Chronicle__Shutdown__DrainTimeout=00:00:05` to use a five-second drain budget, or `Cratis__Chronicle__Shutdown__HostShutdownReserve=00:00:07` to reserve seven seconds after draining. A zero drain timeout skips waiting. The host shutdown reserve must be greater than zero. Leave your orchestrator enough termination grace for the total host shutdown timeout.
 
 Shutdown refuses new observer service calls, joins admitted catch-up and replay work, and flushes local bulk windows without promoting an unfinished replay. If the deadline expires, Chronicle cancels MongoDB bulk writes and logs the affected observer, partitions, and event sequence numbers when available. Cancellation means the write outcome is unknown, not that MongoDB rolled it back. Unconfirmed writes do not advance handled positions; failed partitions are recorded best-effort only while time remains.
 
-The host shutdown timeout is ten seconds. A stop that takes all of it counts as timed out, even when no service reports a failure, because a timed-out service usually just returns late. The process exit code tells your orchestrator how the server stopped:
+The default host shutdown timeout is thirteen seconds. A stop that takes all of it counts as timed out, even when no service reports a failure, because a timed-out service usually just returns late. The process exit code tells your orchestrator how the server stopped:
 
 | Exit code | When | Log entry |
 | --- | --- | --- |

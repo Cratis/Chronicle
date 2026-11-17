@@ -132,7 +132,7 @@ def rerun_target(gate_runs, head_sha, pr_head_sha):
         return None
     run = latest_run(gate_runs, head_sha)
     if run and run["status"] == "completed" and any(
-            job["name"] == GATE_JOB and job["conclusion"] == "failure" for job in run.get("jobs", [])):
+            job["name"] == GATE_JOB and job["conclusion"] in ("failure", "timed_out") for job in run.get("jobs", [])):
         return run["id"]
     return None
 
@@ -236,6 +236,8 @@ def gate(arguments):
     if state["dispatch"] or state["detect"] != "success":
         return integration_ok, integration_message
     latest = latest_build(state["repo"], state["head_sha"], arguments.build_runs_json)
+    if integration_ok:
+        latest = await_specs(latest, state, arguments.build_runs_json)
     specs_ok, specs_message = specs_verdict(latest, state)
     return integration_ok and specs_ok, integration_message + "\n" + specs_message
 
@@ -266,6 +268,19 @@ def latest_build(repo, head_sha, runs_json):
     latest = latest_run(runs, head_sha)
     if latest and latest["status"] == "completed" and not runs_json:
         return with_jobs(repo, latest)
+    return latest
+
+
+def await_specs(latest, state, runs_json):
+    """Keep the required check running until the exact-head build has a final verdict.
+
+    The existing job timeout bounds this wait. Completion refresh can re-evaluate a timed-out
+    gate; integration/detection failures never enter this wait or become pending successes.
+    """
+    while latest and latest["status"] != "completed":
+        print(f"Waiting for .NET Build & Integration specs for {state['head_sha']} (run {latest['id']}).", flush=True)
+        time.sleep(30)
+        latest = latest_build(state["repo"], state["head_sha"], runs_json)
     return latest
 
 
@@ -321,8 +336,9 @@ def refresh(arguments):
     if not pr or pr["head"]["sha"] != head_sha:
         return True, "Nothing to do: the pull request head has moved or no matching pull request exists."
     if os.environ.get("SOURCE_WORKFLOW", "").rsplit("/", 1)[-1] == BUILD_WORKFLOW:
-        if not specs_passed(latest_build(repo, head_sha, arguments.build_runs_json)):
-            return True, "Nothing to do: no green specs evidence for this head commit."
+        build = latest_build(repo, head_sha, arguments.build_runs_json)
+        if not build or build["status"] != "completed":
+            return True, "Nothing to do: no completed specs evidence for this head commit."
     elif not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):
         return True, "Nothing to do: no green requested-integration evidence for this head commit."
     runs = gate_runs(repo, head_sha, arguments.gate_runs_json)

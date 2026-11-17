@@ -198,19 +198,31 @@ test('benchmark production hits are allowed only for the benchmark selection, ne
     }
 });
 
-test('MOCK collector nonzero 37 is exact; missing output cannot rescue or replace it', async () => {
+test('MOCK collector nonzero 37 is exact and project progress is streamed before launch and after exit', async t => {
     const options = await fixture();
     const info = { project: v3Projects[0], runner: 'v3', dll: options.dll };
+    const lines = [];
+    t.mock.method(console, 'log', line => lines.push(line));
     let calls = 0;
-    await assert.rejects(runProject(info, options, async () => { calls++; return { code: 37 }; }), error => error.exitCode === 37);
+    await assert.rejects(runProject(info, options, async () => {
+        calls++;
+        assert.deepEqual(lines, [`[specs] start project=${info.project} elapsed=0ms exit=pending`]);
+        return { code: 37 };
+    }), error => error.exitCode === 37);
     assert.equal(calls, 1);
+    assert.equal(lines.length, 2);
+    assert.ok(lines[1].startsWith(`[specs] finish project=${info.project} elapsed=`));
+    assert.match(lines[1], /elapsed=\d+ms exit=37$/);
     assert.equal((await runProcess(process.execPath, ['-e', 'process.exit(37)'], { timeout: 2000, capture: true })).code, 37);
 });
 
-test('MOCK success requires both fresh TRX and real source hits, once per invocation', async () => {
+test('MOCK success requires both fresh TRX and real source hits, once per invocation', async t => {
+    let lines;
+    t.mock.method(console, 'log', line => lines.push(line));
     for (const mode of ['valid', 'no-trx', 'no-coverage', 'empty-coverage', 'failed-trx']) {
         const options = await fixture();
         const info = { project: v3Projects[0], runner: 'v3', dll: options.dll };
+        lines = [];
         const execute = async () => {
             if (mode !== 'no-trx') await writeFile(path.join(options.directory, 'results.trx'), trx(mode === 'failed-trx' ? 'Failed' : 'Passed'));
             if (mode !== 'no-coverage') await writeFile(path.join(options.directory, 'coverage.cobertura.xml'), mode === 'empty-coverage' ? '<coverage><packages /></coverage>' : coverage());
@@ -218,6 +230,9 @@ test('MOCK success requires both fresh TRX and real source hits, once per invoca
         };
         if (mode === 'valid') await runProject(info, options, execute);
         else await assert.rejects(runProject(info, options, execute));
+        const progress = lines.filter(line => line.startsWith('[specs]'));
+        assert.equal(progress.length, 2);
+        assert.ok(progress[1].endsWith(`exit=${mode === 'valid' ? 0 : 1}`));
     }
 });
 

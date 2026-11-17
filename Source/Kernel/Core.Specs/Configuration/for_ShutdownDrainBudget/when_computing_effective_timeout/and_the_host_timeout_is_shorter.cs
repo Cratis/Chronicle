@@ -7,7 +7,7 @@ public class and_the_host_timeout_is_shorter : Specification
 {
     TimeSpan _effective;
 
-    void Because() => _effective = ShutdownDrainBudget.EffectiveTimeout(TimeSpan.FromSeconds(8), TimeSpan.FromSeconds(5));
+    void Because() => _effective = ShutdownDrainBudget.EffectiveTimeout(TimeSpan.FromSeconds(8), TimeSpan.FromSeconds(7), TimeSpan.FromSeconds(5));
 
-    [Fact] void should_cap_the_shared_budget() => _effective.ShouldEqual(TimeSpan.FromSeconds(3));
+    [Fact] void should_cap_the_shared_budget() => _effective.ShouldEqual(TimeSpan.FromSeconds(2));
 }

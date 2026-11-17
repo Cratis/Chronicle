@@ -13,8 +13,8 @@ concurrency:
 jobs:
   refresh:
     # Same-repo PR runs only. Requested Integration must have succeeded; other labels cannot supply green
-    # evidence. A .NET Build & Integration run refreshes whatever its conclusion, because the refresh itself
-    # requires its `specs` job to have passed, and another job failing must not leave the gate red.
+    # evidence. Completed .NET Build & Integration runs refresh either specs verdict, so a gate whose
+    # pending wait timed out can report the final result. Running gates report for themselves.
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
       (github.event.workflow_run.conclusion == 'success' ||

@@ -223,8 +223,16 @@ test('three-shard workflow matches the planner and refreshed timing samples', as
     const other = jobs.get('specs-other');
     const matrix = JSON.parse(other.match(/shard: (\[[^\]]+\])/)[1]);
     assert.deepEqual(matrix, ordinaryShardIds());
-    assert.equal(step(other, 'Run tests with coverage').match(/^        run: (.+)$/m)[1],
-        `node .github/scripts/run-mixed-specs.mjs --shard \u0024{{ matrix.shard }} --shards ${ORDINARY_SHARDS}`);
+    const run = step(other, 'Run tests with coverage');
+    assert.ok(run.trimEnd().endsWith(`node .github/scripts/run-mixed-specs.mjs --shard \u0024{{ matrix.shard }} --shards ${ORDINARY_SHARDS}`));
+    assert.match(run, /set -euo pipefail/);
+    assert.match(run, /\[specs resources\].*date -u/);
+    assert.match(run, /free -m/);
+    assert.match(run, /df -h \/ "\$GITHUB_WORKSPACE"/);
+    assert.match(run, /ps -eo pid,rss,etime,args --sort=-rss \| sed -n '1,6p'/);
+    assert.match(run, /sleep 30/);
+    assert.match(run, /\) &\n\s+sampler_pid=\$!/);
+    assert.match(run, /trap 'status=\$\?; kill "\$sampler_pid" 2>\/dev\/null \|\| true; wait "\$sampler_pid" \|\| true; exit "\$status"' EXIT/);
     const plan = await sourcePlan(process.cwd());
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));

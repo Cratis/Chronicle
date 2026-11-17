@@ -326,6 +326,7 @@ public class ChronicleOptions : IValidatableObject
         foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
         foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
         foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
+        foreach (var error in ValidateShutdown()) yield return error;
         if (ValidateSinks() is { } sinksError) yield return sinksError;
         if (Startup.BusySiloWaitLimit < TimeSpan.Zero)
         {
@@ -334,6 +335,14 @@ public class ChronicleOptions : IValidatableObject
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    IEnumerable<ValidationResult> ValidateShutdown()
+    {
+        if (Shutdown.HostShutdownReserve <= TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Shutdown.HostShutdownReserve must be greater than zero.", ["Shutdown.HostShutdownReserve"]);
         }
     }
 
