@@ -258,7 +258,7 @@ Readiness keeps a starting kernel out of the `chronicle` Service without restart
 
 When Kubernetes stops a pod, it removes the pod from the Service endpoints and runs the `preStop` hook at the same time; `SIGTERM` follows when the hook returns. The five-second sleep keeps the kernel serving while load balancers and kube-proxy catch up. The `sleep` action runs inside the kubelet, so it works in the production image, which has no shell and no `sleep` binary.
 
-The kernel then has 10 seconds to stop in an orderly way: its host shutdown timeout is fixed at 10 seconds, and the shutdown drain inside it defaults to 8 seconds. `terminationGracePeriodSeconds` covers the `preStop` sleep and that shutdown, so 30 seconds leaves room for both. Keep it at 30 or more. In the test a drained kernel left the cluster in an orderly way within six seconds of the eviction, and its membership row turned `Dead` rather than waiting to be suspected. See [Graceful shutdown](configuration/root-properties.md#graceful-shutdown).
+The kernel then has 13 seconds by default to stop in an orderly way: its host shutdown timeout is the 8-second shutdown drain plus a configurable 5-second host shutdown reserve. `terminationGracePeriodSeconds` covers the `preStop` sleep and that total shutdown timeout, so 30 seconds leaves room for both with the defaults. Increase it if you configure a longer drain or reserve. Keep it at 30 or more. In the test a drained kernel left the cluster in an orderly way within six seconds of the eviction, and its membership row turned `Dead` rather than waiting to be suspected. See [Graceful shutdown](configuration/root-properties.md#graceful-shutdown).
 
 ### Disruptions and placement
 

@@ -431,16 +431,35 @@ class SpecsDecisions(unittest.TestCase):
         self.assertIn("title=Specs required", message)
         self.assertIn(SHA, message)
 
-    def test_running_build_fails_without_loading_jobs(self):
+    def test_running_build_is_loaded_without_fetching_unfinished_jobs(self):
         with patch.object(gate, "with_jobs", side_effect=AssertionError("must not fetch")):
             latest = dict(BUILD_GREEN, status="in_progress", conclusion=None)
             with patch.object(gate, "workflow_runs", return_value=[latest]):
                 self.assertEqual(latest, gate.latest_build("Cratis/Chronicle", SHA, None))
-        ok, message = self.evaluate([latest])
-        self.assertFalse(ok)
-        self.assertIn("still running", message)
-        self.assertIn("turns green automatically when it passes", message)
-        self.assertIn(BUILD_GREEN["html_url"], message)
+
+    def test_running_specs_keep_the_gate_pending_until_a_final_verdict(self):
+        for conclusion in ("success", "failure", "cancelled", "skipped", "missing"):
+            jobs = [] if conclusion == "missing" else [{"name": "specs", "conclusion": conclusion}]
+            completed = dict(BUILD_GREEN, jobs=jobs)
+            with self.subTest(conclusion=conclusion), \
+                    patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
+                    patch.object(gate, "latest_build", side_effect=[
+                        dict(BUILD_GREEN, status="queued"), dict(BUILD_GREEN, status="in_progress"), completed]), \
+                    patch.object(gate.time, "sleep") as sleep, redirect_stdout(io.StringIO()) as output:
+                ok, message = gate.gate(arguments())
+                self.assertEqual(conclusion == "success", ok)
+                self.assertEqual([((30,),), ((30,),)], sleep.call_args_list)
+                self.assertEqual(2, output.getvalue().count("Waiting for .NET Build & Integration"))
+                self.assertNotIn("::error", output.getvalue())
+                self.assertIn("specs passed" if ok else f"specs conclusion: {conclusion}", message)
+
+    def test_failed_integration_never_waits_for_running_specs(self):
+        with patch.dict(os.environ, ENV, clear=True), \
+                patch.object(gate, "latest_build", return_value=dict(BUILD_GREEN, status="in_progress")), \
+                patch.object(gate, "evidence_runs", return_value=[]), \
+                patch.object(gate, "latest_requested", return_value=None), patch.object(gate.time, "sleep") as sleep:
+            self.assertFalse(gate.gate(arguments())[0])
+        sleep.assert_not_called()
 
     def test_completed_build_requires_exact_specs_success(self):
         for conclusion in ("failure", "cancelled", "skipped", None, "missing"):
@@ -473,11 +492,17 @@ class SpecsDecisions(unittest.TestCase):
         self.assertIn("specs passed", message)
 
     def test_forks_require_specs_but_explain_manual_rerun(self):
-        ok, message = self.evaluate([dict(BUILD_GREEN, status="in_progress")], FORK="true")
+        ok, message = self.evaluate([dict(BUILD_GREEN, jobs=[])], FORK="true")
         self.assertFalse(ok)
         self.assertIn("Re-run this check", message)
         self.assertIn("fork PRs do not refresh automatically", message)
         self.assertTrue(self.evaluate([BUILD_GREEN], FORK="true")[0])
+
+    def test_forks_never_wait_for_pending_specs(self):
+        with patch.object(gate, "await_specs", side_effect=AssertionError("forks must not wait")):
+            ok, message = self.evaluate([dict(BUILD_GREEN, jobs=[])], FORK="true")
+        self.assertFalse(ok)
+        self.assertIn("fork PRs do not refresh automatically", message)
 
     def test_dispatch_and_failed_detection_never_query_build_runs(self):
         for overrides in ({"DISPATCH": "true", "BUILD": "success", "MATRIX": "success"}, {"DETECT": "failure"}):
@@ -506,7 +531,8 @@ class RefreshDecisions(unittest.TestCase):
                  ([FAILED_GATE, dict(FAILED_GATE, id=44)], SHA, 44),
                  ([FAILED_GATE, dict(FAILED_GATE, id=44, status="in_progress")], SHA, None),
                  ([dict(FAILED_GATE, event="workflow_dispatch")], SHA, None),
-                 ([dict(FAILED_GATE, jobs=[])], SHA, None)]
+                 ([dict(FAILED_GATE, jobs=[])], SHA, None),
+                 ([dict(FAILED_GATE, jobs=[{"name": gate.GATE_JOB, "conclusion": "timed_out"}])], SHA, 42)]
         for runs, current, expected in cases:
             with self.subTest(runs=runs, current=current):
                 self.assertEqual(expected, gate.rerun_target(runs, SHA, current))
@@ -556,9 +582,10 @@ class RefreshDecisions(unittest.TestCase):
                 if expected_calls:
                     api.assert_called_once_with("repos/Cratis/Chronicle/actions/runs/42/rerun-failed-jobs", method="POST")
 
-    def test_build_source_refresh_requires_latest_green_specs(self):
+    def test_build_source_refresh_requires_completion_and_delivers_both_verdicts(self):
         for latest, expected_calls in [(BUILD_GREEN, 1), (None, 0),
-                                       (dict(BUILD_GREEN, jobs=[]), 0),
+                                       (dict(BUILD_GREEN, jobs=[]), 1),
+                                       (dict(BUILD_GREEN, conclusion="cancelled", jobs=[]), 1),
                                        (dict(BUILD_GREEN, status="in_progress"), 0)]:
             with self.subTest(latest=latest), \
                     patch.dict(os.environ, dict(ENV, SOURCE_WORKFLOW=".github/workflows/dotnet-build.yml"), clear=True), \

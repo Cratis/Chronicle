@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
+using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf.Grpc.Server;
 
@@ -112,7 +113,8 @@ loggingServices = builder.Logging.Services.BuildServiceProvider();
 logger = loggingServices
     .GetRequiredService<ILoggerFactory>()
     .CreateLogger<Kernel>();
-builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(10));
+builder.Services.AddOptions<HostOptions>()
+    .Configure<IOptions<ChronicleOptions>>((options, chronicle) => options.ShutdownTimeout = chronicle.Value.Shutdown.HostShutdownTimeout);
 var assembly = Assembly.GetExecutingAssembly();
 logger.ServerStarting(assembly.GetName().Version?.ToString() ?? "unknown");
 

@@ -37,6 +37,22 @@ export function invocation(info, { directory, filter, timeout, coverage = true }
     return { command: 'dotnet', args: ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'coverage.cobertura.xml'), childCommand('dotnet', args)], timeout };
 }
 export async function runProject(info, options, execute = runProcess) {
+    const started = performance.now();
+    let exitCode = 1;
+    console.log(`[specs] start project=${info.project} elapsed=0ms exit=pending`);
+    try {
+        const result = await collectProject(info, options, execute);
+        exitCode = 0;
+        return result;
+    } catch (error) {
+        exitCode = error.exitCode ?? 1;
+        throw error;
+    } finally {
+        console.log(`[specs] finish project=${info.project} elapsed=${Math.round(performance.now() - started)}ms exit=${exitCode}`);
+    }
+}
+
+async function collectProject(info, options, execute) {
     const call = invocation(info, options);
     await access(path.resolve(options.root, info.dll));
     if ((await readdir(options.directory)).length) fail(`${info.project}: results directory must be fresh and empty`);

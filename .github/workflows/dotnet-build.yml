@@ -760,7 +760,20 @@ jobs:
         # &FullyQualifiedName!~Cratis.Chronicle.Storage.Sql. and applies specs.runsettings.
         # Each project gets fresh, unique TRX/Cobertura; empty/spec-only coverage fails.
         # Actual production hits come only from these real library specs.
-        run: node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 4
+        run: |
+          set -euo pipefail
+          (
+            while true; do
+              echo "[specs resources] $(date -u +%FT%TZ)"
+              free -m
+              df -h / "$GITHUB_WORKSPACE"
+              ps -eo pid,rss,etime,args --sort=-rss | sed -n '1,6p'
+              sleep 30
+            done
+          ) &
+          sampler_pid=$!
+          trap 'status=$?; kill "$sampler_pid" 2>/dev/null || true; wait "$sampler_pid" || true; exit "$status"' EXIT
+          node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 4
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran

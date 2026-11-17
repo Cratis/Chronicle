@@ -210,6 +210,8 @@ jobs:
 
     steps:
       # Re-run-failed-jobs reuses detect's outputs and re-evaluates evidence in this job.
+      # The evaluator keeps this check running while exact-head ordinary specs are still running;
+      # missing evidence and integration/detection failures still fail closed immediately.
       - name: Checkout gate script
         uses: actions/checkout@v4
         with:
