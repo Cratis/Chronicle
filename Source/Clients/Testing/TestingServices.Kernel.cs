@@ -4,22 +4,6 @@
 extern alias KernelCore;
 extern alias KernelGrpc;
 
-using Cratis.Chronicle.Contracts.Captures;
-using Cratis.Chronicle.Contracts.Compliance;
-using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSources;
-using Cratis.Chronicle.Contracts.EventStores;
-using Cratis.Chronicle.Contracts.EventTypes;
-using Cratis.Chronicle.Contracts.ExternalServices;
-using Cratis.Chronicle.Contracts.Host;
-using Cratis.Chronicle.Contracts.Identities;
-using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Namespaces;
-using Cratis.Chronicle.Contracts.Patterns;
-using Cratis.Chronicle.Contracts.ReadModels;
-using Cratis.Chronicle.Contracts.Recommendations;
-using Cratis.Chronicle.Contracts.Security;
-using Cratis.Chronicle.Contracts.Seeding;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,35 +40,33 @@ namespace Cratis.Chronicle.Testing;
 /// <summary>
 /// Creates the non-observation kernel gRPC services backed by in-memory storage.
 /// </summary>
-// The factories deliberately return the contract interface the lazily resolved services are exposed as.
-#pragma warning disable CA1859
 internal sealed partial class TestingServices
 {
     /// <summary>The in-process test kernel enforces no store entitlements, so query collaborators resolve nothing extra.</summary>
     static readonly IServiceProvider _noQueryServices = new ServiceCollection().BuildServiceProvider();
 
-    static IExternalServices CreateExternalServices(TestingServiceContext context) =>
-        new KernelExternalServicesService(context.CommandPipeline.Value, context.Storage, NullLogger<KernelExternalServicesService>.Instance);
+    static KernelExternalServicesService CreateExternalServices(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.Storage, NullLogger<KernelExternalServicesService>.Instance);
 
-    static ICaptures CreateCaptures(TestingServiceContext context) =>
-        new KernelCapturesService(
+    static KernelCapturesService CreateCaptures(TestingServiceContext context) =>
+        new(
             context.CommandPipeline.Value,
             context.Storage,
             context.JsonSerializerOptions,
             context.NamespaceCasing,
             NullLogger<KernelCapturesService>.Instance);
 
-    static Contracts.Occurrences.IOccurrences CreateOccurrences(TestingServiceContext context) =>
-        new Occurrences.OccurrenceReplies(new KernelOccurrencesService(context.CommandPipeline.Value, context.Storage, context.NamespaceCasing, NullLogger<KernelOccurrencesService>.Instance), context.Replies ?? new());
+    static Occurrences.OccurrenceReplies CreateOccurrences(TestingServiceContext context) =>
+        new(new KernelOccurrencesService(context.CommandPipeline.Value, context.Storage, context.NamespaceCasing, NullLogger<KernelOccurrencesService>.Instance), context.Replies ?? new());
 
-    static IJobs CreateJobs(TestingServiceContext context) =>
-        new KernelJobsService(context.CommandPipeline.Value, context.Storage, context.GrainFactory, context.NamespaceCasing, NullLogger<KernelJobsService>.Instance);
+    static KernelJobsService CreateJobs(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.Storage, context.GrainFactory, context.NamespaceCasing, NullLogger<KernelJobsService>.Instance);
 
-    static IEventSeeding CreateSeeding(TestingServiceContext context) =>
-        new KernelSeedingService(context.CommandPipeline.Value, context.GrainFactory, context.NamespaceCasing, NullLogger<KernelSeedingService>.Instance);
+    static KernelSeedingService CreateSeeding(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.GrainFactory, context.NamespaceCasing, NullLogger<KernelSeedingService>.Instance);
 
-    static Contracts.Sequences.IEventSequences CreateSequences(TestingServiceContext context) =>
-        new EventSequences.SequenceReplies(
+    static EventSequences.SequenceReplies CreateSequences(TestingServiceContext context) =>
+        new(
             new KernelSequencesService(
                 context.CommandPipeline.Value,
                 context.Storage,
@@ -96,28 +78,28 @@ internal sealed partial class TestingServices
                 NullLogger<KernelSequencesService>.Instance),
             context.Replies ?? new());
 
-    static INamespaces CreateNamespaces(TestingServiceContext context) =>
-        new KernelNamespacesService(context.CommandPipeline.Value, context.Storage, NullLogger<KernelNamespacesService>.Instance);
+    static KernelNamespacesService CreateNamespaces(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.Storage, NullLogger<KernelNamespacesService>.Instance);
 
-    static IIdentities CreateIdentities(TestingServiceContext context) =>
-        new KernelIdentitiesService(context.CommandPipeline.Value, context.Storage, context.NamespaceCasing, NullLogger<KernelIdentitiesService>.Instance);
+    static KernelIdentitiesService CreateIdentities(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.Storage, context.NamespaceCasing, NullLogger<KernelIdentitiesService>.Instance);
 
-    static IEventSources CreateEventSources(TestingServiceContext context) =>
-        new KernelEventSourcesService(
+    static KernelEventSourcesService CreateEventSources(TestingServiceContext context) =>
+        new(
             context.CommandPipeline.Value,
             context.Storage,
             NullLogger<KernelEventSourcesService>.Instance);
 
-    static IEventTypes CreateEventTypes(TestingServiceContext context) =>
-        new KernelEventTypesService(
+    static KernelEventTypesService CreateEventTypes(TestingServiceContext context) =>
+        new(
             context.CommandPipeline.Value,
             context.Storage,
             NullLogger<KernelEventTypesService>.Instance);
 
-    static IPatterns CreatePatterns(TestingServiceContext context)
+    static KernelPatternsService CreatePatterns(TestingServiceContext context)
     {
         var patternOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
-        return new KernelPatternsService(
+        return new(
             context.Storage,
             new KernelFacetVocabulary(patternOptions),
             new KernelFacetSetGenerator(),
@@ -127,29 +109,29 @@ internal sealed partial class TestingServices
             NullLogger<KernelPatternsService>.Instance);
     }
 
-    static IRecommendations CreateRecommendations(TestingServiceContext context) =>
-        new KernelRecommendationsService(context.CommandPipeline.Value, context.Storage, context.NamespaceCasing, NullLogger<KernelRecommendationsService>.Instance);
+    static KernelRecommendationsService CreateRecommendations(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.Storage, context.NamespaceCasing, NullLogger<KernelRecommendationsService>.Instance);
 
-    static IConstraints CreateConstraints(TestingServiceContext context) =>
-        new KernelConstraintsService(context.GrainFactory);
+    static KernelConstraintsService CreateConstraints(TestingServiceContext context) =>
+        new(context.GrainFactory);
 
-    static IUsers CreateUsers(TestingServiceContext context) =>
-        new KernelUsersService(
+    static KernelUsersService CreateUsers(TestingServiceContext context) =>
+        new(
             context.CommandPipeline.Value,
             context.Storage,
             Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()),
             NullLogger<KernelUsersService>.Instance);
 
-    static IApplications CreateApplications(TestingServiceContext context) =>
-        new KernelApplicationsService(context.CommandPipeline.Value, context.Storage, NullLogger<KernelApplicationsService>.Instance);
+    static KernelApplicationsService CreateApplications(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.Storage, NullLogger<KernelApplicationsService>.Instance);
 
-    static IServer CreateServer() => new KernelServerService(null!);
+    static KernelServerService CreateServer() => new(null!);
 
-    static IEventStores CreateEventStores(TestingServiceContext context) =>
-        new KernelEventStoresService(context.CommandPipeline.Value, context.GrainFactory, context.Storage, new KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization(context.Storage, context.GrainFactory, NullLogger<KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization>.Instance), _noQueryServices, NullLogger<KernelEventStoresService>.Instance);
+    static KernelEventStoresService CreateEventStores(TestingServiceContext context) =>
+        new(context.CommandPipeline.Value, context.GrainFactory, context.Storage, new KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization(context.Storage, context.GrainFactory, NullLogger<KernelCore::Cratis.Chronicle.EventStores.EventStoreInitialization>.Instance), _noQueryServices, NullLogger<KernelEventStoresService>.Instance);
 
-    static IReadModels CreateReadModels(TestingServiceContext context) =>
-        new KernelReadModelsService(
+    static KernelReadModelsService CreateReadModels(TestingServiceContext context) =>
+        new(
             context.GrainFactory,
             context.Storage,
             context.ReadBindings,
@@ -165,8 +147,8 @@ internal sealed partial class TestingServices
             context.JsonSerializerOptions,
             context.NamespaceCasing);
 
-    static ICompliance CreateCompliance(TestingServiceContext context) =>
-        new KernelComplianceService(
+    static KernelComplianceService CreateCompliance(TestingServiceContext context) =>
+        new(
             context.GrainFactory,
             context.Compliance.Manager,
             NullLogger<KernelComplianceService>.Instance,
@@ -176,4 +158,3 @@ internal sealed partial class TestingServices
                 null!, // Direct in-process calls bypass authorization and never resolve a request scope.
                 NullLogger<KernelComplianceAuthorization>.Instance));
 }
-#pragma warning restore CA1859

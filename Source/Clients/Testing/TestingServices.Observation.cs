@@ -4,12 +4,6 @@
 extern alias KernelCore;
 extern alias KernelGrpc;
 
-using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
-using Cratis.Chronicle.Contracts.Observation.Reactors;
-using Cratis.Chronicle.Contracts.Observation.Reducers;
-using Cratis.Chronicle.Contracts.Observation.Webhooks;
-using Cratis.Chronicle.Contracts.Projections;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
 using Cratis.Traces;
@@ -30,12 +24,10 @@ namespace Cratis.Chronicle.Testing;
 /// <summary>
 /// Creates the observation related kernel gRPC services backed by in-memory storage.
 /// </summary>
-// The factories deliberately return the contract interface the lazily resolved services are exposed as.
-#pragma warning disable CA1859
 internal sealed partial class TestingServices
 {
-    static IObservers CreateObservers(TestingServiceContext context) =>
-        new ObserversForTesting(new KernelObserversService(
+    static ObserversForTesting CreateObservers(TestingServiceContext context) =>
+        new(new KernelObserversService(
             context.GrainFactory,
             context.Storage,
             new KernelObserverRemover(context.GrainFactory, context.Storage, NullLogger<KernelObserverRemover>.Instance),
@@ -43,11 +35,11 @@ internal sealed partial class TestingServices
             context.KernelOptions,
             context.NamespaceCasing));
 
-    static IFailedPartitions CreateFailedPartitions(TestingServiceContext context) =>
-        new KernelFailedPartitionsService(context.Storage);
+    static KernelFailedPartitionsService CreateFailedPartitions(TestingServiceContext context) =>
+        new(context.Storage);
 
-    static IReactors CreateReactors(TestingServiceContext context) =>
-        new KernelReactorsService(
+    static KernelReactorsService CreateReactors(TestingServiceContext context) =>
+        new(
             context.GrainFactory,
             new KernelReactorMediator(),
             context.Storage,
@@ -60,8 +52,8 @@ internal sealed partial class TestingServices
             context.NamespaceCasing,
             KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
 
-    static IReducers CreateReducers(TestingServiceContext context) =>
-        new KernelReducersService(
+    static KernelReducersService CreateReducers(TestingServiceContext context) =>
+        new(
             context.GrainFactory,
             new KernelReducerMediator(),
             new ExpandoObjectConverter(new TypeFormats()),
@@ -74,8 +66,8 @@ internal sealed partial class TestingServices
             context.NamespaceCasing,
             KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
 
-    static IProjections CreateProjections(TestingServiceContext context) =>
-        new KernelProjectionsService(
+    static KernelProjectionsService CreateProjections(TestingServiceContext context) =>
+        new(
             context.GrainFactory,
             new ExpandoObjectConverter(new TypeFormats()),
             null!,
@@ -87,13 +79,12 @@ internal sealed partial class TestingServices
             NullLogger<KernelProjectionsService>.Instance,
             context.NamespaceCasing);
 
-    static IWebhooks CreateWebhooks(TestingServiceContext context) =>
-        new KernelWebhooksService(
+    static KernelWebhooksService CreateWebhooks(TestingServiceContext context) =>
+        new(
             context.CommandPipeline.Value,
             context.Storage,
             NullLogger<KernelWebhooksService>.Instance);
 
-    static IEventStoreSubscriptions CreateEventStoreSubscriptions(TestingServiceContext context) =>
-        new KernelSubscriptionsService(context.GrainFactory, context.Storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()));
+    static KernelSubscriptionsService CreateEventStoreSubscriptions(TestingServiceContext context) =>
+        new(context.GrainFactory, context.Storage, Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions()));
 }
-#pragma warning restore CA1859
