@@ -145,7 +145,8 @@ export async function loadProducerEvidence(context, { env = process.env, execute
     if (!/^[1-9]\d*$/.test(context.runId) || !/^[1-9]\d*$/.test(context.runAttempt)) fail('Invalid producer run/attempt');
     const pages = [];
     const api = { env, execute, wait, now, deadline: now() + PRODUCER_API_BUDGET };
-    for (const endpoint of [`jobs?filter=all&per_page=${PRODUCER_PAGE_SIZE}`, `artifacts?per_page=${PRODUCER_PAGE_SIZE}`]) {
+    // filter=latest returns each job's latest attempt only; filter=all grows by the whole matrix per rerun and outran the call deadline (#5967).
+    for (const endpoint of [`jobs?filter=latest&per_page=${PRODUCER_PAGE_SIZE}`, `artifacts?per_page=${PRODUCER_PAGE_SIZE}`]) {
         pages.push(await producerApiPages(endpoint, context, api));
     }
     return selectProducerArtifacts(...pages, context);

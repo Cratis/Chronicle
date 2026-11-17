@@ -314,7 +314,7 @@ test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, in
     reject(j => { j.jobs.push({ ...j.jobs[0], id: 999 }); j.total_count++; });
     reject((j, a) => { a.artifacts.push({ ...a.artifacts[0], id: 999 }); a.total_count++; });
 });
-test('producer API acquisition paginates all attempts and propagates unavailable/malformed evidence', async () => {
+test('producer API acquisition paginates latest attempts and propagates unavailable/malformed evidence', async () => {
     const pages = producerFixture([1, 2, 1, 1]);
     const jobs = pages[0][0].jobs;
     pages[0] = [{ jobs: jobs.slice(0, 1), total_count: jobs.length }, { jobs: jobs.slice(1), total_count: jobs.length }];
@@ -322,7 +322,7 @@ test('producer API acquisition paginates all attempts and propagates unavailable
     const options = { env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
         assert.equal(command, 'gh');
         assert.deepEqual(args.slice(0, 3), ['api', '--paginate', '--slurp']);
-        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=all&per_page=30'));
+        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=latest&per_page=30'));
         return { code: 0, stdout: JSON.stringify(pages[calls++]) };
     } };
     assert.equal((await loadProducerEvidence(retryContext, options)).producers[1].runAttempt, '2');
