@@ -20,7 +20,7 @@ public class when_the_readiness_deadline_expires : given.a_readiness_wait
     [Fact] void should_include_the_container_identity() => _failure.Message.ShouldContain("Container=mongo-123");
     [Fact] void should_include_the_image() => _failure.Message.ShouldContain("mongo:8.2");
     [Fact] void should_include_the_deadline() => _failure.Message.ShouldContain("150 seconds");
-    [Fact] void should_include_initialization_output() => _failure.Message.ShouldContain("rs.initiate exit code: 1");
+    [Fact] void should_include_initialization_output() => _failure.Message.ShouldContain("rs.initiate exit code: 0");
     [Fact] void should_include_the_last_status() => _failure.Message.ShouldContain("{ ok: 1, myState: 2 }");
     [Fact] void should_include_readiness_standard_error() => _failure.Message.ShouldContain("not primary yet");
     [Fact] void should_include_the_log_tail() => _failure.Message.ShouldContain("replica-set election stalled");

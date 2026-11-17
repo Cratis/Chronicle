@@ -54,13 +54,14 @@ internal sealed class MongoReplicaSetWait(TimeProvider? timeProvider = null) : I
         {
             // Deliberately not TimeoutException: ChronicleFixture retries that exception ten times.
             // A fresh Mongo container is not a safe repair for an unexplained initialization failure.
-            throw new MongoReplicaSetReadinessFailed(
-                $"MongoDB replica-set readiness timed out after {ReadinessTimeout.TotalSeconds} seconds. " +
-                $"Container={container.Id}, Image={container.Image.FullName}\n" +
-                $"Last readiness command output (rs.status()):\n{_lastOutput}\n" +
-                $"Container logs (tail):\n{await ReadLogs(container)}");
+            throw await DescribeFailure(container, $"MongoDB replica-set readiness timed out after {ReadinessTimeout.TotalSeconds} seconds.");
         }
-        return await Probe(container);
+        var (ready, initializationFailed) = await Probe(container);
+        if (initializationFailed)
+        {
+            throw await DescribeFailure(container, "MongoDB rs.initiate failed.");
+        }
+        return ready;
     }
 
     static async Task<string> ReadLogs(IContainer container)
@@ -83,20 +84,29 @@ internal sealed class MongoReplicaSetWait(TimeProvider? timeProvider = null) : I
         return lines.Length <= 16000 ? lines : lines[^16000..];
     }
 
-    async Task<bool> Probe(IContainer container)
+    static bool InitializationFailed(string output) => output.Split('\n').Any(line =>
+        line.StartsWith("MongoDB rs.initiate exit code: ", StringComparison.Ordinal) &&
+        !line.TrimEnd().Equals("MongoDB rs.initiate exit code: 0", StringComparison.Ordinal));
+
+    async Task<MongoReplicaSetReadinessFailed> DescribeFailure(IContainer container, string reason) => new(
+        $"{reason} Container={container.Id}, Image={container.Image.FullName}\n" +
+        $"Last readiness command output (rs.status()):\n{_lastOutput}\n" +
+        $"Container logs (tail):\n{await ReadLogs(container)}");
+
+    async Task<(bool Ready, bool InitializationFailed)> Probe(IContainer container)
     {
         using var cancellation = new CancellationTokenSource(_probeTimeout);
         try
         {
             var result = await container.ExecAsync(["/bin/sh", "-c", ReadinessCommand], cancellation.Token).WaitAsync(cancellation.Token);
             _lastOutput = $"ExitCode={result.ExitCode}\n{Tail(result.Stdout + "\n" + result.Stderr)}";
-            return result.ExitCode == 0;
+            return (result.ExitCode == 0, InitializationFailed(result.Stdout));
         }
         catch (Exception exception)
         {
             // Keep the last completed rs.status() output even when the Docker exec transport stalls.
             _lastOutput = Tail($"{_lastOutput}\nReadiness probe failed: {exception.GetType().Name}");
-            return false;
+            return (false, false);
         }
     }
 }

@@ -96,9 +96,11 @@ public class and_observer_discovery_created_the_store(context context) : Given<c
 
         async Task<string> DescribeIncompleteAppend(AppendResultWaitForCompletionResult completion, ulong sequenceNumber)
         {
-            var diagnostic = $"Store={_storeName}, Namespace={_store.Namespace.Value}, SequenceNumber={sequenceNumber}, Completion={JsonSerializer.Serialize(completion)}";
+            var diagnostic = $"Store={_storeName}, Namespace={_store.Namespace.Value}, SequenceNumber={sequenceNumber}";
             try
             {
+                diagnostic += $", Completion={JsonSerializer.Serialize(completion)}";
+
                 // A post-wait snapshot distinguishes a stalled observer from a client-side deadline.
                 // Bound this diagnostic read independently; never replace the completion failure with its failure.
                 var observers = await _services.Services.Observers.GetObservers(new AllObserversRequest
