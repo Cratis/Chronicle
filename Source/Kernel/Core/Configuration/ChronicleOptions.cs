@@ -292,46 +292,82 @@ public class ChronicleOptions : IValidatableObject
     }
 
     /// <inheritdoc/>
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
+        new Func<IEnumerable<ValidationResult>>[]
+        {
+            ValidateTelemetry,
+            () => StorageValidation.Validate(Storage),
+            ValidateFederation,
+            ValidateReadModels,
+            ValidateSingleWriterLeaseAndAlerts,
+            () => ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key)),
+            ValidateConstraintIndexRepair,
+            ValidateShutdown,
+            ValidateSinksAsEnumerable,
+            ValidateStartup,
+            ValidateWebhooks
+        }.SelectMany(_ => _());
+
+    IEnumerable<ValidationResult> ValidateConstraintIndexRepair() => ConstraintIndexRepair.Validate();
+
+    IEnumerable<ValidationResult> ValidateTelemetry()
     {
-        if (Telemetry.RequiresHashKey &&
-            (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
+        if (Telemetry.RequiresHashKey && !HasValidHashKey())
         {
             yield return new ValidationResult(
                 "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
         }
+    }
 
-        foreach (var error in StorageValidation.Validate(Storage)) yield return error;
+    bool HasValidHashKey() =>
+        !string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) && Telemetry.EventSourceIdHashKey.Length >= IdentifierHasher.MinimumKeyLength;
 
+    IEnumerable<ValidationResult> ValidateFederation()
+    {
         if (Federation.Enabled && (Federation.Port == Port || Federation.Port == DedicatedHealthPort))
         {
             yield return new ValidationResult(
                 "Federation:Port must differ from the main port and the dedicated health port; federation is served on its own listener.",
                 [$"{nameof(Federation)}.{nameof(Federation.Port)}"]);
         }
+    }
 
+    IEnumerable<ValidationResult> ValidateReadModels()
+    {
         if (ReadModels.MaxBatchSize <= 0)
         {
             yield return new ValidationResult(
                 "ReadModels.MaxBatchSize must be greater than zero.",
                 [$"{nameof(ReadModels)}.{nameof(ReadModels.MaxBatchSize)}"]);
         }
+    }
 
+    IEnumerable<ValidationResult> ValidateSingleWriterLeaseAndAlerts()
+    {
         var alertErrors = Alerts.Conditions
             .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
             .Select(_ => new ValidationResult(
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
-        foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
-        foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
-        foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
-        foreach (var error in ValidateShutdown()) yield return error;
+        return ValidateSingleWriterLease().Concat(alertErrors);
+    }
+
+    IEnumerable<ValidationResult> ValidateSinksAsEnumerable()
+    {
         if (ValidateSinks() is { } sinksError) yield return sinksError;
+    }
+
+    IEnumerable<ValidationResult> ValidateStartup()
+    {
         if (Startup.BusySiloWaitLimit < TimeSpan.Zero)
         {
             yield return new ValidationResult("Startup.BusySiloWaitLimit must be non-negative.", [$"{nameof(Startup)}.{nameof(Configuration.Startup.BusySiloWaitLimit)}"]);
         }
+    }
+
+    IEnumerable<ValidationResult> ValidateWebhooks()
+    {
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);

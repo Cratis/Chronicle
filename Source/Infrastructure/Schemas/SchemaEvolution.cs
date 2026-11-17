@@ -10,6 +10,8 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 public static class SchemaEvolution
 {
+    static readonly string[] _definitionKeywords = ["$defs", "definitions"];
+
     /// <summary>
     /// Classifies an incoming schema against a stored generation, including referenced definitions.
     /// </summary>
@@ -23,7 +25,7 @@ public static class SchemaEvolution
             return SchemaEvolutionKind.Identical;
         }
 
-        if (stored.DifferingKeywords(stored.MorePrecise(incoming)) is null)
+        if (IsCompatible(stored, incoming))
         {
             return SchemaEvolutionKind.Tolerated;
         }
@@ -38,8 +40,8 @@ public static class SchemaEvolution
 
     static bool IsPropertySetChange(JsonSchema stored, JsonSchema incoming, bool subset)
     {
-        var original = JsonNode.Parse(stored.ToJson())!.AsObject();
-        var candidate = JsonNode.Parse(incoming.ToJson())!.AsObject();
+        var original = ToObject(stored);
+        var candidate = ToObject(incoming);
         var additions = PruneAdditions(original, candidate, subset);
         if (additions is null or <= 0)
         {
@@ -51,13 +53,18 @@ public static class SchemaEvolution
         // For a subset the candidate is the stored superset: compare shared definitions in
         // the stored-to-client direction too, so omitted protection metadata is not tolerated.
         var (baseline, proposed) = subset ? (pruned, stored) : (stored, pruned);
-        return baseline.DifferingKeywords(baseline.MorePrecise(proposed)) is null;
+        return IsCompatible(baseline, proposed);
     }
+
+    static JsonObject ToObject(JsonSchema schema) => JsonNode.Parse(schema.ToJson())!.AsObject();
+
+    static bool IsCompatible(JsonSchema baseline, JsonSchema proposed) =>
+        baseline.DifferingKeywords(baseline.MorePrecise(proposed)) is null;
 
     static int? PruneAdditions(JsonObject stored, JsonObject incoming, bool allowDefault)
     {
         var additions = PruneProperties(stored, incoming, allowDefault);
-        foreach (var keyword in new[] { "$defs", "definitions" })
+        foreach (var keyword in _definitionKeywords)
         {
             if (incoming[keyword] is not JsonObject definitions)
             {
@@ -113,12 +120,16 @@ public static class SchemaEvolution
             incoming.Remove("properties");
         }
 
+        RemoveEmptyRequired(stored, incoming);
+        return additions;
+    }
+
+    static void RemoveEmptyRequired(JsonObject stored, JsonObject incoming)
+    {
         if (stored["required"] is null && incoming["required"] is JsonArray { Count: 0 })
         {
             incoming.Remove("required");
         }
-
-        return additions;
     }
 
     static int? PruneProperty(JsonObject? stored, JsonObject incoming, KeyValuePair<string, JsonNode?> property, bool allowDefault)
@@ -164,9 +175,11 @@ public static class SchemaEvolution
             return true;
         }
 
-        return definition["type"] is JsonArray types && types.Any(_ => _?.GetValue<string>() == "null");
+        return definition["type"] is JsonArray types && ContainsName(types, "null");
     }
 
     static bool IsRequired(JsonObject schema, string property) =>
-        schema["required"] is JsonArray required && required.Any(_ => _?.GetValue<string>() == property);
+        schema["required"] is JsonArray required && ContainsName(required, property);
+
+    static bool ContainsName(JsonArray array, string name) => array.Any(_ => _?.GetValue<string>() == name);
 }
