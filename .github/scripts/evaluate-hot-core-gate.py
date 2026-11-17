@@ -236,7 +236,8 @@ def gate(arguments):
     if state["dispatch"] or state["detect"] != "success":
         return integration_ok, integration_message
     latest = latest_build(state["repo"], state["head_sha"], arguments.build_runs_json)
-    if integration_ok:
+    # Fork builds can sit awaiting approval and are never refreshed, so they report at once with the manual hint.
+    if integration_ok and not state["fork"]:
         latest = await_specs(latest, state, arguments.build_runs_json)
     specs_ok, specs_message = specs_verdict(latest, state)
     return integration_ok and specs_ok, integration_message + "\n" + specs_message

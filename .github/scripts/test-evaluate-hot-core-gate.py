@@ -498,6 +498,12 @@ class SpecsDecisions(unittest.TestCase):
         self.assertIn("fork PRs do not refresh automatically", message)
         self.assertTrue(self.evaluate([BUILD_GREEN], FORK="true")[0])
 
+    def test_forks_never_wait_for_pending_specs(self):
+        with patch.object(gate, "await_specs", side_effect=AssertionError("forks must not wait")):
+            ok, message = self.evaluate([dict(BUILD_GREEN, jobs=[])], FORK="true")
+        self.assertFalse(ok)
+        self.assertIn("fork PRs do not refresh automatically", message)
+
     def test_dispatch_and_failed_detection_never_query_build_runs(self):
         for overrides in ({"DISPATCH": "true", "BUILD": "success", "MATRIX": "success"}, {"DETECT": "failure"}):
             with self.subTest(overrides=overrides), patch.dict(os.environ, dict(ENV, **overrides), clear=True), \
