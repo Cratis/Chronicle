@@ -290,14 +290,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
             var handler = CreateHandler(id, typeof(object), definition.EventSequenceId, definition.EventTypes);
 #pragma warning restore CA2000
-            var registration = new ReactorRegistration(
-                handler,
-                definition.IsReplayable,
-                [],
-                [],
-                EventSourceType.Unspecified,
-                EventStreamType.All,
-                handle);
+            var registration = new ReactorRegistration(handler, definition.IsReplayable)
+            {
+                Tags = [],
+                FilterTags = [],
+                EventSourceType = EventSourceType.Unspecified,
+                EventStreamType = EventStreamType.All,
+                Handle = handle
+            };
             AddRegistration(registration);
             return Task.FromResult<IReactorHandler>(handler);
         }
@@ -509,15 +509,15 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             eventTypes);
 #pragma warning restore CA2000
         var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);
-        return new(
-            handler,
-            !reactorType.IsDefined(typeof(OnceOnlyAttribute), inherit: false),
-            [.. reactorType.GetTags()],
-            [.. reactorType.GetFilterTags()],
-            eventSourceFilter.EventSourceType,
-            eventSourceFilter.EventStreamType,
-            null,
-            reactorType.IsDefined(typeof(StartAtTailAttribute), inherit: false));
+        return new(handler, !reactorType.IsDefined(typeof(OnceOnlyAttribute), inherit: false))
+        {
+            Tags = [.. reactorType.GetTags()],
+            FilterTags = [.. reactorType.GetFilterTags()],
+            EventSourceType = eventSourceFilter.EventSourceType,
+            EventStreamType = eventSourceFilter.EventStreamType,
+            Handle = null,
+            StartAtTail = reactorType.IsDefined(typeof(StartAtTailAttribute), inherit: false)
+        };
     }
 
     ReactorRegistration CreateRegistrationFor(IReactorDefinition definition)
@@ -525,14 +525,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
         var handler = CreateHandler(definition.Id, typeof(object), definition.EventSequenceId, [.. definition.EventTypes]);
 #pragma warning restore CA2000
-        return new(
-            handler,
-            definition.IsReplayable,
-            [],
-            [],
-            EventSourceType.Unspecified,
-            EventStreamType.All,
-            CreateDispatcherFor(definition));
+        return new(handler, definition.IsReplayable)
+        {
+            Tags = [],
+            FilterTags = [],
+            EventSourceType = EventSourceType.Unspecified,
+            EventStreamType = EventStreamType.All,
+            Handle = CreateDispatcherFor(definition)
+        };
     }
 
     /// <summary>
@@ -869,16 +869,38 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         _dispatcher.Dispatch(registration.Handler, registration.Handle, events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken);
 #endif
 
-    sealed record ReactorRegistration(
-        ReactorHandler Handler,
-        bool IsReplayable,
-        string[] Tags,
-        string[] FilterTags,
-        EventSourceType EventSourceType,
-        EventStreamType EventStreamType,
-        Func<ReactorEvent, CancellationToken, Task>? Handle,
-        bool StartAtTail = false)
+    sealed record ReactorRegistration(ReactorHandler Handler, bool IsReplayable)
     {
+        /// <summary>
+        /// Gets the tags attached to the reactor.
+        /// </summary>
+        public required string[] Tags { get; init; }
+
+        /// <summary>
+        /// Gets the tags used to filter events.
+        /// </summary>
+        public required string[] FilterTags { get; init; }
+
+        /// <summary>
+        /// Gets the event source type filter.
+        /// </summary>
+        public required EventSourceType EventSourceType { get; init; }
+
+        /// <summary>
+        /// Gets the event stream type filter.
+        /// </summary>
+        public required EventStreamType EventStreamType { get; init; }
+
+        /// <summary>
+        /// Gets the callback for a runtime registration.
+        /// </summary>
+        public Func<ReactorEvent, CancellationToken, Task>? Handle { get; init; }
+
+        /// <summary>
+        /// Gets whether observation starts at the tail.
+        /// </summary>
+        public bool StartAtTail { get; init; }
+
         /// <summary>
         /// Gets or sets whether the subscription has been sent on the current connection.
         /// </summary>
