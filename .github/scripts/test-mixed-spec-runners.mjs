@@ -432,6 +432,49 @@ for (const [name, settings, expected] of [
         assert.throws(() => verifyReceipts(wrongAttempt, plan, fixture.context, evidence.producers), /context/);
     });
 }
+test('producer acquisition accepts a rerun after an upstream build left the matrix unexpanded', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    const page = fixture.endpoints['attempts/2/jobs?per_page=30'][0];
+    const job = page.jobs[0];
+    page.jobs = [
+        { ...job, name: 'build', conclusion: 'failure' },
+        { ...job, id: 999, name: 'specs-other', conclusion: 'skipped', started_at: null, completed_at: null }
+    ];
+    page.total_count = page.jobs.length;
+    const options = carriedProducerOptions(fixture);
+    const evidence = await loadProducerEvidence(fixture.context, options);
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
+    assert.deepEqual(options.calls.slice(2), ['attempts/2/jobs?per_page=30']);
+});
+test('producer acquisition resolves an attempt-2 execution carried into 3 but absent from 1', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    const page = fixture.endpoints['attempts/1/jobs?per_page=30'][0];
+    page.jobs.splice(1, 1);
+    page.total_count--;
+    const evidence = await loadProducerEvidence(fixture.context, carriedProducerOptions(fixture));
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['1', '2', '1', '1']);
+    assert.equal(evidence.producers[1].artifactId, 101);
+});
+test('producer acquisition stops fetching history once every shard has a different execution', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    for (const job of fixture.endpoints['attempts/2/jobs?per_page=30'][0].jobs) {
+        job.started_at = new Date(Date.parse(job.started_at) + 1000).toISOString();
+    }
+    const options = carriedProducerOptions(fixture);
+    const evidence = await loadProducerEvidence(fixture.context, options);
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
+    assert.deepEqual(options.calls.slice(2), ['attempts/2/jobs?per_page=30']);
+});
+test('producer acquisition does not inspect older records for an already resolved shard', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    fixture.endpoints['attempts/2/jobs?per_page=30'][0].jobs[1].started_at = '2026-11-18T13:06:33Z';
+    const page = fixture.endpoints['attempts/1/jobs?per_page=30'][0];
+    page.jobs[1].run_id = 999;
+    page.jobs.push({ ...page.jobs[1], id: 999 });
+    page.total_count++;
+    const evidence = await loadProducerEvidence(fixture.context, carriedProducerOptions(fixture));
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['1', '3', '1', '1']);
+});
 test('producer acquisition fails closed for unavailable, incomplete or inconsistent attempt history', async () => {
     const reject = async (mutate, pattern = /producing attempt|producer/i) => {
         const fixture = carriedProducerFixture();
@@ -439,8 +482,7 @@ test('producer acquisition fails closed for unavailable, incomplete or inconsist
         await assert.rejects(loadProducerEvidence(fixture.context, carriedProducerOptions(fixture)), pattern);
     };
     await reject(page => { page.jobs.pop(); }, /pagination/);
-    await reject(page => { page.jobs.pop(); page.total_count--; }, /missing\/duplicate job/);
-    await reject(page => { page.jobs.push({ ...page.jobs[0], id: 999 }); page.total_count++; }, /missing\/duplicate job/);
+    await reject(page => { page.jobs.push({ ...page.jobs[0], id: 999 }); page.total_count++; }, /duplicate job/);
     for (const patch of [{ run_id: 999 }, { run_attempt: 2 }, { head_sha: 'wrong-sha' }, { name: 'caller / specs-other (1)' },
         { status: 'in_progress' }, { conclusion: 'failure' }]) {
         await reject(page => { Object.assign(page.jobs[0], patch); });

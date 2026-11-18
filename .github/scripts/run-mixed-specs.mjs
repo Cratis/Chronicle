@@ -148,22 +148,31 @@ const succeeded = job => job.status === 'completed' && job.conclusion === 'succe
 function earlierProducer(job, jobs, shard, attempt) {
     const unresolved = reason => fail(`Cannot determine producing attempt: shard ${shard}, attempt ${attempt}: ${reason}`);
     const candidates = producerCandidates(jobs, shard);
-    if (candidates.length !== 1) unresolved('missing/duplicate job');
+    if (candidates.length > 1) unresolved('duplicate job');
+    if (!candidates.length) return null;
     const earlier = candidates[0];
     if (!sameJobContext(earlier, job, attempt)) unresolved('invalid job context');
-    if (!sameExecution(earlier, job)) return job;
+    if (!sameExecution(earlier, job)) return null;
     if (!succeeded(earlier)) unresolved('inconsistent execution');
     return earlier;
 }
 async function producingJobs(jobPages, context, api) {
     const jobs = apiRecords(jobPages, 'jobs');
     let producers = ordinaryShardIds().map(shard => producerJob(jobs, shard, context));
+    const pending = new Set(ordinaryShardIds());
     // Failed-jobs reruns copy successful jobs with NEW ids/run_attempt but ORIGINAL execution
-    // timestamps. Only the earliest identical execution owns the retained receipt/artifact.
-    for (let attempt = Number(context.runAttempt) - 1; attempt >= 1; attempt--) {
+    // timestamps. Stop each shard's walk at a missing job or a different execution.
+    for (let attempt = Number(context.runAttempt) - 1; attempt >= 1 && pending.size; attempt--) {
         const pages = await producerApiPages(`attempts/${attempt}/jobs?per_page=${PRODUCER_PAGE_SIZE}`, context, api);
         const earlier = apiRecords(pages, 'jobs');
-        producers = producers.map((job, index) => earlierProducer(job, earlier, index + 1, attempt));
+        producers = producers.map((job, index) => {
+            const shard = index + 1;
+            if (!pending.has(shard)) return job;
+            const carried = earlierProducer(job, earlier, shard, attempt);
+            if (carried) return carried;
+            pending.delete(shard);
+            return job;
+        });
     }
     return [{ jobs: producers, total_count: producers.length }];
 }
