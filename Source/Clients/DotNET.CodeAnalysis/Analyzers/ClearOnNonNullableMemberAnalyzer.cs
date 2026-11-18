@@ -81,7 +81,8 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
 
-        if (context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method)
+        if (!MayDeclareClear(invocation.Expression) ||
+            context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method)
         {
             return;
         }
@@ -165,11 +166,34 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
             ? setMember.Name.Identifier.Text
             : string.Empty;
 
+    static bool MayDeclareClear(ExpressionSyntax expression) => expression switch
+    {
+        MemberAccessExpressionSyntax member => MayDeclareClear(member.Name),
+        MemberBindingExpressionSyntax member => MayDeclareClear(member.Name),
+        SimpleNameSyntax name => name.Identifier.ValueText == ClearMethodName || name.Identifier.ValueText == ToValueMethodName,
+        ParenthesizedExpressionSyntax parenthesized => MayDeclareClear(parenthesized.Expression),
+        _ => true
+    };
+
+    static bool MayDeclareClearAttribute(NameSyntax name) => name switch
+    {
+        QualifiedNameSyntax qualified => MayDeclareClearAttribute(qualified.Right),
+        AliasQualifiedNameSyntax qualified => MayDeclareClearAttribute(qualified.Name),
+        GenericNameSyntax generic => IsClearAttributeName(generic.Identifier.ValueText),
+
+        // Non-generic spellings can alias a closed generic attribute. Keep semantic binding for those.
+        _ => true
+    };
+
+    static bool IsClearAttributeName(string name) =>
+        name == "ClearWith" || name == "ClearWithAttribute" || name == "SetValue" || name == "SetValueAttribute";
+
     static void AnalyzeAttribute(SyntaxNodeAnalysisContext context)
     {
         var attribute = (AttributeSyntax)context.Node;
 
-        if (context.SemanticModel.GetSymbolInfo(attribute).Symbol is not IMethodSymbol constructor)
+        if (!MayDeclareClearAttribute(attribute.Name) ||
+            context.SemanticModel.GetSymbolInfo(attribute).Symbol is not IMethodSymbol constructor)
         {
             return;
         }
@@ -182,11 +206,13 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
             _ => false
         };
 
-        if (!declaresClear)
-        {
-            return;
-        }
+        if (!declaresClear) return;
 
+        ReportAttribute(context, attribute);
+    }
+
+    static void ReportAttribute(SyntaxNodeAnalysisContext context, AttributeSyntax attribute)
+    {
         var memberType = GetMemberType(context, attribute);
         if (memberType is null || CanHoldNull(memberType))
         {
