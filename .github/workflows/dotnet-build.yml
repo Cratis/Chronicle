@@ -342,11 +342,16 @@ jobs:
       - name: Build with analyzers
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
 
-  # Independent verification runs beside the specs, never in front of them. The specs
-  # aggregate requires this job, preserving the integration and coverage gates as well.
+  # Independent verification runs beside the specs, never in front of them. PRs reuse
+  # the publish-equivalent pack's multi-target outputs; the server still comes from dotnet-build.
+  # The explicit result guard permits the PR-only pack job to be skipped on other events.
   package-verification:
-    needs: [already-ran, dotnet-build]
-    if: needs.already-ran.outputs.skip != 'true'
+    needs: [already-ran, dotnet-build, package-pack-check]
+    if: >-
+      !cancelled() && needs.already-ran.outputs.skip != 'true' &&
+      needs.dotnet-build.result == 'success' &&
+      (needs.package-pack-check.result == 'success' ||
+       (github.event_name != 'pull_request' && needs.package-pack-check.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -364,9 +369,10 @@ jobs:
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
-      # Reuse the build's evaluated inputs when available; package builds still restore
-      # normally on a miss. Only dotnet-build saves this cache, avoiding competing writers.
+      # Non-PR runs still build the multi-target clients here. PRs get their evaluated
+      # inputs from the pack artifact instead of an optional, potentially stale cache.
       - name: Restore obj cache
+        if: github.event_name != 'pull_request'
         uses: actions/cache/restore@v4
         with:
           path: ./**/obj
@@ -395,9 +401,31 @@ jobs:
       - name: Extract Release build output
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
-      # The analyzers job analyzes net11.0 with warnings as errors. Build every shipped
-      # framework here, keeping generators on both and analyzers on net10.0 as before.
+      # Extract after the server artifact so its single-framework client copies cannot
+      # overwrite the exact bin/obj inputs that passed stable Pack, including both TFMs.
+      - name: Download client package build output
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: client-package-build-output
+
+      - name: Extract client package build output
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          zstd -d --long=30 -c client-package-build-output.tar.zst | tar -xf -
+
+      # obj references the producer's package cache, which may contain packages absent
+      # from this runner's restored cache. Reevaluate local paths and fetch dependencies
+      # without compiling; use the same stable version as the artifact producer.
+      - name: Restore client package dependencies
+        if: github.event_name == 'pull_request'
+        run: dotnet restore ./Source/Clients/Packages.slnf -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0
+
+      # PRs already built and analyzed both frameworks in package-pack-check. Other
+      # events retain the existing build and its net10.0 analysis; analyzers owns net11.0.
       - name: Build client packages for every shipped framework
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           solution_dir=$(mktemp -d "$RUNNER_TEMP/client-packages.XXXXXX")
@@ -436,7 +464,7 @@ jobs:
         run: |
           set -euo pipefail
           feed="$RUNNER_TEMP/packed"
-          dotnet pack ./Source/Clients/Packages.slnf --no-build --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
+          dotnet pack ./Source/Clients/Packages.slnf --no-build --no-restore --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
           bash .github/scripts/verify-packed-consumer-restore.sh "$PACKED_VERSION" "$feed"
 
       # Ordinary PRs check the Dockerfile against the downloaded Release server binaries.
@@ -488,6 +516,27 @@ jobs:
       - name: Verify NuGet packages can be created
         if: github.event_name == 'pull_request'
         run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}
+
+      # Preserve both bin and evaluated pack inputs (assets, generated props and refs).
+      # Server outputs stay in the independent Release artifact; only clients and Contracts
+      # are overlaid by verification, which never recompiles them on pull requests.
+      - name: Archive client package build output
+        run: |
+          set -euo pipefail
+          for framework in net10.0 net11.0; do
+            test -f "Source/Clients/DotNET/bin/Release/$framework/Cratis.Chronicle.dll"
+            test -f "Source/Kernel/Contracts/bin/Release/$framework/Cratis.Chronicle.Contracts.dll"
+          done
+          find Source/Clients Source/Kernel/Contracts -type d \( -name bin -o -name obj \) -prune -print0 | tar --null -cf - -T - | zstd -T0 --long=30 -o client-package-build-output.tar.zst
+
+      - name: Upload client package build output
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: client-package-build-output
+          path: client-package-build-output.tar.zst
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
 
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
