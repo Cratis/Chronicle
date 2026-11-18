@@ -35,6 +35,8 @@ searches with secret/certificate/key-like prefixes also remain blocked. For ripg
 symlinks, not filename-only mode. Literal directory checks retain the process-cwd fallback when the
 payload omits cwd; glob probing does not. Filesystem check/use races remain: this is not a sandbox.
 
+The Bash write guard checks manifest and environment-file names against both logical and resolved physical basenames; run `cratis ai update` to receive this change.
+
 A Pi session runs guards from its starting checkout. Refresh the corpus there with `cratis ai update`,
 or start a new session in the checkout you change. Selecting a newer installed guard corpus per call
 is tracked in [Cratis/AI#1114](https://github.com/Cratis/AI/issues/1114).
@@ -66,6 +68,8 @@ copy runs. A write-target word with expansion syntax (`$`, backtick, `~`, parent
 suffix that follows a slash in it (`$PWD/.cratis/x` and `~+/.cratis/x` are treated as `.cratis/x` in the working
 directory), without parsing the expansion, and refused if a suffix is protected, which includes a read of a protected path through a variable. This is a
 best-effort lexical check, not enforcement: a variable holding the whole path still passes.
+
+Git reflog selectors with unprotected prefixes (`stash@{0}`, `HEAD@{1}`, `branch@{upstream}`) are revisions, not paths.
 
 The shell-write reference scan keeps conservative leading-dot intersections: a tool named `Bash`,
 `SHELL`, and the hook process's options do not establish the execution shell's options. Globbed writes
