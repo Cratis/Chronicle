@@ -141,16 +141,18 @@ async function producerApiPages(endpoint, context, { env, execute, wait, now, de
         await wait(attempt * 5000);
     }
 }
+const sameJobContext = (earlier, job, attempt) => [earlier.name === job.name, earlier.run_id === job.run_id,
+    earlier.run_attempt === attempt, earlier.head_sha === job.head_sha].every(Boolean);
+const sameExecution = (earlier, job) => earlier.started_at === job.started_at && earlier.completed_at === job.completed_at;
+const succeeded = job => job.status === 'completed' && job.conclusion === 'success';
 function earlierProducer(job, jobs, shard, attempt) {
+    const unresolved = reason => fail(`Cannot determine producing attempt: shard ${shard}, attempt ${attempt}: ${reason}`);
     const candidates = producerCandidates(jobs, shard);
-    if (candidates.length !== 1) fail(`Cannot determine producing attempt: shard ${shard}, attempt ${attempt}: missing/duplicate job`);
+    if (candidates.length !== 1) unresolved('missing/duplicate job');
     const earlier = candidates[0];
-    const valid = [earlier.name === job.name, earlier.run_id === job.run_id, earlier.run_attempt === attempt,
-        earlier.head_sha === job.head_sha].every(Boolean);
-    if (!valid) fail(`Cannot determine producing attempt: shard ${shard}, attempt ${attempt}: invalid job context`);
-    const sameExecution = earlier.started_at === job.started_at && earlier.completed_at === job.completed_at;
-    if (!sameExecution) return job;
-    if (earlier.status !== 'completed' || earlier.conclusion !== 'success') fail(`Cannot determine producing attempt: shard ${shard}, attempt ${attempt}: inconsistent execution`);
+    if (!sameJobContext(earlier, job, attempt)) unresolved('invalid job context');
+    if (!sameExecution(earlier, job)) return job;
+    if (!succeeded(earlier)) unresolved('inconsistent execution');
     return earlier;
 }
 async function producingJobs(jobPages, context, api) {
