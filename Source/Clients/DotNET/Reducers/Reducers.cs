@@ -666,7 +666,10 @@ public partial class Reducers : IReducers
                     scheduler.Stop();
                     messages.Dispose();
 
-                    HandleStreamError(handler, scheduler, ex, ScheduleReconnect, cancellationToken);
+                    if (!TryHandleCancelledStream(handler, scheduler, ex, cancellationToken))
+                    {
+                        HandleStreamError(handler, scheduler, ex, ScheduleReconnect);
+                    }
                 },
                 () =>
                 {
@@ -745,20 +748,28 @@ public partial class Reducers : IReducers
         });
     }
 
+    bool TryHandleCancelledStream(
+        IReducerHandler handler,
+        PartitionedDeliveryScheduler scheduler,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        _logger.ReducerStreamCancelled(handler.Id, exception);
+        _ = scheduler.DrainAndDispose();
+        return true;
+    }
+
     void HandleStreamError(
         IReducerHandler handler,
         PartitionedDeliveryScheduler scheduler,
         Exception exception,
-        Action scheduleReconnect,
-        CancellationToken cancellationToken)
+        Action scheduleReconnect)
     {
-        if (cancellationToken.IsCancellationRequested)
-        {
-            _logger.ReducerStreamCancelled(handler.Id, exception);
-            _ = scheduler.DrainAndDispose();
-            return;
-        }
-
         // Any other error reconnects, whatever its kind: only the reducer's own cancellation stops it.
         // A lost kernel connection stays a Warning however long it lasts: a kernel that stays away is
         // reported at Error by the connection watchdog on every failed reconnect attempt.

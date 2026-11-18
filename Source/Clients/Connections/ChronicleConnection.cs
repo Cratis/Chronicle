@@ -197,10 +197,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         TimeProvider? timeProvider,
         X509Certificate2Collection? certificateAuthorities)
     {
-        if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
-        {
-            throw new ClientCredentialsRequireTls();
-        }
+        EnsureClientCredentialsUseTls(connectionString);
 
         _timeProvider = timeProvider ?? TimeProvider.System;
         _skipTlsValidation = skipTlsValidation;
@@ -420,6 +417,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         Capabilities = response.Capabilities.ToArray();
         CapabilitiesAreKnown = true;
         _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
+    }
+
+    static void EnsureClientCredentialsUseTls(ChronicleConnectionString connectionString)
+    {
+        if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
+        {
+            throw new ClientCredentialsRequireTls();
+        }
     }
 
     async Task Connect(bool respectFailureBackoff)

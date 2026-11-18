@@ -60,6 +60,12 @@ one does.
 - **[contract] Re-read preconditions immediately before each mutation and stop when drift
   invalidates the authorized scope, safety assumptions, or recovery plan.** Benign drift
   within an already authorized bounded pass does not require another confirmation.
+- **[contract] A deploy gate asks the system of record; it does not predict it.** A gate
+  for Chronicle event-type registration calls Chronicle's read-only registration check, or
+  carries a contract spec against Chronicle's comparison for every change class (enum
+  extension, enum rename, optional or required property added, property removed, retype).
+  A reimplemented copy drifts: one demanded a registry repair for an enum-only change
+  Chronicle accepts in place ([application-profile.md](./application-profile.md) rule 7).
 - **[convention] When the targets were not already established in the conversation, show
   the dry-run list and act on it once the user has answered.** A user who has reviewed
   and authorized those targets is not asked to approve the same pass again. The list is a

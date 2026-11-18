@@ -8,6 +8,8 @@ Which skill owns each task next to legacy extraction.
   `cratis-screenplay-automations-and-translations`; coverage: `cratis-screenplay-scenario-coverage`;
   review of the candidate: `cratis-screenplay-model-review`; rendering:
   `cratis-screenplay-render-and-gap-fill`.
+- A working app from a running system, HAR, API description or executable, with no source required:
+  `cratis-screenplay-reverse-engineering`.
 - Syntax and verdicts: `cratis-screenplay-toolchain`; phases, identity and approvals:
   `cratis-screenplay-modeling-lifecycle`; running Chronicle: `cratis-chronicle-cli-operations`,
   `cratis-chronicle-mcp-inspection`.

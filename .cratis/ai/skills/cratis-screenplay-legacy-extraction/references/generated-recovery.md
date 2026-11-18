@@ -180,8 +180,8 @@ resolved adapter version, diagnostic, retained/withheld form and open question:
 with SP0073 and dependent values/responses/mappings with SP0052; pins against them
 withhold scenarios with SP0039. Below v7 responses/return expectations are withheld.
 A cap describes less behavior, not an equivalent implementation. A file/inline command
-handler binds only beside unconditional `produces` with a resolved body (Screenplay
-4.250.0); otherwise it refuses executable binding with PLAY0800. Record that verdict
+handler binds only beside unconditional `produces` (Screenplay 4.250.0) or a `may produce`
+block (ESM v35) with a resolved body; otherwise it refuses executable binding with PLAY0800. Record that verdict
 separately and gap-fill the slice in code.
 Requires Screenplay 4.210.0 (`screenplay --version`); older binders use PLAY0268 for these handlers.
 Never remove protection, required payloads or loss rows to obtain a green result.

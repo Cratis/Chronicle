@@ -44,6 +44,8 @@ module Work
           for resource
           month = month
           hours = hours
+      screen Record
+        action Record for screen
 ```
 
 ## Fix
@@ -76,6 +78,8 @@ module Work
           for resource
           month = month
           hours = hours
+      screen Record
+        action Record for screen
 ```
 
 When instances already exist under their own identity and another event only enriches them, use a [join](joins.md) instead: it updates the existing instances and never creates one. There is no automatic repair from a reducer to a projection.

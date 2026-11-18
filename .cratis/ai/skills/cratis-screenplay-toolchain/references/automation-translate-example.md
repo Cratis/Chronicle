@@ -20,6 +20,8 @@ module Membership
         memberId MemberId identifier
         produces event MemberSubscribed
           subscribedAt DateTime = $context.occurred
+      screen Subscribe
+        action Subscribe for screen
       specification SubscribingAMember
         given clock "2026-10-05T09:00:00Z"
         when Subscribe

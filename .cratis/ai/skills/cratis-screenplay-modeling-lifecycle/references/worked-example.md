@@ -41,6 +41,8 @@ module Berths
       constraint OneBerthPerBoat
         unique boat on BerthAllocated
         message "That boat already holds a berth"
+      screen AllocateBerth
+        action AllocateBerth for screen
 
       specification AllocatingABerth
         given caller

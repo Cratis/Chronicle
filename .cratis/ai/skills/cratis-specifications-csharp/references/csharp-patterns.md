@@ -112,9 +112,21 @@ From the `Cratis.Specifications.XUnit` package, namespace `Cratis.Specifications
 | `.ShouldBeGreaterThanOrEqual(n)` / `.ShouldBeLessThanOrEqual(n)` | Inclusive comparison |
 | `.ShouldContainSingleItem()` / `.ShouldEachConformTo(predicate)` | Collection cardinality / each-item predicate |
 | Collection `.ShouldEqual(IEnumerable<T>)` | Ordered sequence equality |
-| Collection `.ShouldContain(Predicate<T>)` | At least one matching item |
+| Collection `.ShouldContain(Func<T, bool>)` | At least one matching item |
 | `.ShouldBeAssignableFrom<T>()` | Actual object is assignable to T |
 | String `.ShouldContain(substring, StringComparison)` | Explicit string comparison |
+
+The collection filter is `Func<T, bool>`. A lambda or a `Func<T, bool>` is
+accepted directly; a typed `Predicate<T>` does not convert, so adapt it:
+
+```csharp
+Func<<ItemType>, bool> isExpected = item => item.<Property> == <expected>;
+_items.ShouldContain(isExpected);
+_items.ShouldContain(item => item.<Property> == <expected>);
+
+Predicate<<ItemType>> matches = item => item.<Property> == <expected>;
+_items.ShouldContain(item => matches(item));
+```
 
 Assert on values and types. Do not assert on presentation message strings by
 default; assert exact text only when that wording is the specified behavior,

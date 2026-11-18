@@ -35,7 +35,7 @@ UI model/runtime in Stage output; read `cratis-stage-rendering-and-sandbox`
 
 So no product source maps a `.play` screen to an Arc React page. A hand-written
 page is a **gap-fill** (`cratis-screenplay-render-and-gap-fill`) with the `.play`
-screen as its contract. Screens are deferred by the backend profile: that deferral
+screen as its contract. Screens are deferred by default (an ESM v42 export admits only their data, actions, navigation and layout): that deferral
 is information `PLAY0269` and does not block binding, but the authoring
 diagnostics still apply (syntax, unresolved or ambiguous references), and
 warnings fail a warnings-as-errors gate. A clean compile proves the model is

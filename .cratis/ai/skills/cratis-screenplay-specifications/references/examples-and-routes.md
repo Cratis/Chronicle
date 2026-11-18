@@ -38,6 +38,8 @@ module Projects
         name String
         produces event ProjectRegistered
           name String = name
+      screen Register
+        action RegisterProject for screen
       specification RegisteringTheDefault
         when DefaultProject
           projectId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"

@@ -122,7 +122,14 @@ module Berths
 State what an action acts on: `action CancelBooking for item` acts on the selected row or the record the screen shows,
 `action BookBerth for screen` does not depend on a selection. An omitted subject is inferred from the declared data
 and identifier types and reported as `PLAY0818` (and `PLAY0819` when the row binding differs from legacy name matching),
-so write the clause. Source: Screenplay v5.1.0 `Documentation/screenplay/action-subjects.md`.
+so write the clause. With a header record beside one table of rows, `for item` acts on that table's collection
+(Requires Screenplay 6.18.0 or later; see the UI composition skill's
+[table narrowing](../../cratis-screenplay-ui-composition/references/action-subjects.md#table-narrowing)).
+Source: Screenplay `Documentation/screenplay/action-subjects.md`.
+
+Property declaration order is not preserved by default; a C# host can opt in to ESM 37.1 metadata,
+but it does not let a model control a generated constructor (see
+[read-model property order](../../cratis-screenplay-toolchain/references/read-model-property-order.md)).
 
 ## What a screen pattern is not
 
@@ -130,6 +137,8 @@ so write the clause. Source: Screenplay v5.1.0 `Documentation/screenplay/action-
   One screen per step is not a rule; a screen hosts every action the person can reasonably take
   there, and an action may be reachable from several screens.
 - Not a mockup: a drawn page is never evidence for the model, and a Level 1 screen is a data and
-  action contract that a renderer or a person fills in (`cratis-screenplay-ui-composition`).
+  action contract that a renderer or a person fills in (`cratis-screenplay-ui-composition`). A
+  sketch, mockup or screenshot may still travel with the screen as `sketch`, `mockup` or `image`
+  lines, which are authoring metadata ([screen visuals](../../cratis-screenplay-ui-composition/references/screen-visuals.md)).
 - Not mandatory to render: a screen that stays design-only is still a contract for lineage and
   review.

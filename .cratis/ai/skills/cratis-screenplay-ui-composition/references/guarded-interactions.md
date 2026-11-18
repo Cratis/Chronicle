@@ -53,7 +53,8 @@ item, and clearing selection runs nothing; change uses the item that changed (se
 single item or selected row, with guarded actions' sibling precedence. Check named
 behaviors at each `uses` site. Component `context` or `selectedItem` bindings do
 not supply the subject in this version; unresolved/equally near subjects report
-PLAY0346.
+PLAY0346, which names the candidate data (see
+[table narrowing](action-subjects.md#table-narrowing)).
 
 Submit, event, interval and application triggers have no alternatives.
 The one-line `on row-click navigate to … by …` remains unchanged. Opaque `where`
@@ -72,3 +73,11 @@ report unsupported, never flatten them into plain actions.
 
 Authority: Screenplay `interactions.md`, `diagnostics.md`,
 `mcp/authoring-tools.md`.
+
+## Availability on screens, forms and actions
+
+A guard decides which action a click runs. `available` decides whether a screen, form or action
+exists for the caller's tenant, user or system at all, before `authorize`, and is refused as
+`NotAvailable` so a client can hide the entry. A persona `audience` line is documentation for the
+board and Studio and changes nothing at runtime. An action or form that `invokes` a command whose
+audiences can be off while the invoker's are on warns (PLAY1139). See `../../cratis-screenplay-availability/SKILL.md`.

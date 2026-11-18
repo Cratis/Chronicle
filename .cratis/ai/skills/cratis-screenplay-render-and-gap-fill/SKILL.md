@@ -36,18 +36,20 @@ Tool versions are covered in `cratis-screenplay-toolchain` `SKILL.md`; read it b
 ## Language modes that block target delivery
 
 Read [language admission](../cratis-screenplay-toolchain/references/language-admission.md)
-for version selection, and [current Stage boundaries](../cratis-stage-rendering-and-sandbox/references/current-boundaries.md)
+for version selection ([unknown-preserving reads](../cratis-screenplay-toolchain/references/unknown-preserving-reader.md)
+are not render admission; read-model [property order](../cratis-screenplay-toolchain/references/read-model-property-order.md)
+is opt-in 37.1 metadata, not a constructor-order promise), and [current Stage boundaries](../cratis-stage-rendering-and-sandbox/references/current-boundaries.md)
 for realization. Bounded atomic batches, source-event Translate captures/publication and resolved
 C# validation bodies now render. Described handlers still refuse even in Stub
 mode; query-performer gaps are a separate contract, not completed behavior. Protected reads still need an admitted shape. Semantic Host/executor
 support is not generated-app protection.
 Preserve contracts; reference success is not target realization.
 
-A file/inline command handler binds beside unconditional `produces` with a resolved
-body (v23 result contract, Screenplay 4.250.0); without them it refuses PLAY0800 with a
-required typed `arguments.subject`. 4.210.0 to 4.249.x refuse every attached handler
+A file/inline command handler binds beside unconditional `produces` or `may produce` with a resolved
+body (v23: Screenplay 4.250.0; `may produce`: ESM v35); else it refuses PLAY0800 with a
+required typed `arguments.subject`. 4.210.0-4.249.x refuse every attached handler
 with PLAY0800; older binders use PLAY0268. Read [renderability gate](references/renderability-gate.md)
-when classifying a handler or other binding refusal; never parse message text.
+when classifying a handler or binding refusal; never parse message text.
 
 Inline bodies (`csharp`, `typescript`, `react`, `html`, `sql`, `java`) are opaque and reach the target
 unchanged; each target decides which it realizes. The Cratis target refuses `java` bodies: gap-fill
@@ -142,13 +144,21 @@ model still compiles and binds) and its V5 states the scope.
    with no business decisions, rebuild, retest. Never edit a managed file; never add behaviour the
    model does not state. Detail: `references/delivery-protocol.md` section 4.
 7. **Report authored-UI parity.** Require explicit plan/runtime evidence for each authored screen,
-   form, layout, template, toolbar, component, outlet, route, package/icon use, theme and persona view,
+   form, layout, template, slot, toolbar, hook, component, outlet, route, package/icon use, theme and persona view,
    or a blocking diagnostic or "not rendered" with the responsible tool version; silent fallback to
    default composition is a failure (Stage 4.24 rendered the default composition only).
+   The design is the same: Stage reads the resolved theme (the profile's theme, else the design system's `default theme`, in the mode
+   its `color scheme` selects) once Cratis/Stage adopts it; until then Stage keeps reading the profile's `appearance` `accent`, `corners` and
+   `font`, so a model that moved them into a theme renders with the default look. Report that as a UI omission naming the Stage version,
+   not as a model defect, and do not put the values back in `appearance` to make it render.
 8. **Drift:** `cratis render ... --check` (exit 6 pending); also compare the manifest's `semanticRevision`
    with a fresh render under the same inputs. For hand-written scope, `cratis screenplay conform` gives
    structural code-vs-model evidence (`references/drift-and-fallback-record.md`). For changes since verification,
    follow that reference's "Hand-written code changed since it was last verified" procedure.
+   A sink change does not move `semanticRevision`: sinks are realization metadata outside the ESM,
+   so a renderer or drift check must hash `SemanticCompilation.Sinks`, `ReadModelSinks` and
+   `GraphSinks` into its render input, or a changed `sink` line never triggers a re-render.
+   Map each sink name to deployment storage; never emit a database name from the model.
 9. **Hand off** the packet: verdict lines, spec mapping, edit requests for the modeler, fallback record
    entries, UI omissions, learning candidates (at most 3).
 
@@ -208,6 +218,7 @@ whole re-render. What to do:
 - Screens reported as `PLAY0269` are information that the backend profile defers them. They are not
   proof of a rendered screen: check the running app (`cratis-screenplay-toolchain` `references/fast-path.md`)
   and list any authored screen that is missing as not rendered.
+- Scope a re-render with `screenplay diff --format json` (`slices`, `modelWide`); other stacks read ESM v42 or `--format ui`: [exports](references/renderability-gate.md#cli-exports-and-diffs).
 
 ## Gate
 
@@ -225,7 +236,7 @@ Before reporting done:
 - A passing test does not claim runtime guarantees (namespace, subject, constraint scope, guarded
   reads, migrations, replay) or omitted UI were delivered.
 - Re-render: drift line present. `Customizations/` changes name the seam and the model element served.
-- Screen delivery: every authored screen/template/form/toolbar/component/outlet/route/package-icon use is either present in generated/runtime evidence or listed as not rendered/unsupported with the responsible tool version.
+- Screen delivery: every authored screen/template/slot/form/toolbar/hook/component/outlet/route/package-icon use is either present in generated/runtime evidence or listed as not rendered/unsupported with the responsible tool version.
 
 ## Route near misses
 

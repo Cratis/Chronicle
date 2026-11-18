@@ -79,6 +79,11 @@ public record <ReadModelName>(
   indexing in the sink, including SQL. `[CompositeIndex]` on the class declares ordered multi-property indexes and
   `[Index(IsDescending = true)]` declares descending ones. Read
   [indexing](references/indexing.md) for valid paths, flags and store-specific limits.
+- `[Sink("name")]` (`Cratis.Chronicle.Sinks`) on the read-model type stores it in a named sink the
+  Kernel configures, such as a reporting database in another engine; without it the read model uses
+  `ChronicleOptions.DefaultSinkName`, then the Kernel default. Never combine it with `[Passive]`
+  (`CHR0069`), and expect a replay when the sink changes. Read [sinks](references/sinks.md) before
+  choosing one.
 
 ### Shape the model for its consumer
 

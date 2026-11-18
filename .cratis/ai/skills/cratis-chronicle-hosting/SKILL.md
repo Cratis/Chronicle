@@ -53,6 +53,13 @@ Read [storage resolution](references/storage-resolution.md) when choosing
 per-namespace destinations, schema/runtime identities, Azure authentication,
 SQL schemas, or disabling automatic creation.
 
+Read models and graphs can live apart from the events. The `sinks` section names
+sink configurations (`type` `MongoDB`, `SQL` or `Neo4j`, each with its own
+connection); `sinks.readModels` and `sinks.graphs` replace the defaults (the
+`storage` connection and the `neo4j` server), and clients choose a named sink with
+`[Sink("name")]`. Changing a sink replays the affected read models. Read
+[named sinks](references/sinks.md) before adding or changing the section.
+
 ## Supply certificates before starting production
 
 Default TLS needs a PFX certificate with a private key:

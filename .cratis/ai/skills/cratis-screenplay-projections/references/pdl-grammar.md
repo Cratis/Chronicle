@@ -115,6 +115,11 @@ LiteralKeyword  = "literal", " ", Literal ;   (* parsed at the Expr level *)
 | Counters | `^(increment\|decrement\|count\|clear)\s+(@?[$\w.]+)$` |
 | Arithmetic | `^(add\|subtract)\s+(@?[$\w.]+)\s+by\s+(.+)$` |
 | Assignment | `^(@?[$\w.@]+)\s*=(?!=\|>)\s*(.+)$` |
+| Set once | `^set\s+once\s+(@?[$\w.]+)\s+(?:=\|to)\s+(.+)$` |
+| Remove entry | `^remove\s+(@?[$\w.]+)$` (target ends in a dynamic key) |
+| Children ordering | `insert first`, `insert last`, `sort by <property> [ascending\|descending]` |
+
+Diagnostics `PLAY0956`-`PLAY0963` for these lines are in [dictionaries and ordering](dictionaries-and-ordering.md#diagnostics).
 
 ## Diagnostics
 

@@ -45,5 +45,9 @@ Levels of Authority in [`general.md`](./general.md).
   packets or briefs.** Never use real credentials or personal data in examples.
 - **[contract] Legacy extraction uses Git read-only:** never checkout, reset or stash
   the legacy repository; do not touch a live checkout the brief excludes.
+- **[contract] A human-only production request carries necessity evidence:** the actual
+  trigger (diff or data) and an independent check against real system behavior that the
+  action is needed, not just a correct procedure. Reviewers ask "is this action needed?".
+  Example: attach the system's own check on the same diff before asking for a demanded repair.
 - **[convention] Prefer the narrowest capability that does the job.** Reaching for the
   broadest available grant makes the next reader assume it was authorized.

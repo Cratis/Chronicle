@@ -41,7 +41,7 @@ after the process that noticed it is gone. These are not facts:
 
 Pick the mechanism that owns the progress, so progress is state of that mechanism, not events:
 
-- a **durable job** (Cratis.Orleans jobs, see **cratis-orleans-jobs**) for work with steps, retries and pacing;
+- a **durable job** (Cratis.Choreography jobs, see **cratis-orleans-jobs**) for work with steps, retries and pacing;
 - an **event-sourced state machine** when the lifecycle is itself a domain fact sequence;
 - an **Orleans reminder** to wake up later;
 - a **command operation** (**cratis-arc-command-operation**) for inline work with compensation;

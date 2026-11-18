@@ -68,6 +68,22 @@ public class a_reducer_whose_stream_completes : all_dependencies
         _firstStream.OnCompleted();
     }
 
+    protected async Task FailTheStreamAndRunTheCapturedWork(Exception error)
+    {
+        await _reducers.Register();
+        await FailTheRegisteredStreamAndRunTheCapturedWork(error);
+    }
+
+    protected async Task FailTheRegisteredStreamAndRunTheCapturedWork(Exception error)
+    {
+        _firstStreamCompleted = true;
+        _firstStream.OnError(error);
+        foreach (var work in _reconnectWork.ToArray())
+        {
+            await work();
+        }
+    }
+
     protected virtual IObservable<ReduceOperationMessage> ReRegister()
     {
         _registrationsAfterCompletion++;

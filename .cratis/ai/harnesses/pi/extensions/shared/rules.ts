@@ -9,6 +9,7 @@ import { corpusRoot } from './corpusRoot.ts';
 import { frontmatter } from './frontmatter.ts';
 import { globToRegExp, universalGlobs } from './globs.ts';
 import type { ManagedRule } from './ManagedRule.ts';
+import { selectedProfileIds } from './skillSelection.ts';
 
 function rulesRoot(cwd: string): string {
     const managedRoot = join(cwd, '.cratis', 'ai', 'rules');
@@ -26,7 +27,7 @@ function configuration(cwd: string): AiConfiguration | undefined {
 }
 
 /**
- * A profile-specific rule is kept only when the repository selects that profile. Repositories without
+ * A profile-specific rule is kept when the repository selects or composes that profile. Repositories without
  * a `.cratis/ai.json` keep every rule, matching the `@cratis/pi` package.
  */
 function matchesProfile(rule: ManagedRule, selected: AiConfiguration | undefined): boolean {
@@ -38,6 +39,23 @@ function matchesProfile(rule: ManagedRule, selected: AiConfiguration | undefined
     return true;
 }
 
+interface ScopeKind {
+    named: (scope: string, name: string) => boolean;
+    satisfied: (selected: AiConfiguration) => boolean;
+}
+
+const hasLanguage = (language: string) => (selected: AiConfiguration) => (selected.languages ?? []).includes(language);
+
+const scopeKinds: ScopeKind[] = [
+    { named: scope => scope.includes('.cs'), satisfied: hasLanguage('csharp') },
+    { named: (scope, name) => scope.includes('.ts') || name === 'rtk.md' || name.endsWith('/rtk.md'), satisfied: hasLanguage('typescript') },
+    { named: scope => scope.includes('.go') || scope.includes('go.mod') || scope.includes('go.sum'), satisfied: hasLanguage('go') },
+    { named: scope => scope.includes('.kt'), satisfied: hasLanguage('kotlin') },
+    { named: scope => scope.includes('.java'), satisfied: hasLanguage('java') },
+    { named: scope => scope.includes('.ex'), satisfied: hasLanguage('elixir') },
+    { named: scope => scope.includes('md'), satisfied: selected => (selected.profiles ?? []).includes('cratis/documentation') },
+];
+
 /**
  * The packaged `@cratis/pi` corpus holds every rule, so the languages and documentation a repository selected
  * decide which apply: a rule scoped to `.cs` files needs `csharp`, to `.ts` files needs `typescript`, and to
@@ -47,23 +65,10 @@ function matchesSelection(name: string, applyTo: string[], selected: AiConfigura
     const languages = selected?.languages ?? [];
     if (!selected || languages.length === 0) return true;
     const scope = applyTo.join(',');
-    const needsCSharp = scope.includes('.cs');
-    const needsTypeScript = scope.includes('.ts') || name === 'rtk.md' || name.endsWith('/rtk.md');
-    const needsGo = scope.includes('.go') || scope.includes('go.mod') || scope.includes('go.sum');
-    const needsKotlin = scope.includes('.kt');
-    const needsJava = scope.includes('.java');
-    const needsElixir = scope.includes('.ex');
-    const needsDocumentation = scope.includes('md');
     // A scope that also names model files (`.play`) is not tied to one language, so it is always kept.
     if (scope.includes('.play')) return true;
-    if (!needsCSharp && !needsTypeScript && !needsGo && !needsKotlin && !needsJava && !needsElixir && !needsDocumentation) return true;
-    return (needsCSharp && languages.includes('csharp')) ||
-        (needsTypeScript && languages.includes('typescript')) ||
-        (needsGo && languages.includes('go')) ||
-        (needsKotlin && languages.includes('kotlin')) ||
-        (needsJava && languages.includes('java')) ||
-        (needsElixir && languages.includes('elixir')) ||
-        (needsDocumentation && (selected.profiles ?? []).includes('cratis/documentation'));
+    const named = scopeKinds.filter(kind => kind.named(scope, name));
+    return named.length === 0 || named.some(kind => kind.satisfied(selected));
 }
 
 /**
@@ -73,7 +78,8 @@ function matchesSelection(name: string, applyTo: string[], selected: AiConfigura
  */
 export function managedRules(cwd: string): ManagedRule[] {
     const root = rulesRoot(cwd);
-    const selected = configuration(cwd);
+    const configured = configuration(cwd);
+    const selected = configured ? { ...configured, profiles: [...selectedProfileIds(configured)] } : undefined;
     const resolved = existsSync(join(cwd, '.cratis', 'ai', 'rules'));
     return readdirSync(root, { recursive: true, encoding: 'utf8' })
         .filter((entry): entry is string => entry.endsWith('.md'))

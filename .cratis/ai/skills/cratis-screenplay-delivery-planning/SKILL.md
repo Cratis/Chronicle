@@ -114,6 +114,6 @@ provides a claim tool such as `issue_work`, its claim step is that guard.
 - `references/provenance.md` - sources and what was not adopted.
 
 ## Related skills
-`cratis-screenplay-slice-design` (slice dependencies), `cratis-screenplay-model-authoring`
+after a model change, `slices` from `screenplay diff --format json` (with `modelWide` and `affectedSlices`) scopes the re-planning; `screenplay export --scope <slice>` hands one slice's executable model to a builder and `screenplay diff` lists what changed ([CLI reference](../cratis-screenplay-toolchain/references/model-export-diff-rename.md)); `cratis-screenplay-slice-design` (slice dependencies), `cratis-screenplay-model-authoring`
 (MCP navigation), `cratis-screenplay-render-and-gap-fill` (what renders, gap-fill handoff),
 `cratis-screenplay-modeling-lifecycle` (phases and gates).

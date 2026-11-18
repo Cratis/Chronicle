@@ -42,6 +42,10 @@ One precise line per load-bearing term, so the same word means the same thing ev
 - **Observer** — Chronicle's umbrella for anything consuming an event sequence (projection, reducer, reactor); carries subscription / replay / **quarantine** state. Projection replay and catch-up each walk the sequence in one globally ordered job step; a new catch-up failure stops that step. Full replay is inactive and completion does not resume a quarantined observer (Chronicle v19.50.1, `Documentation/concepts/observers.mdx`, `Observation/Jobs/{CatchUpObserver,ReplayObserver}.cs` under `Source/Kernel/Core/`).
 - **Sink** — where a read model is persisted (MongoDB, EF Core).
 - **AutoMap** — Chronicle's on-by-default mapping of matching event→read-model property names; **never call `.AutoMap()`**.
+- **Graph** — a named property graph that events build through a graph projection: nodes, edges and their properties. Derived state like a read model; nothing writes to it directly.
+- **Node** — a graph element with a label, one unique key and primitive properties. The label is the type name.
+- **Edge** — a directed, typed graph relationship from a source node to a target node, identified by type, source key and target key (plus an identifying property when several edges of one type may join the same pair).
+- **Graph sink** — where a graph is persisted (Neo4j, or the in-memory graph); it applies the five idempotent graph operations, separate from the `ISink` of document read models.
 - **Query** — a `static` method on a `[ReadModel]`; returns derived state, **snapshot** (one-shot) or **observable** (live).
 
 ## Write side
