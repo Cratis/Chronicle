@@ -81,8 +81,7 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
 
-        if (!MayDeclareClear(invocation.Expression) ||
-            context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method)
+        if (GetClearMethod(context, invocation) is not { } method)
         {
             return;
         }
@@ -165,6 +164,11 @@ public class ClearOnNonNullableMemberAnalyzer : DiagnosticAnalyzer
         setInvocation.ArgumentList.Arguments[0].Expression is SimpleLambdaExpressionSyntax { Body: MemberAccessExpressionSyntax setMember }
             ? setMember.Name.Identifier.Text
             : string.Empty;
+
+    static IMethodSymbol? GetClearMethod(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation) =>
+        MayDeclareClear(invocation.Expression)
+            ? context.SemanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol
+            : null;
 
     static bool MayDeclareClear(ExpressionSyntax expression) => expression switch
     {
