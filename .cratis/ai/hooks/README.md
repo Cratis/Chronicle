@@ -283,15 +283,46 @@ Rule numbers refer to the numbered list in [`../rules/general.md`](../rules/gene
   repository's dependency-manifest policy allows them (see below)
 - `.env`, `.env.*`, `*.env` — secrets
 - Agent controls: `.claude/settings.json`, `.claude/settings.local.json`, `.mcp.json`,
-  `.pi/settings.json` and `.pi/extensions/**`
-- With `.cratis/ai.manifest.json` present, the installed `.cratis/ai/**`, `.claude/**` and `.pi/**`
-  trees. Both addressed paths and symlink destinations are checked, including the Claude settings
-  link to the hook template. The uninstalled Cratis/AI source repository is exempt from this
-  agent-control category so its authored corpus and harness adapters remain editable.
+  `.pi/settings.json`, `.pi/extensions/**`, `.cratis/ai.manifest.json` and `.cratis/ai.json`
+- The installed `.cratis/ai/**` corpus, including when its manifest is missing or unreadable.
+  Adapter paths in `.claude/**` and `.pi/**` are protected according to the manifest's
+  `Integrations` entries. Both addressed paths and symlink destinations are checked, including
+  the Claude settings link to the hook template. Without an installation manifest, authored
+  corpus and harness adapters remain editable only when Git `HEAD` records the authoring layout:
+  `Cratis.AI.slnx`, the guard source and the `@cratis/pi` package in `Source/Pi.Plugin`. Changing a
+  remote URL or adding uncommitted files does not establish this source-repository exception.
+  The two policy JSON files remain protected in the source repository.
 
 For agent controls, report the intended change rather than rewriting permissions or hooks.
 A person edits settings; `cratis ai update` replaces managed files using the CLI's filesystem
-operations, not agent Write/Edit calls. The shell-write guard scans the **whole command text**
+operations, not agent Write/Edit calls. Before reference classification, the shell guard admits
+only these standalone install/repair operations (Node must be available):
+
+- Literal `cratis ai init`, `cratis ai update` or `cratis ai restore`, optionally followed only by
+  `--force` or `--dry-run`. Other arguments receive no exception. This invokes the CLI rather than
+  granting file-content writes.
+- `ln -s`, `ln -sf` or `ln -sfn` with exactly a target and a link. The link must be below `.pi/`,
+  `.claude/`, `.cursor/`, `.opencode/` or `.github/` in the current repository. Resolve the target
+  relative to the link's directory: both its lexical path and its physical path (existing ancestors
+  resolved, including symlinks) must stay inside that repository's `.cratis/ai/`. The link's parent
+  must physically stay in its managed folder. A present `.cratis/ai.manifest.json` must contain an
+  exact `Integrations` link entry (`Path` and a string `Target`); missing/invalid entries or invalid
+  JSON refuse the repair. A missing manifest also refuses every link repair, even if the corpus
+  tree already exists; use the standalone installer commands instead. Both addressed and physical
+  link names are checked against the write guard's own `control_patterns`, read without executing
+  that guard. Hook, agent, guard, extension and workflow trees cannot be repaired with `ln`, even
+  when a manifest lists the link. Recognized repairs that fail validation are blocked outright,
+  rather than falling back to an uninstalled repository's more permissive reference policy.
+  Only links whose lexical or physical target lands in the corpus enter these repair checks.
+  Ordinary non-corpus links and calls outside Git retain the original reference policy; a
+  symlinked link parent or target alias cannot disguise a physical corpus target.
+- These exceptions accept simple whole-word quoting, but no `cd` prefix, chaining, pipes,
+  redirects, substitutions, expansions, escapes, comments, globs or multiline shell constructs.
+  Existing directories cannot be replaced; an existing symlink to a directory requires `-sfn`
+  so `ln` cannot follow it and write into its target. File Write/Edit calls, including writes
+  through repaired links, remain protected as before.
+
+All other commands retain the existing policy. The shell-write guard scans the **whole command text**
 for protected references, including nested strings, heredoc bodies and option values. It
 removes simple quoting/escapes, checks case-insensitive spellings, and asks the write guard's
 `--references` batch mode to classify candidate paths relative to the hook cwd. Original

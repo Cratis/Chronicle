@@ -34,6 +34,21 @@ cwd="" command_text="" parser_status=""
 cwd="${cwd:-$PWD}"
 [ "${#command_text}" -le 131072 ] || parser_failed
 
+# Only standalone corpus installer/repair invocations may bypass reference classification.
+# The helper accepts a deliberately smaller language than the shell, never shell evaluation.
+if [[ "$command_text" =~ ^[[:space:]]*(cratis|ln)[[:space:]] ]] && command -v node >/dev/null 2>&1; then
+    repair_status=0
+    node "$script_directory/cratis-guard-shell-writes-repair.mjs" "$cwd" "$command_text" || repair_status=$?
+    case "$repair_status" in
+        0) exit 0 ;;
+        1) ;; # Not an installer/repair exception: preserve the ordinary reference policy.
+        *)
+            printf '%s\n' 'BLOCKED by cratis-guard-shell-writes: managed link repair was refused; use the installer or report the intended change.' >&2
+            exit 2
+            ;;
+    esac
+fi
+
 IFS= read -r -d '' program <<'AWK' || true
 function candidate(s) {
     if (checking_marker) return

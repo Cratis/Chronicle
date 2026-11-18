@@ -1,5 +1,5 @@
 {
-  "SourceRevision": "e50cd7dee4cac14baa375af49424cf58eedd7573",
+  "SourceRevision": "e4693bd713aa819bd3739d100868d69dde1844a3",
   "Files": [
     {
       "Source": "agents/backend-developer.md",
@@ -769,7 +769,7 @@
     {
       "Source": "hooks/README.md",
       "Destination": "hooks/README.md",
-      "Hash": "E4C9BDED6B756675D6A848C6F3015C9DD84337F539149C4D919979F4AFF7CBF0"
+      "Hash": "75D0E039868FE16B9D6C1A59C5ED25117B99EF63620F172DE38B9CBFEDCB316B"
     },
     {
       "Source": "hooks/agent-stop.md",
@@ -807,9 +807,14 @@
       "Hash": "242A13EE77057C0DB82321D3A6CA3AA798826B0CD3260B27745A98E502F9272C"
     },
     {
+      "Source": "hooks/scripts/cratis-guard-shell-writes-repair.mjs",
+      "Destination": "hooks/scripts/cratis-guard-shell-writes-repair.mjs",
+      "Hash": "ECED5B2C412DCE8BF35BDFA72B691024E99761020C08F3A3FA0197C2FDC428F3"
+    },
+    {
       "Source": "hooks/scripts/cratis-guard-shell-writes.sh",
       "Destination": "hooks/scripts/cratis-guard-shell-writes.sh",
-      "Hash": "97B9BE3CBAAB9F7BA2D537D12ADDEEC619EB1EAE6A35105E29124E803B383926"
+      "Hash": "0084A25D45C1A235534028AA0F85B83D79AD807BBBE97073DB80B98A17D90424"
     },
     {
       "Source": "hooks/scripts/cratis-guard-store-mutations.sh",
@@ -819,7 +824,7 @@
     {
       "Source": "hooks/scripts/cratis-guard-writes.sh",
       "Destination": "hooks/scripts/cratis-guard-writes.sh",
-      "Hash": "6D7516E5FBEE82D4483E33400BFE0B6DAD46028B3916C66EFB4AA68D3ADB723A"
+      "Hash": "4BFB06D4388C3F31FE5EEA23F754F5E3CC64F1F7A6DCFD8BD6B8A32B37C2D9F7"
     },
     {
       "Source": "hooks/scripts/cratis-nuget-pins.txt",
