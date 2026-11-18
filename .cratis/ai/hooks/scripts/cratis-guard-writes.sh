@@ -378,18 +378,25 @@ manifest_writes_allowed() {
 
 # Return the category, leaving normal Write/Edit diagnostics unchanged below.
 classify_file() {
-    local reference_pattern="${2:-0}"
+    local reference_pattern="${2:-0}" physical_base=""
     abspath "$1" "$cwd"; normalize_target_path "$REPLY"; file="$REPLY"
     base_of "$file"; base="$REPLY"
     physical_target_path "$file" || physical_file=""
+    if [ -n "$physical_file" ]; then base_of "$physical_file"; physical_base="$REPLY"; fi
     if agent_control_target "$file" || { [ -n "$physical_file" ] && agent_control_target "$physical_file"; }; then
         classification=controls; return 0
     fi
-    if names_match "$base" "${manifest_patterns[@]}"; then
-        if manifest_writes_allowed; then return 1; fi
-        classification=manifest; return 0
+    if names_match "$base" "${manifest_patterns[@]}" || names_match "$physical_base" "${manifest_patterns[@]}"; then
+        if manifest_writes_allowed; then
+            # Preserve reference-pattern policy when resolution leaves the basename unchanged.
+            [ "$base" != "$physical_base" ] || return 1
+        else
+            classification=manifest; return 0
+        fi
     fi
-    if names_match "$base" "${environment_patterns[@]}"; then classification=environment; return 0; fi
+    if names_match "$base" "${environment_patterns[@]}" || names_match "$physical_base" "${environment_patterns[@]}"; then
+        classification=environment; return 0
+    fi
     return 1
 }
 
@@ -406,6 +413,9 @@ if [ "$reference_mode" = 1 ]; then
     unset 'candidates[last]'
     new_content=""
     for candidate in "${candidates[@]}"; do
+        # Reflog selectors name revisions, unless the prefix or the literal path (or its symlink target) is protected.
+        if [[ "$candidate" =~ ^[A-Za-z0-9._/-]*@\{(-?[0-9]+|upstream|push|u)\}$ ]] \
+            && ! classify_file "${candidate%@*}" && ! classify_file "$candidate"; then continue; fi
         reference_pattern=0
         case "$candidate" in *'*'* | *'?'* | *'['* | *'{'* | *'@('* | *'+('* | *'!('*) reference_pattern=1 ;; esac
         if classify_file "$candidate" "$reference_pattern"; then printf '%s\n' "$candidate"; continue; fi
