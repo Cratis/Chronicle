@@ -15,6 +15,7 @@ import { ORDINARY_SHARDS, sourcePlan } from './spec-shards.mjs';
 import { coreSpecFixture } from './core-spec-fixture.mjs';
 import { coreUnitId } from './core-spec-partition.mjs';
 import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
+import { receiptFor, verifyReceipts } from './spec-shards.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
@@ -315,7 +316,8 @@ test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, in
     reject((j, a) => { a.artifacts.push({ ...a.artifacts[0], id: 999 }); a.total_count++; });
 });
 test('producer API acquisition paginates latest attempts and propagates unavailable/malformed evidence', async () => {
-    const pages = producerFixture([1, 2, 1, 1]);
+    const context = { ...retryContext, runAttempt: '1' };
+    const pages = producerFixture();
     const jobs = pages[0][0].jobs;
     pages[0] = [{ jobs: jobs.slice(0, 1), total_count: jobs.length }, { jobs: jobs.slice(1), total_count: jobs.length }];
     let calls = 0;
@@ -325,46 +327,183 @@ test('producer API acquisition paginates latest attempts and propagates unavaila
         if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=latest&per_page=30'));
         return { code: 0, stdout: JSON.stringify(pages[calls++]) };
     } };
-    assert.equal((await loadProducerEvidence(retryContext, options)).producers[1].runAttempt, '2');
+    assert.equal((await loadProducerEvidence(context, options)).producers[1].runAttempt, '1');
     assert.equal(calls, 2);
-    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
-    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
+    await assert.rejects(loadProducerEvidence(context, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
+    await assert.rejects(loadProducerEvidence(context, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
 });
 test('producer API retries a server error on a page, then reports the captured response', async () => {
-    const pages = producerFixture([1, 2, 1, 1]);
+    const context = { ...retryContext, runAttempt: '1' };
+    const pages = producerFixture();
     const serverError = { code: 1, stdout: '', stderr: 'gh: Server Error (HTTP 502)' };
     const env = { GITHUB_REPOSITORY: 'Cratis/Chronicle' };
     let calls = 0;
     const waits = [];
     const wait = async milliseconds => { waits.push(milliseconds); };
     const recovering = async () => (calls++ === 0 ? serverError : { code: 0, stdout: JSON.stringify(pages[calls - 2]) });
-    assert.equal((await loadProducerEvidence(retryContext, { env, wait, execute: recovering })).producers[1].runAttempt, '2');
+    assert.equal((await loadProducerEvidence(context, { env, wait, execute: recovering })).producers[1].runAttempt, '1');
     assert.equal(calls, 3);
     assert.deepEqual(waits, [5000]);
 
     let failing = 0;
     waits.length = 0;
-    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => { failing++; return serverError; } }),
+    await assert.rejects(loadProducerEvidence(context, { env, wait, execute: async () => { failing++; return serverError; } }),
         /API failed \(1\): gh: Server Error \(HTTP 502\)/);
     assert.equal(failing, 3);
     assert.deepEqual(waits, [5000, 10000]);
 
     const long = `gh: Server Error (HTTP 503) ${'x'.repeat(3000)}`;
-    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => ({ code: 1, stderr: long }) }),
+    await assert.rejects(loadProducerEvidence(context, { env, wait, execute: async () => ({ code: 1, stderr: long }) }),
         error => error.message.endsWith(long.slice(-2000)) && !error.message.includes('HTTP 503'));
 
     let clock = 0;
     const timeouts = [];
     let slow = 0;
     const slowServer = async (command, args, options) => { slow++; timeouts.push(options.timeout); clock += 145000; return serverError; };
-    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, now: () => clock, execute: slowServer }), /HTTP 502/);
+    await assert.rejects(loadProducerEvidence(context, { env, wait, now: () => clock, execute: slowServer }), /HTTP 502/);
     assert.equal(slow, 1, 'no retry once the shared acquisition budget is spent');
     assert.deepEqual(timeouts, [60000]);
 
     let forbidden = 0;
-    await assert.rejects(loadProducerEvidence(retryContext, { env, wait, execute: async () => { forbidden++; return { code: 1, stderr: 'gh: Forbidden (HTTP 403)' }; } }),
+    await assert.rejects(loadProducerEvidence(context, { env, wait, execute: async () => { forbidden++; return { code: 1, stderr: 'gh: Forbidden (HTTP 403)' }; } }),
         /API failed \(1\): gh: Forbidden \(HTTP 403\)/);
     assert.equal(forbidden, 1);
+});
+
+// Projected from run 44301164153 attempts 1/2: retained jobs have new ids and
+// run_attempt values, but preserve BOTH execution timestamps (unlike producerFixture).
+function carriedProducerFixture({ sqlOnly = false, allCarried = false } = {}) {
+    const context = { sha: '6fdcc813d9242b82a5a4c4127f5706c1bf894ab9', runId: '44301164153', runAttempt: allCarried ? '3' : '2' };
+    const executions = [
+        [134793518341, '12:13:49', '12:20:18'], [134793518352, '12:13:48', '13:01:49'],
+        [134793518329, '12:13:48', '12:18:01'], [134793518350, '12:13:49', '12:19:30']
+    ];
+    const first = executions.map(([id, start, end], index) => ({
+        id, name: `specs-other (${index + 1})`, run_id: Number(context.runId), run_attempt: 1,
+        head_sha: context.sha, status: 'completed', conclusion: index === 1 && !sqlOnly ? 'failure' : 'success',
+        started_at: `2026-11-18T${start}Z`, completed_at: `2026-11-18T${end}Z`
+    }));
+    const copiedIds = [134822580502, 134822578447, 134822581075, 134822582522];
+    const second = first.map((job, index) => ({ ...job, id: copiedIds[index], run_attempt: 2 }));
+    if (!sqlOnly) Object.assign(second[1], { started_at: '2026-11-18T13:06:32Z', completed_at: '2026-11-18T13:12:45Z', conclusion: 'success' });
+    // Model a further failed-jobs/SQL-only rerun retaining every ordinary execution.
+    const latest = allCarried ? second.map((job, index) => ({ ...job, id: 134830278864 + index, run_attempt: 3 })) : second;
+    const page = (key, records) => [{ [key]: records, total_count: records.length }];
+    const artifacts = second.map((job, index) => ({
+        id: index + 100, name: `coverage-results-specs-other-${index + 1}`, expired: false,
+        created_at: new Date(Date.parse(job.completed_at) - 1000).toISOString(),
+        workflow_run: { id: Number(context.runId), head_sha: context.sha }
+    }));
+    const endpoints = {
+        'jobs?filter=latest&per_page=30': page('jobs', latest), 'artifacts?per_page=30': page('artifacts', artifacts),
+        'attempts/1/jobs?per_page=30': page('jobs', first), 'attempts/2/jobs?per_page=30': page('jobs', second)
+    };
+    return { context, endpoints };
+}
+function carriedProducerOptions(fixture) {
+    const calls = [];
+    return { calls, env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
+        assert.equal(command, 'gh');
+        const endpoint = args[3].split(`/runs/${fixture.context.runId}/`)[1];
+        calls.push(endpoint);
+        assert.ok(fixture.endpoints[endpoint], `Unexpected endpoint: ${endpoint}`);
+        return { code: 0, stdout: JSON.stringify(fixture.endpoints[endpoint]) };
+    } };
+}
+for (const [name, settings, expected] of [
+    ['mixed failed-jobs retry', {}, ['1', '2', '1', '1']],
+    ['all ordinary jobs carried forward again', { allCarried: true }, ['1', '2', '1', '1']],
+    ['SQL-only retry', { sqlOnly: true }, ['1', '1', '1', '1']]
+]) {
+    test(`producer acquisition resolves actual execution attempts: ${name}`, async () => {
+        const fixture = carriedProducerFixture(settings);
+        const options = carriedProducerOptions(fixture);
+        const evidence = await loadProducerEvidence(fixture.context, options);
+        assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), expected);
+        assert.deepEqual(evidence.producers.map(producer => producer.artifactId), [100, 101, 102, 103]);
+        assert.ok(options.calls.includes('artifacts?per_page=30'), 'artifacts are listed across the whole run, not just the retry');
+        assert.deepEqual(options.calls.slice(2), settings.allCarried
+            ? ['attempts/2/jobs?per_page=30', 'attempts/1/jobs?per_page=30'] : ['attempts/1/jobs?per_page=30']);
+        const plan = evidence.producers.map(({ shard }) => ({ shard, projects: [v3Projects[shard - 1]] }));
+        const receipts = plan.map((shard, index) => receiptFor(shard, shard.projects, { ...fixture.context, runAttempt: expected[index] }));
+        assert.doesNotThrow(() => verifyReceipts(receipts, plan, fixture.context, evidence.producers));
+        const wrongAttempt = structuredClone(receipts);
+        wrongAttempt[0].context.runAttempt = fixture.context.runAttempt;
+        assert.throws(() => verifyReceipts(wrongAttempt, plan, fixture.context, evidence.producers), /context/);
+    });
+}
+test('producer acquisition accepts a rerun after an upstream build left the matrix unexpanded', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    const page = fixture.endpoints['attempts/2/jobs?per_page=30'][0];
+    const job = page.jobs[0];
+    page.jobs = [
+        { ...job, name: 'build', conclusion: 'failure' },
+        { ...job, id: 999, name: 'specs-other', conclusion: 'skipped', started_at: null, completed_at: null }
+    ];
+    page.total_count = page.jobs.length;
+    const options = carriedProducerOptions(fixture);
+    const evidence = await loadProducerEvidence(fixture.context, options);
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
+    assert.deepEqual(options.calls.slice(2), ['attempts/2/jobs?per_page=30']);
+});
+test('producer acquisition resolves an attempt-2 execution carried into 3 but absent from 1', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    const page = fixture.endpoints['attempts/1/jobs?per_page=30'][0];
+    page.jobs.splice(1, 1);
+    page.total_count--;
+    const evidence = await loadProducerEvidence(fixture.context, carriedProducerOptions(fixture));
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['1', '2', '1', '1']);
+    assert.equal(evidence.producers[1].artifactId, 101);
+});
+test('producer acquisition stops fetching history once every shard has a different execution', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    for (const job of fixture.endpoints['attempts/2/jobs?per_page=30'][0].jobs) {
+        job.started_at = new Date(Date.parse(job.started_at) + 1000).toISOString();
+    }
+    const options = carriedProducerOptions(fixture);
+    const evidence = await loadProducerEvidence(fixture.context, options);
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
+    assert.deepEqual(options.calls.slice(2), ['attempts/2/jobs?per_page=30']);
+});
+test('producer acquisition does not inspect older records for an already resolved shard', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    fixture.endpoints['attempts/2/jobs?per_page=30'][0].jobs[1].started_at = '2026-11-18T13:06:33Z';
+    const page = fixture.endpoints['attempts/1/jobs?per_page=30'][0];
+    page.jobs[1].run_id = 999;
+    page.jobs.push({ ...page.jobs[1], id: 999 });
+    page.total_count++;
+    const evidence = await loadProducerEvidence(fixture.context, carriedProducerOptions(fixture));
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['1', '3', '1', '1']);
+});
+test('producer acquisition fails closed for unavailable, incomplete or inconsistent attempt history', async () => {
+    const reject = async (mutate, pattern = /producing attempt|producer/i) => {
+        const fixture = carriedProducerFixture();
+        mutate(fixture.endpoints['attempts/1/jobs?per_page=30'][0]);
+        await assert.rejects(loadProducerEvidence(fixture.context, carriedProducerOptions(fixture)), pattern);
+    };
+    await reject(page => { page.jobs.pop(); }, /pagination/);
+    await reject(page => { page.jobs.push({ ...page.jobs[0], id: 999 }); page.total_count++; }, /duplicate job/);
+    for (const patch of [{ run_id: 999 }, { run_attempt: 2 }, { head_sha: 'wrong-sha' }, { name: 'caller / specs-other (1)' },
+        { status: 'in_progress' }, { conclusion: 'failure' }]) {
+        await reject(page => { Object.assign(page.jobs[0], patch); });
+    }
+    const fixture = carriedProducerFixture();
+    const options = carriedProducerOptions(fixture);
+    const execute = async (command, args) => args[3].includes('/attempts/')
+        ? { code: 1, stderr: 'gh: Not Found (HTTP 404)' } : options.execute(command, args);
+    await assert.rejects(loadProducerEvidence(fixture.context, { ...options, execute }), /API failed.*404/);
+});
+test('producer history cannot run past the shared acquisition budget', async () => {
+    const fixture = carriedProducerFixture();
+    const options = carriedProducerOptions(fixture);
+    let clock = 0;
+    const execute = async (...args) => {
+        const result = await options.execute(...args);
+        clock += 75000;
+        return result;
+    };
+    await assert.rejects(loadProducerEvidence(fixture.context, { ...options, execute, now: () => clock }), /budget exhausted/);
+    assert.equal(options.calls.length, 2);
 });
 
 async function ordinaryDispatch(mode) {

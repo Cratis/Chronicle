@@ -124,12 +124,13 @@ export function selectProducerArtifacts(jobPages, artifactPages, context) {
 // Large pages of a run with reruns can make the jobs listing return 5xx, and the reason is only in gh's stderr (#5871).
 const PRODUCER_PAGE_SIZE = 30;
 const PRODUCER_API_ATTEMPTS = 3;
-// One budget for both listings keeps retries inside the aggregate job's five-minute limit.
+// One budget for all listings keeps retries inside the aggregate job's five-minute limit.
 const PRODUCER_API_BUDGET = 150000;
 const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 async function producerApiPages(endpoint, context, { env, execute, wait, now, deadline }) {
     const args = ['api', '--paginate', '--slurp', `repos/${env.GITHUB_REPOSITORY}/actions/runs/${context.runId}/${endpoint}`];
     for (let attempt = 1; ; attempt++) {
+        if (now() >= deadline) fail('Producer evidence API budget exhausted before producing attempt could be determined');
         const result = await execute('gh', args, { capture: true, timeout: Math.max(1000, Math.min(60000, deadline - now())) });
         if (result.code === 0) return JSON.parse(result.stdout);
         const response = (result.stderr ?? '').trim();
@@ -140,6 +141,41 @@ async function producerApiPages(endpoint, context, { env, execute, wait, now, de
         await wait(attempt * 5000);
     }
 }
+const sameJobContext = (earlier, job, attempt) => [earlier.name === job.name, earlier.run_id === job.run_id,
+    earlier.run_attempt === attempt, earlier.head_sha === job.head_sha].every(Boolean);
+const sameExecution = (earlier, job) => earlier.started_at === job.started_at && earlier.completed_at === job.completed_at;
+const succeeded = job => job.status === 'completed' && job.conclusion === 'success';
+function earlierProducer(job, jobs, shard, attempt) {
+    const unresolved = reason => fail(`Cannot determine producing attempt: shard ${shard}, attempt ${attempt}: ${reason}`);
+    const candidates = producerCandidates(jobs, shard);
+    if (candidates.length > 1) unresolved('duplicate job');
+    if (!candidates.length) return null;
+    const earlier = candidates[0];
+    if (!sameJobContext(earlier, job, attempt)) unresolved('invalid job context');
+    if (!sameExecution(earlier, job)) return null;
+    if (!succeeded(earlier)) unresolved('inconsistent execution');
+    return earlier;
+}
+async function producingJobs(jobPages, context, api) {
+    const jobs = apiRecords(jobPages, 'jobs');
+    let producers = ordinaryShardIds().map(shard => producerJob(jobs, shard, context));
+    const pending = new Set(ordinaryShardIds());
+    // Failed-jobs reruns copy successful jobs with NEW ids/run_attempt but ORIGINAL execution
+    // timestamps. Stop each shard's walk at a missing job or a different execution.
+    for (let attempt = Number(context.runAttempt) - 1; attempt >= 1 && pending.size; attempt--) {
+        const pages = await producerApiPages(`attempts/${attempt}/jobs?per_page=${PRODUCER_PAGE_SIZE}`, context, api);
+        const earlier = apiRecords(pages, 'jobs');
+        producers = producers.map((job, index) => {
+            const shard = index + 1;
+            if (!pending.has(shard)) return job;
+            const carried = earlierProducer(job, earlier, shard, attempt);
+            if (carried) return carried;
+            pending.delete(shard);
+            return job;
+        });
+    }
+    return [{ jobs: producers, total_count: producers.length }];
+}
 export async function loadProducerEvidence(context, { env = process.env, execute = runProcess, wait = pause, now = Date.now } = {}) {
     if (!/^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPOSITORY ?? '')) fail('Missing/invalid producer repository');
     if (!/^[1-9]\d*$/.test(context.runId) || !/^[1-9]\d*$/.test(context.runAttempt)) fail('Invalid producer run/attempt');
@@ -149,7 +185,8 @@ export async function loadProducerEvidence(context, { env = process.env, execute
     for (const endpoint of [`jobs?filter=latest&per_page=${PRODUCER_PAGE_SIZE}`, `artifacts?per_page=${PRODUCER_PAGE_SIZE}`]) {
         pages.push(await producerApiPages(endpoint, context, api));
     }
-    return selectProducerArtifacts(...pages, context);
+    const jobs = await producingJobs(pages[0], context, api);
+    return selectProducerArtifacts(jobs, pages[1], context);
 }
 export function unitInfos(ids, ordinary, parts) {
     return ids.map(id => {
