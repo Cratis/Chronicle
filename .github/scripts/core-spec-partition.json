@@ -370,6 +370,10 @@
             "weight": 0.0006317356200622306
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_UnseenObserverRemoval.",
+            "weight": 0.000001
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_WebhookProbeEligibility.",
             "weight": 0.0008432324252328064
         },

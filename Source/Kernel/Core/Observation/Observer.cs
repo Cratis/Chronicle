@@ -234,6 +234,7 @@ public partial class Observer(
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
+        _unseenRemovalAfter = config.UnseenRemovalAfter;
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();
@@ -569,10 +570,12 @@ public partial class Observer(
 
         await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
+        var wasHeldByClient = IsHeldByClient;
         _subscription = ObserverSubscription.Unsubscribed;
         ForgetSupersededRegistrations();
         await PauseJobs();
         await TransitionTo<Disconnected>();
+        if (wasHeldByClient) await RecordSeenByClient(force: true);
     }
 
     /// <inheritdoc/>
@@ -1156,6 +1159,7 @@ public partial class Observer(
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+        if (subscriberArgs is ConnectedClient) await RecordSeenByClient(force: true);
     }
 
     async Task SetUpAllEventsSubscription<TObserverSubscriber>(
@@ -1190,6 +1194,7 @@ public partial class Observer(
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
+        if (subscriberArgs is ConnectedClient) await RecordSeenByClient(force: true);
     }
 
     async Task ValidateGenerationDelivery(IEnumerable<EventType> eventTypes, EventGenerationDelivery generationDelivery)

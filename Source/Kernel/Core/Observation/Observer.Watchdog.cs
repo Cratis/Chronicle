@@ -60,7 +60,11 @@ public partial class Observer
         if (await RelinquishOwnershipIfMoved()) return;
 
         if (_webhookProbe is not null || _armWebhookProbe) await ReconcileWebhookProbe();
+        var wasHeldByClient = IsHeldByClient;
         await CheckConnectedClient();
+
+        // A client found gone is recorded as seen now, which is at most a watchdog interval after it was; one still there only refreshes.
+        if (wasHeldByClient) await RecordSeenByClient(force: !IsHeldByClient);
         if (!await RecoverIfStuck()) await NudgeStalledJobs();
         await FlushDebouncedProgressState();
         await ReconcileAlertsIfNeeded();

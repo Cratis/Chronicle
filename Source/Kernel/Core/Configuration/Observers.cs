@@ -214,6 +214,35 @@ public class Observers
     public int IdleDeactivationAfter { get; init; } = 900;
 
     /// <summary>
+    /// Gets how long a client reactor or reducer can go without any client holding a subscription to it, in every namespace,
+    /// before the kernel removes it and its records.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 7 days; a zero or negative value turns the removal off. Removal deletes the observer's definition, state,
+    /// failed partitions, jobs and reminders, never a reducer's read model data. When the client connects again the observer
+    /// is registered as new and replays from the start, so a reactor handles the whole history again. Projections, webhooks
+    /// and kernel observers are never removed. This is a server-level setting.
+    /// </remarks>
+    public TimeSpan UnseenRemovalAfter { get; init; } = TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// Gets how often each silo looks for client observers that have not been seen for <see cref="UnseenRemovalAfter"/>.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 1 hour. The sweep reads storage and only activates an observer that is a candidate for removal. A zero or
+    /// negative value falls back to the default.
+    /// </remarks>
+    public TimeSpan UnseenRemovalSweepInterval { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Gets how many observers one storage read of the unseen-observer sweep covers.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 100. A value below 1 falls back to the default.
+    /// </remarks>
+    public int UnseenRemovalBatchSize { get; init; } = 100;
+
+    /// <summary>
     /// Gets the number of consecutive progress-only batches after which the observer's
     /// <c language="csharp">NextEventSequenceNumber</c> is made durable.
     /// </summary>
