@@ -73,6 +73,9 @@ internal sealed class KernelStateResetter(
 
         // Deactivating grains may write dirty state back, so wipe again after activation collection.
         await WipeStorage();
+
+        // Cached stores bypass catalog creation, but the wipe removed their persisted catalog entries.
+        storage.Clear();
         eventStoreInitialization.Clear();
         projectionPipelineManager.Clear();
 

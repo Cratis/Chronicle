@@ -21,6 +21,8 @@ namespace Cratis.Chronicle.DevelopmentTools.for_KernelStateResetter;
 public class when_resetting : Specification
 {
     readonly List<string> _operations = [];
+    readonly List<EventStoreName> _eventStores = [new("target")];
+    bool _recreatedEventStoreExists;
     IGrainFactory _grainFactory;
     IStorage _storage;
     IEventStoreSubscriptionsManager _manager;
@@ -47,8 +49,8 @@ public class when_resetting : Specification
         _grainFactory.GetGrain<IAppendedEventsQueue>(0, "reset-type-lookup").Returns(queue);
         _grainFactory.GetGrain<IAppendedEventsQueues>("reset-type-lookup").Returns(queues);
         _grainFactory.GetGrain<IObserver>("reset-type-lookup").Returns(observer);
-        _storage = Substitute.For<IStorage>();
-        _storage.GetEventStores().Returns([new EventStoreName("target")]);
+        _storage = CreateStorage();
+        _storage.GetEventStore("target");
         var subscriptions = GrainWithIdentity<IEventStoreSubscriptionsManager>("subscriptions");
         _grainFactory.GetGrain<IEventStoreSubscriptionsManager>("reset-type-lookup").Returns(subscriptions);
         _manager = Substitute.For<IEventStoreSubscriptionsManager>();
@@ -64,6 +66,7 @@ public class when_resetting : Specification
         handler.Reset().Returns(_ =>
         {
             _operations.Add("wipe");
+            _eventStores.Clear();
             return Task.CompletedTask;
         });
         _handlers = Substitute.For<IInstancesOf<ICanPerformKernelStateReset>>();
@@ -74,7 +77,25 @@ public class when_resetting : Specification
         _resetter = new KernelStateResetter(_grainFactory, _storage, Substitute.For<IProjectionPipelineManager>(), _handlers, Substitute.For<IEventStoreInitialization>(), _bootstrap, Microsoft.Extensions.Logging.Abstractions.NullLogger<KernelStateResetter>.Instance);
     }
 
-    async Task Because() => await _resetter.Reset();
+    async Task Because()
+    {
+        await _resetter.Reset();
+        _storage.GetEventStore("target");
+        _recreatedEventStoreExists = await _storage.HasEventStore("target");
+    }
+
+    IStorage CreateStorage()
+    {
+        var cluster = Substitute.For<IClusterStorage>();
+        cluster.GetEventStores().Returns(_ => Task.FromResult<IEnumerable<EventStoreName>>(_eventStores.ToArray()));
+        cluster.CreateStorageForEventStore(Arg.Any<EventStoreName>(), Arg.Any<SinksFactory>()).Returns(_ => Substitute.For<IEventStoreStorage>());
+        cluster.SaveEventStore(Arg.Any<EventStoreName>()).Returns(call =>
+        {
+            _eventStores.Add(call.Arg<EventStoreName>());
+            return Task.CompletedTask;
+        });
+        return new Storage.Storage(cluster, Substitute.For<ISystemStorage>(), Substitute.For<IInstancesOf<Storage.Sinks.ISinkFactory>>());
+    }
 
     static T GrainWithIdentity<T>(string type)
         where T : class, IGrain
@@ -94,6 +115,7 @@ public class when_resetting : Specification
         public Task EnsureDefaultClientCredentials() => Task.CompletedTask;
     }
 
+    [Fact] void should_recreate_a_previously_cached_event_store_in_the_wiped_catalog() => _recreatedEventStoreExists.ShouldBeTrue();
     [Fact] async Task should_remove_the_subscription() => await _manager.Received(1).Remove(new EventStoreSubscriptionId("subscription"));
     [Fact] void should_wipe_before_and_after_activation_collection() => _operations.ShouldEqual(["remove-subscription", "wipe", "deactivate", "wipe"]);
 }

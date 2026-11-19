@@ -31,6 +31,9 @@ public class and_event_store_subscriptions_exist(context context) : Given<contex
 
         async Task Because()
         {
+            // The fixture reattaches this default-store callback outside the client cache. Discard it
+            // along with the old stores; the fresh source/target stores register their own callbacks.
+            Services.GetRequiredService<Connections.IChronicleConnection>().Lifecycle.OnConnected -= Services.GetRequiredService<IEventStore>().RegisterAll;
             ChronicleClient.EvictEventStores();
 
             // The inherited client uses this host's Orleans silo, even in OutOfProcess fixture mode.
