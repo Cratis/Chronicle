@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 public partial class Sink
 {
     static bool CanContinueOrderedWrite(UpdateResult? result, bool guarded) =>
-        !guarded || result?.IsAcknowledged != true || result.MatchedCount > 0 || result.UpsertedId is not null;
+        !guarded || (result?.IsAcknowledged == true && (result.MatchedCount > 0 || result.UpsertedId is not null));
 
     async Task<IEnumerable<FailedPartition>> WriteInOrder(
         IChangeset<AppendedEvent, ExpandoObject> changeset,
@@ -24,7 +24,13 @@ public partial class Sink
         OrderedWrite destination)
     {
         var plan = destination.Plan;
-        var options = destination.Options;
+        var guarded = IsGuardedWrite(destination.Options.Mode, plan, destination.EventSequenceNumber);
+
+        // A guarded run must return its own outcome before any later join or direct run can proceed.
+        // Immediate options also keep its null-parent repairs out of the bulk queue.
+        var options = guarded
+            ? destination.Options with { DrainedBatches = destination.Options.DrainedBatches ?? [] }
+            : destination.Options;
         var context = new ChangesetWriteContext(destination.Key, destination.EventSequenceNumber, DirectWrites, RemoveChildFromAll);
         var currentPlan = plan;
         var failures = new List<FailedPartition>();
@@ -42,11 +48,14 @@ public partial class Sink
                 await UnsetNullParents(write, options);
             }
 
-            // The shared path flushes a joined changeset's direct run together with its null-parent repairs
-            // before the converter resumes, retaining the bulk cache and watermark bookkeeping.
+            // Retain the shared path's bulk cache and watermark bookkeeping for buffered and immediate runs.
             var outcome = await WriteUpdate(write, changeset, options);
             failures.AddRange(outcome.Failures);
-            acceptDirectWrites = CanContinueOrderedWrite(outcome.Result, IsGuardedWrite(options.Mode, plan, destination.EventSequenceNumber));
+            if (!CanContinueOrderedWrite(outcome.Result, guarded))
+            {
+                // Resuming the converter would execute the next join or removal before yielding again.
+                break;
+            }
 
             // The first direct write advances the watermark. Later runs belong to that same accepted event.
             currentPlan = PlanWrite(destination.Key, changeset) with { IsUpsert = false };
