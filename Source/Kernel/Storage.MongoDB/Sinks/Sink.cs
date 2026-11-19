@@ -480,8 +480,11 @@ public partial class Sink(
         WritePlan plan,
         SinkWriteOptions options)
     {
-        // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
-        // removes from all has to find the documents still holding it, so the children are removed only afterwards.
+        if (changeset.HasJoined() && changesetConverter is IChangesetConverterWithDirectWrites orderedConverter)
+        {
+            return await WriteInOrder(changeset, orderedConverter, new OrderedWrite(key, eventSequenceNumber, plan, options));
+        }
+
         UpdateDefinitionAndArrayFilters converted;
         if (changesetConverter is IChangesetConverterWithDirectWrites converterWithDirectWrites)
         {
