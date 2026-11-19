@@ -47,7 +47,10 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         // We can then set a property __initialized to false if its not already
         // For other operations, when we get the object from the sink, if the object exists and __initialized is false, we can set the initial state
         // for those properties that does not have a value. We then set the __initialized to true.
-        var initialState = await sink.FindOrDefault(context.Key);
+        // A projection written with optimistic revision checks reads the revision it will be checked against together with the instance.
+        var initialState = projection.SupportsFencedGlobalWrites
+            ? await sink.FindOrDefault(context.Key, SinkWriteMode.FencedGlobal)
+            : await sink.FindOrDefault(context.Key);
 
         // When the sink has no instance for the key yet, this event creates the read model instance.
         context.IsNewInstance = initialState is null;
