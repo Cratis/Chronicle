@@ -65,6 +65,7 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 | `appended_events_queue.catch_up_trigger_budget_exceeded` | `{trigger}` | `chronicle-appended-events-queue-catchup-trigger-budget-exceeded` |
 | `appended_events_queue.suspected_undelivered_events` | `{event}` | `chronicle-appended-events-queue-suspected-undelivered-events` |
 | `appended_events_queue.observer_spills` | `{spill}` | `chronicle-appended-events-queue-observers-spilled-to-catchup` |
+| `appended_events_queue.durable_subscription_disagreements` | `{subscription}` | `chronicle-appended-events-queue-durable-subscription-disagreements` |
 | `alert.failed_transitions` | `{transition}` | `chronicle-alert-transitions-failed` |
 | `alert.open_incidents` | `{incident}` | `chronicle-alerts-open-incidents` |
 | `alert.open_incidents_available` | `1` | `chronicle-alerts-open-incidents-available` |
@@ -117,6 +118,7 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `eventName` | `cratis.event_type.id` |
 | `QueueId` | `cratis.chronicle.appended_events_queue.id` |
 | `Reason` | `cratis.chronicle.observer.spill_reason` |
+| `Disagreement` | `cratis.chronicle.observer.durable_subscription_disagreement` |
 | `divergence` | `cratis.chronicle.observer.claim_divergence` |
 | `Condition` | `cratis.chronicle.alert.condition` |
 | `Severity` | `cratis.chronicle.alert.severity` |

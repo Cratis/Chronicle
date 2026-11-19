@@ -50,6 +50,12 @@ internal static partial class AppendedEventsQueueLogMessages
     [LoggerMessage(LogLevel.Debug, "Live backlog for observer {ObserverKey} spans more than {Limit} partition runs; spilling it to catch-up")]
     internal static partial void SpillingFragmentedObserverToCatchup(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, int limit);
 
+    [LoggerMessage(LogLevel.Information, "Stored durable subscriptions of {EventSequence} disagree with the live ones: {StoredNotLive} stored without a live subscription, {LiveNotStored} live without a stored one")]
+    internal static partial void DurableSubscriptionsDisagree(this ILogger<AppendedEventsQueue> logger, EventSequenceKey eventSequence, int storedNotLive, int liveNotStored);
+
+    [LoggerMessage(LogLevel.Warning, "Could not compare the stored durable subscriptions of {EventSequence} with the live ones")]
+    internal static partial void DurableSubscriptionCheckFailed(this ILogger<AppendedEventsQueue> logger, EventSequenceKey eventSequence, Exception exception);
+
     [LoggerMessage(LogLevel.Debug, "Observer {ObserverKey} was spilled again while its catch-up was being started; starting catch-up again")]
     internal static partial void CatchupRequestedAgain(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
 }

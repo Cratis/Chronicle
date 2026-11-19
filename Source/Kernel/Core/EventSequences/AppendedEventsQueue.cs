@@ -12,6 +12,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Cratis.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +27,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeepAlive]
 [PreferLocalPlacement]
-public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
+public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     /// <summary>
     /// The most sequential per-partition deliveries one coalesced dispatch may cost a live observer before it is moved to its catch-up path.
@@ -54,6 +55,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly MetricNames _metricNames;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly IShutdownDrainBudget? _stopBudget;
+    readonly IStorage? _storage;
+    readonly int _queueCount;
+    readonly Observers _observers;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
     readonly int _queueDepletionWaitTimeoutMs;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
@@ -77,6 +81,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     volatile bool _isResetting;
     AppendedEventsQueueMetrics? _metrics;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
+    int _queueId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueue"/> class.
@@ -87,13 +92,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
+    /// <param name="storage">The <see cref="IStorage"/> the queue compares its subscriptions with; optional for standalone specification queues.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
         [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
         IOptions<ChronicleOptions> options,
         ILogger<AppendedEventsQueue> logger,
-        IShutdownDrainBudget? stopBudget = null)
+        IShutdownDrainBudget? stopBudget = null,
+        IStorage? storage = null)
     {
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
@@ -101,6 +108,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _metricNames = options.Value.Telemetry.MetricNames;
         _logger = logger;
         _stopBudget = stopBudget;
+        _storage = storage;
+        _queueCount = options.Value.Events.Queues;
+        _observers = options.Value.Observers;
         _catchupCancellationToken = _catchupCancellation.Token;
 
         var eventsConfig = options.Value.Events;
@@ -135,8 +145,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
-        _eventSequenceKey = EventSequenceKey.Parse(key!);
+        Identify(EventSequenceKey.Parse(key!), queueId);
         _metrics = _meter.BeginScope(key!, queueId, _metricNames);
+        ConfigureDurableSubscriptionCheck(_observers);
         return base.OnActivateAsync(cancellationToken);
     }
 

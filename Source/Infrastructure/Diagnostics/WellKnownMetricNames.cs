@@ -248,6 +248,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="AppendedEventsQueueObserverSpills"/>.</summary>
     public const string AppendedEventsQueueObserverSpillsUnit = "{spill}";
 
+    /// <summary>Number of durable subscriptions that disagreed with the live subscriptions of an appended events queue.</summary>
+    public const string AppendedEventsQueueDurableSubscriptionDisagreements = "cratis.chronicle.appended_events_queue.durable_subscription_disagreements";
+
+    /// <summary>Unit of <see cref="AppendedEventsQueueDurableSubscriptionDisagreements"/>.</summary>
+    public const string AppendedEventsQueueDurableSubscriptionDisagreementsUnit = "{subscription}";
+
     /// <summary>Number of failed alert transitions.</summary>
     public const string AlertFailedTransitions = "cratis.chronicle.alert.failed_transitions";
 
