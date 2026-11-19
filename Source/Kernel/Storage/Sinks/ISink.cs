@@ -64,6 +64,19 @@ public interface ISink
     Task<ExpandoObject?> FindOrDefault(Key key);
 
     /// <summary>
+    /// Find a read model by key for a write made with the given <see cref="SinkWriteMode"/>.
+    /// </summary>
+    /// <param name="key">Key of the read model to find.</param>
+    /// <param name="mode">The <see cref="SinkWriteMode"/> the instance is read for.</param>
+    /// <returns>A read model instance with the data from the source, or null.</returns>
+    /// <remarks>
+    /// For <see cref="SinkWriteMode.FencedGlobal"/> the instance carries the bookkeeping the fenced write is checked against
+    /// (<see cref="WellKnownProperties.Revision"/>, <see cref="WellKnownProperties.Incarnation"/> and <see cref="WellKnownProperties.LastHandledByNamespace"/>).
+    /// The default implementation ignores the mode, as sinks without the concept do.
+    /// </remarks>
+    Task<ExpandoObject?> FindOrDefault(Key key, SinkWriteMode mode) => FindOrDefault(key);
+
+    /// <summary>
     /// Finds a read model by key in the primary container, even while a replay rebuilds another container.
     /// </summary>
     /// <param name="key">Key of the read model to find.</param>

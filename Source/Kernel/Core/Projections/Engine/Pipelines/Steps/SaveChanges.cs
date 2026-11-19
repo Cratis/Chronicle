@@ -65,53 +65,32 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
-        // Don't save if the event was deferred or the key is permanently unresolvable
-        if (context.IsDeferred || context.IsUnresolvable)
+        if (NothingToSave(context))
         {
-            _logger.NotSavingDueToDeferred(context.Event.Context.SequenceNumber);
             return context;
         }
 
-        if (!context.Changeset.HasChanges && !context.HasPendingFutureSaves)
-        {
-            _logger.NotSaving(context.Event.Context.SequenceNumber);
-            return context;
-        }
+        GuardFencedFutures(projection, context);
 
         var pendingSavesToFold = FoldPendingProperties(context);
-        if (context.Changeset.HasChanges)
+        if (context.Changeset.HasChanges && !await SaveMainChanges(projection, context, pendingSavesToFold))
         {
-            _logger.SavingResult(context.Event.Context.SequenceNumber);
-
-            // TODO: Return the number of affected records and pass this along to the changeset storage
-            var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
-
-            // A bulk flush may report partitions other than this event's. Every one is recorded, but only a failure
-            // of this event's own partition stops the rest of the save: the other partitions' events are retried.
-            foreach (var failedPartition in failedPartitions)
-            {
-                context.AddFailedPartition(failedPartition);
-            }
-
-            if (HasFailedOwnPartition(failedPartitions, context.Changeset, context.Key))
-            {
-                return context;
-            }
-
-            await ResolveSavedFutures(pendingSavesToFold);
-
-            await _changesetStorage.Save(
-                _changesetContainer ?? projection.ReadModel.ContainerName,
-                context.Key,
-                context.Event.Context.EventType,
-                context.Event.Context.SequenceNumber,
-                context.Event.Context.CorrelationId,
-                context.Changeset);
+            return context;
         }
 
         await ApplyPendingFutureSaves(context, pendingSavesToFold);
 
         return context;
+    }
+
+    static void GuardFencedFutures(IProjection projection, ProjectionEventContext context)
+    {
+        // Futures are written outside the fenced write and would be stored again when it is retried, so they fail the partition instead.
+        if (!projection.SupportsFencedGlobalWrites) return;
+        if (context.DeferredFutures.Any() || context.HasPendingFutureSaves)
+        {
+            throw new FencedWriteNotSupportedException($"projection '{projection.Identifier}' produced futures");
+        }
     }
 
     static PendingFutureSave[] FoldPendingProperties(ProjectionEventContext context)
@@ -139,6 +118,55 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     {
         var ownPartition = changeset.Incoming is { } incoming ? incoming.Context.EventSourceId.Value : key.Value;
         return failedPartitions.Any(failure => Equals(failure.EventSourceId.Value, ownPartition) || Equals(failure.EventSourceId.Value, key.Value));
+    }
+
+    bool NothingToSave(ProjectionEventContext context)
+    {
+        // Don't save if the event was deferred or the key is permanently unresolvable
+        if (context.IsDeferred || context.IsUnresolvable)
+        {
+            _logger.NotSavingDueToDeferred(context.Event.Context.SequenceNumber);
+            return true;
+        }
+
+        if (!context.Changeset.HasChanges && !context.HasPendingFutureSaves)
+        {
+            _logger.NotSaving(context.Event.Context.SequenceNumber);
+            return true;
+        }
+
+        return false;
+    }
+
+    async Task<bool> SaveMainChanges(IProjection projection, ProjectionEventContext context, PendingFutureSave[] pendingSavesToFold)
+    {
+        _logger.SavingResult(context.Event.Context.SequenceNumber);
+
+        // TODO: Return the number of affected records and pass this along to the changeset storage
+        var failedPartitions = await ApplyMainChanges(projection, context, pendingSavesToFold);
+
+        // A bulk flush may report partitions other than this event's. Every one is recorded, but only a failure
+        // of this event's own partition stops the rest of the save: the other partitions' events are retried.
+        foreach (var failedPartition in failedPartitions)
+        {
+            context.AddFailedPartition(failedPartition);
+        }
+
+        if (HasFailedOwnPartition(failedPartitions, context.Changeset, context.Key))
+        {
+            return false;
+        }
+
+        await ResolveSavedFutures(pendingSavesToFold);
+
+        await _changesetStorage.Save(
+            _changesetContainer ?? projection.ReadModel.ContainerName,
+            context.Key,
+            context.Event.Context.EventType,
+            context.Event.Context.SequenceNumber,
+            context.Event.Context.CorrelationId,
+            context.Changeset);
+        return true;
     }
 
     /// <summary>
@@ -243,8 +271,16 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// against, and a guarded write never inserts. On a redelivery of that same creating event the instance is
     /// already there, so the write is guarded and correctly does nothing.
     /// </remarks>
-    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context) =>
-        _guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
+    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context)
+    {
+        // Several namespaces write one global instance, so its sequence numbers are not comparable; the revision it was read at is.
+        if (projection.SupportsFencedGlobalWrites)
+        {
+            return SinkWriteMode.FencedGlobal;
+        }
+
+        return _guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
+    }
 }

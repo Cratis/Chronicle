@@ -35,6 +35,7 @@ public class and_multiple_events_share_subject : Specification
         _silo = new TestKitSilo();
         _silo.AddNamespaceCasing();
         var storage = Substitute.For<IStorage>();
+        await given.registered_target_event_types.Register(storage, "event-type-id-1", "event-type-id-2");
         storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition("subscription", "Admin", [])]);
         _silo.AddService(storage);
         _silo.AddService(Substitute.For<IEventGenerationRelease>());

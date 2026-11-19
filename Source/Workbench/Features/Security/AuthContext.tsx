@@ -5,11 +5,14 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 import { useNavigate } from 'react-router-dom';
 import { absolutePath } from '../../Utils/basePath';
 import { clearAntiforgeryToken, getAntiforgeryHeaders, refreshAntiforgeryToken } from './antiforgery';
+import { AuthenticationMode, getAuthenticationMode } from './authenticationMode';
 
 export interface AuthContextType {
     isAuthenticated: boolean;
     isAuthenticationEnabled: boolean;
     isLoading: boolean;
+    authenticationMode: AuthenticationMode;
+    canLogout: boolean;
     checkAuth: () => Promise<void>;
     logout: () => Promise<void>;
 }
@@ -30,12 +33,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticationEnabled, setIsAuthenticationEnabled] = useState(true);
+    const [authenticationMode, setAuthenticationMode] = useState<AuthenticationMode>({ mode: 'chronicle' });
     const navigate = useNavigate();
 
     const checkAuth = async () => {
         try {
             // This endpoint is protected with authentication on, and explicitly returns 204 with it off.
-            setIsAuthenticationEnabled(await refreshAntiforgeryToken());
+            const enabled = await refreshAntiforgeryToken();
+            setIsAuthenticationEnabled(enabled);
+            if (enabled) setAuthenticationMode(await getAuthenticationMode());
             setIsAuthenticated(true);
         } catch {
             clearAntiforgeryToken();
@@ -46,8 +52,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
     };
 
+    const canLogout = isAuthenticationEnabled && (authenticationMode.mode === 'chronicle' || !!authenticationMode.signOutUrl);
+
     const logout = async () => {
-        if (!isAuthenticationEnabled) return;
+        if (!canLogout) return;
+
+        // A reverse proxy owns the session; signing out is its job.
+        if (authenticationMode.mode === 'trustedProxy') {
+            clearAntiforgeryToken();
+            location.assign(authenticationMode.signOutUrl!);
+            return;
+        }
+
         // Do not pretend logout succeeded when the server still has an active session.
         const response = await fetch(absolutePath('/identity/logout'), {
             method: 'POST',
@@ -62,5 +78,5 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     useEffect(() => { checkAuth(); }, []);
 
-    return <AuthContext.Provider value={{ isAuthenticated, isAuthenticationEnabled, isLoading, checkAuth, logout }}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={{ isAuthenticated, isAuthenticationEnabled, isLoading, authenticationMode, canLogout, checkAuth, logout }}>{children}</AuthContext.Provider>;
 };

@@ -145,6 +145,10 @@ If you still need a local development kernel, `docker run -d --name chronicle -p
 
 Use [Connection strings](/chronicle/connection-strings/) to correct the client address, or [Get started](/chronicle/get-started/) to work through a local setup.
 
+## Kernel nodes can't connect to each other
+
+After an upgrade to 19.172.0 or later, nodes of a MongoDB or SQL cluster that use a TLS certificate file can fail to connect when the certificate lacks the client authentication usage. The logs contain `Invalid client certificate for client authentication`. See [Nodes cannot connect to each other after upgrading](/chronicle/hosting/configuration/tls/#nodes-cannot-connect-to-each-other-after-upgrading).
+
 ## Events look wrong after a schema change
 
 When an event type's shape changes over time, use [event type migrations](/chronicle/concepts/event-type-migrations/) to evolve old events to the new shape rather than mutating history. Events are immutable — you migrate how they're read, you don't edit what was written.
