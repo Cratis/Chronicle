@@ -10,6 +10,12 @@ namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 /// </summary>
 internal static class WebhookSigningPublicKeyConverters
 {
+    /// <summary>
+    /// Selects public Ed25519 metadata for active and unexpired overlap keys.
+    /// </summary>
+    /// <param name="keys">The key-ring state.</param>
+    /// <param name="now">The overlap evaluation time.</param>
+    /// <returns>Public verification metadata without private material.</returns>
     internal static IEnumerable<WebhookSigningPublicKey> ToPublicKeys(IEnumerable<WebhookSigningKey> keys, DateTimeOffset now) => keys
         .Where(key => key.Webhook is null && key.Algorithm == WebhookSigningAlgorithm.Ed25519 &&
             (key.Status == WebhookSigningKeyStatus.Active || (key.Status == WebhookSigningKeyStatus.Overlap && key.OverlapEndsAt > now)))

@@ -14,9 +14,9 @@ public class without_an_event_store : Specification
     async Task Because()
     {
         var validator = new RotateWebhookSigningKeyValidator();
-        _emptyValid = (await validator.ValidateAsync(new(string.Empty))).IsValid;
-        _whitespaceValid = (await validator.ValidateAsync(new("  "))).IsValid;
-        _nullValid = (await validator.ValidateAsync(new(null!))).IsValid;
+        _emptyValid = (await validator.ValidateAsync(new RotateWebhookSigningKey(string.Empty))).IsValid;
+        _whitespaceValid = (await validator.ValidateAsync(new RotateWebhookSigningKey("  "))).IsValid;
+        _nullValid = (await validator.ValidateAsync(new RotateWebhookSigningKey(null!))).IsValid;
     }
 
     [Fact] void should_reject_an_empty_store() => _emptyValid.ShouldBeFalse();

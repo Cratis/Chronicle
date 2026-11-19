@@ -19,7 +19,7 @@ public class with_invalid_overlaps : Specification
         _valid = new bool[_overlaps.Length];
         for (var index = 0; index < _overlaps.Length; index++)
         {
-            _valid[index] = (await validator.ValidateAsync(new("store", _overlaps[index]))).IsValid;
+            _valid[index] = (await validator.ValidateAsync(new RotateWebhookSigningKey("store", _overlaps[index]))).IsValid;
         }
     }
 

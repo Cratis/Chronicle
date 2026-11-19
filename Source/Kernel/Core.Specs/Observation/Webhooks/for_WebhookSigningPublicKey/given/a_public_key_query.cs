@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Observation.Webhooks.Signing;
 
 namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookSigningPublicKey.given;
 

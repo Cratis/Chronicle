@@ -11,9 +11,20 @@ namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 /// </summary>
 internal static class WebhookSigningKeyOperations
 {
+    /// <summary>
+    /// Checks whether an optional overlap is finite and within the supported bounds.
+    /// </summary>
+    /// <param name="seconds">The overlap in seconds, or null for the default.</param>
+    /// <returns>Whether the overlap is valid.</returns>
     internal static bool IsValidOverlap(double? seconds) => seconds is null ||
         (double.IsFinite(seconds.Value) && seconds.Value >= 0 && seconds.Value <= WebhookSigningKeyOverlap.Maximum.Value.TotalSeconds);
 
+    /// <summary>
+    /// Gets public verification metadata while masking key-ring failures.
+    /// </summary>
+    /// <param name="eventStore">The event store whose keys to read.</param>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <returns>The active and unexpired overlap public keys.</returns>
     internal static async Task<IEnumerable<WebhookSigningPublicKey>> GetPublicKeys(EventStoreName eventStore, IGrainFactory grainFactory)
     {
         try
@@ -28,6 +39,13 @@ internal static class WebhookSigningKeyOperations
         }
     }
 
+    /// <summary>
+    /// Rotates the addressed key ring while masking private-state failures.
+    /// </summary>
+    /// <param name="eventStore">The event store whose key to rotate.</param>
+    /// <param name="overlapSeconds">The overlap in seconds, or null for the default.</param>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <returns>A task representing the rotation.</returns>
     internal static async Task Rotate(EventStoreName eventStore, double? overlapSeconds, IGrainFactory grainFactory)
     {
         try

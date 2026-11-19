@@ -4,8 +4,9 @@
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Observation.Webhooks.Signing;
 
-namespace Cratis.Chronicle.Observation.Webhooks.Signing;
+namespace Cratis.Chronicle.Observation.Webhooks;
 
 /// <summary>
 /// Rotates an event store's Ed25519 delivery signing key without returning private material.
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 /// <param name="EventStore">The event store whose signing key to rotate.</param>
 /// <param name="OverlapSeconds">The overlap in seconds, or null for the 24-hour default. Zero retires the previous key immediately.</param>
 [Command]
+[Cratis.Arc.Authorization.Authorize(Policy = Security.WellKnownAuthorizationPolicies.Administrator)]
 [BelongsTo(WellKnownServices.Webhooks)]
 public record RotateWebhookSigningKey(EventStoreName EventStore, double? OverlapSeconds = null)
 {

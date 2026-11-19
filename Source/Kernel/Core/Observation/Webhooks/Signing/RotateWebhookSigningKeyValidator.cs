@@ -18,7 +18,7 @@ internal class RotateWebhookSigningKeyValidator : CommandValidator<RotateWebhook
     public RotateWebhookSigningKeyValidator()
     {
         RuleFor(_ => _.EventStore).NotEmpty().WithMessage("Event store name is required.");
-        RuleFor(_ => _.EventStore).Must(store => !string.IsNullOrWhiteSpace(store?.Value)).WithMessage("Event store name is required.");
+        RuleFor(_ => _.EventStore).Must(store => !string.IsNullOrWhiteSpace(store)).WithMessage("Event store name is required.");
         RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.OverlapSeconds).Must(WebhookSigningKeyOperations.IsValidOverlap).WithMessage("Overlap must be finite and between zero and 30 days.");
     }

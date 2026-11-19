@@ -5,8 +5,9 @@ using Cratis.Arc.Queries.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Observation.Webhooks.Signing;
 
-namespace Cratis.Chronicle.Observation.Webhooks.Signing;
+namespace Cratis.Chronicle.Observation.Webhooks;
 
 /// <summary>
 /// Public metadata for an event store's Ed25519 delivery signing key.
@@ -17,6 +18,10 @@ namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 /// <param name="Status">The key's active or overlap status.</param>
 /// <param name="CreatedAt">When the key was created.</param>
 /// <param name="OverlapEndsAt">When an overlap key stops being valid.</param>
+/// <remarks>
+/// Public keys are not secret. This query adds no authorization policy beyond the host's defaults.
+/// Keys are scoped to the requested event store; private keys and HMAC secrets are never returned.
+/// </remarks>
 [ReadModel]
 [BelongsTo(WellKnownServices.Webhooks)]
 public record WebhookSigningPublicKey(

@@ -16,7 +16,7 @@ public class with_an_open_overlap : given.a_public_key_query
     {
         await Sign();
         await Query();
-        WebhookSigningKeys.TryParsePublicKey(_result[1].PublicKey, out _publishedOldKey);
+        WebhookSigningKeys.TryParsePublicKey(_result[1].PublicKey, out _publishedOldKey).ShouldBeTrue();
     }
 
     [Fact] void should_publish_the_old_verification_key() => WebhookSigningKeys.TryParsePublicKey(_result[1].PublicKey, out _).ShouldBeTrue();
