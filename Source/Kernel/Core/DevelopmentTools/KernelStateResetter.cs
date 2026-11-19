@@ -5,7 +5,10 @@ using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
-using Cratis.Types;
+using Microsoft.Extensions.Logging;
+#if DEVELOPMENT
+using Cratis.Chronicle.Observation.EventStoreSubscriptions;
+#endif
 
 // Primary-constructor parameters used inside #if DEVELOPMENT trip CS9113 in release builds.
 #pragma warning disable CS9113
@@ -16,20 +19,28 @@ namespace Cratis.Chronicle.DevelopmentTools;
 /// Wipes the kernel back to a freshly bootstrapped state.
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> instance.</param>
+/// <param name="storage">The storage inventory of event stores whose subscriptions must be stopped.</param>
 /// <param name="projectionPipelineManager"><see cref="IProjectionPipelineManager"/> instance.</param>
 /// <param name="resetHandlers">Storage components that wipe their backing store during a development reset.</param>
 /// <param name="eventStoreInitialization">The event store initialization cache to clear.</param>
 /// <param name="bootstrapResetHandler">Re-runs kernel bootstrap (identity, system event store) after storage is wiped.</param>
+/// <param name="logger">The logger.</param>
 /// <remarks>
 /// This exists for integration tests, which need a known-empty server between test classes. It is compiled in only
 /// when the server is built with the DEVELOPMENT preprocessor symbol - a released kernel cannot be asked to do this.
 /// </remarks>
+#if DEVELOPMENT
+internal sealed partial class KernelStateResetter(
+#else
 internal sealed class KernelStateResetter(
+#endif
     IGrainFactory grainFactory,
+    IStorage storage,
     IProjectionPipelineManager projectionPipelineManager,
-    IInstancesOf<ICanPerformKernelStateReset> resetHandlers,
+    IEnumerable<ICanPerformKernelStateReset> resetHandlers,
     IEventStoreInitialization eventStoreInitialization,
-    KernelBootstrapResetHandler bootstrapResetHandler) : IKernelStateResetter
+    KernelBootstrapResetHandler bootstrapResetHandler,
+    ILogger<KernelStateResetter> logger) : IKernelStateResetter
 {
     /// <summary>
     /// Gets a value indicating whether the server exposes development tools.
@@ -50,20 +61,17 @@ internal sealed class KernelStateResetter(
     {
 #if DEVELOPMENT
         await KeepAliveGrainReset.Reset(grainFactory);
+        await EventStoreSubscriptionsReset.Reset(grainFactory, storage);
+
+        // Removing subscriptions can activate source observers to unsubscribe them. Quiesce those too.
+        await KeepAliveGrainReset.Reset(grainFactory);
         projectionPipelineManager.Clear();
 
-        // Wipe storage BEFORE deactivating grains, as the in-process test fixture does. Deactivating
-        // first let a reminder re-activate a grain between deactivation and the wipe - notably
-        // EventStoreSubscriptionsManager, whose subscription reminder first fires after 100 ms - with its in-memory
-        // state loaded from the previous test class. That state survived the wipe and was persisted
-        // again on the grain's next write, so a test that subscribed once found the previous test's
-        // subscription stored next to its own (#5336). Wiping first also truncates the reminders the
-        // storage holds, and any grain writing during deactivation writes into an empty store.
+        // Wipe persisted reminders before deactivation so they cannot reactivate owners with stale state (#5336).
         await WipeStorage();
         await DeactivateAllGrains();
 
-        // Deactivating grains write their dirty state in OnDeactivateAsync, so wipe again to remove
-        // anything written back between the first wipe and the end of the deactivation cycle.
+        // Deactivating grains may write dirty state back, so wipe again after activation collection.
         await WipeStorage();
         eventStoreInitialization.Clear();
         projectionPipelineManager.Clear();
@@ -79,12 +87,13 @@ internal sealed class KernelStateResetter(
     }
 
 #if DEVELOPMENT
+    [LoggerMessage(LogLevel.Warning, "Kernel grain activations did not settle before the development reset continued.")]
+    static partial void LogDeactivationTimeout(ILogger logger);
+
     async Task WipeStorage()
     {
-        // IInstancesOf may include backend-specific handlers whose dependencies are not
-        // registered in the active storage mode (e.g. MongoDBKernelStateResetHandler when
-        // running on SQL storage). Those handlers cannot be constructed by DI and surface
-        // as null entries in the enumeration; skip them.
+        // Storage builders register only their active backend's reset handler. Discovering every
+        // implementation would try to construct inactive handlers before CanReset can skip them.
         foreach (var handler in resetHandlers)
         {
             if (handler?.CanReset() != true)
@@ -101,10 +110,8 @@ internal sealed class KernelStateResetter(
         var managementGrain = grainFactory.GetGrain<IManagementGrain>(0);
         await managementGrain.ForceActivationCollection(TimeSpan.Zero);
 
-        // ForceActivationCollection returns once the broadcast is acknowledged, not when every
-        // grain has finished deactivating. Wait until the activation count holds steady instead
-        // of guessing how long deactivation takes. The second wipe runs either way, so a count
-        // that never settles within the bound only means the reset proceeds without waiting longer.
+        // ForceActivationCollection acknowledges the broadcast before every grain has deactivated.
+        // Wait for a stable count, but do not let unrelated busy grains prevent the second wipe.
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var stableReadCount = 0;
         var previousCount = -1;
@@ -114,6 +121,11 @@ internal sealed class KernelStateResetter(
             stableReadCount = currentCount == previousCount ? stableReadCount + 1 : 0;
             previousCount = currentCount;
             await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+
+        if (cancellationTokenSource.IsCancellationRequested)
+        {
+            LogDeactivationTimeout(logger);
         }
     }
 #endif
