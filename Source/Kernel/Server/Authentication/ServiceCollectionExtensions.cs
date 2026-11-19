@@ -109,6 +109,16 @@ public static class ServiceCollectionExtensions
         services.AddOpenIddictIfEnabled(chronicleOptions, encryptionCertificateRing);
 
         var bearerScheme = chronicleOptions.Authentication.UseInternalAuthority ? OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme : JwtBearerDefaults.AuthenticationScheme;
+        var authentication = chronicleOptions.Authentication;
+
+        // With a trusted proxy authenticating HTTP callers, the Workbench's own password sign-in is not offered.
+        // The token endpoint stays: gRPC clients still exchange their client credentials there.
+        if (authentication.Http.IsTrustedProxy)
+        {
+            services.AddSingleton(new TrustedProxyPeers(chronicleOptions));
+            services.AddMvcCore().ConfigureApplicationPartManager(manager =>
+                manager.FeatureProviders.Add(new TrustedProxyControllerFeatureProvider()));
+        }
 
         // Use a policy scheme that tries cookie first, then bearer token
         var authBuilder = services.AddAuthentication(options =>
@@ -124,6 +134,13 @@ public static class ServiceCollectionExtensions
                 if (context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 {
                     return bearerScheme;
+                }
+
+                // A trusted proxy's identity headers, on an HTTP request. The handler still checks that the peer is a
+                // trusted proxy and fails the request otherwise, rather than falling through to another scheme.
+                if (TrustedProxyAuthenticationHandler.Applies(context.Request, authentication))
+                {
+                    return TrustedProxyAuthenticationHandler.SchemeName;
                 }
 
                 // Otherwise, if there's a cookie, use cookie authentication
@@ -151,6 +168,11 @@ public static class ServiceCollectionExtensions
         // MapIdentityApi's login/refresh endpoints also support ASP.NET Identity's protected bearer tickets.
         // Keep that scheme distinct from OAuth JWT validation; both are validated by their own handler.
         authBuilder.AddBearerToken(IdentityConstants.BearerScheme);
+
+        if (authentication.Http.IsTrustedProxy)
+        {
+            authBuilder.AddScheme<AuthenticationSchemeOptions, TrustedProxyAuthenticationHandler>(TrustedProxyAuthenticationHandler.SchemeName, null);
+        }
 
         // Add cookie authentication for Identity API endpoints
         authBuilder.AddCookie(IdentityConstants.ApplicationScheme, options =>
@@ -183,6 +205,7 @@ public static class ServiceCollectionExtensions
         services.AddChronicleAdministratorAuthorization();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, ExternalAdministratorClaimValidation>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, TrustedProxyAuthenticationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
 
         // Reads the grants the startup task loaded: given once the silo is active, never from a hosted service (#4040).

@@ -102,6 +102,7 @@ public static class StoreEntitlementEnforcement
     static string CallerKind(ClaimsPrincipal? principal, Authentication authentication, PrincipalKey holder)
     {
         if (PrincipalKey.IsLocalUser(principal, authentication)) return "user";
+        if (authentication.Http.IsTrustedProxy && TrustedProxyUsers.Is(principal)) return "proxy user";
         return holder.IsUnidentified ? "anonymous" : "application";
     }
 
