@@ -165,6 +165,18 @@ public class Projection : IProjection, IDisposable
     /// <inheritdoc/>
     public bool IsEventSourceKeyed { get; private set; }
 
+    /// <summary>
+    /// Gets why the definition, regardless of how its keys resolve, rules out fenced global writes; null when nothing does.
+    /// </summary>
+    public string? FencedGlobalDefinitionIneligibility { get; init; }
+
+    /// <inheritdoc/>
+    public string? FencedGlobalIneligibilityReason =>
+        Scope != ProjectionScope.Global ? null : FencedGlobalDefinitionIneligibility ?? (IsEventSourceKeyed ? null : "its read model keys are not the event source id");
+
+    /// <inheritdoc/>
+    public bool SupportsFencedGlobalWrites => Scope == ProjectionScope.Global && FencedGlobalIneligibilityReason is null;
+
     /// <inheritdoc/>
     public IProjection? Parent { get; private set; }
 

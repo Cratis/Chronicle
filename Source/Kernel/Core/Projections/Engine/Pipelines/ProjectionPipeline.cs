@@ -68,6 +68,8 @@ public partial class ProjectionPipeline(
     /// </remarks>
     readonly ProjectionHandleLock _handleLock = handleLock;
 
+    const int MaxFencedAttempts = 8;
+
     long _activity;
     bool _bulkOpen;
     Action? _sessionOpened;
@@ -206,6 +208,26 @@ public partial class ProjectionPipeline(
             : await _handleLock.AcquireCoarse();
 
         logger.StartingPipeline(@event.Context.SequenceNumber);
+
+        // A write made with a revision check that finds the instance changed has written nothing: read it again and recompute.
+        var attempts = projection.SupportsFencedGlobalWrites ? MaxFencedAttempts : 1;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                var context = await PerformSteps(@event);
+                logger.CompletedAllSteps(@event.Context.SequenceNumber);
+                return context;
+            }
+            catch (SinkWriteConflictException) when (attempt < attempts)
+            {
+                await Task.Delay(Random.Shared.Next(1, 10 * attempt));
+            }
+        }
+    }
+
+    async Task<ProjectionEventContext> PerformSteps(AppendedEvent @event)
+    {
         var context = ProjectionEventContext.Empty(objectComparer, projection.ForProjection(@event)) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
@@ -224,7 +246,6 @@ public partial class ProjectionPipeline(
                 throw;
             }
         }
-        logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
         return context;
     }

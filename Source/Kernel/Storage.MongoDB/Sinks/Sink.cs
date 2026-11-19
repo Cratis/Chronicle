@@ -148,10 +148,10 @@ public partial class Sink(
     /// Highest event sequence number known to be applied to each document while a bulk window is open.
     /// </summary>
     /// <remarks>
-    /// Bulk mode answers <see cref="FindOrDefault"/> from <see cref="_bulkStateCache"/>, so a guarded write that
+    /// Bulk mode answers <see cref="FindOrDefault(Key)"/> from <see cref="_bulkStateCache"/>, so a guarded write that
     /// the server rejects must not leave its recomputed state in that cache — the next event for the same key
     /// would read the doubled state and persist it. Seeded from the document the first uncached
-    /// <see cref="FindOrDefault"/> reads (no extra round trip) and advanced by every write queued in the window,
+    /// <see cref="FindOrDefault(Key)"/> reads (no extra round trip) and advanced by every write queued in the window,
     /// so an already applied event is recognized before its state is cached at all.
     /// </remarks>
     readonly ConcurrentDictionary<string, ulong> _bulkWatermarks = new();
@@ -160,7 +160,7 @@ public partial class Sink(
     /// Documents whose delete is queued in the open bulk window but has not reached the server yet.
     /// </summary>
     /// <remarks>
-    /// The server still holds such a document, so an uncached <see cref="FindOrDefault"/> would report it as
+    /// The server still holds such a document, so an uncached <see cref="FindOrDefault(Key)"/> would report it as
     /// present and the caller would treat the next event as an update of a live instance. On a document whose
     /// write is guarded that is fatal: a guarded write never inserts, so the queued delete runs first and the
     /// re-creating update matches nothing, losing the read model. Reporting the document as already gone restores
@@ -402,6 +402,11 @@ public partial class Sink(
     {
         _bulkCancellation.Token.ThrowIfCancellationRequested();
         options = options with { Partition = PartitionFor(key, changeset) };
+        if (options.Mode == SinkWriteMode.FencedGlobal)
+        {
+            return await ApplyFencedGlobal(key, changeset, eventSequenceNumber);
+        }
+
         var plan = PlanWrite(key, changeset);
 
         if (changeset.HasBeenRemoved())

@@ -78,6 +78,12 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
             return context;
         }
 
+        // Futures are written outside the fenced write and would be stored again when it is retried, so they fail the partition instead.
+        if (projection.SupportsFencedGlobalWrites && (context.DeferredFutures.Any() || context.HasPendingFutureSaves))
+        {
+            throw new FencedWriteNotSupportedException($"projection '{projection.Identifier}' produced futures");
+        }
+
         var pendingSavesToFold = FoldPendingProperties(context);
         if (context.Changeset.HasChanges)
         {
@@ -243,8 +249,16 @@ public class SaveChanges : ICanPerformProjectionPipelineStep
     /// against, and a guarded write never inserts. On a redelivery of that same creating event the instance is
     /// already there, so the write is guarded and correctly does nothing.
     /// </remarks>
-    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context) =>
-        _guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
+    SinkWriteMode WriteModeFor(IProjection projection, ProjectionEventContext context)
+    {
+        // Several namespaces write one global instance, so its sequence numbers are not comparable; the revision it was read at is.
+        if (projection.SupportsFencedGlobalWrites)
+        {
+            return SinkWriteMode.FencedGlobal;
+        }
+
+        return _guardWritesOnWatermark && projection.IsEventSourceKeyed && !context.IsNewInstance
             ? SinkWriteMode.OnlyWhenAdvancingWatermark
             : SinkWriteMode.Always;
+    }
 }

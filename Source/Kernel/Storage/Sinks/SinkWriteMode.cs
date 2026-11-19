@@ -41,5 +41,21 @@ public enum SinkWriteMode
     /// Insert a missing instance; otherwise apply changes only when the incoming sequence number
     /// is beyond the stored watermark, including when writes are buffered in a bulk window.
     /// </summary>
-    GuardedUpsert = 2
+    GuardedUpsert = 2,
+
+    /// <summary>
+    /// Apply the changes with an optimistic revision check against a read model instance shared by several namespaces.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Only requested for an eligible global projection (see <c language="csharp">IProjection.SupportsFencedGlobalWrites</c>). The write succeeds only
+    /// when the stored incarnation and revision are those of the read the changes were computed from, otherwise a
+    /// <see cref="SinkWriteConflictException"/> is thrown and nothing is written, so the caller can read again and recompute.
+    /// Redelivery is made a no-op per writing namespace, never against another namespace's sequence number.
+    /// </para>
+    /// <para>
+    /// A sink without this concept (SQL, in-memory) ignores the mode and writes as <see cref="Always"/>.
+    /// </para>
+    /// </remarks>
+    FencedGlobal = 3
 }

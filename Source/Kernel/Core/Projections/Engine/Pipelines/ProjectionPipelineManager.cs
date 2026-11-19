@@ -162,6 +162,11 @@ public class ProjectionPipelineManager(
         // Sinks owns the sink cache and its replay/bulk mode. Replacing a pipeline must reuse
         // that sink rather than begin replay again (which would clear already replayed data).
         var sink = await sinkStorage.Sinks.GetFor(projection.ReadModel);
+        if (projection.FencedGlobalIneligibilityReason is { } reason)
+        {
+            loggerFactory.CreateLogger<ProjectionPipeline>().GlobalProjectionWrittenWithoutRevisionChecks(projection.Identifier.ToString(), reason);
+        }
+
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
         var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, null);
         Bind(key, projection, newPipeline);
