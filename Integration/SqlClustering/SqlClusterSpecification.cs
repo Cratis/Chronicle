@@ -61,6 +61,10 @@ public abstract class SqlClusterSpecification(bool postgres, ClusterChange chang
     {
         try
         {
+            // Diagnostic (l189/5603-diag only): dump the kernel logs of every run, passing or failing.
+            await Console.Out.WriteLineAsync($"=== DIAG kernel logs for {GetType().FullName} ===");
+            await _cluster.DumpLogs();
+            await Console.Out.WriteLineAsync($"=== END DIAG kernel logs for {GetType().FullName} ===");
             await _load.DisposeAsync();
         }
         finally
