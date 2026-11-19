@@ -8,6 +8,26 @@ Connection resolution lets Chronicle ask instead. Whenever it connects to a data
 
 Nothing changes until you configure it. For how this fits with selecting tenants and namespaces, see [Tenancy](../../tenancy/index.md). Without a `connectionResolution` section, `connectionDetails` is used exactly as before.
 
+## Resolver defaults and required settings
+
+Both `Connection` and `Identity` use the following slot settings. Leave both resolvers at `Default` to keep the configured connection unchanged; configure only the slot you need to replace.
+
+| Setting | Default | When to set it |
+| --- | --- | --- |
+| `Resolver` | `Default` | Select `Template`, `Http` or a code-configured `Custom` resolver |
+| `Template.ConnectionString`, `Template.Database`, `Template.Schema` | `null` | Supply the parts to replace; omitted parts keep their configured values |
+| `Http.Endpoint` | `null` | Required when selecting `Http` |
+| `Http.Headers` | empty dictionary | Static request headers, such as an API key |
+| `Http.Timeout` | `00:00:10` | Change the endpoint response timeout |
+| `Http.Authentication.Type` | `None` | Select `ClientCredentials` or `AzureCredential` to send a bearer token |
+| `Http.Authentication.TokenEndpoint`, `ClientId`, `ClientSecret` | `null` | All three are required for `ClientCredentials`; the token endpoint must use HTTPS, or HTTP on loopback |
+| `Http.Authentication.Scope` | `null` | Optional requested OAuth scope; required for `AzureCredential` |
+| `Http.Authentication.Credential` | `ManagedIdentity` | For `AzureCredential`, choose `WorkloadIdentity` or `Default` when appropriate; its optional `ClientId` selects the identity |
+| `Http.Authentication.RefreshMargin` | `00:05:00` | Renew the token this long before expiry |
+| `CustomType` | `null` | Set the custom resolver type from code; it is created through DI |
+
+`ConnectionResolution.CacheDuration` is shared by the two slots and defaults to `00:05:00`. It is used when the resolver supplies no expiry. Set it to `00:00:00` to resolve for every connection. The [shared resolver reference](https://www.cratis.io/arc/backend/csharp/tenancy/connection-resolution) covers token refresh and examples for each authentication mode.
+
 ## What Chronicle asks
 
 | Field | Values |
