@@ -14,6 +14,8 @@ public class and_a_constraint_is_pending_and_the_key_is_durable : given.an_event
     }
     async Task Because() => _result = await AppendKeyed();
     [Fact] void should_not_refuse_the_durable_key() => _result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_not_report_retryability() => _result.Result.IsRetryable.ShouldBeFalse();
+    [Fact] void should_not_suggest_a_retry_delay() => _result.Result.RetryAfter.ShouldBeNull();
     [Fact] void should_report_a_hit() => _result.Outcome.ShouldEqual(AppendOutcome.AlreadyAppended);
     [Fact] async Task should_not_start_repair() => await _eventSequenceStorage.DidNotReceive().GetFromSequenceNumber(Arg.Any<EventSequenceNumber>(), Arg.Any<EventSourceId?>(), Arg.Any<EventSourceType?>(), Arg.Any<EventStreamType?>(), Arg.Any<EventStreamId?>(), Arg.Any<IEnumerable<EventType>?>(), Arg.Any<IEnumerable<Tag>?>(), Arg.Any<CancellationToken>());
 }
