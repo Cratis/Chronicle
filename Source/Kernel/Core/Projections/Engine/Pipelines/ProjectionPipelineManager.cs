@@ -403,6 +403,10 @@ public class ProjectionPipelineManager(
             handleLock,
             replayScopedStorage,
             loggerFactory.CreateLogger<ProjectionPipeline>(),
-            generation);
+            generation,
+
+            // The sink of a globally scoped projection is shared by every namespace's pipeline: no window of its own.
+            // A generation writes to its own destination, so it keeps its window.
+            generation is not null || projection.Scope != ProjectionScope.Global);
     }
 }
