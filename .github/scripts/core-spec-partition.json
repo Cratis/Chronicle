@@ -70,6 +70,10 @@
             "weight": 0.004883316343081044
         },
         {
+            "prefix": "Cratis.Chronicle.Helpers.",
+            "weight": 0.00005
+        },
+        {
             "prefix": "Cratis.Chronicle.Identities.",
             "weight": 0.0008432324252328064
         },
