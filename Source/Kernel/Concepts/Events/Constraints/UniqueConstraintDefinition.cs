@@ -132,12 +132,8 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
     public virtual bool Equals(UniqueConstraintDefinition? other) =>
         other is not null &&
         Name == other.Name &&
-        IgnoreCasing == other.IgnoreCasing &&
-        Mode == other.Mode &&
-        RemovalEventDefinitions.Canonical().SequenceEqual(other.RemovalEventDefinitions.Canonical()) &&
-        Scope.Canonical() == other.Scope.Canonical() &&
+        !ClaimsDifferFrom(other) &&
         EventDefinitions.Canonical().SequenceEqual(other.EventDefinitions.Canonical()) &&
-        RemovedWith.SameSetAs(other.RemovedWith) &&
         EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
@@ -189,6 +185,26 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         }
 
         var changes = new HashSet<ConstraintChangeType>();
+        CollectEventChanges(existingDefinition, changes);
+
+        if (ClaimsDifferFrom(existingDefinition))
+        {
+            changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
+        }
+
+        // Narrowing needs no reindex: only newly covered sequences need their indexes rebuilt.
+        if (EventSequences.CoversMoreThan(existingDefinition.EventSequences))
+        {
+            changes.Add(ConstraintChangeType.EventSequencesChanged);
+        }
+
+        return changes.Count == 0
+            ? ConstraintChange.None
+            : new ConstraintChange(true, changes.ToArray());
+    }
+
+    void CollectEventChanges(UniqueConstraintDefinition existingDefinition, HashSet<ConstraintChangeType> changes)
+    {
         var existingEventDefinitions = existingDefinition.EventDefinitions.Canonical();
         var newEventDefinitions = EventDefinitions.Canonical();
 
@@ -216,25 +232,6 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
                 break;
             }
         }
-
-        if (ClaimsDifferFrom(existingDefinition))
-        {
-            changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
-        }
-
-        // Narrowing the event sequences needs no reindex: validation and indexing stop for a sequence the constraint
-        // no longer applies to, so its index is simply no longer read. Widening is reported as a change requiring one,
-        // because the index of a newly covered sequence was never maintained, or has been stale since the constraint
-        // last stopped applying to it. Only the newly covered sequences are reindexed - which ones those are is decided
-        // per sequence when the definitions are registered, not here.
-        if (EventSequences.CoversMoreThan(existingDefinition.EventSequences))
-        {
-            changes.Add(ConstraintChangeType.EventSequencesChanged);
-        }
-
-        return changes.Count == 0
-            ? ConstraintChange.None
-            : new ConstraintChange(true, changes.ToArray());
     }
 
     bool ClaimsDifferFrom(UniqueConstraintDefinition existingDefinition) =>
