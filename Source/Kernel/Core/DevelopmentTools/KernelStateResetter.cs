@@ -5,7 +5,6 @@ using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
-using Cratis.Types;
 using Microsoft.Extensions.Logging;
 #if DEVELOPMENT
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -38,7 +37,7 @@ internal sealed class KernelStateResetter(
     IGrainFactory grainFactory,
     IStorage storage,
     IProjectionPipelineManager projectionPipelineManager,
-    IInstancesOf<ICanPerformKernelStateReset> resetHandlers,
+    IEnumerable<ICanPerformKernelStateReset> resetHandlers,
     IEventStoreInitialization eventStoreInitialization,
     KernelBootstrapResetHandler bootstrapResetHandler,
     ILogger<KernelStateResetter> logger) : IKernelStateResetter
@@ -93,10 +92,8 @@ internal sealed class KernelStateResetter(
 
     async Task WipeStorage()
     {
-        // IInstancesOf may include backend-specific handlers whose dependencies are not
-        // registered in the active storage mode (e.g. MongoDBKernelStateResetHandler when
-        // running on SQL storage). Those handlers cannot be constructed by DI and surface
-        // as null entries in the enumeration; skip them.
+        // Storage builders register only their active backend's reset handler. Discovering every
+        // implementation would try to construct inactive handlers before CanReset can skip them.
         foreach (var handler in resetHandlers)
         {
             if (handler?.CanReset() != true)
