@@ -89,11 +89,13 @@ Override the service name and version with `SERVICE_NAME` and `SERVICE_VERSION`.
 
 ## Connecting to a different Chronicle instance
 
-Edit the connection string on line 24 of `Program.cs`:
+By default the sample connects to a local development Chronicle with the client's development defaults. To point it elsewhere, create the options from a connection string in `Program.cs`:
 
 ```csharp
-var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@<host>:<port>");
+var options = ChronicleOptions.FromConnectionString("chronicle://<host>:<port>");
 ```
+
+Add credentials to the connection string only for a deployment that requires them.
 
 ## Project structure
 
