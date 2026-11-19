@@ -32,14 +32,10 @@ public class and_event_store_subscriptions_exist(context context) : Given<contex
         async Task Because()
         {
             ChronicleClient.EvictEventStores();
-            if (ChronicleFixture.Options.Mode == ChronicleRuntimeMode.OutOfProcess)
-            {
-                await ChronicleFixture.ResetForLifecycleProofAsync();
-            }
-            else
-            {
-                await Services.GetRequiredService<IKernelStateResetter>().Reset();
-            }
+
+            // The inherited client uses this host's Orleans silo, even in OutOfProcess fixture mode.
+            // Reset that same kernel, not the separate container used by the fixture lifecycle.
+            await Services.GetRequiredService<IKernelStateResetter>().Reset();
 
             var source = await ChronicleClient.GetEventStore(SourceEventStoreName);
             await source.RegisterAll();
