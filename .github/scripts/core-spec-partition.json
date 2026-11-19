@@ -423,7 +423,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.",
-            "weight": 0.12780797125167484
+            "weight": 0.12730797125167484
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ScreenplayConformance.",
@@ -456,6 +456,10 @@
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_EventValueProviders.",
             "weight": 0.00032892556436176916
+        },
+        {
+            "prefix": "Cratis.Chronicle.Projections.Engine.for_FencedGlobalEligibility.",
+            "weight": 0.0005
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_KeyResolvers.",
