@@ -70,7 +70,7 @@ public class when_removing_a_namespace_whose_name_has_a_comma : Specification
 
     [Fact] async Task should_remove_the_observer_while_the_namespace_is_still_listed() => await _observer.Received(1).Remove();
     [Fact] async Task should_forget_the_namespace() => await _namespaces.Received(1).Forget(_namespace);
-    [Fact] async Task should_remove_the_reminder_of_an_observer_subscribed_again_directly() => await _reminderTable.Received(1).RemoveRow(_resubscribed.GrainId, _resubscribed.ReminderName, _resubscribed.ETag);
+    [Fact] async Task should_remove_the_reminder_of_an_observer_subscribed_again_directly() => await _reminderTable.Received(1).RemoveRow(_resubscribed.GrainId, _resubscribed.ReminderName, "etag");
     [Fact] async Task should_drop_the_data_of_the_namespace() => await _eventStoreStorage.Received(1).DropNamespace(_namespace);
     [Fact] async Task should_delete_the_namespace_record() => await _namespaceRecords.Received(1).Delete(_namespace);
 }

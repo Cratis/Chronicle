@@ -105,7 +105,7 @@ public class NamespaceRemover(
     {
         foreach (var (_, reminder) in await GetObserverReminders(eventStore, @namespace))
         {
-            await reminderTable.RemoveRow(reminder.GrainId, reminder.ReminderName, reminder.ETag);
+            await reminderTable.RemoveRow(reminder.GrainId, reminder.ReminderName, reminder.ETag ?? string.Empty);
         }
     }
 
