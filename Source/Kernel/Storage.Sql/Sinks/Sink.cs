@@ -268,14 +268,18 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     {
         // Composite-key design §4.1: these paths lack target key parts. Leave shadows untouched;
         // never reconstruct composite parts from ambiguous or culture-sensitive legacy ids.
-        foreach (var joined in changes.OfType<Joined>())
+        foreach (var change in changes)
         {
-            await ApplyJoinedChange(scope, joined, eventSequenceNumber, ambientIndexers);
-        }
+            switch (change)
+            {
+                case Joined joined:
+                    await ApplyJoinedChange(scope, joined, eventSequenceNumber, ambientIndexers);
+                    break;
 
-        foreach (var childRemovedFromAll in changes.OfType<ChildRemovedFromAll>())
-        {
-            await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
+                case ChildRemovedFromAll childRemovedFromAll:
+                    await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
+                    break;
+            }
         }
     }
 

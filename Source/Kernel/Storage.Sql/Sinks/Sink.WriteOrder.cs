@@ -15,27 +15,29 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 public partial class Sink
 {
     /// <summary>
-    /// Splits the changes of a cycle by the order they were produced in. Joins before the first direct change and every child
-    /// removal go first. The first run of direct changes is the write that creates the row or guards it. What follows
-    /// alternates between runs of joins and runs of direct changes.
+    /// Splits the changes of a cycle by the order they were produced in. Joins and child removals before the first direct
+    /// change go first. The first run of direct changes is the write that creates the row or guards it. What follows
+    /// alternates between runs of joins and child removals and runs of direct changes.
     /// </summary>
     /// <param name="changes">The changes of the changeset, in order.</param>
     /// <returns>The changes split by when they are written.</returns>
     static CycleWriteOrder OrderWrites(IEnumerable<Change> changes)
     {
-        var ordered = changes.Where(change => change is not ChildRemovedFromAll).ToArray();
-        var leading = changes.OfType<ChildRemovedFromAll>().Cast<Change>().Concat(ordered.TakeWhile(change => change is Joined)).ToArray();
-        var fromFirstDirect = ordered.Skip(leading.Count(change => change is Joined)).ToArray();
-        var firstDirect = fromFirstDirect.TakeWhile(change => change is not Joined).ToArray();
+        var ordered = changes.ToArray();
+        var leading = ordered.TakeWhile(IsJoinOrChildRemoval).ToArray();
+        var fromFirstDirect = ordered.Skip(leading.Length).ToArray();
+        var firstDirect = fromFirstDirect.TakeWhile(change => !IsJoinOrChildRemoval(change)).ToArray();
         return new(leading, firstDirect, GroupRuns(fromFirstDirect.Skip(firstDirect.Length)));
     }
+
+    static bool IsJoinOrChildRemoval(Change change) => change is Joined or ChildRemovedFromAll;
 
     static Change[][] GroupRuns(IEnumerable<Change> changes)
     {
         var runs = new List<List<Change>>();
         foreach (var change in changes)
         {
-            if (runs.Count > 0 && (runs[^1][0] is Joined) == (change is Joined))
+            if (runs.Count > 0 && IsJoinOrChildRemoval(runs[^1][0]) == IsJoinOrChildRemoval(change))
             {
                 runs[^1].Add(change);
             }
@@ -52,7 +54,7 @@ public partial class Sink
     {
         foreach (var run in trailing)
         {
-            if (run[0] is Joined)
+            if (IsJoinOrChildRemoval(run[0]))
             {
                 await ApplyJoinsAndChildRemovals(scope, run, sequenceNumber, key.ArrayIndexers);
             }
@@ -68,8 +70,8 @@ public partial class Sink
     /// <summary>
     /// The changes of a cycle split by when they are written.
     /// </summary>
-    /// <param name="Leading">The joins before the first direct change, and the child removals.</param>
+    /// <param name="Leading">The joins and child removals before the first direct change, in order.</param>
     /// <param name="FirstDirect">The first run of direct changes.</param>
-    /// <param name="Trailing">The runs after that, each of joins only or of direct changes only.</param>
+    /// <param name="Trailing">The runs after that, each of joins and child removals or of direct changes only.</param>
     sealed record CycleWriteOrder(Change[] Leading, Change[] FirstDirect, Change[][] Trailing);
 }
