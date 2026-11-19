@@ -83,6 +83,9 @@ public class AuthorizationDecisions(
         && scope.EventStore is not null
         && !string.Equals(scope.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
 
+    static bool IsTrustedProxyUser(ClaimsPrincipal principal, Authentication authentication) =>
+        authentication.Http.IsTrustedProxy && TrustedProxyUsers.Is(principal);
+
     /// <summary>
     /// Gets whether the principal is an application the operator configured for exactly this capability: enrolling this kernel
     /// (<c language="text">Federation:Enrollment:Applications</c>) or managing the hosted federation it is the authority for
@@ -156,7 +159,7 @@ public class AuthorizationDecisions(
         if (authentication.EnforceStoreEntitlements && cache?.IsFresh is not true) return Deny(AuthorizationReason.Failed, capability, scope);
         if (HasGrant(holder, principal, capability, scope)) return Allow(AuthorizationReason.Granted, capability, scope);
         if (!IsOrdinaryCapability(capability)) return DecideAdministrator(principal, capability, scope, services);
-        return PrincipalKey.IsLocalUser(principal, authentication)
+        return PrincipalKey.IsLocalUser(principal, authentication) || IsTrustedProxyUser(principal, authentication)
             ? Allow(AuthorizationReason.NotEnrolled, capability, scope)
             : Deny(AuthorizationReason.NotGranted, capability, scope);
     }
