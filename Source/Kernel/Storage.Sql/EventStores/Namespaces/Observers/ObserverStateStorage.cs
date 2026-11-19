@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
@@ -197,6 +198,20 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             .Select(observer => new { observer.Id, observer.LastSeenAt })
             .ToListAsync();
         return known.ToDictionary(_ => _.Id, _ => _.LastSeenAt!.Value);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var ownerValue = owner.Value;
+        var recorded = await scope.DbContext.Observers
+            .Where(observer => observer.Owner == ownerValue && observer.DurableSubscription != null)
+            .Select(observer => new { observer.Id, observer.DurableSubscription })
+            .ToListAsync();
+        return recorded.ToDictionary(
+            _ => new ObserverId(_.Id),
+            _ => JsonSerializer.Deserialize<ObserverDurableSubscription>(_.DurableSubscription!, ObserverStateJson.Options)!);
     }
 
     /// <inheritdoc/>

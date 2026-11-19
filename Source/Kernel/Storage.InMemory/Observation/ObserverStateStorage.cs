@@ -148,6 +148,15 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner)
+    {
+        IReadOnlyDictionary<ObserverId, ObserverDurableSubscription> result = _states
+            .Where(entry => entry.Value.DurableSubscription is not null && entry.Value.Owner == owner)
+            .ToDictionary(entry => entry.Key, entry => entry.Value.DurableSubscription!);
+        return Task.FromResult(result);
+    }
+
+    /// <inheritdoc/>
     public Task Delete(ObserverId observerId)
     {
         lock (_mutationLock)

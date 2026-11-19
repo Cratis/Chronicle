@@ -89,6 +89,11 @@ public class ObserverState
     [BsonIgnoreIfNull]
     public WebhookProbeState? WebhookProbe { get; set; }
 
+    /// <summary>Gets or sets the optional durable subscription of the observer (decision 0034).</summary>
+    [BsonElement("durableSubscription")]
+    [BsonIgnoreIfNull]
+    public ObserverDurableSubscription? DurableSubscription { get; set; }
+
     /// <summary>
     /// Gets or sets when the running state last changed, absent on legacy state.
     /// </summary>

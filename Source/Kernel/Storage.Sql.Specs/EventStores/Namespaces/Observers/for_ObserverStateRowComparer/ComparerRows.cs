@@ -27,6 +27,7 @@ public static class ComparerRows
         AlertDisposition = AlertDisposition.Active,
         QuarantineEpisodeId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
         WebhookProbe = "probe",
+        DurableSubscription = "durable",
         LastHandledEventSequenceNumber = 5,
         NextEventSequenceNumber = 6,
         TailEventSequenceNumber = 7,

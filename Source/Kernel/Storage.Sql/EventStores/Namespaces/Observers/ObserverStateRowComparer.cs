@@ -56,7 +56,8 @@ public sealed class ObserverStateRowComparer : IEqualityComparer<ObserverState>,
         x.TypeSetControl == y.TypeSetControl &&
         x.Initialization == y.Initialization &&
         x.DeliveryFences == y.DeliveryFences &&
-        x.WebhookProbe == y.WebhookProbe;
+        x.WebhookProbe == y.WebhookProbe &&
+        x.DurableSubscription == y.DurableSubscription;
 
     static bool SameAlert(ObserverState x, ObserverState y) =>
         x.AlertLifecycleId == y.AlertLifecycleId &&

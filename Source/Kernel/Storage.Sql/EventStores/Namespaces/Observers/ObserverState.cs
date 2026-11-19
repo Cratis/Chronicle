@@ -94,6 +94,9 @@ public class ObserverState
     /// <summary>Gets or sets serialized optional webhook probe coordination.</summary>
     public string? WebhookProbe { get; set; }
 
+    /// <summary>Gets or sets the serialized optional durable subscription of the observer (decision 0034).</summary>
+    public string? DurableSubscription { get; set; }
+
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.
     /// </summary>

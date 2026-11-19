@@ -106,6 +106,10 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             update = update.Set(_ => _.Initialization, document.Initialization);
         }
 
+        // The subscription is the observer's own to set and clear, so an absent one clears the stored one. It is a $set
+        // of null rather than an $unset because the type-set guard below renders only $set operators into a pipeline.
+        update = update.Set(_ => _.DurableSubscription, document.DurableSubscription);
+
         if (document.TypeSetControl is not null)
         {
             update = ObserverTypeSetControlUpdate.Guard(update, document.TypeSetControl);
@@ -183,6 +187,18 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Project(_ => new { _.Id, _.LastSeenAt })
             .ToListAsync().ConfigureAwait(false);
         return known.ToDictionary(_ => _.Id, _ => _.LastSeenAt!.Value);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner)
+    {
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Owner, owner) &
+            Builders<ObserverState>.Filter.Ne(_ => _.DurableSubscription, null);
+        var recorded = await _collection
+            .Find(filter)
+            .Project(_ => new { _.Id, _.DurableSubscription })
+            .ToListAsync().ConfigureAwait(false);
+        return recorded.ToDictionary(_ => _.Id, _ => _.DurableSubscription!);
     }
 
     /// <inheritdoc/>

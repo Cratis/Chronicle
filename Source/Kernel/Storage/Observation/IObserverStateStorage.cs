@@ -114,6 +114,17 @@ public interface IObserverStateStorage
     Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetLastSeenAt(IEnumerable<ObserverId> observerIds, DateTimeOffset startedAt);
 
     /// <summary>
+    /// Gets the durable subscription of every observer owned by an event sequence that has recorded one.
+    /// </summary>
+    /// <param name="owner">The event sequence that owns the observers.</param>
+    /// <returns>The durable subscription by observer. An observer with none recorded is absent.</returns>
+    /// <remarks>
+    /// Reads only the recorded subscriptions, never the observers' failures or counts, so it is cheap enough to run
+    /// periodically for every namespace. An observer whose state has no owner is not returned.
+    /// </remarks>
+    Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner);
+
+    /// <summary>
     /// Delete the state of an observer.
     /// </summary>
     /// <param name="observerId">The <see cref="ObserverId"/> to delete the state for.</param>
