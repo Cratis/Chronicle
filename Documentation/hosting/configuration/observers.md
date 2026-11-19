@@ -24,6 +24,9 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
     "idleDeactivationAfter": 900,
+    "unseenRemovalAfter": "7.00:00:00",
+    "unseenRemovalSweepInterval": "01:00:00",
+    "unseenRemovalBatchSize": 100,
     "maxConcurrentPartitions": 32,
     "maxConcurrentRegistrations": 0,
     "maxConcurrentSubscriptions": 0,
@@ -58,6 +61,9 @@ The example shows the defaults of a production build. The `-development` image s
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 | idleDeactivationAfter | number | 900 | Seconds an observer with no subscription and no pending work stays in memory before it is released. A subscribed observer always stays in memory. `0` keeps every observer in memory. See [Releasing idle observers](#releasing-idle-observers) |
+| unseenRemovalAfter | timespan | `7.00:00:00` | How long a client reactor or reducer can go without any client subscribed to it, in every namespace, before Chronicle removes it and its records. `00:00:00` turns the removal off. **A removed observer replays from the start if its client returns.** See [Removing observers no client has used](#removing-observers-no-client-has-used) |
+| unseenRemovalSweepInterval | timespan | `01:00:00` | How often each silo looks for observers that have not been seen for `unseenRemovalAfter`. The sweep reads storage and only activates an observer that is a candidate for removal |
+| unseenRemovalBatchSize | number | 100 | How many observers one storage read of that sweep covers. A value below `1` uses the default |
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
 | maxConcurrentRegistrations | number | 0 (unlimited) | Maximum gRPC reactor and reducer registrations running concurrently on each silo. When configured above 0, excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
@@ -87,6 +93,27 @@ An observer is not idle while an alert reminder is registered for it. An observe
 When anything calls a released observer again, for example a client that reconnects, it is activated from storage.
 
 Set `idleDeactivationAfter` to `0` to keep every observer in memory. The release is checked on every watchdog tick, so an idle observer is released between `idleDeactivationAfter` and `idleDeactivationAfter` + `watchdogInterval` seconds after it became idle.
+
+## Removing observers no client has used
+
+When you rename or delete a reactor or reducer in application code, the observer it registered stays in Chronicle: its definition, its state in every namespace, its failed partitions, jobs and reminders. Chronicle removes such an observer once no client has been subscribed to it for `unseenRemovalAfter`, which is seven days by default.
+
+> [!WARNING]
+> **A removed observer replays from the start when its client returns.** If the client connects again after the observer was removed, Chronicle registers it as a new observer and it handles the whole event history again. For a reactor that means its side effects, such as sending email or calling another system, run again for every event. If a client can be away for longer than seven days and its reactors must not run again, raise `unseenRemovalAfter` above the longest absence you expect, or set it to `00:00:00` to turn the removal off.
+
+"Seen" means a client held a subscription to the observer. Chronicle records the time when a client subscribes and when the last client unsubscribes or disconnects, and refreshes it at most once an hour while a client stays subscribed. An observer subscribed for months is therefore never mistaken for an unseen one.
+
+The sweep runs on every silo, once per `unseenRemovalSweepInterval`. It finds candidates by reading storage, without activating observers, in batches of `unseenRemovalBatchSize`. It is safe to run on several silos at once.
+
+What is removed and what is not:
+
+- Chronicle removes the observer's definition, its state in every namespace, its failed partitions, handled counts, in-flight events, jobs and reminders, the same records as the `RemoveObserver` command.
+- A reducer's read model data is not deleted.
+- Only reactors and reducers declared by clients are removed. Projections, webhooks, event store subscriptions and kernel observers never are.
+- An observer is never removed while a client is subscribed to it, while it is replaying, catching up or quarantined, while it has failed partitions or unfinished jobs, or when a client has been seen in any namespace within the period.
+- Each removal is logged at `Information` level with the event store, namespace and observer id, and counted by the `chronicle.observers.unseen_removed` metric.
+
+An observer that exists when you upgrade has no recorded time. Its clock starts when the new version first looks at it, so nothing is removed until a full `unseenRemovalAfter` has passed after the upgrade. During a rolling upgrade, older silos do not record the time; a subscribed observer is never removed because of that, and the new silo records the time when it finds the observer subscribed. These are server-level settings and cannot be overridden per observer.
 
 ## Registration concurrency
 
