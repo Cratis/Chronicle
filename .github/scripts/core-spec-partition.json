@@ -71,7 +71,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.Helpers.",
-            "weight": 0.00005
+            "weight": 0.000001
         },
         {
             "prefix": "Cratis.Chronicle.Identities.",
