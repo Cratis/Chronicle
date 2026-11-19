@@ -32,7 +32,7 @@ Start with [Configuration File](configuration-file.md) to place the file, or [Do
 | Memory | Memory budget for work with a large footprint |
 | Jobs | Parallel job step throttling |
 | Authentication | External authority, default admin, and initial admin user bootstrap |
-| TLS | TLS certificate configuration for the Chronicle port |
+| TLS | Every certificate the kernel uses, with required usages, for the Chronicle port and cluster traffic |
 | Encryption certificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys |
 | Health | Dedicated port for the health endpoint |
 | Identity Provider Certificate | Ignored legacy setting; migrate to the shared TLS certificate |
@@ -57,7 +57,7 @@ If your deployment provisions storage before starting replicas, use [SQL schema 
 - [Events](events.md) - Configure event queues.
 - [Memory](memory.md) - Memory budget and memory metrics.
 - [Authentication](authentication.md) - External authority and default admin settings.
-- [TLS](tls.md) - Configure the TLS certificate for the Chronicle port.
+- [TLS](tls.md) - Configure the TLS certificate for the Chronicle port and cluster traffic, which needs both server and client authentication usages.
 - [Data Protection Key Encryption](../encryption-certificate.md) - Configure the encryption certificate, required in production.
 - [Health Endpoint](health-endpoint.md) - Expose the health endpoint on a dedicated port with optional TLS.
 - [Workbench](workbench.md) - Serve the Workbench under a path when a reverse proxy routes by path.
