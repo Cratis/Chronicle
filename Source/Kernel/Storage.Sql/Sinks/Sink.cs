@@ -229,7 +229,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return await ApplyCycle(new CycleWrite { Scope = scope, Key = key, Id = id, Changeset = changeset, SequenceNumber = eventSequenceNumber, Mode = mode });
         }
 
-        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber, key.ArrayIndexers);
+        await ApplyJoinsAndChildRemovals(scope, changeset.Changes, eventSequenceNumber, key.ArrayIndexers);
 
         var nonJoinedChanges = changeset.Changes
             .Where(c => c is not Joined and not ChildRemovedFromAll)
@@ -264,18 +264,22 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         }
     }
 
-    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, ArrayIndexers ambientIndexers)
+    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IEnumerable<Change> changes, EventSequenceNumber eventSequenceNumber, ArrayIndexers ambientIndexers)
     {
         // Composite-key design §4.1: these paths lack target key parts. Leave shadows untouched;
         // never reconstruct composite parts from ambiguous or culture-sensitive legacy ids.
-        foreach (var joined in changeset.Changes.OfType<Joined>())
+        foreach (var change in changes)
         {
-            await ApplyJoinedChange(scope, joined, eventSequenceNumber, ambientIndexers);
-        }
+            switch (change)
+            {
+                case Joined joined:
+                    await ApplyJoinedChange(scope, joined, eventSequenceNumber, ambientIndexers);
+                    break;
 
-        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
+                case ChildRemovedFromAll childRemovedFromAll:
+                    await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
+                    break;
+            }
         }
     }
 
