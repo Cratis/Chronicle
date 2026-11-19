@@ -666,6 +666,16 @@ public partial class HandleEventsForObserver(
         }
     }
 
+    BulkWindowLost LostWindow(FlushCapture capture, IReadOnlyDictionary<SiloAddress, Guid[]> windows) =>
+        new(BulkWindowLostReason.Describe(
+            capture.Observer,
+            capture.IsReplay,
+            capture.Handled,
+            State.LastSuccessfullyHandledEventSequenceNumber,
+            _bulkWindowPin,
+            _bulkWindowPinnedAt is { } pinnedAt ? _clock.GetUtcNow() - pinnedAt : null,
+            windows));
+
     /// <summary>
     /// Advances the durable checkpoint once the windows are confirmed. Must run on the activation.
     /// </summary>
@@ -685,14 +695,7 @@ public partial class HandleEventsForObserver(
             }
             else if (!MatchesBulkWindowPin(windows))
             {
-                throw new BulkWindowLost(BulkWindowLostReason.Describe(
-                    capture.Observer,
-                    capture.IsReplay,
-                    capture.Handled,
-                    State.LastSuccessfullyHandledEventSequenceNumber,
-                    _bulkWindowPin,
-                    _bulkWindowPinnedAt is { } pinnedAt ? _clock.GetUtcNow() - pinnedAt : null,
-                    windows));
+                throw LostWindow(capture, windows);
             }
             var handled = capture.Handled;
             if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)

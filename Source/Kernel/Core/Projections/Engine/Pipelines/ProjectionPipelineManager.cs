@@ -229,7 +229,18 @@ public class ProjectionPipelineManager(
     /// <inheritdoc/>
     public void Clear()
     {
-        foreach (var key in _pipelines.Keys.ToArray()) Retire(key);
+        lock (_registryGate)
+        {
+            foreach (var binding in _pipelines.Values.Concat(_draining.Values))
+            {
+                binding.Evicted = true;
+                binding.Discarded = true;
+            }
+
+            _pipelines.Clear();
+            _draining.Clear();
+        }
+
         _metrics.Pipelines(0);
     }
 
@@ -324,6 +335,7 @@ public class ProjectionPipelineManager(
     {
         lock (_registryGate)
         {
+            if (binding.Discarded) return;
             if (binding.Evicted)
             {
                 KeepWhileDraining(key, binding);
