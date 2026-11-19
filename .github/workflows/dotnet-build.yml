@@ -837,6 +837,15 @@ jobs:
           path: ./coverage-results
           name: The specs job
 
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-dumps-specs-other-${{ matrix.shard }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
@@ -846,15 +855,6 @@ jobs:
           overwrite: true
           path: ./coverage-results/
           retention-days: 1
-
-      - name: Upload crash dumps
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: crash-dumps-specs-other-${{ matrix.shard }}
-          path: ${{ runner.temp }}/crash-dumps/
-          if-no-files-found: ignore
-          retention-days: 3
 
   specs-sql:
     if: needs.already-ran.outputs.skip != 'true'
@@ -925,14 +925,6 @@ jobs:
           path: ./coverage-results
           name: The SQL specs ${{ matrix.shard }} shard
 
-      - name: Upload coverage results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-results-specs-sql-${{ matrix.shard }}
-          path: ./coverage-results/
-          retention-days: 1
-
       - name: Upload crash dumps
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -941,6 +933,14 @@ jobs:
           path: ${{ runner.temp }}/crash-dumps/
           if-no-files-found: ignore
           retention-days: 3
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-specs-sql-${{ matrix.shard }}
+          path: ./coverage-results/
+          retention-days: 1
 
   # The client libraries still ship a net10.0 asset (TargetFrameworks net10.0;net11.0 under IsPackaging).
   # The whole-solution build and the other spec jobs run on net11.0, so this lane builds and runs the client
@@ -1133,14 +1133,6 @@ jobs:
           path: ./Integration/Api/coverage-results
           name: The API integration job
 
-      - name: Upload coverage results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-results-integration-api
-          path: ./Integration/Api/coverage-results/
-          retention-days: 1
-
       - name: Upload crash dumps
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -1149,6 +1141,14 @@ jobs:
           path: ${{ runner.temp }}/crash-dumps/
           if-no-files-found: ignore
           retention-days: 3
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-integration-api
+          path: ./Integration/Api/coverage-results/
+          retention-days: 1
 
   mongodb:
     # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
@@ -1294,6 +1294,15 @@ jobs:
           }
           NODE
 
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-dumps-mongodb
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
@@ -1303,15 +1312,6 @@ jobs:
             ./Integration/MongoDB/coverage-results/
             ./Integration/MongoDB/released-binding-results/
           retention-days: 1
-
-      - name: Upload crash dumps
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: crash-dumps-mongodb
-          path: ${{ runner.temp }}/crash-dumps/
-          if-no-files-found: ignore
-          retention-days: 3
 
   neo4j:
     # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
@@ -1390,14 +1390,6 @@ jobs:
           name: The Neo4j integration job (${{ matrix.lane }})
           prefixes: Cratis.Chronicle.Neo4j.Integration
 
-      - name: Upload coverage results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-results-neo4j-${{ matrix.lane }}
-          path: ./Integration/Neo4j/coverage-results/
-          retention-days: 1
-
       - name: Upload crash dumps
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -1406,6 +1398,14 @@ jobs:
           path: ${{ runner.temp }}/crash-dumps/
           if-no-files-found: ignore
           retention-days: 3
+
+      - name: Upload coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-neo4j-${{ matrix.lane }}
+          path: ./Integration/Neo4j/coverage-results/
+          retention-days: 1
 
   # ReportGenerator over about 170 Cobertura files in one job took 9 minutes and sat alone at the end of the run (#5875).
   # Each group below merges its own artifacts in parallel into one smaller Cobertura file, and coverage-merge-and-cache merges
