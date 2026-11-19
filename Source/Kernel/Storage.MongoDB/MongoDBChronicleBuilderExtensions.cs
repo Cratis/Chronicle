@@ -113,6 +113,7 @@ public static class MongoDBChronicleBuilderExtensions
                 new(),
                 sp.GetRequiredService<IConnectionResolverFactory>()));
             services.AddSingleton<IMongoDBStorageConnections, MongoDBStorageConnections>();
+            services.AddSingleton<ICanPerformKernelStateReset, MongoDBKernelStateResetHandler>();
             services.AddSingleton<IDatabase, Database>();
 
             // One process-wide registry of the change streams read models are observed through, so every observer
