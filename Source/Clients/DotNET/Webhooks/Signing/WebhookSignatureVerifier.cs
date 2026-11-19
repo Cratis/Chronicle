@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -179,9 +180,15 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
         }
     }
 
+    static bool AnyMissing(
+        [NotNullWhen(false)] string? id,
+        [NotNullWhen(false)] string? timestamp,
+        [NotNullWhen(false)] string? signature) =>
+        string.IsNullOrEmpty(id) || string.IsNullOrEmpty(timestamp) || string.IsNullOrEmpty(signature);
+
     WebhookSignatureFailure ValidateHeaders(string? id, string? timestamp, string? signature)
     {
-        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(timestamp) || string.IsNullOrEmpty(signature))
+        if (AnyMissing(id, timestamp, signature))
         {
             return WebhookSignatureFailure.MissingHeader;
         }
@@ -196,8 +203,11 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
             return WebhookSignatureFailure.InvalidTimestamp;
         }
 
-        return Math.Abs(_timeProvider.GetUtcNow().ToUnixTimeSeconds() - unixSeconds) > _tolerance.TotalSeconds
+        return IsOutsideTolerance(unixSeconds)
             ? WebhookSignatureFailure.TimestampOutsideTolerance
             : WebhookSignatureFailure.None;
     }
+
+    bool IsOutsideTolerance(long unixSeconds) =>
+        Math.Abs(_timeProvider.GetUtcNow().ToUnixTimeSeconds() - unixSeconds) > _tolerance.TotalSeconds;
 }
