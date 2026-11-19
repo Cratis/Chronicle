@@ -118,11 +118,13 @@ public partial class ChangesetConverter(
 
     async Task<UpdateDefinitionAndArrayFilters> ToUpdateDefinition(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
     {
-        var updates = new UpdateAccumulator();
-        var normalizedChanges = JoinedChangeNormalizer.Normalize(changeset.Changes);
+        var context = new ChangesetWriteContext(key, eventSequenceNumber, directWrites, _ => Task.CompletedTask);
+        var updates = await ConvertDirect(context, JoinedChangeNormalizer.Normalize(changeset.Changes), changeset.InitialState);
+        return ToDefinition(updates, eventSequenceNumber);
+    }
 
-        await ApplyActualChanges(key, normalizedChanges, changeset.InitialState, updates, eventSequenceNumber, directWrites);
-
+    UpdateDefinitionAndArrayFilters ToDefinition(UpdateAccumulator updates, EventSequenceNumber eventSequenceNumber)
+    {
         // EventSequenceNumber sentinels (Unavailable, Max) are not positions in the sequence. Letting one through
         // would pin the $max watermark at the top of the range and permanently block every later guarded write to
         // the document.
@@ -141,15 +143,12 @@ public partial class ChangesetConverter(
         };
     }
 
-    Task ApplyActualChanges(
-        Key key,
+    async Task ApplyActualChanges(
+        ChangesetWriteContext context,
         IEnumerable<Change> changes,
         ExpandoObject? initialState,
-        UpdateAccumulator updates,
-        EventSequenceNumber eventSequenceNumber,
-        SinkMultiDocumentWrites directWrites)
+        UpdateAccumulator updates)
     {
-        var joinTasks = new List<Task>();
         var changesToApply = changes.ToList();
         var collectionPathsWithChildOperations = changesToApply.GetCollectionPathsWithChildOperations();
         var wholeCollectionReplacementPaths = changesToApply.GetWholeCollectionReplacementPaths();
@@ -168,7 +167,7 @@ public partial class ChangesetConverter(
                     break;
 
                 case ChildRemoved childRemoved:
-                    ApplyChildRemoved(key, updates, childRemoved);
+                    ApplyChildRemoved(context.Key, updates, childRemoved);
                     updates.HasChanges = true;
                     break;
 
@@ -178,16 +177,14 @@ public partial class ChangesetConverter(
                     break;
 
                 case Joined joined:
-                    joinTasks.Add(PerformJoined(key, joined, eventSequenceNumber, directWrites));
+                    await PerformJoined(context, joined);
                     break;
 
                 case ResolvedJoin resolvedJoined:
-                    joinTasks.Add(ApplyActualChanges(key, resolvedJoined.Changes, initialState, updates, eventSequenceNumber, directWrites));
+                    await ApplyActualChanges(context, resolvedJoined.Changes, initialState, updates);
                     break;
             }
         }
-
-        return Task.WhenAll(joinTasks);
     }
 
     void AddLastHandledEventSequenceNumber(UpdateAccumulator updates, EventSequenceNumber eventSequenceNumber)
@@ -202,14 +199,20 @@ public partial class ChangesetConverter(
         updates.Max(WellKnownProperties.LastHandledEventSequenceNumber, value);
     }
 
-    async Task PerformJoined(Key key, Joined joined, EventSequenceNumber eventSequenceNumber, SinkMultiDocumentWrites directWrites)
+    async Task PerformJoined(ChangesetWriteContext context, Joined joined)
     {
-        var joinUpdates = new UpdateAccumulator();
+        // A join can match documents with different parent shapes, so inspect legacy nulls per match.
+        await foreach (var joinUpdates in ConvertInOrder(context, joined.Changes, null))
+        {
+            await WriteJoined(context, joined, joinUpdates);
+        }
+    }
 
-        // A join can match many documents with different parent shapes. Check each matched
-        // document for legacy nulls rather than using one joined state for the whole batch.
-        await ApplyActualChanges(key, joined.Changes, null, joinUpdates, eventSequenceNumber, directWrites);
-
+    async Task WriteJoined(ChangesetWriteContext context, Joined joined, UpdateAccumulator joinUpdates)
+    {
+        var key = context.Key;
+        var eventSequenceNumber = context.SequenceNumber;
+        var directWrites = context.Writes;
         if (!joinUpdates.HasChanges)
         {
             return;

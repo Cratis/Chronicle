@@ -130,15 +130,16 @@ public static class ObserverFootprint
     /// <param name="idleSeconds">Seconds before an idle unsubscribed observer is released; 0 disables it.</param>
     /// <param name="collectionAgeSeconds">Orleans collection age in seconds; 0 keeps the Orleans default.</param>
     /// <param name="configure">Optional extra configuration of the silo.</param>
+    /// <param name="watchdogSeconds">The observer watchdog interval in seconds.</param>
     /// <returns>The host, not started.</returns>
-    internal static IHost BuildHost(int idleSeconds, int collectionAgeSeconds, Action<ISiloBuilder>? configure = null)
+    internal static IHost BuildHost(int idleSeconds, int collectionAgeSeconds, Action<ISiloBuilder>? configure = null, int watchdogSeconds = 1)
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             [$"{ChronicleOptions.SectionPath}:Storage:Type"] = StorageType.InMemory,
-            [$"{ChronicleOptions.SectionPath}:Observers:WatchdogInterval"] = "1",
+            [$"{ChronicleOptions.SectionPath}:Observers:WatchdogInterval"] = watchdogSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
             [$"{ChronicleOptions.SectionPath}:Observers:IdleDeactivationAfter"] = idleSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
 
             // The footprint client never pings, so the connected clients registry must not expire it during the run.

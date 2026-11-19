@@ -46,6 +46,8 @@ public class a_performing_job_step : Specification
 
     protected virtual Cratis.Chronicle.Configuration.Jobs CreateJobsConfig() => new();
 
+    protected virtual TimeProvider CreateTimeProvider() => TimeProvider.System;
+
     protected static AppendedEvent CreateEvent(EventSequenceNumber sequenceNumber, EventSourceId eventSourceId) =>
         AppendedEvent.EmptyWithEventSequenceNumber(sequenceNumber) with
         {
@@ -110,7 +112,7 @@ public class a_performing_job_step : Specification
         _silo.AddProbe(_ => _observer);
         _silo.AddProbe(_ => _observerSubscriber);
         _silo.AddService(_storage);
-        _silo.AddService<TimeProvider>(TimeProvider.System);
+        _silo.AddService(CreateTimeProvider());
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
         _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>())
             .Returns(Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [] }));

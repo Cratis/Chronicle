@@ -805,12 +805,19 @@ jobs:
           name: The container startup unit specs
 
       - name: Run tests with coverage
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
         # Integration and SQL retain their shard/retry selection. Ordinary dispatch excludes
         # &FullyQualifiedName!~Cratis.Chronicle.Storage.Sql. and applies specs.runsettings.
         # Each project gets fresh, unique TRX/Cobertura; empty/spec-only coverage fails.
         # Actual production hits come only from these real library specs.
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
           (
             while true; do
               echo "[specs resources] $(date -u +%FT%TZ)"
@@ -829,6 +836,15 @@ jobs:
         with:
           path: ./coverage-results
           name: The specs job
+
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-dumps-specs-other-${{ matrix.shard }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload coverage results
         if: always()
@@ -891,8 +907,15 @@ jobs:
         run: dotnet tool restore
 
       - name: Run SQL specs with coverage
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
           filter=$(python3 .github/scripts/sql-spec-filter.py '${{ matrix.shard }}')
           node .github/scripts/run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj --settings specs.runsettings --filter "$filter" --coverage --results-directory ./coverage-results
 
@@ -901,6 +924,15 @@ jobs:
         with:
           path: ./coverage-results
           name: The SQL specs ${{ matrix.shard }} shard
+
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-dumps-specs-sql-${{ matrix.shard }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload coverage results
         if: always()
@@ -1085,13 +1117,30 @@ jobs:
         run: dotnet tool restore
 
       - name: Run API integration tests with coverage
-        run: node .github/scripts/run-spec-project.mjs --project Integration/Api/Api.csproj --coverage --results-directory ./Integration/Api/coverage-results
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
+        run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
+          node .github/scripts/run-spec-project.mjs --project Integration/Api/Api.csproj --coverage --results-directory ./Integration/Api/coverage-results
 
       - name: Assert API integration tests ran
         uses: ./.github/actions/assert-tests-ran
         with:
           path: ./Integration/Api/coverage-results
           name: The API integration job
+
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-dumps-integration-api
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload coverage results
         if: always()
@@ -1200,7 +1249,15 @@ jobs:
           NODE
 
       - name: Run MongoDB integration tests with coverage
-        run: node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
+        run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
+          node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
 
       - name: Assert MongoDB integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -1236,6 +1293,15 @@ jobs:
             assert.ok(methods.some(method => method.className === 'Cratis.Chronicle.MongoDB.Integration.Observation.for_ObserverPayloadRoundTrip.when_old_kernel_reads_and_writes_new_claims' && method.name === name), `Missing passing old MongoDB writer fact: ${name}`);
           }
           NODE
+
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-dumps-mongodb
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload coverage results
         if: always()
@@ -1304,11 +1370,18 @@ jobs:
 
       - name: Run Neo4j integration tests with coverage (${{ matrix.lane }})
         env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
           CHRONICLE_NEO4J_IMAGE: ${{ matrix.image }}
           CHRONICLE_NEO4J_DATABASE_MODE: ${{ matrix.database-mode }}
           # The runner is destroyed after the job, so the Testcontainers reaper has nothing to clean up.
           TESTCONTAINERS_RYUK_DISABLED: true
-        run: node .github/scripts/run-spec-project.mjs --project Integration/Neo4j/Neo4j.csproj --coverage --results-directory ./Integration/Neo4j/coverage-results
+        run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
+          node .github/scripts/run-spec-project.mjs --project Integration/Neo4j/Neo4j.csproj --coverage --results-directory ./Integration/Neo4j/coverage-results
 
       - name: Assert Neo4j integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -1316,6 +1389,15 @@ jobs:
           path: ./Integration/Neo4j/coverage-results
           name: The Neo4j integration job (${{ matrix.lane }})
           prefixes: Cratis.Chronicle.Neo4j.Integration
+
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crash-dumps-neo4j-${{ matrix.lane }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload coverage results
         if: always()

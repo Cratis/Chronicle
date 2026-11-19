@@ -25,7 +25,7 @@ These behaviors concern retained source events. Neither subscribing nor replayin
 
 Before either operation, review what the affected consumers do when processing an event again. Source-forwarding replay can append another inbox row for an event already delivered, with a new inbox sequence number. That row can trigger ordinary consumer processing and repeat external actions. Replaying the inbox consumer can also repeat its actions, even though it does not add another forwarded copy.
 
-Fix the cause of the failure before choosing a replay. For example, a missing pinned schema or an erased subject's blocked encryption key will still prevent a target append after replay. See [Explicit Event Store Subscriptions](explicit-subscriptions) for generation pins and [Compliance and PII](compliance-and-pii.md) for the erasure behavior.
+Fix the cause of the failure before choosing a replay. For example, when the target registers an event type but cannot accept its source generation, an unavailable compatible generation or downward migration parks the forwarding partition: the failure names the event type, source generation, and registered target generations. Register the required target generation or supply the source's missing downward migration before retrying or replaying that partition. A missing pinned schema or an erased subject's blocked encryption key will still prevent a target append after replay. See [Explicit Event Store Subscriptions](explicit-subscriptions) for generation pins and [Compliance and PII](compliance-and-pii.md) for the erasure behavior.
 
 ## Resolve the exact subscription scope
 

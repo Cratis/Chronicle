@@ -222,7 +222,7 @@ public partial class Observer(
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
-        await failures.ReadStateAsync();
+        await _failureReads.Read(failures.ReadStateAsync);
         await RestoreDeliveryFences();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
@@ -496,8 +496,8 @@ public partial class Observer(
         logger.SubscribingToAllEvents();
 
         var storageWasReset = await ReloadObserverState();
-        await observerDefinition.ReadStateAsync();
-        await failures.ReadStateAsync();
+        await _definitionReads.Read(observerDefinition.ReadStateAsync);
+        await _failureReads.Read(failures.ReadStateAsync);
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await ClaimDefinitionForKey();
 
@@ -970,7 +970,7 @@ public partial class Observer(
     /// <returns>True if storage no longer has a record for this observer, false if it does.</returns>
     async Task<bool> ReloadObserverState()
     {
-        await ReadStateAsync();
+        await _stateReads.Read(ReadStateAsync);
         var storageWasReset = State.Identifier == ObserverId.Unspecified;
         State = State with { Identifier = _observerId };
         if (IsQuarantined)
@@ -1051,8 +1051,8 @@ public partial class Observer(
                 var wasQuarantined = IsQuarantined;
                 storageWasReset = await ReloadObserverState();
 
-                await observerDefinition.ReadStateAsync();
-                await failures.ReadStateAsync();
+                await _definitionReads.Read(observerDefinition.ReadStateAsync);
+                await _failureReads.Read(failures.ReadStateAsync);
                 if (storageWasReset && wasQuarantined && IsQuarantined)
                 {
                     // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,

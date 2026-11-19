@@ -78,7 +78,16 @@ public partial class Sink
     async Task<bool> ApplyJoinsThenDirectChanges(CycleWrite write, Change[] nonJoinedChanges)
     {
         var scope = write.Scope;
-        await ApplyJoinsAndChildRemovals(scope, write.Changeset, write.SequenceNumber, write.Key.ArrayIndexers);
+        var order = OrderWrites(write.Changeset.Changes);
+        await ApplyJoinsAndChildRemovals(scope, order.Leading, write.SequenceNumber, write.Key.ArrayIndexers);
+        var wroteDirect = await TryApplyFirstDirectRun(write, nonJoinedChanges, order.FirstDirect);
+        await ApplyTrailingRuns(scope, write.Key, write.Id, write.SequenceNumber, order.Trailing, wroteDirect);
+        return wroteDirect;
+    }
+
+    async Task<bool> TryApplyFirstDirectRun(CycleWrite write, Change[] nonJoinedChanges, Change[] firstDirect)
+    {
+        var scope = write.Scope;
         if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, write.Id, write.Changeset, nonJoinedChanges))
         {
             return false;
@@ -91,9 +100,9 @@ public partial class Sink
             return false;
         }
 
-        ApplyChangesToEntity(entry, nonJoinedChanges, write.Key.ArrayIndexers);
+        ApplyChangesToEntity(entry, firstDirect, write.Key.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, nonJoinedChanges, write.SequenceNumber, write.Key.ArrayIndexers));
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, firstDirect, write.SequenceNumber, write.Key.ArrayIndexers));
         return true;
     }
 

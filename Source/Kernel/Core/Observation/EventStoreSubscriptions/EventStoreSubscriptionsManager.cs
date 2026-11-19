@@ -240,7 +240,7 @@ public class EventStoreSubscriptionsManager(
         try
         {
             var observer = await GetObserver(definition, namespaceName);
-            return await observer.IsSubscribed() && await IsSubscribedToCurrentEventTypes(observer, definition);
+            return await observer.IsSubscribed() && await HasCurrentEventTypes(observer, definition);
         }
         catch (OperationCanceledException)
         {
@@ -334,6 +334,32 @@ public class EventStoreSubscriptionsManager(
         {
             throw new EventStoreSubscriptionRefreshFailed(definition.Identifier, namespaceName, ex);
         }
+    }
+
+    /// <summary>
+    /// Checks whether an observer's definition holds the event types and generation delivery the subscription has now.
+    /// </summary>
+    /// <param name="observer">The observer to check.</param>
+    /// <param name="definition">The subscription definition.</param>
+    /// <returns>True if the observer is up to date.</returns>
+    /// <remarks>
+    /// The observer of a subscription is subscribed with its event types listed, never to all events, so the event types
+    /// it reports are the ones in its definition. Reading them from the definition returned for the generation check
+    /// saves a second grain call that would carry the same list again.
+    /// </remarks>
+    async Task<bool> HasCurrentEventTypes(IObserver observer, EventStoreSubscriptionDefinition definition)
+    {
+        var observerDefinition = await observer.GetDefinition();
+        var currentMode = observerDefinition?.GenerationDelivery ?? EventGenerationDelivery.Compatibility;
+        if (currentMode != definition.GenerationDelivery)
+        {
+            return false;
+        }
+
+        var eventTypes = observerDefinition?.EventTypes ?? [];
+        return definition.GenerationDelivery == EventGenerationDelivery.Pinned
+            ? eventTypes.ToHashSet().SetEquals(definition.EventTypes)
+            : eventTypes.Select(eventType => eventType.Id).ToHashSet().SetEquals(definition.EventTypes.Select(eventType => eventType.Id));
     }
 
     async Task<bool> IsSubscribedToCurrentEventTypes(IObserver observer, EventStoreSubscriptionDefinition definition)

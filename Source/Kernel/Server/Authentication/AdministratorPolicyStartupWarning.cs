@@ -33,6 +33,18 @@ public partial class AdministratorPolicyStartupWarning(IOptions<ChronicleOptions
             else if (!authentication.UseInternalAuthority) LogMappingEnabled(logger, mapping.Type);
         }
 
+        if (authentication.Http.IsTrustedProxy)
+        {
+            if (!authentication.Enabled) WarnTrustedProxyIgnored(logger);
+            else if (string.IsNullOrWhiteSpace(authentication.Http.TrustedProxy.AdministratorGroup)) WarnEveryProxyUserIsAdministrator(logger);
+            else LogTrustedProxyAdministratorGroup(logger, authentication.Http.TrustedProxy.AdministratorGroup);
+
+            if (authentication.Enabled && authentication.Http.TrustedProxy.KnownNetworks.Any() && string.IsNullOrEmpty(authentication.Http.TrustedProxy.SharedSecret))
+            {
+                WarnTrustedNetworksWithoutSecret(logger);
+            }
+        }
+
         return Task.CompletedTask;
     }
 
@@ -57,4 +69,16 @@ public partial class AdministratorPolicyStartupWarning(IOptions<ChronicleOptions
 
     [LoggerMessage(LogLevel.Information, "External-authority administrator mapping is enabled for claim type {ClaimType}")]
     static partial void LogMappingEnabled(ILogger logger, string? claimType);
+
+    [LoggerMessage(LogLevel.Warning, "Authentication:Http:Mode is TrustedProxy but authentication is disabled; it has no effect")]
+    static partial void WarnTrustedProxyIgnored(ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "HTTP callers are authenticated by a trusted proxy and Authentication:Http:TrustedProxy:AdministratorGroup is not set; every user the proxy authenticates is a Chronicle administrator")]
+    static partial void WarnEveryProxyUserIsAdministrator(ILogger logger);
+
+    [LoggerMessage(LogLevel.Warning, "Authentication:Http:TrustedProxy:KnownNetworks is set without a SharedSecret; every peer in those networks can claim to be any user")]
+    static partial void WarnTrustedNetworksWithoutSecret(ILogger logger);
+
+    [LoggerMessage(LogLevel.Information, "HTTP callers are authenticated by a trusted proxy; members of group {Group} are Chronicle administrators")]
+    static partial void LogTrustedProxyAdministratorGroup(ILogger logger, string? group);
 }
