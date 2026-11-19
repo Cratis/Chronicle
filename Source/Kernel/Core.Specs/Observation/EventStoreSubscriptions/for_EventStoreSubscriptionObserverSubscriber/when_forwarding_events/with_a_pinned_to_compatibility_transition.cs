@@ -13,6 +13,7 @@ public class with_a_pinned_to_compatibility_transition : given.a_pinned_subscrib
         await Forward();
         _inboxSequence.ClearReceivedCalls();
         _definition = _definition with { GenerationDelivery = EventGenerationDelivery.Compatibility };
+        RegisterGenerations("Lobby", 1, 2);
     }
     async Task Because() => _result = await Forward();
     [Fact] void should_stop_releasing_into_the_old_pin() => ForwardedType().ShouldEqual(new EventType("event-type-1", 2));
