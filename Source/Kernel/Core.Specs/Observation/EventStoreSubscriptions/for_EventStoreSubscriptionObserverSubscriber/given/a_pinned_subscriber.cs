@@ -40,7 +40,7 @@ public class a_pinned_subscriber : a_subscriber_with_events
     protected void RegisterGenerations(EventStoreName store, params uint[] generations)
     {
         var types = _storage.GetEventStore(store).EventTypes;
-        types.HasFor("event-type-1").Returns(true);
+        types.GetAllGenerationsForEventType(Arg.Is<EventType>(_ => _.Id == (EventTypeId)"event-type-1")).Returns(generations.Select(generation => new EventTypeSchema(new("event-type-1", generation), EventTypeOwner.Client, EventTypeSource.Code, _schema)).ToArray());
         types.GetDefinition("event-type-1").Returns(new EventTypeDefinition("event-type-1", EventTypeOwner.Client, false, generations.Select(generation => new EventTypeGenerationDefinition(generation, _schema)), []));
         foreach (var generation in generations)
         {

@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="targetStore">The target event store.</param>
 public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, IEventTypesStorage target, IEventGenerationRelease release, EventStoreName sourceStore, EventStoreName targetStore)
 {
-    readonly Dictionary<EventTypeId, EventTypeGeneration[]?> _generations = [];
+    readonly Dictionary<EventTypeId, EventTypeGeneration[]> _generations = [];
     readonly Dictionary<EventType, EventTypeSchema> _schemas = [];
 
     /// <summary>
@@ -32,9 +32,8 @@ public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, I
     public async Task<AppendedEvent> Release(AppendedEvent incoming, IReadOnlyDictionary<EventTypeId, EventType> pins)
     {
         var eventType = incoming.Context.EventType;
-        var registeredGenerations = await GetGenerations(eventType.Id);
-        if (pins.Count == 0 && registeredGenerations is null) return incoming;
-        var generations = registeredGenerations ?? [];
+        var generations = await GetGenerations(eventType.Id);
+        if (pins.Count == 0 && generations.Length == 0) return incoming;
         try
         {
             var selected = SelectForSubscription(eventType, pins, generations);
@@ -72,13 +71,13 @@ public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, I
             : new(sourceType.Id, generation);
     }
 
-    async Task<EventTypeGeneration[]?> GetGenerations(EventTypeId id)
+    async Task<EventTypeGeneration[]> GetGenerations(EventTypeId id)
     {
         if (!_generations.TryGetValue(id, out var generations))
         {
-            generations = await target.HasFor(id)
-                ? (await target.GetDefinition(id)).Generations.Select(_ => _.Generation).ToArray()
-                : null;
+            // This query returns no schemas for missing types, independently of any default generation.
+            var schemas = await target.GetAllGenerationsForEventType(new(id, EventTypeGeneration.First));
+            generations = schemas.Select(_ => _.Type.Generation).ToArray();
             _generations[id] = generations;
         }
         return generations;

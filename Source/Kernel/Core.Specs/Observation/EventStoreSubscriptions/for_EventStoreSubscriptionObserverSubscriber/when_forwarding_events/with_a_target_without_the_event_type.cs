@@ -14,7 +14,7 @@ public class with_a_target_without_the_event_type : given.a_subscriber_with_even
     {
         _events = [_events[0]];
         var types = _storage.GetEventStore("Lobby").EventTypes;
-        types.HasFor("event-type-1").Returns(false);
+        types.GetAllGenerationsForEventType(Arg.Is<EventType>(_ => _.Id == (EventTypeId)"event-type-1")).Returns([]);
         types.HasFor("event-type-1", 1).Returns(false);
     }
 

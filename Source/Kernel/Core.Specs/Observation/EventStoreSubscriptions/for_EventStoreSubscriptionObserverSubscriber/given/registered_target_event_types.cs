@@ -19,7 +19,9 @@ public static class registered_target_event_types
             types.HasFor(id).Returns(true);
             types.HasFor(id, EventTypeGeneration.First).Returns(true);
             types.GetDefinition(id).Returns(new EventTypeDefinition(id, EventTypeOwner.Client, false, [new EventTypeGenerationDefinition(EventTypeGeneration.First, schema)], []));
-            types.GetFor(id, EventTypeGeneration.First).Returns(new EventTypeSchema(new(id, EventTypeGeneration.First), EventTypeOwner.Client, EventTypeSource.Code, schema));
+            var registered = new EventTypeSchema(new(id, EventTypeGeneration.First), EventTypeOwner.Client, EventTypeSource.Code, schema);
+            types.GetFor(id, EventTypeGeneration.First).Returns(registered);
+            types.GetAllGenerationsForEventType(Arg.Is<EventType>(_ => _.Id == id)).Returns([registered]);
         }
     }
 }

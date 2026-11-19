@@ -16,7 +16,9 @@ public class with_a_source_generation_the_target_also_registers : given.a_subscr
         var schema = definition.Generations.Single().Schema;
         types.GetDefinition("event-type-1").Returns(definition with { Generations = [new(2, schema)] });
         types.HasFor("event-type-1", 2).Returns(true);
-        types.GetFor("event-type-1", 2).Returns(new Concepts.EventTypes.EventTypeSchema(new("event-type-1", 2), EventTypeOwner.Client, EventTypeSource.Code, schema));
+        var registered = new Concepts.EventTypes.EventTypeSchema(new("event-type-1", 2), EventTypeOwner.Client, EventTypeSource.Code, schema);
+        types.GetFor("event-type-1", 2).Returns(registered);
+        types.GetAllGenerationsForEventType(Arg.Is<EventType>(_ => _.Id == (EventTypeId)"event-type-1")).Returns([registered]);
         _events = [_events[0] with { Context = _events[0].Context with { EventType = new("event-type-1", 2) } }];
     }
 
