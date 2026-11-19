@@ -775,7 +775,7 @@ public partial class Reducers : IReducers
                 ReconnectIfCurrent(handler, cancellationToken);
                 return;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 return;
             }

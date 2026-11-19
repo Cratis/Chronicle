@@ -713,7 +713,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 ReconnectIfCurrent(registration, cancellationToken);
                 return;
             }
-            catch (OperationCanceledException ex)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
                 _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                 return;
