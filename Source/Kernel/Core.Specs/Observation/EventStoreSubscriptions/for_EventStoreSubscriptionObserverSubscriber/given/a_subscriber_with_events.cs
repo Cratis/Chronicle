@@ -44,6 +44,7 @@ public class a_subscriber_with_events : Specification
 
         // The committed definition of the subscription: without one the subscriber fails closed and forwards nothing.
         _storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition("subscription", SourceEventStore, [])]);
+        await registered_target_event_types.Register(_storage, "event-type-1", "event-type-2", "event-type-3");
         silo.AddService(_storage);
         silo.AddService(_generationRelease);
         silo.AddService(new JsonSerializerOptions());
