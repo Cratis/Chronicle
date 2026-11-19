@@ -69,4 +69,29 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
             }
         });
     }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<WebhookSigningPublicKey>> GetSigningKeys()
+    {
+        var request = new GetWebhookSigningKeysRequest { EventStore = eventStore.Name };
+        var result = await _servicesAccessor.Services.Webhooks.GetWebhookSigningKeys(request);
+        if (!result.IsSuccess)
+        {
+            throw new WebhookSigningKeysQueryFailed(string.Join("; ", result.ExceptionMessages.Concat(result.ValidationResults.Select(validation => validation.Message))));
+        }
+
+        return result.Data
+            .Where(key => key.Algorithm == WebhookSigningAlgorithm.Ed25519
+                && key.Status != Contracts.Observation.Webhooks.WebhookSigningKeyStatus.Retired)
+            .Select(ToPublicKey)
+            .ToArray();
+    }
+
+    static WebhookSigningPublicKey ToPublicKey(WebhookSigningPublicKeyResponse key) =>
+        new(
+            key.KeyId,
+            key.Status == Contracts.Observation.Webhooks.WebhookSigningKeyStatus.Active ? WebhookSigningKeyStatus.Active : WebhookSigningKeyStatus.Overlap,
+            key.PublicKey,
+            key.CreatedAt,
+            key.OverlapEndsAt);
 }

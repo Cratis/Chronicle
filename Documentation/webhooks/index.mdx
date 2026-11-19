@@ -26,13 +26,13 @@ A retried or replayed batch can arrive more than once. Make the receiver idempot
 Webhooks are unsigned by default. In the .NET registration callback, opt in with
 `WithSigning(WebhookSigningMode.Ed25519)`; the enum is in `Cratis.Chronicle.Webhooks`.
 Chronicle signs deliveries using Standard Webhooks. Receivers verify signatures with
-the event store's public key. HMAC signing is not available yet. See [Signing keys](#signing-keys) for public-key retrieval and rotation.
+the event store's public keys; see [Verify signatures](./signature-verification.mdx). HMAC signing is not available yet. See [Signing keys](#signing-keys) for public-key retrieval and rotation.
 
 To disable signing, re-register the webhook with `WithSigning(WebhookSigningMode.None)`.
 
 ## Signing keys
 
-Use the kernel query `WebhookSigningPublicKey.GetWebhookSigningKeys(eventStore)`
+In .NET, call `eventStore.Webhooks.GetSigningKeys()`. Other languages use the kernel query `WebhookSigningPublicKey.GetWebhookSigningKeys(eventStore)`
 (`GetWebhookSigningKeys` on the `Webhooks` gRPC service) to retrieve an event store's
 current Ed25519 public keys. Each result contains `KeyId`, `Algorithm`, `PublicKey`,
 `Status`, `CreatedAt`, and `OverlapEndsAt`. `PublicKey` uses `whpk_` followed by
@@ -43,8 +43,8 @@ and reads only the requested event store's ring.
 To rotate, submit the kernel command `RotateWebhookSigningKey` with `EventStore`
 and optional `UseSpecifiedOverlap` and `OverlapSeconds`. Rotation requires administrator rights. The command
 returns no key material: query `GetWebhookSigningKeys` again afterward to obtain the
-new public key, then distribute it to receivers within the overlap window. Receivers
-load public keys from configuration; the kernel does not push them.
+new public key, then make it available to receivers within the overlap window. Receivers
+load public keys themselves, as described in [Verify signatures](./signature-verification.mdx#get-the-public-keys); the kernel does not push them.
 
 Omit `UseSpecifiedOverlap` (or set it to `false`) for the default 24-hour overlap;
 `OverlapSeconds` is ignored in that case. Set `UseSpecifiedOverlap` to `true` to use
