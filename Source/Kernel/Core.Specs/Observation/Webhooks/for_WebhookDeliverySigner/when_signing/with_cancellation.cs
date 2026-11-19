@@ -8,7 +8,7 @@ public class with_cancellation : given.a_delivery_signer
     async Task Because()
     {
         using var cancellation = new CancellationTokenSource();
-        cancellation.Cancel();
+        await cancellation.CancelAsync();
         _error = await Catch.Exception(() => _signer.Sign("store", "message", 1000, Body, cancellation.Token));
     }
 

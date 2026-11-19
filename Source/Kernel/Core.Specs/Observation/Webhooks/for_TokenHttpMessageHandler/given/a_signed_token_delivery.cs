@@ -30,8 +30,10 @@ public class a_signed_token_delivery : Signing.for_WebhookDeliverySigner.given.a
     protected async Task Deliver()
     {
         var attempt = 0;
-        _client = TokenHttpMessageHandler.CreateClient(new(_receiver) { BaseAddress = new("https://example.com/webhook") },
-            (_, _) => Task.FromResult(new AccessTokenInfo($"token-{++attempt}", DateTimeOffset.MaxValue)), _ => { });
+        _client = TokenHttpMessageHandler.CreateClient(
+            new(_receiver) { BaseAddress = new("https://example.com/webhook") },
+            (_, _) => Task.FromResult(new AccessTokenInfo($"token-{++attempt}", DateTimeOffset.MaxValue)),
+            _ => { });
         var factory = Substitute.For<IWebhookHttpClientFactory>();
         factory.Create(Arg.Any<WebhookTarget>(), Arg.Any<string?>()).Returns(_client);
         _mediator = new(factory, new JsonSerializerOptions(), signer: _deliverySigner, timeProvider: _clock);
@@ -54,8 +56,13 @@ public class a_signed_token_delivery : Signing.for_WebhookDeliverySigner.given.a
         public HttpStatusCode FinalStatus { get; set; } = HttpStatusCode.OK;
 
         public bool Verifies(int index) => WebhookSignatureVerification.Verify(
-            Headers[index]["webhook-id"].Single(), long.Parse(Headers[index]["webhook-timestamp"].Single(), CultureInfo.InvariantCulture),
-            Bodies[index], Headers[index]["webhook-signature"].Single(), [], [PublicKey], Headers[index]["Cratis-Key-Id"].Single());
+            Headers[index]["webhook-id"].Single(),
+            long.Parse(Headers[index]["webhook-timestamp"].Single(), CultureInfo.InvariantCulture),
+            Bodies[index],
+            Headers[index]["webhook-signature"].Single(),
+            [],
+            [PublicKey],
+            Headers[index]["Cratis-Key-Id"].Single());
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
