@@ -35,7 +35,8 @@ public class WebhookDefinitionComparer(
 
         logger.ComparingDefinitions(webhookKey.WebhookId);
 
-        if (first.Signing == second.Signing && first.GenerationDelivery == second.GenerationDelivery && objectComparer.Compare(first, second, out _))
+        var sameDeliveryPolicies = first.Signing == second.Signing && first.GenerationDelivery == second.GenerationDelivery;
+        if (sameDeliveryPolicies && objectComparer.Compare(first, second, out _))
         {
             return new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.Same, null);
         }

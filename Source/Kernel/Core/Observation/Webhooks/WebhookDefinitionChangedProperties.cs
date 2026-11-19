@@ -37,7 +37,10 @@ public record WebhookDefinitionChangedProperties(
     /// <summary>
     /// Gets whether the changes affect which events are delivered.
     /// </summary>
-    public bool AffectsDeliveredEvents => EventTypesChanged || TargetUrlChanged || TargetHeadersChanged ||
-        AuthorizationChanged || IsReplayableChanged || IsActiveChanged || OwnerChanged ||
-        EventSequenceIdChanged || GenerationDeliveryChanged;
+    public bool AffectsDeliveredEvents => HasTargetChanges() || HasSubscriptionChanges();
+
+    bool HasTargetChanges() => TargetUrlChanged || TargetHeadersChanged || AuthorizationChanged;
+
+    bool HasSubscriptionChanges() => EventTypesChanged || IsReplayableChanged || IsActiveChanged ||
+        OwnerChanged || EventSequenceIdChanged || GenerationDeliveryChanged;
 }
