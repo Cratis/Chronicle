@@ -18,6 +18,9 @@ public record ProjectionPipelineBinding(IProjection Projection, IProjectionPipel
     /// <summary>Gets or sets whether the idle sweep released this binding.</summary>
     internal bool Swept { get; set; }
 
+    /// <summary>Gets or sets whether the binding was evicted explicitly, so it is no longer the current pipeline of its key.</summary>
+    internal bool Evicted { get; set; }
+
     /// <summary>
     /// Observes the pipeline and reports whether it has shown no activity since the previous observations for at least the timeout.
     /// </summary>
