@@ -18,6 +18,7 @@ public static class ComparerRows
         ObserverWideClaim = "wide",
         OwnershipRevision = 3,
         RunningStateChangedAt = new DateTimeOffset(2026, 5, 1, 10, 0, 0, TimeSpan.Zero),
+        LastSeenAt = new DateTimeOffset(2026, 5, 2, 10, 0, 0, TimeSpan.Zero),
         TypeSetControl = "control",
         Initialization = "init",
         DeliveryFences = "fences",
