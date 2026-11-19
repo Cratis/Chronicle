@@ -25,8 +25,7 @@ var sinkType = database switch
     "mongodb" or _ => WellKnownSinkTypes.MongoDB,
 };
 
-var options = ChronicleOptions.FromConnectionString("chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000");
-options.DefaultSinkTypeId = sinkType;
+var options = new ChronicleOptions { DefaultSinkTypeId = sinkType };
 
 Console.WriteLine($"Connecting to Chronicle... (Database: {database}, Sink: {sinkType})");
 using var client = new ChronicleClient(options, loggerFactory: loggerFactory);

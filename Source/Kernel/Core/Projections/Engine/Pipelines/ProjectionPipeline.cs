@@ -33,6 +33,9 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="generation">The <see cref="MaterializationGenerationIdentity"/> the pipeline builds, if it builds a materialization generation.
 /// A generation writes only to its own destination and never puts its sink or changesets into replay mode: the destination is its own,
 /// so there is nothing to shadow and nothing to rename.</param>
+/// <param name="usesBulkWindow">Whether the pipeline opens bulk windows on its sink. A globally scoped projection's sink is shared by every
+/// namespace's pipeline, so one namespace ending its catch-up would end or replace another's window; such a pipeline
+/// never opens a window and its writes go to the sink per event.</param>
 public partial class ProjectionPipeline(
     EngineProjection projection,
     ISink sink,
@@ -42,8 +45,11 @@ public partial class ProjectionPipeline(
     ProjectionHandleLock handleLock,
     IReplayScopedCache replayScopedCache,
     ILogger<ProjectionPipeline> logger,
-    MaterializationGenerationIdentity? generation = null) : IProjectionPipeline
+    MaterializationGenerationIdentity? generation = null,
+    bool usesBulkWindow = true) : IProjectionPipeline
 {
+    const int MaxFencedAttempts = 8;
+
     /// <summary>
     /// Serializes the read-modify-write cycle in <see cref="Handle"/>.
     /// </summary>
@@ -157,7 +163,7 @@ public partial class ProjectionPipeline(
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
         _sessionOpened?.Invoke();
-        return sink.BeginBulk();
+        return usesBulkWindow ? sink.BeginBulk() : Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -166,18 +172,19 @@ public partial class ProjectionPipeline(
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
         _sessionOpened?.Invoke();
-        return sink.ResumeBulk();
+        return usesBulkWindow ? sink.ResumeBulk() : Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
+    public Task<BulkFlushResult> FlushBulk() =>
+        usesBulkWindow ? sink.FlushBulk() : Task.FromResult(new BulkFlushResult(null, []));
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> EndBulk()
     {
         ClearPreparedPage();
         Volatile.Write(ref _bulkOpen, false);
-        return sink.EndBulk();
+        return usesBulkWindow ? sink.EndBulk() : Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
@@ -185,7 +192,7 @@ public partial class ProjectionPipeline(
     {
         ClearPreparedPage();
         Volatile.Write(ref _bulkOpen, false);
-        return sink.EndBulk(cancellationToken);
+        return usesBulkWindow ? sink.EndBulk(cancellationToken) : Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
@@ -201,6 +208,43 @@ public partial class ProjectionPipeline(
             : await _handleLock.AcquireCoarse();
 
         logger.StartingPipeline(@event.Context.SequenceNumber);
+
+        // A write made with a revision check that finds the instance changed has written nothing: read it again and recompute.
+        var attempts = projection.SupportsFencedGlobalWrites ? MaxFencedAttempts : 1;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                var context = await PerformSteps(@event);
+                logger.CompletedAllSteps(@event.Context.SequenceNumber);
+                return context;
+            }
+            catch (SinkWriteConflictException) when (attempt < attempts)
+            {
+                await Task.Delay(Random.Shared.Next(1, 10 * attempt));
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
+    {
+        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
+        using var handleScope = await _handleLock.AcquireCoarse();
+        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
+        foreach (var key in keys)
+        {
+            if (await sink.FindOrDefault(key) is { } state)
+            {
+                states.Add((key, state));
+            }
+        }
+
+        return states;
+    }
+
+    async Task<ProjectionEventContext> PerformSteps(AppendedEvent @event)
+    {
         var context = ProjectionEventContext.Empty(objectComparer, projection.ForProjection(@event)) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
@@ -219,25 +263,7 @@ public partial class ProjectionPipeline(
                 throw;
             }
         }
-        logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
         return context;
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
-    {
-        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
-        using var handleScope = await _handleLock.AcquireCoarse();
-        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
-        foreach (var key in keys)
-        {
-            if (await sink.FindOrDefault(key) is { } state)
-            {
-                states.Add((key, state));
-            }
-        }
-
-        return states;
     }
 }

@@ -6,6 +6,8 @@ Set `workbench.basePath` when a reverse proxy serves the Chronicle Workbench und
 
 Without the setting, the page requests scripts and styles from the host root. Behind a path-routing proxy, those requests can reach the wrong service and leave the Workbench blank.
 
+If the proxy also signs users in, Chronicle can trust the user it forwards instead of showing its own login page. gRPC clients still have to present their client credentials. See [Workbench sign-in through a reverse proxy](authentication.md#workbench-sign-in-through-a-reverse-proxy).
+
 ## Configuration
 
 Add the public path prefix to `chronicle.json`, without a `Cratis:Chronicle` wrapper:

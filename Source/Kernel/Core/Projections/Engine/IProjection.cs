@@ -83,6 +83,20 @@ public interface IProjection
     bool IsEventSourceKeyed { get; }
 
     /// <summary>
+    /// Gets a value indicating whether writes to the read model are made with optimistic revision checks (<see cref="Storage.Sinks.SinkWriteMode.FencedGlobal"/>).
+    /// </summary>
+    /// <remarks>
+    /// True only for a globally scoped projection that is event source keyed and holds nothing but property mappings:
+    /// no joins, children, removals or nested clearing. Other global projections keep writing as they always did.
+    /// </remarks>
+    bool SupportsFencedGlobalWrites => false;
+
+    /// <summary>
+    /// Gets why a globally scoped projection cannot use <see cref="SupportsFencedGlobalWrites"/>; null when it can, or when it is not global.
+    /// </summary>
+    string? FencedGlobalIneligibilityReason => null;
+
+    /// <summary>
     /// Gets a value indicating whether the projection subscribes to every event type in the system, including
     /// ones that did not exist yet when the projection was created.
     /// </summary>

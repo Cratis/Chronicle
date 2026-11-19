@@ -346,8 +346,8 @@ public partial class Observer
 
             if (!IsQuarantined)
             {
-                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
-                if (webhook && context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
+                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : context.Policy != WebhookDeliveryFailurePolicy.ParkPartition && ShouldQuarantineObserver(config);
+                if (context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
                 {
                     logger.QuarantiningFailedPartition(partition);
                     failures.State.Quarantine(partition);

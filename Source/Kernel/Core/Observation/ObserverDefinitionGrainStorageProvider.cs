@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Orleans.Storage;
@@ -13,8 +15,15 @@ namespace Cratis.Chronicle.Observation;
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling observer state storage.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
+/// <remarks>
+/// A definition is stored by observer identifier alone, so the activations of one observer in every namespace read the
+/// same record. Reads of the same record that are running at the same moment share one read from storage. Nothing is
+/// cached: a read that starts after the running one completed asks storage again.
+/// </remarks>
 public class ObserverDefinitionGrainStorageProvider(IStorage storage) : IGrainStorage
 {
+    readonly SingleFlight<(EventStoreName EventStore, ObserverId ObserverId), ObserverDefinition> _reads = new();
+
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
 
@@ -25,7 +34,7 @@ public class ObserverDefinitionGrainStorageProvider(IStorage storage) : IGrainSt
         var observerKey = ObserverKey.Parse(grainId.Key.ToString()!);
 
         var observers = storage.GetEventStore(observerKey.EventStore).Observers;
-        var stored = await observers.Get(observerKey.ObserverId);
+        var stored = await _reads.Run((observerKey.EventStore, observerKey.ObserverId), () => observers.Get(observerKey.ObserverId));
 
         // Keep a stored event sequence as it is, so an activation under another sequence can tell that the record is
         // not its own. A missing record is on no sequence yet; the key's sequence is the one registering it claims.

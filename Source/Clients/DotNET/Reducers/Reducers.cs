@@ -639,7 +639,17 @@ public partial class Reducers : IReducers
 #pragma warning restore CA2000 // Dispose objects before losing scope
         var backoff = _reconnectBackoffs.GetValue(handler, _ => new(ReconnectDelay, MaxReconnectDelay, HealthyStreamDuration, TimeProvider.System, ReconnectJitter));
         backoff.StreamOpened();
-        var operationsToObserve = services.Reducers.Observe(messages.Messages, cancellationToken);
+        IObservable<ReduceOperationMessage> operationsToObserve;
+        try
+        {
+            operationsToObserve = services.Reducers.Observe(messages.Messages, cancellationToken);
+        }
+        catch
+        {
+            messages.Dispose();
+            _ = scheduler.DrainAndDispose();
+            throw;
+        }
 
         void ScheduleReconnect() => ScheduleReducerReconnect(handler, scheduler, backoff, cancellationToken);
 
@@ -731,6 +741,30 @@ public partial class Reducers : IReducers
             try
             {
                 await scheduler.DrainAndDispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.ReducerReconnectFailed(handler.Id, ex);
+            }
+
+            await ReconnectUntilRegistered(handler, backoff, cancellationToken);
+        });
+    }
+
+    /// <summary>
+    /// Re-registers until it succeeds, is cancelled, replaced or released. A failed re-registration must not be
+    /// terminal: the connection can recover while this handler stays disconnected.
+    /// </summary>
+    /// <param name="handler">The <see cref="IReducerHandler"/> to register again.</param>
+    /// <param name="backoff">The <see cref="ObservationReconnectBackoff"/> that paces the attempts.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the handler.</param>
+    /// <returns>An awaitable task.</returns>
+    async Task ReconnectUntilRegistered(IReducerHandler handler, ObservationReconnectBackoff backoff, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            try
+            {
                 await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -739,13 +773,21 @@ public partial class Reducers : IReducers
 
                 _logger.ReconnectingReducer(handler.Id);
                 ReconnectIfCurrent(handler, cancellationToken);
+                return;
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
             catch (Exception ex)
             {
                 _logger.ReducerReconnectFailed(handler.Id, ex);
+                if (!CanReconnect(handler, cancellationToken))
+                {
+                    return;
+                }
             }
-        });
+        }
     }
 
     bool TryHandleCancelledStream(

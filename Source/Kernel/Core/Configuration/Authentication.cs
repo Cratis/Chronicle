@@ -130,6 +130,12 @@ public class Authentication
     /// </summary>
     public SignInThrottling SignInThrottling { get; init; } = new();
 
+    /// <summary>
+    /// Gets how browser and HTTP API callers - the Workbench and its API - are authenticated.
+    /// gRPC clients always authenticate with their client credentials, whatever this says.
+    /// </summary>
+    public HttpAuthentication Http { get; init; } = new();
+
 #if DEVELOPMENT
     /// <summary>
     /// Gets the default admin password for development. When set, the admin user is created with this password pre-configured,

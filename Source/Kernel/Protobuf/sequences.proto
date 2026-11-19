@@ -54,6 +54,8 @@ message AppendManyOnceResponse {
    repeated string Errors = 10;
    repeated ConcurrencyViolation ConcurrencyViolations = 11;
    repeated IdempotencyKeyConflict IdempotencyConflicts = 12;
+   bool IsRetryable = 13;
+   .bcl.TimeSpan RetryAfter = 14;
 }
 message AppendManyOnceWithNamedTagsRequest {
    string EventStore = 1;
@@ -93,6 +95,8 @@ message AppendManyResponse {
    repeated ConcurrencyViolation ConcurrencyViolations = 10;
    EffectReceiptDetails EffectReceipt = 11;
    bool EffectAlreadyRecorded = 12;
+   bool IsRetryable = 13;
+   .bcl.TimeSpan RetryAfter = 14;
 }
 message AppendManyWithNamedTagsRequest {
    string EventStore = 1;
@@ -141,6 +145,8 @@ message AppendOnceResponse {
    repeated string Errors = 10;
    ConcurrencyViolation ConcurrencyViolation = 11;
    repeated IdempotencyKeyConflict IdempotencyConflicts = 12;
+   bool IsRetryable = 13;
+   .bcl.TimeSpan RetryAfter = 14;
 }
 message AppendOnceWithNamedTagsRequest {
    string EventStore = 1;
@@ -201,6 +207,8 @@ message AppendResponse {
    ConcurrencyViolation ConcurrencyViolation = 10;
    EffectReceiptDetails EffectReceipt = 11;
    bool EffectAlreadyRecorded = 12;
+   bool IsRetryable = 13;
+   .bcl.TimeSpan RetryAfter = 14;
 }
 message AppendWithNamedTagsRequest {
    string EventStore = 1;
