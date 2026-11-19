@@ -2,3 +2,5 @@
   href: index.mdx
 - name: Webhook receivers
   href: receivers.md
+- name: Verify signatures
+  href: signature-verification.mdx
