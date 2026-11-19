@@ -770,7 +770,8 @@ public class ProjectionFactory(
         {
             GenerationDelivery = generationDelivery,
             ReleaseStoredEvent = releaseStoredEvent,
-            DateTimes = new(context.EventTypeSchemas)
+            DateTimes = new(context.EventTypeSchemas),
+            FencedGlobalDefinitionIneligibility = FencedGlobalEligibility.ReasonFor(projectionDefinition)
         };
 
         // Set parent relationships immediately after creation

@@ -113,6 +113,39 @@ until it succeeds or disconnects. Local preparation failures and identity drift 
 they need correction instead. Do not treat an exhausted foreground retry as proof that no artifacts
 registered, or repeatedly restart the host to make it catch up.
 
+## Global projections and concurrent writers
+
+A globally scoped projection writes one read model that every namespace shares, so several namespaces can update the
+same instance at the same time. Each namespace's observer reads the instance, computes the change and writes it back;
+without protection the last writer silently overwrites the other's update.
+
+On the MongoDB sink Chronicle protects a global projection with an **optimistic revision check** when the projection only
+maps event properties onto the read model (for example a counter or a latest-value projection):
+
+- Every instance carries a `__revision`, an `__incarnation` and a `__lastHandled` map with the last handled event
+  sequence number per namespace. The write is applied only when the instance still has the revision it was read with.
+- When another namespace wrote in between, nothing is written. The observer reads the instance again, recomputes the
+  change from what it finds and retries, a bounded number of times, before the partition is reported as failed.
+- Instances that existed before are stamped with an incarnation and revision 0 the first time they are written, so
+  no migration is needed. A deleted and recreated instance is a new incarnation and never matches a write computed
+  against the old one.
+- A redelivered event is applied once per namespace; the sequence numbers of different namespaces are tracked
+  independently and never reject each other.
+- The bookkeeping properties are Chronicle's own and are not part of your read model.
+
+A projection that joins events, has children or removes with events is **not** protected, because those write several
+documents or several parts of one document in separate operations that one revision cannot cover. Chronicle logs a
+single warning per projection registration on each silo, naming the projection and the reason:
+
+```text
+Globally scoped projection <projection> is written without revision checks because <reason>; concurrent namespaces can lose updates to a shared instance
+```
+
+The reason is one of `it joins events`, `it has children`, `it removes with events` or `it targets a graph`. To get the
+protection, split the projection so the shared instance only holds properties set directly from events, or keep the
+projection namespaced. A projection that is protected cannot also hold persisted futures; Chronicle fails the write
+rather than store them unprotected.
+
 ## When a projection is no longer registered — retirement
 
 A projection the client stops declaring — its read model was deleted, or renamed and thereby given a

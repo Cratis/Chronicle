@@ -22,6 +22,7 @@ public class when_an_old_build_finishes_after_eviction : given.a_pipeline_manage
         _fresh.EventSequenceId.Returns(_projection.EventSequenceId);
         _fresh.ReadModel.Returns(_projection.ReadModel);
         _fresh.DefinitionFingerprint.Returns("fresh");
+        _fresh.FencedGlobalIneligibilityReason.Returns((string?)null);
         await _manager.GetFor(_store, _namespace, _fresh);
         held.SetResult(_sink);
         _stale = await oldBuild;
