@@ -33,6 +33,9 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="generation">The <see cref="MaterializationGenerationIdentity"/> the pipeline builds, if it builds a materialization generation.
 /// A generation writes only to its own destination and never puts its sink or changesets into replay mode: the destination is its own,
 /// so there is nothing to shadow and nothing to rename.</param>
+/// <param name="usesBulkWindow">Whether the pipeline opens bulk windows on its sink. A globally scoped projection's sink is shared by every
+/// namespace's pipeline, so one namespace ending its catch-up would end or replace another's window; such a pipeline
+/// never opens a window and its writes go to the sink per event.</param>
 public partial class ProjectionPipeline(
     EngineProjection projection,
     ISink sink,
@@ -42,7 +45,8 @@ public partial class ProjectionPipeline(
     ProjectionHandleLock handleLock,
     IReplayScopedCache replayScopedCache,
     ILogger<ProjectionPipeline> logger,
-    MaterializationGenerationIdentity? generation = null) : IProjectionPipeline
+    MaterializationGenerationIdentity? generation = null,
+    bool usesBulkWindow = true) : IProjectionPipeline
 {
     /// <summary>
     /// Serializes the read-modify-write cycle in <see cref="Handle"/>.
@@ -157,7 +161,7 @@ public partial class ProjectionPipeline(
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
         _sessionOpened?.Invoke();
-        return sink.BeginBulk();
+        return usesBulkWindow ? sink.BeginBulk() : Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -166,18 +170,19 @@ public partial class ProjectionPipeline(
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
         _sessionOpened?.Invoke();
-        return sink.ResumeBulk();
+        return usesBulkWindow ? sink.ResumeBulk() : Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
+    public Task<BulkFlushResult> FlushBulk() =>
+        usesBulkWindow ? sink.FlushBulk() : Task.FromResult(new BulkFlushResult(null, []));
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> EndBulk()
     {
         ClearPreparedPage();
         Volatile.Write(ref _bulkOpen, false);
-        return sink.EndBulk();
+        return usesBulkWindow ? sink.EndBulk() : Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
@@ -185,7 +190,7 @@ public partial class ProjectionPipeline(
     {
         ClearPreparedPage();
         Volatile.Write(ref _bulkOpen, false);
-        return sink.EndBulk(cancellationToken);
+        return usesBulkWindow ? sink.EndBulk(cancellationToken) : Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
