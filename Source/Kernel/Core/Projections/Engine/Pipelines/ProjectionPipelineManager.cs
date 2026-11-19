@@ -71,6 +71,11 @@ public class ProjectionPipelineManager(
     readonly ConcurrentDictionary<string, ProjectionPipelineBinding> _draining = new();
     readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     readonly ProjectionPipelineManagerMetrics _metrics = new(meter, options.Value.Telemetry.MetricNames);
+
+    /// <summary>
+    /// The registrations already warned about, so an ineligible global projection is reported once per silo and not once per namespace.
+    /// </summary>
+    readonly ConcurrentDictionary<string, byte> _warnedGlobalProjections = new();
     readonly object _sweepGate = new();
     readonly object _registryGate = new();
 
@@ -162,7 +167,7 @@ public class ProjectionPipelineManager(
         // Sinks owns the sink cache and its replay/bulk mode. Replacing a pipeline must reuse
         // that sink rather than begin replay again (which would clear already replayed data).
         var sink = await sinkStorage.Sinks.GetFor(projection.ReadModel);
-        if (projection.FencedGlobalIneligibilityReason is { } reason)
+        if (projection.FencedGlobalIneligibilityReason is { } reason && _warnedGlobalProjections.TryAdd($"{eventStore}/{projection.Identifier}/{projection.DefinitionFingerprint}", 0))
         {
             loggerFactory.CreateLogger<ProjectionPipeline>().GlobalProjectionWrittenWithoutRevisionChecks(projection.Identifier.ToString(), reason);
         }

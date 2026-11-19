@@ -33,7 +33,7 @@ public partial class Sink
             BsonDocument? document;
             using (var result = await Collection.FindAsync(filter))
             {
-                document = result.SingleOrDefault();
+                document = await result.SingleOrDefaultAsync();
             }
 
             if (document is null)
@@ -79,7 +79,8 @@ public partial class Sink
             return [];
         }
 
-        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, eventSequenceNumber);
+        // The scalar watermark is not written: the per-namespace map in the same update replaces it, and a shared scalar would mix namespaces.
+        var converted = await changesetConverter.ToUpdateDefinition(key, changeset, EventSequenceNumber.Unavailable);
         if (!converted.hasChanges)
         {
             return [];
@@ -128,17 +129,74 @@ public partial class Sink
     /// <param name="Incarnation">The incarnation of the instance read, or null when there was none.</param>
     /// <param name="Revision">The revision of the instance read.</param>
     /// <param name="LastHandled">The last handled event sequence number per writing namespace.</param>
-    sealed record FencedGlobalState(string? Incarnation, long Revision, IReadOnlyDictionary<string, long> LastHandled)
+    internal sealed record FencedGlobalState(string? Incarnation, long Revision, IReadOnlyDictionary<string, long> LastHandled)
     {
+        /// <summary>
+        /// Gets whether the instance did not exist when it was read.
+        /// </summary>
         public bool IsAbsent => Incarnation is null;
 
+        /// <summary>
+        /// Gets the path of the last handled event sequence number for a writing namespace.
+        /// </summary>
+        /// <param name="writingNamespace">The namespace name.</param>
+        /// <returns>The field path.</returns>
         public static string LastHandledPath(string writingNamespace) =>
-            $"{WellKnownProperties.LastHandledByNamespace}.{writingNamespace.Replace(".", "%2E").Replace("$", "%24")}";
+            $"{WellKnownProperties.LastHandledByNamespace}.{EncodeNamespace(writingNamespace)}";
 
+        /// <summary>
+        /// Encodes a namespace as a field name. Escaping '%' first keeps it injective, so 'a.b' and 'a%2Eb' never share a key.
+        /// </summary>
+        /// <param name="writingNamespace">The namespace name.</param>
+        /// <returns>The encoded field name.</returns>
+        public static string EncodeNamespace(string writingNamespace) =>
+            writingNamespace.Replace("%", "%25").Replace(".", "%2E").Replace("$", "%24");
+
+        /// <summary>
+        /// Reverses <see cref="EncodeNamespace"/> in a single pass.
+        /// </summary>
+        /// <param name="encoded">The encoded field name.</param>
+        /// <returns>The namespace name.</returns>
+        public static string DecodeNamespace(string encoded)
+        {
+            var decoded = new System.Text.StringBuilder(encoded.Length);
+            var index = 0;
+            while (index < encoded.Length)
+            {
+                var rest = encoded.AsSpan(index);
+                if (rest.StartsWith("%25", StringComparison.Ordinal))
+                {
+                    decoded.Append('%');
+                    index += 3;
+                }
+                else if (rest.StartsWith("%2E", StringComparison.Ordinal))
+                {
+                    decoded.Append('.');
+                    index += 3;
+                }
+                else if (rest.StartsWith("%24", StringComparison.Ordinal))
+                {
+                    decoded.Append('$');
+                    index += 3;
+                }
+                else
+                {
+                    decoded.Append(encoded[index]);
+                    index++;
+                }
+            }
+
+            return decoded.ToString();
+        }
+
+        /// <summary>
+        /// Reads the bookkeeping from the initial state of a changeset.
+        /// </summary>
+        /// <param name="initialState">The state as read, if any.</param>
+        /// <returns>The <see cref="FencedGlobalState"/>.</returns>
         public static FencedGlobalState From(ExpandoObject? initialState)
         {
-            var state = initialState as IDictionary<string, object?>;
-            if (state is null || !state.TryGetValue(WellKnownProperties.Incarnation, out var incarnation) || incarnation is null)
+            if (initialState is not IDictionary<string, object?> state || !state.TryGetValue(WellKnownProperties.Incarnation, out var incarnation) || incarnation is null)
             {
                 return new(null, 0, new Dictionary<string, long>());
             }
@@ -149,7 +207,7 @@ public partial class Sink
             {
                 foreach (var (name, value) in byNamespace.Where(_ => _.Value is not null))
                 {
-                    lastHandled[name.Replace("%2E", ".").Replace("%24", "$")] = Convert.ToInt64(value);
+                    lastHandled[DecodeNamespace(name)] = Convert.ToInt64(value);
                 }
             }
 
@@ -160,6 +218,7 @@ public partial class Sink
         /// Only property changes are fenced; every other kind of change fails closed, so a new kind never writes unprotected.
         /// </summary>
         /// <param name="changeset">The changeset about to be written.</param>
+        /// <exception cref="FencedWriteNotSupportedException">Thrown when the changeset holds a change that cannot be fenced.</exception>
         public static void EnsureSupported(IChangeset<AppendedEvent, ExpandoObject> changeset)
         {
             foreach (var change in changeset.Changes.Where(_ => _ is not PropertiesChanged<ExpandoObject>))
@@ -168,6 +227,12 @@ public partial class Sink
             }
         }
 
+        /// <summary>
+        /// Gets whether the writing namespace already handled the event.
+        /// </summary>
+        /// <param name="writingNamespace">The namespace name.</param>
+        /// <param name="eventSequenceNumber">The event sequence number.</param>
+        /// <returns>True if handled, false otherwise.</returns>
         public bool HasHandled(string writingNamespace, EventSequenceNumber eventSequenceNumber) =>
             LastHandled.TryGetValue(writingNamespace, out var handled) && handled >= (long)eventSequenceNumber.Value;
     }

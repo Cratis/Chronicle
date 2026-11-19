@@ -48,6 +48,8 @@ public partial class ProjectionPipeline(
     MaterializationGenerationIdentity? generation = null,
     bool usesBulkWindow = true) : IProjectionPipeline
 {
+    const int MaxFencedAttempts = 8;
+
     /// <summary>
     /// Serializes the read-modify-write cycle in <see cref="Handle"/>.
     /// </summary>
@@ -67,8 +69,6 @@ public partial class ProjectionPipeline(
     /// both the old and new pipeline share the same stripes so the concurrent paths still serialize.
     /// </remarks>
     readonly ProjectionHandleLock _handleLock = handleLock;
-
-    const int MaxFencedAttempts = 8;
 
     long _activity;
     bool _bulkOpen;
@@ -226,6 +226,23 @@ public partial class ProjectionPipeline(
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
+    {
+        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
+        using var handleScope = await _handleLock.AcquireCoarse();
+        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
+        foreach (var key in keys)
+        {
+            if (await sink.FindOrDefault(key) is { } state)
+            {
+                states.Add((key, state));
+            }
+        }
+
+        return states;
+    }
+
     async Task<ProjectionEventContext> PerformSteps(AppendedEvent @event)
     {
         var context = ProjectionEventContext.Empty(objectComparer, projection.ForProjection(@event)) with
@@ -248,22 +265,5 @@ public partial class ProjectionPipeline(
         }
 
         return context;
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
-    {
-        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
-        using var handleScope = await _handleLock.AcquireCoarse();
-        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
-        foreach (var key in keys)
-        {
-            if (await sink.FindOrDefault(key) is { } state)
-            {
-                states.Add((key, state));
-            }
-        }
-
-        return states;
     }
 }
