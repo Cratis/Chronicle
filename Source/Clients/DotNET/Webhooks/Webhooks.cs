@@ -60,7 +60,13 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
             w.IsReplayable,
             w.IsActive)
         {
-            GenerationDelivery = (EventGenerationDelivery)w.GenerationDelivery
+            GenerationDelivery = (EventGenerationDelivery)w.GenerationDelivery,
+            Signing = w.Signing switch
+            {
+                Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519 => WebhookSigningMode.Ed25519,
+                Contracts.Observation.Webhooks.WebhookSigningMode.Disabled or Contracts.Observation.Webhooks.WebhookSigningMode.Unspecified => WebhookSigningMode.None,
+                _ => WebhookSigningMode.None
+            }
         });
     }
 }

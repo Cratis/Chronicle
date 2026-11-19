@@ -21,6 +21,15 @@ public interface IWebhookDefinitionBuilder
         generationDelivery == EventGenerationDelivery.Compatibility ? this : throw new WebhookGenerationDeliveryNotSupported();
 
     /// <summary>
+    /// Sets the signing mode. None is the default.
+    /// </summary>
+    /// <param name="signing">The signing mode.</param>
+    /// <returns>The builder for continuation.</returns>
+    /// <exception cref="WebhookSigningNotSupported">The builder does not support signing.</exception>
+    IWebhookDefinitionBuilder WithSigning(WebhookSigningMode signing) =>
+        signing == WebhookSigningMode.None ? this : throw new WebhookSigningNotSupported();
+
+    /// <summary>
     /// Sets the <see cref="EventSequenceId"/> that the webhook observer should be registered on.
     /// </summary>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/>.</param>

@@ -21,6 +21,15 @@ If you omit event types, the .NET builder uses all event types known to that cli
 A retried or replayed batch can arrive more than once. Make the receiver idempotent: processing the same event again must not repeat its side effect. A timeout or cancellation cannot undo work the receiver has already completed.
 :::
 
+## Signing
+
+Webhooks are unsigned by default. In the .NET registration callback, opt in with
+`WithSigning(WebhookSigningMode.Ed25519)`; the enum is in `Cratis.Chronicle.Webhooks`.
+Chronicle signs deliveries using Standard Webhooks. Receivers verify signatures with
+the event store's public key. HMAC signing is not available yet.
+
+To disable signing, re-register the webhook with `WithSigning(WebhookSigningMode.None)`.
+
 ## Delivery retries and timeouts
 
 The observer schedules recovery rather than making the HTTP client sleep and retry inline. The authentication handlers can resend a request once after a `401`, as described under [OAuth client credentials](#oauth-client-credentials) and [managed identity](#managed-identity).
