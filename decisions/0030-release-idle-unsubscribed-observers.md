@@ -17,6 +17,8 @@ applies-to:
 <!-- markdownlint-disable-next-line MD025 -->
 # Keep subscribed observers resident and release observers that have no subscription and no pending work after an idle period
 
+> **2026-11-19 - related proposal.** [Decision 0034](./0034-release-dormant-subscribed-observers.md) proposes the design this record defers under "Persist the subscription and let the appended events queue activate the observer". It is proposed, not accepted, and changes nothing here. If it is accepted it narrows decision 1 only.
+
 Tracking issue: [Cratis/Chronicle#5792](https://github.com/Cratis/Chronicle/issues/5792). Related: #5677, #5110, #4610, #4068.
 
 ## Context
