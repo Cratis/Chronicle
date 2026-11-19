@@ -82,6 +82,7 @@ internal sealed partial class TestingServices
     static KernelWebhooksService CreateWebhooks(TestingServiceContext context) =>
         new(
             context.CommandPipeline.Value,
+            context.GrainFactory,
             context.Storage,
             NullLogger<KernelWebhooksService>.Instance);
 
