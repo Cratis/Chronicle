@@ -14,6 +14,7 @@ public class with_a_target_schema_fallback : given.a_pinned_subscriber
         _storage.GetEventStore("Lobby").EventTypes.GetFor("event-type-1", 2).Returns(new Concepts.EventTypes.EventTypeSchema(new("event-type-1", 1), EventTypeOwner.Client, EventTypeSource.Code, _schema));
     }
     async Task Because() => _result = await Forward();
+    [Fact] void should_park_the_partition() => _result.FailurePolicy.ShouldEqual(WebhookDeliveryFailurePolicy.ParkPartition);
     [Fact] void should_reject_a_generation_absent_from_the_definition() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_not_append_with_the_substitute_schema() => AppendCalls().ShouldEqual(0);
     [Fact] void should_not_advance() => _result.LastSuccessfulObservation.ShouldEqual(EventSequenceNumber.Unavailable);

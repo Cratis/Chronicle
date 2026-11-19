@@ -16,6 +16,7 @@ public class and_an_append_throws : given.a_subscriber_with_events
 
     async Task Because() => _result = await Forward();
 
+    [Fact] void should_retry() => _result.FailurePolicy.ShouldEqual(WebhookDeliveryFailurePolicy.Retry);
     [Fact] void should_fail() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_acknowledge_only_the_forwarded_event() => _result.LastSuccessfulObservation.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_not_attempt_later_events() => AppendCalls().ShouldEqual(2);
