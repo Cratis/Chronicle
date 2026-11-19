@@ -19,7 +19,7 @@ public class and_the_previous_key_is_retired_immediately : Signing.for_WebhookSi
         _factory.GetGrain<IWebhookSigningKeyRing>("the-store").Returns(_ring);
     }
 
-    Task Because() => new RotateWebhookSigningKey("the-store", 0).Handle(_factory);
+    Task Because() => new RotateWebhookSigningKey("the-store", true, 0).Handle(_factory);
 
     [Fact] void should_retire_the_previous_key() => State.Keys.Single(key => key.KeyId == _originalId).Status.ShouldEqual(WebhookSigningKeyStatus.Retired);
     [Fact] void should_erase_its_ciphertext() => State.Keys.Single(key => key.KeyId == _originalId).EncryptedSecret.ShouldEqual(EncryptedWebhookSigningSecret.Empty);

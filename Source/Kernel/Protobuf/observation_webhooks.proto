@@ -109,6 +109,7 @@ message RemoveWebhooksRequest {
 message RotateWebhookSigningKeyRequest {
    string EventStore = 1;
    double OverlapSeconds = 2;
+   bool UseSpecifiedOverlap = 3;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {

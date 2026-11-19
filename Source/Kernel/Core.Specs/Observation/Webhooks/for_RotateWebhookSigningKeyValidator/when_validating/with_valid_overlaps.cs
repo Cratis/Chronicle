@@ -16,8 +16,8 @@ public class with_valid_overlaps : Specification
     {
         var validator = new RotateWebhookSigningKeyValidator();
         _defaultValid = (await validator.ValidateAsync(new RotateWebhookSigningKey("store"))).IsValid;
-        _zeroValid = (await validator.ValidateAsync(new RotateWebhookSigningKey("store", 0))).IsValid;
-        _maximumValid = (await validator.ValidateAsync(new RotateWebhookSigningKey("store", WebhookSigningKeyOverlap.Maximum.Value.TotalSeconds))).IsValid;
+        _zeroValid = (await validator.ValidateAsync(new RotateWebhookSigningKey("store", true, 0))).IsValid;
+        _maximumValid = (await validator.ValidateAsync(new RotateWebhookSigningKey("store", true, WebhookSigningKeyOverlap.Maximum.Value.TotalSeconds))).IsValid;
     }
 
     [Fact] void should_allow_the_default_overlap() => _defaultValid.ShouldBeTrue();

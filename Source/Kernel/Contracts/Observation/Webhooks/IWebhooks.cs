@@ -276,10 +276,16 @@ public class RotateWebhookSigningKeyRequest
     public string EventStore { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the UseSpecifiedOverlap.
+    /// </summary>
+    [ProtoMember(3)]
+    public bool UseSpecifiedOverlap { get; set; }
+
+    /// <summary>
     /// Gets or sets the OverlapSeconds.
     /// </summary>
     [ProtoMember(2)]
-    public double? OverlapSeconds { get; set; }
+    public double OverlapSeconds { get; set; }
 }
 
 /// <summary>

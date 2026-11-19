@@ -48,7 +48,7 @@ internal sealed class Webhooks(
     public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RotateWebhookSigningKey(global::Cratis.Chronicle.Contracts.Observation.Webhooks.RotateWebhookSigningKeyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         CommandExecutor.Execute(
             commandPipeline,
-            new global::Cratis.Chronicle.Observation.Webhooks.RotateWebhookSigningKey((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.OverlapSeconds));
+            new global::Cratis.Chronicle.Observation.Webhooks.RotateWebhookSigningKey((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.UseSpecifiedOverlap, request.OverlapSeconds));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse>>> GetWebhookSigningKeys(global::Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhookSigningKeysRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>

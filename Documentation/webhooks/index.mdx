@@ -41,18 +41,23 @@ returned. The query adds no extra authorization policy beyond the host defaults
 and reads only the requested event store's ring.
 
 To rotate, submit the kernel command `RotateWebhookSigningKey` with `EventStore`
-and optional `OverlapSeconds`. Rotation requires administrator rights. The command
+and optional `UseSpecifiedOverlap` and `OverlapSeconds`. Rotation requires administrator rights. The command
 returns no key material: query `GetWebhookSigningKeys` again afterward to obtain the
 new public key, then distribute it to receivers within the overlap window. Receivers
 load public keys from configuration; the kernel does not push them.
 
-The default overlap is 24 hours; the maximum is 30 days. During overlap, deliveries
+Omit `UseSpecifiedOverlap` (or set it to `false`) for the default 24-hour overlap;
+`OverlapSeconds` is ignored in that case. Set `UseSpecifiedOverlap` to `true` to use
+`OverlapSeconds`, including zero. The maximum specified overlap is 30 days. During overlap, deliveries
 carry signatures from both keys and the query lists the new Active key and the
 previous Overlap key, including its `OverlapEndsAt`. For a compromised key, set
-`OverlapSeconds` to zero to retire it immediately and distribute the replacement
+`UseSpecifiedOverlap` to `true` and `OverlapSeconds` to zero to retire it immediately and distribute the replacement
 public key promptly. Expired overlap keys disappear from query results at read time;
 retired keys are not listed. Treat `Cratis-Key-Id` as an advisory hint, not an
 authorization or verification decision.
+
+This unreleased rotation API replaces its earlier nullable overlap input; prerelease
+clients must regenerate their contracts to use the explicit overlap selector.
 
 CLI retrieval and rotation commands will arrive in a separate CLI follow-up; use the
 kernel API for now. HMAC secret hand-off remains deferred and HMAC signing stays off.

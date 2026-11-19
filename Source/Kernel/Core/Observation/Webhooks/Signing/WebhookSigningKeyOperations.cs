@@ -12,12 +12,12 @@ namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 internal static class WebhookSigningKeyOperations
 {
     /// <summary>
-    /// Checks whether an optional overlap is finite and within the supported bounds.
+    /// Checks whether a specified overlap is finite and within the supported bounds.
     /// </summary>
-    /// <param name="seconds">The overlap in seconds, or null for the default.</param>
+    /// <param name="seconds">The specified overlap in seconds.</param>
     /// <returns>Whether the overlap is valid.</returns>
-    internal static bool IsValidOverlap(double? seconds) => seconds is null ||
-        (double.IsFinite(seconds.Value) && seconds.Value >= 0 && seconds.Value <= WebhookSigningKeyOverlap.Maximum.Value.TotalSeconds);
+    internal static bool IsValidOverlap(double seconds) =>
+        double.IsFinite(seconds) && seconds >= 0 && seconds <= WebhookSigningKeyOverlap.Maximum.Value.TotalSeconds;
 
     /// <summary>
     /// Gets public verification metadata while masking key-ring failures.
@@ -43,15 +43,17 @@ internal static class WebhookSigningKeyOperations
     /// Rotates the addressed key ring while masking private-state failures.
     /// </summary>
     /// <param name="eventStore">The event store whose key to rotate.</param>
-    /// <param name="overlapSeconds">The overlap in seconds, or null for the default.</param>
+    /// <param name="useSpecifiedOverlap">Whether to use the specified overlap instead of the default.</param>
+    /// <param name="overlapSeconds">The specified overlap in seconds.</param>
     /// <param name="grainFactory">The grain factory.</param>
     /// <returns>A task representing the rotation.</returns>
-    internal static async Task Rotate(EventStoreName eventStore, double? overlapSeconds, IGrainFactory grainFactory)
+    internal static async Task Rotate(EventStoreName eventStore, bool useSpecifiedOverlap, double overlapSeconds, IGrainFactory grainFactory)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(eventStore?.Value) || !IsValidOverlap(overlapSeconds)) throw new WebhookSigningUnavailable();
-            var overlap = overlapSeconds is null ? WebhookSigningKeyOverlap.Default : new WebhookSigningKeyOverlap(TimeSpan.FromSeconds(overlapSeconds.Value));
+            if (string.IsNullOrWhiteSpace(eventStore?.Value)) throw new WebhookSigningUnavailable();
+            if (useSpecifiedOverlap && !IsValidOverlap(overlapSeconds)) throw new WebhookSigningUnavailable();
+            var overlap = useSpecifiedOverlap ? new WebhookSigningKeyOverlap(TimeSpan.FromSeconds(overlapSeconds)) : WebhookSigningKeyOverlap.Default;
             await grainFactory.GetGrain<IWebhookSigningKeyRing>(eventStore).Rotate(overlap);
         }
         catch
