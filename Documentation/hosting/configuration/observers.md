@@ -70,6 +70,8 @@ The example shows the defaults of a production build. The `-development` image s
 | deploymentConditionGracePeriod | timespan | `00:01:00` | How long the `Deployment` condition must hold before the generation is promoted. Applies only when `features.projectionGenerations` is enabled |
 | pendingGenerationAlertAfter | timespan | `1.00:00:00` | How long a generation can stay pending before Chronicle raises an alert. Applies only when `features.projectionGenerations` is enabled |
 
+`BackoffScheduleSeconds` (empty by default) and `RetryBudget` (`00:00:00` by default) belong to the shared retry options type but are used only under `webhooks.retry`, not for ordinary observers. Webhooks supply their own schedule and budget defaults; see [Delivery retry policy](../../configuration/chronicle-options.mdx#delivery-retry-policy).
+
 ## Releasing idle observers
 
 Every observer, reactor and reducer is an activation in the Kernel's memory, and each one costs roughly 40 KB of heap. A subscribed observer has to stay in memory, because its live subscription to new events exists only there. An observer whose client has disconnected, or one that was only loaded to answer a question, has nothing in memory that is not also in storage.
