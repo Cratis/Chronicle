@@ -20,6 +20,7 @@ public class and_the_observer_holds_stale_event_types : Specification
     TestKitSilo _silo;
     EventStoreSubscriptionsManager _manager;
     IObserver _observer;
+    EventType _eventType;
 
     async Task Establish()
     {
@@ -33,7 +34,7 @@ public class and_the_observer_holds_stale_event_types : Specification
         namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
-        var eventType = new EventType("5db7cfa2-0fcb-4791-b174-83ff2806d654", EventTypeGeneration.First);
+        _eventType = new EventType("5db7cfa2-0fcb-4791-b174-83ff2806d654", EventTypeGeneration.First);
 
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(true);
@@ -48,7 +49,7 @@ public class and_the_observer_holds_stale_event_types : Specification
             new EventStoreSubscriptionDefinition(
                 new EventStoreSubscriptionId(SourceEventStore),
                 new EventStoreName(SourceEventStore),
-                [eventType]));
+                [_eventType]));
     }
 
     async Task Because() => await _manager.ReceiveReminder(ReminderName, default);
@@ -57,7 +58,7 @@ public class and_the_observer_holds_stale_event_types : Specification
     void should_subscribe_with_the_current_event_types() =>
         _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _eventType })),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),
