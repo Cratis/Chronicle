@@ -48,6 +48,14 @@ public class ObserverState
     public DateTimeOffset? RunningStateChangedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets when a client was last seen holding a subscription to the observer, absent until first recorded.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not mapped by the state converters and preserved by state saves.
+    /// </remarks>
+    public DateTimeOffset? LastSeenAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the serialized type-set control, or null before initialization.
     /// </summary>
     [ConcurrencyCheck]

@@ -100,6 +100,16 @@ public class ObserverState
     public DateTimeOffset? RunningStateChangedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets when a client was last seen holding a subscription to the observer, absent until first recorded.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not mapped by the state converters and not part of the Save update, so progress saves preserve it.
+    /// </remarks>
+    [BsonElement("lastSeenAt")]
+    [BsonIgnoreIfNull]
+    public DateTimeOffset? LastSeenAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the last handled event sequence number.
     /// </summary>
     public EventSequenceNumber LastHandledEventSequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
