@@ -79,36 +79,6 @@ public class NamespaceRemover(
     /// <param name="value">The key to parse.</param>
     /// <param name="key">The parsed <see cref="ObserverKey"/>.</param>
     /// <returns>True if the key was an observer key; otherwise false.</returns>
-    async Task RemoveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEventStoreStorage eventStoreStorage, IEventStoreNamespaceStorage namespaceStorage)
-    {
-        // Every observer of the namespace is unsubscribed and removed. Removing an observer is what also removes its
-        // reminders - left behind, they wake the observer at the next start and bring the namespace back.
-        var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier, _ => _.EventSequenceId);
-        var fallbackSequences = (await namespaceStorage.GetEventSequences()).ToArray();
-        foreach (var state in await namespaceStorage.Observers.GetAll())
-        {
-            foreach (var eventSequenceId in definitions.TryGetValue(state.Identifier, out var sequence) ? [sequence] : fallbackSequences)
-            {
-                await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId)));
-            }
-        }
-
-        // Observers that never saved any state - the forwarding observers between event stores and the kernel's own
-        // pattern observers - are not found above, but they hold reminders all the same. Find them by their reminders.
-        foreach (var (observerKey, _) in await GetObserverReminders(eventStore, @namespace))
-        {
-            await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(observerKey));
-        }
-    }
-
-    async Task RemoveRemindersOf(EventStoreName eventStore, EventStoreNamespaceName @namespace)
-    {
-        foreach (var (_, reminder) in await GetObserverReminders(eventStore, @namespace))
-        {
-            await reminderTable.RemoveRow(reminder.GrainId, reminder.ReminderName, reminder.ETag ?? string.Empty);
-        }
-    }
-
     internal static bool TryParseKey(string value, out ObserverKey key)
     {
         try
@@ -138,6 +108,36 @@ public class NamespaceRemover(
                 // Subscribed again by a subscription that was already on its way; unsubscribe once more.
                 await Task.Delay(_removalRetryDelay);
             }
+        }
+    }
+
+    async Task RemoveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEventStoreStorage eventStoreStorage, IEventStoreNamespaceStorage namespaceStorage)
+    {
+        // Every observer of the namespace is unsubscribed and removed. Removing an observer is what also removes its
+        // reminders - left behind, they wake the observer at the next start and bring the namespace back.
+        var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier, _ => _.EventSequenceId);
+        var fallbackSequences = (await namespaceStorage.GetEventSequences()).ToArray();
+        foreach (var state in await namespaceStorage.Observers.GetAll())
+        {
+            foreach (var eventSequenceId in definitions.TryGetValue(state.Identifier, out var sequence) ? [sequence] : fallbackSequences)
+            {
+                await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId)));
+            }
+        }
+
+        // Observers that never saved any state - the forwarding observers between event stores and the kernel's own
+        // pattern observers - are not found above, but they hold reminders all the same. Find them by their reminders.
+        foreach (var (observerKey, _) in await GetObserverReminders(eventStore, @namespace))
+        {
+            await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(observerKey));
+        }
+    }
+
+    async Task RemoveRemindersOf(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        foreach (var (_, reminder) in await GetObserverReminders(eventStore, @namespace))
+        {
+            await reminderTable.RemoveRow(reminder.GrainId, reminder.ReminderName, reminder.ETag ?? string.Empty);
         }
     }
 
