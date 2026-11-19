@@ -108,7 +108,7 @@ Chronicle reloads the TLS certificate when the file at `certificatePath` changes
 
 - **A broken file never replaces a good one.** If the changed file cannot be read, is half written or has the wrong password, Chronicle logs `The TLS certificate file changed but could not be loaded` once and keeps serving the current certificate. The next change to the file is tried again.
 - **The password is not reloaded.** It is read at startup, so a renewal must keep the same password. A new password needs a restart.
-- **Kubernetes Secrets.** A Secret mounted as a directory or with `items` updates in place, and Chronicle sees it after the kubelet syncs it, which can take a minute or so. A Secret mounted with `subPath` is never updated by Kubernetes, so mount the whole Secret or use `items` without `subPath`.
+- **Kubernetes Secrets.** A Secret mounted as a directory or with `items` updates in place, and Chronicle sees it after the kubelet syncs it, which can take a minute or so. Before version 19.172.11 Chronicle did not see a renewed Secret, because it compared the write time and length of the symbolic link instead of the file behind it, so those versions need a restart to pick up a renewed certificate. A Secret mounted with `subPath` is never updated by Kubernetes, so mount the whole Secret or use `items` without `subPath`.
 - **The encryption certificate is not reloaded.** It is deliberately fixed for the life of the data it protects. See [Encryption certificate](../encryption-certificate.md).
 - **The development certificate** is generated in memory and does not change.
 
