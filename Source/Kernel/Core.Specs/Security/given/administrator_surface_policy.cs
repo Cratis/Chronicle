@@ -7,6 +7,7 @@ public static class administrator_surface_policy
 {
     public static IReadOnlyDictionary<string, string> Required { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Cratis.Chronicle.Observation.Webhooks.RotateWebhookSigningKey"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.GrantAdministrator"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.RevokeAdministrator"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.GrantEventStoreAccess"] = WellKnownAuthorizationPolicies.Administrator,
@@ -105,6 +106,7 @@ public static class administrator_surface_policy
         ["Observation.ObserverInformation"] = "read-only observer diagnostics",
         ["Observation.FailedPartitionDetails"] = "read-only observer diagnostics",
         ["Observation.FailedPartitionGroup"] = "read-only observer diagnostics",
+        ["Observation.Webhooks.WebhookSigningPublicKey"] = "public verification metadata only; no private keys or HMAC secrets",
         ["Observation.Webhooks.WebhookDetails"] = "read-only webhook definitions",
         ["Occurrences.EffectReceiptRecord"] = "read-only occurrence diagnostics",
         ["Occurrences.OccurrenceSnapshot"] = "read-only occurrence diagnostics",

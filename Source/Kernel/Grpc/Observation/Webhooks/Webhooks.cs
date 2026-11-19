@@ -16,6 +16,7 @@ namespace Cratis.Chronicle.Services.Observation.Webhooks;
 /// </summary>
 internal sealed class Webhooks(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
+    global::Orleans.IGrainFactory grainFactory,
     global::Cratis.Chronicle.Storage.IStorage storage,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Observation.Webhooks.Webhooks> logger) : global::Cratis.Chronicle.Contracts.Observation.Webhooks.IWebhooks
 {
@@ -44,6 +45,24 @@ internal sealed class Webhooks(
             new global::Cratis.Chronicle.Observation.Webhooks.RemoveWebhooks((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.Webhooks.Select(x => (global::Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId)x)));
 
     /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Commands.CommandResult> RotateWebhookSigningKey(global::Cratis.Chronicle.Contracts.Observation.Webhooks.RotateWebhookSigningKeyRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        CommandExecutor.Execute(
+            commandPipeline,
+            new global::Cratis.Chronicle.Observation.Webhooks.RotateWebhookSigningKey((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, request.UseSpecifiedOverlap, request.OverlapSeconds));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse>>> GetWebhookSigningKeys(global::Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhookSigningKeysRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse>>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
+            async () =>
+            {
+                var result = await global::Cratis.Chronicle.Observation.Webhooks.WebhookSigningPublicKey.GetWebhookSigningKeys((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, grainFactory, storage);
+                return result.Select(ToWebhookSigningPublicKeyResponse).ToList();
+            },
+            exception => logger.QueryFailed(exception, "Webhooks", "GetWebhookSigningKeys"));
+
+    /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>> GetWebhooks(global::Cratis.Chronicle.Contracts.Observation.Webhooks.GetWebhooksRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>>(
             callContext,
@@ -65,6 +84,17 @@ internal sealed class Webhooks(
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse>)_.Select(ToWebhookDetailsResponse).ToList()),
             exception => logger.QueryFailed(exception, "Webhooks", "ObserveWebhooks"));
 
+    static global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningPublicKeyResponse ToWebhookSigningPublicKeyResponse(global::Cratis.Chronicle.Observation.Webhooks.WebhookSigningPublicKey source) =>
+        new()
+        {
+            KeyId = source.KeyId,
+            Algorithm = (global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithm)source.Algorithm,
+            PublicKey = source.PublicKey,
+            Status = (global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatus)source.Status,
+            CreatedAt = (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset)source.CreatedAt,
+            OverlapEndsAt = source.OverlapEndsAt is null ? null : (global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset?)source.OverlapEndsAt
+        };
+
     static global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookDetailsResponse ToWebhookDetailsResponse(global::Cratis.Chronicle.Observation.Webhooks.WebhookDetails source) =>
         new()
         {
@@ -77,6 +107,7 @@ internal sealed class Webhooks(
             Headers = source.Headers,
             IsReplayable = source.IsReplayable,
             IsActive = source.IsActive,
-            GenerationDelivery = (global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery)source.GenerationDelivery
+            GenerationDelivery = (global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery)source.GenerationDelivery,
+            Signing = source.Signing
         };
 }
