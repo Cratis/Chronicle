@@ -36,7 +36,7 @@ A delivery is valid when any `v1a` signature in the header verifies under any co
 
 ## Key rotation
 
-When the key ring rotates, the Kernel signs each delivery with both the new and the previous key until the overlap ends, and the header carries both signatures. A receiver that has either key configured accepts the delivery. After a rotation, fetch the keys again and keep the old key until its `OverlapEndsAt` has passed. Keys disappear from the query once the overlap ends.
+When the key ring rotates, the Kernel signs each delivery with both the new and the previous key until the overlap ends, and the header carries both signatures. A receiver that has either key configured accepts the delivery. After a rotation, fetch the keys again and keep the old key until its `OverlapEndsAt` has passed. When you build the verifier from the keys the event store returns, it applies `OverlapEndsAt` itself and stops accepting an overlap key once that time has passed. Keys disappear from the query once the overlap ends.
 
 Refresh the keys when verification fails for a delivery whose `Cratis-Key-Id` you do not know, then verify once more. Never skip verification because a key id is unknown.
 

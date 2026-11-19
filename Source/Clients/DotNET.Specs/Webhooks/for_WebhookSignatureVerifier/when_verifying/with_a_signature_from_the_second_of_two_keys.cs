@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Specs.Webhooks.for_WebhookSignatureVerifier.when_veri
 
 public class with_a_signature_from_the_second_of_two_keys : given.a_verifier
 {
-    void Establish() => _verifier = new(new WebhookSigningPublicKey[] { new("first", WebhookSigningKeyStatus.Active, PublicKey, DateTimeOffset.UnixEpoch, null), new("second", WebhookSigningKeyStatus.Overlap, OtherPublicKey, DateTimeOffset.UnixEpoch, null) }, timeProvider: _time);
+    void Establish() => _verifier = new(new WebhookSigningPublicKey[] { new("first", WebhookSigningKeyStatus.Active, PublicKey, DateTimeOffset.UnixEpoch, null), new("second", WebhookSigningKeyStatus.Overlap, OtherPublicKey, DateTimeOffset.UnixEpoch, DateTimeOffset.FromUnixTimeSeconds(UnixNow + 60)) }, timeProvider: _time);
 
     void Because() => _result = Verify(Id, Timestamp, Sign(OtherSeed, Id, Timestamp, Payload));
 

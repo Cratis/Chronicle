@@ -15,14 +15,13 @@ namespace Cratis.Chronicle.Webhooks;
 /// <remarks>
 /// A delivery is valid when any <c language="text">v1a</c> signature in the header verifies under any configured key, which is
 /// how key rotation overlap works: the kernel emits one signature per active or overlapping key. Signatures of other versions
-/// are ignored. A key that is no longer listed is rejected only because it is no longer configured; keys are not expired here.
-/// Widening the tolerance weakens replay protection.
+/// are ignored. Like the kernel signer, a key is usable while it is active, or while it is overlapping and its overlap end
+/// is still in the future; an overlap key whose end has passed no longer verifies. Widening the tolerance weakens replay protection.
 /// </remarks>
 public class WebhookSignatureVerifier : IWebhookSignatureVerifier
 {
     const string PublicKeyPrefix = "whpk_";
     const string SupportedVersionPrefix = "v1a,";
-    const int MaxSignatureTokens = 16;
     const int MaxSignatureHeaderLength = 4096;
     const int SignatureLength = 64;
     const int PublicKeyLength = 32;
@@ -30,7 +29,7 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
     static readonly TimeSpan _defaultTolerance = TimeSpan.FromMinutes(5);
     static readonly UTF8Encoding _utf8 = new(false, true);
 
-    readonly (string KeyId, byte[] PublicKey)[] _keys;
+    readonly (string KeyId, byte[] PublicKey, WebhookSigningKeyStatus Status, DateTimeOffset? OverlapEndsAt)[] _keys;
     readonly TimeSpan _tolerance;
     readonly TimeProvider _timeProvider;
 
@@ -42,7 +41,7 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
     /// <param name="timeProvider">The time source. Defaults to <see cref="TimeProvider.System"/>.</param>
     /// <exception cref="ArgumentException">No keys were given, or a key is malformed.</exception>
     public WebhookSignatureVerifier(IEnumerable<WebhookSigningPublicKey> keys, TimeSpan? tolerance = null, TimeProvider? timeProvider = null)
-        : this(keys.Select(_ => (_.KeyId, _.PublicKey)), tolerance, timeProvider)
+        : this(keys.Select(_ => (_.KeyId, _.PublicKey, _.Status, _.OverlapEndsAt)), tolerance, timeProvider)
     {
     }
 
@@ -54,13 +53,13 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
     /// <param name="timeProvider">The time source. Defaults to <see cref="TimeProvider.System"/>.</param>
     /// <exception cref="ArgumentException">No keys were given, or a key is malformed.</exception>
     public WebhookSignatureVerifier(IEnumerable<string> publicKeys, TimeSpan? tolerance = null, TimeProvider? timeProvider = null)
-        : this(publicKeys.Select(_ => (_, _)), tolerance, timeProvider)
+        : this(publicKeys.Select(_ => (_, _, WebhookSigningKeyStatus.Active, (DateTimeOffset?)null)), tolerance, timeProvider)
     {
     }
 
-    WebhookSignatureVerifier(IEnumerable<(string KeyId, string PublicKey)> keys, TimeSpan? tolerance, TimeProvider? timeProvider)
+    WebhookSignatureVerifier(IEnumerable<(string KeyId, string PublicKey, WebhookSigningKeyStatus Status, DateTimeOffset? OverlapEndsAt)> keys, TimeSpan? tolerance, TimeProvider? timeProvider)
     {
-        _keys = [.. keys.Select(_ => (_.KeyId, Decode(_.PublicKey)))];
+        _keys = [.. keys.Select(_ => (_.KeyId, Decode(_.PublicKey), _.Status, _.OverlapEndsAt))];
         if (_keys.Length == 0)
         {
             throw new ArgumentException("At least one public key is required.", nameof(keys));
@@ -90,8 +89,14 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
             return Fail(WebhookSignatureFailure.InvalidId);
         }
 
-        foreach (var (keyId, publicKey) in _keys)
+        var now = _timeProvider.GetUtcNow();
+        foreach (var (keyId, publicKey, status, overlapEndsAt) in _keys)
         {
+            if (!IsUsable(status, overlapEndsAt, now))
+            {
+                continue;
+            }
+
             if (signatures.Exists(signature => VerifySignature(message, signature, publicKey)))
             {
                 return new(WebhookSignatureFailure.None, keyId);
@@ -100,6 +105,9 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
 
         return Fail(WebhookSignatureFailure.SignatureMismatch);
     }
+
+    static bool IsUsable(WebhookSigningKeyStatus status, DateTimeOffset? overlapEndsAt, DateTimeOffset now) =>
+        status == WebhookSigningKeyStatus.Active || (status == WebhookSigningKeyStatus.Overlap && overlapEndsAt > now);
 
     static WebhookSignatureVerificationResult Fail(WebhookSignatureFailure failure) => new(failure);
 
@@ -126,7 +134,7 @@ public class WebhookSignatureVerifier : IWebhookSignatureVerifier
     static (WebhookSignatureFailure Failure, List<byte[]> Signatures) ParseSignatures(string header)
     {
         var tokens = header.Length > MaxSignatureHeaderLength ? [] : header.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (header.Length > MaxSignatureHeaderLength || tokens.Length > MaxSignatureTokens)
+        if (header.Length > MaxSignatureHeaderLength)
         {
             return (WebhookSignatureFailure.SignatureMismatch, []);
         }
