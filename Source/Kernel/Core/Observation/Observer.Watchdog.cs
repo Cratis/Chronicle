@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 
@@ -14,6 +17,8 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    static readonly SingleFlight<(IGrainFactory GrainFactory, EventStoreName EventStore, EventStoreNamespaceName Namespace, EventSequenceId EventSequenceId), EventSequenceNumber> _tailLookups = new();
+
     /// <summary>
     /// Gets the number of consecutive stranded catch-up preparations the watchdog has recovered. This property is for testing purposes only.
     /// </summary>
@@ -351,6 +356,18 @@ public partial class Observer
 
     bool HasCatchupOwnershipInFlight() => _catchUpHandoversInFlight > 0 || _pendingCatchUpAcquisition is not null;
 
+    /// <summary>
+    /// Gets the tail of the observer's event sequence, sharing the lookup with the other observers of the same event
+    /// sequence on this silo that ask while it runs.
+    /// </summary>
+    /// <returns>The tail <see cref="EventSequenceNumber"/>.</returns>
+    /// <remarks>
+    /// Every observer of an event sequence asks the same question on each watchdog tick. Nothing is cached, so the
+    /// answer is never older than one grain call.
+    /// </remarks>
+    Task<EventSequenceNumber> GetTailForWatchdog() =>
+        _tailLookups.Run((GrainFactory, _observerKey.EventStore, _observerKey.Namespace, _observerKey.EventSequenceId), _eventSequence.GetTailSequenceNumber);
+
     async Task<bool> CheckNextSequenceNumber()
     {
         if (IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
@@ -363,7 +380,7 @@ public partial class Observer
             return false;
         }
 
-        var tailSequenceNumber = await _eventSequence.GetTailSequenceNumber();
+        var tailSequenceNumber = await GetTailForWatchdog();
         if (!tailSequenceNumber.IsActualValue)
         {
             return false;

@@ -73,9 +73,15 @@ internal static class ExpandoObjectCloning
     {
         var elementType = valueType.GetEnumerableElementType();
         var list = (Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType)) as IList)!;
+
+        // Each element is cloned as a value of its own, so a collection nested in a collection (an array of arrays in
+        // an untyped JSON object) is cloned element by element too. Cloning it as an object went through a JSON round
+        // trip into object[], which turned its elements into JsonElement that no sink could store. A typed element the
+        // value clone cannot give back as its own type (an array clones into a list) keeps the typed clone.
         foreach (var element in enumerableValue)
         {
-            list.Add(element is ExpandoObject child ? child.Clone() : element.Clone());
+            var cloned = CloneValue(element);
+            list.Add(cloned is null || elementType.IsInstanceOfType(cloned) ? cloned : element.Clone());
         }
 
         return list;
@@ -95,7 +101,8 @@ internal static class ExpandoObjectCloning
         {
             var entryKey = keyProperty.GetValue(keyValuePair)!;
             var entryValue = valueProperty.GetValue(keyValuePair);
-            clone[entryKey] = entryValue is ExpandoObject nestedEntry ? nestedEntry.Clone() : entryValue?.Clone();
+            var cloned = CloneValue(entryValue);
+            clone[entryKey] = cloned is null || valueType.IsInstanceOfType(cloned) ? cloned : entryValue?.Clone();
         }
 
         return clone;
