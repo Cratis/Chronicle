@@ -48,6 +48,8 @@ public partial class ProjectionPipeline(
     MaterializationGenerationIdentity? generation = null,
     bool usesBulkWindow = true) : IProjectionPipeline
 {
+    const int MaxFencedAttempts = 8;
+
     /// <summary>
     /// Serializes the read-modify-write cycle in <see cref="Handle"/>.
     /// </summary>
@@ -206,6 +208,43 @@ public partial class ProjectionPipeline(
             : await _handleLock.AcquireCoarse();
 
         logger.StartingPipeline(@event.Context.SequenceNumber);
+
+        // A write made with a revision check that finds the instance changed has written nothing: read it again and recompute.
+        var attempts = projection.SupportsFencedGlobalWrites ? MaxFencedAttempts : 1;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                var context = await PerformSteps(@event);
+                logger.CompletedAllSteps(@event.Context.SequenceNumber);
+                return context;
+            }
+            catch (SinkWriteConflictException) when (attempt < attempts)
+            {
+                await Task.Delay(Random.Shared.Next(1, 10 * attempt));
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
+    {
+        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
+        using var handleScope = await _handleLock.AcquireCoarse();
+        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
+        foreach (var key in keys)
+        {
+            if (await sink.FindOrDefault(key) is { } state)
+            {
+                states.Add((key, state));
+            }
+        }
+
+        return states;
+    }
+
+    async Task<ProjectionEventContext> PerformSteps(AppendedEvent @event)
+    {
         var context = ProjectionEventContext.Empty(objectComparer, projection.ForProjection(@event)) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
@@ -224,25 +263,7 @@ public partial class ProjectionPipeline(
                 throw;
             }
         }
-        logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
         return context;
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
-    {
-        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
-        using var handleScope = await _handleLock.AcquireCoarse();
-        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
-        foreach (var key in keys)
-        {
-            if (await sink.FindOrDefault(key) is { } state)
-            {
-                states.Add((key, state));
-            }
-        }
-
-        return states;
     }
 }

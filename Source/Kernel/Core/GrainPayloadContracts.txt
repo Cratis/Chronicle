@@ -906,7 +906,9 @@ json Cratis.Chronicle.EventSequences.AppendManyResult
   hasConcurrencyViolations: bool
   hasConstraintViolations: bool
   hasErrors: bool
+  isRetryable: bool
   isSuccess: bool
+  retryAfter: System.TimeSpan?
   sequenceNumbers: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventSequenceNumber>
 enum Cratis.Chronicle.EventSequences.AppendOutcome : int
   AlreadyAppended = 1
@@ -923,7 +925,9 @@ json Cratis.Chronicle.EventSequences.AppendResult
   hasConcurrencyViolations: bool
   hasConstraintViolations: bool
   hasErrors: bool
+  isRetryable: bool
   isSuccess: bool
+  retryAfter: System.TimeSpan?
   sequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 json Cratis.Chronicle.EventSequences.AppendedEventsQueueObserverSubscription
   allEventTypes: bool

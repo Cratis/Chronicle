@@ -83,6 +83,10 @@ public readonly record struct PrincipalKey([property: Id(0)] string Issuer, [pro
     /// <inheritdoc/>
     public override string ToString() => IsClient ? $"{Issuer}|{Subject}|client" : $"{Issuer}|{Subject}";
 
-    static string Normalize(string issuer, Authentication authentication) =>
-        authentication.UseInternalAuthority || issuer == ClaimsIdentity.DefaultIssuer ? LocalIssuer : issuer;
+    static string Normalize(string issuer, Authentication authentication)
+    {
+        // Users a trusted proxy authenticated keep their own issuer, so they never share an identity with a Chronicle user.
+        if (authentication.Http.IsTrustedProxy && string.Equals(issuer, authentication.Http.TrustedProxy.Issuer, StringComparison.Ordinal)) return issuer;
+        return authentication.UseInternalAuthority || issuer == ClaimsIdentity.DefaultIssuer ? LocalIssuer : issuer;
+    }
 }
