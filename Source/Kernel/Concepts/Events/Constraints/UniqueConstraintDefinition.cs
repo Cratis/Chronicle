@@ -134,10 +134,10 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         Name == other.Name &&
         IgnoreCasing == other.IgnoreCasing &&
         Mode == other.Mode &&
-        RemovalEventDefinitions.SequenceEqual(other.RemovalEventDefinitions) &&
-        Scope == other.Scope &&
-        EventDefinitions.SequenceEqual(other.EventDefinitions) &&
-        RemovedWith.SequenceEqual(other.RemovedWith) &&
+        RemovalEventDefinitions.Canonical().SequenceEqual(other.RemovalEventDefinitions.Canonical()) &&
+        Scope.Canonical() == other.Scope.Canonical() &&
+        EventDefinitions.Canonical().SequenceEqual(other.EventDefinitions.Canonical()) &&
+        RemovedWith.SameSetAs(other.RemovedWith) &&
         EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
@@ -147,18 +147,18 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         hashCode.Add(Name);
         hashCode.Add(IgnoreCasing);
         hashCode.Add(Mode);
-        foreach (var removalEventDefinition in RemovalEventDefinitions)
+        foreach (var removalEventDefinition in RemovalEventDefinitions.Canonical())
         {
             hashCode.Add(removalEventDefinition);
         }
 
-        hashCode.Add(Scope);
-        foreach (var eventDefinition in EventDefinitions)
+        hashCode.Add(Scope.Canonical());
+        foreach (var eventDefinition in EventDefinitions.Canonical())
         {
             hashCode.Add(eventDefinition);
         }
 
-        foreach (var removalEventTypeId in RemovedWith)
+        foreach (var removalEventTypeId in RemovedWith.Canonical())
         {
             hashCode.Add(removalEventTypeId);
         }
@@ -166,6 +166,19 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         hashCode.AddEventSequences(EventSequences);
         return hashCode.ToHashCode();
     }
+
+    /// <summary>
+    /// Get this definition in its canonical form, see <see cref="ConstraintNormalization"/>.
+    /// </summary>
+    /// <returns>An equal definition whose collections are distinct and ordered, and whose empty scope is absent.</returns>
+    public UniqueConstraintDefinition Normalized() => this with
+    {
+        EventDefinitions = EventDefinitions.Canonical(),
+        RemovedWith = RemovedWith.Canonical(),
+        RemovalEventDefinitions = RemovalEventDefinitions.Canonical(),
+        EventSequences = EventSequences.Canonical(),
+        Scope = Scope.Canonical()
+    };
 
     /// <inheritdoc/>
     public ConstraintChange CompareWith(IConstraintDefinition existing)
@@ -176,8 +189,8 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         }
 
         var changes = new HashSet<ConstraintChangeType>();
-        var existingEventDefinitions = existingDefinition.EventDefinitions.ToArray();
-        var newEventDefinitions = EventDefinitions.ToArray();
+        var existingEventDefinitions = existingDefinition.EventDefinitions.Canonical();
+        var newEventDefinitions = EventDefinitions.Canonical();
 
         var existingEventTypes = existingEventDefinitions.Select(_ => _.EventTypeId).ToHashSet();
         var newEventTypes = newEventDefinitions.Select(_ => _.EventTypeId).ToHashSet();
@@ -204,9 +217,7 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
             }
         }
 
-        if (!RemovedWith.SequenceEqual(existingDefinition.RemovedWith) ||
-            !RemovalEventDefinitions.SequenceEqual(existingDefinition.RemovalEventDefinitions) ||
-            Mode != existingDefinition.Mode || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
+        if (ClaimsDifferFrom(existingDefinition))
         {
             changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
         }
@@ -225,4 +236,11 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
             ? ConstraintChange.None
             : new ConstraintChange(true, changes.ToArray());
     }
+
+    bool ClaimsDifferFrom(UniqueConstraintDefinition existingDefinition) =>
+        !RemovedWith.SameSetAs(existingDefinition.RemovedWith) ||
+        !RemovalEventDefinitions.Canonical().SequenceEqual(existingDefinition.RemovalEventDefinitions.Canonical()) ||
+        Mode != existingDefinition.Mode ||
+        IgnoreCasing != existingDefinition.IgnoreCasing ||
+        Scope.Canonical() != existingDefinition.Scope.Canonical();
 }
