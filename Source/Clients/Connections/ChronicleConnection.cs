@@ -929,10 +929,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         handshake.TrySetResult();
         _watchDog.NotifyKeepAlive();
 
-        if (!Debugger.IsAttached)
-        {
-            _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
-        }
+        // Always answer, also with a debugger attached: the kernel drops a connection whose keep-alives go unanswered.
+        _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();
     }
 
     /// <summary>
