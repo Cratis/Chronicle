@@ -17,7 +17,8 @@ namespace Cratis.Chronicle.Helpers;
 /// time one lookup takes, which is what makes this safe for the periodic safety-net checks that must see current state.
 /// </para>
 /// <para>
-/// A failed lookup fails every caller that shared it, and the next caller starts a new one.
+/// A failed lookup fails every caller that shared it, a cancelled one cancels every caller that shared it, and the
+/// next caller starts a new one.
 /// </para>
 /// </remarks>
 internal sealed class SingleFlight<TKey, TResult>
@@ -51,6 +52,14 @@ internal sealed class SingleFlight<TKey, TResult>
             _inFlight.TryRemove(new KeyValuePair<TKey, Task<TResult>>(key, completion.Task));
             completion.SetResult(result);
             return result;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _inFlight.TryRemove(new KeyValuePair<TKey, Task<TResult>>(key, completion.Task));
+
+            // Joined callers observe the cancellation the same way the leader does.
+            completion.SetCanceled(ex.CancellationToken);
+            throw;
         }
         catch (Exception ex)
         {
