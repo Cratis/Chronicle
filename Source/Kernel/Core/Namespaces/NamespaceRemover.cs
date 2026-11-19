@@ -39,31 +39,31 @@ public class NamespaceRemover(
         }
 
         logger.RemovingNamespace(eventStore, @namespace);
-
-        // The namespace stops being listed first. The subscriptions between event stores re-subscribe the forwarding
-        // observers of every listed namespace once a minute, which would otherwise subscribe an observer again
-        // between it being unsubscribed and removed.
-        await grainFactory.GetGrain<INamespaces>(eventStore).Forget(@namespace);
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var namespaceStorage = eventStoreStorage.GetNamespace(@namespace);
 
-        // Every observer of the namespace is unsubscribed and removed. Removing an observer is what also removes its
-        // reminders - left behind, they wake the observer at the next start and bring the namespace back.
-        var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier, _ => _.EventSequenceId);
-        var fallbackSequences = (await namespaceStorage.GetEventSequences()).ToArray();
-        foreach (var state in await namespaceStorage.Observers.GetAll())
+        // A name with a comma can no longer be added, so once it stops being listed none of its grains can activate
+        // again - not even to be removed. Its observers are therefore removed while it is still listed.
+        var activatesOnlyWhileListed = NamespaceNameRules.ContainsComma(@namespace.Value);
+        if (activatesOnlyWhileListed)
         {
-            foreach (var eventSequenceId in definitions.TryGetValue(state.Identifier, out var sequence) ? [sequence] : fallbackSequences)
-            {
-                await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId)));
-            }
+            await RemoveObservers(eventStore, @namespace, eventStoreStorage, namespaceStorage);
         }
 
-        // Observers that never saved any state - the forwarding observers between event stores and the kernel's own
-        // pattern observers - are not found above, but they hold reminders all the same. Find them by their reminders.
-        foreach (var observerKey in await GetObserversWithReminders(eventStore, @namespace))
+        // Any other namespace stops being listed first. The subscriptions between event stores re-subscribe the
+        // forwarding observers of every listed namespace once a minute, which would otherwise subscribe an observer
+        // again between it being unsubscribed and removed.
+        await grainFactory.GetGrain<INamespaces>(eventStore).Forget(@namespace);
+
+        if (activatesOnlyWhileListed)
         {
-            await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(observerKey));
+            // An observer subscribed again before the namespace stopped being listed cannot activate to be removed
+            // now. Its reminders would only wake it to fail, so they are removed from the reminder table directly.
+            await RemoveRemindersOf(eventStore, @namespace);
+        }
+        else
+        {
+            await RemoveObservers(eventStore, @namespace, eventStoreStorage, namespaceStorage);
         }
 
         await eventStoreStorage.DropNamespace(@namespace);
@@ -111,20 +111,51 @@ public class NamespaceRemover(
         }
     }
 
-    async Task<IEnumerable<ObserverKey>> GetObserversWithReminders(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    async Task RemoveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEventStoreStorage eventStoreStorage, IEventStoreNamespaceStorage namespaceStorage)
+    {
+        // Every observer of the namespace is unsubscribed and removed. Removing an observer is what also removes its
+        // reminders - left behind, they wake the observer at the next start and bring the namespace back.
+        var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier, _ => _.EventSequenceId);
+        var fallbackSequences = (await namespaceStorage.GetEventSequences()).ToArray();
+        foreach (var state in await namespaceStorage.Observers.GetAll())
+        {
+            foreach (var eventSequenceId in definitions.TryGetValue(state.Identifier, out var sequence) ? [sequence] : fallbackSequences)
+            {
+                await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId)));
+            }
+        }
+
+        // Observers that never saved any state - the forwarding observers between event stores and the kernel's own
+        // pattern observers - are not found above, but they hold reminders all the same. Find them by their reminders.
+        foreach (var (observerKey, _) in await GetObserverReminders(eventStore, @namespace))
+        {
+            await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(observerKey));
+        }
+    }
+
+    async Task RemoveRemindersOf(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        foreach (var (_, reminder) in await GetObserverReminders(eventStore, @namespace))
+        {
+            await reminderTable.RemoveRow(reminder.GrainId, reminder.ReminderName, reminder.ETag ?? string.Empty);
+        }
+    }
+
+    async Task<IEnumerable<(ObserverKey Key, ReminderEntry Reminder)>> GetObserverReminders(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
         // The table is read in two ranges because the first does not include a reminder hashed to zero.
         var rows = (await reminderTable.ReadRows(0, uint.MaxValue)).Reminders
             .Concat((await reminderTable.ReadRows(uint.MaxValue, 0)).Reminders);
 
+        var reminders = new List<(ObserverKey Key, ReminderEntry Reminder)>();
         var keys = new HashSet<ObserverKey>();
         foreach (var row in rows)
         {
             if (row.GrainId.Type.ToString() != ObserverGrainType) continue;
             if (!TryParseKey(row.GrainId.Key.ToString(), out var key)) continue;
-            if (key.EventStore == eventStore && key.Namespace == @namespace) keys.Add(key);
+            if (key.EventStore == eventStore && key.Namespace == @namespace && keys.Add(key)) reminders.Add((key, row));
         }
 
-        return keys;
+        return reminders;
     }
 }
