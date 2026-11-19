@@ -31,6 +31,7 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | eventStoreAccess | array | [] | Explicit event store grants for issuer-qualified external principals |
 | defaultAdminUsername | string | "admin" | Default admin username created on first startup when `adminUser` is not configured |
 | initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
+| http | object | `{ "mode": "Chronicle" }` | How Workbench and HTTP API callers sign in. gRPC clients are not affected. See [Workbench sign-in through a reverse proxy](#workbench-sign-in-through-a-reverse-proxy) |
 
 ## Password sign-ins
 
@@ -144,6 +145,67 @@ With `tls.enabled=false`, the Chronicle backend listens using cleartext HTTP/2 o
 Authenticated h2c currently works for callers that obtain a bearer token from the external authority themselves and attach it to HTTP or gRPC requests, and for Workbench browser sessions using Chronicle's cookie login. The .NET SDK's built-in ClientCredentials mode cannot use an external authority: it always requests a token from Chronicle's `/connect/token`, which is absent in this topology. There is no SDK token-endpoint setting to change this. Do not use that mode for an authenticated h2c backend until SDK support is added.
 
 The proxy must forward all Chronicle-bound traffic using h2c and overwrite any client-supplied `X-Forwarded-For` and `X-Forwarded-Proto` headers with the actual client IP and public HTTPS scheme. Configure [trusted reverse-proxy addresses or networks](tls.md#trusted-reverse-proxies) so only that proxy can change the scheme seen by HTTPS-sensitive middleware (including antiforgery) and the effective client IP. Restrict direct connections to the backend. Do not expose the h2c port publicly.
+
+## Workbench sign-in through a reverse proxy
+
+With authentication on, Chronicle authenticates two kinds of callers. gRPC clients use their client ID and secret, and Workbench users sign in with a username and password. A reverse proxy that already handles sign-in for your web applications can take over the Workbench part. Examples are oauth2-proxy, Pomerium, or a Traefik or nginx forward-auth setup. Clients still have to present their credentials.
+
+Set `authentication.http.mode` to `TrustedProxy`. The proxy authenticates the user and forwards who they are in request headers, and Chronicle accepts those headers from the proxy:
+
+```json
+{
+  "authentication": {
+    "enabled": true,
+    "http": {
+      "mode": "TrustedProxy",
+      "trustedProxy": {
+        "administratorGroup": "chronicle-admins",
+        "signOutUrl": "/oauth2/sign_out"
+      }
+    }
+  },
+  "forwardedHeaders": {
+    "knownNetworks": ["10.42.0.0/24"]
+  }
+}
+```
+
+The defaults match oauth2-proxy's headers, so with oauth2-proxy you usually only set the administrator group and the sign-out URL. In oauth2-proxy, enable `--set-xauthrequest` or `--pass-user-headers`.
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| http.mode | string | `Chronicle` | `Chronicle` signs Workbench users in with a username and password. `TrustedProxy` accepts the user a trusted reverse proxy forwards |
+| http.trustedProxy.userHeader | string | `X-Forwarded-User` | Header carrying the user's stable identifier. A request without it is not signed in by the proxy |
+| http.trustedProxy.emailHeader | string | `X-Forwarded-Email` | Header carrying the user's email address |
+| http.trustedProxy.nameHeader | string | `X-Forwarded-Preferred-Username` | Header carrying the name shown for the user. Falls back to the user identifier |
+| http.trustedProxy.groupsHeader | string | `X-Forwarded-Groups` | Header carrying the user's comma-separated groups |
+| http.trustedProxy.administratorGroup | string | null | Group whose members are Chronicle administrators. When not set, **every** user the proxy signs in is an administrator, and the server logs a warning at startup |
+| http.trustedProxy.issuer | string | `chronicle:proxy` | Issuer recorded for proxy users in audit records and access decisions. Must not be `chronicle:local` |
+| http.trustedProxy.sharedSecret | string | null | Optional secret the proxy must also send. Store it with your secret management |
+| http.trustedProxy.sharedSecretHeader | string | `X-Chronicle-Proxy-Secret` | Header carrying the shared secret |
+| http.trustedProxy.signOutUrl | string | null | Where the Workbench sends a user who signs out, for example the proxy's sign-out endpoint. Either an absolute HTTP(S) URL or a path starting with `/`. When not set, the Workbench shows no **Logout** option |
+
+### What changes, and what does not
+
+- **gRPC clients are not affected.** Chronicle never reads the proxy headers on a gRPC call, so a client still needs a valid client ID and secret, and the token endpoint stays available for them.
+- **Workbench users are signed in by the proxy.** The Workbench skips its login page, and Chronicle's own password sign-in endpoints (`/identity/*` and `/api/security/login`) are not served.
+- **Event store access.** A proxy user can work with ordinary event stores in the same way as a Workbench user who signs in with a password.
+- **Administrator access.** A proxy user is an administrator when they are in `administratorGroup`, or always when no group is configured. The Workbench's administrator roster does not apply to proxy users.
+- **Request protection.** Chronicle still requires the Workbench's antiforgery token on state-changing requests from proxy users, because the proxy's browser session is sent with every request just like Chronicle's own cookie.
+
+The mode has no effect when `authentication.enabled` is `false`.
+
+### Which proxies are trusted
+
+Chronicle accepts the headers only from a proxy it trusts, and decides that by the address of the peer that opened the connection. These are the same peers it accepts forwarded headers from: loopback, plus the addresses and networks under [`forwardedHeaders`](tls.md#trusted-reverse-proxies). A proxy running as a sidecar in the same pod or container connects over loopback and needs no further configuration.
+
+If identity headers arrive from any other peer, the request is refused rather than treated as anonymous. Chronicle checks the connection's own address, not the client address the proxy reports, and that holds even with `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. If a header is sent more than once, Chronicle ignores it.
+
+To keep this safe:
+
+- **The proxy must remove these headers from incoming requests** before adding its own. Otherwise a user can forge them by sending them to the proxy.
+- **Keep the trusted networks narrow.** Every peer in `knownNetworks` can claim to be any user. If other workloads share that network, set `sharedSecret` as well, so only the proxy is accepted.
+- **Clients still connect directly.** Chronicle keeps serving gRPC on its single port, so network policy can't block that port. The address check, together with the optional shared secret, is what keeps the headers safe.
 
 ## Turning authentication off
 
