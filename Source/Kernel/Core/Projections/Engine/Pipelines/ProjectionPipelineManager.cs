@@ -64,6 +64,11 @@ public class ProjectionPipelineManager(
     /// (see <see cref="IProjectionPipeline.GetActivity"/>) for <see cref="IdleTimeout"/>.
     /// </summary>
     readonly ConcurrentDictionary<string, ProjectionPipelineBinding> _pipelines = new();
+
+    /// <summary>
+    /// Owns evicted pipelines that still hold an open bulk or replay session, so the session stays discoverable until it drains.
+    /// </summary>
+    readonly ConcurrentDictionary<string, ProjectionPipelineBinding> _draining = new();
     readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     readonly ProjectionPipelineManagerMetrics _metrics = new(meter, options.Value.Telemetry.MetricNames);
     readonly object _sweepGate = new();
@@ -88,12 +93,33 @@ public class ProjectionPipelineManager(
     /// <summary>Gets the number of pipelines currently retained.</summary>
     internal int PipelineCount => _pipelines.Count;
 
+    /// <summary>Gets the number of evicted pipelines still draining an open session.</summary>
+    internal int DrainingCount => _draining.Count;
+
     /// <summary>Gets the number of handle lock keys currently registered.</summary>
     internal int HandleLockCount => _handleLocks.Count;
 
     /// <inheritdoc/>
-    public bool TryGetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out ProjectionPipelineBinding? binding) =>
-        _pipelines.TryGetValue(KeyHelper.Combine(eventStore, @namespace, id), out binding);
+    public bool TryGetFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id, [NotNullWhen(true)] out ProjectionPipelineBinding? binding)
+    {
+        var key = KeyHelper.Combine(eventStore, @namespace, id);
+        lock (_registryGate)
+        {
+            // A pipeline still owning an open session is preferred: its flush and end must reach the session.
+            if (_draining.TryGetValue(key, out var draining))
+            {
+                if (draining.Pipeline.IsPinned())
+                {
+                    binding = draining;
+                    return true;
+                }
+
+                _draining.TryRemove(key, out _);
+            }
+
+            return _pipelines.TryGetValue(key, out binding);
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<IProjectionPipeline> GetFor(
@@ -192,7 +218,7 @@ public class ProjectionPipelineManager(
     /// <inheritdoc/>
     public void EvictFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionId id)
     {
-        _pipelines.TryRemove(KeyHelper.Combine(eventStore, @namespace, id), out _);
+        Retire(KeyHelper.Combine(eventStore, @namespace, id));
         _metrics.Pipelines(_pipelines.Count);
     }
 
@@ -203,7 +229,18 @@ public class ProjectionPipelineManager(
     /// <inheritdoc/>
     public void Clear()
     {
-        _pipelines.Clear();
+        lock (_registryGate)
+        {
+            foreach (var binding in _pipelines.Values.Concat(_draining.Values))
+            {
+                binding.Evicted = true;
+                binding.Discarded = true;
+            }
+
+            _pipelines.Clear();
+            _draining.Clear();
+        }
+
         _metrics.Pipelines(0);
     }
 
@@ -220,6 +257,11 @@ public class ProjectionPipelineManager(
                 if (!entries.Remove(entry)) continue;
                 entry.Value.Swept = true;
                 entry.Value.Pipeline.ClearPreparedPage();
+            }
+
+            foreach (var entry in _draining.ToArray())
+            {
+                if (!entry.Value.Pipeline.IsPinned()) _draining.TryRemove(entry.Key, out _);
             }
         }
 
@@ -246,8 +288,32 @@ public class ProjectionPipelineManager(
 
     void Evict(string key)
     {
-        if (_pipelines.TryRemove(key, out var pipeline)) pipeline.Pipeline.ClearPreparedPage();
+        Retire(key)?.Pipeline.ClearPreparedPage();
         _metrics.Pipelines(_pipelines.Count);
+    }
+
+    /// <summary>
+    /// Removes a binding from the current pipelines. A pipeline still holding an open bulk or replay session is kept
+    /// discoverable as draining, because its flush and end must still reach the pipeline that owns the session.
+    /// </summary>
+    /// <param name="key">The binding key.</param>
+    /// <returns>The removed binding, if there was one.</returns>
+    ProjectionPipelineBinding? Retire(string key)
+    {
+        lock (_registryGate)
+        {
+            if (!_pipelines.TryRemove(key, out var binding)) return null;
+            binding.Evicted = true;
+            KeepWhileDraining(key, binding);
+            return binding;
+        }
+    }
+
+    void KeepWhileDraining(string key, ProjectionPipelineBinding binding)
+    {
+        if (!binding.Pipeline.IsPinned()) return;
+        if (_draining.TryGetValue(key, out var existing) && existing.Pipeline.IsPinned()) return;
+        _draining[key] = binding;
     }
 
     void Bind(string key, EngineProjection projection, IProjectionPipeline pipeline)
@@ -269,8 +335,15 @@ public class ProjectionPipelineManager(
     {
         lock (_registryGate)
         {
-            if (!binding.Swept) return;
-            if (_pipelines.TryAdd(key, binding)) binding.Swept = false;
+            if (binding.Discarded) return;
+            if (binding.Evicted)
+            {
+                KeepWhileDraining(key, binding);
+            }
+            else if (binding.Swept && _pipelines.TryAdd(key, binding))
+            {
+                binding.Swept = false;
+            }
         }
 
         _metrics.Pipelines(_pipelines.Count);
@@ -330,6 +403,10 @@ public class ProjectionPipelineManager(
             handleLock,
             replayScopedStorage,
             loggerFactory.CreateLogger<ProjectionPipeline>(),
-            generation);
+            generation,
+
+            // The sink of a globally scoped projection is shared by every namespace's pipeline: no window of its own.
+            // A generation writes to its own destination, so it keeps its window.
+            generation is not null || projection.Scope != ProjectionScope.Global);
     }
 }

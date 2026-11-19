@@ -480,8 +480,11 @@ public partial class Sink(
         WritePlan plan,
         SinkWriteOptions options)
     {
-        // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
-        // removes from all has to find the documents still holding it, so the children are removed only afterwards.
+        if (changeset.HasJoined() && changesetConverter is IChangesetConverterWithDirectWrites orderedConverter)
+        {
+            return await WriteInOrder(changeset, orderedConverter, new OrderedWrite(key, eventSequenceNumber, plan, options));
+        }
+
         UpdateDefinitionAndArrayFilters converted;
         if (changesetConverter is IChangesetConverterWithDirectWrites converterWithDirectWrites)
         {
@@ -510,7 +513,7 @@ public partial class Sink(
             await UnsetNullParents(write, options);
         }
 
-        return await WriteUpdate(write, changeset, options);
+        return (await WriteUpdate(write, changeset, options)).Failures;
     }
 
     async Task<BulkBatch?> FlushBeforeJoin(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
@@ -722,14 +725,14 @@ public partial class Sink(
         return await AddToBulk(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
     }
 
-    async Task<IEnumerable<FailedPartition>> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+    async Task<(IEnumerable<FailedPartition> Failures, UpdateResult? Result)> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
         if (await TryBufferUpdate(write, changeset, options) is { } failures)
         {
-            return failures;
+            return (failures, null);
         }
 
-        await writes.UpdateOne(
+        var result = await writes.UpdateOne(
             Collection,
             write.Filter,
             write.Converted.UpdateDefinition,
@@ -740,7 +743,7 @@ public partial class Sink(
             });
         CacheImmediateWrite(write, changeset, options);
 
-        return [];
+        return ([], result);
     }
 
     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)

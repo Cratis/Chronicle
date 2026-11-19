@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
@@ -70,7 +69,8 @@ public class EventStoreSubscriptionObserverSubscriber(
         var inboxSequenceId = new EventSequenceId($"{EventSequenceId.InboxPrefix}{_key.EventStore}");
         var inboxSequence = grainFactory.GetEventSequence(inboxSequenceId, targetEventStore, targetNamespace);
 
-        var state = new ForwardingState(inboxSequence, targetEventStore, targetNamespace);
+        var generation = new EventStoreSubscriptionTargetGeneration(storage.GetEventStore(_key.EventStore).EventTypes, storage.GetEventStore(targetEventStore).EventTypes, generationRelease, _key.EventStore, targetEventStore);
+        var state = new ForwardingState(inboxSequence, targetEventStore, targetNamespace, generation);
         try
         {
             var definition = await ResolveDefinition(targetEventStore);
@@ -95,6 +95,11 @@ public class EventStoreSubscriptionObserverSubscriber(
 
             logger.SuccessfullyForwardedEvents(_key, targetEventStore, inboxSequenceId);
             return ObserverSubscriberResult.Ok(state.LastForwarded);
+        }
+        catch (EventStoreSubscriptionGenerationUnavailable ex)
+        {
+            logger.ErrorForwardingEvents(ex, _key, targetEventStore, inboxSequenceId);
+            return ObserverSubscriberResult.Failed(state.LastForwarded, ex.Message) with { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition };
         }
         catch (Exception ex)
         {
@@ -206,7 +211,7 @@ public class EventStoreSubscriptionObserverSubscriber(
 
     async Task<(AppendedEvent Event, AppendResult Result)> ForwardEvent(AppendedEvent incoming, ForwardingState state)
     {
-        var @event = await ReleaseForCurrentPin(incoming, state.Pins, state.Schemas, state.TargetEventStore);
+        var @event = await state.Generation.Release(incoming, state.Pins);
         if (state.CopiedSubjects.Add(@event.Context.Subject))
         {
             await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, state.TargetEventStore, state.TargetNamespace);
@@ -223,48 +228,6 @@ public class EventStoreSubscriptionObserverSubscriber(
         return ObserverSubscriberResult.Failed(
             state.LastForwarded,
             $"Inbox append {failureKind} for event type '{@event.Context.EventType.Id}'{DescribeViolations(appendResult)}");
-    }
-
-    async Task<AppendedEvent> ReleaseForCurrentPin(
-        AppendedEvent @event,
-        Dictionary<EventTypeId, EventType> pins,
-        Dictionary<EventType, EventTypeSchema> schemas,
-        EventStoreName targetEventStore)
-    {
-        if (pins.Count == 0)
-        {
-            return @event;
-        }
-
-        // Redaction markers for subscribed original types also arrive on replay and retry. They have
-        // their own kernel schema, not the original type's pin, and contain no content to migrate.
-        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
-        {
-            await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(targetEventStore).EventTypes, @event.Context.EventType);
-            return @event;
-        }
-
-        if (!pins.TryGetValue(@event.Context.EventType.Id, out var pin))
-        {
-            throw new PinnedEventTypeGenerationUnavailable(@event.Context.EventType);
-        }
-
-        // Validate per event, before any key propagation or inbox append. A later failure must report
-        // the prefix already forwarded, and target registrations may change independently of the source.
-        await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(targetEventStore).EventTypes, pin);
-        if (pin == @event.Context.EventType)
-        {
-            // The observer has already released this generation; never decrypt its plaintext again.
-            return @event;
-        }
-
-        if (!schemas.ContainsKey(pin))
-        {
-            schemas[pin] = await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(_key.EventStore).EventTypes, pin);
-        }
-
-        var released = await generationRelease.Release(_key.EventStore, [pin], schemas, [@event]);
-        return released.Single();
     }
 
     async Task<JsonObject> MapToTargetSchema(
@@ -330,7 +293,7 @@ public class EventStoreSubscriptionObserverSubscriber(
         logger.CopiedEncryptionKeyToTargetEventStore(_key.EventStore, targetEventStore, targetNamespace);
     }
 
-    sealed class ForwardingState(IEventSequence inboxSequence, EventStoreName targetEventStore, EventStoreNamespaceName targetNamespace)
+    sealed class ForwardingState(IEventSequence inboxSequence, EventStoreName targetEventStore, EventStoreNamespaceName targetNamespace, EventStoreSubscriptionTargetGeneration generation)
     {
         public IEventSequence InboxSequence { get; } = inboxSequence;
 
@@ -340,7 +303,7 @@ public class EventStoreSubscriptionObserverSubscriber(
 
         public Dictionary<EventTypeId, EventType> Pins { get; set; } = [];
 
-        public Dictionary<EventType, EventTypeSchema> Schemas { get; } = [];
+        public EventStoreSubscriptionTargetGeneration Generation { get; } = generation;
 
         public Dictionary<EventType, JsonSchema?> TargetSchemas { get; } = [];
 
