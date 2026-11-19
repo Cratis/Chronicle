@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_RotateWebhookSigningKey.when
 public class and_the_ring_fails : given.a_key_rotation
 {
     void Establish() => _ring.Rotate(Arg.Any<WebhookSigningKeyOverlap>()).Returns(_ => Task.FromException<WebhookSigningKey>(new InvalidOperationException("encrypted-private-material")));
-    async Task Because() => _error = await Catch.Exception(() => _command.Handle(_grainFactory));
+    async Task Because() => _error = await Catch.Exception(() => _command.Handle(_grainFactory, _storage));
 
     [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<WebhookSigningUnavailable>();
     [Fact] void should_not_retain_the_cause() => _error!.InnerException.ShouldBeNull();

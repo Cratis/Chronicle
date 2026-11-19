@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation.Webhooks.Signing;
 
@@ -24,12 +25,13 @@ internal static class WebhookSigningKeyOperations
     /// </summary>
     /// <param name="eventStore">The event store whose keys to read.</param>
     /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="storage">The storage used to confirm the event store exists.</param>
     /// <returns>The active and unexpired overlap public keys.</returns>
-    internal static async Task<IEnumerable<WebhookSigningPublicKey>> GetPublicKeys(EventStoreName eventStore, IGrainFactory grainFactory)
+    internal static async Task<IEnumerable<WebhookSigningPublicKey>> GetPublicKeys(EventStoreName eventStore, IGrainFactory grainFactory, IStorage storage)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(eventStore?.Value)) throw new WebhookSigningUnavailable();
+            if (string.IsNullOrWhiteSpace(eventStore?.Value) || !await storage.HasEventStore(eventStore)) throw new WebhookSigningUnavailable();
             var keys = await grainFactory.GetGrain<IWebhookSigningKeyRing>(eventStore).GetSigningKeys();
             return WebhookSigningPublicKeyConverters.ToPublicKeys(keys, DateTimeOffset.UtcNow);
         }
@@ -46,12 +48,13 @@ internal static class WebhookSigningKeyOperations
     /// <param name="useSpecifiedOverlap">Whether to use the specified overlap instead of the default.</param>
     /// <param name="overlapSeconds">The specified overlap in seconds.</param>
     /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="storage">The storage used to confirm the event store exists.</param>
     /// <returns>A task representing the rotation.</returns>
-    internal static async Task Rotate(EventStoreName eventStore, bool useSpecifiedOverlap, double overlapSeconds, IGrainFactory grainFactory)
+    internal static async Task Rotate(EventStoreName eventStore, bool useSpecifiedOverlap, double overlapSeconds, IGrainFactory grainFactory, IStorage storage)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(eventStore?.Value)) throw new WebhookSigningUnavailable();
+            if (string.IsNullOrWhiteSpace(eventStore?.Value) || !await storage.HasEventStore(eventStore)) throw new WebhookSigningUnavailable();
             if (useSpecifiedOverlap && !IsValidOverlap(overlapSeconds)) throw new WebhookSigningUnavailable();
             var overlap = useSpecifiedOverlap ? new WebhookSigningKeyOverlap(TimeSpan.FromSeconds(overlapSeconds)) : WebhookSigningKeyOverlap.Default;
             await grainFactory.GetGrain<IWebhookSigningKeyRing>(eventStore).Rotate(overlap);

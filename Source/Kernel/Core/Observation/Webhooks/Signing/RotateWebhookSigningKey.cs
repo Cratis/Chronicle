@@ -5,6 +5,7 @@ using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Observation.Webhooks.Signing;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
@@ -23,6 +24,7 @@ public record RotateWebhookSigningKey(EventStoreName EventStore, bool UseSpecifi
     /// Rotates the key inside the kernel boundary.
     /// </summary>
     /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="storage">The storage used to confirm the event store exists.</param>
     /// <returns>A task with no key material.</returns>
-    public Task Handle(IGrainFactory grainFactory) => WebhookSigningKeyOperations.Rotate(EventStore, UseSpecifiedOverlap, OverlapSeconds, grainFactory);
+    public Task Handle(IGrainFactory grainFactory, IStorage storage) => WebhookSigningKeyOperations.Rotate(EventStore, UseSpecifiedOverlap, OverlapSeconds, grainFactory, storage);
 }

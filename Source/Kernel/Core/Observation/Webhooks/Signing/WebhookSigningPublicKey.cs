@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Observation.Webhooks.Signing;
+using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
 
@@ -37,7 +38,8 @@ public record WebhookSigningPublicKey(
     /// </summary>
     /// <param name="eventStore">The event store whose keys to get.</param>
     /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="storage">The storage used to confirm the event store exists.</param>
     /// <returns>Public verification metadata only.</returns>
-    public static Task<IEnumerable<WebhookSigningPublicKey>> GetWebhookSigningKeys(EventStoreName eventStore, IGrainFactory grainFactory) =>
-        WebhookSigningKeyOperations.GetPublicKeys(eventStore, grainFactory);
+    public static Task<IEnumerable<WebhookSigningPublicKey>> GetWebhookSigningKeys(EventStoreName eventStore, IGrainFactory grainFactory, IStorage storage) =>
+        WebhookSigningKeyOperations.GetPublicKeys(eventStore, grainFactory, storage);
 }

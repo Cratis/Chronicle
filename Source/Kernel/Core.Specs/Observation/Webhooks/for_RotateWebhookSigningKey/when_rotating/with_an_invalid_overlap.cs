@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_RotateWebhookSigningKey.when
 public class with_an_invalid_overlap : given.a_key_rotation
 {
     void Establish() => _command = new("store", true, double.NaN);
-    async Task Because() => _error = await Catch.Exception(() => _command.Handle(_grainFactory));
+    async Task Because() => _error = await Catch.Exception(() => _command.Handle(_grainFactory, _storage));
 
     [Fact] void should_fail_closed_even_without_validation() => _error.ShouldBeOfExactType<WebhookSigningUnavailable>();
     [Fact] void should_not_touch_the_ring() => _overlap.ShouldBeNull();

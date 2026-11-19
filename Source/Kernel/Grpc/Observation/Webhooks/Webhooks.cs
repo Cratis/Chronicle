@@ -57,7 +57,7 @@ internal sealed class Webhooks(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: null),
             async () =>
             {
-                var result = await global::Cratis.Chronicle.Observation.Webhooks.WebhookSigningPublicKey.GetWebhookSigningKeys((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, grainFactory);
+                var result = await global::Cratis.Chronicle.Observation.Webhooks.WebhookSigningPublicKey.GetWebhookSigningKeys((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, grainFactory, storage);
                 return result.Select(ToWebhookSigningPublicKeyResponse).ToList();
             },
             exception => logger.QueryFailed(exception, "Webhooks", "GetWebhookSigningKeys"));

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_RotateWebhookSigningKey.when
 
 public class with_the_default_overlap : given.a_key_rotation
 {
-    Task Because() => _command.Handle(_grainFactory);
+    Task Because() => _command.Handle(_grainFactory, _storage);
 
     [Fact] void should_use_the_default_overlap() => _overlap.ShouldEqual(WebhookSigningKeyOverlap.Default);
     [Fact] void should_return_no_key_material() => typeof(RotateWebhookSigningKey).GetMethod(nameof(RotateWebhookSigningKey.Handle))!.ReturnType.ShouldEqual(typeof(Task));
