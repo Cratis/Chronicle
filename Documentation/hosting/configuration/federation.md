@@ -22,7 +22,7 @@ A link is one direction. Two services consuming each other are two links, each w
 | --- | --- | --- | --- |
 | `federation.enabled` | `Cratis__Chronicle__Federation__Enabled` | `false` | Opens the federation listener and runs consumer bindings. Setting it to `false` is a kill switch for every link |
 | `federation.port` | `Cratis__Chronicle__Federation__Port` | `35100` | Port of the listener. Must differ from the main and health ports |
-| `federation.certificatePath` | `Cratis__Chronicle__Federation__CertificatePath` | none | PKCS#12 certificate the listener presents. There is no fallback to the main TLS certificate |
+| `federation.certificatePath` | `Cratis__Chronicle__Federation__CertificatePath` | none | PKCS#12 certificate the listener presents. There is no fallback to the main [TLS certificate](tls.md#certificates-the-kernel-uses) |
 | `federation.certificatePasswordPath` | `Cratis__Chronicle__Federation__CertificatePasswordPath` | none | Path to a file holding the certificate password |
 | `federation.limits.maxBatchSize` | `Cratis__Chronicle__Federation__Limits__MaxBatchSize` | `500` | Events returned by one pull |
 | `federation.limits.maxEventsPerSecond` | `Cratis__Chronicle__Federation__Limits__MaxEventsPerSecond` | `5000` | Per-link event rate |
