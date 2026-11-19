@@ -144,7 +144,6 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
     {
         try
         {
-            var deliverySigner = signer ?? throw new WebhookSigningUnavailable();
             var signingStore = eventStore ?? throw new WebhookSigningUnavailable();
             if (signingStore != identity.EventStore) throw new WebhookSigningUnavailable();
 
@@ -154,12 +153,34 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             request.Content = new ByteArrayContent(body);
             request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
             var messageId = WebhookMessageIds.For(identity);
+            await ApplySignature(request, signingStore, messageId, body, cancellationToken);
+            request.Options.Set(WebhookRequestOptions.Resign, (retry, token) => ApplySignature(retry, signingStore, messageId, body, token));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            throw new WebhookSigningUnavailable();
+        }
+    }
+
+    async Task ApplySignature(HttpRequestMessage request, EventStoreName eventStore, string messageId, byte[] body, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deliverySigner = signer ?? throw new WebhookSigningUnavailable();
             var timestamp = (timeProvider ?? TimeProvider.System).GetUtcNow().ToUnixTimeSeconds();
-            var signature = await deliverySigner.Sign(signingStore, messageId, timestamp, body, cancellationToken);
+            var signature = await deliverySigner.Sign(eventStore, messageId, timestamp, body, cancellationToken);
             SetSigningHeader(request, "webhook-id", signature.Id);
             SetSigningHeader(request, "webhook-timestamp", signature.Timestamp);
             SetSigningHeader(request, "webhook-signature", signature.Signature);
             SetSigningHeader(request, "Cratis-Key-Id", signature.KeyId);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

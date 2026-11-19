@@ -44,6 +44,10 @@ public class WebhookDeliverySigner(IGrainFactory grainFactory, IEncryption encry
 
             return new(messageId, unixTimestamp.ToString(CultureInfo.InvariantCulture), string.Join(' ', signatures), keys[0].KeyId.Value);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch
         {
             // Never retain an inner exception from decryption, decoding, or signing.

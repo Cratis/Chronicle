@@ -54,7 +54,7 @@ public class TokenHttpMessageHandler(HttpClient client, Func<EventStoreName?, Ca
         var body = request.Content is null ? null : await request.Content.ReadAsByteArrayAsync(cancellationToken);
         request.Options.TryGetValue(WebhookRequestOptions.EventStore, out var eventStore);
         var token = await acquireToken(eventStore, cancellationToken);
-        var response = await Send(request, body, token, cancellationToken);
+        var response = await Send(request, body, token, retry: false, cancellationToken);
         if (response.StatusCode != HttpStatusCode.Unauthorized)
         {
             return response;
@@ -63,7 +63,7 @@ public class TokenHttpMessageHandler(HttpClient client, Func<EventStoreName?, Ca
         response.Dispose();
         invalidate(token);
         token = await acquireToken(eventStore, cancellationToken);
-        var retried = await Send(request, body, token, cancellationToken);
+        var retried = await Send(request, body, token, retry: true, cancellationToken);
         if (retried.StatusCode == HttpStatusCode.Unauthorized)
         {
             invalidate(token);
@@ -81,7 +81,7 @@ public class TokenHttpMessageHandler(HttpClient client, Func<EventStoreName?, Ca
         base.Dispose(disposing);
     }
 
-    async Task<HttpResponseMessage> Send(HttpRequestMessage original, byte[]? body, AccessTokenInfo token, CancellationToken cancellationToken)
+    async Task<HttpResponseMessage> Send(HttpRequestMessage original, byte[]? body, AccessTokenInfo token, bool retry, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(original.Method, original.RequestUri)
         {
@@ -107,6 +107,11 @@ public class TokenHttpMessageHandler(HttpClient client, Func<EventStoreName?, Ca
         if (!string.IsNullOrEmpty(token.AccessToken))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        }
+
+        if (retry && original.Options.TryGetValue(WebhookRequestOptions.Resign, out var resign))
+        {
+            await resign(request, cancellationToken);
         }
 
         return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
