@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks.Signing;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -58,9 +59,15 @@ public class WebhookObserverSubscriber(
     /// <inheritdoc/>
     public async Task<ObserverSubscriberResult> OnNext(Key partition, IEnumerable<AppendedEvent> events, ObserverSubscriberContext context, CancellationToken cancellationToken)
     {
+        AppendedEvent[] batch;
+        WebhookMessageIdentity? signingIdentity;
         try
         {
-            events = await ReleaseMismatches(events);
+            // Read the committed policy once, rather than relying on a possibly stale grain snapshot.
+            var definition = await storage.GetEventStore(_key.EventStore).Webhooks.Get(_key.ObserverId);
+            if (definition.Signing is not (WebhookSigningMode.None or WebhookSigningMode.Ed25519)) throw new WebhookSigningUnavailable();
+            batch = (await ReleaseMismatches(events, definition)).ToArray();
+            signingIdentity = CreateSigningIdentity(definition.Signing, partition, batch, context);
         }
         catch (Exception error)
         {
@@ -73,7 +80,7 @@ public class WebhookObserverSubscriber(
             var oauth = target.Authorization.AsT2;
             target = target with { Authorization = oauth with { ClientSecret = encryption.Decrypt(oauth.ClientSecret) } };
         }
-        var onNextResult = await webhookMediator.Deliver(_key.EventStore, target, partition, events, cancellationToken: cancellationToken);
+        var onNextResult = await webhookMediator.Deliver(_key.EventStore, target, partition, batch, signingIdentity: signingIdentity, cancellationToken: cancellationToken);
         if (onNextResult.Deferral is { } deferral)
         {
             return new(ObserverSubscriberState.Deferred, onNextResult.LastHandled, [], string.Empty) { Deferral = deferral };
@@ -87,7 +94,7 @@ public class WebhookObserverSubscriber(
         }
 
         logger.SuccessfullyHandledAllEvents(_key);
-        return ObserverSubscriberResult.Ok(events.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
+        return ObserverSubscriberResult.Ok(batch.LastOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
 
         ObserverSubscriberResult HandleError(Exception error)
         {
@@ -111,12 +118,13 @@ public class WebhookObserverSubscriber(
         }
     }
 
-    async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(IEnumerable<AppendedEvent> events)
+    WebhookMessageIdentity? CreateSigningIdentity(WebhookSigningMode signing, Key partition, AppendedEvent[] batch, ObserverSubscriberContext context) =>
+        signing == WebhookSigningMode.Ed25519 && batch.Length > 0
+            ? WebhookMessageIdentity.ForEvents(_key, partition, batch, context.ReplayEpoch)
+            : null;
+
+    async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(IEnumerable<AppendedEvent> events, WebhookDefinition definition)
     {
-        // SetDefinition persists here before notifications, replay, and observer rebind. Resolve the committed
-        // policy for every batch, including old Compatibility jobs with null metadata. Reading storage directly
-        // avoids calling the webhook grain while its replay turn awaits this observer's delivery.
-        var definition = await storage.GetEventStore(_key.EventStore).Webhooks.Get(_key.ObserverId);
         if (definition.GenerationDelivery != EventGenerationDelivery.Pinned)
         {
             return events;
