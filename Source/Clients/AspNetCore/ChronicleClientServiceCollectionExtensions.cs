@@ -151,7 +151,7 @@ public static class ChronicleClientServiceCollectionExtensions
             sp.GetRequiredService<IHostEnvironment>(),
             sp.GetRequiredService<IHostApplicationLifetime>(),
             sp.GetRequiredService<ILogger<ChronicleClientStartup>>(),
-            () => !marker.Called,
+            () => true,
             diagnostics.Report);
     }
 

@@ -33,6 +33,37 @@ The legacy `identityProvider.certificate` option is ignored; see [Identity Provi
 | initialAdminSetupToken | string | null | Optional operator-provided token for initial password setup; use secret management |
 | http | object | `{ "mode": "Chronicle" }` | How Workbench and HTTP API callers sign in. gRPC clients are not affected. See [Workbench sign-in through a reverse proxy](#workbench-sign-in-through-a-reverse-proxy) |
 
+## Explicit event store grants
+
+Use `authentication.eventStoreAccess` to grant an external principal access to ordinary event stores. The list is empty by default. `enforceStoreEntitlements` defaults to `false` (audit only); enable it to require these grants. Grants do not grant administrator privilege or cover the `System` store.
+
+| Property | Default | Requirement |
+| --- | --- | --- |
+| `issuer`, `subject` | empty strings | Both must be nonempty and identify the exact principal; issuer-wide grants are not supported |
+| `isClient` | `false` | Set to `true` when `subject` is a client identifier rather than a token subject |
+| `eventStore`, `allEventStores` | `null`, `false` | Set exactly one: an ordinary store name, or `allEventStores: true` with `eventStore` omitted |
+| `namespace` | `null` | Omit for every namespace, or supply a nonempty namespace name |
+| `access` | `None` | Supply a nonempty combination of `Read`, `Append`, and `Manage`; no other flags are accepted |
+
+```json
+{
+  "authentication": {
+    "enforceStoreEntitlements": true,
+    "eventStoreAccess": [
+      {
+        "issuer": "https://identity.example.com",
+        "subject": "orders-service",
+        "isClient": true,
+        "eventStore": "Orders",
+        "access": "Read, Append"
+      }
+    ]
+  }
+}
+```
+
+For clients created by Chronicle's internal authority, use the same store-scope fields in each [bootstrap client's `eventStores`](client-bootstrap.md) list instead. Invalid principal or scope entries fail startup. When using the internal authority, an external issuer that cannot match produces a warning.
+
 ## Password sign-ins
 
 New passwords must contain at least eight characters, whether chosen through Chronicle commands or the Identity API. Existing configured administrator passwords remain accepted; a shorter bootstrap password produces a warning without logging the password.
