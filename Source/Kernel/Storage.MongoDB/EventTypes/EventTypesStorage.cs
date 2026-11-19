@@ -107,14 +107,14 @@ public partial class EventTypesStorage(
     {
         using var result = await GetCollection().FindAsync(_ => true).ConfigureAwait(false);
         var schemas = await result.ToListAsync();
-        return schemas.ConvertAll(_ => _.ToKernelForLatestGeneration());
+        return schemas.ConvertAll(LatestFor);
     }
 
     /// <inheritdoc/>
     public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() =>
         new TransformingSubject<IEnumerable<EventType>, IEnumerable<EventTypeSchema>>(
             GetCollection().Observe(),
-            _ => _.Select(_ => _.ToKernelForLatestGeneration()));
+            _ => _.Select(LatestFor).ToArray());
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetAllGenerationsForEventType(Concepts.Events.EventType eventType)
@@ -368,6 +368,8 @@ public partial class EventTypesStorage(
             _definitionRevision++;
             _definitionsByType.TryRemove(eventTypeId, out _);
         }
+
+        _latestSchemasByType.TryRemove(eventTypeId, out _);
 
         foreach (var key in _schemasByTypeAndGeneration.Keys)
         {

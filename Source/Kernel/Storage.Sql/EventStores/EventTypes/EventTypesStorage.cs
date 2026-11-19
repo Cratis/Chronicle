@@ -166,7 +166,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     {
         await using var scope = await database.EventStore(eventStore);
         var eventTypes = await scope.DbContext.EventTypes.ToListAsync();
-        return eventTypes.ConvertAll(_ => _.ToKernelForLatestGeneration());
+        return eventTypes.ConvertAll(LatestFor);
     }
 
     /// <inheritdoc/>
@@ -253,6 +253,7 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     public void Invalidate(EventTypeId eventTypeId)
     {
         InvalidateDefinition(eventTypeId);
+        _latestSchemasByType.TryRemove(eventTypeId, out _);
         if (_eventTypes.Any(_ => _.Id == eventTypeId))
         {
             _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
