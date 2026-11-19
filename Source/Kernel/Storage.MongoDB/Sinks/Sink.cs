@@ -429,17 +429,27 @@ public partial class Sink(
         // Its outcome is claimed only on a returning path: an exception leaves it in the ledger for the next drain or EndBulk.
         InvalidatePrefetchBeforeJoin(changeset);
         var joinBatch = await FlushBeforeJoin(changeset, options);
-        IEnumerable<FailedPartition> failures;
+        var failures = await WriteTranslatingFailures(key, changeset, eventSequenceNumber, guardedPlan, options);
+        return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
+    }
+
+    async Task<IEnumerable<FailedPartition>> WriteTranslatingFailures(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        WritePlan guardedPlan,
+        SinkWriteOptions options)
+    {
         try
         {
-            failures = WriteDirectlyInOneBatch(changeset, options)
+            return WriteDirectlyInOneBatch(changeset, options)
                 ? await writes.InBatch(() => WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options))
                 : await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
         }
         catch (MongoWriteException exception) when (options.Mode == SinkWriteMode.GuardedUpsert && IsDuplicateId(exception))
         {
             EvictBulkState(key);
-            failures = [];
+            return [];
         }
         catch (NonIdempotentWriteCannotBeSplit error)
         {
@@ -447,7 +457,6 @@ public partial class Sink(
             logger.RefusedOversizedChangesetSplit(readModel.Identifier, key.ToString(), partition.ToString(), error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
             throw new OversizedChangesetCannotBeSplit(readModel.Identifier, key, partition, error);
         }
-        return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
     }
 
     /// <summary>
