@@ -32,7 +32,8 @@ internal static class WebhookDefinitionConverters
             webhookDefinition.IsReplayable && !webhookDefinition.IsNotReplayable,
             webhookDefinition.IsActive && !webhookDefinition.IsInactive)
         {
-            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery
+            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery,
+            Signing = webhookDefinition.Signing.ToChronicle()
         };
 
     /// <summary>
@@ -45,6 +46,7 @@ internal static class WebhookDefinitionConverters
         {
             Identifier = webhookDefinition.Identifier,
             GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)webhookDefinition.GenerationDelivery,
+            Signing = webhookDefinition.Signing.ToContract(),
             EventSequenceId = webhookDefinition.EventSequenceId,
             EventTypes = webhookDefinition.EventTypes.Select(type => type.ToContract()).ToList(),
             IsActive = webhookDefinition.IsActive,
@@ -147,9 +149,37 @@ internal static class WebhookDefinitionConverters
             contract.IsReplayable,
             contract.IsActive)
         {
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            Signing = contract.Signing
         };
     }
+
+    /// <summary>
+    /// Maps an omitted registration policy to unsigned delivery.
+    /// </summary>
+    /// <param name="signing">The registration policy.</param>
+    /// <returns>The kernel signing policy.</returns>
+    /// <exception cref="WebhookSigningNotSupported">The requested signing policy is not supported.</exception>
+    internal static WebhookSigningMode ToChronicle(this Contracts.Observation.Webhooks.WebhookSigningMode signing) => signing switch
+    {
+        Contracts.Observation.Webhooks.WebhookSigningMode.Unspecified => WebhookSigningMode.None,
+        Contracts.Observation.Webhooks.WebhookSigningMode.Disabled => WebhookSigningMode.None,
+        Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519 => WebhookSigningMode.Ed25519,
+        _ => throw new WebhookSigningNotSupported(signing)
+    };
+
+    /// <summary>
+    /// Maps an effective policy to its explicit registration value.
+    /// </summary>
+    /// <param name="signing">The effective policy.</param>
+    /// <returns>The explicit registration policy.</returns>
+    /// <exception cref="WebhookSigningNotSupported">The effective signing policy is not supported.</exception>
+    internal static Contracts.Observation.Webhooks.WebhookSigningMode ToContract(this WebhookSigningMode signing) => signing switch
+    {
+        WebhookSigningMode.None => Contracts.Observation.Webhooks.WebhookSigningMode.Disabled,
+        WebhookSigningMode.Ed25519 => Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519,
+        _ => throw new WebhookSigningNotSupported((Contracts.Observation.Webhooks.WebhookSigningMode)signing)
+    };
 
     /// <summary>
     /// Resolves which kind of authorization a webhook target carries.

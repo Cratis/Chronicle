@@ -35,7 +35,7 @@ public class WebhookDefinitionComparer(
 
         logger.ComparingDefinitions(webhookKey.WebhookId);
 
-        if (first.GenerationDelivery == second.GenerationDelivery && objectComparer.Compare(first, second, out _))
+        if (first.Signing == second.Signing && first.GenerationDelivery == second.GenerationDelivery && objectComparer.Compare(first, second, out _))
         {
             return new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.Same, null);
         }
@@ -50,7 +50,8 @@ public class WebhookDefinitionComparer(
             OwnerChanged: first.Owner != second.Owner,
             EventSequenceIdChanged: first.EventSequenceId != second.EventSequenceId)
         {
-            GenerationDeliveryChanged = first.GenerationDelivery != second.GenerationDelivery
+            GenerationDeliveryChanged = first.GenerationDelivery != second.GenerationDelivery,
+            SigningChanged = first.Signing != second.Signing
         };
 
         return new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.Different, changedProperties);

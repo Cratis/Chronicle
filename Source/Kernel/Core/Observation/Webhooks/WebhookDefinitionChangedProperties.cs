@@ -28,4 +28,16 @@ public record WebhookDefinitionChangedProperties(
     /// Gets whether the generation delivery policy changed.
     /// </summary>
     public bool GenerationDeliveryChanged { get; init; }
+
+    /// <summary>
+    /// Gets whether the signing policy changed.
+    /// </summary>
+    public bool SigningChanged { get; init; }
+
+    /// <summary>
+    /// Gets whether the changes affect which events are delivered.
+    /// </summary>
+    public bool AffectsDeliveredEvents => EventTypesChanged || TargetUrlChanged || TargetHeadersChanged ||
+        AuthorizationChanged || IsReplayableChanged || IsActiveChanged || OwnerChanged ||
+        EventSequenceIdChanged || GenerationDeliveryChanged;
 }

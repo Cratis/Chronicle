@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="IsReplayable">Whether the webhook can be replayed.</param>
 /// <param name="IsActive">Whether the webhook is delivering.</param>
 /// <param name="GenerationDelivery">The policy for delivering event generations.</param>
+/// <param name="Signing">The effective signing policy.</param>
 /// <remarks>
 /// The authorization is reported as its <see cref="Contracts.Security.AuthorizationType"/> only. The credentials
 /// themselves are stored encrypted and never leave the kernel - a caller listing webhooks wants to know how one
@@ -41,7 +42,8 @@ public record WebhookDetails(
     IDictionary<string, string> Headers,
     bool IsReplayable,
     bool IsActive,
-    EventGenerationDelivery GenerationDelivery = EventGenerationDelivery.Compatibility)
+    EventGenerationDelivery GenerationDelivery = EventGenerationDelivery.Compatibility,
+    Contracts.Observation.Webhooks.WebhookSigningMode Signing = Contracts.Observation.Webhooks.WebhookSigningMode.Disabled)
 {
     /// <summary>
     /// Initializes a webhook read model using the original Compatibility delivery policy.

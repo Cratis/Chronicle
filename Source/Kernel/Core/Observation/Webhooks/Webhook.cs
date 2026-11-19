@@ -47,6 +47,8 @@ public class Webhook(
         {
             logger.WebhookHasChanged(key.WebhookId);
             await _definitionObservers.Notify(notifier => notifier.OnWebhookDefinitionsChanged());
+            if (compareResult.ChangedProperties is { SigningChanged: true, AffectsDeliveredEvents: false }) return;
+
             var namespaceNames = (await GrainFactory.GetGrain<INamespaces>(key.EventStore).GetAll()).ToList();
 
             // Schedule replay as a separate grain turn so that SetDefinition() returns immediately,
