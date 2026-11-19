@@ -43,7 +43,8 @@ export const getAuthenticationMode = async (): Promise<AuthenticationMode> => {
 };
 
 const isSafeSignOutUrl = (url: string): boolean => {
-    if (url.startsWith('/')) return !url.startsWith('//');
+    // Browsers read '//host' and '/\host' as another origin; only a path on this origin is a relative sign-out.
+    if (url.startsWith('/')) return !url.startsWith('//') && !url.startsWith('/\\');
     try {
         const parsed = new URL(url);
         return parsed.protocol === 'https:' || parsed.protocol === 'http:';

@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Server.Authentication.for_TrustedProxyAuthenticationH
 public class a_trusted_proxy_handler : Specification
 {
     protected const string ProxyAddress = "10.0.0.5";
+    protected static readonly string[] TrustedNetworks = ["10.0.0.0/24"];
     protected TrustedProxyAuthentication _proxy;
     protected DefaultHttpContext _context;
     protected AuthenticateResult _result;
@@ -22,7 +23,6 @@ public class a_trusted_proxy_handler : Specification
     {
         var chronicleOptions = new ChronicleOptions
         {
-            ForwardedHeaders = new() { KnownNetworks = ["10.0.0.0/24"] },
             Authentication = new() { Http = new() { Mode = HttpAuthenticationMode.TrustedProxy, TrustedProxy = _proxy } }
         };
         var schemeOptions = Substitute.For<IOptionsMonitor<AuthenticationSchemeOptions>>();
@@ -41,7 +41,7 @@ public class a_trusted_proxy_handler : Specification
 
     void Establish()
     {
-        _proxy = new TrustedProxyAuthentication();
+        _proxy = new TrustedProxyAuthentication { KnownNetworks = TrustedNetworks };
         _context = new DefaultHttpContext();
         _context.Request.Method = HttpMethods.Get;
         _context.Request.Headers["X-Forwarded-User"] = "alice";

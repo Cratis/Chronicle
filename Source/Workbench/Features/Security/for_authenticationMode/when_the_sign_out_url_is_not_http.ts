@@ -4,7 +4,7 @@
 import sinon from 'sinon';
 import { AuthenticationMode, getAuthenticationMode } from '../authenticationMode';
 
-describe('when the sign-out url is unsafe', () => {
+describe('when the sign-out url is not http', () => {
     let sandbox: sinon.SinonSandbox;
     let originalLocation: PropertyDescriptor | undefined;
     let result: AuthenticationMode;

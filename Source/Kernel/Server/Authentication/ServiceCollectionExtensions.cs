@@ -143,8 +143,9 @@ public static class ServiceCollectionExtensions
                     return TrustedProxyAuthenticationHandler.SchemeName;
                 }
 
-                // Otherwise, if there's a cookie, use cookie authentication
-                if (context.Request.Cookies.ContainsKey(CookieAntiforgeryMiddleware.AuthenticationCookieName))
+                // Otherwise, if there's a cookie, use cookie authentication. Behind a trusted proxy Chronicle issues no
+                // cookies of its own, so one left over from password sign-in must not let a user around the proxy.
+                if (!authentication.Http.IsTrustedProxy && context.Request.Cookies.ContainsKey(CookieAntiforgeryMiddleware.AuthenticationCookieName))
                 {
                     return IdentityConstants.ApplicationScheme;
                 }

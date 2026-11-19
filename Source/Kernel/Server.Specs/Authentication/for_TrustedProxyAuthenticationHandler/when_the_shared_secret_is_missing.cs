@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Server.Authentication.for_TrustedProxyAuthenticationH
 
 public class when_the_shared_secret_is_missing : given.a_trusted_proxy_handler
 {
-    void Establish() => _proxy = new() { SharedSecret = "proxy-secret" };
+    void Establish() => _proxy = new() { SharedSecret = "proxy-secret", KnownNetworks = TrustedNetworks };
 
     Task Because() => Authenticate();
 

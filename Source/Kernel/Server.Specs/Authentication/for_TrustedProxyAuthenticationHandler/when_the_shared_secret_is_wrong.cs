@@ -7,7 +7,7 @@ public class when_the_shared_secret_is_wrong : given.a_trusted_proxy_handler
 {
     void Establish()
     {
-        _proxy = new() { SharedSecret = "proxy-secret" };
+        _proxy = new() { SharedSecret = "proxy-secret", KnownNetworks = TrustedNetworks };
         _context.Request.Headers["X-Chronicle-Proxy-Secret"] = "guess";
     }
 

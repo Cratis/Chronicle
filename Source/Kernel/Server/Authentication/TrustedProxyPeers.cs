@@ -10,25 +10,40 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Decides whether an immediate peer is a reverse proxy whose identity headers may be trusted.
 /// </summary>
 /// <remarks>
-/// It trusts exactly the peers forwarded headers are trusted from: loopback, plus the configured
-/// <see cref="ForwardedHeaders.KnownProxies"/> and <see cref="ForwardedHeaders.KnownNetworks"/>.
+/// It trusts exactly <see cref="TrustedProxyAuthentication.KnownProxies"/>, <see cref="TrustedProxyAuthentication.KnownNetworks"/>
+/// and, when <see cref="TrustedProxyAuthentication.TrustLoopback"/> is on, loopback. It deliberately does not inherit the peers
+/// trusted for forwarded headers. Values that do not parse are ignored here; configuration validation refuses them at startup.
 /// </remarks>
-/// <param name="options">The Chronicle options.</param>
-public class TrustedProxyPeers(ChronicleOptions options)
+public class TrustedProxyPeers
 {
-    readonly ForwardedHeadersOptions _trust = ForwardedHeadersTrust.Create(options);
+    readonly IPAddress[] _proxies;
+    readonly System.Net.IPNetwork[] _networks;
+    readonly bool _trustLoopback;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TrustedProxyPeers"/> class.
+    /// </summary>
+    /// <param name="options">The Chronicle options.</param>
+    public TrustedProxyPeers(ChronicleOptions options)
+    {
+        var proxy = options.Authentication.Http.TrustedProxy;
+        _proxies = [.. proxy.KnownProxies.Select(_ => IPAddress.TryParse(_, out var address) ? Normalize(address) : null).OfType<IPAddress>()];
+        _networks = [.. proxy.KnownNetworks.Where(network => network.Contains('/', StringComparison.Ordinal) && System.Net.IPNetwork.TryParse(network, out _)).Select(System.Net.IPNetwork.Parse)];
+        _trustLoopback = proxy.TrustLoopback;
+    }
 
     /// <summary>
     /// Checks whether the peer is trusted.
     /// </summary>
     /// <param name="address">The address of the immediate peer.</param>
-    /// <returns>True if the peer is loopback or a configured proxy.</returns>
+    /// <returns>True if the peer is a configured proxy, or loopback when that is trusted.</returns>
     public bool IsTrusted(IPAddress? address)
     {
         if (address is null) return false;
-        if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
-        if (IPAddress.IsLoopback(address)) return true;
-        if (_trust.KnownProxies.Any(_ => (_.IsIPv4MappedToIPv6 ? _.MapToIPv4() : _).Equals(address))) return true;
-        return _trust.KnownIPNetworks.Any(_ => _.Contains(address));
+        address = Normalize(address);
+        if (_proxies.Contains(address) || _networks.Any(_ => _.Contains(address))) return true;
+        return _trustLoopback && IPAddress.IsLoopback(address);
     }
+
+    static IPAddress Normalize(IPAddress address) => address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
 }

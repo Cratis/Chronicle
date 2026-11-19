@@ -86,9 +86,16 @@ public static class OpenIddictServiceCollectionExtensions
             })
             .AddServer(options =>
             {
-                options.SetTokenEndpointUris("/connect/token")
-                    .AllowPasswordFlow()
-                    .AllowClientCredentialsFlow()
+                options.SetTokenEndpointUris("/connect/token");
+
+                // A trusted proxy owns user sign-in. A user who could exchange a password for a token here would
+                // reach the HTTP API without passing the proxy, so only clients are given tokens.
+                if (!chronicleOptions.Authentication.Http.IsTrustedProxy)
+                {
+                    options.AllowPasswordFlow();
+                }
+
+                options.AllowClientCredentialsFlow()
                     .AllowRefreshTokenFlow()
                     .AcceptAnonymousClients()
                     .DisableAccessTokenEncryption()

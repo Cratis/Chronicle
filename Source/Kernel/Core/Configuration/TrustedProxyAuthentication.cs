@@ -8,13 +8,31 @@ namespace Cratis.Chronicle.Configuration;
 /// </summary>
 /// <remarks>
 /// The headers are accepted only on HTTP requests - never on gRPC calls - whose immediate peer is a trusted proxy:
-/// loopback, or an address in <see cref="ForwardedHeaders.KnownProxies"/> or <see cref="ForwardedHeaders.KnownNetworks"/>.
-/// The proxy must remove any of these headers a caller sends before adding its own.
+/// an address in <see cref="KnownProxies"/> or <see cref="KnownNetworks"/>, or loopback when <see cref="TrustLoopback"/> is on.
+/// This list is deliberately separate from <see cref="ForwardedHeaders"/>: a peer trusted to report a client address
+/// is not thereby trusted to say who the user is. The proxy must remove any of these headers a caller sends before adding its own.
 /// </remarks>
 public class TrustedProxyAuthentication
 {
     /// <summary>The default issuer given to users authenticated by the proxy.</summary>
     public const string DefaultIssuer = "chronicle:proxy";
+
+    /// <summary>
+    /// Gets the IP addresses of the proxies whose identity headers are trusted.
+    /// </summary>
+    public IEnumerable<string> KnownProxies { get; init; } = [];
+
+    /// <summary>
+    /// Gets the CIDR ranges of the proxies whose identity headers are trusted. Every peer in a range can claim to be any user,
+    /// so keep them narrow and consider <see cref="SharedSecret"/>.
+    /// </summary>
+    public IEnumerable<string> KnownNetworks { get; init; } = [];
+
+    /// <summary>
+    /// Gets whether a proxy connecting over loopback - a sidecar in the same pod or container - is trusted. Defaults to false,
+    /// because every process on the host, and every port-forward, connects over loopback too.
+    /// </summary>
+    public bool TrustLoopback { get; init; }
 
     /// <summary>
     /// Gets the header carrying the authenticated user's stable identifier. Required. Defaults to "X-Forwarded-User".
