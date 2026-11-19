@@ -694,6 +694,41 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
+    /// <summary>
+    /// Re-registers until it succeeds, is cancelled, replaced or released. A failed re-registration must not be
+    /// terminal: the connection can recover while this handler stays disconnected.
+    /// </summary>
+    /// <param name="registration">The <see cref="ReactorRegistration"/> to register again.</param>
+    /// <param name="backoff">The <see cref="ObservationReconnectBackoff"/> that paces the attempts.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the handler.</param>
+    /// <returns>An awaitable task.</returns>
+    async Task ReconnectUntilRegistered(ReactorRegistration registration, ObservationReconnectBackoff backoff, CancellationToken cancellationToken)
+    {
+        var handler = registration.Handler;
+        while (true)
+        {
+            try
+            {
+                await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
+                ReconnectIfCurrent(registration, cancellationToken);
+                return;
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.ReactorReconnectFailed(handler.Id, ex);
+                if (IsStaleReconnect(handler, cancellationToken))
+                {
+                    return;
+                }
+            }
+        }
+    }
+
     RegisterReactor BuildRegisterRequest(ReactorRegistration registration)
     {
         var handler = registration.Handler;
@@ -748,7 +783,17 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #endif
         var backoff = _reconnectBackoffs.GetValue(handler, _ => new(ReconnectDelay, MaxReconnectDelay, HealthyStreamDuration, TimeProvider.System, ReconnectJitter));
         backoff.StreamOpened();
-        var eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
+        IObservable<EventsToObserve> eventsToObserve;
+        try
+        {
+            eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
+        }
+        catch
+        {
+            messages.Dispose();
+            _ = scheduler.DrainAndDispose();
+            throw;
+        }
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
@@ -768,17 +813,13 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
-                    ReconnectIfCurrent(registration, cancellationToken);
-                }
-                catch (OperationCanceledException ex)
-                {
-                    _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                 }
                 catch (Exception ex)
                 {
                     _logger.ReactorReconnectFailed(handler.Id, ex);
                 }
+
+                await ReconnectUntilRegistered(registration, backoff, cancellationToken);
             });
         }
 
