@@ -312,6 +312,12 @@ public class WebhookDetailsResponse
     /// </summary>
     [ProtoMember(10)]
     public global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Signing.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode Signing { get; set; }
 }
 
 /// <summary>

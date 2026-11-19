@@ -77,6 +77,7 @@ internal sealed class Webhooks(
             Headers = source.Headers,
             IsReplayable = source.IsReplayable,
             IsActive = source.IsActive,
-            GenerationDelivery = (global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery)source.GenerationDelivery
+            GenerationDelivery = (global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery)source.GenerationDelivery,
+            Signing = source.Signing
         };
 }

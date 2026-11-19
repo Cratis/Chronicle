@@ -34,6 +34,6 @@ public class with_signing_modes : Specification
             Target = new() { Url = "https://example.com/webhook" }
         }]));
         result.IsValid.ShouldEqual(valid);
-        if (!valid) result.Errors.Any(_ => _.PropertyName.Contains("Signing", StringComparison.Ordinal)).ShouldBeTrue();
+        if (!valid) result.Errors.Exists(_ => _.PropertyName.Contains("Signing", StringComparison.Ordinal)).ShouldBeTrue();
     }
 }

@@ -116,6 +116,7 @@ message WebhookDefinition {
    bool IsNotReplayable = 7;
    bool IsInactive = 8;
    EventGenerationDelivery GenerationDelivery = 9;
+   WebhookSigningMode Signing = 10;
 }
 message WebhookDetailsResponse {
    string Identifier = 1;
@@ -128,6 +129,12 @@ message WebhookDetailsResponse {
    bool IsActive = 8;
    string Id = 9;
    EventGenerationDelivery GenerationDelivery = 10;
+   WebhookSigningMode Signing = 11;
+}
+enum WebhookSigningMode {
+   Unspecified = 0;
+   Disabled = 1;
+   Ed25519 = 2;
 }
 message WebhookTarget {
    string Url = 1;
