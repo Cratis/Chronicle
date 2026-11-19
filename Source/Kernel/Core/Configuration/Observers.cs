@@ -214,6 +214,63 @@ public class Observers
     public int IdleDeactivationAfter { get; init; } = 900;
 
     /// <summary>
+    /// Gets whether, and how, an observer records its subscription in its state document.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="DurableSubscriptionMode.Shadow"/>: the subscription is written and cleared with the
+    /// observer's state and the appended events queue compares what is stored with what is live and reports any
+    /// disagreement, but nothing is released or woken because of it. <see cref="DurableSubscriptionMode.Off"/> writes
+    /// none and clears any that is stored. A dormant observer (<see cref="DormantAfter"/>) needs the record, so
+    /// releasing dormant observers does nothing while this is off. A server-level setting (decision 0034).
+    /// </remarks>
+    public DurableSubscriptionMode DurableSubscriptions { get; init; } = DurableSubscriptionMode.Shadow;
+
+    /// <summary>
+    /// Gets how many seconds a subscribed observer that has nothing to do stays resident before it is released.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 900 seconds (15 minutes), the same as <see cref="IdleDeactivationAfter"/>; 0 keeps every subscribed
+    /// observer resident. A released observer is woken by the appended events queue when an event it observes arrives,
+    /// and by the safety net (<see cref="DormantSafetyNet"/>). Applies to client reactors, client reducers and
+    /// projections only. Declared by decision 0034; nothing acts on it until the release is implemented, so it has no
+    /// effect yet.
+    /// </remarks>
+    public int DormantAfter { get; init; } = 900;
+
+    /// <summary>
+    /// Gets how many seconds pass at most before a dormant observer is woken, whether or not an event arrived.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 900 seconds (15 minutes). Each observer's interval is jittered so wake-ups do not line up. It bounds
+    /// how long a lost wake-up can delay delivery to a dormant observer, and costs about one activation per dormant
+    /// observer per interval. Values below 1 select the default. A server-level setting (decision 0034); no effect yet.
+    /// </remarks>
+    public int DormantSafetyNet { get; init; } = 900;
+
+    /// <summary>
+    /// Gets how many dormant observers one silo wakes at the same time.
+    /// </summary>
+    /// <remarks>
+    /// One event that many dormant observers watch for wakes all of them; this bounds how many are activated at once
+    /// on a silo, so a burst becomes a short queue instead of a spike. The others wait for a place and are delivered
+    /// to afterwards. Defaults to 0 (automatic): two per processor, at least 4 and at most 16, the same as
+    /// <see cref="MaxConcurrentSubscriptions"/>. Values below 1 select the automatic limit. A server-level setting
+    /// (decision 0034); no effect yet.
+    /// </remarks>
+    public int MaxConcurrentWakes { get; init; }
+
+    /// <summary>
+    /// Gets how often each appended events queue compares its live subscriptions with the stored durable ones.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 15 minutes. The comparison reads the observer states of the queue's event store and namespace once
+    /// per interval and only counts disagreements; it never changes a subscription. It runs only while
+    /// <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Shadow"/>. A zero or negative value
+    /// falls back to the default.
+    /// </remarks>
+    public TimeSpan DurableSubscriptionCheckInterval { get; init; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
     /// Gets how long a client reactor or reducer can go without any client holding a subscription to it, in every namespace,
     /// before the kernel removes it and its records.
     /// </summary>

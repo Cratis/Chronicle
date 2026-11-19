@@ -24,6 +24,11 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
     "idleDeactivationAfter": 900,
+    "durableSubscriptions": "Shadow",
+    "dormantAfter": 900,
+    "dormantSafetyNet": 900,
+    "maxConcurrentWakes": 0,
+    "durableSubscriptionCheckInterval": "00:15:00",
     "unseenRemovalAfter": "7.00:00:00",
     "unseenRemovalSweepInterval": "01:00:00",
     "unseenRemovalBatchSize": 100,
@@ -61,6 +66,11 @@ The example shows the defaults of a production build. The `-development` image s
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
 | watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 | idleDeactivationAfter | number | 900 | Seconds an observer with no subscription and no pending work stays in memory before it is released. A subscribed observer always stays in memory. `0` keeps every observer in memory. See [Releasing idle observers](#releasing-idle-observers) |
+| durableSubscriptions | string | `Shadow` | Whether an observer records its subscription (what serves it, its filters and, for client observers, the connections it delivers to) in its own state, and clears it when it unsubscribes. `Shadow` records it and has each appended events queue compare the record with its live subscriptions every `durableSubscriptionCheckInterval`, without acting on the result. `Off` records nothing and clears what is stored. Nothing is released or woken because of the record yet. See [Recording subscriptions](#recording-subscriptions) |
+| durableSubscriptionCheckInterval | timespan | `00:15:00` | How often each appended events queue reads the recorded subscriptions of its event sequence and compares them with its live ones. A zero or negative value uses the default. Applies only while `durableSubscriptions` is `Shadow` |
+| dormantAfter | number | 900 | Seconds a subscribed observer with nothing to do will stay in memory before it is released, once dormant release ships. `0` keeps every subscribed observer in memory. **No effect yet:** observers are not released while subscribed |
+| dormantSafetyNet | number | 900 | Most seconds that pass before a released, dormant observer is woken even if no event arrived, once dormant release ships. Each observer's interval is jittered. **No effect yet** |
+| maxConcurrentWakes | number | 0 (automatic) | How many dormant observers one silo wakes at the same time, once dormant release ships. `0` or less selects two per processor, at least 4 and at most 16. **No effect yet** |
 | unseenRemovalAfter | timespan | `7.00:00:00` | How long a client reactor or reducer can go without any client subscribed to it, in every namespace, before Chronicle removes it and its records. `00:00:00` turns the removal off. **A removed observer replays from the start if its client returns.** See [Removing observers no client has used](#removing-observers-no-client-has-used) |
 | unseenRemovalSweepInterval | timespan | `01:00:00` | How often each silo looks for observers that have not been seen for `unseenRemovalAfter`. The sweep reads storage and only activates an observer that is a candidate for removal |
 | unseenRemovalBatchSize | number | 100 | How many observers one storage read of that sweep covers. A value below `1` uses the default |
@@ -93,6 +103,14 @@ An observer is not idle while an alert reminder is registered for it. An observe
 When anything calls a released observer again, for example a client that reconnects, it is activated from storage.
 
 Set `idleDeactivationAfter` to `0` to keep every observer in memory. The release is checked on every watchdog tick, so an idle observer is released between `idleDeactivationAfter` and `idleDeactivationAfter` + `watchdogInterval` seconds after it became idle.
+
+## Recording subscriptions
+
+A subscription exists in memory: in the observer's activation and in the appended events queue it subscribed to. With `durableSubscriptions` set to `Shadow` (the default) the observer also records the facts of its subscription in its own state document, in the same write that records the subscription: what serves it (client reactor, client reducer, projection, kernel reactor, webhook or event store subscription), whether it delivers pages, its filters and, for client observers, the connection identifier and silo of every client it delivers to. It clears the record when it unsubscribes or is deactivated; a silo that shuts down leaves it as it is.
+
+The record is advisory. It does not change how a resident observer delivers events, and nothing is released or woken because of it yet. Each appended events queue reads the recorded subscriptions of its event sequence once per `durableSubscriptionCheckInterval`, compares them with the observers subscribed to it, and counts the disagreements in the `appended_events_queue.durable_subscription_disagreements` metric (attribute `Disagreement`: `stored_not_live` or `live_not_stored`). Expect disagreements while observers are still subscribing after a restart and while silos of different releases run together, because an older silo neither writes nor clears the record. Set `durableSubscriptions` to `Off` to stop recording and to clear the stored records.
+
+The record is one optional field, so a rolling upgrade needs nothing special: an older silo ignores it. SQL stores add a nullable `DurableSubscription` column to the observer table.
 
 ## Removing observers no client has used
 
