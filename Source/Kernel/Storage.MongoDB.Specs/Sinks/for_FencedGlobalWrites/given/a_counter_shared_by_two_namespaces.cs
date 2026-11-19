@@ -88,7 +88,7 @@ public abstract class a_counter_shared_by_two_namespaces(MongoDBFixture fixture)
             }
             catch (SinkWriteConflictException)
             {
-                await Task.Yield();
+                // The conflicting write already completed; re-read and try again straight away.
             }
         }
     }
