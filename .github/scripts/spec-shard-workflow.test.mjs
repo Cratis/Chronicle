@@ -276,6 +276,35 @@ test('single build receives the find-derived client set, including new projects 
     }
 });
 
+for (const [job, runName, suffix] of [
+    ['specs-other', 'Run tests with coverage', '-${{ matrix.shard }}'],
+    ['specs-sql', 'Run SQL specs with coverage', '-${{ matrix.shard }}'],
+    ['integration-api', 'Run API integration tests with coverage', ''],
+    ['mongodb', 'Run MongoDB integration tests with coverage', ''],
+    ['neo4j', 'Run Neo4j integration tests with coverage (${{ matrix.lane }})', '-${{ matrix.lane }}']
+]) {
+    test(`${job} keeps crash minidumps for failed jobs`, () => {
+        // Cratis/Chronicle#5630: the test host intermittently dies with SIGSEGV and no dump was kept.
+        const run = step(jobs.get(job), runName);
+        const env = run.match(/^        env:\n([\s\S]*?)(?=^        \S)/m)?.[1];
+        assert.ok(env, 'Crash dump settings must be on the test-run step');
+        assert.match(env, /^          DOTNET_DbgEnableMiniDump: 1$/m);
+        assert.match(env, /^          DOTNET_DbgMiniDumpType: 1$/m);
+        assert.ok(env.includes('DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp\n'));
+        const script = run.split('        run: |\n')[1];
+        assert.ok(script, 'The test-run step must prepare the dump directory');
+        const mkdir = script.indexOf('mkdir -p "$RUNNER_TEMP/crash-dumps"');
+        assert.ok(mkdir >= 0 && mkdir < script.indexOf('node .github/scripts/run-'));
+        const upload = step(jobs.get(job), 'Upload crash dumps');
+        assert.match(upload, /^        if: failure\(\)$/m);
+        assert.match(upload, /uses: actions\/upload-artifact@/);
+        assert.ok(upload.includes(`          name: crash-dumps-${job}${suffix}\n`));
+        assert.ok(upload.includes('          path: ${{ runner.temp }}/crash-dumps/\n'));
+        assert.match(upload, /^          if-no-files-found: ignore$/m);
+        assert.match(upload, /^          retention-days: 3$/m);
+    });
+}
+
 test('three-shard workflow matches the planner and refreshed timing samples', async () => {
     const other = jobs.get('specs-other');
     const matrix = JSON.parse(other.match(/shard: (\[[^\]]+\])/)[1]);
