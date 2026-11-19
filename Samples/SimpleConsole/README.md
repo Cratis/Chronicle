@@ -92,10 +92,10 @@ Override the service name and version with `SERVICE_NAME` and `SERVICE_VERSION`.
 By default the sample connects to a local development Chronicle with the client's development defaults. To point it elsewhere, create the options from a connection string in `Program.cs`:
 
 ```csharp
-var options = ChronicleOptions.FromConnectionString("chronicle://<host>:<port>");
+var options = ChronicleOptions.FromConnectionString("chronicle://<host>:<port>?skipTlsValidation=false");
 ```
 
-Add credentials to the connection string only for a deployment that requires them.
+The development defaults skip TLS certificate validation so a local kernel's self-signed certificate is accepted. Set `skipTlsValidation=false` for any other deployment, and add credentials to the connection string only when the deployment requires them.
 
 ## Project structure
 
