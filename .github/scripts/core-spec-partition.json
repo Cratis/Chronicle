@@ -218,6 +218,10 @@
             "weight": 0.0008432324252328064
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_ObserverDurableSubscriptionFilters.",
+            "weight": 0.000001
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverEventSequenceResolver.",
             "weight": 0.0006104732185188725
         },
@@ -292,6 +296,10 @@
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscription.",
             "weight": 0.0006317356200622306
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscriptionDurability.",
+            "weight": 0.000001
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverTransitionStateMerge.",

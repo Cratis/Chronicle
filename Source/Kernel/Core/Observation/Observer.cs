@@ -234,6 +234,7 @@ public partial class Observer(
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
+        ConfigureDurableSubscriptions(config.DurableSubscriptions);
         _unseenRemovalAfter = config.UnseenRemovalAfter;
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
@@ -273,7 +274,9 @@ public partial class Observer(
             // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
             if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle)
             {
+                ForgetDurableSubscription();
                 await TransitionTo<Disconnected>();
+                await PersistForgottenDurableSubscription();
                 await base.OnDeactivateAsync(reason, cancellationToken);
             }
         }
@@ -572,9 +575,11 @@ public partial class Observer(
         SupersedeRecoveryAfterQuarantine();
         var wasHeldByClient = IsHeldByClient;
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetDurableSubscription();
         ForgetSupersededRegistrations();
         await PauseJobs();
         await TransitionTo<Disconnected>();
+        await PersistForgottenDurableSubscription();
         if (wasHeldByClient) await RecordSeenByClient(force: true);
     }
 
@@ -839,6 +844,7 @@ public partial class Observer(
                 QuarantineEpisodeId = _quarantineEpisodeId,
                 WebhookProbe = _webhookProbe,
                 DeliveryFences = DeliveryFenceSnapshot(),
+                DurableSubscription = DurableSubscriptionToWrite(),
                 PartitionClaims = shadowClaims.Claims,
                 ObserverWideClaim = shadowClaims.Wide,
                 OwnershipRevision = shadowClaims.Revision
@@ -867,6 +873,7 @@ public partial class Observer(
             }
 
             _persistedStateWrites++;
+            _forgottenDurableSubscriptionIsPending = false;
             PublishRunningStateGauge();
             if (revision == _alertRevision)
             {
@@ -1123,6 +1130,7 @@ public partial class Observer(
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetDurableSubscription();
         ForgetSupersededRegistrations();
     }
 
@@ -1156,6 +1164,7 @@ public partial class Observer(
 
         if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+        RecordDurableSubscription();
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
@@ -1191,6 +1200,7 @@ public partial class Observer(
             subscriberArgs,
             isReplayable);
         ForgetSupersededRegistrations();
+        RecordDurableSubscription();
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
