@@ -1,11 +1,13 @@
 ---
 id: 0034-release-dormant-subscribed-observers
 title: Persist the subscription so a subscribed observer with nothing to do can be released, woken by the appended events queue, and stop costing a resident activation, keeper calls and a per-namespace stream
-status: proposed
+status: accepted
 stage: none
 class: contract
 reversibility: costly
 proposed: 2026-11-19
+decided: 2026-11-19
+decider: einari
 applies-to:
   - Source/Kernel/Core/Observation/Observer*.cs
   - Source/Kernel/Core/Observation/States/**
@@ -21,6 +23,17 @@ applies-to:
 # Persist the subscription so a subscribed observer with nothing to do can be released, woken by the appended events queue, and stop costing a resident activation, keeper calls and a per-namespace stream
 
 Proposed on 2026-11-19. It is accepted only when the decider (einari) says so; until then it binds nothing. It extends [decision 0030](./0030-release-idle-unsubscribed-observers.md): that record keeps every subscribed observer resident and defers, as a design of its own, the option "persist the subscription and let the appended events queue activate the observer". This is that design. It does not contradict 0030's decisions 2 to 5 (releasing unsubscribed idle observers stays exactly as it is). It would replace only 0030's decision 1, "subscribed observers stay resident", for the observers this record makes releasable, and it names the conditions under which that holds. If accepted, 0030 gets a dated banner pointing here; its text is not edited. It leans on [decision 0018](./0018-partition-ownership-protocol.md) (who may deliver to a partition), [decision 0011](./0011-a-type-set-change-quiesces-the-observer-through-orleans-drain-and-admission.md) and [decision 0010](./0010-observer-event-types-are-the-union-of-registered-definitions.md) (durable observer membership), and is written to survive [decision 0004](./0004-ordered-lanes-observer-delivery.md) (proposed, not decided).
+
+> **2026-11-19 - accepted by einari.** The design direction is accepted. The decider's answers settle the open questions below; the text of the record is unchanged.
+>
+> 1. Direction accepted. It narrows [decision 0030](./0030-release-idle-unsubscribed-observers.md) decision 1 only, for the observer kinds in scope; 0030 carries a banner that points here and its text is not edited.
+> 2. Dormant release is on by default at 900 seconds (the value of 0030's idle deactivation); `0` turns it off. Server-level, in the `Observers` configuration section.
+> 3. A lost wake-up may delay delivery to a dormant observer by at most 15 minutes: the safety-net wake defaults to 900 seconds, jittered, server-level.
+> 4. The durable subscription is an optional field on the observer state document (DP1 option A).
+> 5. Scope of the first delivery: client reactors, client reducers and projections (Stages 1 to 3 together, each switchable by its setting). Webhooks, kernel reactors and event store subscriptions stay resident (Stage 4 not accepted yet). The multiplexed client stream (Stage 5) is not part of this delivery; no client SDK or wire-contract change is wanted.
+> 6. A new, separate question, the automatic removal of observers no client has subscribed for a period, is decided in [decision 0035](./0035-remove-unseen-client-observers.md), so that either can be superseded alone.
+>
+> **Implementation status (2026-11-19).** The pull request that records this acceptance delivers decision 0035 only. The dormant release, wake, durable subscription and keeper change described here are *not* implemented in it, and the record's stage stays `none`. Nothing in this record is claimed as done.
 
 ## Context
 
