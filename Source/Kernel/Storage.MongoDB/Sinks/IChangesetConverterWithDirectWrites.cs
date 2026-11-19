@@ -11,6 +11,14 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <summary>Supplies the owning sink's direct-write boundary without changing the public converter contract.</summary>
 internal interface IChangesetConverterWithDirectWrites
 {
+    /// <summary>
+    /// Yields each direct update before executing the joins and removals that follow it.
+    /// </summary>
+    /// <param name="changeset">The ordered changes to convert.</param>
+    /// <param name="context">The destination and shared write seams.</param>
+    /// <returns>The consecutive direct updates, interleaved with awaited multi-document writes.</returns>
+    IAsyncEnumerable<UpdateDefinitionAndArrayFilters> ToUpdatesInOrder(IChangeset<AppendedEvent, ExpandoObject> changeset, ChangesetWriteContext context);
+
     /// <summary>Converts a changeset, routing any direct multi-document mutations through the supplied boundary.</summary>
     /// <param name="key">The changeset key.</param>
     /// <param name="changeset">The changes to convert.</param>
