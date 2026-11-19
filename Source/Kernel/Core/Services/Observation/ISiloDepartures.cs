@@ -6,6 +6,10 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <summary>
 /// Tells when a silo starts leaving or leaves the cluster, taking the subscriptions of the observers it hosted with it.
 /// </summary>
+/// <remarks>
+/// It also takes the appended-events queues it hosted, and with them the live subscriptions of observers on the silos
+/// that remain, which is why observers re-verify their own subscription on each departure.
+/// </remarks>
 public interface ISiloDepartures
 {
     /// <summary>
