@@ -487,6 +487,18 @@ public class AppendResponse
     public bool HasErrors { get; set; }
 
     /// <summary>
+    /// Gets or sets the IsRetryable.
+    /// </summary>
+    [ProtoMember(13)]
+    public bool IsRetryable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RetryAfter.
+    /// </summary>
+    [ProtoMember(14)]
+    public global::System.TimeSpan? RetryAfter { get; set; }
+
+    /// <summary>
     /// Gets or sets the ConcurrencyCheckPerformed.
     /// </summary>
     [ProtoMember(7)]
@@ -643,6 +655,18 @@ public class AppendManyResponse
     /// </summary>
     [ProtoMember(6)]
     public bool HasErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IsRetryable.
+    /// </summary>
+    [ProtoMember(13)]
+    public bool IsRetryable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RetryAfter.
+    /// </summary>
+    [ProtoMember(14)]
+    public global::System.TimeSpan? RetryAfter { get; set; }
 
     /// <summary>
     /// Gets or sets the ConcurrencyCheckPerformed.
@@ -911,6 +935,18 @@ public class AppendManyOnceResponse
     /// </summary>
     [ProtoMember(7)]
     public bool HasErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IsRetryable.
+    /// </summary>
+    [ProtoMember(13)]
+    public bool IsRetryable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RetryAfter.
+    /// </summary>
+    [ProtoMember(14)]
+    public global::System.TimeSpan? RetryAfter { get; set; }
 
     /// <summary>
     /// Gets or sets the ConcurrencyCheckPerformed.
@@ -1245,6 +1281,18 @@ public class AppendOnceResponse
     /// </summary>
     [ProtoMember(7)]
     public bool HasErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IsRetryable.
+    /// </summary>
+    [ProtoMember(13)]
+    public bool IsRetryable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RetryAfter.
+    /// </summary>
+    [ProtoMember(14)]
+    public global::System.TimeSpan? RetryAfter { get; set; }
 
     /// <summary>
     /// Gets or sets the ConcurrencyCheckPerformed.

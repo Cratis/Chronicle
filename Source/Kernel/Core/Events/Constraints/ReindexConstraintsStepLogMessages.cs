@@ -3,12 +3,39 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
 internal static partial class ReindexConstraintsStepLogMessages
 {
+    /// <summary>
+    /// Inform that a constraint index rebuild is starting.
+    /// </summary>
+    /// <param name="logger">The job-step logger.</param>
+    /// <param name="eventStore">The event store the rebuild runs in.</param>
+    /// <param name="namespace">The namespace the rebuild runs in.</param>
+    /// <param name="eventSequenceId">The event sequence whose constraint indexes are rebuilt.</param>
+    /// <param name="constraintNames">The constraints being rebuilt, comma separated.</param>
+    /// <param name="runId">The rebuild run.</param>
+    [LoggerMessage(LogLevel.Information, "Constraint index rebuild {RunId} starting for constraints [{ConstraintNames}] on event sequence {EventSequenceId} in event store {EventStore}, namespace {Namespace}. Governed appends are refused until it completes.")]
+    internal static partial void ConstraintIndexRebuildStarted(this ILogger<ReindexConstraintsStep> logger, string eventStore, string @namespace, EventSequenceId eventSequenceId, string constraintNames, Guid runId);
+
+    /// <summary>
+    /// Inform that a constraint index rebuild finished, whatever its outcome.
+    /// </summary>
+    /// <param name="logger">The job-step logger.</param>
+    /// <param name="eventStore">The event store the rebuild ran in.</param>
+    /// <param name="namespace">The namespace the rebuild ran in.</param>
+    /// <param name="eventSequenceId">The event sequence whose constraint indexes were rebuilt.</param>
+    /// <param name="constraintNames">The constraints rebuilt, comma separated.</param>
+    /// <param name="runId">The rebuild run.</param>
+    /// <param name="succeeded">Whether the rebuild ran to completion.</param>
+    /// <param name="duration">How long the rebuild took.</param>
+    [LoggerMessage(LogLevel.Information, "Constraint index rebuild {RunId} finished for constraints [{ConstraintNames}] on event sequence {EventSequenceId} in event store {EventStore}, namespace {Namespace}. Completed: {Succeeded}, duration {Duration}.")]
+    internal static partial void ConstraintIndexRebuildFinished(this ILogger<ReindexConstraintsStep> logger, string eventStore, string @namespace, EventSequenceId eventSequenceId, string constraintNames, Guid runId, bool succeeded, TimeSpan duration);
+
     /// <summary>
     /// Warn that the terminal handoff could not be delivered after its bounded retries.
     /// </summary>

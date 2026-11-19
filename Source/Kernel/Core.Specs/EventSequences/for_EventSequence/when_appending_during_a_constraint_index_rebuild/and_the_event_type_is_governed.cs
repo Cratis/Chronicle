@@ -25,6 +25,8 @@ public class and_the_event_type_is_governed : given.a_rebuilding_constraint_inde
         ConcurrencyScope.None);
 
     [Fact] void should_refuse_with_the_retryable_index_error() => _result.Errors.ShouldContainOnly(AppendError.ConstraintIndexUnavailable);
+    [Fact] void should_report_retryability() => _result.IsRetryable.ShouldBeTrue();
+    [Fact] void should_suggest_a_retry_delay() => _result.RetryAfter.ShouldEqual(TimeSpan.FromSeconds(1));
     [Fact] void should_not_report_a_business_constraint_violation() => _result.HasConstraintViolations.ShouldBeFalse();
     [Fact] void should_not_store_the_event() => _log.Events.Count.ShouldEqual(2);
     [Fact] void should_not_change_the_index() => _claimWrites.ShouldEqual(0);
