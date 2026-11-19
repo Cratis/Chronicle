@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_verifying_live_subscrip
 
 public class and_a_silo_leaves_the_cluster : given.an_observing_observer
 {
-    readonly TaskCompletionSource _departure = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _departure = new();
     bool _scheduledBeforeDeparture;
 
     public and_a_silo_leaves_the_cluster()
@@ -20,14 +20,10 @@ public class and_a_silo_leaves_the_cluster : given.an_observing_observer
 
     void Establish() => _scheduledBeforeDeparture = _observer.HasDepartureChecksScheduled;
 
-    async Task Because()
+    void Because()
     {
+        // The departure completes without asynchronous continuations, so the window is open by the time SetResult returns.
         _departure.SetResult();
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (!_observer.HasDepartureChecksScheduled && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(TimeSpan.FromMilliseconds(10), TimeProvider.System);
-        }
     }
 
     [Fact] void should_not_check_before_a_silo_leaves() => _scheduledBeforeDeparture.ShouldBeFalse();
