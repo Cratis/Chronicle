@@ -14,7 +14,6 @@ public class with_ed25519_signing : given.a_subscriber_with_signing
     {
         await _subscriber.OnNext("partition", _events, new(null));
         await _subscriber.OnNext("partition", _events, new(null) { ReplayEpoch = _epoch });
-        await _subscriber.OnNext("partition", [], new(null));
     }
 
     [Fact] void should_supply_a_signing_identity() => _identities.Take(2).All(identity => identity is not null).ShouldBeTrue();
@@ -27,6 +26,5 @@ public class with_ed25519_signing : given.a_subscriber_with_signing
     [Fact] void should_leave_live_delivery_without_a_replay_epoch() => _identities[0]!.ReplayEpoch.ShouldBeNull();
     [Fact] void should_forward_the_replay_epoch() => _identities[1]!.ReplayEpoch.ShouldEqual(_epoch);
     [Fact] void should_give_replays_a_different_id() => (WebhookMessageIds.For(_identities[0]!) != WebhookMessageIds.For(_identities[1]!)).ShouldBeTrue();
-    [Fact] void should_leave_empty_deliveries_unsigned() => _identities[2].ShouldBeNull();
-    [Fact] async Task should_read_the_committed_definition_once_per_delivery() => await _definitions.Received(3).Get("webhook");
+    [Fact] async Task should_read_the_committed_definition_once_per_delivery() => await _definitions.Received(2).Get("webhook");
 }

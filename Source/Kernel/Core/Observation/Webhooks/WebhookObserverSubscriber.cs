@@ -67,6 +67,13 @@ public class WebhookObserverSubscriber(
             var definition = await storage.GetEventStore(_key.EventStore).Webhooks.Get(_key.ObserverId);
             if (definition.Signing is not (WebhookSigningMode.None or WebhookSigningMode.Ed25519)) throw new WebhookSigningUnavailable();
             batch = (await ReleaseMismatches(events, definition)).ToArray();
+
+            // A signed webhook is never delivered unsigned: with nothing to sign there is nothing to send.
+            if (definition.Signing == WebhookSigningMode.Ed25519 && batch.Length == 0)
+            {
+                return ObserverSubscriberResult.Ok(EventSequenceNumber.Unavailable);
+            }
+
             signingIdentity = CreateSigningIdentity(definition.Signing, partition, batch, context);
         }
         catch (Exception error)
@@ -119,7 +126,7 @@ public class WebhookObserverSubscriber(
     }
 
     WebhookMessageIdentity? CreateSigningIdentity(WebhookSigningMode signing, Key partition, AppendedEvent[] batch, ObserverSubscriberContext context) =>
-        signing == WebhookSigningMode.Ed25519 && batch.Length > 0
+        signing == WebhookSigningMode.Ed25519
             ? WebhookMessageIdentity.ForEvents(_key, partition, batch, context.ReplayEpoch)
             : null;
 
