@@ -513,7 +513,7 @@ public partial class Sink(
             await UnsetNullParents(write, options);
         }
 
-        return await WriteUpdate(write, changeset, options);
+        return (await WriteUpdate(write, changeset, options)).Failures;
     }
 
     async Task<BulkBatch?> FlushBeforeJoin(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
@@ -725,14 +725,14 @@ public partial class Sink(
         return await AddToBulk(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
     }
 
-    async Task<IEnumerable<FailedPartition>> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+    async Task<(IEnumerable<FailedPartition> Failures, UpdateResult? Result)> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
         if (await TryBufferUpdate(write, changeset, options) is { } failures)
         {
-            return failures;
+            return (failures, null);
         }
 
-        await writes.UpdateOne(
+        var result = await writes.UpdateOne(
             Collection,
             write.Filter,
             write.Converted.UpdateDefinition,
@@ -743,7 +743,7 @@ public partial class Sink(
             });
         CacheImmediateWrite(write, changeset, options);
 
-        return [];
+        return ([], result);
     }
 
     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)

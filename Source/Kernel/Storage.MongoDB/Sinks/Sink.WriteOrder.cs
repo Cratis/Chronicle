@@ -15,6 +15,9 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// </summary>
 public partial class Sink
 {
+    static bool CanContinueOrderedWrite(UpdateResult? result, bool guarded) =>
+        !guarded || result?.IsAcknowledged != true || result.MatchedCount > 0 || result.UpsertedId is not null;
+
     async Task<IEnumerable<FailedPartition>> WriteInOrder(
         IChangeset<AppendedEvent, ExpandoObject> changeset,
         IChangesetConverterWithDirectWrites orderedConverter,
@@ -24,6 +27,7 @@ public partial class Sink
         var options = destination.Options;
         var context = new ChangesetWriteContext(destination.Key, destination.EventSequenceNumber, DirectWrites, RemoveChildFromAll);
         var currentPlan = plan;
+        var failures = new List<FailedPartition>();
         var acceptDirectWrites = !plan.ShouldSuppressRootUpdateAfterRootLevelJoin;
         await foreach (var converted in orderedConverter.ToUpdatesInOrder(changeset, context).WithCancellation(CancellationToken.None))
         {
@@ -38,23 +42,17 @@ public partial class Sink
                 await UnsetNullParents(write, options);
             }
 
-            // Never buffer a run: the converter resumes with a join or removal only after this write completes.
-            var result = await WriteOrderedUpdate(write);
-            CacheImmediateWrite(write, changeset, options);
-            acceptDirectWrites = !IsGuardedWrite(options.Mode, plan, destination.EventSequenceNumber) ||
-                !result.IsAcknowledged || result.MatchedCount > 0 || result.UpsertedId is not null;
+            // The shared path flushes a joined changeset's direct run together with its null-parent repairs
+            // before the converter resumes, retaining the bulk cache and watermark bookkeeping.
+            var outcome = await WriteUpdate(write, changeset, options);
+            failures.AddRange(outcome.Failures);
+            acceptDirectWrites = CanContinueOrderedWrite(outcome.Result, IsGuardedWrite(options.Mode, plan, destination.EventSequenceNumber));
 
             // The first direct write advances the watermark. Later runs belong to that same accepted event.
             currentPlan = PlanWrite(destination.Key, changeset) with { IsUpsert = false };
         }
-        return [];
+        return failures;
     }
-
-    Task<UpdateResult> WriteOrderedUpdate(UpdateWrite write) => writes.UpdateOne(
-        Collection,
-        write.Filter,
-        write.Converted.UpdateDefinition,
-        new UpdateOptions { IsUpsert = write.IsUpsert, ArrayFilters = write.Converted.ArrayFilters });
 
     sealed record OrderedWrite(Key Key, EventSequenceNumber EventSequenceNumber, WritePlan Plan, SinkWriteOptions Options);
 }

@@ -24,7 +24,7 @@ public class a_sink_recording_writes : for_ChangesetConverter.given.a_changeset_
     };
     protected string _key = "root";
     protected Change[] _changes;
-    Sink _sink;
+    protected Sink _sink;
 
     void Establish()
     {
