@@ -6,23 +6,16 @@ using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.when_checkpointing_progress;
 
-public class and_a_pinned_silo_disappears : given.a_debouncing_job_step
+public class and_a_pinned_silo_disappears : given.a_window_mismatch
 {
-    Exception _error;
+    readonly Guid _pinned = Guid.NewGuid();
 
-    async Task Establish()
-    {
-        _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>()).Returns(
-            Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]> { [SiloAddress.Zero] = [Guid.NewGuid()] }),
-            Task.FromResult<IReadOnlyDictionary<SiloAddress, Guid[]>>(new Dictionary<SiloAddress, Guid[]>()));
-        await _jobStep.FlushCheckpoint(start: true);
-        await _jobStep.ReportNewSuccessfullyHandledEvent(1UL);
-        await _jobStep.ReportNewSuccessfullyHandledEvent(2UL);
-    }
-
-    async Task Because() => _error = await Catch.Exception(() => _jobStep.ReportNewSuccessfullyHandledEvent(3UL));
+    async Task Because() => await Mismatch(Windows((SiloAddress.Zero, [_pinned])), Windows());
 
     [Fact] void should_fail_the_report() => _error.ShouldBeOfExactType<BulkWindowLost>();
     [Fact] void should_leave_the_durable_checkpoint_unchanged() => _stateStorage.State.LastSuccessfullyHandledEventSequenceNumber.ShouldEqual(EventSequenceNumber.Unavailable);
     [Fact] void should_not_persist_the_unconfirmed_position() => _stateStorageStats.Writes.ShouldEqual(0);
+    [Fact] void should_name_the_silo_as_missing() => Message.ShouldContain($"missing silos {SiloAddress.Zero}");
+    [Fact] void should_name_the_removed_window() => Message.ShouldContain($"removed {_pinned}");
+    [Fact] void should_say_nothing_was_returned_for_the_silo() => Message.ShouldContain($"silo {SiloAddress.Zero}: expected {_pinned}, returned <none>");
 }

@@ -78,6 +78,7 @@ public partial class HandleEventsForObserver(
     EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
     IReadOnlyDictionary<SiloAddress, Guid[]>? _bulkWindowPin;
+    DateTimeOffset? _bulkWindowPinnedAt;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
     ObserverObservationMetrics? _metrics;
@@ -627,6 +628,7 @@ public partial class HandleEventsForObserver(
         if (start)
         {
             _bulkWindowPin = null;
+            _bulkWindowPinnedAt = null;
             _checkpointFailure = null;
             _lastHandled = State.LastSuccessfullyHandledEventSequenceNumber;
             _durableCheckpoints.Persisted();
@@ -679,10 +681,18 @@ public partial class HandleEventsForObserver(
             {
                 // Only the range-start flush sets the pin, including silos with no open window.
                 _bulkWindowPin = windows.ToDictionary(_ => _.Key, _ => _.Value.ToArray());
+                _bulkWindowPinnedAt = _clock.GetUtcNow();
             }
             else if (!MatchesBulkWindowPin(windows))
             {
-                throw new BulkWindowLost();
+                throw new BulkWindowLost(BulkWindowLostReason.Describe(
+                    capture.Observer,
+                    capture.IsReplay,
+                    capture.Handled,
+                    State.LastSuccessfullyHandledEventSequenceNumber,
+                    _bulkWindowPin,
+                    _bulkWindowPinnedAt is { } pinnedAt ? _clock.GetUtcNow() - pinnedAt : null,
+                    windows));
             }
             var handled = capture.Handled;
             if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
