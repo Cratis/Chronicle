@@ -36,6 +36,29 @@ dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benc
 
 Compare runs with different `--count` values, or `dotnet-gcdump report` output from two runs, to attribute the growth to types. Results from November 2026 are in [decision 0030](../../decisions/0030-release-idle-unsubscribed-observers.md).
 
+### Dormant phase
+
+`--observer-footprint --dormant` adds a dormant phase after the subscribed measurement, for [decision 0034](../../decisions/0034-release-dormant-subscribed-observers.md). It sets `observers.dormantAfter` to `--dormant-after`, waits for the kernel to release the dormant observers, and reports three things for the observers that stay subscribed throughout:
+
+1. **released**: the live heap, the retained heap per measured observer, the resident activations of every grain type (the twelve largest), and over a window with nothing appended the grain calls per observer per minute, the bytes allocated per observer per minute and the process CPU.
+2. **wake**: the time to wake one observer at a time (median, 95th percentile and maximum over `--wake-samples` observers), then the time to wake all of them in batches of 100. Waking is a call to the observer, which activates it; a kernel that has not released the observer answers from memory.
+3. **woken**: the same figures as released, once every observer is resident again.
+
+```sh
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --observer-footprint --dormant --count 2000 --dormant-after 5 --window 30
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--dormant` | off | Runs the dormant phase after the subscribed measurement. |
+| `--dormant-after` | 0 | `observers.dormantAfter` in seconds. `0` keeps every subscribed observer resident, which is what every kernel did before the release existed. |
+| `--dormant-settle` | twice `--dormant-after` plus 10 s | Seconds to wait for the release before the released measurement. |
+| `--window` | 30 | Seconds of each idle window, with nothing appended. |
+| `--wake-samples` | 100 | Observers woken one at a time for the latency percentiles. |
+| `--watchdog` | 1 | `observers.watchdogInterval` in seconds. The default of the harness is much shorter than the kernel's 60 s, which multiplies every per-minute figure of the window; use `--watchdog 60 --window 125` for the cadence of a real kernel. |
+
+Without a release, released equals subscribed and the wake is a call to a resident grain: that is the baseline. The harness never appends events, so it measures the cost of being dormant and of an activation, not event-triggered wake-up through the appended events queue; that path is measured by the specifications and, in a real kernel, by the wake metrics of decision 0034.
+
 ### Lazy observer metric instruments
 
 An observer activation used to create all 17 of its metric instruments up front, each with its own copy of the scope's tags. They are now created the first time the observer records them, and the instruments of a scope share one copy of its tags. The command above, run twice on each build on .NET 11 under the default legacy metric names, measured:
