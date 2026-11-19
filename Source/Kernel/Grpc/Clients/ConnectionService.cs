@@ -3,6 +3,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Compatibility;
 using Cratis.Chronicle.Configuration;
@@ -101,6 +102,7 @@ internal sealed class ConnectionService(
     /// <inheritdoc/>
     public async Task ConnectionKeepAlive(ConnectionKeepAlive keepAlive, CallContext context = default)
     {
+        LogConnectionStore("KeepAliveReceived", keepAlive.ConnectionId);
         var caller = ConnectionCallers.From(context, options.Value);
         var verification = ownership.Verify(grainFactory, keepAlive.ConnectionId, caller.Owner, options.Value.Clustering.ResponseTimeout, timeProvider: RegistrationTimeProvider, cancellationToken: context.CancellationToken);
 #pragma warning disable MA0042 // Result is read only after successful synchronous completion; the hot path must not block or allocate.
@@ -122,22 +124,31 @@ internal sealed class ConnectionService(
         {
             var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
             var registryKnowsClient = await connectedClients.OnClientPing(keepAlive.ConnectionId);
+            logger.DiagnosticRegistryPing(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse);
+            LogConnectionStore("RegistryPingCompleted", keepAlive.ConnectionId);
             if (!registryKnowsClient && !openConnections.IsOpen(keepAlive.ConnectionId))
             {
                 // The connection was opened on another silo, and the load balancer sent this keep-alive here. Its own
                 // silo has to see it, or the client is dropped as stale while it is alive (#5665).
+                LogConnectionStore("ForwardingPing", keepAlive.ConnectionId);
                 await PingOwningSilo(keepAlive.ConnectionId);
                 return;
             }
 
             if (openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse, out var request))
             {
+                logger.DiagnosticLapseDecision("Restore", keepAlive.ConnectionId, openConnections.HasLapsed(keepAlive.ConnectionId));
                 await Restore(connectedClients, request);
+            }
+            else
+            {
+                logger.DiagnosticLapseDecision("NoRestore", keepAlive.ConnectionId, openConnections.HasLapsed(keepAlive.ConnectionId));
             }
         }
         finally
         {
             openConnections.Handled(keepAlive.ConnectionId, DateTimeOffset.UtcNow);
+            LogConnectionStore("KeepAliveHandled", keepAlive.ConnectionId);
         }
     }
 
@@ -450,6 +461,7 @@ internal sealed class ConnectionService(
             }
 
             openConnections.Opened(request, DateTimeOffset.UtcNow);
+            LogConnectionStore("Opened", request.ConnectionId);
             var keepRegistered = Task.CompletedTask;
             Task<ReservationOutcome>? renewal = null;
             using var renewals = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -481,6 +493,7 @@ internal sealed class ConnectionService(
                     }
                     else if (openConnections.HasLapsed(request.ConnectionId))
                     {
+                        logger.DiagnosticLapseDecision("CloseLapsed", request.ConnectionId, true);
                         break;
                     }
 
@@ -535,6 +548,7 @@ internal sealed class ConnectionService(
             }
 
             openConnections.Closed(request.ConnectionId);
+            LogConnectionStore("Closed", request.ConnectionId);
 
             // A registry check given up on above may still be putting the client back. Let it settle first, so the
             // disconnect is the registry's last word for this connection rather than being undone by a late restore.
@@ -660,6 +674,13 @@ internal sealed class ConnectionService(
             logger.FailedToKeepClientRegistered(request.ConnectionId, ex);
         }
     }
+
+    void LogConnectionStore(string phase, string connectionId) => logger.DiagnosticConnectionStore(
+        phase,
+        connectionId,
+        RuntimeHelpers.GetHashCode(openConnections),
+        localSiloDetails.SiloAddress.ToString(),
+        openConnections.IsOpen(connectionId));
 
     async Task Restore(IConnectedClients connectedClients, ConnectRequest request)
     {

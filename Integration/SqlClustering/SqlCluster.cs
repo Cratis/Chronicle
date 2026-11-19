@@ -120,6 +120,7 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         .WithEnvironment("Logging__LogLevel__Cratis.Chronicle.Jobs", "Debug")
         .WithEnvironment("Logging__LogLevel__Cratis.Choreography.Jobs", "Debug")
         .WithEnvironment("Logging__LogLevel__Cratis.Chronicle.Services.Observation", "Debug")
+        .WithEnvironment("Logging__LogLevel__Cratis.Chronicle.Services.Clients", "Debug")
         .WithEnvironment("Logging__LogLevel__Orleans.Runtime.Placement", "Debug")
         .WithEnvironment("Logging__LogLevel__Orleans.Runtime.GrainDirectory", "Debug")
         .WithEnvironment("Logging__LogLevel__Orleans.Runtime.Catalog", "Debug")
