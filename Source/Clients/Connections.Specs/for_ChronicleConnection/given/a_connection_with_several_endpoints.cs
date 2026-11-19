@@ -36,6 +36,7 @@ public class a_connection_with_several_endpoints : Specification
     protected Dictionary<ChronicleServerAddress, int> _connectsPerServer;
     protected Dictionary<ChronicleServerAddress, Func<Task<CompatibilityResponse>>> _compatibility;
     protected int _disconnectedCalls;
+    protected int _keepAlivesAnswered;
     readonly Channel<TaskCompletionSource> _watchdogDelays = Channel.CreateUnbounded<TaskCompletionSource>();
     readonly object _changeGate = new();
     TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -158,6 +159,12 @@ public class a_connection_with_several_endpoints : Specification
                     .Returns(_ => _compatibility.TryGetValue(address, out var check)
                         ? check()
                         : Task.FromResult(new CompatibilityResponse { IsCompatible = true }));
+                service.ConnectionKeepAlive(Arg.Any<ConnectionKeepAlive>())
+                    .Returns(_ =>
+                    {
+                        Interlocked.Increment(ref _keepAlivesAnswered);
+                        return Task.CompletedTask;
+                    });
                 service.Connect(Arg.Any<ConnectRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
                     .Returns(_ =>
                     {
