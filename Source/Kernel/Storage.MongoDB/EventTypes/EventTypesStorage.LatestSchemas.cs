@@ -17,11 +17,17 @@ public partial class EventTypesStorage
     /// Keeps the latest parsed <see cref="EventTypeSchema"/> per event type together with what it was parsed from.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Every caller that asks for the latest schemas of all event types keeps what it gets: a compiled projection holds
     /// them for as long as it is cached. Parsing a fresh set per call therefore left one full copy of every schema in
     /// the event store behind for each of them. The documents are still read on every call, and a schema is only
     /// reused while the stored generation, schema and metadata equal what it was parsed from, so a change made by
     /// another silo is picked up on the next read. Growth is bounded by the number of registered event types.
+    /// </para>
+    /// <para>
+    /// The returned schemas are shared between callers and must be treated as read-only: a caller that needs to change
+    /// one must work on its own copy. This matches how the per-generation cache in this storage already shares instances.
+    /// </para>
     /// </remarks>
     readonly ConcurrentDictionary<EventTypeId, LatestSchema> _latestSchemasByType = new();
 
