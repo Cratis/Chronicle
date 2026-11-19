@@ -29,6 +29,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Providers;
+using ISiloDepartures = Cratis.Chronicle.Services.Observation.ISiloDepartures;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -50,6 +51,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 /// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
+/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when a silo leaves the cluster, after which the observer re-verifies its live subscription.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -70,7 +72,8 @@ public partial class Observer(
     IOptionsMonitor<ChronicleOptions> optionsMonitor,
     IEventGenerationRelease? eventGenerationRelease = null,
     TimeProvider? timeProvider = null,
-    IObserverGauges? observerGauges = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    IObserverGauges? observerGauges = null,
+    ISiloDepartures? siloDepartures = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -233,6 +236,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
+        WatchSiloDepartures();
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();

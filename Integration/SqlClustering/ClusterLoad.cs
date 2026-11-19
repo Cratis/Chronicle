@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
@@ -135,29 +136,73 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     /// </summary>
     /// <param name="timeout">The complete failover and delivery budget.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="TimeoutException">The append or its delivery to both observers missed the deadline; the message names which observer missed which event.</exception>
     public async Task WaitForReconnectProgress(TimeSpan timeout)
     {
         using var deadline = new CancellationTokenSource(timeout);
         using var poll = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
-        while (true)
+        var started = Stopwatch.StartNew();
+        (Guid Id, EventSequenceNumber Sequence)? acknowledged = null;
+        try
         {
-            var id = Guid.NewGuid();
-            var result = await TryAppend(id, deadline.Token);
-            if (result is null)
+            while (true)
             {
-                await poll.WaitForNextTickAsync(deadline.Token);
-                continue;
-            }
+                var id = Guid.NewGuid();
+                var result = await TryAppend(id, deadline.Token);
+                if (result is null)
+                {
+                    await poll.WaitForNextTickAsync(deadline.Token);
+                    continue;
+                }
 
-            var acknowledged = (id, result.SequenceNumber);
-            _acknowledged.Enqueue(acknowledged);
-            while (!_observed.Contains(acknowledged) || !_reconnectReducer.HasHandled(id, result.SequenceNumber))
-            {
-                await poll.WaitForNextTickAsync(deadline.Token);
-            }
+                acknowledged = (id, result.SequenceNumber);
+                _acknowledged.Enqueue(acknowledged.Value);
+                while (!_observed.Contains(acknowledged.Value) || !_reconnectReducer.HasHandled(id, result.SequenceNumber))
+                {
+                    await poll.WaitForNextTickAsync(deadline.Token);
+                }
 
-            return;
+                return;
+            }
         }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+        {
+            throw new TimeoutException(DescribeMissedReconnectProgress(timeout, started.Elapsed, acknowledged));
+        }
+    }
+
+    /// <summary>
+    /// Describes which observer did not receive which event when reconnect progress missed its deadline, from what the
+    /// load already holds, so the failure says where delivery stopped without waiting any longer.
+    /// </summary>
+    /// <param name="timeout">The deadline that was missed.</param>
+    /// <param name="elapsed">How long the wait took.</param>
+    /// <param name="acknowledged">The append that was acknowledged, or null when no append was acknowledged in time.</param>
+    /// <returns>The failure message.</returns>
+    string DescribeMissedReconnectProgress(TimeSpan timeout, TimeSpan elapsed, (Guid Id, EventSequenceNumber Sequence)? acknowledged)
+    {
+        var observed = _observed.ToArray();
+        var reactorHighest = observed.Length == 0 ? "none" : observed.Max(@event => @event.Sequence.Value).ToString(CultureInfo.InvariantCulture);
+        var reducerHighest = _reconnectReducer.HighestHandled()?.Value.ToString(CultureInfo.InvariantCulture) ?? "none";
+        var progress = $"reactor 'cluster-integrity' highest observed sequence {reactorHighest}, reducer '{nameof(ClusterReconnectReducer)}' highest handled sequence {reducerHighest}";
+        if (acknowledged is not { } append)
+        {
+            return $"No append was acknowledged within {timeout.TotalSeconds:0.#} s (elapsed {elapsed.TotalSeconds:0.0} s); {progress}.";
+        }
+
+        var missing = new List<string>();
+        if (!observed.Contains(append))
+        {
+            missing.Add("reactor 'cluster-integrity'");
+        }
+
+        if (!_reconnectReducer.HasHandled(append.Id, append.Sequence))
+        {
+            missing.Add($"reducer '{nameof(ClusterReconnectReducer)}'");
+        }
+
+        var observers = missing.Count == 0 ? "both observers until the deadline" : string.Join(" and ", missing);
+        return $"Event {append.Id} at sequence {append.Sequence.Value} was acknowledged but not delivered to {observers} within {timeout.TotalSeconds:0.#} s (elapsed {elapsed.TotalSeconds:0.0} s); {progress}.";
     }
 
     async Task<AppendResult?> TryAppend(Guid id, CancellationToken cancellationToken)
