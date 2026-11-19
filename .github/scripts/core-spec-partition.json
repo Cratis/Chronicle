@@ -358,6 +358,10 @@
             "weight": 0.0008432324252328064
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_SerializedStateReads.",
+            "weight": 0.00032892556436176916
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_StalledObserverJobs.",
             "weight": 0.0006104732185188725
         },
@@ -419,7 +423,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.",
-            "weight": 0.1281368968160366
+            "weight": 0.12780797125167484
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ScreenplayConformance.",

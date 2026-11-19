@@ -106,7 +106,7 @@ public partial class Observer
         if (!await IsObservingWithNoTransitionInProgress()) return false;
         if (!await _appendedEventsQueues.IsSubscribed(_observerKey)) return false;
         if (!await StoredStateBelongsToThisLifecycle()) return false;
-        await observerDefinition.ReadStateAsync();
+        await _definitionReads.Read(observerDefinition.ReadStateAsync);
 
         if (!CanHandOverTo<TObserverSubscriber>(registration, filters) || !StoredDefinitionMatches(registration)) return false;
         if (!await IsObservingWithNoTransitionInProgress()) return false;

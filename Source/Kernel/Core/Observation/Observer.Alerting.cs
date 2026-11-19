@@ -80,6 +80,9 @@ public partial class Observer
         _shortCatchUpRetryTimer?.Dispose();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
+        _stateReads.Dispose();
+        _definitionReads.Dispose();
+        _failureReads.Dispose();
         GC.SuppressFinalize(this);
     }
 
