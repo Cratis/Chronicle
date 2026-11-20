@@ -67,11 +67,12 @@ public abstract class an_unseen_observer_kernel<TFixture>(TFixture fixture) : Sp
     protected UnseenObserverRemoval Sweeper => Services.GetServices<ILifecycleParticipant<ISiloLifecycle>>().OfType<UnseenObserverRemoval>().Single();
 
     /// <summary>
-    /// Gets the messages the removal logged at a level.
+    /// Gets the messages the removal logged at a level about the event store of the specification. The kernel is shared by every
+    /// specification of its collection, so what it logged for the others is not this one's.
     /// </summary>
     /// <param name="level">The <see cref="LogLevel"/>.</param>
     /// <returns>The messages.</returns>
-    public string[] LoggedAt(LogLevel level) => ChronicleFixture.Logs.At(level);
+    public string[] LoggedAt(LogLevel level) => [.. ChronicleFixture.Logs.At(level).Where(message => message.Contains(_storeName, StringComparison.Ordinal))];
 
     /// <inheritdoc/>
     protected override Action<KernelChronicleBuilder> GetStorageConfigurator(string mongoServer) => builder =>
