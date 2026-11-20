@@ -38,6 +38,7 @@ public static class system_store_command_policy
         "Cratis.Chronicle.Observation.Webhooks.AddWebhooks",
         "Cratis.Chronicle.Observation.Webhooks.RemoveWebhook",
         "Cratis.Chronicle.Observation.Webhooks.RemoveWebhooks",
+        "Cratis.Chronicle.Observation.Webhooks.RotateWebhookSigningKey",
         "Cratis.Chronicle.Occurrences.RecordEffectReceipt",
         "Cratis.Chronicle.Occurrences.RecordLifecycleOccurrence",
         "Cratis.Chronicle.Occurrences.RecordOccurrence",

@@ -50,7 +50,7 @@ internal sealed partial class TestingServices
             NullLogger<KernelReactorsService>.Instance,
             context.RegistrationGate,
             context.NamespaceCasing,
-            KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
+            KernelCore::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
 
     static KernelReducersService CreateReducers(TestingServiceContext context) =>
         new(
@@ -64,7 +64,7 @@ internal sealed partial class TestingServices
             NullLogger<KernelReducersService>.Instance,
             context.RegistrationGate,
             context.NamespaceCasing,
-            KernelGrpc::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
+            KernelCore::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
 
     static KernelProjectionsService CreateProjections(TestingServiceContext context) =>
         new(
@@ -82,6 +82,7 @@ internal sealed partial class TestingServices
     static KernelWebhooksService CreateWebhooks(TestingServiceContext context) =>
         new(
             context.CommandPipeline.Value,
+            context.GrainFactory,
             context.Storage,
             NullLogger<KernelWebhooksService>.Instance);
 

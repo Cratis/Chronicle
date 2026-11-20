@@ -583,6 +583,7 @@ json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition
   isActive: bool
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner
+  signing: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningMode
   target: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTarget
 concept Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId : string
 enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner : int
@@ -608,6 +609,10 @@ enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyStatus : in
   Active = 0
   Overlap = 1
   Retired = 2
+enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningMode : int
+  Ed25519 = 1
+  HmacSha256 = 2
+  None = 0
 json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTarget
   authorization: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookAuthorization
   headers: System.Collections.Generic.IReadOnlyDictionary<string,string>
