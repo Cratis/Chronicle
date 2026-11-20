@@ -298,6 +298,23 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertNotIn("ref", data)
         self.assertNotIn("path", data)
 
+    def test_detection_policy_comes_from_the_trusted_checkout(self):
+        detect = self.hot_core["jobs"]["detect"]
+        self.assertEqual({"contents": "read"}, detect["permissions"])
+        tools = next(step["with"] for step in detect["steps"] if step.get("name") == "Checkout gate tools")
+        self.assertEqual(".github", tools["sparse-checkout"])
+        commands = "\n".join(step.get("run", "") for step in detect["steps"])
+        policy_commands = [line for line in commands.splitlines()
+                           if "gate-tools/.github/scripts/detect-hot-core-changes.py " in line]
+        self.assertEqual(2, len(policy_commands))
+        self.assertTrue(all("--policy-root gate-tools" in line for line in policy_commands))
+
+    def test_build_tests_the_pull_requests_own_gate_scripts(self):
+        step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"]
+                    if step.get("name") == "Spec prerelease artifact handoff without caches")
+        self.assertIn("python3 .github/scripts/test-detect-hot-core-changes.py", step["run"])
+        self.assertIn("python3 .github/scripts/test-evaluate-hot-core-gate.py", step["run"])
+
     def test_gate_imports_ignore_the_data_directory_and_python_environment(self):
         script = Path(__file__).with_name("evaluate-hot-core-gate.py").resolve()
         with tempfile.TemporaryDirectory() as directory:
