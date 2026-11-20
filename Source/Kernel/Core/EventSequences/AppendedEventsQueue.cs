@@ -131,6 +131,16 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </summary>
     internal TimeProvider CatchupTimeProvider { get; set; } = TimeProvider.System;
 
+    /// <summary>
+    /// Gets whether no new delivery work is admitted: the queue is disposed or draining.
+    /// </summary>
+    bool RefusesNewWork => _isDisposed || _isDraining;
+
+    /// <summary>
+    /// Gets whether the kernel stop has begun, after which this silo queues no more live delivery.
+    /// </summary>
+    bool IsStopping => _stopBudget?.IsStopping == true;
+
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -177,13 +187,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </remarks>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        if (_isDisposed || _isDraining)
+        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
+        if (TrySpillWhileStopping(batch)) return Task.CompletedTask;
+
+        if (RefusesNewWork)
         {
             // Events are durable; a new owner catches up from the observers' persisted cursors.
             return Task.CompletedTask;
         }
-
-        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
 
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
@@ -242,7 +253,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents)
     {
-        if (_isDisposed || _isDraining) return Task.CompletedTask;
+        if (RefusesNewWork) return Task.CompletedTask;
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
         if (batch.Length > 0) SpillSubscribersMatchingToCatchup(batch, AppendedEventsQueueSpillReasons.CommittedOutsideLiveDelivery);
         return Task.CompletedTask;
@@ -1085,6 +1096,20 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
         Observe(() => _logger.SpillingFragmentedObserverToCatchup(subscription.ObserverKey, MaxPartitionRunsPerLiveDispatch));
         ReportSpill(subscription.ObserverKey, AppendedEventsQueueSpillReasons.FragmentedBacklog);
+        return true;
+    }
+
+    /// <summary>
+    /// Catches the matching observers up instead of delivering live once the kernel stop has begun. A batch that is not delivered
+    /// live must not let an observer on a surviving silo see a later live batch as the next one: live handling moves its cursor
+    /// past a gap.
+    /// </summary>
+    /// <param name="batch">The committed batch.</param>
+    /// <returns>True if the stop has begun and the batch was spilled; false if it is to be delivered as usual.</returns>
+    bool TrySpillWhileStopping(AppendedEvent[] batch)
+    {
+        if (!IsStopping || _isDisposed) return false;
+        if (batch.Length > 0) SpillSubscribersMatchingToCatchup(batch, AppendedEventsQueueSpillReasons.StopBegun);
         return true;
     }
 

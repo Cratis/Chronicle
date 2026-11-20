@@ -22,4 +22,7 @@ internal static class AppendedEventsQueueSpillReasons
 
     /// <summary>The events were committed without live delivery, as an import commits its chunks (decision 0023).</summary>
     internal const string CommittedOutsideLiveDelivery = "CommittedOutsideLiveDelivery";
+
+    /// <summary>The kernel stop had begun, so the batch was not delivered live.</summary>
+    internal const string StopBegun = "StopBegun";
 }

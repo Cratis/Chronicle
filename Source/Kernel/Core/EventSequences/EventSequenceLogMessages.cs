@@ -103,6 +103,9 @@ internal static partial class EventSequenceLogMessages
     [LoggerMessage(LogLevel.Warning, "Event type '{EventType}' has no declared visibility, as it was registered by a client that predates public event types. Allowing append to event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace} - upgrade the client to have visibility enforced")]
     internal static partial void EventTypeVisibilityNotSpecified(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType);
 
+    [LoggerMessage(LogLevel.Warning, "The kernel stop deadline passed while writing the state of event sequence {EventSequenceId}; the next activation rebuilds it from the event tail")]
+    internal static partial void StateWriteAbandonedAtStopDeadline(this ILogger<EventSequence> logger, EventSequenceId eventSequenceId);
+
     [LoggerMessage(LogLevel.Warning, "Refused appending event type '{EventType}' to event sequence {EventSequenceId} for event store '{EventStore}' on namespace {Namespace}: {Reason}")]
     internal static partial void EventTypeVisibilityRefused(this ILogger<EventSequence> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, EventType eventType, string reason);
 }

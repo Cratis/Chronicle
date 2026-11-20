@@ -69,6 +69,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 /// <param name="encryptionKeyStorage">The read-only key lookup used to compare keyed retries.</param>
 /// <param name="timeProvider">The clock for default occurrence times and effect receipts; defaults to the system clock.</param>
+/// <param name="stopBudget">The shared kernel stop deadline that bounds the state write at deactivation; none means the write is unbounded.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
 public partial class EventSequence(
@@ -90,7 +91,8 @@ public partial class EventSequence(
     IEventTypeSchemaCache schemaCache,
     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
     IEncryptionKeyStorage? encryptionKeyStorage = null,
-    TimeProvider? timeProvider = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
+    TimeProvider? timeProvider = null,
+    IShutdownDrainBudget? stopBudget = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     /// <summary>
     /// Caps the reports of refused names, so a caller cycling through distinct names cannot grow memory or the log.
@@ -218,7 +220,7 @@ public partial class EventSequence(
         _catchUpExcluded.Clear();
         if (_appendsSinceStateWrite > 0)
         {
-            await WriteStateAsync();
+            await WriteStateWithinStopBudget();
             _appendsSinceStateWrite = 0;
         }
 
@@ -1519,6 +1521,15 @@ public partial class EventSequence(
         catch (Exception exception)
         {
             logger.FailedReconcilingNamespaceSubscriptions(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
+        }
+    }
+
+    async Task WriteStateWithinStopBudget()
+    {
+        // The state is a warm-start optimisation only; it is rebuilt from the event tail on the next activation.
+        if (!await stopBudget.CompletesWithinStopBudget(WriteStateAsync()))
+        {
+            logger.StateWriteAbandonedAtStopDeadline(_eventSequenceId);
         }
     }
 }
