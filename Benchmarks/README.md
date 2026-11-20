@@ -409,8 +409,7 @@ safe builds, the core/full matrices, measurement commands and metric definitions
 `Chronicle.Benchmarks.Storage` compares the event-sequence storage providers (SQLite, PostgreSQL,
 SQL Server, MongoDB) directly at the storage level, with the Orleans grain layer bypassed. It covers
 single and batched appends, concurrent appends, catch-up reads, unique-constraint reads and the storage
-half of grain activation. Each run records the command count per operation (SQL BEGIN/COMMIT are not
-counted), a settings ledger (durability, versions, hardware, machine load) and BenchmarkDotNet JSON
+half of grain activation. Each run records the command count per operation (see the counting rule below), a settings ledger (durability, versions, hardware, machine load) and BenchmarkDotNet JSON
 under `output/<stamp>/<provider>/`.
 
 ```bash
@@ -422,6 +421,22 @@ Benchmarks/storage-run.sh --profile smoke --providers sqlite,pg,mongo --repetiti
   Never compare numbers taken under load; results are comparable only when the ledgers match.
 - Containers need Docker. MongoDB runs as a single-node replica set; other topologies are not implemented.
 - Specs: `Chronicle.Benchmarks.Storage.Specs`.
+- A run exits non-zero when any benchmark fails, produces no report, or any measured operation fails.
+
+### Counting rule
+
+Both families count what reaches the database driver, so the numbers are comparable:
+
+- **SQL** is counted at the ADO.NET level by a wrapping connection, command and transaction. Every command
+  counts, whether EF Core or a direct `DbCommand` issued it. Transaction `Commit` and `Rollback` count as one
+  command each; `BEGIN` is not counted. Savepoint operations count under `savepoint`.
+- **MongoDB** is counted from driver command events: every succeeded or failed command counts, including
+  `commitTransaction` and `abortTransaction`. Housekeeping (`hello`, `ping`, authentication, `endSessions`)
+  is ignored.
+- Only the measured iterations count. Jitting and warmup invocations are discarded, and unique-constraint
+  tables are warmed outside measurement.
+- Failed operations never count as operations or events; they are counted as errors and fail the run.
+- The ledger reports the effective connection pool size of each client, not a requested default.
 
 ## Results
 

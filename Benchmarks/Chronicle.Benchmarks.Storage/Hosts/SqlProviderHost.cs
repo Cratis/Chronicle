@@ -39,7 +39,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
         NullLogger<UniqueConstraintMigrator>.Instance);
     IContainer? _container;
     string _connectionString = string.Empty;
-    SqlCommandCounter _interceptor = null!;
+    CountingConnectionInterceptor _interceptor = null!;
 
     /// <inheritdoc/>
     public StorageProvider Provider => provider;
@@ -111,6 +111,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
         string version;
         string durabilityClass;
         string image;
+        string pool;
         var digest = HostFacts.Unknown;
         switch (provider)
         {
@@ -127,6 +128,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
                 }
 
                 image = "file-backed (Microsoft.Data.Sqlite)";
+                pool = $"Pooling={new SqliteConnectionStringBuilder(_connectionString).Pooling} (Microsoft.Data.Sqlite; pool size is not configurable)";
                 break;
 
             case StorageProvider.PostgreSql:
@@ -142,6 +144,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
                 }
 
                 image = PostgreSqlImage;
+                pool = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"MaxPoolSize={new NpgsqlConnectionStringBuilder(_connectionString).MaxPoolSize} (connection string in effect)");
                 digest = HostFacts.ImageDigest(image);
                 break;
 
@@ -156,11 +159,12 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
                 }
 
                 image = Integration.SqlServerContainerImage.Name;
+                pool = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"MaxPoolSize={new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(_connectionString).MaxPoolSize} (connection string in effect)");
                 digest = HostFacts.ImageDigest(image);
                 break;
         }
 
-        return HostFacts.Ledger(provider, options, loadAtStart, image, version, durability, durabilityClass, 100, digest);
+        return HostFacts.Ledger(provider, options, loadAtStart, new(new(image, digest, version), new(durability, durabilityClass), pool));
     }
 
     /// <inheritdoc/>

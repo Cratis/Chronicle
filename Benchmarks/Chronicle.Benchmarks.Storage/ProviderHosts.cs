@@ -47,7 +47,6 @@ internal static class ProviderHosts
     static async Task<IStorageProviderHost> StartAsync(StorageProvider provider)
     {
         IStorageProviderHost host = provider == StorageProvider.Mongo ? new MongoProviderHost() : new SqlProviderHost(provider);
-        await host.Start();
-        return host;
+        return await StartGuard.StartOrDispose(host, started => started.Start());
     }
 }

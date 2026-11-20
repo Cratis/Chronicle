@@ -54,6 +54,8 @@ try
                 .WithToolchain(InProcessNoEmitToolchain.Instance)
                 .WithStrategy(RunStrategy.Monitoring)
                 .WithLaunchCount(1)
+                .WithInvocationCount(1)
+                .WithUnrollFactor(1)
                 .WithWarmupCount(options.Profile.WarmupCount)
                 .WithIterationCount(options.Profile.IterationCount);
             var config = ManualConfig.CreateEmpty()
@@ -63,7 +65,14 @@ try
                 .AddColumnProvider(BenchmarkDotNet.Columns.DefaultColumnProviders.Instance)
                 .WithOptions(ConfigOptions.DisableOptimizationsValidator)
                 .WithArtifactsPath(Path.Combine(providerDirectory, "bdn"));
-            BenchmarkSwitcher.FromAssembly(typeof(StorageBenchmark).Assembly).Run(["--filter", options.Filter], config);
+            var summaries = BenchmarkSwitcher.FromAssembly(typeof(StorageBenchmark).Assembly).Run(["--filter", options.Filter], config);
+            Measurements.Commit(options.Profile.IterationCount);
+            var verdict = RunVerdict.Of(summaries, Measurements.TotalErrors());
+            if (!verdict.Succeeded)
+            {
+                await Console.Error.WriteLineAsync($"{StorageProviderNames.NameOf(provider)} run failed: {verdict.Reason}");
+                exitCode = 1;
+            }
         }
         catch (Exception error)
         {

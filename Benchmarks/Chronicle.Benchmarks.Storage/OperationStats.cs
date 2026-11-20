@@ -45,6 +45,16 @@ public sealed class OperationStats
         return ordered[Math.Clamp(rank - 1, 0, ordered.Length - 1)];
     }
 
+    /// <summary>Counts what one invocation did: successes as operations, events and latency, failures as errors.</summary>
+    /// <param name="record">The invocation record.</param>
+    public void Apply(InvocationRecord record)
+    {
+        if (record.Errors > 0) Interlocked.Add(ref _errors, record.Errors);
+        if (record.Operations == 0) return;
+        RecordBatch(record.Operations, record.Events, record.Commands);
+        foreach (var latency in record.Latencies) RecordLatency(latency);
+    }
+
     /// <summary>Records one finished operation.</summary>
     /// <param name="events">The events it carried or returned.</param>
     /// <param name="commands">The commands it caused.</param>

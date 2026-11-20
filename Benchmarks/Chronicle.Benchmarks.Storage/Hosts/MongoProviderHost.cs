@@ -111,16 +111,11 @@ internal sealed class MongoProviderHost : IStorageProviderHost
             ["defaultWriteConcern.j"] = journal?.ToString() ?? "server decides",
             ["writeConcernMajorityJournalDefault"] = majorityJournal.ToString()
         };
-        return HostFacts.Ledger(
-            StorageProvider.Mongo,
-            options,
-            loadAtStart,
-            Image,
-            build["version"].AsString,
-            durability,
-            DurabilityClassifier.ForMongo(concern, journal, majorityJournal),
-            100,
-            HostFacts.ImageDigest(Image));
+        var facts = new ServerFacts(
+            new(Image, HostFacts.ImageDigest(Image), build["version"].AsString),
+            new(durability, DurabilityClassifier.ForMongo(concern, journal, majorityJournal)),
+            string.Create(System.Globalization.CultureInfo.InvariantCulture, $"MaxConnectionPoolSize={_client.Settings.MaxConnectionPoolSize} (driver setting in effect)"));
+        return HostFacts.Ledger(StorageProvider.Mongo, options, loadAtStart, facts);
     }
 
     /// <inheritdoc/>

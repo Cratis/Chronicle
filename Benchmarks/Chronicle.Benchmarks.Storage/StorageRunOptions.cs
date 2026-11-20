@@ -9,6 +9,20 @@ public sealed class StorageRunOptions
     /// <summary>The flag that confirms a long run.</summary>
     public const string ConfirmFlag = "--yes-i-know-this-is-long";
 
+    static readonly Dictionary<string, Action<StorageRunOptions, string>> _handlers = new(StringComparer.Ordinal)
+    {
+        ["--profile"] = (options, value) => options.Profile = BenchmarkProfile.Parse(value),
+        ["--providers"] = (options, value) => options.Providers = StorageProviderNames.Parse(value),
+        ["--output"] = (options, value) => options.OutputDirectory = value,
+        ["--max-load"] = (options, value) => options.MaxLoad = ParseDouble("--max-load", value),
+        ["--payload-bytes"] = (options, value) => options._payloadBytes = ParseInt("--payload-bytes", value),
+        ["--mongo-topology"] = (options, value) => options.MongoTopology = value,
+        ["--filter"] = (options, value) => options.Filter = value,
+        ["--repetition"] = (options, value) => options.Repetition = ParseInt("--repetition", value),
+    };
+
+    int? _payloadBytes;
+
     /// <summary>Gets the current options. Benchmarks run in process, so they read the options from here.</summary>
     public static StorageRunOptions Current { get; set; } = new();
 
@@ -39,33 +53,25 @@ public sealed class StorageRunOptions
     /// <summary>Parses the command line.</summary>
     /// <param name="args">The arguments.</param>
     /// <returns>The options.</returns>
-    /// <exception cref="ArgumentException">An argument is unknown or lacks its value.</exception>
+    /// <exception cref="ArgumentException">An argument is unknown, lacks its value or has an invalid value.</exception>
     public static StorageRunOptions Parse(IReadOnlyList<string> args)
     {
         var options = new StorageRunOptions();
-        var payload = (int?)null;
         for (var index = 0; index < args.Count; index++)
         {
-            string Value() => index + 1 < args.Count ? args[++index] : throw new ArgumentException($"{args[index]} needs a value.");
-            switch (args[index])
+            var name = args[index];
+            if (name == ConfirmFlag)
             {
-                case "--profile": options.Profile = BenchmarkProfile.Parse(Value()); break;
-                case "--providers": options.Providers = StorageProviderNames.Parse(Value()); break;
-                case "--output": options.OutputDirectory = Value(); break;
-                case "--max-load": options.MaxLoad = double.Parse(Value(), System.Globalization.CultureInfo.InvariantCulture); break;
-                case "--payload-bytes": payload = int.Parse(Value(), System.Globalization.CultureInfo.InvariantCulture); break;
-                case "--mongo-topology": options.MongoTopology = Value(); break;
-                case "--filter": options.Filter = Value(); break;
-                case "--repetition": options.Repetition = int.Parse(Value(), System.Globalization.CultureInfo.InvariantCulture); break;
-                case ConfirmFlag: options.Confirmed = true; break;
-                default: throw new ArgumentException($"Unknown argument '{args[index]}'.");
+                options.Confirmed = true;
+                continue;
             }
+
+            if (!_handlers.TryGetValue(name, out var handler)) throw new ArgumentException($"Unknown argument '{name}'.");
+            if (index + 1 >= args.Count) throw new ArgumentException($"{name} needs a value.");
+            handler(options, args[++index]);
         }
 
-        if (options.Providers.Count == 0) throw new ArgumentException("At least one provider is needed.");
-        if (options.MongoTopology != "single") throw new ArgumentException("Only --mongo-topology single is implemented; rs3 is a follow-up.");
-        if (payload is not null) options.Profile = options.Profile.WithPayloadBytes(payload.Value);
-        return options;
+        return options.Validated();
     }
 
     /// <summary>Creates a copy of these options that runs one provider only.</summary>
@@ -76,5 +82,29 @@ public sealed class StorageRunOptions
         var copy = (StorageRunOptions)MemberwiseClone();
         copy.Providers = [provider];
         return copy;
+    }
+
+    static int ParseInt(string name, string value) =>
+        int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : throw new ArgumentException($"{name} needs an integer, got '{value}'.");
+
+    static double ParseDouble(string name, string value) =>
+        double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : throw new ArgumentException($"{name} needs a number, got '{value}'.");
+
+    StorageRunOptions Validated()
+    {
+        if (Providers.Count == 0) throw new ArgumentException("At least one provider is needed.");
+        if (MongoTopology != "single") throw new ArgumentException("Only --mongo-topology single is implemented; rs3 is a follow-up.");
+        if (Repetition < 1) throw new ArgumentException("--repetition must be at least 1.");
+        if (_payloadBytes is not null)
+        {
+            if (_payloadBytes.Value < 1) throw new ArgumentException("--payload-bytes must be at least 1.");
+            Profile = Profile.WithPayloadBytes(_payloadBytes.Value);
+        }
+
+        return this;
     }
 }

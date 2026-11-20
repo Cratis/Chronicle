@@ -77,42 +77,15 @@ internal static class HostFacts
     /// <param name="provider">The provider.</param>
     /// <param name="options">The run options.</param>
     /// <param name="loadAtStart">The machine load at the start.</param>
-    /// <param name="image">The image tag, or a description for a file-backed provider.</param>
-    /// <param name="serverVersion">The server version.</param>
-    /// <param name="durability">The durability settings read from the server.</param>
-    /// <param name="durabilityClass">The durability class.</param>
-    /// <param name="connectionPoolSize">The pool size in effect.</param>
-    /// <param name="digest">The image digest.</param>
+    /// <param name="facts">What the host read from its server.</param>
     /// <returns>The ledger.</returns>
-    public static SettingsLedger Ledger(
-        StorageProvider provider,
-        StorageRunOptions options,
-        LoadReading loadAtStart,
-        string image,
-        string serverVersion,
-        IReadOnlyDictionary<string, string> durability,
-        string durabilityClass,
-        int connectionPoolSize,
-        string digest) => new(
+    public static SettingsLedger Ledger(StorageProvider provider, StorageRunOptions options, LoadReading loadAtStart, ServerFacts facts) => new(
+        new(options.Profile.Name, Commit(), DateTimeOffset.UtcNow),
+        new(
             StorageProviderNames.NameOf(provider),
-            options.Profile.Name,
-            image,
-            digest,
-            serverVersion,
+            facts.Image,
             provider == StorageProvider.Mongo ? $"single-node replica set ({options.MongoTopology})" : "single node",
-            durability,
-            durabilityClass,
-            Commit(),
-            options.Profile.BatchSizes,
-            options.Profile.Concurrency,
-            options.Profile.PayloadBytes,
-            options.Profile.EventCounts,
-            connectionPoolSize,
-            0,
-            true,
-            Hardware(),
-            loadAtStart,
-            null,
-            MachineLoad.Threshold(Environment.ProcessorCount, options.MaxLoad),
-            DateTimeOffset.UtcNow);
+            facts.Durability),
+        new(options.Profile.Workload, options.Profile.PayloadBytes, new(facts.ConnectionPool, 0, true)),
+        new(Hardware(), loadAtStart, null, MachineLoad.Threshold(Environment.ProcessorCount, options.MaxLoad)));
 }

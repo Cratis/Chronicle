@@ -23,6 +23,7 @@
     <PackageReference Include="Cratis.Arc" />
     <PackageReference Include="Cratis.Arc.MongoDB" />
     <Using Include="NSubstitute" />
+    <InternalsVisibleTo Include="Chronicle.Benchmarks.Storage.Specs" />
     <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
     <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
     <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj" />

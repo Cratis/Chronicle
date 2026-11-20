@@ -28,17 +28,19 @@ public static class StorageProviderNames
         var providers = new List<StorageProvider>();
         foreach (var name in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var provider = name.ToLowerInvariant() switch
-            {
-                "mongo" or "mongodb" => StorageProvider.Mongo,
-                "postgres" or "postgresql" or "pg" => StorageProvider.PostgreSql,
-                "sqlserver" or "mssql" => StorageProvider.SqlServer,
-                "sqlite" => StorageProvider.Sqlite,
-                _ => throw new ArgumentException($"Unknown storage provider '{name}'. Use mongo, postgres, sqlserver or sqlite.", nameof(value))
-            };
+            var provider = ParseOne(name);
             if (!providers.Contains(provider)) providers.Add(provider);
         }
 
         return providers;
     }
+
+    static StorageProvider ParseOne(string name) => name.ToLowerInvariant() switch
+    {
+        "mongo" or "mongodb" => StorageProvider.Mongo,
+        "postgres" or "postgresql" or "pg" => StorageProvider.PostgreSql,
+        "sqlserver" or "mssql" => StorageProvider.SqlServer,
+        "sqlite" => StorageProvider.Sqlite,
+        _ => throw new ArgumentException($"Unknown storage provider '{name}'. Use mongo, postgres, sqlserver or sqlite.", nameof(name))
+    };
 }

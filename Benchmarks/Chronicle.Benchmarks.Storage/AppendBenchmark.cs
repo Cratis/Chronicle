@@ -84,7 +84,6 @@ public class AppendBenchmark : StorageBenchmark
 
     async Task Concurrent(string key, Func<int, IEventSequenceStorage> storageFor)
     {
-        var stats = Measurements.For(key);
         var before = Host.Counter.Snapshot();
         var writers = Enumerable.Range(0, WriterCount).Select(async index =>
         {
@@ -92,14 +91,17 @@ public class AppendBenchmark : StorageBenchmark
             try
             {
                 await Append(storageFor(index), (ulong)Interlocked.Increment(ref _next) - 1);
-                stats.RecordLatency(Stopwatch.GetElapsedTime(started));
+                return (Elapsed: (TimeSpan?)Stopwatch.GetElapsedTime(started), Error: (Exception?)null);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                stats.RecordError();
+                return (Elapsed: null, Error: ex);
             }
         }).ToArray();
-        await Task.WhenAll(writers);
-        stats.RecordBatch(WriterCount, WriterCount, Host.Counter.Snapshot().Since(before));
+        var outcomes = await Task.WhenAll(writers);
+        var latencies = outcomes.Where(_ => _.Elapsed is not null).Select(_ => _.Elapsed!.Value).ToArray();
+        var failures = outcomes.Where(_ => _.Error is not null).Select(_ => _.Error!).ToArray();
+        Measurements.Hold(key, new InvocationRecord(latencies.Length, latencies.Length, Host.Counter.Snapshot().Since(before), latencies, failures.Length));
+        if (failures.Length > 0) throw new AggregateException(failures);
     }
 }

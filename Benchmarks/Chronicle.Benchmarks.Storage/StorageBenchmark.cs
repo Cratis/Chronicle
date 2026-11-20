@@ -27,6 +27,10 @@ public abstract class StorageBenchmark
     /// <summary>Gets the started host.</summary>
     internal IStorageProviderHost Host { get; private set; } = null!;
 
+    /// <summary>Turns the held invocations of this case into counts; only the measured iterations survive.</summary>
+    [GlobalCleanup]
+    public void CommitMeasurements() => Measurements.Commit(Profile.IterationCount);
+
     /// <summary>Reads every event a cursor yields.</summary>
     /// <param name="cursor">The cursor.</param>
     /// <returns>The number of events read.</returns>
@@ -77,16 +81,16 @@ public abstract class StorageBenchmark
     {
         var before = Host.Counter.Snapshot();
         var started = Stopwatch.GetTimestamp();
-        var stats = Measurements.For(key);
         try
         {
             var result = await operation();
-            stats.Record(events(result), Host.Counter.Snapshot().Since(before), Stopwatch.GetElapsedTime(started));
+            var elapsed = Stopwatch.GetElapsedTime(started);
+            Measurements.Hold(key, new InvocationRecord(1, events(result), Host.Counter.Snapshot().Since(before), [elapsed], 0));
             return result;
         }
         catch (Exception)
         {
-            stats.RecordError();
+            Measurements.Hold(key, InvocationRecord.Failure);
             throw;
         }
     }
