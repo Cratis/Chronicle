@@ -58,8 +58,18 @@ export class SpecHangWatchdog {
                 this.tests.delete(message.TestUniqueID);
                 break;
             default:
-                if (!quietMessages.has(message?.$type)) this.report(line);
+                if (!quietMessages.has(message?.$type)) this.reportMessage(message, line);
         }
+    }
+
+    reportMessage(message, line) {
+        const readable = ['diagnostic-message', 'internal-diagnostic-message', 'error', 'test-failed', 'test-output'];
+        if (!readable.includes(message?.$type)) return this.report(line);
+        const details = [message.Message, message.Messages, message.StackTraces, message.Output]
+            .flat().filter(value => typeof value === 'string' && value.length);
+        if (!details.length) return this.report(line);
+        const name = this.tests.get(message.TestUniqueID)?.name;
+        this.report(`[${message.$type}]${name ? ` ${name}` : ''}\n${details.join('\n')}`);
     }
 
     finishClass(id) {

@@ -146,7 +146,7 @@ test('selection rejects mixed cores, missing assets, stale versions and local fl
 test('documented collector grammar has one child argument with a bare executable and quoted arguments', () => {
     const info = { runner: 'v3', dll: '/a folder/Different.Assembly.dll' };
     const filter = 'FullyQualifiedName~a&FullyQualifiedName!~b|Name="quoted"';
-    const call = invocation(info, { root: '/repo', directory: '/fresh output', filter, timeout: 123 });
+    const call = invocation(info, { root: '/repo', directory: '/fresh output', filter, timeout: 123, classWatchdog: true });
     assert.deepEqual(call.args.slice(0, 9), ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', '/fresh output/coverage.cobertura.xml']);
     assert.equal(call.args.length, 10);
     assert.equal(call.args[9], 'dotnet "/a folder/Different.Assembly.dll" "-filterVSTest" "FullyQualifiedName~a&FullyQualifiedName!~b|Name=\\"quoted\\"" "-result-trx" "/fresh output/results.trx" "-noAutoReporters" "-noColor" "-reporter" "json" "-diagnostics" "-longRunning" "120"');
@@ -160,8 +160,7 @@ test('documented collector grammar has one child argument with a bare executable
 test('dispatch rejects any non-v3 runner and can run without a collector', () => {
     assert.throws(() => invocation({ runner: 'v2' }, {}), /executable v3/);
     const call = invocation({ runner: 'v3', dll: '/built/SqlClustering.dll' }, { directory: '/unique', filter: 'Name=a', coverage: false });
-    assert.deepEqual(call.args, ['/built/SqlClustering.dll', '-filterVSTest', 'Name=a', '-result-trx', '/unique/results.trx',
-        '-noAutoReporters', '-noColor', '-reporter', 'json', '-diagnostics', '-longRunning', '120']);
+    assert.deepEqual(call.args, ['/built/SqlClustering.dll', '-filterVSTest', 'Name=a', '-result-trx', '/unique/results.trx']);
 });
 
 test('TRX preserves escaped theory/display identities and definition linkage', () => {
@@ -208,7 +207,7 @@ test('MOCK collector nonzero 37 is exact and project progress is streamed before
     t.mock.method(console, 'log', line => lines.push(line));
     let calls = 0;
     await assert.rejects(runProject(info, options, async (command, args, execution) => {
-        assert.deepEqual(execution.specProgress, { directory: options.directory });
+        assert.deepEqual(execution, { cwd: options.root, timeout: options.timeout });
         calls++;
         assert.deepEqual(lines, [`[specs] start project=${info.project} elapsed=0ms exit=pending`]);
         return { code: 37 };
@@ -534,9 +533,11 @@ async function ordinaryDispatch(mode) {
         }
         assert.equal(queried.length, 38, 'validate every selection before any child');
         launched.push(args);
+        const directory = path.dirname(args[8]);
+        assert.deepEqual(options.specProgress, { directory });
+        assert.ok(args[9].endsWith('"-noAutoReporters" "-noColor" "-reporter" "json" "-diagnostics" "-longRunning" "120"'));
         if (mode === 'failed-shard') return { code: 7 };
         assert.equal(options.timeout, 1234);
-        const directory = path.dirname(args[8]);
         const filter = args[9];
         assert.ok(filter.includes(ordinaryFilter));
         assert.ok(filter.includes('Name!~excluded&Name!~also'));
@@ -652,6 +653,31 @@ test('watchdog matches concurrent classes/tests by ID, warns once, and ignores c
     assert.equal(watcher.tests.size, 0);
     const progress = await readFile(path.join(options.directory, 'class-progress.log'), 'utf8');
     assert.match(progress, /class finish Specs.when_shared_fixture_hangs elapsed=120.0s/);
+});
+
+test('JSON reporter keeps diagnostics, failures, captured output and unknown messages visible', async () => {
+    const options = await watchdogFixture();
+    const watcher = new SpecHangWatchdog(options.specProgress);
+    watcher.consume(JSON.stringify(testStarting));
+    const messages = [
+        { $type: 'diagnostic-message', Message: 'fixture diagnostic\nsecond line' },
+        { $type: 'internal-diagnostic-message', Message: 'runner diagnostic' },
+        { $type: 'error', Messages: ['runner error'], StackTraces: ['runner stack'] },
+        { $type: 'test-failed', TestUniqueID: 'test-1', Messages: ['assertion failed'], StackTraces: ['test stack'], Output: 'failure output' },
+        { $type: 'test-output', TestUniqueID: 'test-1', Output: 'captured\noutput' },
+        { $type: 'future-message', Value: 'preserve unknown payload' }
+    ];
+    for (const message of messages) watcher.consume(JSON.stringify(message));
+    watcher.consume('collector stderr-style output');
+    assert.deepEqual(options.lines, [
+        '[diagnostic-message]\nfixture diagnostic\nsecond line',
+        '[internal-diagnostic-message]\nrunner diagnostic',
+        '[error]\nrunner error\nrunner stack',
+        '[test-failed] Specs.should_finish\nassertion failed\ntest stack\nfailure output',
+        '[test-output] Specs.should_finish\ncaptured\noutput',
+        JSON.stringify(messages.at(-1)),
+        'collector stderr-style output'
+    ]);
 });
 
 test('watchdog rejects invalid timeout configuration before launching', async () => {
