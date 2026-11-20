@@ -3,7 +3,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -12,8 +13,7 @@ const imageTag = '1.2.3-development-slim';
 const published = { name: imageTag, images: [{ architecture: 'arm64', os: 'linux' }] };
 
 async function lookupFixture(t, responses) {
-    await mkdir('.ai-work/ci9', { recursive: true });
-    const dir = await mkdtemp(path.resolve('.ai-work/ci9/image-test-'));
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'previous-release-image-test-'));
     t.after(() => rm(dir, { recursive: true, force: true }));
     await writeFile(path.join(dir, 'curl'), `#!/usr/bin/env node
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
