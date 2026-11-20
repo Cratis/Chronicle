@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Namespaces;
 using Cratis.Chronicle.Storage.Observation;
@@ -32,6 +33,8 @@ public class a_dormant_target_sweep : Specification
     protected IWakeAdmission _wakeAdmission;
 
     protected virtual bool RecordsCanBeRelied => true;
+
+    protected virtual bool SiloIsStopping => false;
 
     void Establish()
     {
@@ -65,9 +68,16 @@ public class a_dormant_target_sweep : Specification
         grainFactory.GetGrain<IObserver>(_other.ToString(), Arg.Any<string>()).Returns(_otherObserver);
 
         _wakeAdmission = new WakeAdmission(0, Environment.ProcessorCount);
-        _sweep = new DormantTargetSweep(storage, grainFactory, _records, _wakeAdmission, Substitute.For<ILogger<DormantTargetSweep>>())
+        _sweep = new DormantTargetSweep(storage, grainFactory, _records, _wakeAdmission, Substitute.For<ILogger<DormantTargetSweep>>(), StopBudget())
         {
             CollectFor = TimeSpan.FromMilliseconds(1)
         };
+    }
+
+    IShutdownDrainBudget StopBudget()
+    {
+        var budget = Substitute.For<IShutdownDrainBudget>();
+        budget.IsStopping.Returns(SiloIsStopping);
+        return budget;
     }
 }

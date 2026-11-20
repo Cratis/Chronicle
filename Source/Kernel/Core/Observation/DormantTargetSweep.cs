@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.DependencyInjection;
@@ -24,13 +25,15 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="records">The <see cref="IDurableSubscriptionRecords"/> that hold the targets.</param>
 /// <param name="wakeAdmission">The <see cref="IWakeAdmission"/> that bounds the wakes of one silo.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+/// <param name="stopBudget">The optional <see cref="IShutdownDrainBudget"/>; a silo that is stopping sweeps nothing, because storage and the grains go away under it.</param>
 [Singleton]
 public class DormantTargetSweep(
     IStorage storage,
     IGrainFactory grainFactory,
     IDurableSubscriptionRecords records,
     IWakeAdmission wakeAdmission,
-    ILogger<DormantTargetSweep> logger) : IDormantTargetSweep
+    ILogger<DormantTargetSweep> logger,
+    IShutdownDrainBudget? stopBudget = null) : IDormantTargetSweep
 {
     /// <summary>
     /// The most observers told at the same time by one sweep.
@@ -51,7 +54,7 @@ public class DormantTargetSweep(
     /// <inheritdoc/>
     public Task ConnectionLeft(ConnectionId connectionId, IReadOnlyCollection<ObserverKey> alreadyNotified)
     {
-        if (!records.CanBeRelied)
+        if (!records.CanBeRelied || stopBudget?.IsStopping == true)
         {
             return Task.CompletedTask;
         }
@@ -73,7 +76,7 @@ public class DormantTargetSweep(
     /// <inheritdoc/>
     public async Task<int> SilosLeft(IReadOnlyCollection<string> silos, CancellationToken cancellationToken = default)
     {
-        if (silos.Count == 0 || !records.CanBeRelied)
+        if (silos.Count == 0 || !records.CanBeRelied || stopBudget?.IsStopping == true)
         {
             return 0;
         }
@@ -142,6 +145,11 @@ public class DormantTargetSweep(
                     told = [.. _told];
                     _leaving.Clear();
                     _told.Clear();
+                }
+
+                if (stopBudget?.IsStopping == true)
+                {
+                    continue;
                 }
 
                 await Tell(leaving, told);
