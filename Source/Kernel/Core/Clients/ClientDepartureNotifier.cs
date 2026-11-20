@@ -18,8 +18,9 @@ namespace Cratis.Chronicle.Clients;
 /// </remarks>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for getting observers.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+/// <param name="dormantTargets">The optional <see cref="IDormantTargetSweep"/> that finds observers released while dormant.</param>
 [Singleton]
-public class ClientDepartureNotifier(IGrainFactory grainFactory, ILogger<ClientDepartureNotifier> logger) : IClientDepartureNotifier, IDisposable
+public class ClientDepartureNotifier(IGrainFactory grainFactory, ILogger<ClientDepartureNotifier> logger, IDormantTargetSweep? dormantTargets = null) : IClientDepartureNotifier, IDisposable
 {
     /// <summary>
     /// The most observers notified at the same time, across every connection, so connections dropping together cannot flood the cluster.
@@ -34,6 +35,10 @@ public class ClientDepartureNotifier(IGrainFactory grainFactory, ILogger<ClientD
     /// <inheritdoc/>
     public Task Notify(ConnectionId connectionId, IReadOnlyCollection<ObserverKey> observers) =>
         Task.WhenAll(observers.Select(observer => NotifyObserver(connectionId, observer)));
+
+    /// <inheritdoc/>
+    public Task NotifyDormant(ConnectionId connectionId, IReadOnlyCollection<ObserverKey> alreadyNotified) =>
+        dormantTargets?.ConnectionLeft(connectionId, alreadyNotified) ?? Task.CompletedTask;
 
     async Task NotifyObserver(ConnectionId connectionId, ObserverKey observer)
     {

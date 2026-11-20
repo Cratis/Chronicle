@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Defines a queue for appended events.
 /// </summary>
-[Version(1)]
+[Version(2)]
 public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
 {
     /// <summary>
@@ -89,4 +89,28 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     /// cursor, so it delivers the imported events and any ordinary appends that interleave with them, in order.
     /// </remarks>
     Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents);
+
+    /// <summary>
+    /// Marks the subscription of an observer that is leaving its activation as dormant, keeping it so an event wakes the observer.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer that is being released.</param>
+    /// <returns>True when the subscription is kept as dormant; false when the observer must stay subscribed the ordinary way.</returns>
+    /// <remarks>
+    /// Refused when the observer has no subscription here, or when events are still queued for it or being delivered, so a
+    /// release never strands events in a lane. A dormant subscription is woken by an event, under the wake admission of the
+    /// silo, and by the safety net (decision 0034), and is no longer dormant once the observer subscribes again.
+    /// </remarks>
+    Task<bool> TryMarkDormant(ObserverKey observerKey);
+
+    /// <summary>
+    /// Gets whether the subscription of an observer is kept as dormant: the observer has no activation and an event or the safety net wakes it.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>True when the observer is dormant.</returns>
+    /// <remarks>
+    /// Answered from the queue alone, so a listing or an inspection can tell a dormant observer from a resident one without
+    /// activating it (decision 0034). It is false once the observer has been woken, even if the activation is not done yet.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task<bool> IsDormant(ObserverKey observerKey);
 }

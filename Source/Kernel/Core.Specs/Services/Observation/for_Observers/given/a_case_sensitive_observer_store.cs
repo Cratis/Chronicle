@@ -58,8 +58,8 @@ public class a_case_sensitive_observer_store : for_QueryExecutor.given.a_routed_
         _service = CreateService(_casing);
     }
 
-    internal Observers CreateService(INamespaceCasing casing) =>
-        new(_grains, _storage, Substitute.For<IObserverRemover>(), Substitute.For<IConnectedClientsVisibility>(), Options.Create(new ChronicleOptions()), casing);
+    internal Observers CreateService(INamespaceCasing casing, IDormantObservers? dormantObservers = null, IConnectedClientsVisibility? visibility = null) =>
+        new(_grains, _storage, Substitute.For<IObserverRemover>(), visibility ?? Substitute.For<IConnectedClientsVisibility>(), Options.Create(new ChronicleOptions()), casing, dormantObservers);
 
     void Destroy() => _stores.Dispose();
 }

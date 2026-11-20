@@ -139,8 +139,19 @@ public class a_projections_manager_grain : Specification
         _stateStorage.State = _state;
         _silo.Options.StorageFactory = _ => _stateStorage;
 
+        if (CreateDormantObservers() is { } dormant)
+        {
+            _silo.AddService(dormant);
+        }
+
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
+
+    /// <summary>
+    /// Creates the dormant observers the manager asks, or none when it should ask its observers as before.
+    /// </summary>
+    /// <returns>The <see cref="Observation.IDormantObservers"/>, or null.</returns>
+    protected virtual Observation.IDormantObservers? CreateDormantObservers() => null;
 
     /// <summary>
     /// Changes the status of a silo in the membership the manager sees.

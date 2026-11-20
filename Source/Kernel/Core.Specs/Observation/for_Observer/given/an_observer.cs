@@ -12,11 +12,13 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
@@ -84,8 +86,19 @@ public class an_observer : Specification
     protected ILogger<Observer> _logger;
     protected ILoggerFactory _loggerFactory;
     protected IMeter<Observer>? _meter;
+    protected IClusterReleases _clusterReleases;
 
     protected virtual Observers CreateWebhookRetryConfig() => _observersConfig;
+
+    protected virtual void ConfigureProbes(TestKitSilo silo)
+    {
+    }
+
+    /// <summary>
+    /// Gets whether every silo of the cluster runs a release that supports dormant observers. Not by default, so an observer
+    /// is never released as dormant unless a specification says the cluster is ready for it.
+    /// </summary>
+    protected virtual bool DormantFloorIsReached => false;
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
@@ -98,6 +111,7 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
+        silo.AddService(_clusterReleases);
         silo.AddService(_timeProvider);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
@@ -127,6 +141,7 @@ public class an_observer : Specification
         silo.AddProbe(_ => _jobsManager);
         silo.AddProbe(_ => _appendedEventsQueues);
         silo.AddProbe(_ => _eventSequence);
+        ConfigureProbes(silo);
     }
 
     /// <summary>
@@ -150,6 +165,10 @@ public class an_observer : Specification
     async Task Establish()
     {
         _observersConfig = CreateObserversConfig();
+        _clusterReleases = Substitute.For<IClusterReleases>();
+        _clusterReleases.Summarize().Returns(DormantFloorIsReached
+            ? new ClusterReleaseSummary([(new SemanticVersion(19, 173, 0), 1)], 0, 0)
+            : new ClusterReleaseSummary([(new SemanticVersion(19, 172, 0), 1), (new SemanticVersion(19, 173, 0), 1)], 0, 0));
         _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();

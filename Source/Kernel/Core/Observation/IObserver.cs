@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(10)]
+[Version(11)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -873,4 +873,16 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="batches">The <see cref="ObserverPartitionBatch"/> of each partition in the page, each in sequence order.</param>
     /// <returns>Awaitable task.</returns>
     Task HandlePage(IReadOnlyList<ObserverPartitionBatch> batches);
+
+    /// <summary>
+    /// Runs one watchdog pass and, when the activation was only woken to run it, releases the observer again.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The safety net of a dormant observer (decision 0034): the appended events queue calls this on a jittered interval, which
+    /// activates the observer from its durable subscription, lets it check that its client is still there and that nothing
+    /// is owed, and releases it again when it is dormant. An activation that has handled events since it was woken keeps its
+    /// ordinary dormancy period instead.
+    /// </remarks>
+    Task RunWatchdogOnce();
 }

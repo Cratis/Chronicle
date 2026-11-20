@@ -162,6 +162,26 @@
             "weight": 0.0006104732185188725
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_DormantSiloDepartures.",
+            "weight": 0.000001
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_DormantTargetSweep.",
+            "weight": 0.000001
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_DormantObserverGauge.",
+            "weight": 0.000001
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_DormantObservers.",
+            "weight": 0.000001
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_DurableSubscriptionRecords.",
+            "weight": 0.000001
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_EventSkipDetector.",
             "weight": 0.0010739505541057927
         },
@@ -216,6 +236,10 @@
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider.",
             "weight": 0.0008432324252328064
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_ObserverDurableSubscriptionFilters.",
+            "weight": 0.000001
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverEventSequenceResolver.",
@@ -292,6 +316,10 @@
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscription.",
             "weight": 0.0006317356200622306
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscriptionDurability.",
+            "weight": 0.000001
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverTransitionStateMerge.",
@@ -372,6 +400,14 @@
         {
             "prefix": "Cratis.Chronicle.Observation.for_SuspectedSkipWarningLimiter.",
             "weight": 0.0006317356200622306
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_UnseenObserverRemoval.",
+            "weight": 0.000001
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_WakeAdmission.",
+            "weight": 0.000001
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_WebhookProbeEligibility.",

@@ -54,8 +54,9 @@ internal static class ObserverInformationConverters
             state.HandledEventCount,
             (ObserverRunningState)(int)state.RunningState,
 
-            // Subscription state is per-observer and only known by the observer grain, so the listing
-            // reports false rather than activating every grain to ask. Read a single observer to get it.
-            IsSubscribed: false,
+            // The live subscription is only known by the observer grain, and a listing must not activate every grain to
+            // ask. The subscription the observer recorded in its state is the same fact for a resident observer and for
+            // one released while dormant, so the listing reports that. It is false for an observer that records none.
+            IsSubscribed: state.DurableSubscription is not null,
             definition.IsReplayable);
 }

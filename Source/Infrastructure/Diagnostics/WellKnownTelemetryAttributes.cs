@@ -59,8 +59,17 @@ public static class WellKnownTelemetryAttributes
     /// <summary>The identifier of an appended events queue.</summary>
     public const string AppendedEventsQueueId = "cratis.chronicle.appended_events_queue.id";
 
+    /// <summary>The way a durable subscription and the live subscriptions of a queue disagreed.</summary>
+    public const string DurableSubscriptionDisagreement = "cratis.chronicle.observer.durable_subscription_disagreement";
+
     /// <summary>The reason an observer was spilled to catch-up.</summary>
     public const string ObserverSpillReason = "cratis.chronicle.observer.spill_reason";
+
+    /// <summary>What woke a dormant observer: an appended event, the safety net or a sweep.</summary>
+    public const string ObserverWakeCause = "cratis.chronicle.observer.wake_cause";
+
+    /// <summary>How a woken observer found its way back to its cursor: resumed from it, fell back to catch-up or found its client gone.</summary>
+    public const string ObserverResumeOutcome = "cratis.chronicle.observer.resume_outcome";
 
     /// <summary>The kind of claim divergence.</summary>
     public const string ObserverClaimDivergence = "cratis.chronicle.observer.claim_divergence";

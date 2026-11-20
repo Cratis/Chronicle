@@ -165,6 +165,8 @@ public static class ChronicleServerSiloBuilderExtensions
         });
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Federation.FederationConsumerKeeper>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Observation.DormantSiloDepartures>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Observation.UnseenObserverRemoval>());
 
         builder.Services.AddChronicleAdministratorAuthorization();
         builder.Services.AddChronicleDataProtection();
@@ -236,8 +238,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(),
                     sp.GetRequiredService<IObserverRegistrationGate>(),
                     sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(),
-                    sp.GetRequiredService<ISiloDepartures>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(), sp.GetRequiredService<ISiloDepartures>()),
+                    sp.GetRequiredService<ISiloDepartures>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(), sp.GetRequiredService<ISiloDepartures>(), sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
                 projections,
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),
