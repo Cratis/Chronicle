@@ -34,6 +34,8 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     outputs:
       touched: ${{ steps.detect.outputs.touched }}
       build-triggered: ${{ steps.detect.outputs.build-triggered }}
@@ -45,16 +47,37 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
+
+      # The PR checkout supplies diff data; executable gate tools come from the base revision.
+      # Direct script execution searches the trusted script directory, not the working directory.
+      # -E -s ignores Python environment settings and user-site packages for imports.
+      - name: Checkout gate tools
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          path: gate-tools
+          sparse-checkout: .github
+          persist-credentials: false
 
       # Runs on every pull request, hot core or not, because a pattern that has stopped matching any
       # file - a rename - disarms the gate without failing anything, and a pattern with no owner
       # disarms the review half the same way.
       - name: Assert the hot-core contract is intact
         run: |
-          python3 .github/scripts/test-detect-hot-core-changes.py
-          python3 .github/scripts/test-evaluate-hot-core-gate.py
-          python3 .github/scripts/test-evaluate-hot-core-gate-jobs.py
-          python3 .github/scripts/detect-hot-core-changes.py --verify
+          python3 -E -s gate-tools/.github/scripts/test-detect-hot-core-changes.py
+          python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate.py
+          # Older trusted bases predate the split job-evidence specs; the PR build always runs them.
+          if [ -f gate-tools/.github/scripts/test-evaluate-hot-core-gate-jobs.py ]; then
+            python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate-jobs.py
+          fi
+          policy_args=()
+          if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then
+            policy_args=(--policy-root gate-tools)
+          else
+            echo "::notice::Policy provenance hardening activates once the base contains --policy-root."
+          fi
+          python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py "${policy_args[@]}" --verify
 
       # Prints every matched path and, on ordinary pushes, how to request integration.
       - name: Detect hot-core changes
@@ -64,14 +87,20 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          python3 .github/scripts/evaluate-hot-core-gate.py detect-build --base "$BASE_SHA" --head "$HEAD_SHA"
+          python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py detect-build --base "$BASE_SHA" --head "$HEAD_SHA"
           if [ -z "$BASE_SHA" ]; then
             echo "Manual run - there is no pull request to diff, so the full matrix runs unconditionally."
             echo "touched=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
+          policy_args=()
+          if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then
+            policy_args=(--policy-root gate-tools)
+          else
+            echo "::notice::Policy provenance hardening activates once the base contains --policy-root."
+          fi
+          python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py "${policy_args[@]}" --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Manual dispatch retains its all-provider hot-core matrix; ordinary pushes do not build it.
   # integration.yml applies reviewed lane exclusions visibly; the gate also reports their reasons.
@@ -89,6 +118,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -218,7 +249,10 @@ jobs:
       - name: Checkout gate script
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          path: gate-tools
           sparse-checkout: .github/scripts
+          persist-credentials: false
       - name: Decide
         env:
           GH_TOKEN: ${{ github.token }}
@@ -238,4 +272,4 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python3 .github/scripts/evaluate-hot-core-gate.py gate
+        run: python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py gate
