@@ -16,8 +16,9 @@ namespace Cratis.Chronicle.Server.Authentication;
 /// Authenticates HTTP callers from the user a trusted reverse proxy has already authenticated and forwarded in headers.
 /// </summary>
 /// <remarks>
-/// It refuses gRPC calls outright - clients authenticate with their own credentials - and accepts the headers only
-/// when the immediate peer is a trusted proxy and, if one is configured, the proxy presented the shared secret.
+/// It refuses gRPC calls outright - clients authenticate with their own credentials - and accepts the headers only from a
+/// recognized proxy: from a trusted address when address trust is configured, with the shared secret when one is configured,
+/// and with both when both are.
 /// </remarks>
 /// <param name="options">The scheme options.</param>
 /// <param name="chronicleOptions">The Chronicle options.</param>
@@ -54,15 +55,18 @@ public class TrustedProxyAuthenticationHandler(
         if (!authentication.Http.IsTrustedProxy || IsGrpc(Request)) return Task.FromResult(AuthenticateResult.NoResult());
 
         var proxy = authentication.Http.TrustedProxy;
+
+        // Fail closed: a proxy recognized by neither its address nor a secret is not a proxy. Validation refuses this at startup.
+        if (!proxy.HasAddressTrust && !proxy.HasSharedSecret) return Task.FromResult(AuthenticateResult.Fail("No way to recognize the trusted proxy is configured."));
         var user = Single(proxy.UserHeader);
         if (user is null) return Task.FromResult(AuthenticateResult.NoResult());
 
-        if (!peers.IsTrusted(Context.Features.Get<IImmediatePeerFeature>()?.Address))
+        if (proxy.HasAddressTrust && !peers.IsTrusted(Context.Features.Get<IImmediatePeerFeature>()?.Address))
         {
             return Task.FromResult(AuthenticateResult.Fail("Identity headers were sent by a peer that is not a trusted proxy."));
         }
 
-        if (!string.IsNullOrEmpty(proxy.SharedSecret) && !SecretMatches(Single(proxy.SharedSecretHeader), proxy.SharedSecret))
+        if (proxy.HasSharedSecret && !SecretMatches(Single(proxy.SharedSecretHeader), proxy.SharedSecret!))
         {
             return Task.FromResult(AuthenticateResult.Fail("The trusted proxy did not present the shared secret."));
         }

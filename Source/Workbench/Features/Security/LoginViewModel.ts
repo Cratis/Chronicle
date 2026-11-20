@@ -8,6 +8,7 @@ import { GetStatus } from './GetStatus';
 import { SetInitialAdminPassword } from './SetInitialAdminPassword';
 import { absolutePath } from '../../Utils/basePath';
 import { clearAntiforgeryToken, refreshAntiforgeryToken } from './antiforgery';
+import { getAuthenticationMode } from './authenticationMode';
 
 @injectable()
 export class LoginViewModel {
@@ -21,6 +22,7 @@ export class LoginViewModel {
     errorMessage: string = '';
     requiresPasswordChange: boolean = false;
     isInitialSetup: boolean = false;
+    isTrustedProxy: boolean = false;
     userId: Guid | null = null;
 
     constructor(
@@ -32,6 +34,14 @@ export class LoginViewModel {
     async checkInitialSetup() {
         this.isLoading = true;
         try {
+            // A reverse proxy owns sign-in in trusted-proxy mode; Chronicle never shows its own password or
+            // initial-setup form there, even if a user lands here because the proxy session is missing or expired.
+            const mode = await getAuthenticationMode();
+            if (mode.mode === 'trustedProxy') {
+                this.isTrustedProxy = true;
+                return;
+            }
+
             const result = await this._getStatus.perform();
             if (result.data?.isRequired) {
                 this.isInitialSetup = true;
@@ -171,6 +181,11 @@ export class LoginViewModel {
         } finally {
             this.isLoggingIn = false;
         }
+    }
+
+    retrySignIn() {
+        // The reverse proxy owns the session; sending the user back through it lets the proxy re-establish sign-in.
+        location.assign(absolutePath('/'));
     }
 
     cancelPasswordChange() {

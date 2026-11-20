@@ -190,7 +190,7 @@ Set `authentication.http.mode` to `TrustedProxy`. The proxy authenticates the us
     "http": {
       "mode": "TrustedProxy",
       "trustedProxy": {
-        "knownProxies": ["10.42.0.17"],
+        "sharedSecret": "<from your secret store>",
         "administratorGroup": "chronicle-admins",
         "signOutUrl": "/oauth2/sign_out"
       }
@@ -199,7 +199,7 @@ Set `authentication.http.mode` to `TrustedProxy`. The proxy authenticates the us
 }
 ```
 
-The header defaults match oauth2-proxy, so with oauth2-proxy you usually only set which proxy to trust, the administrator group and the sign-out URL. In oauth2-proxy, enable `--set-xauthrequest` or `--pass-user-headers`.
+The header defaults match oauth2-proxy, so with oauth2-proxy you usually only set how Chronicle recognizes the proxy, the administrator group and the sign-out URL. In oauth2-proxy, enable `--set-xauthrequest` or `--pass-user-headers`. Have the ingress or proxy add the shared secret header, for example with a Traefik headers middleware or an nginx `proxy_set_header`.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -213,7 +213,7 @@ The header defaults match oauth2-proxy, so with oauth2-proxy you usually only se
 | http.trustedProxy.groupsHeader | string | `X-Forwarded-Groups` | Header carrying the user's comma-separated groups |
 | http.trustedProxy.administratorGroup | string | null | Group whose members are Chronicle administrators. When not set, **every** user the proxy signs in is an administrator, and the server logs a warning at startup |
 | http.trustedProxy.issuer | string | `chronicle:proxy` | Issuer recorded for proxy users in audit records and access decisions. Must differ from `chronicle:local` and from the configured `authority` |
-| http.trustedProxy.sharedSecret | string | null | Optional secret the proxy must also send. Store it with your secret management |
+| http.trustedProxy.sharedSecret | string | null | Secret the proxy sends to prove it is the proxy, wherever it connects from. Store it with your secret management |
 | http.trustedProxy.sharedSecretHeader | string | `X-Chronicle-Proxy-Secret` | Header carrying the shared secret |
 | http.trustedProxy.signOutUrl | string | null | Where the Workbench sends a user who signs out, for example the proxy's sign-out endpoint. Either an absolute HTTP(S) URL or a path starting with `/`. When not set, the Workbench shows no **Logout** option |
 
@@ -221,25 +221,37 @@ The header defaults match oauth2-proxy, so with oauth2-proxy you usually only se
 
 - **gRPC clients are not affected.** Chronicle never reads the proxy headers on a gRPC call, so a client still needs a valid client ID and secret, and `/connect/token` keeps issuing tokens to clients.
 - **Workbench users are signed in by the proxy.** The Workbench skips its login page. Chronicle turns off every way a user could sign in with a password and bypass the proxy. It does not serve `/identity/*` or `/api/security/login`, `/connect/token` refuses the password grant, and Chronicle sign-in cookies issued earlier are no longer accepted. Tools that signed users in with a password, such as the CLI, need client credentials in this mode.
+- **No admin password or setup token is needed.** Because the proxy establishes who every user is, there is nothing to set up: Chronicle never asks for an initial administrator password, never shows the **Set Admin Password** screen, and never logs an initial administrator setup token. Leave `adminUser.password` and `initialAdminSetupToken` unset. If a user ever reaches the login page — because their proxy session is missing or expired, or Chronicle rejected the forwarded identity — the Workbench shows a message and a **Sign In** button that sends them back through the proxy, not its own password form.
+- **Grants still have a local administrator.** Chronicle still creates the deterministic bootstrap administrator so administrator grants and recovery keep working; it simply has no password and cannot sign in with one, which is harmless because password sign-in is turned off anyway.
 - **Event store access.** A proxy user can work with ordinary event stores in the same way as a Workbench user who signs in with a password.
 - **Administrator access.** A proxy user is an administrator when they are in `administratorGroup`, or always when no group is configured. The Workbench's administrator roster does not apply to proxy users.
-- **Request protection.** Chronicle still requires the Workbench's antiforgery token on state-changing requests from proxy users, because the proxy's browser session is sent with every request just like Chronicle's own cookie.
+- **Request protection.** Chronicle still requires the Workbench's antiforgery token on state-changing requests from proxy users, because the proxy's browser session is sent with every request just like Chronicle's own cookie. When an authenticated request has no proxy identity — a missing or expired proxy session, or one Chronicle rejected — the antiforgery endpoint answers `401`. That is by design, not a sign-in defect; the browser is sent back through the proxy to re-establish the session rather than shown Chronicle's own login.
 
 The mode has no effect when `authentication.enabled` is `false`.
 
-### Which proxies are trusted
+### How Chronicle recognizes the proxy
 
-Chronicle accepts the headers only from a proxy it trusts, and decides that by the address of the peer that opened the connection. The trusted peers are `knownProxies`, `knownNetworks` and, when `trustLoopback` is on, loopback. Startup fails if none of them is configured.
+Chronicle accepts the headers only from a proxy it recognizes. It recognizes the proxy by a shared secret, by its address, or by both:
 
-This list is deliberately separate from [`forwardedHeaders`](tls.md#trusted-reverse-proxies). A peer trusted to report the client's address is not automatically trusted to say who the user is. Loopback is not trusted unless you turn it on, because every process on the host, and every `kubectl port-forward`, connects over loopback too. Turn on `trustLoopback` only when the proxy runs as a sidecar and nothing else on the host can reach Chronicle.
+| Configured | Chronicle accepts the headers when |
+| --- | --- |
+| `sharedSecret` only | the request carries the secret, wherever it comes from |
+| Address trust only (`knownProxies`, `knownNetworks`, `trustLoopback`) | the peer that opened the connection is one of those addresses |
+| Both | the request carries the secret **and** comes from a trusted address |
+| Neither | startup fails |
 
-If identity headers arrive from any other peer, the request is refused rather than treated as anonymous. Chronicle checks the connection's own address, not the client address the proxy reports, and that holds even with `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. If a header is sent more than once, Chronicle ignores it.
+In Kubernetes and other platforms where addresses change, use `sharedSecret`, kept in a Kubernetes Secret. Add address trust as well when the proxy has a stable address, so a leaked secret isn't enough on its own.
+
+The address list is deliberately separate from [`forwardedHeaders`](tls.md#trusted-reverse-proxies). A peer trusted to report the client's address is not automatically trusted to say who the user is. Loopback is not trusted unless you turn it on, because every process on the host, and every `kubectl port-forward`, connects over loopback too. Turn on `trustLoopback` only when the proxy runs as a sidecar and nothing else on the host can reach Chronicle.
+
+If identity headers arrive without the secret or from an untrusted peer, the request is refused rather than treated as anonymous. Chronicle checks the connection's own address, not the client address the proxy reports, and that holds even with `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. If a header is sent more than once, Chronicle ignores it.
 
 To keep this safe:
 
 - **The proxy must remove these headers from incoming requests** before adding its own. Otherwise a user can forge them by sending them to the proxy.
 - **Prefer `knownProxies` and keep networks narrow.** Every peer in `knownNetworks` can claim to be any user. If other workloads share that network, set `sharedSecret` as well, so only the proxy is accepted. The server logs a warning when `knownNetworks` is set without a shared secret.
-- **Clients still connect directly.** Chronicle keeps serving gRPC on its single port, so network policy can't block that port. The address check, together with the optional shared secret, is what keeps the headers safe.
+- **Treat the shared secret like a password.** Anyone who has it can claim to be any user. Rotate it the same way you rotate other secrets.
+- **Clients still connect directly.** Chronicle keeps serving gRPC on its single port, so network policy can't block that port. The shared secret and the address check are what keep the headers safe.
 
 ## Turning authentication off
 
@@ -281,6 +293,8 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 Keep administrator configuration consistent across silos. Changing the bootstrap username is not an account-rename mechanism. Restrict network access until interactive initial setup has completed, or supply the initial password through your secret mechanism.
 
 ### Interactive initial setup
+
+Interactive initial setup applies only to `Chronicle` HTTP authentication. In [`TrustedProxy`](#workbench-sign-in-through-a-reverse-proxy) mode the proxy signs users in, so there is nothing to set up: no setup token is logged and the Workbench never shows the **Set Admin Password** screen.
 
 If no administrator password or setup token is configured, Chronicle logs a generated initial setup token when the administrator has no credentials. Copy it into the Workbench setup form with the new password and matching confirmation. Treat the token and the logs containing it as credentials; restrict access to both. Older clients that do not send a setup token cannot complete initial setup.
 

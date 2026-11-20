@@ -25,9 +25,9 @@ public class TrustedProxyAuthenticationValidation : IValidateOptions<ChronicleOp
         if (!IsOptionalHeaderName(proxy.EmailHeader)) failures.Add("Authentication:Http:TrustedProxy:EmailHeader must be a header name when set.");
         if (!IsOptionalHeaderName(proxy.NameHeader)) failures.Add("Authentication:Http:TrustedProxy:NameHeader must be a header name when set.");
         if (!IsOptionalHeaderName(proxy.GroupsHeader)) failures.Add("Authentication:Http:TrustedProxy:GroupsHeader must be a header name when set.");
-        if (!proxy.TrustLoopback && !proxy.KnownProxies.Any() && !proxy.KnownNetworks.Any())
+        if (!proxy.HasAddressTrust && !proxy.HasSharedSecret)
         {
-            failures.Add("Authentication:Http:TrustedProxy needs the proxy it trusts: KnownProxies, KnownNetworks or TrustLoopback.");
+            failures.Add("Authentication:Http:TrustedProxy needs a way to recognize the proxy: SharedSecret, KnownProxies, KnownNetworks or TrustLoopback.");
         }
 
         failures.AddRange(proxy.KnownProxies

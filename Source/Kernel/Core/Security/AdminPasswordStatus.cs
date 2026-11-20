@@ -51,6 +51,13 @@ public record AdminPasswordStatus(
     /// <returns>The current <see cref="AdminPasswordStatus"/>.</returns>
     public static async Task<AdminPasswordStatus> GetStatus(IStorage storage, IOptions<Configuration.ChronicleOptions> options)
     {
+        // A trusted reverse proxy signs users in, and Chronicle's own password sign-in is not offered in that mode.
+        // There is nothing to set up, so never ask for an initial administrator password.
+        if (options.Value.Authentication.Http.IsTrustedProxy)
+        {
+            return new AdminPasswordStatus(false, null, string.Empty);
+        }
+
         var adminUser = await storage.System.Users.GetByUsername(options.Value.Authentication.EffectiveAdminUsername);
         var required = adminUser is { HasLoggedIn: false } && string.IsNullOrEmpty(adminUser.PasswordHash?.Value);
         return new AdminPasswordStatus(required, required ? (Guid)adminUser!.Id : null, required ? adminUser!.Username : string.Empty);

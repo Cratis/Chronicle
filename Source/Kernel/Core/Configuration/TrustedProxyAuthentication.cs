@@ -7,9 +7,15 @@ namespace Cratis.Chronicle.Configuration;
 /// Represents how Chronicle reads the user a trusted reverse proxy has already authenticated.
 /// </summary>
 /// <remarks>
-/// The headers are accepted only on HTTP requests - never on gRPC calls - whose immediate peer is a trusted proxy:
-/// an address in <see cref="KnownProxies"/> or <see cref="KnownNetworks"/>, or loopback when <see cref="TrustLoopback"/> is on.
-/// This list is deliberately separate from <see cref="ForwardedHeaders"/>: a peer trusted to report a client address
+/// The headers are accepted only on HTTP requests - never on gRPC calls - and only from a proxy Chronicle can recognize,
+/// by its address, by a shared secret, or by both:
+/// <list type="bullet">
+/// <item><description>With address trust configured (<see cref="KnownProxies"/>, <see cref="KnownNetworks"/> or <see cref="TrustLoopback"/>),
+/// the immediate peer must be one of those addresses.</description></item>
+/// <item><description>With <see cref="SharedSecret"/> configured, the request must carry it in <see cref="SharedSecretHeader"/>.</description></item>
+/// <item><description>With both, both must hold. With neither, startup fails.</description></item>
+/// </list>
+/// The address list is deliberately separate from <see cref="ForwardedHeaders"/>: a peer trusted to report a client address
 /// is not thereby trusted to say who the user is. The proxy must remove any of these headers a caller sends before adding its own.
 /// </remarks>
 public class TrustedProxyAuthentication
@@ -33,6 +39,16 @@ public class TrustedProxyAuthentication
     /// because every process on the host, and every port-forward, connects over loopback too.
     /// </summary>
     public bool TrustLoopback { get; init; }
+
+    /// <summary>
+    /// Gets whether the proxy is recognized by its address.
+    /// </summary>
+    public bool HasAddressTrust => TrustLoopback || KnownProxies.Any() || KnownNetworks.Any();
+
+    /// <summary>
+    /// Gets whether the proxy is recognized by a shared secret.
+    /// </summary>
+    public bool HasSharedSecret => !string.IsNullOrEmpty(SharedSecret);
 
     /// <summary>
     /// Gets the header carrying the authenticated user's stable identifier. Required. Defaults to "X-Forwarded-User".
@@ -67,7 +83,8 @@ public class TrustedProxyAuthentication
     public string Issuer { get; init; } = DefaultIssuer;
 
     /// <summary>
-    /// Gets an optional secret the proxy must send in <see cref="SharedSecretHeader"/>, in addition to coming from a trusted address.
+    /// Gets a secret the proxy must send in <see cref="SharedSecretHeader"/>. On its own it recognizes the proxy wherever it
+    /// connects from - the natural choice where addresses change, such as in Kubernetes. Combined with address trust, both must hold.
     /// Store it as a secret.
     /// </summary>
     public string? SharedSecret { get; init; }
