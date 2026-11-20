@@ -47,8 +47,8 @@ public record ClosesStreamConstraintDefinition(
     /// <returns>True if the declarations have equal content.</returns>
     public virtual bool Equals(ClosesStreamConstraintDefinition? other) =>
         other is not null && Name == other.Name && Dimensions == other.Dimensions &&
-        EventStreamIdFrom == other.EventStreamIdFrom && EventTypeIds.SequenceEqual(other.EventTypeIds) &&
-        ReopenedBy.SequenceEqual(other.ReopenedBy) && EventSequences.CoversSameAs(other.EventSequences);
+        EventStreamIdFrom == other.EventStreamIdFrom && EventTypeIds.SameSetAs(other.EventTypeIds) &&
+        ReopenedBy.SameSetAs(other.ReopenedBy) && EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -57,12 +57,12 @@ public record ClosesStreamConstraintDefinition(
         hash.Add(Name);
         hash.Add(Dimensions);
         hash.Add(EventStreamIdFrom);
-        foreach (var eventType in EventTypeIds)
+        foreach (var eventType in EventTypeIds.Canonical())
         {
             hash.Add(eventType);
         }
 
-        foreach (var eventType in ReopenedBy)
+        foreach (var eventType in ReopenedBy.Canonical())
         {
             hash.Add(eventType);
         }
@@ -71,6 +71,17 @@ public record ClosesStreamConstraintDefinition(
 
         return hash.ToHashCode();
     }
+
+    /// <summary>
+    /// Get this declaration in its canonical form, see <see cref="ConstraintNormalization"/>.
+    /// </summary>
+    /// <returns>An equal declaration whose collections are distinct and ordered.</returns>
+    public ClosesStreamConstraintDefinition Normalized() => this with
+    {
+        EventTypeIds = EventTypeIds.Canonical(),
+        ReopenedBy = ReopenedBy.Canonical(),
+        EventSequences = EventSequences.Canonical()
+    };
 
     /// <inheritdoc/>
     /// <remarks>

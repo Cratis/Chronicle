@@ -78,8 +78,13 @@ public partial class Observer
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
         _shortCatchUpRetryTimer?.Dispose();
+        _departureCheckTimer?.Dispose();
+        StopWatchingSiloDepartures();
         _alertMutationLock.Dispose();
         _stateWriteLock.Dispose();
+        _stateReads.Dispose();
+        _definitionReads.Dispose();
+        _failureReads.Dispose();
         GC.SuppressFinalize(this);
     }
 

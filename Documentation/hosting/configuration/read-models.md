@@ -20,6 +20,8 @@ Read model configuration controls how many revert containers Chronicle keeps aft
 | --- | --- | --- | --- |
 | replayedVersionsToKeep | number | 1 | Number of replay occurrences to keep per read model. `snapshotsToKeep` is an alias that sets the same value. |
 | maxBatchSize | number | 500 | Maximum number of items per read-model batch. Must be greater than zero |
+| rollbackWindow | timespan | `1.00:00:00` | How long retired generations keep following for rollback; applies only with `features.projectionGenerations` enabled |
+| maxFollowingRetiredGenerations | number | 1 | Maximum retired generations that keep following; applies only with `features.projectionGenerations` enabled |
 | guardSinkWritesOnWatermark | boolean | true | Makes a read model write conditional on the incoming event advancing the read model's last handled event sequence number, so a re-delivered event after a crash is a no-op instead of being folded in twice. Chronicle requests the guard only for read models keyed by event source id. A projection whose key collapses several event sources onto one document (a join, a constant key or a parent hierarchy) is never guarded. Set it to `false` only to restore the behavior of earlier versions. See [Step checkpoints](job-throttling.md#step-checkpoints) |
 
 There is no age-based setting. Chronicle counts occurrences; it does not look at how old they are.
@@ -44,7 +46,7 @@ Read models owned by the Chronicle kernel itself apply `0` at the start of a rep
 
 Apart from that extra pass for kernel-owned read models, retention runs only at the start of a replay. There is no pass at startup, on a schedule or based on age. A revert container for a read model that is never replayed again stays where it is.
 
-The `rollbackWindow` and `maxFollowingRetiredGenerations` settings belong to projection generations, which are off by default. They are separate and do not change this retention.
+The `rollbackWindow` and `maxFollowingRetiredGenerations` settings belong to [projection generations](features.md), which are off by default and remain experimental: rebuilds still use legacy replay. They are separate and do not change this retention. For example, `Cratis__Chronicle__ReadModels__RollbackWindow=02:00:00` and `Cratis__Chronicle__ReadModels__MaxFollowingRetiredGenerations=2` override the generation policy defaults; they do not enable generation rebuilds.
 
 ## What Chronicle never removes
 

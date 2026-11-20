@@ -197,6 +197,13 @@ KernelStartupDiagnostics.ReportLegacySchemaEvolution(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportSubscriberTimeout(chronicleOptions, logger);
 KernelStartupDiagnostics.ReportGrainDirectory(chronicleOptions, logger);
 ForwardedHeadersTrust.Configure(builder.Services, chronicleOptions);
+
+// A trusted proxy's identity headers are only accepted from the proxy itself, which needs the connection's own peer
+// address - recorded here, before forwarded headers replace it with the client's.
+if (chronicleOptions.Authentication.Enabled && chronicleOptions.Authentication.Http.IsTrustedProxy)
+{
+    ImmediatePeerStartupFilter.Register(builder.Services);
+}
 var isSqlStorage = string.Equals(chronicleOptions.Storage.Type, StorageType.Sqlite, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.MsSql, StringComparison.OrdinalIgnoreCase)
     || string.Equals(chronicleOptions.Storage.Type, StorageType.PostgreSql, StringComparison.OrdinalIgnoreCase);
@@ -643,12 +650,19 @@ if (chronicleOptions.Authentication.Enabled)
     app.MapGet("/.cratis/antiforgery", (HttpContext context, IAntiforgery antiforgery) =>
         new AntiforgeryTokenResponse(antiforgery.GetAndStoreTokens(context).RequestToken!));
 
-    IdentityEndpointAuthorization.Apply(app.MapGroup("/identity").MapIdentityApi<User>());
-    app.MapPost("/identity/logout", async (SignInManager<User> signInManager) =>
+    // Tells the Workbench how its users sign in and out, before it knows whether it has a session.
+    app.MapGet("/.cratis/authentication", () => AuthenticationModeResponse.From(chronicleOptions.Authentication.Http)).AllowAnonymous();
+
+    // With a trusted proxy authenticating HTTP callers, the Workbench's own password sign-in is not offered.
+    if (!chronicleOptions.Authentication.Http.IsTrustedProxy)
     {
-        await signInManager.SignOutAsync();
-        return Results.Ok();
-    });
+        IdentityEndpointAuthorization.Apply(app.MapGroup("/identity").MapIdentityApi<User>());
+        app.MapPost("/identity/logout", async (SignInManager<User> signInManager) =>
+        {
+            await signInManager.SignOutAsync();
+            return Results.Ok();
+        });
+    }
 }
 else
 {

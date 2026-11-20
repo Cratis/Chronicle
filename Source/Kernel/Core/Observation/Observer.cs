@@ -30,6 +30,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Providers;
+using ISiloDepartures = Cratis.Chronicle.Services.Observation.ISiloDepartures;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -52,6 +53,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="timeProvider">The delivery fence clock.</param>
 /// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
 /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo of the cluster supports dormant observers.</param>
+/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when a silo leaves the cluster, after which the observer re-verifies its live subscription.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -73,7 +75,8 @@ public partial class Observer(
     IEventGenerationRelease? eventGenerationRelease = null,
     TimeProvider? timeProvider = null,
     IObserverGauges? observerGauges = null,
-    IClusterReleases? clusterReleases = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    IClusterReleases? clusterReleases = null,
+    ISiloDepartures? siloDepartures = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -223,7 +226,7 @@ public partial class Observer(
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
-        await failures.ReadStateAsync();
+        await _failureReads.Read(failures.ReadStateAsync);
         await RestoreDeliveryFences();
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
@@ -237,6 +240,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
+        WatchSiloDepartures();
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         ConfigureDurableSubscriptions(config.DurableSubscriptions);
         ConfigureDormancy(config);
@@ -512,8 +516,8 @@ public partial class Observer(
         logger.SubscribingToAllEvents();
 
         var storageWasReset = await ReloadObserverState();
-        await observerDefinition.ReadStateAsync();
-        await failures.ReadStateAsync();
+        await _definitionReads.Read(observerDefinition.ReadStateAsync);
+        await _failureReads.Read(failures.ReadStateAsync);
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await ClaimDefinitionForKey();
 
@@ -992,7 +996,7 @@ public partial class Observer(
     /// <returns>True if storage no longer has a record for this observer, false if it does.</returns>
     async Task<bool> ReloadObserverState()
     {
-        await ReadStateAsync();
+        await _stateReads.Read(ReadStateAsync);
         var storageWasReset = State.Identifier == ObserverId.Unspecified;
         State = State with { Identifier = _observerId };
         if (IsQuarantined)
@@ -1073,8 +1077,8 @@ public partial class Observer(
                 var wasQuarantined = IsQuarantined;
                 storageWasReset = await ReloadObserverState();
 
-                await observerDefinition.ReadStateAsync();
-                await failures.ReadStateAsync();
+                await _definitionReads.Read(observerDefinition.ReadStateAsync);
+                await _failureReads.Read(failures.ReadStateAsync);
                 if (storageWasReset && wasQuarantined && IsQuarantined)
                 {
                     // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,

@@ -19,7 +19,18 @@ FENCE_RE = re.compile(r"```([^\s`]+)[^\n]*\n(.*?)\n```", re.DOTALL)
 USING_DIRECTIVE_RE = re.compile(r"^using\s+(?:static\s+)?[A-Za-z_][A-Za-z0-9_.]*(?:\s*=\s*[A-Za-z_][A-Za-z0-9_.]*)?\s*;$")
 VALIDATION_EXCLUDED_PREFIXES = ("legacy/",)
 
+# Aliases, not whole-namespace imports: a global Microsoft.AspNetCore.Http import makes Chronicle's [Tags] ambiguous.
+SNIPPET_USING_ALIASES = {
+    "webhooks/signature-verification/verify": [
+        "using HttpRequest = Microsoft.AspNetCore.Http.HttpRequest;",
+        "using Results = Microsoft.AspNetCore.Http.Results;",
+    ],
+}
+
 BODY_SNIPPETS = {
+    "webhooks/signature-verification/verify": """
+        Microsoft.AspNetCore.Builder.WebApplication app = default!;
+    """,
     "get-started/client-flow": "",
     "hosting/client-tracing/identifier-tracing": """
         string[] args = [];
@@ -433,6 +444,8 @@ def generate_source() -> str:
             if (relative_path != ACTION_SNIPPET or using != "using Microsoft.AspNetCore.Http;")
             and using not in DECLARATION_ALIASED_USINGS.get(relative_path, ())
         )
+
+        usings.update(SNIPPET_USING_ALIASES.get(relative_path, []))
 
         site_namespace = site_concepts_namespace(relative_path)
         if site_namespace is not None:

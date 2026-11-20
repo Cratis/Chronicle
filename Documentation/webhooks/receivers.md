@@ -33,7 +33,7 @@ The `context` of each event carries the values a receiver needs to recognize it 
 
 The `content` is the event itself, released from [compliance](#personal-data-is-delivered-in-plaintext) protection.
 
-The request headers are the ones you configured: the authorization header for the chosen [authentication](#authenticating-the-kernel-to-your-receiver) and any custom headers registered with the webhook. Chronicle adds no request id, delivery id or signature header to webhook requests in this version.
+The request headers are the ones you configured: the authorization header for the chosen [authentication](#authenticating-the-kernel-to-your-receiver) and any custom headers registered with the webhook. A webhook registered with signing adds `webhook-id`, `webhook-timestamp` and `webhook-signature` headers; see [Verify signatures](./signature-verification.mdx). Without signing, Chronicle adds no request id, delivery id or signature header.
 
 A response in the `2xx` range acknowledges every event in the request. Any other outcome acknowledges none of them, as described next.
 
@@ -86,7 +86,7 @@ When the receiver's effect is appending an event to Chronicle, use a [keyed appe
 
 The Kernel sends the credentials you register with the webhook: basic authentication, a bearer token, an OAuth client-credentials token, or a [managed identity](./index.mdx#managed-identity) token, plus any custom headers. Validate them on every request. [OAuth client credentials](./index.mdx#oauth-client-credentials) and managed identity give you short-lived tokens that your receiver can validate against the identity provider; a static bearer token or password stays valid until you rotate it.
 
-Webhook requests are not signed in this version, so authentication is the only proof that a request came from your Kernel. A receiver that accepts unauthenticated requests, such as a public function URL with no authentication, accepts them from anyone who knows the URL.
+Webhook requests are signed only when the webhook opts in to signing, and you [verify the signature](./signature-verification.mdx) in the receiver. Without signing, authentication is the only proof that a request came from your Kernel. A receiver that accepts unauthenticated requests, such as a public function URL with no authentication, accepts them from anyone who knows the URL.
 
 ### Where the Kernel may send requests
 

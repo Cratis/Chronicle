@@ -32,6 +32,21 @@ public static class WellKnownProperties
     public const string Subjects = "__subjects";
 
     /// <summary>
+    /// The property name for the revision of a read model instance shared by several namespaces, checked on every fenced write.
+    /// </summary>
+    public const string Revision = "__revision";
+
+    /// <summary>
+    /// The property name for the incarnation of a read model instance shared by several namespaces, telling a recreated instance from its predecessor.
+    /// </summary>
+    public const string Incarnation = "__incarnation";
+
+    /// <summary>
+    /// The property name for the last handled event sequence number per writing namespace of a read model instance shared by several namespaces.
+    /// </summary>
+    public const string LastHandledByNamespace = "__lastHandled";
+
+    /// <summary>
     /// All the kernel bookkeeping property names.
     /// </summary>
     /// <remarks>
@@ -40,5 +55,5 @@ public static class WellKnownProperties
     /// declare them unless it deliberately exposes one. Every name declared above belongs in here; leaving one
     /// out is how such a walk ends up rejecting a property the kernel put there.
     /// </remarks>
-    public static readonly ImmutableArray<string> All = [LastHandledEventSequenceNumber, ReadModelInstanceInitialized, Subject, Subjects];
+    public static readonly ImmutableArray<string> All = [LastHandledEventSequenceNumber, ReadModelInstanceInitialized, Subject, Subjects, Revision, Incarnation, LastHandledByNamespace];
 }

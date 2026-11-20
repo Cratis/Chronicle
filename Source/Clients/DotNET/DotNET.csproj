@@ -99,6 +99,7 @@
         <PackageReference Include="protobuf-net.Grpc" />
         <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="System.Reactive" />
+        <PackageReference Include="BouncyCastle.Cryptography" />
     </ItemGroup>
 
     <ItemGroup>

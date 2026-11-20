@@ -51,6 +51,7 @@ public static class SqlChronicleBuilderExtensions
 
         builder.Services.AddSingleton<ISystemStorage, SqlStorage>();
         builder.Services.AddSingleton<IStorage, Storage.Storage>();
+        builder.Services.AddSingleton<ICanPerformKernelStateReset, SqlKernelStateResetHandler>();
         builder.Services.AddSingleton<IStorageErrorClassifier, SqlStorageErrorClassifier>();
         builder.Services.AddSingleton<IReservedEventSequenceIds, SqlReservedEventSequenceIds>();
         builder.Services.AddSingleton<Storage.Generations.Bindings.IMaterializationBindingStorage, Storage.Sql.Generations.SqlMaterializationBindingStorage>();
