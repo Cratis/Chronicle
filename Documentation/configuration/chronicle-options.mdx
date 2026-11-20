@@ -278,7 +278,7 @@ How registering the client's artifacts is retried when the Kernel does not accep
 | `InitialDelay` | `TimeSpan` | `00:00:02` | Wait after the first failed attempt. Each further attempt doubles it, jittered |
 | `MaximumDelay` | `TimeSpan` | `00:00:30` | Upper bound for the wait between attempts |
 
-Registration retries let a client wait out a busy kernel rather than immediately repeating the whole startup. Registration is idempotent. In a hosted application, exhausted connection retries (timeout or unavailable) are logged and readiness remains unhealthy, rather than stopping the host; whether the connection runs in the background depends on whether `UseCratisChronicle()` is called. Direct callers still observe registration failures. See [Startup and readiness](index.mdx#startup-and-readiness).
+Registration retries let a client wait out a busy kernel rather than immediately repeating the whole startup. Registration is idempotent. In a hosted application the eager connection runs in the background: exhausted retries are logged and readiness remains unhealthy, rather than stopping the host. Direct callers still observe registration failures. See [Startup and readiness](index.mdx#startup-and-readiness).
 
 In `appsettings.json`:
 
