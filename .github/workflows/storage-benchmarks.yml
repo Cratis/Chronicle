@@ -1,0 +1,109 @@
+name: Storage benchmarks
+
+# Baselines for the storage-provider benchmark harness (Chronicle.Benchmarks.Storage) come from this workflow
+# on a GitHub-hosted runner, never from a developer machine: a workstation is never quiet enough for numbers
+# that are compared across runs. Pull requests that touch the harness run the smoke profile so the harness
+# is proven to run; workflow_dispatch runs the smoke profile on demand. The medium profile needs an explicit
+# confirmation and hours of runtime, so it is not offered here. There is no schedule.
+# The runner is always GitHub-hosted: this repository is public, so a pull_request job must never reach
+# self-hosted infrastructure.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Benchmark profile'
+        type: choice
+        options:
+          - smoke
+        default: smoke
+      providers:
+        description: 'Comma-separated providers (sqlite, postgres, mongo)'
+        required: false
+        default: sqlite,postgres,mongo
+  pull_request:
+    paths:
+      - 'Benchmarks/Chronicle.Benchmarks.Storage/**'
+      - 'Benchmarks/Chronicle.Benchmarks.Storage.Specs/**'
+      - 'Benchmarks/storage-run.sh'
+      - '.github/workflows/storage-benchmarks.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  storage-benchmarks:
+    name: Storage benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
+      PROVIDERS: ${{ github.event.inputs.providers || 'sqlite,postgres,mongo' }}
+      PROJECT: Benchmarks/Chronicle.Benchmarks.Storage/Chronicle.Benchmarks.Storage.csproj
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The build is its own step so a build failure is reported as one, and so the load it causes can settle
+      # before anything is measured.
+      - name: Build
+        run: >
+          dotnet build "$PROJECT" -c Release -warnaserror
+          -p:DisableDockerBuild=true -p:CratisProxiesSkip=true -p:CratisProxiesOutputPath=
+
+      # The harness refuses to measure when the 1-minute load average exceeds 0.7 x CPUs (exit 3). The build
+      # raises the load, so wait - bounded - for it to come back down. The limit is never raised: a runner that
+      # does not get quiet fails the job through the harness's own exit code.
+      - name: Wait for the runner to go quiet
+        run: |
+          limit=$(awk -v cpus="$(nproc)" 'BEGIN { printf "%.2f", cpus * 0.7 }')
+          deadline=$((SECONDS + 300))
+          while true; do
+            load=$(cut -d' ' -f1 /proc/loadavg)
+            echo "1-minute load $load, limit $limit"
+            if awk -v load="$load" -v limit="$limit" 'BEGIN { exit !(load < limit) }'; then break; fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Load did not drop below the limit within 5 minutes; the harness decides."
+              break
+            fi
+            sleep 15
+          done
+
+      - name: Run storage benchmarks
+        run: >
+          dotnet run --project "$PROJECT" -c Release --no-build --
+          --profile "$PROFILE" --providers "$PROVIDERS" --repetition 1
+          --output "$GITHUB_WORKSPACE/storage-benchmark-results"
+
+      - name: Summarize results
+        if: always()
+        run: |
+          for summary in storage-benchmark-results/*/summary.md; do
+            [ -f "$summary" ] && cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+          done
+          exit 0
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: storage-benchmark-results
+          path: storage-benchmark-results
+          retention-days: 30
+          if-no-files-found: warn

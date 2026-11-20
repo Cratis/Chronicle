@@ -529,7 +529,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             """], cwd=WORKFLOWS.parents[1], check=True, capture_output=True, text=True, timeout=30)
         projects = json.loads(selection.stdout)
         self.assertNotIn("Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj", projects)
-        self.assertEqual(26, len(set(projects)))
+        self.assertEqual(27, len(set(projects)))
         self.assertIn("Source/Kernel/Storage.Neo4j.Specs/Storage.Neo4j.Specs.csproj", projects)
         self.assertIn("Source/Clients/XUnit.Integration.v3.Specs/XUnit.Integration.v3.Specs.csproj", projects)
         self.assertIn("Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj", projects)

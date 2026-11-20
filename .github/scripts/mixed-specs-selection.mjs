@@ -10,6 +10,7 @@ const benchmarkDirectory = 'Benchmarks/Chronicle.Benchmarks.Clustering';
 export const benchmarkProject = project(`${benchmarkDirectory}.Specs`);
 export const v3Projects = [
     `${benchmarkDirectory}.Specs`,
+    'Benchmarks/Chronicle.Benchmarks.Storage.Specs',
     'Source/Infrastructure.Specs',
     ...['AspNetCore', 'Aspire', 'Connections', 'DotNET.CodeAnalysis', 'DotNET', 'Testing', 'Workbench'].map(x => `Source/Clients/${x}.Specs`),
     ...['Compatibility', 'Concepts', 'Core', 'Server', 'Storage.AzureKeyVault', 'Storage.Vault'].map(x => `Source/Kernel/${x}.Specs`),
