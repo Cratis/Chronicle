@@ -29,7 +29,7 @@ SHA = "647523d239226eec17b4718855f2f0d3930bc0ae"
 SKIPPED_SHA = "33d501177e26a905871de5e390aeba188b9510ed"
 GREEN = {"id": 39822452184, "head_sha": SHA, "event": "pull_request", "conclusion": "success",
          "html_url": "https://github.com/Cratis/Chronicle/actions/runs/39822452184",
-         "jobs": [{"name": gate.EVIDENCE_JOB, "conclusion": "success"}]}
+         "jobs": [{"id": 1, "name": gate.EVIDENCE_JOB, "status": "completed", "conclusion": "success"}]}
 SKIPPED = {"id": 39837419547, "head_sha": SKIPPED_SHA, "event": "pull_request", "conclusion": "skipped",
            "jobs": [{"name": "hot-core-gate-requested-${{ github.event.label.name }}", "conclusion": "skipped"}]}
 FAILED_GATE = {"id": 42, "head_sha": SHA, "event": "pull_request", "status": "completed",
@@ -219,8 +219,9 @@ class GateDecisions(unittest.TestCase):
     def same_run(self, pr=None, evidence=None, **overrides):
         env = dict(ENV, RUN_INTEGRATION="true", **{**self.SAME_RUN, **overrides})
         lookup = patch.object(gate, "evidence_runs", return_value=evidence or [])
+        jobs = [dict(GREEN["jobs"][0], name=NESTED_JOB)]
         with patch.dict(os.environ, env, clear=True), patch.object(gate, "api", return_value=pr or self.LABELLED), \
-                lookup:
+                patch.object(gate, "with_jobs", return_value={"jobs": jobs}), lookup:
             return gate.gate(arguments())
 
     def test_same_run_proof_turns_a_touched_gate_green_without_looking_up_runs(self):
@@ -300,7 +301,7 @@ class GateDecisions(unittest.TestCase):
         load.assert_called_once_with("Cratis/Chronicle", failed_gate_run)
 
     def test_nested_requested_job_in_a_gate_run_is_evidence_but_a_run_without_it_is_not(self):
-        same_run = dict(GREEN, jobs=[{"name": NESTED_JOB, "conclusion": "success"}])
+        same_run = dict(GREEN, jobs=[dict(GREEN["jobs"][0], name=NESTED_JOB)])
         self.assertTrue(gate.has_green_evidence([same_run], SHA))
         for jobs in ([], [{"name": "hot-core-gate", "conclusion": "success"}],
                      [{"name": NESTED_JOB, "conclusion": "failure"}],
