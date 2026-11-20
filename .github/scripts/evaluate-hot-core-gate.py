@@ -64,7 +64,7 @@ def in_flight(run_or_jobs):
         return any(in_flight(job) for job in run_or_jobs)
     if not run_or_jobs:
         return False
-    return (run_or_jobs.get("status", "completed") != "completed"
+    return (run_or_jobs.get("status", "queued") != "completed"
             or in_flight(run_or_jobs.get("jobs", [])))
 
 
@@ -99,7 +99,7 @@ def requested_jobs_passed(jobs):
 def has_green_evidence(runs, head_sha):
     """Only the requested gate in a pull-request run for this exact commit is evidence."""
     return any(run["head_sha"] == head_sha and run["event"] == "pull_request"
-               and run.get("status", "completed") == "completed"
+               and run.get("status", "queued") == "completed"
                and requested_jobs_passed(run.get("jobs", [])) for run in runs)
 
 
@@ -300,7 +300,7 @@ def gate(arguments):
     if integration_ok and not state["fork"]:
         latest = await_specs(latest, state, arguments.build_runs_json)
     specs_ok, specs_message = specs_verdict(latest, state)
-    if specs_ok is None:
+    if integration_ok and specs_ok is None:
         return None, specs_message
     return integration_ok and specs_ok, integration_message + "\n" + specs_message
 
@@ -351,10 +351,10 @@ def latest_build(repo, head_sha, runs_json):
 def await_specs(latest, state, runs_json):
     """Keep the required check running until the exact-head build has a final verdict.
 
-    The existing job timeout bounds this wait. Completion refresh can re-evaluate a timed-out
-    gate; integration/detection failures never enter this wait or become pending successes.
+    The polling budget leaves time to exit before the job timeout. Completion refresh can
+    re-evaluate the gate; integration/detection failures never enter this wait or become pending successes.
     """
-    deadline = time.monotonic() + 30 * 60
+    deadline = time.monotonic() + 25 * 60
     while in_flight(latest):
         if time.monotonic() >= deadline:
             return latest

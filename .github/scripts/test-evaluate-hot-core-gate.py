@@ -27,16 +27,16 @@ LATEST_REQUESTED = gate.latest_requested
 # Recorded read-only API fields from the plan's green and skipped-label runs.
 SHA = "647523d239226eec17b4718855f2f0d3930bc0ae"
 SKIPPED_SHA = "33d501177e26a905871de5e390aeba188b9510ed"
-GREEN = {"id": 39822452184, "head_sha": SHA, "event": "pull_request", "conclusion": "success",
+GREEN = {"id": 39822452184, "head_sha": SHA, "event": "pull_request", "status": "completed", "conclusion": "success",
          "html_url": "https://github.com/Cratis/Chronicle/actions/runs/39822452184",
          "jobs": [{"id": 1, "name": gate.EVIDENCE_JOB, "status": "completed", "conclusion": "success"}]}
-SKIPPED = {"id": 39837419547, "head_sha": SKIPPED_SHA, "event": "pull_request", "conclusion": "skipped",
-           "jobs": [{"name": "hot-core-gate-requested-${{ github.event.label.name }}", "conclusion": "skipped"}]}
+SKIPPED = {"id": 39837419547, "head_sha": SKIPPED_SHA, "event": "pull_request", "status": "completed", "conclusion": "skipped",
+           "jobs": [{"name": "hot-core-gate-requested-${{ github.event.label.name }}", "status": "completed", "conclusion": "skipped"}]}
 FAILED_GATE = {"id": 42, "head_sha": SHA, "event": "pull_request", "status": "completed",
-               "jobs": [{"name": gate.GATE_JOB, "conclusion": "failure"}]}
+               "jobs": [{"name": gate.GATE_JOB, "status": "completed", "conclusion": "failure"}]}
 BUILD_GREEN = {"id": 70, "head_sha": SHA, "event": "pull_request", "status": "completed",
                "conclusion": "success", "html_url": "https://github.com/Cratis/Chronicle/actions/runs/70",
-               "jobs": [{"name": "specs", "conclusion": "success"}]}
+               "jobs": [{"name": "specs", "status": "completed", "conclusion": "success"}]}
 NESTED_JOB = "requested / " + gate.EVIDENCE_JOB
 ENV = {"DETECT": "success", "TOUCHED": "true", "DISPATCH": "false", "FORK": "false",
        "REPO": "Cratis/Chronicle", "HEAD_SHA": SHA, "BUILD": "skipped", "MATRIX": "skipped",
@@ -440,7 +440,7 @@ class SpecsDecisions(unittest.TestCase):
 
     def test_running_specs_keep_the_gate_pending_until_a_final_verdict(self):
         for conclusion in ("success", "failure", "cancelled", "skipped", "missing"):
-            jobs = [] if conclusion == "missing" else [{"name": "specs", "conclusion": conclusion}]
+            jobs = [] if conclusion == "missing" else [{"name": "specs", "status": "completed", "conclusion": conclusion}]
             completed = dict(BUILD_GREEN, jobs=jobs)
             with self.subTest(conclusion=conclusion), \
                     patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
@@ -458,7 +458,7 @@ class SpecsDecisions(unittest.TestCase):
         running = dict(BUILD_GREEN, status="in_progress")
         with patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
                 patch.object(gate, "latest_build", return_value=running), \
-                patch.object(gate.time, "monotonic", side_effect=[0, 1800]), \
+                patch.object(gate.time, "monotonic", side_effect=[0, 1500]), \
                 patch.object(gate.time, "sleep") as sleep:
             ok, message = gate.gate(arguments())
         self.assertIsNone(ok)
@@ -481,18 +481,20 @@ class SpecsDecisions(unittest.TestCase):
                 patch.object(gate, "latest_build", return_value=dict(BUILD_GREEN, status="in_progress")), \
                 patch.object(gate, "evidence_runs", return_value=[]), \
                 patch.object(gate, "latest_requested", return_value=None), patch.object(gate.time, "sleep") as sleep:
-            self.assertFalse(gate.gate(arguments())[0])
+            ok, message = gate.gate(arguments())
+        self.assertIs(ok, False)
+        self.assertIn("::error title=Hot core needs integration::", message)
         sleep.assert_not_called()
 
     def test_completed_build_requires_exact_specs_success(self):
         for conclusion in ("failure", "cancelled", "skipped", None, "missing"):
-            jobs = [] if conclusion == "missing" else [{"name": "specs", "conclusion": conclusion}]
+            jobs = [] if conclusion == "missing" else [{"name": "specs", "status": "completed", "conclusion": conclusion}]
             with self.subTest(conclusion=conclusion):
                 ok, message = self.evaluate([dict(BUILD_GREEN, jobs=jobs)])
                 self.assertFalse(ok)
                 self.assertIn(f"specs conclusion: {conclusion}", message)
                 self.assertIn(BUILD_GREEN["html_url"], message)
-        self.assertFalse(self.evaluate([dict(BUILD_GREEN, jobs=[{"name": "not-specs", "conclusion": "success"}])])[0])
+        self.assertFalse(self.evaluate([dict(BUILD_GREEN, jobs=[{"name": "not-specs", "status": "completed", "conclusion": "success"}])])[0])
         self.assertTrue(self.evaluate([BUILD_GREEN])[0])
         self.assertTrue(self.evaluate([BUILD_GREEN], BUILD_TRIGGERED="true")[0])
 

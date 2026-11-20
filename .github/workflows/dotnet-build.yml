@@ -1073,9 +1073,11 @@ jobs:
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
       - name: Add GitHub Package Registry to NuGet
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dotnet nuget update source github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text || \
-          dotnet nuget add source --name github --username cratis --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+          dotnet nuget update source github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
 
       - name: Compile client snippets
         run: python3 Documentation/validate-client-snippets.py

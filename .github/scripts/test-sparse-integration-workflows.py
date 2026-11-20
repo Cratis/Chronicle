@@ -514,12 +514,17 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 ("preflight-client-snippets", "client-snippets.yml", "verify"),
                 ("preflight-timing-ratchet", "timing-coupling-ratchet.yml", "timing-coupling-ratchet")):
             job = jobs[inline]
-            commands = lambda steps: [step["run"] for step in steps if "run" in step]
+            commands = lambda steps: [step["run"].replace('"$GITHUB_TOKEN"', "${{ secrets.GITHUB_TOKEN }}")
+                                      for step in steps if "run" in step]
             self.assertEqual(commands(workflow(filename)["jobs"][standalone]["steps"]), commands(job["steps"]))
             self.assertEqual("ubuntu-latest", job["runs-on"])
             self.assertIn("github.event_name == 'pull_request'", job["if"])
             self.assertIn("inputs.integration_requested", job["if"])
             self.assertNotIn("draft", job["if"])
+        registry = next(step for step in jobs["preflight-client-snippets"]["steps"]
+                        if step["name"] == "Add GitHub Package Registry to NuGet")
+        self.assertEqual({"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}"}, registry["env"])
+        self.assertNotIn("${{ secrets.GITHUB_TOKEN }}", registry["run"])
         runner_commands = [step.get("run") for step in jobs["spec-runner-checks"]["steps"]]
         self.assertIn("python3 .github/scripts/test-generate-integration-matrix.py", runner_commands)
 

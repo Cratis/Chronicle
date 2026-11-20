@@ -86,6 +86,17 @@ class PendingEvidence(unittest.TestCase):
                 self.assertTrue(gate.in_flight(dict(GREEN, status=status)))
                 self.assertTrue(gate.in_flight([completed, dict(completed, id=3, status=status)]))
 
+    def test_missing_run_status_is_pending_and_never_green_evidence(self):
+        run = {key: value for key, value in GREEN.items() if key != "status"}
+        self.assertTrue(gate.in_flight(run))
+        self.assertFalse(gate.has_green_evidence([run], SHA))
+
+    def test_missing_job_status_is_pending_and_never_green_evidence(self):
+        job = {key: value for key, value in GREEN["jobs"][0].items() if key != "status"}
+        run = dict(GREEN, jobs=[job])
+        self.assertTrue(gate.in_flight(run))
+        self.assertFalse(gate.has_green_evidence([run], SHA))
+
     def test_same_run_nonfinal_result_is_pending_without_polling(self):
         for status in ("queued", "in_progress", "waiting"):
             with self.subTest(status=status), patch.dict(os.environ, dict(SAME_RUN, REQUESTED=status), clear=True), \
