@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 [Collection(ChronicleCollection.Name)]
 public class many_with_first_event_violating_unique_constraint(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_event_log_with_append_diagnostics(chronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];
@@ -22,12 +22,12 @@ public class many_with_first_event_violating_unique_constraint(context context) 
         public async Task Establish()
         {
             Event = new UserOnboardingStarted(Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
-            await EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event);
+            await AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event));
         }
 
         public async Task Because()
         {
-            Result = await EventStore.EventLog.AppendMany(Guid.NewGuid().ToString(), [Event, new UserRemoved()]);
+            Result = await AppendWithDiagnostics(() => EventStore.EventLog.AppendMany(Guid.NewGuid().ToString(), [Event, new UserRemoved()]));
         }
     }
 

@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 [Collection(ChronicleCollection.Name)]
 public class many_with_duplicate_unique_value_among_distinct_events(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_event_log_with_append_diagnostics(chronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];
@@ -30,12 +30,12 @@ public class many_with_duplicate_unique_value_among_distinct_events(context cont
         {
             // The duplicate appears as the second and third event for different sources, never as the first —
             // so the violation can only be caught by reconciling against the other events in the same batch.
-            Result = await EventStore.EventLog.AppendMany(
+            Result = await AppendWithDiagnostics(() => EventStore.EventLog.AppendMany(
             [
                 new EventForEventSourceId(Guid.NewGuid().ToString(), Distinct),
                 new EventForEventSourceId(Guid.NewGuid().ToString(), Duplicate),
                 new EventForEventSourceId(Guid.NewGuid().ToString(), Duplicate)
-            ]);
+            ]));
         }
     }
 

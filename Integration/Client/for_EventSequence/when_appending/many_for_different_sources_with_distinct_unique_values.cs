@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 [Collection(ChronicleCollection.Name)]
 public class many_for_different_sources_with_distinct_unique_values(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_event_log_with_append_diagnostics(chronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];
@@ -18,11 +18,11 @@ public class many_for_different_sources_with_distinct_unique_values(context cont
         public IAppendResult Result { get; private set; }
 
         public async Task Because() =>
-            Result = await EventStore.EventLog.AppendMany(
+            Result = await AppendWithDiagnostics(() => EventStore.EventLog.AppendMany(
             [
                 new EventForEventSourceId(Guid.NewGuid().ToString(), new UserOnboardingStarted(Guid.NewGuid().ToString(), Guid.NewGuid().ToString())),
                 new EventForEventSourceId(Guid.NewGuid().ToString(), new UserOnboardingStarted(Guid.NewGuid().ToString(), Guid.NewGuid().ToString()))
-            ]);
+            ]));
     }
 
     [Fact] void should_be_successful() => Context.Result.IsSuccess.ShouldBeTrue();

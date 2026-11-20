@@ -40,7 +40,7 @@ Cratis__Chronicle__Clients__1__ClientSecret=another-secret-value
 | clientSecret | string | Yes | The client secret in plaintext. Hashed internally on load |
 | eventStores | array | No | Explicit event store grants for this client. Empty by default. Each entry has `eventStore` (the store name), `allEventStores` (`true` to cover every ordinary store instead of one), `namespace` (omit for every namespace) and `access` (the access flags to grant) |
 
-When `allEventStores` is `false` and `eventStore` is omitted, the entry does not name a store, so set one or the other. Subjects configured under external event store access carry `isClient` (default `false`): set it to `true` when the subject is a client identifier rather than a token subject.
+When `allEventStores` is `false` and `eventStore` is omitted, the entry does not name a store, so set one or the other. `access` defaults to `None` and must explicitly grant `Read`, `Append`, `Manage`, or a combination. Invalid scope entries fail startup; see [Explicit event store grants](authentication.md#explicit-event-store-grants) for the shared scope defaults and requirements. Subjects configured under external event store access carry `isClient` (default `false`): set it to `true` when the subject is a client identifier rather than a token subject.
 
 ## How it works
 

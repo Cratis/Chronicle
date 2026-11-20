@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 [Collection(ChronicleCollection.Name)]
 public class with_unique_constraint_ignoring_casing_violated_by_different_casing(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_event_log_with_append_diagnostics(chronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueOrganizationNameIgnoringCasingConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(OrganizationNameClaimed)];
@@ -19,8 +19,8 @@ public class with_unique_constraint_ignoring_casing_violated_by_different_casing
 
         public async Task Because()
         {
-            FirstResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), new OrganizationNameClaimed("ACME"));
-            SecondResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), new OrganizationNameClaimed("Acme"));
+            FirstResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), new OrganizationNameClaimed("ACME")));
+            SecondResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), new OrganizationNameClaimed("Acme")));
         }
     }
 

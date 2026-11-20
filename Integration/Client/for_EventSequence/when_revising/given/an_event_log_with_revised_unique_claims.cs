@@ -25,7 +25,7 @@ public class an_event_log_with_revised_unique_claims(ChronicleFixture fixture) :
     public async Task ReviseAndProbe<TEvent>(string constraintName, Func<string, TEvent> createEvent)
         where TEvent : notnull
     {
-        var original = await EventStore.EventLog.Append(Owner, createEvent("alpha"));
+        var original = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Owner, createEvent("alpha")));
         OriginalAppend = original;
         original.IsSuccess.ShouldBeTrue();
         SequenceNumber = original.SequenceNumber;

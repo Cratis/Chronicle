@@ -34,13 +34,13 @@ public class and_the_revision_changes_a_closing_stream_scope(context context) : 
 
         async Task Establish()
         {
-            var originalClosing = await EventStore.EventLog.Append(Source, new PeriodClosed("2024-01"));
+            var originalClosing = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Source, new PeriodClosed("2024-01")));
             OriginalClosing = originalClosing;
             OriginalClosingSequenceNumber = originalClosing.SequenceNumber;
             OriginalClosing.IsSuccess.ShouldBeTrue();
-            OriginalReopening = await EventStore.EventLog.Append(Source, new PeriodReopened("2024-02"));
+            OriginalReopening = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Source, new PeriodReopened("2024-02")));
             OriginalReopening.IsSuccess.ShouldBeTrue();
-            var unrelatedClosing = await EventStore.EventLog.Append(Source, new PeriodClosed("2024-03"));
+            var unrelatedClosing = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Source, new PeriodClosed("2024-03")));
             UnrelatedClosing = unrelatedClosing;
             UnrelatedClosingSequenceNumber = unrelatedClosing.SequenceNumber;
             UnrelatedClosing.IsSuccess.ShouldBeTrue();
