@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cratis.Chronicle.Benchmarks.Storage</RootNamespace>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <!-- Match Source's Specifications 5 settings: type-discovery experimental types, incremental cancellation-token adoption, original display names. -->
+    <NoWarn>$(NoWarn);CRSPECEXP01;xUnit1051</NoWarn>
+    <CratisSpecificationsReadableNames>false</CratisSpecificationsReadableNames>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Cratis.Specifications.XUnit.v3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3.mtp-off" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <!-- The pure harness logic is linked in so the specs need neither Docker nor a database. -->
+    <Compile Include="../Chronicle.Benchmarks.Storage/StorageProvider.cs" Link="StorageProvider.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/StorageProviderNames.cs" Link="StorageProviderNames.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/BenchmarkProfile.cs" Link="BenchmarkProfile.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/MachineLoad.cs" Link="MachineLoad.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/LoadReading.cs" Link="LoadReading.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/CommandCounter.cs" Link="CommandCounter.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/CommandSnapshot.cs" Link="CommandSnapshot.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/DurabilityClassifier.cs" Link="DurabilityClassifier.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/SettingsLedger.cs" Link="SettingsLedger.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/HardwareDescription.cs" Link="HardwareDescription.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/OperationStats.cs" Link="OperationStats.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/StorageRunOptions.cs" Link="StorageRunOptions.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Storage/PreflightResult.cs" Link="PreflightResult.cs" />
+  </ItemGroup>
+</Project>

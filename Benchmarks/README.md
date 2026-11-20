@@ -404,6 +404,25 @@ changing production defaults. Its `plan` subcommand starts no processes. See the
 [container-profile harness guide](Chronicle.Benchmarks/ContainerProfile/README.md) for
 safe builds, the core/full matrices, measurement commands and metric definitions.
 
+## Storage-provider benchmarks
+
+`Chronicle.Benchmarks.Storage` compares the event-sequence storage providers (SQLite, PostgreSQL,
+SQL Server, MongoDB) directly at the storage level, with the Orleans grain layer bypassed. It covers
+single and batched appends, concurrent appends, catch-up reads, unique-constraint reads and the storage
+half of grain activation. Each run records the command count per operation (SQL BEGIN/COMMIT are not
+counted), a settings ledger (durability, versions, hardware, machine load) and BenchmarkDotNet JSON
+under `output/<stamp>/<provider>/`.
+
+```bash
+Benchmarks/storage-run.sh --profile smoke --providers sqlite,pg,mongo --repetitions 3
+```
+
+- Profiles: `smoke`, `small`, and `medium` (1M events; needs `--yes-i-know-this-is-long`, exit 2 without it).
+- The run refuses to measure when the machine load exceeds `--max-load` (default 0.7 x CPU count) and exits 3.
+  Never compare numbers taken under load; results are comparable only when the ledgers match.
+- Containers need Docker. MongoDB runs as a single-node replica set; other topologies are not implemented.
+- Specs: `Chronicle.Benchmarks.Storage.Specs`.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
