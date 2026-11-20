@@ -12,6 +12,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Cratis.Tasks;
@@ -93,6 +94,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
     /// <param name="storage">The <see cref="IStorage"/> the queue compares its subscriptions with; optional for standalone specification queues.</param>
+    /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo supports dormant observers; without it none is kept.</param>
+    /// <param name="wakeAdmission">The <see cref="IWakeAdmission"/> that bounds how many dormant observers wake at once; without it wakes are not bounded.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
@@ -100,8 +103,12 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         IOptions<ChronicleOptions> options,
         ILogger<AppendedEventsQueue> logger,
         IShutdownDrainBudget? stopBudget = null,
-        IStorage? storage = null)
+        IStorage? storage = null,
+        IClusterReleases? clusterReleases = null,
+        IWakeAdmission? wakeAdmission = null)
     {
+        _clusterReleases = clusterReleases;
+        _wakeAdmission = wakeAdmission;
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
@@ -142,13 +149,15 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     internal TimeProvider CatchupTimeProvider { get; set; } = TimeProvider.System;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
         Identify(EventSequenceKey.Parse(key!), queueId);
         _metrics = _meter.BeginScope(key!, queueId, _metricNames);
         ConfigureDurableSubscriptionCheck(_observers);
-        return base.OnActivateAsync(cancellationToken);
+        ConfigureDormantSafetyNet();
+        await SeedDormantSubscriptions();
+        await base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -275,6 +284,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             // catch-up); each entry would otherwise leave stale duplicates behind and cause
             // observer.Handle to be invoked multiple times for the same event.
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _dormant.Remove(observerKey);
             _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
         }
 
@@ -292,6 +302,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             }
 
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _dormant.Remove(observerKey);
             _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
         }
 
@@ -309,6 +320,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         lock (_subscriptionsLock)
         {
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _dormant.Remove(observerKey);
             CloseLane(observerKey);
             _pageObservers.TryRemove(observerKey, out _);
         }
@@ -804,6 +816,11 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <returns>Awaitable task.</returns>
     async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
+        if (!await WakeDormantObserver(lane, events))
+        {
+            return;
+        }
+
         var runs = SplitIntoPartitionRuns(events);
         var deliversPages = await DeliversPages(lane);
         if (!deliversPages && runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))

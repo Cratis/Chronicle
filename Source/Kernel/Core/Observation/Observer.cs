@@ -21,6 +21,7 @@ using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
@@ -50,6 +51,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 /// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
+/// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo of the cluster supports dormant observers.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -70,7 +72,8 @@ public partial class Observer(
     IOptionsMonitor<ChronicleOptions> optionsMonitor,
     IEventGenerationRelease? eventGenerationRelease = null,
     TimeProvider? timeProvider = null,
-    IObserverGauges? observerGauges = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    IObserverGauges? observerGauges = null,
+    IClusterReleases? clusterReleases = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -202,6 +205,7 @@ public partial class Observer(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnActivateAsync(cancellationToken);
+        await FinishWakeFromDormancy();
         await ReconcilePartitionDeferrals();
         RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleActivationAlertReport();
@@ -235,6 +239,8 @@ public partial class Observer(
         RegisterWatchdog(config.WatchdogInterval);
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         ConfigureDurableSubscriptions(config.DurableSubscriptions);
+        ConfigureDormancy(config);
+        _dormantResumeMaxEvents = config.DormantResumeMaxEvents < 1 ? 1000 : config.DormantResumeMaxEvents;
         _unseenRemovalAfter = config.UnseenRemovalAfter;
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
@@ -242,6 +248,11 @@ public partial class Observer(
         if (!KeyOwnsDefinition)
         {
             logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
+        }
+
+        if (_observerExists)
+        {
+            await RestoreFromDurableSubscription();
         }
 
         PublishFailedPartitionsGauge();
@@ -272,7 +283,12 @@ public partial class Observer(
             }
 
             // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
-            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle)
+            // One released as dormant keeps its subscription - the record in its state and the entry in the queue - so an event wakes it.
+            // If the queue cannot keep it (an event reached its lane since the release was asked for), it leaves the ordinary way.
+            var keepsSubscription = reason.ReasonCode != DeactivationReasonCode.ShuttingDown &&
+                IsReleasedAsDormant &&
+                await KeepQueueEntryForDormantRelease();
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle && !keepsSubscription)
             {
                 ForgetDurableSubscription();
                 await TransitionTo<Disconnected>();

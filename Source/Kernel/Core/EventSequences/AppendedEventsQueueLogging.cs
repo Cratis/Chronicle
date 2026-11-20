@@ -58,4 +58,13 @@ internal static partial class AppendedEventsQueueLogMessages
 
     [LoggerMessage(LogLevel.Debug, "Observer {ObserverKey} was spilled again while its catch-up was being started; starting catch-up again")]
     internal static partial void CatchupRequestedAgain(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey);
+
+    [LoggerMessage(LogLevel.Information, "Keeping {Seeded} dormant subscription(s) of {EventSequence} from the stored durable subscriptions")]
+    internal static partial void SeededDormantSubscriptions(this ILogger<AppendedEventsQueue> logger, EventSequenceKey eventSequence, int seeded);
+
+    [LoggerMessage(LogLevel.Warning, "Could not seed the dormant subscriptions of {EventSequence} from storage; the safety net tries again")]
+    internal static partial void SeedingDormantSubscriptionsFailed(this ILogger<AppendedEventsQueue> logger, EventSequenceKey eventSequence, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Waking dormant observer {ObserverKey} for its safety net failed; it is tried again at the next interval")]
+    internal static partial void SafetyNetWakeFailed(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, Exception exception);
 }

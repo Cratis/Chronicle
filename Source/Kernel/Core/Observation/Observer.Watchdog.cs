@@ -68,6 +68,7 @@ public partial class Observer
         if (!await RecoverIfStuck()) await NudgeStalledJobs();
         await FlushDebouncedProgressState();
         await ReconcileAlertsIfNeeded();
+        await ReleaseWhenDormant();
     }
 
     /// <summary>

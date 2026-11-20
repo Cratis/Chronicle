@@ -109,6 +109,18 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     }
 
     /// <inheritdoc/>
+    public Task<bool> TryMarkDormant(ObserverKey observerKey) =>
+        _isResetting ? Task.FromResult(false) : _queues[_router.GetQueueIndexFor(observerKey)].TryMarkDormant(observerKey);
+
+    /// <inheritdoc/>
+    public async Task Forget(ObserverKey observerKey)
+    {
+        var queueIndex = _router.GetQueueIndexFor(observerKey);
+        _router.Unsubscribe(queueIndex, observerKey);
+        await _queues[queueIndex].Unsubscribe(observerKey);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> IsSubscribed(ObserverKey observerKey)
     {
         var subscriptions = await _queues[_router.GetQueueIndexFor(observerKey)].GetSubscriptions();

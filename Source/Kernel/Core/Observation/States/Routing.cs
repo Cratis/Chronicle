@@ -214,6 +214,16 @@ public class Routing(
             return state;
         }
 
+        // An observer waking from a durable subscription stands at its persisted cursor. It must not skip to the tail, which would
+        // pass the events appended while it was dormant, and it must not start a catch-up job for them: it takes the queue
+        // subscription by entering Observing and then reads from its cursor to the tail itself, falling back to this routing
+        // (without the flag) when that is not clean.
+        if (StateMachine is Observer { IsResumingFromDormancy: true })
+        {
+            await StateMachine.TransitionTo<Observing>();
+            return state;
+        }
+
         if (CanFastForward(state))
         {
             logger.FastForwarding();
