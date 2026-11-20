@@ -301,6 +301,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual("false", self.refresh["concurrency"]["cancel-in-progress"])
         # workflow_run.event stays pull_request for labeled, synchronize and reopened alike.
         self.assertEqual("github.event.workflow_run.event == 'pull_request' && "
+                         "github.event.workflow_run.status == 'completed' && "
                          "(github.event.workflow_run.conclusion == 'success' || "
                          "github.event.workflow_run.path == '.github/workflows/dotnet-build.yml') && "
                          "github.event.workflow_run.head_repository.full_name == github.repository", job["if"])
@@ -316,6 +317,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(event=event, conclusion=conclusion, path=path, same_repo=same_repo):
                 self.assertEqual(expected, evaluate_boolean_condition(job["if"], {
                     "github.event.workflow_run.event": event,
+                    "github.event.workflow_run.status": "completed",
                     "github.event.workflow_run.conclusion": conclusion,
                     "github.event.workflow_run.path": path,
                     "github.event.workflow_run.head_repository.full_name == github.repository": same_repo,
@@ -465,18 +467,73 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(evaluator.EVIDENCE_JOB, name.replace("${{ " + EFFECTIVE_LABEL + " }}", "run-integration"))
         self.assertEqual("hot-core-gate", evaluator.GATE_JOB)
 
-    def test_requested_integration_starts_after_builds_beside_specs(self):
+    def test_requested_integration_starts_after_builds_and_preflight_beside_specs(self):
         jobs = self.build["jobs"]
         for job_id in ("integration", "integration-api", "mongodb", "neo4j"):
             with self.subTest(job=job_id):
                 job = jobs[job_id]
                 self.assertNotIn("specs", job["needs"])
+                self.assertIn("integration-preflight", job["needs"])
+                self.assertIn("(github.event_name != 'pull_request' || needs.integration-preflight.result == 'success')",
+                              job["if"])
                 self.assertNotIn("needs.specs", job["if"])
                 self.assertIn("!cancelled()", job["if"])
                 self.assertIn("needs.dotnet-build.result == 'success'", job["if"])
                 self.assertIn("(github.event_name != 'pull_request' || inputs.integration_requested)", job["if"])
         self.assertIn("needs.dotnet-build-development.result == 'success'", jobs["integration"]["if"])
         self.assertIn("github.actor != 'dependabot[bot]'", jobs["integration"]["if"])
+
+    def test_preflight_requires_only_the_cheap_deterministic_checks(self):
+        jobs = self.build["jobs"]
+        preflight = jobs["integration-preflight"]
+        checks = {"wire-compatibility", "grain-compatibility", "spec-runner-checks", "analyzers",
+                  "preflight-client-snippets", "preflight-timing-ratchet"}
+        self.assertEqual(checks | {GATE}, set(preflight["needs"]))
+        self.assertIn("always()", preflight["if"])
+        step = preflight["steps"][0]
+        self.assertEqual({"${{ needs." + check + ".result }}" for check in checks}, set(step["env"].values()))
+        for failed in checks:
+            results = dict.fromkeys(preflight["needs"], "success")
+            results[failed] = "failure"
+            self.assertTrue(condition_allows(preflight, ConditionContext("pull_request", True, results)))
+            env = {name: results[value.split(".")[1]] for name, value in step["env"].items()}
+            self.assertNotEqual(0, subprocess.run(["bash", "-c", step["run"]], env=env).returncode)
+        self.assertEqual(0, subprocess.run(["bash", "-c", step["run"]],
+                                          env=dict.fromkeys(step["env"], "success")).returncode)
+        for event, requested in (("schedule", True), ("workflow_dispatch", True), ("pull_request", False)):
+            results = dict.fromkeys(preflight["needs"], "skipped")
+            self.assertFalse(condition_allows(preflight, ConditionContext(event, requested, results)))
+        self.assertNotIn("integration-preflight", jobs["specs"]["needs"])
+        for name, job in jobs.items():
+            if name.startswith("coverage-"):
+                self.assertNotIn("integration-preflight", job.get("needs", []))
+
+    def test_preflight_commands_match_the_standalone_checks(self):
+        jobs = self.build["jobs"]
+        for inline, filename, standalone in (
+                ("preflight-client-snippets", "client-snippets.yml", "verify"),
+                ("preflight-timing-ratchet", "timing-coupling-ratchet.yml", "timing-coupling-ratchet")):
+            job = jobs[inline]
+            commands = lambda steps: [step["run"] for step in steps if "run" in step]
+            self.assertEqual(commands(workflow(filename)["jobs"][standalone]["steps"]), commands(job["steps"]))
+            self.assertEqual("ubuntu-latest", job["runs-on"])
+            self.assertIn("github.event_name == 'pull_request'", job["if"])
+            self.assertIn("inputs.integration_requested", job["if"])
+            self.assertNotIn("draft", job["if"])
+        runner_commands = [step.get("run") for step in jobs["spec-runner-checks"]["steps"]]
+        self.assertIn("python3 .github/scripts/test-generate-integration-matrix.py", runner_commands)
+
+    def test_preflight_blocks_only_requested_pr_lanes_not_nightly_or_dispatch(self):
+        jobs = self.build["jobs"]
+        for lane, event, result in product(("integration", "integration-api", "mongodb", "neo4j"),
+                                           ("pull_request", "schedule", "workflow_dispatch"),
+                                           ("success", "failure", "cancelled", "skipped")):
+            job = jobs[lane]
+            results = dict.fromkeys(job["needs"], "success")
+            results["integration-preflight"] = result
+            with self.subTest(lane=lane, event=event, preflight=result):
+                self.assertEqual(event != "pull_request" or result == "success",
+                                 condition_allows(job, ConditionContext(event, True, results)))
 
     def test_sql_specs_run_in_parallel_without_reducing_coverage(self):
         jobs = self.build["jobs"]
@@ -790,13 +847,13 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
         self.assertEqual({"dotnet-build", "dotnet-build-development",
-                          "dotnet-build-development-requested"}, set(prerequisites_of(job)))
+                          "dotnet-build-development-requested", "integration-preflight"}, set(prerequisites_of(job)))
         states = ("success", "failure", "cancelled", "skipped")
         for event, requested, specs, development, release, cancelled in product(
                 ("pull_request", "schedule", "workflow_dispatch"), (False, True),
                 states, states, states, (False, True)):
             is_pr = event == "pull_request"
-            results = {"dotnet-build": release, "specs": specs,
+            results = {"dotnet-build": release, "specs": specs, "integration-preflight": "success",
                        "dotnet-build-development": "skipped" if is_pr else development,
                        "dotnet-build-development-requested": development if is_pr else "skipped"}
             expected = (not cancelled and release == "success" and development == "success"

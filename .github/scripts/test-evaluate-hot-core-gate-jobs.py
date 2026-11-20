@@ -76,6 +76,60 @@ class JobEvidence(unittest.TestCase):
                 self.assertFalse(gate.gate(arguments())[0])
 
 
+class PendingEvidence(unittest.TestCase):
+    def test_in_flight_inspects_every_job_id_including_queued_rerun_copies(self):
+        completed = {"id": 2, "name": "integration", "status": "completed", "conclusion": "success"}
+        self.assertFalse(gate.in_flight(dict(GREEN, status="completed")))
+        self.assertFalse(gate.in_flight([completed]))
+        for status in ("queued", "in_progress", "waiting", "pending", None):
+            with self.subTest(status=status):
+                self.assertTrue(gate.in_flight(dict(GREEN, status=status)))
+                self.assertTrue(gate.in_flight([completed, dict(completed, id=3, status=status)]))
+
+    def test_same_run_nonfinal_result_is_pending_without_polling(self):
+        for status in ("queued", "in_progress", "waiting"):
+            with self.subTest(status=status), patch.dict(os.environ, dict(SAME_RUN, REQUESTED=status), clear=True), \
+                    patch.object(gate, "evidence_runs", return_value=[]), \
+                    patch.object(gate, "latest_requested", return_value=None), \
+                    patch.object(gate.time, "sleep") as sleep:
+                ok, message = gate.gate(arguments())
+                self.assertIsNone(ok)
+                self.assertIn("::notice title=Waiting for Requested Integration::", message)
+                self.assertNotIn("::error", message)
+                sleep.assert_not_called()
+
+    def test_same_run_queued_job_is_pending_not_an_error(self):
+        queued = {"id": 3, "name": "requested / integration", "status": "queued", "conclusion": None}
+        ok, message = same_run([NESTED_AGGREGATE, queued])
+        self.assertIsNone(ok)
+        self.assertIn("::notice", message)
+        self.assertNotIn("::error", message)
+
+    def test_newest_requested_run_or_job_overrides_older_green_evidence(self):
+        for latest in (dict(GREEN, id=99, status="in_progress"),
+                       dict(GREEN, id=99, status="completed", jobs=GREEN["jobs"] + [
+                           {"id": 3, "name": "integration", "status": "queued", "conclusion": None}])):
+            with self.subTest(latest=latest), patch.dict(os.environ, ENV, clear=True), \
+                    patch.object(gate, "evidence_runs", return_value=[GREEN]), \
+                    patch.object(gate, "latest_requested", return_value=latest), \
+                    patch.object(gate.time, "sleep") as sleep:
+                ok, message = gate.gate(arguments())
+                self.assertIsNone(ok)
+                self.assertIn("::notice", message)
+                self.assertNotIn("::error", message)
+                sleep.assert_not_called()
+
+    def test_pending_cli_exits_nonzero_with_notice(self):
+        output = io.StringIO()
+        with patch.dict(os.environ, ENV, clear=True), patch.object(sys, "argv", [str(SCRIPT), "gate"]), \
+                patch.object(gate, "evidence_runs", return_value=[]), \
+                patch.object(gate, "latest_requested", return_value=dict(GREEN, status="queued")), \
+                redirect_stdout(output):
+            self.assertEqual(1, gate.main())
+        self.assertIn("::notice", output.getvalue())
+        self.assertNotIn("::error", output.getvalue())
+
+
 class CompletedGateEvidence(unittest.TestCase):
     def test_completed_run_with_unfinished_or_failing_job_never_passes(self):
         for status, conclusion in (("queued", None), ("in_progress", "success"), ("waiting", None),

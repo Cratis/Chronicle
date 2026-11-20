@@ -58,6 +58,21 @@ def detect_build(arguments):
     return True, message
 
 
+def in_flight(run_or_jobs):
+    """Inspect every reported status, including separate queued copies of rerun job IDs."""
+    if isinstance(run_or_jobs, list):
+        return any(in_flight(job) for job in run_or_jobs)
+    if not run_or_jobs:
+        return False
+    return (run_or_jobs.get("status", "completed") != "completed"
+            or in_flight(run_or_jobs.get("jobs", [])))
+
+
+def pending(subject, detail):
+    """None is pending, never success: the CLI exits non-zero without an error annotation."""
+    return None, f"::notice title=Waiting for {subject}::{detail} Completion refresh will re-evaluate this check."
+
+
 def completed_job(job):
     """A passing conclusion is only evidence when the identified job has finished."""
     return (job.get("id") is not None and job.get("status") == "completed"
@@ -84,6 +99,7 @@ def requested_jobs_passed(jobs):
 def has_green_evidence(runs, head_sha):
     """Only the requested gate in a pull-request run for this exact commit is evidence."""
     return any(run["head_sha"] == head_sha and run["event"] == "pull_request"
+               and run.get("status", "completed") == "completed"
                and requested_jobs_passed(run.get("jobs", [])) for run in runs)
 
 
@@ -97,12 +113,23 @@ def integration_status(latest, head_sha, repo):
     if not latest:
         return f"No Requested Integration run has started for {head_sha}."
     url = latest.get("html_url") or f"https://github.com/{repo}/actions/runs/{latest['id']}"
-    if latest.get("status") != "completed":
+    if in_flight(latest):
         return f"Requested Integration is still running for {head_sha}: {url}"
     if latest.get("conclusion") == "success":
         return f"Requested Integration finished for {head_sha} but its requested gate did not pass: {url}"
     return (f"Requested Integration ended with {latest.get('conclusion')} for {head_sha}: {url} - fix or re-run "
             "its failing jobs.")
+
+
+def requested_non_hot_core(evidence, head_sha, repo, latest):
+    if evidence:
+        return True, f"Requested integration {evidence} passed for {head_sha}."
+    return False, ("::error title=Integration requested::run-integration is set and no passing Requested "
+                   f"Integration run exists for {head_sha}. {integration_status(latest, head_sha, repo)} "
+                   "Integration runs automatically on each push to "
+                   "a PR labeled `run-integration`; if none started for this head, push again or re-run the "
+                   "latest Requested Integration run for this PR in the Actions tab. This check turns green "
+                   "automatically when that run passes; remove the label and re-run this check to drop the requirement.")
 
 
 def decide(*, detect, touched, dispatch, build, matrix, fork, evidence, head_sha="", repo="Cratis/Chronicle",
@@ -111,15 +138,8 @@ def decide(*, detect, touched, dispatch, build, matrix, fork, evidence, head_sha
         return False, (f"::error::Hot-core detection did not complete ({detect}), so whether this pull request "
                        "reaches the hot core is unknown. Failing closed.")
     if touched != "true":
-        if run_integration and not dispatch and not fork:
-            if evidence:
-                return True, f"Requested integration {evidence} passed for {head_sha}."
-            return False, ("::error title=Integration requested::run-integration is set and no passing Requested "
-                           f"Integration run exists for {head_sha}. {integration_status(latest, head_sha, repo)} "
-                           "Integration runs automatically on each push to "
-                           "a PR labeled `run-integration`; if none started for this head, push again or re-run the "
-                           "latest Requested Integration run for this PR in the Actions tab. This check turns green "
-                           "automatically when that run passes; remove the label and re-run this check to drop the requirement.")
+        if run_integration and not (dispatch or fork):
+            return requested_non_hot_core(evidence, head_sha, repo, latest)
         return True, ("No hot-core path is touched by this pull request. The full out-of-process integration "
                       "matrix is not required here.")
     if dispatch:
@@ -224,7 +244,10 @@ def evidence_runs(repo, head_sha, runs_json):
 
 def latest_requested(repo, head_sha, runs_json):
     runs = recorded(runs_json) if runs_json else workflow_runs(repo, EVIDENCE_WORKFLOW, head_sha)
-    return latest_run(runs, head_sha)
+    latest = latest_run(runs, head_sha)
+    if latest and latest.get("status") == "completed" and not runs_json:
+        return with_jobs(repo, latest)
+    return latest
 
 
 def still_requested(repo, head_sha):
@@ -250,7 +273,10 @@ def same_run_evidence(state):
     if not run_id or not same_run_proof_is_complete(state):
         return None
     # GitHub can report successful needs outputs while a rerun matrix job is still queued.
-    if not requested_jobs_passed(with_jobs(state["repo"], {"id": run_id})["jobs"]):
+    jobs = with_jobs(state["repo"], {"id": run_id})["jobs"]
+    aggregates = [job for job in jobs if is_evidence_job(job["name"])]
+    state["pending"] = any(in_flight(workflow_jobs(jobs, aggregate)) for aggregate in aggregates)
+    if not requested_jobs_passed(jobs):
         return None
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
     return f"{server}/{state['repo']}/actions/runs/{run_id}"
@@ -259,9 +285,13 @@ def same_run_evidence(state):
 def gate(arguments):
     state = {name: os.environ.get(name.upper(), "") for name in ("detect", "touched", "build", "matrix")}
     state.update(dispatch=os.environ.get("DISPATCH") == "true", fork=os.environ.get("FORK") == "true",
-                 head_sha=os.environ["HEAD_SHA"], repo=os.environ["REPO"], evidence=None,
+                 head_sha=os.environ["HEAD_SHA"], repo=os.environ["REPO"], evidence=None, latest=None,
                  run_integration=os.environ.get("RUN_INTEGRATION") == "true")
     load_integration_evidence(state, arguments.runs_json)
+    if state.pop("pending", False):
+        detail = integration_status(state["latest"], state["head_sha"], state["repo"]) if state["latest"] else (
+            f"Requested Integration is still running for {state['head_sha']}.")
+        return pending("Requested Integration", detail)
     integration_ok, integration_message = with_exclusion_summary(decide(**state))
     if state["dispatch"] or state["detect"] != "success":
         return integration_ok, integration_message
@@ -270,11 +300,25 @@ def gate(arguments):
     if integration_ok and not state["fork"]:
         latest = await_specs(latest, state, arguments.build_runs_json)
     specs_ok, specs_message = specs_verdict(latest, state)
+    if specs_ok is None:
+        return None, specs_message
     return integration_ok and specs_ok, integration_message + "\n" + specs_message
 
 
+def integration_lookup_required(state):
+    return state["touched"] == "true" or state["run_integration"]
+
+
+def can_load_integration(state):
+    return state["detect"] == "success" and not state["dispatch"] and not state["fork"]
+
+
 def load_integration_evidence(state, runs_json):
-    if state["detect"] != "success" or state["dispatch"] or state["fork"]:
+    if not can_load_integration(state):
+        return
+    requested = os.environ.get("REQUESTED", "")
+    if requested not in ("", "success", "failure", "cancelled", "skipped"):
+        state["pending"] = True
         return
     same_run = same_run_evidence(state)
     if same_run or (state["touched"] != "true" and state["run_integration"]):
@@ -283,14 +327,16 @@ def load_integration_evidence(state, runs_json):
     if same_run and state["run_integration"]:
         state["evidence"] = same_run
         return
-    if state["touched"] != "true" and not state["run_integration"]:
+    if not integration_lookup_required(state):
+        return
+    state["latest"] = latest_requested(state["repo"], state["head_sha"], runs_json)
+    if in_flight(state["latest"]):
+        state["pending"] = True
         return
     runs = evidence_runs(state["repo"], state["head_sha"], runs_json)
     green = next((run for run in runs if has_green_evidence([run], state["head_sha"])), None)
     if green:
         state["evidence"] = green.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{green['id']}"
-    else:
-        state["latest"] = latest_requested(state["repo"], state["head_sha"], runs_json)
 
 
 def latest_build(repo, head_sha, runs_json):
@@ -308,7 +354,10 @@ def await_specs(latest, state, runs_json):
     The existing job timeout bounds this wait. Completion refresh can re-evaluate a timed-out
     gate; integration/detection failures never enter this wait or become pending successes.
     """
-    while latest and latest["status"] != "completed":
+    deadline = time.monotonic() + 30 * 60
+    while in_flight(latest):
+        if time.monotonic() >= deadline:
+            return latest
         print(f"Waiting for .NET Build & Integration specs for {state['head_sha']} (run {latest['id']}).", flush=True)
         time.sleep(30)
         latest = latest_build(state["repo"], state["head_sha"], runs_json)
@@ -320,24 +369,25 @@ def specs_passed(latest):
         job["name"] == "specs" and job["conclusion"] == "success" for job in latest.get("jobs", [])))
 
 
+def specs_detail(latest, state):
+    if latest is None:
+        return f".NET Build & Integration has not started for {state['head_sha']}."
+    url = latest.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{latest['id']}"
+    job = next((job for job in latest.get("jobs", []) if job["name"] == "specs"), None)
+    conclusion = job["conclusion"] if job else "missing"
+    return f".NET Build & Integration specs conclusion: {conclusion} for {state['head_sha']}: {url}"
+
+
 def specs_verdict(latest, state):
     if os.environ.get("BUILD_TRIGGERED") != "true" and latest is None:
         return True, ".NET Build & Integration was not triggered; specs are not required."
+    if in_flight(latest):
+        return pending("Specs", f".NET Build & Integration is still running for {state['head_sha']}.")
     if specs_passed(latest):
         return True, f".NET Build & Integration specs passed for {state['head_sha']}."
     retry = ("Re-run this check after specs pass; fork PRs do not refresh automatically." if state["fork"] else
              "This check turns green automatically when it passes.")
-    if latest is None:
-        detail = f".NET Build & Integration has not started for {state['head_sha']}."
-    else:
-        url = latest.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{latest['id']}"
-        if latest["status"] != "completed":
-            detail = f".NET Build & Integration is still running for {state['head_sha']}: {url}"
-        else:
-            job = next((job for job in latest.get("jobs", []) if job["name"] == "specs"), None)
-            conclusion = job["conclusion"] if job else "missing"
-            detail = f".NET Build & Integration specs conclusion: {conclusion} for {state['head_sha']}: {url}"
-    return False, f"::error title=Specs required::{detail} {retry}"
+    return False, f"::error title=Specs required::{specs_detail(latest, state)} {retry}"
 
 
 def current_pr(repo, head_sha, pr_json):
@@ -362,8 +412,11 @@ def gate_runs(repo, head_sha, runs_json):
 
 
 def refresh_evidence_error(repo, head_sha, arguments):
+    requested = latest_requested(repo, head_sha, arguments.runs_json)
+    build = latest_build(repo, head_sha, arguments.build_runs_json)
+    if in_flight(requested) or in_flight(build):
+        return "Nothing to do: required Requested Integration or build jobs are still running."
     if os.environ.get("SOURCE_WORKFLOW", "").rsplit("/", 1)[-1] == BUILD_WORKFLOW:
-        build = latest_build(repo, head_sha, arguments.build_runs_json)
         if not build or build["status"] != "completed":
             return "Nothing to do: no completed specs evidence for this head commit."
     elif not has_green_evidence(evidence_runs(repo, head_sha, arguments.runs_json), head_sha):

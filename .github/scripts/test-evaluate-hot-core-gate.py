@@ -454,6 +454,28 @@ class SpecsDecisions(unittest.TestCase):
                 self.assertNotIn("::error", output.getvalue())
                 self.assertIn("specs passed" if ok else f"specs conclusion: {conclusion}", message)
 
+    def test_specs_poll_budget_exhaustion_is_pending_not_an_error(self):
+        running = dict(BUILD_GREEN, status="in_progress")
+        with patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
+                patch.object(gate, "latest_build", return_value=running), \
+                patch.object(gate.time, "monotonic", side_effect=[0, 1800]), \
+                patch.object(gate.time, "sleep") as sleep:
+            ok, message = gate.gate(arguments())
+        self.assertIsNone(ok)
+        self.assertIn("::notice title=Waiting for Specs::", message)
+        self.assertNotIn("::error", message)
+        sleep.assert_not_called()
+
+    def test_completed_build_with_a_queued_rerun_job_never_passes(self):
+        queued = {"name": "specs-other", "id": 9, "status": "queued", "conclusion": None}
+        running = dict(BUILD_GREEN, jobs=BUILD_GREEN["jobs"] + [queued])
+        with patch.dict(os.environ, dict(ENV, TOUCHED="false"), clear=True), \
+                patch.object(gate, "latest_build", return_value=running), \
+                patch.object(gate.time, "monotonic", side_effect=[0, 1800]):
+            ok, message = gate.gate(arguments())
+        self.assertIsNone(ok)
+        self.assertIn("::notice", message)
+
     def test_failed_integration_never_waits_for_running_specs(self):
         with patch.dict(os.environ, ENV, clear=True), \
                 patch.object(gate, "latest_build", return_value=dict(BUILD_GREEN, status="in_progress")), \
@@ -525,6 +547,39 @@ class SpecsDecisions(unittest.TestCase):
 
 
 class RefreshDecisions(unittest.TestCase):
+    def setUp(self):
+        for name in ("latest_requested", "latest_build"):
+            lookup = patch.object(gate, name, return_value=None)
+            lookup.start()
+            self.addCleanup(lookup.stop)
+
+    def test_refresh_waits_for_required_runs_or_queued_job_ids(self):
+        work = SCRIPT.resolve().parents[2] / ".ai-work" / "ci-failfast"
+        work.mkdir(parents=True, exist_ok=True)
+        for source, field in ((gate.EVIDENCE_WORKFLOW, "requested"), (gate.BUILD_WORKFLOW, "build")):
+            for status in ("queued", "in_progress", "job-queued"):
+                pending = dict(GREEN, status=status)
+                if status == "job-queued":
+                    pending.update(status="completed", jobs=GREEN["jobs"] + [
+                        {"name": "integration", "id": 3, "status": "queued", "conclusion": None}])
+                with self.subTest(source=source, status=status), tempfile.TemporaryDirectory(dir=work) as root:
+                    fixtures = {"requested": [GREEN], "build": [BUILD_GREEN], "gate": [FAILED_GATE],
+                                "pr": {"head": {"sha": SHA}}}
+                    fixtures[field] = [pending]
+                    paths = {}
+                    for name, data in fixtures.items():
+                        path = Path(root) / (name + ".json")
+                        path.write_text(json.dumps(data), encoding="utf-8")
+                        paths[name] = str(path)
+                    result = subprocess.run([sys.executable, str(SCRIPT), "refresh", "--dry-run",
+                                             "--runs-json", paths["requested"], "--build-runs-json", paths["build"],
+                                             "--gate-runs-json", paths["gate"], "--pr-json", paths["pr"]],
+                                            env={**os.environ, **ENV, "SOURCE_WORKFLOW": source},
+                                            capture_output=True, text=True)
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    self.assertIn("Nothing to do", result.stdout)
+                    self.assertNotIn("Would re-run", result.stdout)
+
     def test_rerun_target_uses_latest_completed_failed_gate_only(self):
         passed = dict(FAILED_GATE, id=43, jobs=[{"name": gate.GATE_JOB, "conclusion": "success"}])
         cases = [([], SHA, None), ([FAILED_GATE], "new-push", None), ([FAILED_GATE], SHA, 42),
@@ -649,8 +704,10 @@ def recorded_checks():
                                "--gate-runs-json", paths["gate"], "--pr-json", paths["current"]],
              {"SOURCE_WORKFLOW": ".github/workflows/dotnet-build.yml"}, 0, "run 42")])
         for name, args, overrides, expected, text in cases:
-            if args[0] == "gate" and "--build-runs-json" not in args:
+            if "--build-runs-json" not in args:
                 args.extend(["--build-runs-json", paths["no-build"]])
+            if args[0] == "refresh" and "--runs-json" not in args:
+                args.extend(["--runs-json", paths["green"]])
             result = subprocess.run([sys.executable, str(SCRIPT), *args], env=dict(ENV, **overrides),
                                     capture_output=True, text=True, timeout=10)
             print(f"{name}: exit {result.returncode}; {result.stdout.strip()}")
