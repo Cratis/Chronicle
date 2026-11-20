@@ -110,6 +110,9 @@ public class AdministratorRoster(
         }
     }
 
+    static AdministratorPrivilegeMigrated MigrationDecision(UserId? userId) =>
+        new(userId is null ? "Unproven" : "Proven", userId ?? UserId.NotSet);
+
     static void ValidateDecision(EventToAppend[] events)
     {
         if (events.Count(@event => @event.EventSourceId == Roster.EventSourceId) > 1 ||
@@ -162,7 +165,7 @@ public class AdministratorRoster(
             events.Add(RosterEvent(new UserGrantedAdministrator(userId, GrantReason.UpgradeProvenance, "Lowest-sequence InitialAdminUserAdded; configured username; active user; no later UserRemoved.")));
         }
         if (userId is null) _unprovenWarning(logger, null);
-        events.Add(ToEvent(Roster.MigrationEventSourceId, new AdministratorPrivilegeMigrated(userId is null ? "Unproven" : "Proven", userId)));
+        events.Add(ToEvent(Roster.MigrationEventSourceId, MigrationDecision(userId)));
         return (true, events.ToArray());
     }
 
@@ -226,7 +229,10 @@ public class AdministratorRoster(
             if (result.HasConcurrencyViolations) continue;
             if (!result.IsSuccess || !result.ConcurrencyCheckPerformed)
             {
-                logger.AdministratorAppendFailed(result.ConcurrencyCheckPerformed, string.Join("; ", result.Errors));
+                logger.AdministratorAppendFailed(
+                    result.ConcurrencyCheckPerformed,
+                    string.Join("; ", result.Errors),
+                    AdministratorRosterLogging.DescribeConstraintViolations(result.ConstraintViolations, decision.Events.Select(@event => @event.EventType.Id)));
                 throw new InvalidOperationException("The guarded administrator roster change could not be appended.");
             }
             return true;
