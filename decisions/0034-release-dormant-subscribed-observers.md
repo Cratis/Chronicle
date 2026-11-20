@@ -16,6 +16,9 @@ applies-to:
   - Source/Kernel/Core/Observation/Reducers/Clients/**
   - Source/Kernel/Grpc/Observation/**
   - Source/Kernel/Core/Configuration/Observers.cs
+  - Source/Kernel/Core/Configuration/Clients.cs
+  - Source/Kernel/Core/Observation/Dormant*.cs
+  - Source/Kernel/Core/Observation/DurableSubscriptionRecords.cs
   - Source/Kernel/Storage/Observation/ObserverState.cs
   - Benchmarks/Chronicle.Benchmarks.Kernel/**
 ---
@@ -275,9 +278,51 @@ These resolve items of "What I could not establish from the code" and two of the
 - **Type-set change and the quiesce of 0010/0011.** The quiesce is not in `Core` yet (only its stored field and guard exist). A type set changes today through a re-registration that calls `IObserver.Subscribe...`, which activates the observer, rewrites its definition and replaces its queue entry by key, so a dormant observer is always woken by the change. The drift risk is confined to the queue entry that is seeded from storage: the durable record deliberately holds no event types, so seeding must read the observer definition and `SubscribesToAllEvents` together with the record and never cache types in it. When 0011's quiesce lands it has to wake a dormant observer, or drop its queue entry, before it drains.
 - **Things that wake a dormant observer today, beyond the keeper.** `ProjectionsManager.SubscribeIfNotSubscribed` (start, registration, timers, and every namespace when a silo is dead), `GetObserverInformation`, `GetConnectedClientsForObserver`, `WaitForObserverCompletion`, `ConnectedClientsQuery.GetAllForObserver` and the connected-reducer lookup in `ReadModels`. The observer listing does not. Stage 3 has to change the projection manager and these reads or releasing projections will not last.
 
-## Stage 2 as implemented
+## As built (2026-11-20)
 
-Settings in `observers`: `durableSubscriptions` (`Off` or `Shadow`, default `Shadow`), `dormantAfter` (900, `0` off), `dormantSafetyNet` (900), `maxConcurrentWakes` (0 = automatic) and `durableSubscriptionCheckInterval` (15 minutes). The last four exist and are documented; only `durableSubscriptions` and `durableSubscriptionCheckInterval` act in Stage 2. The metric is `appended_events_queue.durable_subscription_disagreements`, attribute `Disagreement` (`stored_not_live`, `live_not_stored`). The Stage 0 baseline and the benchmark mode are described in `Benchmarks/Chronicle.Benchmarks.Kernel/README.md`.
+Stages 1 to 4 are built in one release. Stage 5 (the wire contract) is not touched.
+
+**Settings.** `observers.durableSubscriptions` is `Off`, `Shadow` or `Release`, and defaults to `Release`. `observers.dormantAfter` (900 s, `0` off), `observers.dormantSafetyNet` (900 s, jittered per observer between 60% and 90%), `observers.maxConcurrentWakes` (0, automatic), `observers.dormantResumeMaxEvents` (1000) and `observers.durableSubscriptionCheckInterval` (15 minutes, `Shadow` only). `connectedClients.keeperMode` is `Legacy` or `SiloLocal` and defaults to `SiloLocal`. Every default is on.
+
+**Release.** `Observer.Dormancy.cs` holds the predicate (subscribed, active, nothing owed, in scope, floor reached, setting on, period passed) and runs at the end of each watchdog pass. The observer asks its queue to keep the subscription, and the queue holds a per-observer entry seeded from storage. Only client reactors, client reducers and projections are in scope.
+
+**Wake.** The queue rings a doorbell through the wake admission (`maxConcurrentWakes`) when an event the entry observes is appended. The safety net is driven from the queue with no per-observer timer. The woken observer resumes from its persisted cursor (`Observer.DormantResume.cs`): it subscribes to the queue first, reads from the cursor, delivers in order, and falls back to the catch-up job when the gap exceeds `dormantResumeMaxEvents`. A record that names a client that is gone is dropped and repaired on the wake.
+
+**The watchdog's duties (DP5).** None is held per observer. A client that disconnects is found by `IClientDepartureNotifier.NotifyDormant`, which reads the durable subscriptions through `IDormantTargetSweep` (collected for a second and shared between connections that leave together). A silo that leaves is found by `DormantSiloDepartures` on every silo, which wakes the observers whose record names a client served from it. A stale record is validated and repaired on the wake. The removal of unseen observers (0035) reads the record: an observer whose record names a client is seen and never removed, and a record found stale on a wake records the last-seen time, so a client that left while the observer was dormant starts the clock then.
+
+**The keeper (DP6, option "stay per namespace, stop calling").** The per-namespace client `Reactor` and `Reducer` grains and the gRPC streams are unchanged. What changed is that the stream's check no longer calls the client grain, which is what kept it and the observer resident. In `SiloLocal` mode, while the stream is open, a subscription is intact when the observer's durable subscription names the connection; the records of a namespace are read once and shared for 30 seconds by `IDurableSubscriptionRecords`. An observer with no record, a failed read, `Legacy` mode, a setting that does not apply or a mixed cluster fall back to the original two calls. `ProjectionsManager` treats a projection held by a record as subscribed, on start, registration, timers and silo loss. This is a deviation from the "stream registration, silo departure and a long safety net" shape of DP6: the checks keep the cadence they had (every `reviseIntervalSeconds` when unconfirmed, up to `subscriptionCheckIntervalSeconds` otherwise); what is gone is the call that woke the observer. A per-namespace stream that is never opened for a dormant observer (option "no stream until needed") was not attempted.
+
+**Surfaces.** The observer listing reports `isSubscribed` from the record, which is true for a resident and a dormant observer alike. Reading one observer and reading its connected clients check `IAppendedEventsQueues.IsDormant` first and answer from storage and the record without activating it. No dormant marker is exposed: the contract types are generated from Core and adding a field is a wire change, left to Stage 5. `IsDormant` is `[AlwaysInterleave]`; without it a queue busy delivering made the call time out in the integration run.
+
+**Telemetry.** `observer.dormant` (gauge per event store and namespace, fed from the queues, zero rather than absent when empty), `observer.dormant_releases`, `observer.dormant_wakes` (`WakeCause`: `event`, `safety_net`), `observer.dormant_wakes_delayed`, `observer.dormant_resumes` (`ResumeOutcome`: `cursor`, `catch_up`, `stale_record`). A released observer's gauge entries are released with its activation.
+
+**Compatibility.** The grain interfaces only grew: `IObserver` v11, `IAppendedEventsQueue` v2, `IAppendedEventsQueues` v2 (one method `IsDormant` and the earlier `TryMarkDormant`). No stored or serialized payload changed. Release and wake are gated by `DormantObserverFloor` (19.173.0), evaluated at each decision, so a rolling upgrade releases nothing until every silo supports it, and returns to resident when an older silo joins.
+
+**Deviations from the decision.**
+
+- DP6 is the "stop calling" variant described above, not a removal of the per-namespace grains.
+- A new observer is released only after its alert reminder ticked (one to two minutes after it subscribed, Orleans' minimum reminder period), so an observer is dormant a few minutes after subscribing.
+- The `ObserverAlerts` companion grain is not touched. It is not `[KeepAlive]`, so Orleans collects it after its collection age (15 minutes by default); the benchmark run does not set that age, so its figures still count 2200 of them.
+- A reducer read-model read that needs the connected reducer, and `WaitForObserverCompletion`, still activate the observer because they use it.
+
+**Measurements.** `Benchmarks/Chronicle.Benchmarks.Kernel` `--observer-footprint --dormant`, 2000 reactor observers on one connection and 200 warm-up observers, one in-process silo with in-memory storage, a shared and loaded machine (so timings are noisy; heap and call counts are not). The baseline is the `Off` run taken before any dormancy existed; after is `Release` with `--dormant-after 30`.
+
+| | Before (`Off`) | After (released) |
+| --- | --- | --- |
+| `Observer` activations resident | 2201 | 0 (of 2200 companions: 2200, see above) |
+| Live heap over the baseline | +37.7 MiB (18.4 KiB per observer) | +10.9 MiB (5.6 KiB per observer) |
+| Grain calls per observer per minute, production cadence (`--watchdog 60`, 125 s) | 1.47 | 0.06 |
+| Bytes allocated per observer per minute, same | 11 904 | 1 122 |
+| Process CPU, same | 0.005 cores | 0.004 cores |
+| Grain calls per observer per minute, harness cadence (`--watchdog 1`, 30 s) | 87.9 | 0.23 |
+| Wake of one observer (activation from nothing, median / p95 / max) | 0.01 / 0.03 / 0.14 ms (a resident call) | 0.42 / 1.90 / 7.03 ms |
+| Wake of all 2000 in batches of 100 | 18 ms | 485 ms (0.24 ms per observer) |
+| Subscribed, before release (`Release` writes the record) | 18.4 KiB per observer | 19.3 KiB per observer |
+| Woken again | not applicable | 16.5 KiB per observer |
+
+Raw logs are in the working record of the change and not committed. What the harness does not cover: the gRPC streams and the client `Reactor` and `Reducer` grains (so the keeper's saving is shown by the specifications and the integration scenario, not by a figure), the event-triggered wake through the queue (covered by the specifications and the integration scenario), cross-silo calls and serialization, MongoDB and SQL reads, and a quiet machine.
+
+**Proof of the guarantees.** See the pull request. In short: `for_Observer/when_going_dormant`, `when_waking_from_dormancy`, `for_AppendedEventsQueue`, `for_WakeAdmission`, `for_DormantObserverFloor`, `for_DurableSubscriptionRecords`, `for_DormantTargetSweep`, `for_DormantSiloDepartures`, `for_ClientSubscriptionKeeper`, `for_ProjectionsManager` and `for_UnseenObserverRemoval` in `Core.Specs`, and `Integration/Kernel/for_DormantObserver` in a running kernel with MongoDB.
 
 ## Consequences
 
