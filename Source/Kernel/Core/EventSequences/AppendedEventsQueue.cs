@@ -417,6 +417,9 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
                     }
                 }
 
+                // Nothing was admitted (a batch spilled while stopping never enters the queue), so there is nothing to deplete.
+                if (Volatile.Read(ref _pendingItems) == 0) return;
+
                 await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs), TimeProvider.System);
             }
         });
