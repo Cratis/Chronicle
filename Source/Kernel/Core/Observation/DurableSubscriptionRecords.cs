@@ -39,6 +39,11 @@ public class DurableSubscriptionRecords(
     /// </summary>
     internal static readonly TimeSpan CacheFor = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// How old the shared read must be before an observer missing from it is looked for in storage.
+    /// </summary>
+    internal static readonly TimeSpan RecheckMissAfter = TimeSpan.FromSeconds(2);
+
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly ConcurrentDictionary<(EventStoreName EventStore, EventStoreNamespaceName Namespace, EventSequenceId Sequence), CachedRead> _reads = new();
 
@@ -55,7 +60,22 @@ public class DurableSubscriptionRecords(
     public async Task<ObserverDurableSubscription?> Get(ObserverKey observer)
     {
         var records = await GetAll(observer.EventStore, observer.Namespace, observer.EventSequenceId);
-        return records.TryGetValue(observer.ObserverId, out var record) ? record : null;
+        if (records.TryGetValue(observer.ObserverId, out var record))
+        {
+            return record;
+        }
+
+        // An observer that subscribed after the shared read was taken is missing from it, and a missing record sends the caller
+        // to the observer itself, which would wake it. So a miss is checked against storage - but only once the shared read
+        // is old enough that several asks in a row cannot turn into a read each.
+        var key = (observer.EventStore, observer.Namespace, observer.EventSequenceId);
+        if (_reads.TryGetValue(key, out var cached) && _clock.GetUtcNow() - cached.ReadAt >= RecheckMissAfter)
+        {
+            records = await GetAll(observer.EventStore, observer.Namespace, observer.EventSequenceId, fresh: true);
+            return records.TryGetValue(observer.ObserverId, out record) ? record : null;
+        }
+
+        return null;
     }
 
     /// <inheritdoc/>

@@ -111,6 +111,7 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// <remarks>
     /// Answered by the queue that holds the observer's subscription, so asking never activates the observer.
     /// </remarks>
+    [AlwaysInterleave]
     Task<bool> IsDormant(ObserverKey observerKey);
 
     /// <summary>

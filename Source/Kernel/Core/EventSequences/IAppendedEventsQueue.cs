@@ -111,5 +111,6 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     /// Answered from the queue alone, so a listing or an inspection can tell a dormant observer from a resident one without
     /// activating it (decision 0034). It is false once the observer has been woken, even if the activation is not done yet.
     /// </remarks>
+    [AlwaysInterleave]
     Task<bool> IsDormant(ObserverKey observerKey);
 }
