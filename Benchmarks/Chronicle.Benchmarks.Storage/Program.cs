@@ -51,7 +51,7 @@ try
             await File.WriteAllTextAsync(Path.Combine(providerDirectory, "ledger.json"), ledger.ToJson());
 
             var job = Job.Default
-                .WithToolchain(InProcessNoEmitToolchain.Instance)
+                .WithToolchain(InProcessNoEmitToolchain.Default)
                 .WithStrategy(RunStrategy.Monitoring)
                 .WithLaunchCount(1)
                 .WithWarmupCount(options.Profile.WarmupCount)
