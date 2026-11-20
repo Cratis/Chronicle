@@ -70,7 +70,7 @@ public sealed class UnseenObserverRemoval(
     public async Task<int> Sweep()
     {
         var settings = options.Value.Observers;
-        if (settings.UnseenRemovalAfter <= TimeSpan.Zero)
+        if (!settings.UnseenRemovalEnabled)
         {
             return 0;
         }
@@ -105,7 +105,8 @@ public sealed class UnseenObserverRemoval(
         var namespaces = (await eventStoreStorage.Namespaces.GetAll()).Select(@namespace => @namespace.Name).ToArray();
         var batchSize = settings.UnseenRemovalBatchSize < 1 ? DefaultBatchSize : settings.UnseenRemovalBatchSize;
         var now = _time.GetUtcNow();
-        var cutoff = now - settings.UnseenRemovalAfter;
+        var period = settings.UnseenRemovalAfter > TimeSpan.Zero ? settings.UnseenRemovalAfter : Observers.DefaultUnseenRemovalAfter;
+        var cutoff = now - period;
         var removed = 0;
 
         foreach (var batch in candidates.Chunk(batchSize))

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -9,7 +10,7 @@ public partial class Observer
 {
     static readonly TimeSpan _longestLastSeenRefresh = TimeSpan.FromHours(1);
 
-    TimeSpan _unseenRemovalAfter;
+    TimeSpan _unseenRemovalAfter = Observers.DefaultUnseenRemovalAfter;
     DateTimeOffset _lastSeenRecordedAt;
 
     /// <summary>
@@ -30,13 +31,14 @@ public partial class Observer
     /// client leaving do; false to write at most once per refresh interval, which the watchdog does.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Only client reactors and reducers are ever candidates for removal, and nothing is written while the removal is off.
+    /// Only client reactors and reducers are ever candidates for removal. The time is recorded whether or not the removal is
+    /// turned on, so that turning it on later does not start every clock from zero.
     /// A failure to write is logged and never fails the subscription: the worst outcome is a stale time, which the removal
     /// sweep's own guard (a subscribed observer is never removed) covers.
     /// </remarks>
     async Task RecordSeenByClient(bool force)
     {
-        if (_unseenRemovalAfter <= TimeSpan.Zero || _removed || !_observerExists)
+        if (_removed || !_observerExists)
         {
             return;
         }

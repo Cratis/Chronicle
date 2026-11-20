@@ -9,7 +9,7 @@ public class when_the_removal_is_turned_off : given.an_unseen_observer_removal
 {
     int _result;
 
-    protected override ChronicleOptions Configuration => new() { Observers = new() { UnseenRemovalAfter = TimeSpan.Zero } };
+    protected override ChronicleOptions Configuration => new() { Observers = new() { UnseenRemovalEnabled = false } };
 
     async Task Because() => _result = await _removal.Sweep();
 

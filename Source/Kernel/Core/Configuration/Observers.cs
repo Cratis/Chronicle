@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Observers
 {
     /// <summary>
+    /// The recommended period, and the one used when <see cref="UnseenRemovalAfter"/> is not a positive value.
+    /// </summary>
+    public static readonly TimeSpan DefaultUnseenRemovalAfter = TimeSpan.FromDays(7);
+
+    /// <summary>
     /// Gets the upper bound on how many job steps run in parallel.
     /// </summary>
     /// <remarks>
@@ -284,19 +289,30 @@ public class Observers
     public TimeSpan DurableSubscriptionCheckInterval { get; init; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// Gets how long a client reactor or reducer can go without any client holding a subscription to it, in every namespace,
-    /// before the kernel removes it and its records.
+    /// Gets whether the kernel removes client reactors and reducers that no client has subscribed to for <see cref="UnseenRemovalAfter"/>.
     /// </summary>
     /// <remarks>
-    /// Defaults to 7 days; a zero or negative value turns the removal off. Removal deletes the observer's definition, state,
-    /// failed partitions, jobs and reminders, never a reducer's read model data. When the client connects again the observer
-    /// is registered as new and replays from the start, so a reactor handles the whole history again. Projections, webhooks
-    /// and kernel observers are never removed. This is a server-level setting.
+    /// Defaults to <see langword="false"/>: nothing is ever removed unless an operator turns this on, because a removed reactor replays
+    /// from the start when its client returns and handles the whole history again. While it is off the kernel does not sweep
+    /// and removes nothing, but it still records when each client observer was last seen, so turning the removal on later does
+    /// not start every clock from zero. This is a server-level setting.
     /// </remarks>
-    public TimeSpan UnseenRemovalAfter { get; init; } = TimeSpan.FromDays(7);
+    public bool UnseenRemovalEnabled { get; init; }
 
     /// <summary>
-    /// Gets how often each silo looks for client observers that have not been seen for <see cref="UnseenRemovalAfter"/>.
+    /// Gets how long a client reactor or reducer can go without any client holding a subscription to it, in every namespace,
+    /// before the kernel removes it and its records, when <see cref="UnseenRemovalEnabled"/> is on.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 7 days, which is the recommended period; a zero or negative value falls back to the default. Removal
+    /// deletes the observer's definition, state, failed partitions, jobs and reminders, never a reducer's read model data.
+    /// When the client connects again the observer is registered as new and replays from the start, so a reactor handles the
+    /// whole history again. Projections, webhooks and kernel observers are never removed. This is a server-level setting.
+    /// </remarks>
+    public TimeSpan UnseenRemovalAfter { get; init; } = DefaultUnseenRemovalAfter;
+
+    /// <summary>
+    /// Gets how often each silo looks for client observers that have not been seen for <see cref="UnseenRemovalAfter"/>, when <see cref="UnseenRemovalEnabled"/> is on.
     /// </summary>
     /// <remarks>
     /// Defaults to 1 hour. The sweep reads storage and only activates an observer that is a candidate for removal. A zero or

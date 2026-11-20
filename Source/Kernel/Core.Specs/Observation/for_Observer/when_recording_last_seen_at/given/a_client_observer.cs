@@ -13,7 +13,7 @@ using Orleans.TestKit;
 namespace Cratis.Chronicle.Observation.for_Observer.when_recording_last_seen_at.given;
 
 /// <summary>
-/// A client reactor observer whose clock the spec controls, with the unseen removal at its default of seven days.
+/// A client reactor observer whose clock the spec controls, with the unseen removal at its default, which is off, and its period at seven days.
 /// </summary>
 public class a_client_observer : for_Observer.given.an_observer_that_lost_its_client
 {
@@ -37,7 +37,12 @@ public class a_client_observer : for_Observer.given.an_observer_that_lost_its_cl
         _silo.AddProbe(_ => _connectedClients);
     }
 
-    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, UnseenRemovalAfter = UnseenRemovalAfter };
+    /// <summary>
+    /// Gets whether the removal is turned on; it is off by default, and the last-seen time is recorded either way.
+    /// </summary>
+    protected virtual bool RemovalEnabled => false;
+
+    protected override Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0, UnseenRemovalEnabled = RemovalEnabled, UnseenRemovalAfter = UnseenRemovalAfter };
 
     protected Task SubscribeClient() =>
         _observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, [event_type], SiloAddress.Zero, _client);

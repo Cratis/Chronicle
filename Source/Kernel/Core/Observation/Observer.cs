@@ -245,7 +245,7 @@ public partial class Observer(
         ConfigureDurableSubscriptions(config.DurableSubscriptions);
         ConfigureDormancy(config);
         _dormantResumeMaxEvents = config.DormantResumeMaxEvents < 1 ? 1000 : config.DormantResumeMaxEvents;
-        _unseenRemovalAfter = config.UnseenRemovalAfter;
+        _unseenRemovalAfter = config.UnseenRemovalAfter > TimeSpan.Zero ? config.UnseenRemovalAfter : Observers.DefaultUnseenRemovalAfter;
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();

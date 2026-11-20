@@ -49,6 +49,7 @@ public class a_provider_with_retry_overrides : Specification
             MaxConcurrentWakes = 6,
             DormantResumeMaxEvents = 77,
             DurableSubscriptionCheckInterval = TimeSpan.FromMinutes(31),
+            UnseenRemovalEnabled = true,
             UnseenRemovalAfter = TimeSpan.FromDays(9),
             UnseenRemovalSweepInterval = TimeSpan.FromMinutes(47),
             UnseenRemovalBatchSize = 53,

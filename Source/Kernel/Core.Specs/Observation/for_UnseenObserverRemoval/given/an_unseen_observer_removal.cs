@@ -45,7 +45,7 @@ public abstract class an_unseen_observer_removal : Specification
 
     protected DateTimeOffset Recent => _time.Now - TimeSpan.FromDays(1);
 
-    protected virtual ChronicleOptions Configuration => new();
+    protected virtual ChronicleOptions Configuration => new() { Observers = new() { UnseenRemovalEnabled = true } };
 
     protected virtual IDurableSubscriptionRecords? Records => null;
 
