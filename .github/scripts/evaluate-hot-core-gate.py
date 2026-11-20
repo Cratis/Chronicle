@@ -58,11 +58,27 @@ def detect_build(arguments):
     return True, message
 
 
+def completed_jobs(jobs):
+    """Inspect every job id, never collapse matrix copies by their repeated display names."""
+    return bool(jobs) and all(job.get("id") is not None and job.get("status") == "completed"
+                              and job.get("conclusion") in ("success", "skipped", "neutral") for job in jobs)
+
+
+def requested_jobs_passed(jobs):
+    """The aggregate must pass, and every job in its called workflow must be complete and passing."""
+    for job in jobs:
+        if not is_evidence_job(job["name"]) or job.get("conclusion") != "success":
+            continue
+        prefix = job["name"][:-len(EVIDENCE_JOB)]
+        if completed_jobs([candidate for candidate in jobs if candidate["name"].startswith(prefix)]):
+            return True
+    return False
+
+
 def has_green_evidence(runs, head_sha):
     """Only the requested gate in a pull-request run for this exact commit is evidence."""
     return any(run["head_sha"] == head_sha and run["event"] == "pull_request"
-               and any(is_evidence_job(job["name"]) and job["conclusion"] == "success"
-                       for job in run.get("jobs", [])) for run in runs)
+               and requested_jobs_passed(run.get("jobs", [])) for run in runs)
 
 
 def is_evidence_job(name):
@@ -221,6 +237,9 @@ def same_run_evidence(state):
     touched = state["touched"] == "true" or os.environ.get("REQUESTED_TOUCHED") == "true"
     # A reused result (skip) was proven by the earlier run; a fresh one must have used every provider when touched.
     if proven == "true" and touched and os.environ.get("REQUESTED_ALL_PROVIDERS") != "true":
+        return None
+    # GitHub can report successful needs outputs while a rerun matrix job is still queued.
+    if not requested_jobs_passed(with_jobs(state["repo"], {"id": run_id})["jobs"]):
         return None
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
     return f"{server}/{state['repo']}/actions/runs/{run_id}"
