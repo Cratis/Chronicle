@@ -197,6 +197,15 @@ public abstract class an_unseen_observer_kernel<TFixture>(TFixture fixture) : Sp
         (await States(@namespace).SaveLastSeenAt(observerId, Now - age, EventSequenceId.Log)).ShouldBeTrue();
 
     /// <summary>
+    /// Makes an observer that has a state record look as if no client had held it for a long time.
+    /// </summary>
+    /// <param name="observerId">The id of the observer.</param>
+    /// <param name="age">How long ago it was last seen.</param>
+    /// <returns>Awaitable task.</returns>
+    protected async Task BackdateWhereThereIsAState(string observerId, TimeSpan age) =>
+        await States().SaveLastSeenAt(observerId, Now - age, EventSequenceId.Log);
+
+    /// <summary>
     /// Waits until an observer has been unseen for longer than the period.
     /// </summary>
     /// <param name="observerId">The id of the observer.</param>
