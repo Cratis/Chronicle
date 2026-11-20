@@ -181,7 +181,7 @@ When you rename or delete a reactor or reducer in application code, the observer
 
 "Seen" means a client held a subscription to the observer. Chronicle records the time when a client subscribes and when the last client unsubscribes or disconnects, and refreshes it at most once an hour while a client stays subscribed. An observer subscribed for months is therefore never mistaken for an unseen one. The time is recorded whether or not the removal is on, so turning it on later does not start every clock from zero.
 
-While the removal is off the sweep does nothing: it reads no storage and removes nothing. When it is on, the sweep runs on every silo, once per `unseenRemovalSweepInterval`. It finds candidates by reading storage, without activating observers, in batches of `unseenRemovalBatchSize`. It is safe to run on several silos at once.
+While the removal is off the sweep does nothing: it reads no storage and removes nothing. When it is on, the sweep runs on every silo, once per `unseenRemovalSweepInterval`. It finds candidates by reading storage, without activating observers, in batches of `unseenRemovalBatchSize`. It is safe to run on several silos at once: a candidate that two silos reach in the same instant is removed once, though both may log it and count it.
 
 What is removed and what is not:
 
