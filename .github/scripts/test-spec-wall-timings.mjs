@@ -61,7 +61,7 @@ test('train 8 model selects two parts; all larger counts lose even with perfect 
     const projects = [...timings.measurements.map(record => record.project), CORE_PROJECT];
     const plan = planShards(projects, timings, partitionUnits(partition.units));
     assert.ok(Math.abs(slowest(plan) - best - timings.shardOverheadSeconds) < 0.001);
-    assert.equal(timings.measurements.length, 25);
+    assert.equal(timings.measurements.length, 26);
     assert.equal(timings.core.samples.length, 4);
     assert.deepEqual(timings.samples.map(sample => sample.run), Array(3).fill('43190307308'));
     for (const core of [undefined, { fixedSeconds: -1, variableSeconds: 1 }, { fixedSeconds: 55, variableSeconds: NaN }]) {
