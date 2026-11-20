@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -86,6 +87,15 @@ public partial class ProjectionsManager
             try
             {
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
+
+                // An observer released while dormant is subscribed: its durable subscription and its queue entry hold the
+                // subscription, and asking it would wake it. Starting, a silo leaving and the timers all pass here.
+                if (await IsHeldByDurableSubscription(definition, @namespace))
+                {
+                    _subscribed.TryAdd((definition.Identifier, @namespace), default);
+                    return;
+                }
+
                 if (reconcile && await observer.IsSubscriptionEstablished())
                 {
                     _subscribed.TryAdd((definition.Identifier, @namespace), default);
@@ -120,6 +130,27 @@ public partial class ProjectionsManager
         if (!missing.IsEmpty)
         {
             await SubscribeMissingInNamespace(@namespace, missing, reconcile);
+        }
+    }
+
+    async Task<bool> IsHeldByDurableSubscription(ProjectionDefinition definition, EventStoreNamespaceName @namespace)
+    {
+        if (durableSubscriptionRecords?.CanBeRelied != true || _pendingRevival.ContainsKey((definition.Identifier, @namespace)))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await durableSubscriptionRecords.Get(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId)) is
+            {
+                Kind: ObserverSubscriptionKind.Projection or ObserverSubscriptionKind.CollapsingProjection
+            };
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Without the record the observer is asked, as it was before it could be released.
+            return false;
         }
     }
 

@@ -34,6 +34,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="subscriptionThrottle">Host-wide projection subscription admission.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> the registration subscribe budget is measured against. Defaults to the system clock.</param>
+/// <param name="durableSubscriptionRecords">The <see cref="IDurableSubscriptionRecords"/> that tells whether a projection's observer is subscribed without waking it.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public partial class ProjectionsManager(
@@ -46,7 +47,8 @@ public partial class ProjectionsManager(
     IClusterMembershipService clusterMembership,
     ISubscriptionAdmission subscriptionThrottle,
     ILogger<ProjectionsManager> logger,
-    TimeProvider? timeProvider = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
+    TimeProvider? timeProvider = null,
+    IDurableSubscriptionRecords? durableSubscriptionRecords = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
     /// <summary>
     /// How long a registration waits for its subscribe fan-out before handing what is left to the background repair.

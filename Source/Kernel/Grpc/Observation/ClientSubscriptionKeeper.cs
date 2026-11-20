@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Services.Observation;
@@ -100,6 +102,43 @@ internal static class ClientSubscriptionKeeper
 
         return intact;
     }
+
+    /// <summary>
+    /// Confirms that a subscription is intact from the observer's durable subscription when that can be relied on, so the check calls no grain.
+    /// </summary>
+    /// <param name="isIntact">The check that asks the observer's client grain, used when the record cannot confirm the subscription.</param>
+    /// <param name="records">The <see cref="IDurableSubscriptionRecords"/> to read the durable subscription from; none means every check calls the observer.</param>
+    /// <param name="key">The <see cref="ConnectedObserverKey"/> of the observer served by the stream.</param>
+    /// <returns>A check that is true when the stream is open - it is, while this runs - and the durable subscription names its client.</returns>
+    /// <remarks>
+    /// <para>
+    /// The stream being open on this silo is the part that used to need a call to the observer: the silo is alive and the
+    /// stream is the connection. What is left to know is that the observer still holds the client, and the record that outlives
+    /// the observer's activation says so without activating it. An observer that has no record, a record that does not name the
+    /// client, a read that fails and a setting or cluster that does not rely on records all fall back to the call, which restores
+    /// whatever was lost. Only an observer that was released while dormant is spared the call, and it can only be dormant with a record.
+    /// </para>
+    /// </remarks>
+    public static Func<Task<bool>> ConfirmFromDurableSubscription(Func<Task<bool>> isIntact, IDurableSubscriptionRecords? records, ConnectedObserverKey key) =>
+        async () =>
+        {
+            if (records?.ConfirmsClientSubscriptions == true)
+            {
+                try
+                {
+                    if (await records.Names(new ObserverKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId), key.ConnectionId))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Falls through to the call below.
+                }
+            }
+
+            return await isIntact();
+        };
 
     static async Task<bool> WaitForCheck(TimeSpan interval, Task departure, TimeProvider timeProvider, CancellationToken cancellationToken)
     {

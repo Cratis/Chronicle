@@ -139,8 +139,19 @@ public class a_projections_manager_grain : Specification
         _stateStorage.State = _state;
         _silo.Options.StorageFactory = _ => _stateStorage;
 
+        if (CreateDurableSubscriptionRecords() is { } records)
+        {
+            _silo.AddService(records);
+        }
+
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
+
+    /// <summary>
+    /// Creates the durable subscription records the manager reads, or none when it should ask its observers as before.
+    /// </summary>
+    /// <returns>The <see cref="Observation.IDurableSubscriptionRecords"/>, or null.</returns>
+    protected virtual Observation.IDurableSubscriptionRecords? CreateDurableSubscriptionRecords() => null;
 
     /// <summary>
     /// Changes the status of a silo in the membership the manager sees.
