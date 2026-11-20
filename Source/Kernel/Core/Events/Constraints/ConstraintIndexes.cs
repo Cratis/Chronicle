@@ -27,8 +27,8 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// for instance - would keep an index that is missing every value appended while it was not covered.
 /// <para>
 /// The event sequences of a namespace are those <see cref="IEventSequences"/> reports: the well-known sequences and
-/// every other sequence that holds persisted state. A namespace that has never held any data has no index to rebuild
-/// and is skipped.
+/// every other sequence that holds persisted state. A namespace that has never held any data, or a sequence with no
+/// events, has no index to rebuild and is skipped.
 /// </para>
 /// </remarks>
 [Singleton]
@@ -61,7 +61,9 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
     /// <inheritdoc/>
     public async Task<JobId> Reindex(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IReadOnlyCollection<ConstraintDefinitionChange> changes)
     {
-        var result = await StartReindex(eventStore, @namespace, eventSequenceId, changes, grainFactory.GetJobsManager(eventStore, @namespace));
+        var jobsManager = grainFactory.GetJobsManager(eventStore, @namespace);
+        await RefreshConstraints(eventStore, @namespace, eventSequenceId);
+        var result = await StartReindex(eventStore, @namespace, eventSequenceId, changes, jobsManager);
         return result.Match(id => id, error => throw new Operator.ConstraintReindexCouldNotBeStarted($"Constraint reindex could not be started: {error}."));
     }
 
@@ -88,6 +90,15 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
                     continue;
                 }
 
+                // Refresh drains earlier appends; later appends maintain the new index themselves.
+                // Only a tail read after that barrier can prove there is no history to rebuild.
+                await RefreshConstraints(eventStore, @namespace, eventSequenceId);
+                if (!await HasEvents(eventStore, @namespace, eventSequenceId))
+                {
+                    logger.SkippingReindexForEmptySequence(eventStore, @namespace, eventSequenceId);
+                    continue;
+                }
+
                 await StartReindex(eventStore, @namespace, eventSequenceId, changes, jobsManager);
             }
         }
@@ -97,9 +108,22 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
         }
     }
 
+    async Task<bool> HasEvents(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)
+    {
+        try
+        {
+            var sequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
+            return !(await sequenceStorage.GetTailSequenceNumber()).IsUnavailable;
+        }
+        catch (Exception ex)
+        {
+            logger.FailedCheckingForEvents(eventStore, @namespace, eventSequenceId, ex);
+            return true;
+        }
+    }
+
     async Task<Result<JobId, StartJobError>> StartReindex(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IReadOnlyCollection<ConstraintDefinitionChange> changes, IJobsManager jobsManager)
     {
-        await RefreshConstraints(eventStore, @namespace, eventSequenceId);
         logger.StartingReindex(eventStore, @namespace, eventSequenceId);
         var result = await jobsManager.Start<IReindexConstraints, ReindexConstraintsRequest>(new(eventSequenceId, changes));
         if (result.TryGetError(out var error))
@@ -124,7 +148,7 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
     /// it). One can be both, and writing the same entry twice replaces it. The reindex handoff marks the constraint
     /// as rebuilding and folds later log events on completion, restoring live updates overwritten by the job.
     /// The scope-clear window remains while the rebuild is in progress. Should the
-    /// refresh fail, the rebuild is still started - the sequence refreshes on its own
+    /// refresh fail, a non-empty sequence's rebuild is still started - the sequence refreshes on its own
     /// within the throttle, and an index rebuilt with that window open is better than none.
     /// </remarks>
     async Task RefreshConstraints(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)
