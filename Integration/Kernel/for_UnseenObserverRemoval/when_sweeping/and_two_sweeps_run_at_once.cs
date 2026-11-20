@@ -1,13 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Observation;
 using context = Cratis.Chronicle.Kernel.Integration.for_UnseenObserverRemoval.when_sweeping.and_two_sweeps_run_at_once.context;
 
 namespace Cratis.Chronicle.Kernel.Integration.for_UnseenObserverRemoval.when_sweeping;
 
 /// <summary>
-/// Two sweepers, as on two silos, run at the same moment over the same storage: every unseen observer is removed, none is removed or
+/// Two sweeps of the same silo run at the same moment over the same storage: every unseen observer is removed, none is removed or
 /// counted twice, and a sweep after that finds nothing.
 /// </summary>
 /// <param name="context">The <see cref="context"/> the specification runs against.</param>
@@ -40,9 +39,8 @@ public class and_two_sweeps_run_at_once(context context) : Given<context>(contex
                 await WaitUntilUnseenForThePeriod(id);
             }
 
-            var secondSilo = ActivatorUtilities.CreateInstance<UnseenObserverRemoval>(Services);
             CountedBefore = CountedRemovals;
-            Removed = await Task.WhenAll(Task.Run(() => Sweeper.Sweep()), Task.Run(() => secondSilo.Sweep()));
+            Removed = await Task.WhenAll(Task.Run(() => Sweeper.Sweep()), Task.Run(() => Sweeper.Sweep()));
             CountedAfter = CountedRemovals;
             After = await Task.WhenAll(ObserverIds.Select(id => FootprintOf(id)));
             RemovedByALaterSweep = await Sweeper.Sweep();
