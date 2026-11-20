@@ -1,0 +1,55 @@
+---
+title: "Verify Chronicle webhook signatures"
+description: Verify that a Cratis Chronicle webhook delivery came from your Kernel and was not changed or replayed, using Ed25519 signatures and the event store's public keys.
+---
+
+A signed delivery lets the receiver prove that the Kernel sent a request and that nobody changed the body on the way. Signing is opt in per webhook: register it with `WithSigning(WebhookSigningMode.Ed25519)`, as described in [Signing](./index.mdx#signing). Verification does not replace [authenticating the Kernel](./receivers.md#authenticating-the-kernel-to-your-receiver); use both.
+
+## What is signed
+
+A signed request carries these headers:
+
+| Header | Contents |
+| --- | --- |
+| `webhook-id` | The identifier of the delivery. It stays the same when the Kernel retries the same delivery. |
+| `webhook-timestamp` | The time of signing, in Unix seconds. |
+| `webhook-signature` | One or more space-separated signatures, each written `v1a,<base64>`. |
+| `Cratis-Key-Id` | The id of the key that produced the signature. Treat it as a hint only, never as a verification decision. |
+
+Chronicle follows the [Standard Webhooks](https://www.standardwebhooks.com) framing with asymmetric `v1a` signatures. The signed message is `webhook-id`, `webhook-timestamp` and the raw request body joined with dots (`id.timestamp.body`), signed with Ed25519 ([RFC 8032](https://www.rfc-editor.org/rfc/rfc8032)) and encoded as Base64. Standard Webhooks publishes test vectors only for its HMAC `v1` scheme, so Chronicle's specifications pin the `v1a` format with an RFC 8032 key and a fixed message. HMAC `v1` signing is not available yet.
+
+## Get the public keys
+
+The event store publishes the public keys of its signing key ring. Each key is `whpk_` followed by the Base64 encoding of the 32-byte Ed25519 public key. The result includes the active key and, while a rotation overlaps, the previous key.
+
+<ChronicleClientTabs snippet="webhooks/signature-verification/load-keys" />
+
+Receivers in other languages call the Kernel query `GetWebhookSigningKeys` on the `Webhooks` gRPC service, described under [Signing keys](./index.mdx#signing-keys). Load the keys when the receiver starts and keep them in memory or configuration. The Kernel does not push keys to receivers.
+
+## Verify a delivery
+
+Verify the exact bytes the Kernel sent. Read the raw request body before any JSON parser touches it: a body that was deserialized and serialized again almost never matches byte for byte, and the signature then fails for a delivery that is genuine. Reject the request when verification fails and do not process it.
+
+<ChronicleClientTabs snippet="webhooks/signature-verification/verify" />
+
+A delivery is valid when any `v1a` signature in the header verifies under any configured key. The verifier also rejects a timestamp more than five minutes away from the receiver's clock, in either direction, so keep the receiver's clock synchronized. Signatures of other versions are ignored.
+
+## Key rotation
+
+When the key ring rotates, the Kernel signs each delivery with both the new and the previous key until the overlap ends, and the header carries both signatures. A receiver that has either key configured accepts the delivery. After a rotation, fetch the keys again and keep the old key until its `OverlapEndsAt` has passed. When you build the verifier from the keys the event store returns, it applies `OverlapEndsAt` itself and stops accepting an overlap key once that time has passed. Keys disappear from the query once the overlap ends.
+
+Refresh the keys when verification fails for a delivery whose `Cratis-Key-Id` you do not know, then verify once more. Never skip verification because a key id is unknown.
+
+## Replay protection
+
+The timestamp tolerance limits how long a captured request stays usable, but it does not make a delivery single use. Also record the `webhook-id` values you have processed and ignore repeats, as described in [Webhook receivers](./receivers.md#how-delivery-behaves). A replay of events from Chronicle is a new delivery with a new `webhook-id`, so the event sequence number remains the key for deduplicating the effect itself.
+
+## Verify in another language
+
+Any language with an Ed25519 implementation can verify a delivery:
+
+1. Reject the request when `webhook-id`, `webhook-timestamp` or `webhook-signature` is missing, or when the timestamp is more than five minutes from now.
+1. Build the message as `webhook-id`, `webhook-timestamp` and the raw body, joined with dots.
+1. Remove the `whpk_` prefix from each public key and Base64-decode it to 32 bytes.
+1. Split `webhook-signature` on spaces, keep entries that start with `v1a,`, and Base64-decode the rest.
+1. Accept the request when any signature verifies under any key. Compare in constant time where your library requires it.
