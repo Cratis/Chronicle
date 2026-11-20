@@ -190,7 +190,7 @@ Set `authentication.http.mode` to `TrustedProxy`. The proxy authenticates the us
     "http": {
       "mode": "TrustedProxy",
       "trustedProxy": {
-        "knownProxies": ["10.42.0.17"],
+        "sharedSecret": "<from your secret store>",
         "administratorGroup": "chronicle-admins",
         "signOutUrl": "/oauth2/sign_out"
       }
@@ -199,7 +199,7 @@ Set `authentication.http.mode` to `TrustedProxy`. The proxy authenticates the us
 }
 ```
 
-The header defaults match oauth2-proxy, so with oauth2-proxy you usually only set which proxy to trust, the administrator group and the sign-out URL. In oauth2-proxy, enable `--set-xauthrequest` or `--pass-user-headers`.
+The header defaults match oauth2-proxy, so with oauth2-proxy you usually only set how Chronicle recognizes the proxy, the administrator group and the sign-out URL. In oauth2-proxy, enable `--set-xauthrequest` or `--pass-user-headers`. Have the ingress or proxy add the shared secret header, for example with a Traefik headers middleware or an nginx `proxy_set_header`.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -213,7 +213,7 @@ The header defaults match oauth2-proxy, so with oauth2-proxy you usually only se
 | http.trustedProxy.groupsHeader | string | `X-Forwarded-Groups` | Header carrying the user's comma-separated groups |
 | http.trustedProxy.administratorGroup | string | null | Group whose members are Chronicle administrators. When not set, **every** user the proxy signs in is an administrator, and the server logs a warning at startup |
 | http.trustedProxy.issuer | string | `chronicle:proxy` | Issuer recorded for proxy users in audit records and access decisions. Must differ from `chronicle:local` and from the configured `authority` |
-| http.trustedProxy.sharedSecret | string | null | Optional secret the proxy must also send. Store it with your secret management |
+| http.trustedProxy.sharedSecret | string | null | Secret the proxy sends to prove it is the proxy, wherever it connects from. Store it with your secret management |
 | http.trustedProxy.sharedSecretHeader | string | `X-Chronicle-Proxy-Secret` | Header carrying the shared secret |
 | http.trustedProxy.signOutUrl | string | null | Where the Workbench sends a user who signs out, for example the proxy's sign-out endpoint. Either an absolute HTTP(S) URL or a path starting with `/`. When not set, the Workbench shows no **Logout** option |
 
@@ -227,19 +227,29 @@ The header defaults match oauth2-proxy, so with oauth2-proxy you usually only se
 
 The mode has no effect when `authentication.enabled` is `false`.
 
-### Which proxies are trusted
+### How Chronicle recognizes the proxy
 
-Chronicle accepts the headers only from a proxy it trusts, and decides that by the address of the peer that opened the connection. The trusted peers are `knownProxies`, `knownNetworks` and, when `trustLoopback` is on, loopback. Startup fails if none of them is configured.
+Chronicle accepts the headers only from a proxy it recognizes. It recognizes the proxy by a shared secret, by its address, or by both:
 
-This list is deliberately separate from [`forwardedHeaders`](tls.md#trusted-reverse-proxies). A peer trusted to report the client's address is not automatically trusted to say who the user is. Loopback is not trusted unless you turn it on, because every process on the host, and every `kubectl port-forward`, connects over loopback too. Turn on `trustLoopback` only when the proxy runs as a sidecar and nothing else on the host can reach Chronicle.
+| Configured | Chronicle accepts the headers when |
+| --- | --- |
+| `sharedSecret` only | the request carries the secret, wherever it comes from |
+| Address trust only (`knownProxies`, `knownNetworks`, `trustLoopback`) | the peer that opened the connection is one of those addresses |
+| Both | the request carries the secret **and** comes from a trusted address |
+| Neither | startup fails |
 
-If identity headers arrive from any other peer, the request is refused rather than treated as anonymous. Chronicle checks the connection's own address, not the client address the proxy reports, and that holds even with `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. If a header is sent more than once, Chronicle ignores it.
+In Kubernetes and other platforms where addresses change, use `sharedSecret`, kept in a Kubernetes Secret. Add address trust as well when the proxy has a stable address, so a leaked secret isn't enough on its own.
+
+The address list is deliberately separate from [`forwardedHeaders`](tls.md#trusted-reverse-proxies). A peer trusted to report the client's address is not automatically trusted to say who the user is. Loopback is not trusted unless you turn it on, because every process on the host, and every `kubectl port-forward`, connects over loopback too. Turn on `trustLoopback` only when the proxy runs as a sidecar and nothing else on the host can reach Chronicle.
+
+If identity headers arrive without the secret or from an untrusted peer, the request is refused rather than treated as anonymous. Chronicle checks the connection's own address, not the client address the proxy reports, and that holds even with `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. If a header is sent more than once, Chronicle ignores it.
 
 To keep this safe:
 
 - **The proxy must remove these headers from incoming requests** before adding its own. Otherwise a user can forge them by sending them to the proxy.
 - **Prefer `knownProxies` and keep networks narrow.** Every peer in `knownNetworks` can claim to be any user. If other workloads share that network, set `sharedSecret` as well, so only the proxy is accepted. The server logs a warning when `knownNetworks` is set without a shared secret.
-- **Clients still connect directly.** Chronicle keeps serving gRPC on its single port, so network policy can't block that port. The address check, together with the optional shared secret, is what keeps the headers safe.
+- **Treat the shared secret like a password.** Anyone who has it can claim to be any user. Rotate it the same way you rotate other secrets.
+- **Clients still connect directly.** Chronicle keeps serving gRPC on its single port, so network policy can't block that port. The shared secret and the address check are what keep the headers safe.
 
 ## Turning authentication off
 

@@ -11,6 +11,7 @@ public class when_validating : Specification
 
     [Fact] void should_accept_a_trusted_proxy() => Validate(new() { KnownProxies = _proxies }).Succeeded.ShouldBeTrue();
     [Fact] void should_accept_a_trusted_sidecar() => Validate(new() { TrustLoopback = true }).Succeeded.ShouldBeTrue();
+    [Fact] void should_accept_a_proxy_recognized_only_by_a_shared_secret() => Validate(new() { SharedSecret = "secret" }).Succeeded.ShouldBeTrue();
     [Fact] void should_refuse_trusting_no_proxy() => Validate(new()).Failed.ShouldBeTrue();
     [Fact] void should_reject_a_malformed_proxy_address() => Validate(new() { KnownProxies = ["proxy.local"] }).Failed.ShouldBeTrue();
     [Fact] void should_reject_a_network_without_a_prefix() => Validate(new() { KnownNetworks = ["10.0.0.0"] }).Failed.ShouldBeTrue();
