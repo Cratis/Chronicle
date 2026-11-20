@@ -58,6 +58,9 @@ try
                 .WithIterationCount(options.Profile.IterationCount);
             var config = ManualConfig.CreateEmpty()
                 .AddJob(job)
+                .AddFilter(new BenchmarkDotNet.Filters.SimpleFilter(benchmarkCase =>
+                    benchmarkCase.Parameters.Items.FirstOrDefault(_ => _.Value is StorageProvider)?.Value is not StorageProvider measuredProvider
+                    || KnownGaps.ReasonFor(measuredProvider, benchmarkCase.Descriptor.WorkloadMethod.Name) is null))
                 .AddExporter(JsonExporter.Full)
                 .AddLogger(BenchmarkDotNet.Loggers.ConsoleLogger.Default)
                 .AddColumnProvider(BenchmarkDotNet.Columns.DefaultColumnProviders.Instance)
@@ -80,7 +83,7 @@ try
         finally
         {
             Measurements.Write(Path.Combine(providerDirectory, "counts.json"));
-            await File.WriteAllTextAsync(Path.Combine(providerDirectory, "summary-part.md"), RunSummary.ForProvider(StorageProviderNames.NameOf(provider)));
+            await File.WriteAllTextAsync(Path.Combine(providerDirectory, "summary-part.md"), RunSummary.ForProvider(StorageProviderNames.NameOf(provider), KnownGaps.For(provider)));
         }
     }
 }

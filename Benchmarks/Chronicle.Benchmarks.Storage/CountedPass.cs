@@ -29,7 +29,10 @@ public static class CountedPass
             if (methods.Length == 0) continue;
             foreach (var combination in Combinations(type))
             {
-                await RunCase(type, combination, methods, iterations);
+                var provider = combination.Where(_ => _.Value is StorageProvider).Select(_ => (StorageProvider?)_.Value).FirstOrDefault();
+                var measured = methods.Where(_ => provider is null || KnownGaps.ReasonFor(provider.Value, _.Name) is null).ToArray();
+                if (measured.Length == 0) continue;
+                await RunCase(type, combination, measured, iterations);
             }
         }
     }

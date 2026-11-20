@@ -10,14 +10,20 @@ public static class RunSummary
 {
     /// <summary>Summarizes the counted cases of one provider.</summary>
     /// <param name="provider">The provider name.</param>
+    /// <param name="notMeasured">The cases that are not measured on this provider, with the reason.</param>
     /// <returns>Markdown rows.</returns>
-    public static string ForProvider(string provider)
+    public static string ForProvider(string provider, IReadOnlyList<(string Case, string Reason)>? notMeasured = null)
     {
         var builder = new StringBuilder();
         foreach (var key in Measurements.Keys().Order(StringComparer.Ordinal))
         {
             var stats = Measurements.For(key);
             builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {provider} | {key[(provider.Length + 1)..]} | {stats.Operations} | {stats.CommandsPerOperation:0.##} | {stats.CommandsPer1000Events:0.##} | {stats.Errors} |");
+        }
+
+        foreach (var (gapCase, reason) in notMeasured ?? [])
+        {
+            builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {provider} | {gapCase} | — | — | — | {reason} |");
         }
 
         return builder.ToString();
