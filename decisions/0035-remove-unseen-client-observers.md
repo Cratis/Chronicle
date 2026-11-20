@@ -1,13 +1,14 @@
 ---
 id: 0035-remove-unseen-client-observers
 title: Remove a client reactor or reducer that no client has subscribed to for a configured period, by recorded last-seen time and a bounded storage sweep
-status: accepted
+status: superseded
 stage: none
 class: contract
 reversibility: costly
 proposed: 2026-11-19
 decided: 2026-11-19
 decider: einari
+superseded-by: 0036-unseen-observer-removal-is-opt-in
 applies-to:
   - Source/Kernel/Core/Observation/Observer*.cs
   - Source/Kernel/Core/Observation/ObserverRemover.cs
@@ -20,6 +21,8 @@ applies-to:
 ---
 <!-- markdownlint-disable-next-line MD025 -->
 # Remove a client reactor or reducer that no client has subscribed to for a configured period, by recorded last-seen time and a bounded storage sweep
+
+> **2026-11-19 — superseded in part by [decision 0036](./0036-unseen-observer-removal-is-opt-in.md).** The decider changed the answer on the default the same day: the removal is off unless an operator sets `Observers.UnseenRemovalEnabled`, `UnseenRemovalAfter` keeps its 7-day default as the period used when it is on, and the last-seen time is recorded even while the removal is off. Decisions 1 (default and "zero turns the feature off") and 3 ("while the setting is zero nothing is written") below were the original choice and are kept as written; the rest of this record still applies and is read together with 0036.
 
 Decided on 2026-11-19 by einari. It came out of the discussion of [decision 0034](./0034-release-dormant-subscribed-observers.md) as a separate question; it is a separate record so that either can be superseded alone. It relies on [decision 0030](./0030-release-idle-unsubscribed-observers.md) (an unsubscribed idle observer is already released from memory, so nothing resident keeps an unseen observer's cost down to its stored records) and on the existing `IObserverRemover` / `RemoveObserver` path.
 
