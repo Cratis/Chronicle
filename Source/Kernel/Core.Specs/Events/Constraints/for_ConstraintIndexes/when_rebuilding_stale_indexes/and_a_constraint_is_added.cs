@@ -15,6 +15,7 @@ public class and_a_constraint_is_added : given.an_event_store_with_a_log_and_an_
         [],
         [UniqueEmail(EventSequenceId.Log)]);
 
+    [Fact] void should_refresh_before_checking_the_tail_and_reindexing() => _calls.ShouldEqual(new[] { $"refresh {EventSequenceId.Log}", $"tail {EventSequenceId.Log}", $"reindex {EventSequenceId.Log}" });
     [Fact] void should_start_a_single_reindex() => _startedReindexes.Count.ShouldEqual(1);
     [Fact] void should_reindex_the_event_log() => _startedReindexes.Single().EventSequenceId.ShouldEqual(EventSequenceId.Log);
 }

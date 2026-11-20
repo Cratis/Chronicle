@@ -21,7 +21,7 @@ public class and_a_constraint_was_widened_to_the_outbox : given.an_event_store_w
     [Fact] void should_start_a_single_reindex() => _startedReindexes.Count.ShouldEqual(1);
     [Fact] void should_reindex_the_outbox() => _startedReindexes.Single().EventSequenceId.ShouldEqual(EventSequenceId.Outbox);
     [Fact] void should_reindex_the_widened_constraint() => _startedReindexes.Single().Changes.Single().Name.Value.ShouldEqual("UniqueEmail");
-    [Fact] void should_refresh_the_constraints_of_the_outbox_before_reindexing_it() => string.Join(" then ", _calls).ShouldEqual($"refresh {EventSequenceId.Outbox} then reindex {EventSequenceId.Outbox}");
+    [Fact] void should_refresh_the_constraints_of_the_outbox_before_reindexing_it() => string.Join(" then ", _calls).ShouldEqual($"refresh {EventSequenceId.Outbox} then tail {EventSequenceId.Outbox} then reindex {EventSequenceId.Outbox}");
     [Fact] void should_not_refresh_the_event_log() => _log.DidNotReceive().RefreshConstraints();
     [Fact] void should_report_the_event_sequences_as_changed() => _startedReindexes.Single().Changes.Single().ChangeTypes.ShouldContainOnly([ConstraintChangeType.EventSequencesChanged]);
 }
