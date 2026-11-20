@@ -31,8 +31,26 @@ public class ObserverRemover(
     IStorage storage,
     ILogger<ObserverRemover> logger) : IObserverRemover
 {
+    static readonly SemaphoreSlim _removing = new(1, 1);
+
     /// <inheritdoc/>
     public async Task<ObserverRemovalResult> Remove(EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId)
+    {
+        // One removal at a time on a silo: two callers racing for the same observer, such as two sweeps of unseen
+        // observers, otherwise both pass the existence check and both report it as removed. Removals are rare and the
+        // second one finds the first one's work and reports not found. Separate silos are not coordinated by this.
+        await _removing.WaitAsync();
+        try
+        {
+            return await RemoveObserver(eventStore, observerId, eventSequenceId);
+        }
+        finally
+        {
+            _removing.Release();
+        }
+    }
+
+    async Task<ObserverRemovalResult> RemoveObserver(EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId)
     {
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var namespaces = (await grainFactory.GetGrain<INamespaces>(eventStore).GetAll()).ToArray();
