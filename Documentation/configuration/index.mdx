@@ -59,7 +59,7 @@ Direct construction also accepts no arguments, but does not bind host configurat
 
 ### Startup and readiness
 
-Hosted applications eagerly connect in the background after `ApplicationStarted`, with or without `UseCratisChronicle()`. A pending kernel connection does not hold up host startup. Failures are logged by the shared startup service; they do not stop the host. Options validation still runs at startup, and logging a connection failure is not proof that the client recovered. Host shutdown cancels the startup wait, not necessarily the underlying transport operation.
+Hosted applications connect after `ApplicationStarted`. When `UseCratisChronicle()` is called, it connects synchronously in that callback, so the callback waits for the connection; connection timeouts and unavailability are logged and do not stop the host, but other failures (misconfiguration) are not caught there. Without `UseCratisChronicle()`, the shared startup service connects on a background task and a pending connection does not hold up the host; its failures are logged and do not stop the host. Options validation still runs at startup, and logging a connection failure is not proof that the client recovered. Host shutdown cancels the startup wait, not necessarily the underlying transport operation.
 
 ASP.NET Core automatically registers the Chronicle health check with `chronicle` and `ready` tags, not a liveness tag. The web example maps `/health/ready`; it stays unhealthy until the connection and required artifact registration succeed. A running host is not necessarily ready to serve Chronicle-dependent requests. Workers must expose their own readiness signal if required.
 
