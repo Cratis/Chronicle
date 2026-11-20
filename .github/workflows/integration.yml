@@ -454,15 +454,7 @@ jobs:
             echo "Skipping releases listed in .github/rolling-upgrade-unusable-releases.txt: $(tr '\n' ' ' <<< "$unusable")"
           fi
           image_tag="${release_tag#v}-development-slim"
-          metadata=$(curl --fail --silent --show-error --location --max-time 60 \
-            "https://hub.docker.com/v2/repositories/cratis/chronicle/tags/${image_tag}") || {
-            echo "::error::Previous release image cratis/chronicle:${image_tag} could not be resolved on Docker Hub."
-            exit 1
-          }
-          if ! jq -e --arg tag "$image_tag" '.name == $tag and (.images | length > 0)' <<< "$metadata"; then
-            echo "::error::Docker Hub returned no image for cratis/chronicle:${image_tag}."
-            exit 1
-          fi
+          node .github/scripts/resolve-previous-release-image.mjs "$image_tag"
           echo "Previous release: ${release_tag}; image: cratis/chronicle:${image_tag}"
           echo "CRATIS_CHRONICLE_PREVIOUS_IMAGE=cratis/chronicle:${image_tag}" >> "$GITHUB_ENV"
 
