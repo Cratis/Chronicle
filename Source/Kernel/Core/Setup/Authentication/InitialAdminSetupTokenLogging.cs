@@ -24,6 +24,12 @@ internal class InitialAdminSetupTokenLogging(IInitialAdminSetupTokens tokens, IO
     /// <param name="bootstrapPassword">The configured bootstrap password, if any.</param>
     internal void LogIfRequired(User? user, string bootstrapPassword)
     {
+        // A trusted reverse proxy signs users in, and the interactive setup flow is not offered in that mode.
+        // Logging a setup token there is misleading - there is no screen that can consume it - so never issue one.
+        if (options.Value.Authentication.Http.IsTrustedProxy)
+        {
+            return;
+        }
         if (user?.HasLoggedIn is not false)
         {
             return;
