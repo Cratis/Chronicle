@@ -90,10 +90,10 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
                     continue;
                 }
 
-                // Refresh drains earlier appends; later appends maintain the new index themselves.
+                // A successful refresh drains earlier appends; later appends maintain the new index themselves.
                 // Only a tail read after that barrier can prove there is no history to rebuild.
-                await RefreshConstraints(eventStore, @namespace, eventSequenceId);
-                if (!await HasEvents(eventStore, @namespace, eventSequenceId))
+                var refreshed = await RefreshConstraints(eventStore, @namespace, eventSequenceId);
+                if (refreshed && !await HasEvents(eventStore, @namespace, eventSequenceId))
                 {
                     logger.SkippingReindexForEmptySequence(eventStore, @namespace, eventSequenceId);
                     continue;
@@ -139,7 +139,7 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
     /// <param name="eventStore">The <see cref="EventStoreName"/> the event sequence belongs to.</param>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the event sequence belongs to.</param>
     /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> of the event sequence.</param>
-    /// <returns>Awaitable task.</returns>
+    /// <returns>Whether the constraints were successfully refreshed.</returns>
     /// <remarks>
     /// An active sequence only notices a changed version on an append after its throttled check, so without this an
     /// append arriving meanwhile would still use validators that do not maintain the newly covered index - and if the
@@ -148,18 +148,20 @@ public class ConstraintIndexes(IGrainFactory grainFactory, IStorage storage, ILo
     /// it). One can be both, and writing the same entry twice replaces it. The reindex handoff marks the constraint
     /// as rebuilding and folds later log events on completion, restoring live updates overwritten by the job.
     /// The scope-clear window remains while the rebuild is in progress. Should the
-    /// refresh fail, a non-empty sequence's rebuild is still started - the sequence refreshes on its own
+    /// refresh fail, the rebuild is still started - the sequence refreshes on its own
     /// within the throttle, and an index rebuilt with that window open is better than none.
     /// </remarks>
-    async Task RefreshConstraints(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)
+    async Task<bool> RefreshConstraints(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId)
     {
         try
         {
             await grainFactory.GetEventSequence(eventSequenceId, eventStore, @namespace).RefreshConstraints();
+            return true;
         }
         catch (Exception ex)
         {
             logger.FailedRefreshingConstraints(eventStore, @namespace, eventSequenceId, ex);
+            return false;
         }
     }
 }
