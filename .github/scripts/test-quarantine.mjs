@@ -24,18 +24,31 @@ test('matching is exact or dot-delimited prefix, never substring; expired entrie
     assert.deepEqual(unquarantined([entry.spec], config, Date.parse('2026-12-13')), [entry.spec]);
 });
 
-async function wrapperFixture(t, names, attempts = 3) {
+function testResults(names = [], outcome = 'Failed') {
+    return `<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Results>${names.map(name => `<UnitTestResult testName="${name}" outcome="${outcome}"/>`).join('')}</Results></TestRun>`;
+}
+
+function fixtureRunner(runs) {
+    return `import {mkdirSync,writeFileSync,appendFileSync} from 'node:fs';
+import path from 'node:path';
+const dir=process.argv[process.argv.indexOf('--results-directory')+1];
+mkdirSync(dir,{recursive:true});
+const runs=${JSON.stringify(runs)};
+const attempt=Number(path.basename(dir).split('-')[1]);
+const run=runs[Math.min(attempt-1,runs.length-1)];
+appendFileSync(path.join(path.dirname(dir),'filters.log'),process.argv[process.argv.indexOf('--filter')+1]+'\\n');
+if(run.trx!==null) writeFileSync(path.join(dir,'results.trx'),run.trx);
+process.exitCode=run.status;`;
+}
+
+async function wrapperFixture(t, names, attempts = 3, runs = [{ status: 1, trx: testResults(names) }]) {
     await mkdir('.ai-work/r1', { recursive: true });
     const dir = await mkdtemp(path.resolve('.ai-work/r1/quarantine-test-'));
     t.after(() => rm(dir, { recursive: true, force: true }));
     await mkdir(path.join(dir, '.github/scripts'), { recursive: true });
     for (const file of ['quarantine.mjs', 'run-tests-with-retry.sh']) await copyFile(`.github/scripts/${file}`, path.join(dir, '.github/scripts', file));
     await writeFile(path.join(dir, '.github/quarantine.json'), JSON.stringify({ entries: [{ ...entry, expires: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10) }] }));
-    await writeFile(path.join(dir, '.github/scripts/run-spec-project.mjs'), `import {mkdirSync,writeFileSync} from 'node:fs';
-const dir=process.argv[process.argv.indexOf('--results-directory')+1];
-mkdirSync(dir,{recursive:true});
-writeFileSync(dir+'/results.trx', '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Results>${names.map(name => `<UnitTestResult testName="${name}" outcome="Failed"/>`).join('')}</Results></TestRun>');
-process.exitCode=1;`);
+    await writeFile(path.join(dir, '.github/scripts/run-spec-project.mjs'), fixtureRunner(runs));
     const result = spawnSync('bash', ['.github/scripts/run-tests-with-retry.sh', 'Example', 'FullyQualifiedName~Example'], { cwd: dir, encoding: 'utf8', env: { ...process.env, TEST_MAX_ATTEMPTS: String(attempts), TEST_RESULTS_DIR: path.join(dir, 'results') } });
     return { dir, result };
 }
@@ -59,4 +72,45 @@ test('mixed failures and infrastructure failures stay blocking', async t => {
     assert.equal(mixed.result.status, 1);
     const crash = await wrapperFixture(t, []);
     assert.equal(crash.result.status, 1);
+});
+
+for (const trx of [null, testResults()]) test(`exit 139 before results retries the same filter (${trx === null ? 'missing' : 'empty'} TRX)`, async t => {
+    const { dir, result } = await wrapperFixture(t, [], 3, [{ status: 139, trx }, { status: 0, trx: testResults(['Example.should_pass'], 'Passed') }]);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /::warning::Temporary containment for Cratis\/Chronicle#5630/);
+    assert.match(result.stdout, /All tests passed on attempt 2/);
+    assert.equal(await readFile(path.join(dir, 'results/filters.log'), 'utf8'), 'FullyQualifiedName~Example\nFullyQualifiedName~Example\n');
+});
+
+for (const trx of [testResults(['Example.should_pass'], 'Passed'), '<not-valid-xml', '<TestRun/>', testResults().replace('</TestRun>', '<ResultSummary><Counters executed="1"/></ResultSummary></TestRun>')]) test(`exit 139 with recorded results or uncertain TRX is a hard failure: ${trx}`, async t => {
+    const { dir, result } = await wrapperFixture(t, [], 3, [{ status: 139, trx }]);
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /Treating as a hard failure/);
+    assert.doesNotMatch(result.stdout, /Temporary containment/);
+    assert.equal(await readFile(path.join(dir, 'results/filters.log'), 'utf8'), 'FullyQualifiedName~Example\n');
+});
+
+for (const status of [1, 134]) test(`exit ${status} without TRX failures is still a hard failure`, async t => {
+    const { dir, result } = await wrapperFixture(t, [], 3, [{ status, trx: null }]);
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /Treating as a hard failure/);
+    assert.equal(await readFile(path.join(dir, 'results/filters.log'), 'utf8'), 'FullyQualifiedName~Example\n');
+});
+
+test('repeated pre-test crashes exhaust the existing attempt budget and fail', async t => {
+    const { dir, result } = await wrapperFixture(t, [], 3, [{ status: 139, trx: null }]);
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /Tests still failing after 3 attempts/);
+    assert.equal((await readFile(path.join(dir, 'results/filters.log'), 'utf8')).trim().split('\n').length, 3);
+});
+
+test('a pre-test crash on a failed-test retry preserves the narrowed filter and flake ledger', async t => {
+    const { dir, result } = await wrapperFixture(t, [], 3, [
+        { status: 1, trx: testResults(['Other.should_fail']) },
+        { status: 139, trx: null },
+        { status: 0, trx: testResults(['Other.should_fail'], 'Passed') }
+    ]);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(await readFile(path.join(dir, 'results/filters.log'), 'utf8'), 'FullyQualifiedName~Example\nFullyQualifiedName=Other.should_fail\nFullyQualifiedName=Other.should_fail\n');
+    assert.match(await readFile(path.join(dir, 'results/flaky-tests.log'), 'utf8'), /passed-on-attempt-3.*Other.should_fail/);
 });
