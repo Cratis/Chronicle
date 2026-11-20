@@ -404,6 +404,46 @@ changing production defaults. Its `plan` subcommand starts no processes. See the
 [container-profile harness guide](Chronicle.Benchmarks/ContainerProfile/README.md) for
 safe builds, the core/full matrices, measurement commands and metric definitions.
 
+## Storage-provider benchmarks
+
+`Chronicle.Benchmarks.Storage` compares the event-sequence storage providers (SQLite, PostgreSQL,
+SQL Server, MongoDB) directly at the storage level, with the Orleans grain layer bypassed. It covers
+single and batched appends, concurrent appends, catch-up reads, unique-constraint reads and the storage
+half of grain activation. Each run records the command count per operation (see the counting rule below), a settings ledger (durability, versions, hardware, machine load) and BenchmarkDotNet JSON
+under `output/<stamp>/<provider>/`.
+
+```bash
+Benchmarks/storage-run.sh --profile smoke --providers sqlite,pg,mongo --repetitions 3
+```
+
+- Profiles: `smoke` and `medium` (1M events; needs `--yes-i-know-this-is-long`, exit 2 without it).
+- The run refuses to measure when the machine load exceeds `--max-load` (default 0.7 x CPU count) and exits 3.
+  Never compare numbers taken under load; results are comparable only when the ledgers match.
+- Containers need Docker. MongoDB runs as a single-node replica set; other topologies are not implemented.
+- **Baselines come from the `Storage benchmarks` workflow** (`.github/workflows/storage-benchmarks.yml`) on a GitHub-hosted runner, not from a developer machine: a workstation is never quiet enough. It runs the smoke profile on pull requests that touch the harness and on demand (`workflow_dispatch`, smoke only; `medium` needs confirmation and hours), waits for the runner to go quiet, uploads the results as the `storage-benchmark-results` artifact and writes the summary table to the job summary. `storage-run.sh` is for checking the harness itself, not for taking baselines.
+- Specs: `Chronicle.Benchmarks.Storage.Specs`.
+- A run exits non-zero when any benchmark fails, produces no report, or any measured operation fails.
+
+### Counting rule
+
+Both families count what reaches the database driver, so the numbers are comparable:
+
+- **SQL** is counted by EF Core command and transaction interceptors. They observe commands and never replace
+  the connection, so the kernel sees the provider's own connection type (`SqlConnection`, `NpgsqlConnection`,
+  `SqliteConnection`), which production code such as the schema lock recognizes. Every EF command counts;
+  transaction `Commit` and `Rollback` count as one command each; `BEGIN` is not counted; savepoint operations
+  count under `savepoint`. Known gap: commands the kernel issues directly on the connection (table and index
+  migrations, setup) bypass EF and are not counted; none of them sit on a measured path, and table setup is
+  warmed outside measurement.
+- **MongoDB** is counted from driver command events: every succeeded or failed command counts, including
+  `commitTransaction` and `abortTransaction`. Housekeeping (`hello`, `ping`, authentication, `endSessions`)
+  is ignored.
+- Counting happens in a separate deterministic pass after BenchmarkDotNet's timing run: every case runs
+  its setup and then each benchmark method exactly the profile's iteration count of times. BenchmarkDotNet's
+  jitting, pilot and warmup invocations are never counted, because counting is only on inside that pass.
+- Failed operations never count as operations or events; they are counted as errors and fail the run.
+- The ledger reports the effective connection pool size of each client, not a requested default.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
