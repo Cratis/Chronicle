@@ -32,7 +32,11 @@ export function childCommand(executable, args) {
 }
 export function invocation(info, { directory, filter, timeout, coverage = true }) {
     if (info.runner !== 'v3') fail(`${info.project}: executable v3 runner required`);
-    const args = [info.dll, ...(filter ? ['-filterVSTest', filter] : []), '-result-trx', path.join(directory, 'results.trx')];
+    // Explicit JSON reporting is compatible with coverage's single child command;
+    // Disable environmental reporters and ANSI colors so each line stays JSON
+    // (xUnit v3 4.0.2's JsonReporter uses ConsoleRunnerLogger).
+    const args = [info.dll, ...(filter ? ['-filterVSTest', filter] : []), '-result-trx', path.join(directory, 'results.trx'),
+        '-noAutoReporters', '-noColor', '-reporter', 'json', '-diagnostics', '-longRunning', '120'];
     if (!coverage) return { command: 'dotnet', args, timeout };
     return { command: 'dotnet', args: ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'coverage.cobertura.xml'), childCommand('dotnet', args)], timeout };
 }
@@ -56,7 +60,7 @@ async function collectProject(info, options, execute) {
     const call = invocation(info, options);
     await access(path.resolve(options.root, info.dll));
     if ((await readdir(options.directory)).length) fail(`${info.project}: results directory must be fresh and empty`);
-    const child = await execute(call.command, call.args, { cwd: options.root, timeout: call.timeout });
+    const child = await execute(call.command, call.args, { cwd: options.root, timeout: call.timeout, specProgress: { directory: options.directory } });
     if (child.code !== 0) throw Object.assign(new Error(`${info.project}: child exited ${child.code}`), { exitCode: child.code });
     const identities = validateTrx(await readFile(path.join(options.directory, 'results.trx'), 'utf8'));
     if (options.coverage === false) {

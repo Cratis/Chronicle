@@ -111,7 +111,8 @@ test('single project runner rejects zero tests and propagates child failure', as
             root: directory,
             evaluate: async () => ({ runner: 'v3', dll: path.join(directory, 'Spec.dll') }),
             execute: async (_command, args) => {
-                assert.deepEqual(args, [path.join(directory, 'Spec.dll'), '-result-trx', path.join(directory, 'results/results.trx')]);
+                assert.deepEqual(args, [path.join(directory, 'Spec.dll'), '-result-trx', path.join(directory, 'results/results.trx'),
+                    '-noAutoReporters', '-noColor', '-reporter', 'json', '-diagnostics', '-longRunning', '120']);
                 await writeFile(path.join(directory, 'results/results.trx'), '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"/>');
                 return { code };
             }
