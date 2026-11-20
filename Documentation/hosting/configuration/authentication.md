@@ -221,9 +221,11 @@ The header defaults match oauth2-proxy, so with oauth2-proxy you usually only se
 
 - **gRPC clients are not affected.** Chronicle never reads the proxy headers on a gRPC call, so a client still needs a valid client ID and secret, and `/connect/token` keeps issuing tokens to clients.
 - **Workbench users are signed in by the proxy.** The Workbench skips its login page. Chronicle turns off every way a user could sign in with a password and bypass the proxy. It does not serve `/identity/*` or `/api/security/login`, `/connect/token` refuses the password grant, and Chronicle sign-in cookies issued earlier are no longer accepted. Tools that signed users in with a password, such as the CLI, need client credentials in this mode.
+- **No admin password or setup token is needed.** Because the proxy establishes who every user is, there is nothing to set up: Chronicle never asks for an initial administrator password, never shows the **Set Admin Password** screen, and never logs an initial administrator setup token. Leave `adminUser.password` and `initialAdminSetupToken` unset. If a user ever reaches the login page — because their proxy session is missing or expired, or Chronicle rejected the forwarded identity — the Workbench shows a message and a **Sign In** button that sends them back through the proxy, not its own password form.
+- **Grants still have a local administrator.** Chronicle still creates the deterministic bootstrap administrator so administrator grants and recovery keep working; it simply has no password and cannot sign in with one, which is harmless because password sign-in is turned off anyway.
 - **Event store access.** A proxy user can work with ordinary event stores in the same way as a Workbench user who signs in with a password.
 - **Administrator access.** A proxy user is an administrator when they are in `administratorGroup`, or always when no group is configured. The Workbench's administrator roster does not apply to proxy users.
-- **Request protection.** Chronicle still requires the Workbench's antiforgery token on state-changing requests from proxy users, because the proxy's browser session is sent with every request just like Chronicle's own cookie.
+- **Request protection.** Chronicle still requires the Workbench's antiforgery token on state-changing requests from proxy users, because the proxy's browser session is sent with every request just like Chronicle's own cookie. When an authenticated request has no proxy identity — a missing or expired proxy session, or one Chronicle rejected — the antiforgery endpoint answers `401`. That is by design, not a sign-in defect; the browser is sent back through the proxy to re-establish the session rather than shown Chronicle's own login.
 
 The mode has no effect when `authentication.enabled` is `false`.
 
@@ -291,6 +293,8 @@ Chronicle supports pre-configuring the initial admin user's credentials at start
 Keep administrator configuration consistent across silos. Changing the bootstrap username is not an account-rename mechanism. Restrict network access until interactive initial setup has completed, or supply the initial password through your secret mechanism.
 
 ### Interactive initial setup
+
+Interactive initial setup applies only to `Chronicle` HTTP authentication. In [`TrustedProxy`](#workbench-sign-in-through-a-reverse-proxy) mode the proxy signs users in, so there is nothing to set up: no setup token is logged and the Workbench never shows the **Set Admin Password** screen.
 
 If no administrator password or setup token is configured, Chronicle logs a generated initial setup token when the administrator has no credentials. Copy it into the Workbench setup form with the new password and matching confirmation. Treat the token and the logs containing it as credentials; restrict access to both. Older clients that do not send a setup token cannot complete initial setup.
 
