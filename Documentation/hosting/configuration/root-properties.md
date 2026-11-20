@@ -100,13 +100,14 @@ The kernel tracks which clients are connected. These settings live under `connec
 | connectedClients.staleThresholdSeconds | number | 5 | Seconds a client can go unseen before it is considered disconnected. Raise it only if healthy clients are dropped on a slow network |
 | connectedClients.observeIntervalSeconds | number | 1 | Seconds between observations of the connected clients for observers |
 | connectedClients.keepAliveIntervalSeconds | number | 1 | Seconds between keep-alive messages the kernel sends to a connected client |
+| connectedClients.keeperMode | string | `SiloLocal` | How the open stream of a client confirms that its reactor and reducer subscriptions are intact. `SiloLocal` confirms a subscription from the observer's recorded subscription, so a dormant observer is not woken and the client's grains are not kept in memory for it. `Legacy` calls the client's grains on every check. See [Keeping client subscriptions](#keeping-client-subscriptions) |
 | servers.observeIntervalSeconds | number | 5 | Seconds between observations of server instances for the live Workbench view |
 
 ### Keeping client subscriptions
 
 The subscription of a connected reactor or reducer exists only in the memory of the kernel's grain activations. A silo that leaves the cluster takes the activations it hosted with it, and the remaining silos deactivate the activations whose directory entries it owned. The client stays connected and never registers again, so the kernel restores the subscription from the open observation stream.
 
-Each stream checks its subscription with two grain calls. How often depends on what the kernel knows:
+Each stream checks its subscription with two grain calls, or, with the default `keeperMode`, with one read of the subscriptions the observers recorded, shared by every stream of the namespace and answered without calling an observer or a client grain when the observer is [dormant](observers.md#releasing-dormant-observers). An observer without a recorded subscription is checked with the grain calls. How often depends on what the kernel knows:
 
 - A new subscription, one that was just restored, and one whose check failed are checked every `reviseIntervalSeconds`, until a check finds the subscription intact. So is a client the observer only holds as a superseded registration during a client rollout, and an inactive reducer whose registration is still held back for a webhook.
 - When a silo starts shutting down, and again when it is declared dead, every stream on the remaining silos checks within one `reviseIntervalSeconds`, spread over that interval, and then every `reviseIntervalSeconds` for `subscriptionSettleSeconds`. During a rolling deployment the kernel is therefore back at one check per subscription every `reviseIntervalSeconds` for as long as silos keep leaving.

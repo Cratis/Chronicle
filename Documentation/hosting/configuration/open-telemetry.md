@@ -162,6 +162,7 @@ These instruments are new, so they have no legacy name. They are published under
 | `cratis.chronicle.observer.quarantined_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Quarantined partitions of the observer now. Reported only while above 0. |
 | `cratis.chronicle.observer.running_state` | Gauge `1` | event store, namespace, event sequence, observer, `cratis.chronicle.observer.state` | `1` while the observer is in the state named by `cratis.chronicle.observer.state`. Reported only for `quarantined` and `suspended`. |
 | `cratis.chronicle.observer.resident` | Gauge `{observer}` | event store, namespace, `cratis.observer.type`, `cratis.chronicle.observer.state` | Observers resident in the process, in every state. |
+| `cratis.chronicle.observer.dormant` | Gauge `{observer}` | event store, namespace | Observers held as dormant by the appended events queues of the silo: subscribed, with no activation. See [Releasing dormant observers](observers.md#releasing-dormant-observers). |
 | `cratis.chronicle.job.running` | Gauge `{job}` | event store, namespace, `cratis.chronicle.job.type` | Running catch-up and replay jobs. |
 | `cratis.chronicle.observer.job.handled_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Completed steps, successful or failed, of the observer's running jobs of that type. |
 | `cratis.chronicle.observer.job.total_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Steps of the observer's running jobs of that type. |
@@ -178,6 +179,8 @@ The three per-observer gauges report an observer only while it needs attention, 
 - When an observer recovers, or the process releases it while it is abnormal, its series reports `0` for three minutes and then stops. The first collection after the recovery reports the `0` even when the export or scrape interval is three minutes or longer. With several readers, such as an OTLP exporter and a Prometheus endpoint, only the first reader to collect after the recovery is certain to see that `0`, so a reader that collects less often than every three minutes can miss it. A backend therefore sees the value fall to `0` instead of keeping the last abnormal value until the series goes stale. Alert on the value, not on whether the series exists.
 
 `cratis.chronicle.observer.resident` and `cratis.chronicle.job.running` report `0` for a combination of event store, namespace, type and state they have reported before, rather than leaving it out once it empties.
+
+The dormant observer counters are published under their `Telemetry:MetricNames` names (see [Telemetry names](telemetry-names.md)): `observer.dormant_releases`, `observer.dormant_wakes` with `cratis.chronicle.observer.wake_cause` (`event` or `safety_net`), `observer.dormant_wakes_delayed` and `observer.dormant_resumes` with `cratis.chronicle.observer.resume_outcome` (`cursor`, `catch_up` or `stale_record`). [Releasing dormant observers](observers.md#releasing-dormant-observers) says what to read from them.
 
 #### How many series to expect
 
