@@ -9,14 +9,19 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_marking_d
 public class when_events_are_still_queued_for_the_observer : given.a_queue_with_a_stored_durable_subscription
 {
     readonly TaskCompletionSource _release = new();
+    readonly TaskCompletionSource _handling = new();
     bool _result;
 
     async Task Establish()
     {
         await _queue.Subscribe(_observerKey, [_eventType]);
-        _observer.Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns(_ => _release.Task);
+        _observer.Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns(_ =>
+        {
+            _handling.TrySetResult();
+            return _release.Task;
+        });
         await _queue.Enqueue([EventAt(3)]);
-        await Task.Delay(100);
+        await _handling.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
     async Task Because()
