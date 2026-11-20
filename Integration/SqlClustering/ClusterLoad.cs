@@ -42,6 +42,12 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     readonly CancellationTokenSource _stop = new();
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly string _source = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Reconnect probes append to their own event source so they cannot contend with the load
+    /// for optimistic concurrency on the load source. Verification reads both sources.
+    /// </summary>
+    readonly string _probeSource = Guid.NewGuid().ToString();
     readonly ClusterReconnectReducer _reconnectReducer = new();
 #if CHRONICLE_ROLLING_DIAGNOSTICS
     readonly ClusterLoadDeliveryDiagnostics _deliveryDiagnostics = new();
@@ -210,7 +216,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         AppendResult result;
         try
         {
-            var append = _store.EventLog.Append(_source, new ClusterEventAppended(id));
+            var append = _store.EventLog.Append(_probeSource, new ClusterEventAppended(id));
             _outstanding.Enqueue(append);
             result = await append.WaitAsync(cancellationToken);
         }
@@ -240,7 +246,9 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         // An attempt that timed out or lost its connection has an unknown outcome: it may or may not have been stored.
         // Such attempts are allowed in the log at most once, but every acknowledged append must be there exactly once.
         var allowed = acknowledged.Select(append => append.Id).Concat(_unknown).ToHashSet();
-        var stored = await _store.EventLog.GetForEventSourceIdAndEventTypes(_source, []);
+        var stored = (await _store.EventLog.GetForEventSourceIdAndEventTypes(_source, []))
+            .Concat(await _store.EventLog.GetForEventSourceIdAndEventTypes(_probeSource, []))
+            .ToArray();
         var storedEvents = stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)).ToArray();
         try
         {
@@ -254,7 +262,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
             await WaitForObservationsToSettle(storedEvents, TimeSpan.FromSeconds(15));
             var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
             var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
-            Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
+            Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Length}, observed={_observed.Count}");
             storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
             storedIds.All(allowed.Contains).ShouldBeTrue();
             acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
@@ -373,7 +381,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         {
             _unknown.Enqueue(id);
         }
-        Failed($"{id}: {string.Join(';', result.Errors)}");
+        Failed($"{id}: {AppendFailureDescription.Describe(result)}");
     }
 
     internal static bool IsUncertainAppend(AppendResult result) =>
@@ -381,7 +389,19 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
 
     internal static bool IsUncertainAppend(Exception exception) =>
         exception is RpcException or TimeoutException or ConnectionUnavailable or ConnectionTimedOut ||
-        IsUnavailableSiloAppend(exception.GetType().FullName, exception.Message);
+        IsUnavailableSiloAppend(exception.GetType().FullName, exception.Message) ||
+        IsSiloStoppingAppend(exception.GetType().FullName, exception.Message);
+
+    /// <summary>
+    /// A silo that is shutting down refuses requests with a CommandFailed saying "Silo stopping" (#6019). The refusal
+    /// may have raced the append, so the outcome is uncertain: recorded as unknown and still verified against the stream.
+    /// </summary>
+    /// <param name="exceptionType">The full exception type name.</param>
+    /// <param name="message">The failure message.</param>
+    /// <returns>Whether this is the shutdown refusal.</returns>
+    internal static bool IsSiloStoppingAppend(string? exceptionType, string message) =>
+        exceptionType == "Cratis.Chronicle.Contracts.Commands.CommandFailed" &&
+        message.StartsWith("Command failed: Silo stopping", StringComparison.Ordinal);
 
     /// <summary>
     /// Until the cluster has declared a killed or stopped silo dead, a surviving silo can still forward an append to
@@ -407,7 +427,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
 
         var endpoint = DepartedEndpoint.Match(message);
         return endpoint.Success &&
-            departed.Contains((endpoint.Groups["address"].Value, int.Parse(endpoint.Groups["generation"].Value, System.Globalization.CultureInfo.InvariantCulture)));
+            departed.Contains((endpoint.Groups["address"].Value, int.Parse(endpoint.Groups["generation"].Value, CultureInfo.InvariantCulture)));
     }
 
     internal static bool IsUnavailableSiloAppend(string? exceptionType, string message)
