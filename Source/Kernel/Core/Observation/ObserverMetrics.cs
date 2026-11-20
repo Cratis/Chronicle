@@ -30,6 +30,7 @@ internal sealed class ObserverMetrics(MetricSet metrics) : IDisposable
     MetricInstrument<int, CounterMetricRecorder<int>>? _skipped;
     MetricInstrument<int, CounterMetricRecorder<int>>? _zeroWorkCatchup;
     MetricInstrument<int, CounterMetricRecorder<int>>? _claimDivergence;
+    MetricInstrument<int, CounterMetricRecorder<int>>? _dormantResumes;
     MetricInstrument<int, CounterMetricRecorder<int>>? _probeScheduled;
     MetricInstrument<int, CounterMetricRecorder<int>>? _probeAttempt;
     MetricInstrument<int, CounterMetricRecorder<int>>? _probeFailure;
@@ -70,6 +71,9 @@ internal sealed class ObserverMetrics(MetricSet metrics) : IDisposable
 
     internal void ClaimDivergence(ShadowClaimDivergence divergence) =>
         (_claimDivergence ??= metrics.Counter<int>(WellKnownMetricNames.ObserverClaimDivergences, WellKnownMetricNames.ObserverClaimDivergencesUnit, "Shadow partition-claim divergences from replaying/catching-up sets", WellKnownTelemetryAttributes.ObserverClaimDivergence)).Record(1, divergence.ToString());
+
+    internal void DormantResumed(string outcome) =>
+        (_dormantResumes ??= metrics.Counter<int>(WellKnownMetricNames.ObserverDormantResumes, WellKnownMetricNames.ObserverDormantResumesUnit, "Number of woken observers that resumed from their cursor or fell back to catch-up, by outcome", WellKnownTelemetryAttributes.ObserverResumeOutcome)).Record(1, outcome);
 
     internal void WebhookProbeScheduled() =>
         (_probeScheduled ??= metrics.Counter<int>(WellKnownMetricNames.WebhookProbesScheduled, WellKnownMetricNames.WebhookProbesScheduledUnit)).Record(1);

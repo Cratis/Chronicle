@@ -96,6 +96,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <param name="storage">The <see cref="IStorage"/> the queue compares its subscriptions with; optional for standalone specification queues.</param>
     /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo supports dormant observers; without it none is kept.</param>
     /// <param name="wakeAdmission">The <see cref="IWakeAdmission"/> that bounds how many dormant observers wake at once; without it wakes are not bounded.</param>
+    /// <param name="dormantObserverGauge">The <see cref="IDormantObserverGauge"/> the queue reports its dormant observers to; optional for standalone specification queues.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
@@ -105,8 +106,10 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         IShutdownDrainBudget? stopBudget = null,
         IStorage? storage = null,
         IClusterReleases? clusterReleases = null,
-        IWakeAdmission? wakeAdmission = null)
+        IWakeAdmission? wakeAdmission = null,
+        IDormantObserverGauge? dormantObserverGauge = null)
     {
+        _dormantObserverGauge = dormantObserverGauge;
         _clusterReleases = clusterReleases;
         _wakeAdmission = wakeAdmission;
         _taskFactory = taskFactory;
@@ -144,6 +147,15 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     }
 
     /// <summary>
+    /// Gets or sets the metrics the queue records to; set on activation, and by specifications that listen to them.
+    /// </summary>
+    internal AppendedEventsQueueMetrics? Metrics
+    {
+        get => _metrics;
+        set => _metrics = value;
+    }
+
+    /// <summary>
     /// Gets or sets the clock used for catch-up trigger deadlines and retry delays.
     /// </summary>
     internal TimeProvider CatchupTimeProvider { get; set; } = TimeProvider.System;
@@ -154,6 +166,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
         Identify(EventSequenceKey.Parse(key!), queueId);
         _metrics = _meter.BeginScope(key!, queueId, _metricNames);
+        _dormantGaugeRegistration = _dormantObserverGauge?.Register(_eventSequenceKey, () => DormantCount);
         ConfigureDurableSubscriptionCheck(_observers);
         ConfigureDormantSafetyNet();
         await SeedDormantSubscriptions();
@@ -354,6 +367,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         _channel.Writer.TryComplete();
         StopLanes(discard: true);
 
+        _dormantGaugeRegistration?.Dispose();
         _metrics?.Dispose();
     }
 

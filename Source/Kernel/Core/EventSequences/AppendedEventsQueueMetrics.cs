@@ -22,6 +22,10 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
 
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _durableSubscriptionDisagreements = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueDurableSubscriptionDisagreements, WellKnownMetricNames.AppendedEventsQueueDurableSubscriptionDisagreementsUnit, "Number of durable subscriptions that disagreed with the live subscriptions of the queue, by kind of disagreement", WellKnownTelemetryAttributes.DurableSubscriptionDisagreement);
 
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantReleases = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantReleases, WellKnownMetricNames.ObserverDormantReleasesUnit, "Number of observers released while dormant");
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantWakes = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantWakes, WellKnownMetricNames.ObserverDormantWakesUnit, "Number of dormant observers woken, by what woke them", WellKnownTelemetryAttributes.ObserverWakeCause);
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantWakesDelayed = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantWakesDelayed, WellKnownMetricNames.ObserverDormantWakesDelayedUnit, "Number of dormant observer wakes that waited for a place under the wake admission of the silo");
+
     public void Dispose()
     {
         // Instruments belong to the injected meter, not to a queue.
@@ -36,4 +40,8 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
     internal void EventsSuspectedUndelivered(int numberOfEvents, ObserverId observerId) => _undelivered.Record(numberOfEvents, observerId);
     internal void DurableSubscriptionsDisagreed(string kind, int count) => _durableSubscriptionDisagreements.Record(count, kind);
     internal void ObserverSpilledToCatchup(ObserverId observerId, string reason) => _observersSpilled.Record(1, observerId, reason);
+
+    internal void ObserverReleasedWhileDormant() => _dormantReleases.Record(1);
+    internal void DormantObserverWoken(string cause) => _dormantWakes.Record(1, cause);
+    internal void DormantWakeDelayed() => _dormantWakesDelayed.Record(1);
 }

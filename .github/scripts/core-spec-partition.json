@@ -170,6 +170,10 @@
             "weight": 0.000001
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_DormantObserverGauge.",
+            "weight": 0.000001
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_DormantObservers.",
             "weight": 0.000001
         },

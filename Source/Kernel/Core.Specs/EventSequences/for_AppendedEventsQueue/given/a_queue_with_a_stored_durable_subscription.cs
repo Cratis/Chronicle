@@ -51,6 +51,8 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
 
     protected virtual int SafetyNetSeconds => 900;
 
+    internal virtual AppendedEventsQueueMetrics? CreateMetrics() => null;
+
     protected virtual IWakeAdmission CreateWakeAdmission() => new WakeAdmission(0, Environment.ProcessorCount);
 
     protected static AppendedEvent EventAt(ulong sequenceNumber, string partition = "partition") =>
@@ -89,6 +91,7 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
             CatchupTimeProvider = _clock
         };
         queue.Identify(new EventSequenceKey(_eventSequence, EventStore, Namespace), 0);
+        queue.Metrics = CreateMetrics();
         return queue;
     }
 

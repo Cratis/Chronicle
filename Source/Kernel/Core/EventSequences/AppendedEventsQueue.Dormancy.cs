@@ -41,6 +41,8 @@ public partial class AppendedEventsQueue
     readonly Dictionary<ObserverKey, DateTimeOffset> _dormant = [];
     readonly IClusterReleases? _clusterReleases;
     readonly IWakeAdmission? _wakeAdmission;
+    readonly IDormantObserverGauge? _dormantObserverGauge;
+    IDisposable? _dormantGaugeRegistration;
     bool _dormantSeedPending;
 
     /// <summary>
@@ -103,6 +105,7 @@ public partial class AppendedEventsQueue
             _dormant[observerKey] = NextSafetyNetDue();
         }
 
+        Observe(() => _metrics?.ObserverReleasedWhileDormant());
         return Task.FromResult(true);
     }
 
@@ -279,7 +282,7 @@ public partial class AppendedEventsQueue
     {
         try
         {
-            await WithWakeAdmission(() => _grainFactory.GetGrain<IObserver>(observerKey).RunWatchdogOnce());
+            await WithWakeAdmission(() => _grainFactory.GetGrain<IObserver>(observerKey).RunWatchdogOnce(), WakeCauses.SafetyNet);
         }
         catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
         {
@@ -287,12 +290,18 @@ public partial class AppendedEventsQueue
         }
     }
 
-    async Task WithWakeAdmission(Func<Task> wake)
+    async Task WithWakeAdmission(Func<Task> wake, string cause)
     {
+        Observe(() => _metrics?.DormantObserverWoken(cause));
         if (_wakeAdmission is null)
         {
             await wake();
             return;
+        }
+
+        if (_wakeAdmission.InProgress >= _wakeAdmission.Limit)
+        {
+            Observe(() => _metrics?.DormantWakeDelayed());
         }
 
         await _wakeAdmission.WaitAsync(_catchupCancellationToken);
@@ -333,7 +342,7 @@ public partial class AppendedEventsQueue
 
         try
         {
-            await WithWakeAdmission(lane.Observer.Ensure);
+            await WithWakeAdmission(lane.Observer.Ensure, WakeCauses.Event);
             return true;
         }
         catch (OperationCanceledException) when (_catchupCancellationToken.IsCancellationRequested)

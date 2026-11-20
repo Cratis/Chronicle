@@ -254,6 +254,36 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="AppendedEventsQueueDurableSubscriptionDisagreements"/>.</summary>
     public const string AppendedEventsQueueDurableSubscriptionDisagreementsUnit = "{subscription}";
 
+    /// <summary>Number of observers held as dormant by the appended events queues of a silo: subscribed, with no activation.</summary>
+    public const string ObserverDormant = "cratis.chronicle.observer.dormant";
+
+    /// <summary>Unit of <see cref="ObserverDormant"/>.</summary>
+    public const string ObserverDormantUnit = "{observer}";
+
+    /// <summary>Number of observers released while dormant.</summary>
+    public const string ObserverDormantReleases = "cratis.chronicle.observer.dormant_releases";
+
+    /// <summary>Unit of <see cref="ObserverDormantReleases"/>.</summary>
+    public const string ObserverDormantReleasesUnit = "{observer}";
+
+    /// <summary>Number of dormant observers woken, by what woke them.</summary>
+    public const string ObserverDormantWakes = "cratis.chronicle.observer.dormant_wakes";
+
+    /// <summary>Unit of <see cref="ObserverDormantWakes"/>.</summary>
+    public const string ObserverDormantWakesUnit = "{wake}";
+
+    /// <summary>Number of dormant observer wakes that had to wait for a place under the wake admission of the silo.</summary>
+    public const string ObserverDormantWakesDelayed = "cratis.chronicle.observer.dormant_wakes_delayed";
+
+    /// <summary>Unit of <see cref="ObserverDormantWakesDelayed"/>.</summary>
+    public const string ObserverDormantWakesDelayedUnit = "{wake}";
+
+    /// <summary>Number of woken observers that resumed from their cursor or fell back to catch-up, by outcome.</summary>
+    public const string ObserverDormantResumes = "cratis.chronicle.observer.dormant_resumes";
+
+    /// <summary>Unit of <see cref="ObserverDormantResumes"/>.</summary>
+    public const string ObserverDormantResumesUnit = "{resume}";
+
     /// <summary>Number of failed alert transitions.</summary>
     public const string AlertFailedTransitions = "cratis.chronicle.alert.failed_transitions";
 

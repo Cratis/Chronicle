@@ -80,6 +80,7 @@ public partial class Observer
         {
             ForgetDurableSubscription();
             _repairDurableSubscriptionPending = true;
+            _metrics?.DormantResumed(DormantResumeOutcomes.Stale);
 
             // The record said a client held this observer until now, so this is when it was last seen: a client that
             // left while the observer was dormant starts the clock for removing unseen observers here.
@@ -184,6 +185,7 @@ public partial class Observer
 
         // Routing (now without the flag) is what finds the events from the cursor by catch-up when the resume was not clean.
         _resumingFromDormancy = false;
+        _metrics?.DormantResumed(resumed ? DormantResumeOutcomes.Cursor : DormantResumeOutcomes.CatchUp);
         if (!resumed)
         {
             await TransitionTo<Routing>();
