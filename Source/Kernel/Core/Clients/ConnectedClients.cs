@@ -132,6 +132,9 @@ public partial class ConnectedClients(
             _ = BackgroundFaults.Run(() => departureNotifier.Notify(connectionId, observers), logger, $"{nameof(ConnectedClients)}.{nameof(IClientDepartureNotifier.Notify)}");
         }
 
+        // An observer released while dormant is not in the set above, or is there only for as long as this activation lives.
+        _ = BackgroundFaults.Run(() => departureNotifier.NotifyDormant(connectionId, observers), logger, $"{nameof(ConnectedClients)}.{nameof(IClientDepartureNotifier.NotifyDormant)}");
+
         return Task.CompletedTask;
     }
 

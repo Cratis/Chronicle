@@ -49,6 +49,9 @@ internal static class ObserverInformationConverters
             HandledEventCount = state.HandledEventCount,
             RunningState = state.RunningState.ToContract(),
             RunningStateChangedAt = runningStateChangedAt,
+
+            // A recorded subscription is a subscription, resident or dormant, so a listing can say so without waking anything.
+            IsSubscribed = state.DurableSubscription is not null,
             IsReplayable = definition.IsReplayable
         };
 

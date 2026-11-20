@@ -48,6 +48,14 @@ public class ObserverState
     public DateTimeOffset? RunningStateChangedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets when a client was last seen holding a subscription to the observer, absent until first recorded.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not mapped by the state converters and preserved by state saves.
+    /// </remarks>
+    public DateTimeOffset? LastSeenAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the serialized type-set control, or null before initialization.
     /// </summary>
     [ConcurrencyCheck]
@@ -85,6 +93,9 @@ public class ObserverState
 
     /// <summary>Gets or sets serialized optional webhook probe coordination.</summary>
     public string? WebhookProbe { get; set; }
+
+    /// <summary>Gets or sets the serialized optional durable subscription of the observer (decision 0034).</summary>
+    public string? DurableSubscription { get; set; }
 
     /// <summary>
     /// Gets or sets the sequence number of the last event the observer handled.

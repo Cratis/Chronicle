@@ -21,6 +21,7 @@ using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Metrics;
@@ -51,6 +52,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 /// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
+/// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo of the cluster supports dormant observers.</param>
 /// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when a silo leaves the cluster, after which the observer re-verifies its live subscription.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
@@ -73,6 +75,7 @@ public partial class Observer(
     IEventGenerationRelease? eventGenerationRelease = null,
     TimeProvider? timeProvider = null,
     IObserverGauges? observerGauges = null,
+    IClusterReleases? clusterReleases = null,
     ISiloDepartures? siloDepartures = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
@@ -205,6 +208,7 @@ public partial class Observer(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await base.OnActivateAsync(cancellationToken);
+        await FinishWakeFromDormancy();
         await ReconcilePartitionDeferrals();
         RememberHandledEventsReportsForTheResponseTimeout();
         ScheduleActivationAlertReport();
@@ -238,12 +242,21 @@ public partial class Observer(
         RegisterWatchdog(config.WatchdogInterval);
         WatchSiloDepartures();
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
+        ConfigureDurableSubscriptions(config.DurableSubscriptions);
+        ConfigureDormancy(config);
+        _dormantResumeMaxEvents = config.DormantResumeMaxEvents < 1 ? 1000 : config.DormantResumeMaxEvents;
+        _unseenRemovalAfter = config.UnseenRemovalAfter > TimeSpan.Zero ? config.UnseenRemovalAfter : Observers.DefaultUnseenRemovalAfter;
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();
         if (!KeyOwnsDefinition)
         {
             logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
+        }
+
+        if (_observerExists)
+        {
+            await RestoreFromDurableSubscription();
         }
 
         PublishFailedPartitionsGauge();
@@ -274,9 +287,16 @@ public partial class Observer(
             }
 
             // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
-            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle)
+            // One released as dormant keeps its subscription - the record in its state and the entry in the queue - so an event wakes it.
+            // If the queue cannot keep it (an event reached its lane since the release was asked for), it leaves the ordinary way.
+            var keepsSubscription = reason.ReasonCode != DeactivationReasonCode.ShuttingDown &&
+                IsReleasedAsDormant &&
+                await KeepQueueEntryForDormantRelease();
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle && !keepsSubscription)
             {
+                ForgetDurableSubscription();
                 await TransitionTo<Disconnected>();
+                await PersistForgottenDurableSubscription();
                 await base.OnDeactivateAsync(reason, cancellationToken);
             }
         }
@@ -573,10 +593,14 @@ public partial class Observer(
 
         await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
+        var wasHeldByClient = IsHeldByClient;
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetDurableSubscription();
         ForgetSupersededRegistrations();
         await PauseJobs();
         await TransitionTo<Disconnected>();
+        await PersistForgottenDurableSubscription();
+        if (wasHeldByClient) await RecordSeenByClient(force: true);
     }
 
     /// <inheritdoc/>
@@ -840,6 +864,7 @@ public partial class Observer(
                 QuarantineEpisodeId = _quarantineEpisodeId,
                 WebhookProbe = _webhookProbe,
                 DeliveryFences = DeliveryFenceSnapshot(),
+                DurableSubscription = DurableSubscriptionToWrite(),
                 PartitionClaims = shadowClaims.Claims,
                 ObserverWideClaim = shadowClaims.Wide,
                 OwnershipRevision = shadowClaims.Revision
@@ -868,6 +893,7 @@ public partial class Observer(
             }
 
             _persistedStateWrites++;
+            _forgottenDurableSubscriptionIsPending = false;
             PublishRunningStateGauge();
             if (revision == _alertRevision)
             {
@@ -1124,6 +1150,7 @@ public partial class Observer(
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetDurableSubscription();
         ForgetSupersededRegistrations();
     }
 
@@ -1157,9 +1184,11 @@ public partial class Observer(
 
         if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+        RecordDurableSubscription();
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+        if (subscriberArgs is ConnectedClient) await RecordSeenByClient(force: true);
     }
 
     async Task SetUpAllEventsSubscription<TObserverSubscriber>(
@@ -1191,9 +1220,11 @@ public partial class Observer(
             subscriberArgs,
             isReplayable);
         ForgetSupersededRegistrations();
+        RecordDurableSubscription();
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
+        if (subscriberArgs is ConnectedClient) await RecordSeenByClient(force: true);
     }
 
     async Task ValidateGenerationDelivery(IEnumerable<EventType> eventTypes, EventGenerationDelivery generationDelivery)

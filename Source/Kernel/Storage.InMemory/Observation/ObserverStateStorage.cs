@@ -16,6 +16,7 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
 {
     readonly ConcurrentDictionary<ObserverId, ObserverState> _states = new();
     readonly ConcurrentDictionary<ObserverId, DateTimeOffset> _runningStatesChangedAt = new();
+    readonly ConcurrentDictionary<ObserverId, DateTimeOffset> _lastSeenAt = new();
     readonly ReplaySubject<IEnumerable<ObserverState>> _allSubject = new(1);
 
     /// <summary>Serializes every mutation, so a timestamp write cannot interleave with a delete, rename or ownership change.</summary>
@@ -116,12 +117,53 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<bool> SaveLastSeenAt(ObserverId observerId, DateTimeOffset lastSeenAt, EventSequenceId owner)
+    {
+        lock (_mutationLock)
+        {
+            if (!_states.TryGetValue(observerId, out var existing) || (existing.Owner is not null && existing.Owner != owner))
+            {
+                return Task.FromResult(false);
+            }
+
+            _lastSeenAt[observerId] = lastSeenAt;
+        }
+
+        return Task.FromResult(true);
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetLastSeenAt(IEnumerable<ObserverId> observerIds, DateTimeOffset startedAt)
+    {
+        var result = new Dictionary<ObserverId, DateTimeOffset>();
+        lock (_mutationLock)
+        {
+            foreach (var observerId in observerIds.Distinct().Where(_states.ContainsKey))
+            {
+                result[observerId] = _lastSeenAt.GetOrAdd(observerId, startedAt);
+            }
+        }
+
+        return Task.FromResult<IReadOnlyDictionary<ObserverId, DateTimeOffset>>(result);
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner)
+    {
+        IReadOnlyDictionary<ObserverId, ObserverDurableSubscription> result = _states
+            .Where(entry => entry.Value.DurableSubscription is not null && entry.Value.Owner == owner)
+            .ToDictionary(entry => entry.Key, entry => entry.Value.DurableSubscription!);
+        return Task.FromResult(result);
+    }
+
+    /// <inheritdoc/>
     public Task Delete(ObserverId observerId)
     {
         lock (_mutationLock)
         {
             if (!_states.TryRemove(observerId, out _)) return Task.CompletedTask;
             _runningStatesChangedAt.TryRemove(observerId, out _);
+            _lastSeenAt.TryRemove(observerId, out _);
         }
 
         _allSubject.OnNext(Snapshot());
@@ -138,6 +180,11 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
             if (_runningStatesChangedAt.TryRemove(currentId, out var changedAt))
             {
                 _runningStatesChangedAt[newId] = changedAt;
+            }
+
+            if (_lastSeenAt.TryRemove(currentId, out var lastSeenAt))
+            {
+                _lastSeenAt[newId] = lastSeenAt;
             }
         }
 

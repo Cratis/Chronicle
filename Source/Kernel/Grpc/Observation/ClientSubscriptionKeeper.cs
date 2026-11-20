@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Services.Observation;
@@ -100,6 +102,43 @@ internal static class ClientSubscriptionKeeper
 
         return intact;
     }
+
+    /// <summary>
+    /// Confirms that a subscription is intact without asking the observer when the observer is dormant and holds this client.
+    /// </summary>
+    /// <param name="isIntact">The check that asks the observer's client grain, used whenever the observer has to be asked.</param>
+    /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that tells whether the observer is dormant and holds the client; none means every check asks.</param>
+    /// <param name="key">The <see cref="ConnectedObserverKey"/> of the observer served by the stream.</param>
+    /// <returns>A check that is true when the observer is dormant and its record names this client on this silo.</returns>
+    /// <remarks>
+    /// <para>
+    /// Asking the observer is what wakes it, and a dormant observer is subscribed by its record and its queue entry, so
+    /// there is nothing to restore by asking. An observer that is resident, has no record, has a record naming another
+    /// connection or silo, a read that fails, the legacy keeper mode, a setting that does not apply or a mixed cluster all
+    /// fall back to the call, which restores whatever was lost - including the live subscription of a resident observer whose
+    /// silo was lost, which a record alone would hide.
+    /// </para>
+    /// </remarks>
+    public static Func<Task<bool>> ConfirmFromDurableSubscription(Func<Task<bool>> isIntact, IDormantObservers? dormantObservers, ConnectedObserverKey key) =>
+        async () =>
+        {
+            if (dormantObservers is not null)
+            {
+                try
+                {
+                    if (await dormantObservers.HoldsClient(new ObserverKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId), key.ConnectionId))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Falls through to the call below.
+                }
+            }
+
+            return await isIntact();
+        };
 
     static async Task<bool> WaitForCheck(TimeSpan interval, Task departure, TimeProvider timeProvider, CancellationToken cancellationToken)
     {

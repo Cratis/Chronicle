@@ -12,6 +12,8 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Releases;
+using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Cratis.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +28,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeepAlive]
 [PreferLocalPlacement]
-public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
+public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     /// <summary>
     /// The most sequential per-partition deliveries one coalesced dispatch may cost a live observer before it is moved to its catch-up path.
@@ -54,6 +56,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly MetricNames _metricNames;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly IShutdownDrainBudget? _stopBudget;
+    readonly IStorage? _storage;
+    readonly int _queueCount;
+    readonly Observers _observers;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
     readonly int _queueDepletionWaitTimeoutMs;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
@@ -77,6 +82,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     volatile bool _isResetting;
     AppendedEventsQueueMetrics? _metrics;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
+    int _queueId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueue"/> class.
@@ -87,20 +93,34 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
+    /// <param name="storage">The <see cref="IStorage"/> the queue compares its subscriptions with; optional for standalone specification queues.</param>
+    /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo supports dormant observers; without it none is kept.</param>
+    /// <param name="wakeAdmission">The <see cref="IWakeAdmission"/> that bounds how many dormant observers wake at once; without it wakes are not bounded.</param>
+    /// <param name="dormantObserverGauge">The <see cref="IDormantObserverGauge"/> the queue reports its dormant observers to; optional for standalone specification queues.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
         [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
         IOptions<ChronicleOptions> options,
         ILogger<AppendedEventsQueue> logger,
-        IShutdownDrainBudget? stopBudget = null)
+        IShutdownDrainBudget? stopBudget = null,
+        IStorage? storage = null,
+        IClusterReleases? clusterReleases = null,
+        IWakeAdmission? wakeAdmission = null,
+        IDormantObserverGauge? dormantObserverGauge = null)
     {
+        _dormantObserverGauge = dormantObserverGauge;
+        _clusterReleases = clusterReleases;
+        _wakeAdmission = wakeAdmission;
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
         _metricNames = options.Value.Telemetry.MetricNames;
         _logger = logger;
         _stopBudget = stopBudget;
+        _storage = storage;
+        _queueCount = options.Value.Events.Queues;
+        _observers = options.Value.Observers;
         _catchupCancellationToken = _catchupCancellation.Token;
 
         var eventsConfig = options.Value.Events;
@@ -127,6 +147,15 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <summary>
+    /// Gets or sets the metrics the queue records to; set on activation, and by specifications that listen to them.
+    /// </summary>
+    internal AppendedEventsQueueMetrics? Metrics
+    {
+        get => _metrics;
+        set => _metrics = value;
+    }
+
+    /// <summary>
     /// Gets or sets the clock used for catch-up trigger deadlines and retry delays.
     /// </summary>
     internal TimeProvider CatchupTimeProvider { get; set; } = TimeProvider.System;
@@ -142,12 +171,16 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     bool IsStopping => _stopBudget?.IsStopping == true;
 
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
-        _eventSequenceKey = EventSequenceKey.Parse(key!);
+        Identify(EventSequenceKey.Parse(key!), queueId);
         _metrics = _meter.BeginScope(key!, queueId, _metricNames);
-        return base.OnActivateAsync(cancellationToken);
+        _dormantGaugeRegistration = _dormantObserverGauge?.Register(_eventSequenceKey, () => DormantCount);
+        ConfigureDurableSubscriptionCheck(_observers);
+        ConfigureDormantSafetyNet();
+        await SeedDormantSubscriptions();
+        await base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -275,6 +308,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             // catch-up); each entry would otherwise leave stale duplicates behind and cause
             // observer.Handle to be invoked multiple times for the same event.
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _dormant.Remove(observerKey);
             _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
         }
 
@@ -292,6 +326,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             }
 
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _dormant.Remove(observerKey);
             _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
         }
 
@@ -309,6 +344,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         lock (_subscriptionsLock)
         {
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            _dormant.Remove(observerKey);
             CloseLane(observerKey);
             _pageObservers.TryRemove(observerKey, out _);
         }
@@ -342,6 +378,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _channel.Writer.TryComplete();
         StopLanes(discard: true);
 
+        _dormantGaugeRegistration?.Dispose();
         _metrics?.Dispose();
     }
 
@@ -804,6 +841,11 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <returns>Awaitable task.</returns>
     async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
+        if (!await WakeDormantObserver(lane, events))
+        {
+            return;
+        }
+
         var runs = SplitIntoPartitionRuns(events);
         var deliversPages = await DeliversPages(lane);
         if (!deliversPages && runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))

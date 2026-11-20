@@ -92,6 +92,7 @@ public partial class Observer
             return;
         }
 
+        NoteHandledAfterWake();
         using var span = activitySource.Handle();
         span?.Activity?.Tag(_observerKey);
         span?.Activity?.Tag(Definition.Type);

@@ -50,6 +50,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
 /// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
+/// <param name="dormantObservers">The <see cref="IDormantObservers"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
@@ -61,7 +62,8 @@ internal sealed class Reducers(
     ILogger<Reducers> logger,
     IObserverRegistrationGate registrationGate,
     INamespaceCasing namespaceCasing,
-    ISiloDepartures siloDepartures) : IReducers
+    ISiloDepartures siloDepartures,
+    IDormantObservers? dormantObservers = null) : IReducers
 {
     /// <summary>
     /// The size, in characters, of a reducer's serialized state from which each reduce is reported as expensive.
@@ -306,7 +308,9 @@ internal sealed class Reducers(
 
                     await ClientSubscriptionKeeper.KeepWhileConnected(
                         () => reducerDefinition.IsActive
-                            ? ClientSubscriptionKeeper.KeepSubscription(clientObserver!.IsSubscriptionIntact, () => clientObserver.KeepSubscription(reducerDefinition))
+                            ? ClientSubscriptionKeeper.KeepSubscription(
+                                ClientSubscriptionKeeper.ConfirmFromDurableSubscription(clientObserver!.IsSubscriptionIntact, dormantObservers, new ConnectedObserverKey(registration.Reducer.ReducerId, registration.EventStore, registration.Namespace, registration.Reducer.EventSequenceId, registration.ConnectionId)),
+                                () => clientObserver.KeepSubscription(reducerDefinition))
                             : KeepInactive(clientObserver!, reducerDefinition),
                         SubscriptionCheckSchedule.From(options.Value),
                         siloDepartures,

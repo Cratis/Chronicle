@@ -37,6 +37,10 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 | `observer.suspected_skipped_events` | `{event}` | `chronicle-observer-events-suspected-skipped` |
 | `observer.zero_work_catch_ups` | `{catch_up}` | `chronicle-observer-zero-work-catch-ups` |
 | `observer.claim_divergences` | `{divergence}` | `chronicle-observer-claim-divergences` |
+| `observer.dormant_releases` | `{observer}` | `chronicle-observer-dormant-releases` |
+| `observer.dormant_wakes` | `{wake}` | `chronicle-observer-dormant-wakes` |
+| `observer.dormant_wakes_delayed` | `{wake}` | `chronicle-observer-dormant-wakes-delayed` |
+| `observer.dormant_resumes` | `{resume}` | `chronicle-observer-dormant-resumes` |
 | `webhook.probes_scheduled` | `{probe}` | `chronicle-webhook-probe-scheduled` |
 | `webhook.probe_attempts` | `{probe}` | `chronicle-webhook-probe-attempts` |
 | `webhook.probe_failures` | `{probe}` | `chronicle-webhook-probe-failures` |
@@ -65,6 +69,7 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 | `appended_events_queue.catch_up_trigger_budget_exceeded` | `{trigger}` | `chronicle-appended-events-queue-catchup-trigger-budget-exceeded` |
 | `appended_events_queue.suspected_undelivered_events` | `{event}` | `chronicle-appended-events-queue-suspected-undelivered-events` |
 | `appended_events_queue.observer_spills` | `{spill}` | `chronicle-appended-events-queue-observers-spilled-to-catchup` |
+| `appended_events_queue.durable_subscription_disagreements` | `{subscription}` | `chronicle-appended-events-queue-durable-subscription-disagreements` |
 | `alert.failed_transitions` | `{transition}` | `chronicle-alert-transitions-failed` |
 | `alert.open_incidents` | `{incident}` | `chronicle-alerts-open-incidents` |
 | `alert.open_incidents_available` | `1` | `chronicle-alerts-open-incidents-available` |
@@ -91,6 +96,7 @@ These instruments were added after the convention. They have no legacy name and 
 | `observer.quarantined_partitions` | `{partition}` |
 | `observer.running_state` | `1` |
 | `observer.resident` | `{observer}` |
+| `observer.dormant` | `{observer}` |
 | `job.running` | `{job}` |
 | `observer.job.handled_steps` | `{step}` |
 | `observer.job.total_steps` | `{step}` |
@@ -117,7 +123,10 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `eventName` | `cratis.event_type.id` |
 | `QueueId` | `cratis.chronicle.appended_events_queue.id` |
 | `Reason` | `cratis.chronicle.observer.spill_reason` |
+| `Disagreement` | `cratis.chronicle.observer.durable_subscription_disagreement` |
 | `divergence` | `cratis.chronicle.observer.claim_divergence` |
+| `WakeCause` | `cratis.chronicle.observer.wake_cause` |
+| `ResumeOutcome` | `cratis.chronicle.observer.resume_outcome` |
 | `Condition` | `cratis.chronicle.alert.condition` |
 | `Severity` | `cratis.chronicle.alert.severity` |
 | `state` | `cratis.chronicle.abandoned_delivery.result_state` |
