@@ -4,7 +4,7 @@
 using DotNet.Testcontainers.Containers;
 using NSubstitute;
 
-namespace Cratis.Chronicle.Integration.for_ReusableBackingContainer;
+namespace Cratis.Chronicle.Integration.for_ContainerStartup.for_ReusableBackingContainer;
 
 public class when_the_kernel_start_is_retried : Cratis.Specifications.Specification
 {
