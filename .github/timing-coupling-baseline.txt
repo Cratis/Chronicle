@@ -102,6 +102,7 @@
 4 Integration/Kernel/for_DormantObserver/when_an_event_is_appended_while_dormant/and_the_observer_has_been_released.cs  # waits that a dormant observer stays dormant and a woken one handles nothing more; there is no event that says nothing happened
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
 1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
+1 Integration/Kernel/for_UnseenObserverRemoval/given/an_unseen_observer_kernel.cs  # bounded poll in one wait helper: the kernel noticing that a client is gone and an observer staying unseen for the period have no completion signal, and the period is the thing being waited out
 2 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/ReleasedFloorKernel.cs  # readiness: bounded poll of a released kernel container (populated store, container exit); a released binary exposes no completion signal
 1 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/given/a_populated_store.cs  # readiness: bounded poll for the first event-store write by a released kernel container; no completion signal available
 2 Integration/SqlClustering/for_ClusterLoadDeliveryDiagnostics/when_capturing_the_enabled_transport.cs  # knob: 20 events/s pacing cadence for the diagnostics overhead measurement, not a wait
