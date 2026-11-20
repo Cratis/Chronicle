@@ -217,13 +217,14 @@ public class Observers
     /// Gets whether, and how, an observer records its subscription in its state document.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see cref="DurableSubscriptionMode.Shadow"/>: the subscription is written and cleared with the
-    /// observer's state and the appended events queue compares what is stored with what is live and reports any
-    /// disagreement, but nothing is released or woken because of it. <see cref="DurableSubscriptionMode.Off"/> writes
-    /// none and clears any that is stored. A dormant observer (<see cref="DormantAfter"/>) needs the record, so
-    /// releasing dormant observers does nothing while this is off. A server-level setting (decision 0034).
+    /// Defaults to <see cref="DurableSubscriptionMode.Release"/>: the subscription is written and cleared with the
+    /// observer's state, and a subscribed observer that has nothing to do is released after <see cref="DormantAfter"/>
+    /// and woken from the record. <see cref="DurableSubscriptionMode.Shadow"/> writes the record and compares it with
+    /// the live subscriptions of the appended events queue without releasing or waking anything.
+    /// <see cref="DurableSubscriptionMode.Off"/> writes none and clears any that is stored. A server-level setting
+    /// (decision 0034).
     /// </remarks>
-    public DurableSubscriptionMode DurableSubscriptions { get; init; } = DurableSubscriptionMode.Shadow;
+    public DurableSubscriptionMode DurableSubscriptions { get; init; } = DurableSubscriptionMode.Release;
 
     /// <summary>
     /// Gets how many seconds a subscribed observer that has nothing to do stays resident before it is released.
@@ -232,8 +233,9 @@ public class Observers
     /// Defaults to 900 seconds (15 minutes), the same as <see cref="IdleDeactivationAfter"/>; 0 keeps every subscribed
     /// observer resident. A released observer is woken by the appended events queue when an event it observes arrives,
     /// and by the safety net (<see cref="DormantSafetyNet"/>). Applies to client reactors, client reducers and
-    /// projections only. Declared by decision 0034; nothing acts on it until the release is implemented, so it has no
-    /// effect yet.
+    /// projections only, and only while <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Release"/>
+    /// and every silo of the cluster runs the same release, which supports it. An observer resumes from its persisted
+    /// cursor when it wakes (decision 0034). A server-level setting.
     /// </remarks>
     public int DormantAfter { get; init; } = 900;
 
@@ -243,7 +245,8 @@ public class Observers
     /// <remarks>
     /// Defaults to 900 seconds (15 minutes). Each observer's interval is jittered so wake-ups do not line up. It bounds
     /// how long a lost wake-up can delay delivery to a dormant observer, and costs about one activation per dormant
-    /// observer per interval. Values below 1 select the default. A server-level setting (decision 0034); no effect yet.
+    /// observer per interval. The wake-ups are driven by the appended events queue, so no timer or activation is held
+    /// for a dormant observer. Values below 1 select the default. A server-level setting (decision 0034).
     /// </remarks>
     public int DormantSafetyNet { get; init; } = 900;
 
@@ -255,9 +258,19 @@ public class Observers
     /// on a silo, so a burst becomes a short queue instead of a spike. The others wait for a place and are delivered
     /// to afterwards. Defaults to 0 (automatic): two per processor, at least 4 and at most 16, the same as
     /// <see cref="MaxConcurrentSubscriptions"/>. Values below 1 select the automatic limit. A server-level setting
-    /// (decision 0034); no effect yet.
+    /// (decision 0034).
     /// </remarks>
     public int MaxConcurrentWakes { get; init; }
+
+    /// <summary>
+    /// Gets how many events a woken observer may read and deliver from its cursor before the wake falls back to a catch-up job.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 1000. An observer that was dormant normally wakes for the one or two events that woke it; a larger gap
+    /// is what the catch-up job exists for, so the observer resumes through it instead of delivering inside its
+    /// activation. Values below 1 select the default. A server-level setting (decision 0034).
+    /// </remarks>
+    public int DormantResumeMaxEvents { get; init; } = 1000;
 
     /// <summary>
     /// Gets how often each appended events queue compares its live subscriptions with the stored durable ones.

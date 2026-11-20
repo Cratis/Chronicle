@@ -24,7 +24,7 @@ public class when_getting_the_kind_of_a_subscriber : Specification
     [Fact] void should_recognize_a_client_reducer() => typeof(IReducerObserverSubscriber).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.ClientReducer);
     [Fact] void should_recognize_a_client_reducer_that_takes_pages() => typeof(IReducerPageObserverSubscriber).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.ClientReducer);
     [Fact] void should_recognize_a_projection() => typeof(IProjectionObserverSubscriber).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.Projection);
-    [Fact] void should_recognize_a_collapsing_projection() => typeof(ICollapsingProjectionObserverSubscriber).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.Projection);
+    [Fact] void should_recognize_a_collapsing_projection() => typeof(ICollapsingProjectionObserverSubscriber).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.CollapsingProjection);
     [Fact] void should_recognize_a_kernel_reactor() => typeof(Reactors.Kernel.IReactorObserverSubscriber<KernelReactor>).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.KernelReactor);
     [Fact] void should_recognize_a_webhook() => typeof(IWebhookObserverSubscriber).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.Webhook);
     [Fact] void should_recognize_an_event_store_subscription() => typeof(IEventStoreSubscriptionObserverSubscriber).GetSubscriptionKind().ShouldEqual(ObserverSubscriptionKind.EventStoreSubscription);

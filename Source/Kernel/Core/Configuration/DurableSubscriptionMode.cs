@@ -16,5 +16,10 @@ public enum DurableSubscriptionMode
     /// <summary>
     /// Record the subscription and compare it with the live ones, without acting on the result.
     /// </summary>
-    Shadow = 1
+    Shadow = 1,
+
+    /// <summary>
+    /// Record the subscription, keep the queue entry of a dormant observer and wake it from the record.
+    /// </summary>
+    Release = 2
 }

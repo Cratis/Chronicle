@@ -22,6 +22,14 @@ public static class ClusterReleaseBoundary
     public static readonly SemanticVersion SerializerRename = new(19, 123, 1);
 
     /// <summary>
+    /// Gets the first release that releases dormant observers and wakes them from their durable subscription (decision 0034).
+    /// </summary>
+    /// <remarks>
+    /// Dormant observers are released and woken only while every silo of the cluster runs one release at or after this one.
+    /// </remarks>
+    public static readonly SemanticVersion DormantObservers = new(19, 173, 0);
+
+    /// <summary>
     /// Finds the releases in a cluster that this release cannot exchange grain calls with because of a boundary.
     /// </summary>
     /// <param name="local">The release of this silo.</param>

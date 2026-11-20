@@ -24,13 +24,33 @@ public static class ObserverSubscriptionDurability
     {
         _ when subscriberType.IsAssignableTo(typeof(IReactorObserverSubscriber)) => ObserverSubscriptionKind.ClientReactor,
         _ when subscriberType.IsAssignableTo(typeof(IReducerObserverSubscriber)) => ObserverSubscriptionKind.ClientReducer,
-        _ when subscriberType.IsAssignableTo(typeof(IProjectionObserverSubscriber)) ||
-               subscriberType.IsAssignableTo(typeof(ICollapsingProjectionObserverSubscriber)) => ObserverSubscriptionKind.Projection,
+        _ when subscriberType.IsAssignableTo(typeof(ICollapsingProjectionObserverSubscriber)) => ObserverSubscriptionKind.CollapsingProjection,
+        _ when subscriberType.IsAssignableTo(typeof(IProjectionObserverSubscriber)) => ObserverSubscriptionKind.Projection,
         _ when subscriberType.IsAssignableTo(typeof(IWebhookObserverSubscriber)) => ObserverSubscriptionKind.Webhook,
         _ when subscriberType.IsAssignableTo(typeof(IEventStoreSubscriptionObserverSubscriber)) => ObserverSubscriptionKind.EventStoreSubscription,
         _ when IsKernelReactor(subscriberType) => ObserverSubscriptionKind.KernelReactor,
         _ => null
     };
+
+    /// <summary>
+    /// Gets whether an observer of this kind can be released while it is dormant (decision 0034).
+    /// </summary>
+    /// <param name="kind">The <see cref="ObserverSubscriptionKind"/> of the observer.</param>
+    /// <returns>True for client reactors, client reducers and projections; false for every other kind, which stay resident.</returns>
+    public static bool CanBeReleasedWhenDormant(this ObserverSubscriptionKind kind) => kind is
+        ObserverSubscriptionKind.ClientReactor or
+        ObserverSubscriptionKind.ClientReducer or
+        ObserverSubscriptionKind.Projection or
+        ObserverSubscriptionKind.CollapsingProjection;
+
+    /// <summary>
+    /// Gets whether an observer of this kind is served by connected clients.
+    /// </summary>
+    /// <param name="kind">The <see cref="ObserverSubscriptionKind"/> of the observer.</param>
+    /// <returns>True for client reactors and client reducers.</returns>
+    public static bool IsServedByClient(this ObserverSubscriptionKind kind) => kind is
+        ObserverSubscriptionKind.ClientReactor or
+        ObserverSubscriptionKind.ClientReducer;
 
     /// <summary>
     /// Gets the durable form of a subscription.

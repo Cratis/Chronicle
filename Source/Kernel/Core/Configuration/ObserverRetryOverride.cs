@@ -74,6 +74,7 @@ public class ObserverRetryOverride
         DormantAfter = observers.DormantAfter,
         DormantSafetyNet = observers.DormantSafetyNet,
         MaxConcurrentWakes = observers.MaxConcurrentWakes,
+        DormantResumeMaxEvents = observers.DormantResumeMaxEvents,
         DurableSubscriptionCheckInterval = observers.DurableSubscriptionCheckInterval,
         UnseenRemovalAfter = observers.UnseenRemovalAfter,
         UnseenRemovalSweepInterval = observers.UnseenRemovalSweepInterval,

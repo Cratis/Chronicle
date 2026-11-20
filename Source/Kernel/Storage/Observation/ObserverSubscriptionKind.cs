@@ -44,5 +44,10 @@ public enum ObserverSubscriptionKind
     /// <summary>
     /// An event store subscription.
     /// </summary>
-    EventStoreSubscription = 6
+    EventStoreSubscription = 6,
+
+    /// <summary>
+    /// A projection served by the kernel that can collapse several event sources onto one read model document.
+    /// </summary>
+    CollapsingProjection = 7
 }

@@ -382,6 +382,10 @@
             "weight": 0.000001
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_WakeAdmission.",
+            "weight": 0.000001
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_WebhookProbeEligibility.",
             "weight": 0.0008432324252328064
         },

@@ -11,7 +11,8 @@ public class and_dormant_observer_release_is_not_configured : Specification
 
     [Fact] void should_release_dormant_observers_after_fifteen_minutes() => _options.Observers.DormantAfter.ShouldEqual(900);
     [Fact] void should_wake_dormant_observers_every_fifteen_minutes() => _options.Observers.DormantSafetyNet.ShouldEqual(900);
-    [Fact] void should_record_durable_subscriptions_in_shadow() => _options.Observers.DurableSubscriptions.ShouldEqual(DurableSubscriptionMode.Shadow);
+    [Fact] void should_release_durable_subscriptions() => _options.Observers.DurableSubscriptions.ShouldEqual(DurableSubscriptionMode.Release);
+    [Fact] void should_resume_from_a_gap_of_at_most_a_thousand_events() => _options.Observers.DormantResumeMaxEvents.ShouldEqual(1000);
     [Fact] void should_choose_the_wake_limit_automatically() => _options.Observers.MaxConcurrentWakes.ShouldEqual(0);
     [Fact] void should_compare_durable_subscriptions_every_fifteen_minutes() => _options.Observers.DurableSubscriptionCheckInterval.ShouldEqual(TimeSpan.FromMinutes(15));
 }
