@@ -51,10 +51,10 @@ public interface IDurableSubscriptionRecords
     Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetAll(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, bool fresh = false);
 
     /// <summary>
-    /// Gets whether the durable subscription of an observer names a connection among its targets.
+    /// Gets whether the durable subscription of an observer names a connection served from this silo among its targets.
     /// </summary>
     /// <param name="observer">The <see cref="ObserverKey"/> of the observer.</param>
     /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
-    /// <returns>True when the record names the connection.</returns>
+    /// <returns>True when the record names the connection as served from this silo.</returns>
     Task<bool> Names(ObserverKey observer, ConnectionId connectionId);
 }

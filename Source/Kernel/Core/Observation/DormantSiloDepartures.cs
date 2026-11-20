@@ -88,7 +88,8 @@ public sealed class DormantSiloDepartures(
         await _cancellation.CancelAsync();
         try
         {
-            await _loop;
+            // A sweep that is still calling observers must not hold the silo's shutdown up; the next silo to look finds what it missed.
+            await _loop.WaitAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {

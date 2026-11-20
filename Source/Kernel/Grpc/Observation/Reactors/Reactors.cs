@@ -45,7 +45,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
 /// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
-/// <param name="durableSubscriptionRecords">The <see cref="IDurableSubscriptionRecords"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
+/// <param name="dormantObservers">The <see cref="IDormantObservers"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
     IReactorMediator reactorMediator,
@@ -58,7 +58,7 @@ internal sealed class Reactors(
     IObserverRegistrationGate registrationGate,
     INamespaceCasing namespaceCasing,
     ISiloDepartures siloDepartures,
-    IDurableSubscriptionRecords? durableSubscriptionRecords = null) : IReactors
+    IDormantObservers? dormantObservers = null) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -231,7 +231,7 @@ internal sealed class Reactors(
 
                 await ClientSubscriptionKeeper.KeepWhileConnected(
                     () => ClientSubscriptionKeeper.KeepSubscription(
-                        ClientSubscriptionKeeper.ConfirmFromDurableSubscription(clientObserver.IsSubscriptionIntact, durableSubscriptionRecords, key),
+                        ClientSubscriptionKeeper.ConfirmFromDurableSubscription(clientObserver.IsSubscriptionIntact, dormantObservers, key),
                         () => clientObserver.KeepSubscription(definition)),
                     SubscriptionCheckSchedule.From(options.Value),
                     siloDepartures,

@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.when_confirming_from_the_durable_subscription;
 
-public class and_the_record_names_the_client : given.a_confirmation_from_the_durable_subscription
+public class and_the_observer_is_dormant_and_holds_the_client : given.a_confirmation_from_the_durable_subscription
 {
-    void Establish() => RecordNamesTheClient(true);
+    void Establish() => ObserverHoldsTheClient(true);
 
     Task Because() => Confirm();
 

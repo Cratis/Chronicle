@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
@@ -26,4 +27,18 @@ public interface IDormantObservers
     /// never mistaken for a dormant one on the strength of a record that may be a moment old.
     /// </remarks>
     Task<ObserverDurableSubscription?> Find(ObserverKey observer);
+
+    /// <summary>
+    /// Gets whether an observer is dormant and its client, served from this silo, is the one it recorded.
+    /// </summary>
+    /// <param name="observer">The <see cref="ObserverKey"/> of the observer.</param>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the client whose stream asks.</param>
+    /// <returns>True when the subscription is intact without the observer being asked; false whenever it has to be asked.</returns>
+    /// <remarks>
+    /// A record alone does not say the subscription is intact: an observer that is resident when its silo is lost has a record
+    /// and no live subscription. Only the queue that holds the observer as dormant says the record is the subscription, and
+    /// only a target on this silo says the stream asking is the one the record names. Everything else, including the setting
+    /// that decides whether the keeper may rely on records, answers false so the observer is asked as it always was.
+    /// </remarks>
+    Task<bool> HoldsClient(ObserverKey observer, ConnectionId connectionId);
 }

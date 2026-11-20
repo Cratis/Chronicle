@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 
 public class and_reading_the_record_fails : given.a_confirmation_from_the_durable_subscription
 {
-    void Establish() => _records.Names(Arg.Any<ObserverKey>(), _key.ConnectionId).Returns(Task.FromException<bool>(new InvalidOperationException("storage is down")));
+    void Establish() => _dormantObservers.HoldsClient(Arg.Any<ObserverKey>(), _key.ConnectionId).Returns(Task.FromException<bool>(new InvalidOperationException("storage is down")));
 
     Task Because() => Confirm();
 

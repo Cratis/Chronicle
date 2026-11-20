@@ -27,12 +27,14 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="options">The <see cref="ChronicleOptions"/>.</param>
 /// <param name="clusterReleases">The <see cref="IClusterReleases"/> telling whether every silo supports dormant observers.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> for ageing the cache.</param>
+/// <param name="localSilo">The <see cref="ILocalSiloDetails"/> of this silo; a record names a client of this silo only when its target says so.</param>
 [Singleton]
 public class DurableSubscriptionRecords(
     IStorage storage,
     IOptions<ChronicleOptions> options,
     IClusterReleases? clusterReleases = null,
-    TimeProvider? timeProvider = null) : IDurableSubscriptionRecords
+    TimeProvider? timeProvider = null,
+    ILocalSiloDetails? localSilo = null) : IDurableSubscriptionRecords
 {
     /// <summary>
     /// How long the records of one event sequence in a namespace are reused.
@@ -80,7 +82,7 @@ public class DurableSubscriptionRecords(
 
     /// <inheritdoc/>
     public async Task<bool> Names(ObserverKey observer, ConnectionId connectionId) =>
-        await Get(observer) is { } record && record.Targets.Any(target => target.ConnectionId == connectionId.Value);
+        await Get(observer) is { } record && record.Targets.Any(target => target.ConnectionId == connectionId.Value && IsThisSilo(target.Silo));
 
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetAll(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, bool fresh = false)
@@ -98,6 +100,8 @@ public class DurableSubscriptionRecords(
         _reads[key] = read;
         return read.Records;
     }
+
+    bool IsThisSilo(string silo) => localSilo is null || silo == localSilo.SiloAddress.ToParsableString();
 
     async Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> Read((EventStoreName EventStore, EventStoreNamespaceName Namespace, EventSequenceId Sequence) key)
     {

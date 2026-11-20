@@ -13,15 +13,13 @@ namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_a_silo_leaves
 public class and_the_observer_is_dormant : given.a_projections_manager_grain
 {
     ProjectionDefinition _definition;
-    IDurableSubscriptionRecords _records;
 
-    protected override IDurableSubscriptionRecords? CreateDurableSubscriptionRecords()
+    protected override IDormantObservers? CreateDormantObservers()
     {
-        _records = Substitute.For<IDurableSubscriptionRecords>();
-        _records.CanBeRelied.Returns(true);
-        _records.Get(Arg.Any<ObserverKey>()).Returns(Task.FromResult<ObserverDurableSubscription?>(
+        var dormant = Substitute.For<IDormantObservers>();
+        dormant.Find(Arg.Any<ObserverKey>()).Returns(Task.FromResult<ObserverDurableSubscription?>(
             new ObserverDurableSubscription(ObserverSubscriptionKind.Projection, false, null, [])));
-        return _records;
+        return dormant;
     }
 
     async Task Establish()

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
@@ -39,5 +40,17 @@ public class DormantObservers(IGrainFactory grainFactory, IDurableSubscriptionRe
 
         var stored = await records.GetAll(observer.EventStore, observer.Namespace, observer.EventSequenceId, fresh: true);
         return stored.TryGetValue(observer.ObserverId, out var record) ? record : null;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HoldsClient(ObserverKey observer, ConnectionId connectionId)
+    {
+        if (!records.ConfirmsClientSubscriptions)
+        {
+            return false;
+        }
+
+        var queues = grainFactory.GetGrain<IAppendedEventsQueues>(new EventSequenceKey(observer.EventSequenceId, observer.EventStore, observer.Namespace));
+        return await queues.IsDormant(observer) && await records.Names(observer, connectionId);
     }
 }

@@ -12,7 +12,7 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.giv
 /// </summary>
 public class a_confirmation_from_the_durable_subscription : Specification
 {
-    protected IDurableSubscriptionRecords _records;
+    protected IDormantObservers _dormantObservers;
     protected int _grainCalls;
     protected bool _grainAnswer = true;
     protected bool _intact;
@@ -21,8 +21,7 @@ public class a_confirmation_from_the_durable_subscription : Specification
     void Establish()
     {
         _key = new ConnectedObserverKey("an-observer", "an-event-store", "a-namespace", "a-sequence", new ConnectionId("a-connection"));
-        _records = Substitute.For<IDurableSubscriptionRecords>();
-        _records.ConfirmsClientSubscriptions.Returns(true);
+        _dormantObservers = Substitute.For<IDormantObservers>();
     }
 
     protected async Task Confirm() => _intact = await ClientSubscriptionKeeper.ConfirmFromDurableSubscription(
@@ -31,9 +30,9 @@ public class a_confirmation_from_the_durable_subscription : Specification
             _grainCalls++;
             return Task.FromResult(_grainAnswer);
         },
-        _records,
+        _dormantObservers,
         _key)();
 
-    protected void RecordNamesTheClient(bool names) =>
-        _records.Names(Arg.Any<ObserverKey>(), _key.ConnectionId).Returns(Task.FromResult(names));
+    protected void ObserverHoldsTheClient(bool holds) =>
+        _dormantObservers.HoldsClient(Arg.Any<ObserverKey>(), _key.ConnectionId).Returns(Task.FromResult(holds));
 }

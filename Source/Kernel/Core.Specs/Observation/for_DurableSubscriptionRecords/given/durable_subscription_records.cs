@@ -26,6 +26,7 @@ public class durable_subscription_records : Specification
     protected int _dormantAfter = 900;
     protected ClientKeeperMode _keeper = ClientKeeperMode.SiloLocal;
     protected bool _everySiloSupportsDormancy = true;
+    protected Orleans.Runtime.SiloAddress? _thisSilo;
 
     protected void Create()
     {
@@ -55,7 +56,8 @@ public class durable_subscription_records : Specification
                 ConnectedClients = new Configuration.Clients { KeeperMode = _keeper }
             }),
             _releases,
-            _time);
+            _time,
+            _thisSilo is null ? null : new LocalSilo(_thisSilo));
     }
 
     protected sealed class ManualTime : TimeProvider
@@ -65,5 +67,18 @@ public class durable_subscription_records : Specification
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan by) => _now += by;
+    }
+
+    sealed class LocalSilo(Orleans.Runtime.SiloAddress address) : Orleans.Runtime.ILocalSiloDetails
+    {
+        public string Name => "the-silo";
+
+        public string ClusterId => "the-cluster";
+
+        public string DnsHostName => "localhost";
+
+        public Orleans.Runtime.SiloAddress SiloAddress => address;
+
+        public Orleans.Runtime.SiloAddress GatewayAddress => address;
     }
 }

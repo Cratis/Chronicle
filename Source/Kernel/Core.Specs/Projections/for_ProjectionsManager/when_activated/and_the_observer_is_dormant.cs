@@ -12,13 +12,12 @@ public class and_the_observer_is_dormant : given.a_projections_manager_grain
 {
     ProjectionDefinition _definition;
 
-    protected override IDurableSubscriptionRecords? CreateDurableSubscriptionRecords()
+    protected override IDormantObservers? CreateDormantObservers()
     {
-        var records = Substitute.For<IDurableSubscriptionRecords>();
-        records.CanBeRelied.Returns(true);
-        records.Get(Arg.Any<ObserverKey>()).Returns(Task.FromResult<ObserverDurableSubscription?>(
+        var dormant = Substitute.For<IDormantObservers>();
+        dormant.Find(Arg.Any<ObserverKey>()).Returns(Task.FromResult<ObserverDurableSubscription?>(
             new ObserverDurableSubscription(ObserverSubscriptionKind.Projection, false, null, [])));
-        return records;
+        return dormant;
     }
 
     void Establish()

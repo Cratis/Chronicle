@@ -104,29 +104,29 @@ internal static class ClientSubscriptionKeeper
     }
 
     /// <summary>
-    /// Confirms that a subscription is intact from the observer's durable subscription when that can be relied on, so the check calls no grain.
+    /// Confirms that a subscription is intact without asking the observer when the observer is dormant and holds this client.
     /// </summary>
-    /// <param name="isIntact">The check that asks the observer's client grain, used when the record cannot confirm the subscription.</param>
-    /// <param name="records">The <see cref="IDurableSubscriptionRecords"/> to read the durable subscription from; none means every check calls the observer.</param>
+    /// <param name="isIntact">The check that asks the observer's client grain, used whenever the observer has to be asked.</param>
+    /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that tells whether the observer is dormant and holds the client; none means every check asks.</param>
     /// <param name="key">The <see cref="ConnectedObserverKey"/> of the observer served by the stream.</param>
-    /// <returns>A check that is true when the stream is open - it is, while this runs - and the durable subscription names its client.</returns>
+    /// <returns>A check that is true when the observer is dormant and its record names this client on this silo.</returns>
     /// <remarks>
     /// <para>
-    /// The stream being open on this silo is the part that used to need a call to the observer: the silo is alive and the
-    /// stream is the connection. What is left to know is that the observer still holds the client, and the record that outlives
-    /// the observer's activation says so without activating it. An observer that has no record, a record that does not name the
-    /// client, a read that fails and a setting or cluster that does not rely on records all fall back to the call, which restores
-    /// whatever was lost. Only an observer that was released while dormant is spared the call, and it can only be dormant with a record.
+    /// Asking the observer is what wakes it, and a dormant observer is subscribed by its record and its queue entry, so
+    /// there is nothing to restore by asking. An observer that is resident, has no record, has a record naming another
+    /// connection or silo, a read that fails, the legacy keeper mode, a setting that does not apply or a mixed cluster all
+    /// fall back to the call, which restores whatever was lost - including the live subscription of a resident observer whose
+    /// silo was lost, which a record alone would hide.
     /// </para>
     /// </remarks>
-    public static Func<Task<bool>> ConfirmFromDurableSubscription(Func<Task<bool>> isIntact, IDurableSubscriptionRecords? records, ConnectedObserverKey key) =>
+    public static Func<Task<bool>> ConfirmFromDurableSubscription(Func<Task<bool>> isIntact, IDormantObservers? dormantObservers, ConnectedObserverKey key) =>
         async () =>
         {
-            if (records?.ConfirmsClientSubscriptions == true)
+            if (dormantObservers is not null)
             {
                 try
                 {
-                    if (await records.Names(new ObserverKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId), key.ConnectionId))
+                    if (await dormantObservers.HoldsClient(new ObserverKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId), key.ConnectionId))
                     {
                         return true;
                     }

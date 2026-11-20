@@ -135,21 +135,23 @@ public partial class ProjectionsManager
 
     async Task<bool> IsHeldByDurableSubscription(ProjectionDefinition definition, EventStoreNamespaceName @namespace)
     {
-        if (durableSubscriptionRecords?.CanBeRelied != true || _pendingRevival.ContainsKey((definition.Identifier, @namespace)))
+        if (dormantObservers is null || _pendingRevival.ContainsKey((definition.Identifier, @namespace)))
         {
             return false;
         }
 
         try
         {
-            return await durableSubscriptionRecords.Get(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId)) is
+            // Dormant is the queue's word that the record and its entry are the subscription. A resident observer that lost its
+            // live subscription with its silo has a record too, and is exactly what this manager repairs.
+            return await dormantObservers.Find(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId)) is
             {
                 Kind: ObserverSubscriptionKind.Projection or ObserverSubscriptionKind.CollapsingProjection
             };
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // Without the record the observer is asked, as it was before it could be released.
+            // Without the answer the observer is asked, as it was before it could be released.
             return false;
         }
     }

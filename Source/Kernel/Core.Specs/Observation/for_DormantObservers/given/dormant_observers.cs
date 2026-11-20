@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Observation.for_DormantObservers.given;
 public class dormant_observers : Specification
 {
     protected static readonly ObserverKey _observer = new("the-observer", "the-event-store", "the-namespace", EventSequenceId.Log);
+    protected static readonly Cratis.Chronicle.Concepts.Clients.ConnectionId _connection = new("the-connection");
     protected static readonly ObserverDurableSubscription _record = new(ObserverSubscriptionKind.ClientReactor, false, null, [new("the-connection", "silo")]);
 
     protected IGrainFactory _grainFactory;
@@ -18,6 +19,7 @@ public class dormant_observers : Specification
     protected IDurableSubscriptionRecords _records;
     protected DormantObservers _dormantObservers;
     protected ObserverDurableSubscription? _result;
+    protected bool _holds;
 
     void Establish()
     {
@@ -26,6 +28,8 @@ public class dormant_observers : Specification
         _grainFactory.GetGrain<IAppendedEventsQueues>(Arg.Any<string>(), Arg.Any<string>()).Returns(_queues);
         _records = Substitute.For<IDurableSubscriptionRecords>();
         _records.CanBeRelied.Returns(true);
+        _records.ConfirmsClientSubscriptions.Returns(true);
+        _records.Names(_observer, _connection).Returns(true);
         _records.Get(_observer).Returns(Task.FromResult<ObserverDurableSubscription?>(_record));
         _dormantObservers = new(_grainFactory, _records);
     }
