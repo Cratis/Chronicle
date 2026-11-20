@@ -12,7 +12,7 @@ using KernelEventSequenceId = Cratis.Chronicle.Concepts.EventSequences.EventSequ
 
 namespace Cratis.Chronicle.Integration.for_EventSequence.when_revising.given;
 
-public class a_constrained_event_log(ChronicleFixture fixture) : Specification(fixture)
+public class a_constrained_event_log(ChronicleFixture fixture) : for_EventSequence.given.an_event_log_with_append_diagnostics(fixture)
 {
     IEventStoreStorage Store => Services.GetRequiredService<IStorage>().GetEventStore(EventStore.Name.Value);
     IEventStoreNamespaceStorage Namespace => Store.GetNamespace(EventStore.Namespace.Value);
@@ -23,7 +23,7 @@ public class a_constrained_event_log(ChronicleFixture fixture) : Specification(f
         TResult result = default!;
         await RetryWaits.Until(async () =>
         {
-            result = await append();
+            result = await AppendWithDiagnostics(append);
             return !result.Errors.Any(error => error.Value == "ConstraintIndexUnavailable");
         });
 

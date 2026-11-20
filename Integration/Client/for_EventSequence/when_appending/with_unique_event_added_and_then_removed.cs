@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 [Collection(ChronicleCollection.Name)]
 public class with_unique_event_added_and_then_removed(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : Specification<ChronicleFixture>(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_event_log_with_append_diagnostics(chronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueEventReleasedByRemovalConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];
@@ -38,10 +38,10 @@ public class with_unique_event_added_and_then_removed(context context) : Given<c
         public async Task Because()
         {
             var eventSourceId = Guid.NewGuid().ToString();
-            FirstResult = await EventStore.EventLog.Append(eventSourceId, _event);
-            RemovedResult = await EventStore.EventLog.Append(eventSourceId, _removedEvent);
-            NextCycleResult = await EventStore.EventLog.Append(eventSourceId, _event);
-            SameCycleResult = await EventStore.EventLog.Append(eventSourceId, _event);
+            FirstResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(eventSourceId, _event));
+            RemovedResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(eventSourceId, _removedEvent));
+            NextCycleResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(eventSourceId, _event));
+            SameCycleResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(eventSourceId, _event));
         }
     }
 

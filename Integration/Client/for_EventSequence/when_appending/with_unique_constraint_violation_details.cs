@@ -22,7 +22,7 @@ public class with_unique_constraint_violation_details(context context) : Given<c
     /// </summary>
     const string PropertyValueDetailKey = "PropertyValue";
 
-    public class context(ChronicleFixture chronicleFixture) : Specification(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_event_log_with_append_diagnostics(chronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];
@@ -41,8 +41,8 @@ public class with_unique_constraint_violation_details(context context) : Given<c
 
         public async Task Because()
         {
-            FirstResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event);
-            SecondResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event);
+            FirstResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event));
+            SecondResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event));
         }
     }
 

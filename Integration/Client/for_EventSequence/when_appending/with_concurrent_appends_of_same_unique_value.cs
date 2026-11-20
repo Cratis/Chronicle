@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 [Collection(ChronicleCollection.Name)]
 public class with_concurrent_appends_of_same_unique_value(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleFixture) : Specification(chronicleFixture)
+    public class context(ChronicleFixture chronicleFixture) : given.an_event_log_with_append_diagnostics(chronicleFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueUserConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(UserOnboardingStarted), typeof(UserRemoved)];
@@ -22,8 +22,8 @@ public class with_concurrent_appends_of_same_unique_value(context context) : Giv
 
         public async Task Because() =>
             Results = await Task.WhenAll(
-                EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event),
-                EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event));
+                AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event)),
+                AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), Event)));
     }
 
     [Fact] void should_have_exactly_one_successful_append() => Context.Results.Count(_ => _.IsSuccess).ShouldEqual(1);

@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Integration.for_EventSequence.when_appending;
 [Collection(ChronicleCollection.Name)]
 public class with_unique_deep_property_path_constraint_violation(context context) : Given<context>(context)
 {
-    public class context(ChronicleFixture chronicleInProcessFixture) : Specification(chronicleInProcessFixture)
+    public class context(ChronicleFixture chronicleInProcessFixture) : given.an_event_log_with_append_diagnostics(chronicleInProcessFixture)
     {
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueMobilePhoneConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(PersonRegistered)];
@@ -25,8 +25,8 @@ public class with_unique_deep_property_path_constraint_violation(context context
 
         public async Task Because()
         {
-            FirstResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), _event);
-            SecondResult = await EventStore.EventLog.Append(Guid.NewGuid().ToString(), _event);
+            FirstResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), _event));
+            SecondResult = await AppendWithDiagnostics(() => EventStore.EventLog.Append(Guid.NewGuid().ToString(), _event));
         }
     }
 
