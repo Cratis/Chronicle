@@ -289,12 +289,20 @@ def gate(arguments):
                  run_integration=os.environ.get("RUN_INTEGRATION") == "true")
     load_integration_evidence(state, arguments.runs_json)
     if state.pop("pending", False):
-        detail = integration_status(state["latest"], state["head_sha"], state["repo"]) if state["latest"] else (
-            f"Requested Integration is still running for {state['head_sha']}.")
-        return pending("Requested Integration", detail)
+        return pending("Requested Integration", pending_detail(state))
     integration_ok, integration_message = with_exclusion_summary(decide(**state))
     if state["dispatch"] or state["detect"] != "success":
         return integration_ok, integration_message
+    return combine_with_specs(integration_ok, integration_message, state, arguments)
+
+
+def pending_detail(state):
+    if state["latest"]:
+        return integration_status(state["latest"], state["head_sha"], state["repo"])
+    return f"Requested Integration is still running for {state['head_sha']}."
+
+
+def combine_with_specs(integration_ok, integration_message, state, arguments):
     latest = latest_build(state["repo"], state["head_sha"], arguments.build_runs_json)
     # Fork builds can sit awaiting approval and are never refreshed, so they report at once with the manual hint.
     if integration_ok and not state["fork"]:
@@ -303,6 +311,18 @@ def gate(arguments):
     if integration_ok and specs_ok is None:
         return None, specs_message
     return integration_ok and specs_ok, integration_message + "\n" + specs_message
+
+
+def requested_in_progress():
+    return os.environ.get("REQUESTED", "") not in ("", "success", "failure", "cancelled", "skipped")
+
+
+def green_evidence_url(state, runs_json):
+    runs = evidence_runs(state["repo"], state["head_sha"], runs_json)
+    green = next((run for run in runs if has_green_evidence([run], state["head_sha"])), None)
+    if green:
+        return green.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{green['id']}"
+    return None
 
 
 def integration_lookup_required(state):
@@ -316,8 +336,7 @@ def can_load_integration(state):
 def load_integration_evidence(state, runs_json):
     if not can_load_integration(state):
         return
-    requested = os.environ.get("REQUESTED", "")
-    if requested not in ("", "success", "failure", "cancelled", "skipped"):
+    if requested_in_progress():
         state["pending"] = True
         return
     same_run = same_run_evidence(state)
@@ -333,10 +352,7 @@ def load_integration_evidence(state, runs_json):
     if in_flight(state["latest"]):
         state["pending"] = True
         return
-    runs = evidence_runs(state["repo"], state["head_sha"], runs_json)
-    green = next((run for run in runs if has_green_evidence([run], state["head_sha"])), None)
-    if green:
-        state["evidence"] = green.get("html_url") or f"https://github.com/{state['repo']}/actions/runs/{green['id']}"
+    state["evidence"] = green_evidence_url(state, runs_json)
 
 
 def latest_build(repo, head_sha, runs_json):
