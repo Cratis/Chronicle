@@ -12,6 +12,7 @@ Keep connection strings, timeouts, and TLS settings in `ChronicleOptions`. For a
 | Dependency | Purpose | Default |
 |---|---|---|
 | `IClientArtifactsProvider` | Supplies event types, projections, reactors, and other client artifacts | `DefaultClientArtifactsProvider.Default`, using project- and package-referenced assemblies |
+| `IServiceProvider` | Activates client artifacts and their services | `DefaultServiceProvider` for direct construction, using default-constructor activation; pass `serviceProvider` when artifacts need registered dependencies. Hosted clients use the host's provider |
 | `IIdentityProvider` | Supplies identity for event metadata | `BaseIdentityProvider`, returning the current identity or `Identity.System` when none is set |
 | `ICorrelationIdAccessor` | Provides the current correlation ID for event metadata | `CorrelationIdAccessor`, returning the current async-local value or `Guid.Empty` |
 | `IEventStoreNamespaceResolver` | Selects the event store namespace | `DefaultEventStoreNamespaceResolver`, returning the default namespace |

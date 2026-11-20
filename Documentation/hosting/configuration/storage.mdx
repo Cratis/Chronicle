@@ -8,7 +8,7 @@ Configure the storage backend for Chronicle Server.
 
 | Type | Description |
 | --- | --- |
-| `MongoDB` | MongoDB (default) |
+| `MongoDB` | MongoDB |
 | `PostgreSql` | PostgreSQL |
 | `MsSql` | Microsoft SQL Server |
 | `Sqlite` | SQLite (embedded, file-based) |
@@ -297,8 +297,8 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
-| type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
-| connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
+| type | string | Conditional | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory`. Unset by default; inferred from recognized connection details. Set `Cratis__Chronicle__Storage__Type` explicitly when inference is not possible |
+| connectionDetails | string | Conditional | Connection string for the chosen storage backend. Supply this or `connectionDetailsFile` for persistent storage; `InMemory` is exempt |
 | connectionDetailsFile | string | No | Path of a file holding the connection string, such as a mounted Kubernetes Secret. Read once at startup and trimmed of a trailing newline. Set either this or `connectionDetails`, not both |
 | databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
 | systemDatabaseName | string | No | Name the System event store's MongoDB databases are named by. Defaults to `_system`; ignored by other storage backends |
