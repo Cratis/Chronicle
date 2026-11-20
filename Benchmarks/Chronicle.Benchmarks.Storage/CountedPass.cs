@@ -37,6 +37,26 @@ public static class CountedPass
         }
     }
 
+    /// <summary>
+    /// Gets every combination of the parameter values of a benchmark type. The parameter sources are public static
+    /// properties and several (such as the providers) are declared on the base class, so the lookup asks for static
+    /// members up the hierarchy or it finds nothing.
+    /// </summary>
+    /// <param name="type">The benchmark type.</param>
+    /// <returns>The combinations.</returns>
+    internal static List<List<(PropertyInfo Property, object Value)>> Combinations(Type type)
+    {
+        var combinations = new List<List<(PropertyInfo, object)>> { new() };
+        foreach (var property in type.GetProperties().Where(_ => Attribute.IsDefined(_, typeof(ParamsSourceAttribute))))
+        {
+            var sourceName = property.GetCustomAttribute<ParamsSourceAttribute>()!.Name;
+            var values = ((System.Collections.IEnumerable)type.GetProperty(sourceName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)!.GetValue(null)!).Cast<object>().ToArray();
+            combinations = [.. combinations.SelectMany(existing => values.Select(value => new List<(PropertyInfo, object)>([.. existing, (property, value)])))];
+        }
+
+        return combinations;
+    }
+
     static async Task RunCase(Type type, IReadOnlyList<(PropertyInfo Property, object Value)> combination, MethodInfo[] methods, int iterations)
     {
         var instance = Activator.CreateInstance(type)!;
@@ -81,18 +101,5 @@ public static class CountedPass
             var result = method.Invoke(instance, null);
             if (result is Task task) await task;
         }
-    }
-
-    static List<List<(PropertyInfo Property, object Value)>> Combinations(Type type)
-    {
-        var combinations = new List<List<(PropertyInfo, object)>> { new() };
-        foreach (var property in type.GetProperties().Where(_ => Attribute.IsDefined(_, typeof(ParamsSourceAttribute))))
-        {
-            var sourceName = property.GetCustomAttribute<ParamsSourceAttribute>()!.Name;
-            var values = ((System.Collections.IEnumerable)type.GetProperty(sourceName)!.GetValue(null)!).Cast<object>().ToArray();
-            combinations = [.. combinations.SelectMany(existing => values.Select(value => new List<(PropertyInfo, object)>([.. existing, (property, value)])))];
-        }
-
-        return combinations;
     }
 }
