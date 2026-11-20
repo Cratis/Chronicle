@@ -29,7 +29,8 @@ public static class WebhookDefinitionConverters
             Target = definition.Target.ToSql(),
             IsReplayable = definition.IsReplayable,
             IsActive = definition.IsActive,
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            Signing = definition.Signing
         };
 
     /// <summary>
@@ -47,7 +48,8 @@ public static class WebhookDefinitionConverters
             definition.IsReplayable,
             definition.IsActive)
         {
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            Signing = definition.Signing
         };
 
     static Concepts.Observation.Webhooks.WebhookTarget ToKernel(this WebhookTarget target)

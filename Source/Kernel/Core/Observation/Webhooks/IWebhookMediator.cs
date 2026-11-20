@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Observation.Webhooks.Signing;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -36,7 +37,8 @@ public interface IWebhookMediator
     /// <param name="events">Collection of <see cref="AppendedEvent"/> to observe.</param>
     /// <param name="accessToken">Optional access token to use for authorization.</param>
     /// <param name="timeout">The optional timeout.</param>
+    /// <param name="signingIdentity">The identity to sign, or null for an unsigned delivery.</param>
     /// <param name="cancellationToken">Cancellation of the entire delivery, including the resilience pipeline.</param>
     /// <returns>The typed delivery outcome, including partial progress and any deadline.</returns>
-    Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default);
+    Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, WebhookMessageIdentity? signingIdentity = null, CancellationToken cancellationToken = default);
 }

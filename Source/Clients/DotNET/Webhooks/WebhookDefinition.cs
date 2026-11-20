@@ -28,4 +28,9 @@ public record WebhookDefinition(
     /// Gets the policy for delivering event generations.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the signing mode for webhook deliveries.
+    /// </summary>
+    public WebhookSigningMode Signing { get; init; } = WebhookSigningMode.None;
 }

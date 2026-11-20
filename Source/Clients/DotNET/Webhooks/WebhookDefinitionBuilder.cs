@@ -22,11 +22,24 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
     bool _isReplayable = true;
     bool _isActive = true;
     EventGenerationDelivery _generationDelivery = EventGenerationDelivery.Compatibility;
+    WebhookSigningMode _signing = WebhookSigningMode.None;
 
     /// <inheritdoc/>
     public IWebhookDefinitionBuilder WithGenerationDelivery(EventGenerationDelivery generationDelivery)
     {
         _generationDelivery = generationDelivery;
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public IWebhookDefinitionBuilder WithSigning(WebhookSigningMode signing)
+    {
+        if (!Enum.IsDefined(signing))
+        {
+            throw new ArgumentOutOfRangeException(nameof(signing), signing, "The webhook signing mode is not supported.");
+        }
+
+        _signing = signing;
         return this;
     }
 
@@ -97,7 +110,10 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
         var target = new WebhookTarget(
             Url: targetUrl,
             Authorization: _authorization,
-            Headers: _headers) { ManagedIdentity = _managedIdentity };
+            Headers: _headers)
+        {
+            ManagedIdentity = _managedIdentity
+        };
 
         return new WebhookDefinition(
             Identifier: id,
@@ -107,7 +123,8 @@ public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefiniti
             IsReplayable: _isReplayable,
             IsActive: _isActive)
         {
-            GenerationDelivery = _generationDelivery
+            GenerationDelivery = _generationDelivery,
+            Signing = _signing
         };
     }
 
