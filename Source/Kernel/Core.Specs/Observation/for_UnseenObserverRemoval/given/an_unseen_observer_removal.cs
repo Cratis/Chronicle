@@ -36,6 +36,7 @@ public abstract class an_unseen_observer_removal : Specification
     protected UnseenObserverRemoval _removal;
     protected ObserverRemovalResult _removalResult = ObserverRemovalResult.Removed;
     protected int _removeCalls;
+    protected Task? _removalGate;
 
     readonly Dictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaceStorages = [];
     readonly List<JobState> _jobs = [];
@@ -85,15 +86,20 @@ public abstract class an_unseen_observer_removal : Specification
         grainFactory.GetGrain<IJobsManager>(0, Arg.Any<string?>()).Returns(jobsManager);
 
         var remover = Substitute.For<IObserverRemover>();
-        remover.Remove(Arg.Any<EventStoreName>(), Arg.Any<ObserverId>(), Arg.Any<EventSequenceId>()).Returns(call =>
+        remover.Remove(Arg.Any<EventStoreName>(), Arg.Any<ObserverId>(), Arg.Any<EventSequenceId>()).Returns(async call =>
         {
             _removeCalls++;
+            if (_removalGate is not null)
+            {
+                await _removalGate;
+            }
+
             if (_removalResult.Outcome == ObserverRemovalOutcome.Removed)
             {
                 _removed.Add(call.ArgAt<ObserverId>(1).Value);
             }
 
-            return Task.FromResult(_removalResult);
+            return _removalResult;
         });
 
         _removal = new(

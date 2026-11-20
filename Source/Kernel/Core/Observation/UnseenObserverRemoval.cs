@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
@@ -53,6 +54,7 @@ public sealed class UnseenObserverRemoval(
         "chronicle.observers.unseen_removed",
         "{observer}",
         "Client observers removed because no client had subscribed to them for the configured period");
+    readonly ConcurrentDictionary<(EventStoreName EventStore, ObserverId ObserverId), byte> _removing = new();
     CancellationTokenSource? _cancellation;
     Task _loop = Task.CompletedTask;
 
@@ -146,6 +148,26 @@ public sealed class UnseenObserverRemoval(
     }
 
     async Task<bool> Remove(EventStoreName eventStore, Storage.Observation.ObserverDefinition definition, EventStoreNamespaceName[] namespaces, DateTimeOffset now)
+    {
+        // Two sweeps on a silo can reach the same candidate at the same time. The one that got there first removes it; the other leaves
+        // it alone, so the removal is reported, logged and counted once. Sweeps on different silos are not coordinated by this.
+        var key = (eventStore, definition.Identifier);
+        if (!_removing.TryAdd(key, 0))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await RemoveWhenRemovable(eventStore, definition, namespaces, now);
+        }
+        finally
+        {
+            _removing.TryRemove(key, out _);
+        }
+    }
+
+    async Task<bool> RemoveWhenRemovable(EventStoreName eventStore, Storage.Observation.ObserverDefinition definition, EventStoreNamespaceName[] namespaces, DateTimeOffset now)
     {
         foreach (var @namespace in namespaces)
         {
