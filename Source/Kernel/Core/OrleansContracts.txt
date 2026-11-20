@@ -100,6 +100,7 @@ class [GrainType("eventsequences")] Cratis.Chronicle.EventSequences.EventSequenc
 interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQueue")] Cratis.Chronicle.EventSequences.IAppendedEventsQueue [Version(2)]
   A21C2489: Enqueue(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   D17FC975: GetSubscriptions() -> Task<System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.EventSequences.AppendedEventsQueueObserverSubscription>>
+  72BDD190: IsDormant(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task<bool>
   BA26AC21: ResetForDevelopment() -> Task
   D8D0078E: SpillMatchingToCatchup(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   001631A1: SpillToCatchup() -> Task
@@ -111,6 +112,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQu
 interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQueues")] Cratis.Chronicle.EventSequences.IAppendedEventsQueues [Version(2)]
   67AB967A: Enqueue(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   56A32A29: Forget(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task
+  506F6BC1: IsDormant(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task<bool>
   68B51930: IsSubscribed(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task<bool>
   BB5FDFB6: ResetForDevelopment() -> Task
   64C75630: SpillMatchingToCatchup(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task

@@ -101,4 +101,15 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     /// silo, and by the safety net (decision 0034), and is no longer dormant once the observer subscribes again.
     /// </remarks>
     Task<bool> TryMarkDormant(ObserverKey observerKey);
+
+    /// <summary>
+    /// Gets whether the subscription of an observer is kept as dormant: the observer has no activation and an event or the safety net wakes it.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>True when the observer is dormant.</returns>
+    /// <remarks>
+    /// Answered from the queue alone, so a listing or an inspection can tell a dormant observer from a resident one without
+    /// activating it (decision 0034). It is false once the observer has been woken, even if the activation is not done yet.
+    /// </remarks>
+    Task<bool> IsDormant(ObserverKey observerKey);
 }

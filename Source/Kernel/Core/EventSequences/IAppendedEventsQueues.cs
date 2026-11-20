@@ -104,6 +104,16 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     Task<bool> TryMarkDormant(ObserverKey observerKey);
 
     /// <summary>
+    /// Gets whether the subscription of an observer is kept as dormant, so it has no activation (decision 0034).
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>True when the observer is dormant.</returns>
+    /// <remarks>
+    /// Answered by the queue that holds the observer's subscription, so asking never activates the observer.
+    /// </remarks>
+    Task<bool> IsDormant(ObserverKey observerKey);
+
+    /// <summary>
     /// Removes the subscription of an observer without it having an activation to ask, such as a dormant one that turned out to have no subscriber left.
     /// </summary>
     /// <param name="observerKey"><see cref="ObserverKey"/> of the observer.</param>

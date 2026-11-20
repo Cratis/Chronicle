@@ -106,6 +106,15 @@ public partial class AppendedEventsQueue
         return Task.FromResult(true);
     }
 
+    /// <inheritdoc/>
+    public Task<bool> IsDormant(ObserverKey observerKey)
+    {
+        lock (_subscriptionsLock)
+        {
+            return Task.FromResult(!_isResetting && _dormant.ContainsKey(observerKey));
+        }
+    }
+
     /// <summary>
     /// Gets the events of a batch that an observer's subscription takes, in sequence order, as live delivery would deliver them.
     /// </summary>
