@@ -47,6 +47,8 @@ public abstract class an_unseen_observer_removal : Specification
 
     protected virtual ChronicleOptions Configuration => new();
 
+    protected virtual IDurableSubscriptionRecords? Records => null;
+
     async Task Establish()
     {
         foreach (var @namespace in new EventStoreNamespaceName[] { First, Second })
@@ -101,7 +103,8 @@ public abstract class an_unseen_observer_removal : Specification
             Options.Create(Configuration),
             NullLogger<UnseenObserverRemoval>.Instance,
             Substitute.For<IMeter<UnseenObserverRemoval>>(),
-            _time);
+            _time,
+            Records);
     }
 
     void Destroy() => _removal.Dispose();

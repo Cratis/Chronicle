@@ -34,6 +34,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="logger">The <see cref="ILogger{T}"/>.</param>
 /// <param name="meter">The Chronicle <see cref="IMeter{T}"/>.</param>
 /// <param name="timeProvider">The optional <see cref="TimeProvider"/>.</param>
+/// <param name="durableSubscriptionRecords">The optional <see cref="IDurableSubscriptionRecords"/>; an observer released while dormant is seen through its recorded subscription, never by waking it.</param>
 public sealed class UnseenObserverRemoval(
     IStorage storage,
     IGrainFactory grainFactory,
@@ -41,7 +42,8 @@ public sealed class UnseenObserverRemoval(
     IOptions<ChronicleOptions> options,
     ILogger<UnseenObserverRemoval> logger,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<UnseenObserverRemoval> meter,
-    TimeProvider? timeProvider = null) : ILifecycleParticipant<ISiloLifecycle>, IDisposable
+    TimeProvider? timeProvider = null,
+    IDurableSubscriptionRecords? durableSubscriptionRecords = null) : ILifecycleParticipant<ISiloLifecycle>, IDisposable
 {
     const int DefaultBatchSize = 100;
     static readonly TimeSpan _defaultSweepInterval = TimeSpan.FromHours(1);
@@ -173,6 +175,15 @@ public sealed class UnseenObserverRemoval(
         var observer = grainFactory.GetGrain<IObserver>(observerKey);
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
 
+        // An observer released while dormant has a durable subscription, so a client holds it: it is seen, and asking it
+        // would wake it once every sweep. A record that outlived its client is dropped when the observer is next woken,
+        // by its queue's safety net, and the clock starts from that time.
+        if (await IsHeldByDurableSubscription(observerKey))
+        {
+            await namespaceStorage.Observers.SaveLastSeenAt(definition.Identifier, now, definition.EventSequenceId);
+            return false;
+        }
+
         if (await observer.IsSubscribed())
         {
             // Seen right now: an observer subscribed through a node that does not record it must not be asked about every sweep.
@@ -192,6 +203,24 @@ public sealed class UnseenObserverRemoval(
 
         var jobs = await grainFactory.GetJobsManager(eventStore, @namespace).GetUnfinishedJobs();
         return !jobs.Any(job => job.Request is IObserverJobRequest request && request.ObserverKey.ObserverId == definition.Identifier);
+    }
+
+    async Task<bool> IsHeldByDurableSubscription(ObserverKey observerKey)
+    {
+        if (durableSubscriptionRecords?.CanBeRelied != true)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await durableSubscriptionRecords.Get(observerKey) is { Targets.Count: > 0 };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Without the record the observer is asked, as it was before it could be released.
+            return false;
+        }
     }
 
     Task Start(CancellationToken cancellationToken)

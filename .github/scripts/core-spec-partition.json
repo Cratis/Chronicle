@@ -162,6 +162,14 @@
             "weight": 0.0006104732185188725
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_DormantSiloDepartures.",
+            "weight": 0.000001
+        },
+        {
+            "prefix": "Cratis.Chronicle.Observation.for_DormantTargetSweep.",
+            "weight": 0.000001
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_DormantObservers.",
             "weight": 0.000001
         },

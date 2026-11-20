@@ -80,6 +80,14 @@ public partial class Observer
         {
             ForgetDurableSubscription();
             _repairDurableSubscriptionPending = true;
+
+            // The record said a client held this observer until now, so this is when it was last seen: a client that
+            // left while the observer was dormant starts the clock for removing unseen observers here.
+            if (record.Kind.IsServedByClient())
+            {
+                await RecordSeenByClient(force: true);
+            }
+
             return;
         }
 

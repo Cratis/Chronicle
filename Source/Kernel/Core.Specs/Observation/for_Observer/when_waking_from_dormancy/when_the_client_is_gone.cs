@@ -22,5 +22,6 @@ public class when_the_client_is_gone : given.a_dormant_client_observer
     [Fact] void should_not_deliver_anything() => _delivered.Count.ShouldEqual(0);
     [Fact] async Task should_not_be_subscribed() => (await _observer.IsSubscribed()).ShouldBeFalse();
     [Fact] void should_drop_the_record() => _stateStorage.State.DurableSubscription.ShouldBeNull();
+    [Fact] async Task should_record_that_a_client_held_it_until_now() => await _eventStoreNamespaceStorage.Observers.Received().SaveLastSeenAt(_observerId, Arg.Any<DateTimeOffset>(), _observerKey.EventSequenceId);
     [Fact] void should_forget_the_entry_the_queue_kept() => _appendedEventsQueues.Received().Forget(Arg.Any<ObserverKey>());
 }

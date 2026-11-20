@@ -165,6 +165,7 @@ public static class ChronicleServerSiloBuilderExtensions
         });
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Federation.FederationConsumerKeeper>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Observation.DormantSiloDepartures>());
 
         builder.Services.AddChronicleAdministratorAuthorization();
         builder.Services.AddChronicleDataProtection();
