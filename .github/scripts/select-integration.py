@@ -18,6 +18,7 @@ wins, and a file that matches no entry forces ``full``. The nightly run ignores 
 import argparse
 import json
 import os
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -221,6 +222,8 @@ def summarize(mode, selection, reasons):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--policy-root", default=Path(__file__).resolve().parents[2],
+                        type=Path, help="Checkout containing the integration selection contract.")
     parser.add_argument("--base", help="Base commit of the pull request.")
     parser.add_argument("--head", required=True, help="Head commit of the pull request.")
     parser.add_argument("--touched", default="false", help="true when the pull request touches the hot core.")
@@ -229,7 +232,7 @@ def main():
     parser.add_argument("--event", default="", help="Reuse is enabled only for pull_request events.")
     parser.add_argument("--head-repo", default="", help="PR head repository; unknown/fork heads cannot reuse.")
     args = parser.parse_args()
-    entries = load_entries()
+    entries = load_entries(args.policy_root / CONTRACT)
     current = dict(repo=args.repo, pull_request=args.pull_request, head=args.head, base=args.base,
                    event=args.event, head_repo=args.head_repo)
     green = last_green_run(current, entries) if args.repo and args.pull_request else None

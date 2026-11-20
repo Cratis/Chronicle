@@ -1,9 +1,12 @@
 # Copyright (c) Cratis. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 """Specifications for the integration selection: when a push runs everything, some lanes, or nothing."""
+from contextlib import redirect_stdout
 import importlib.util
+import io
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 import unittest
@@ -49,6 +52,37 @@ class ContractSpecs(unittest.TestCase):
                 select.load_entries(str(path))
             finally:
                 path.unlink()
+
+
+class PolicyProvenanceSpecs(unittest.TestCase):
+    def selection(self, *arguments):
+        decide = select.decide
+        with patch.object(sys, "argv", ["select-integration.py", "--base", "B", "--head", "H", *arguments]), \
+             patch.object(select, "changed_files", return_value=["Source/Kernel/Core/Observation/Observer.cs"]) as diff, \
+             patch.object(select, "decide", side_effect=lambda **kwargs: decide(files_between=diff, **kwargs)), \
+             patch.object(select, "emit") as emit, redirect_stdout(io.StringIO()):
+            select.main()
+        diff.assert_called_once_with("B", "H")
+        return dict(call.args for call in emit.call_args_list)["mode"]
+
+    def test_pr_policy_cannot_narrow_selection_with_default_or_explicit_trusted_root(self):
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory)
+            (data / ".github").mkdir()
+            (data / select.CONTRACT).write_text(
+                '{"entries":[{"paths":["**"],"action":"ignore"}]}', encoding="utf-8")
+            previous = os.getcwd()
+            try:
+                os.chdir(data)
+                self.assertEqual("full", self.selection())
+                self.assertEqual("full", self.selection("--policy-root", str(ROOT)))
+            finally:
+                os.chdir(previous)
+
+    def test_missing_trusted_policy_does_not_fall_back_to_pr_policy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(FileNotFoundError):
+                self.selection("--policy-root", directory)
 
 
 class ClassificationSpecs(unittest.TestCase):

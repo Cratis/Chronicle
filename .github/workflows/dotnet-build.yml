@@ -176,6 +176,9 @@ jobs:
           python3 .github/scripts/test-sparse-integration-workflows.py
           python3 .github/scripts/test-detect-hot-core-changes.py
           python3 .github/scripts/test-evaluate-hot-core-gate.py
+          python3 .github/scripts/test-select-integration.py
+          python3 .github/scripts/test-requested-reuse.py
+          python3 .github/scripts/test-requested-integration-provenance.py
           python3 .github/scripts/test-integration-wall-workflows.py
 
 
