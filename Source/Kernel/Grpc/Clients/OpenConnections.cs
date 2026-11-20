@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Contracts.Clients;
+using Cratis.DependencyInjection;
 
 namespace Cratis.Chronicle.Services.Clients;
 
@@ -28,6 +29,7 @@ namespace Cratis.Chronicle.Services.Clients;
 /// Shared by every call on the silo: the connection is opened by one call and the client responds through others.
 /// </para>
 /// </remarks>
+[Singleton]
 internal sealed class OpenConnections
 {
     readonly ConcurrentDictionary<ConnectionId, OpenConnection> _connections = new();
