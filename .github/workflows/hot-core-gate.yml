@@ -67,7 +67,13 @@ jobs:
         run: |
           python3 -E -s gate-tools/.github/scripts/test-detect-hot-core-changes.py
           python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate.py
-          python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py --policy-root gate-tools --verify
+          policy_args=()
+          if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then
+            policy_args=(--policy-root gate-tools)
+          else
+            echo "::notice::Policy provenance hardening activates once the base contains --policy-root."
+          fi
+          python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py "${policy_args[@]}" --verify
 
       # Prints every matched path and, on ordinary pushes, how to request integration.
       - name: Detect hot-core changes
@@ -84,7 +90,13 @@ jobs:
             exit 0
           fi
 
-          python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py --policy-root gate-tools --base "$BASE_SHA" --head "$HEAD_SHA"
+          policy_args=()
+          if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then
+            policy_args=(--policy-root gate-tools)
+          else
+            echo "::notice::Policy provenance hardening activates once the base contains --policy-root."
+          fi
+          python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py "${policy_args[@]}" --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Manual dispatch retains its all-provider hot-core matrix; ordinary pushes do not build it.
   # integration.yml applies reviewed lane exclusions visibly; the gate also reports their reasons.

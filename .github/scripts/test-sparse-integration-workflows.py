@@ -298,7 +298,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertNotIn("ref", data)
         self.assertNotIn("path", data)
 
-    def test_detection_policy_comes_from_the_trusted_checkout(self):
+    def test_detection_policy_uses_the_trusted_checkout_with_support_for_older_bases(self):
         detect = self.hot_core["jobs"]["detect"]
         self.assertEqual({"contents": "read"}, detect["permissions"])
         tools = next(step["with"] for step in detect["steps"] if step.get("name") == "Checkout gate tools")
@@ -307,7 +307,18 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         policy_commands = [line for line in commands.splitlines()
                            if "gate-tools/.github/scripts/detect-hot-core-changes.py " in line]
         self.assertEqual(2, len(policy_commands))
-        self.assertTrue(all("--policy-root gate-tools" in line for line in policy_commands))
+        self.assertTrue(all('"${policy_args[@]}"' in line for line in policy_commands))
+        selection = ('policy_args=()\n'
+                     "if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then\n"
+                     '  policy_args=(--policy-root gate-tools)\n'
+                     'else\n'
+                     '  echo "::notice::Policy provenance hardening activates once the base contains --policy-root."\n'
+                     'fi\n')
+        steps = detect["steps"]
+        for name in ("Assert the hot-core contract is intact", "Detect hot-core changes"):
+            step = next(step for step in steps if step.get("name") == name)
+            with self.subTest(step=name):
+                self.assertIn(selection, step["run"])
 
     def test_build_tests_the_pull_requests_own_gate_scripts(self):
         step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"]
