@@ -35,25 +35,39 @@ Use `IHostApplicationBuilder` for worker and console hosts, or `WebApplicationBu
 
 The connection string above uses TLS, but the client skips server certificate validation by default. Before connecting beyond a trusted development environment, configure certificate trust and enable [TLS validation](./tls). See the [getting-started host guides](../get-started/toc.yml) for the surrounding application setup.
 
-## Minimal setup
+## Minimal local setup
 
-A client needs two settings: the kernel's connection string and the event store name. With the environment-variable form:
+First run a [development kernel](../hosting/development-and-production-images.md) reachable at `localhost:35000`. Client registration does not start a kernel. Install `Cratis.Chronicle.AspNetCore` for a web application, or `Cratis.Chronicle` for a worker or console application.
 
-```bash
-export Cratis__Chronicle__ConnectionString="chronicle://clientId:clientSecret@chronicle.example.com:35000"
-export Cratis__Chronicle__EventStore="my-store"
-```
+No connection or event store settings are needed for a local hosted application. The connection defaults to `localhost:35000` with the built-in development credentials. The hosted event store name is derived from `ProgramIdentifier`, or the entry assembly name when that identifier is unset; see [EventStore](chronicle-options.mdx#eventstore) for normalization and overrides.
 
-Everything else has a default. For a kernel on `localhost:35000` the connection string can be omitted, and the client uses the built-in development credentials.
+### ASP.NET Core
 
-A production kernel needs a storage connection, because it has no embedded database. For example, with MongoDB or PostgreSQL:
+<ChronicleClientTabs snippet="configuration/index/minimal-aspnet" />
 
-```bash
-export Cratis__Chronicle__Storage__Type=PostgreSql
-export Cratis__Chronicle__Storage__ConnectionDetails="Host=db.example.com;Database=chronicle;Username=chronicle"
-```
+`UseCratisChronicle()` installs the middleware; place it after routing, authentication and authorization when those are present. The example disables automatic middleware so that this explicit placement takes effect. Namespace selection defaults to the caller-controlled `x-cratis-tenant-id` header: use a trusted proxy or a resolver derived from authenticated identity before accepting untrusted traffic.
 
-A production kernel also needs a TLS certificate and an encryption certificate; see [Production hosting](../hosting/production.md). Check [Settings that must match the kernel](must-match-the-kernel) when both sides are configured.
+### Worker
+
+<ChronicleClientTabs snippet="configuration/index/minimal-worker" />
+
+### Console without a host
+
+<ChronicleClientTabs snippet="configuration/index/minimal-console" />
+
+Direct construction also accepts no arguments, but does not bind host configuration or derive an event store name. Supply the name to `GetEventStore`; that call can wait for the connection and registration.
+
+### Startup and readiness
+
+Hosted applications eagerly connect in the background after `ApplicationStarted`, with or without `UseCratisChronicle()`. A pending kernel connection does not hold up host startup. Failures are logged by the shared startup service; they do not stop the host. Options validation still runs at startup, and logging a connection failure is not proof that the client recovered. Host shutdown cancels the startup wait, not necessarily the underlying transport operation.
+
+ASP.NET Core automatically registers the Chronicle health check with `chronicle` and `ready` tags, not a liveness tag. The web example maps `/health/ready`; it stays unhealthy until the connection and required artifact registration succeed. A running host is not necessarily ready to serve Chronicle-dependent requests. Workers must expose their own readiness signal if required.
+
+## Beyond local development
+
+Configure an explicit kernel endpoint and application credentials from a secret provider, enable [server certificate validation](tls.mdx), and trust the kernel's certificate authority. The default skips server certificate validation and is not a production security configuration. Set an explicit event store name when multiple applications must share a store or deployments must keep the same name despite assembly renames.
+
+Kernel storage, TLS, encryption and bootstrap clients are separate server requirements, not client options. See [Production hosting](../hosting/production.md) for conditional requirements and [Settings that must match the kernel](must-match-the-kernel) for the client/kernel pairs.
 
 ## Topics
 
