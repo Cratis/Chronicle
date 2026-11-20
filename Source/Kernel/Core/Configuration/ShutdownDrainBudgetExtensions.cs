@@ -4,31 +4,10 @@
 namespace Cratis.Chronicle.Configuration;
 
 /// <summary>
-/// Extension methods for bounding waits by the shared kernel stop deadline held by <see cref="IShutdownDrainBudget"/>.
+/// Extension methods for bounding waits by a kernel stop deadline.
 /// </summary>
 internal static class ShutdownDrainBudgetExtensions
 {
-    /// <summary>
-    /// Awaits a call, abandoning the wait at the shared stop deadline. The token only cancels at the deadline, which only exists
-    /// once the stop has begun, so a call issued before the stop is bounded as well and attaching it costs nothing otherwise.
-    /// </summary>
-    /// <param name="budget">The shared kernel stop deadline; none means nothing is bounded.</param>
-    /// <param name="call">The call to await.</param>
-    /// <returns>True if the call completed; false if the deadline passed first and the call was abandoned.</returns>
-    /// <remarks>
-    /// An abandoned call keeps running; its outcome is observed so a late failure is not an unobserved task exception.
-    /// </remarks>
-    internal static async Task<bool> CompletesWithinStopBudget(this IShutdownDrainBudget? budget, Task call)
-    {
-        if (budget is null)
-        {
-            await call;
-            return true;
-        }
-
-        return await call.CompletesBefore(budget.Token);
-    }
-
     /// <summary>
     /// Awaits a call, abandoning the wait when a deadline token is cancelled.
     /// </summary>
