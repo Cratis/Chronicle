@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Security;
 /// Records the outcome of the one-time administrator privilege migration.
 /// </summary>
 /// <param name="Outcome">Whether bootstrap provenance was proven.</param>
-/// <param name="UserId">The proven user, when any.</param>
+/// <param name="UserId">The proven user, or <see cref="UserId.NotSet"/> when provenance is unproven.</param>
 /// <param name="Proof">The kernel proof.</param>
 [EventType]
-public record AdministratorPrivilegeMigrated(string Outcome, UserId? UserId, string Proof = "");
+public record AdministratorPrivilegeMigrated(string Outcome, UserId UserId, string Proof = "");
