@@ -420,6 +420,7 @@ Benchmarks/storage-run.sh --profile smoke --providers sqlite,pg,mongo --repetiti
 - The run refuses to measure when the machine load exceeds `--max-load` (default 0.7 x CPU count) and exits 3.
   Never compare numbers taken under load; results are comparable only when the ledgers match.
 - Containers need Docker. MongoDB runs as a single-node replica set; other topologies are not implemented.
+- **Baselines come from the `Storage benchmarks` workflow** (`.github/workflows/storage-benchmarks.yml`) on a GitHub-hosted runner, not from a developer machine: a workstation is never quiet enough. It runs the smoke profile on pull requests that touch the harness and any profile on demand (`workflow_dispatch`), waits for the runner to go quiet, uploads the results as the `storage-benchmark-results` artifact and writes the summary table to the job summary. `storage-run.sh` is for checking the harness itself, not for taking baselines.
 - Specs: `Chronicle.Benchmarks.Storage.Specs`.
 - A run exits non-zero when any benchmark fails, produces no report, or any measured operation fails.
 
