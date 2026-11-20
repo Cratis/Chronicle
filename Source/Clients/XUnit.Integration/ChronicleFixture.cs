@@ -294,6 +294,45 @@ public abstract class ChronicleFixture : IChronicleFixture
         })
         : builder;
 
+    static bool IsRetryableStartFailure(Exception error) =>
+        error is DockerApiException || error.InnerException is DockerApiException || error is TimeoutException;
+
+    static bool IsPortReservationRejected(Exception error) =>
+        (error is DockerApiException || error.InnerException is DockerApiException)
+        && (error.Message.Contains("sysctl", StringComparison.OrdinalIgnoreCase)
+            || error.InnerException?.Message.Contains("sysctl", StringComparison.OrdinalIgnoreCase) == true);
+
+    static async Task<string> ReadStartupLogs(IContainer container)
+    {
+        try
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var logs = await container.GetLogsAsync(ct: deadline.Token).WaitAsync(deadline.Token);
+            Console.WriteLine(logs.Stdout);
+            Console.WriteLine(logs.Stderr);
+            return logs.Stdout + Environment.NewLine + logs.Stderr;
+        }
+        catch (Exception logException)
+        {
+            Console.WriteLine($"Could not retrieve container logs: {logException.Message}");
+            return $"<log tail unavailable: {logException.GetType().Name}>";
+        }
+    }
+
+    static async Task<long?> ReadTerminalExitCode(IContainer container, int retryCount)
+    {
+        if (retryCount != 9) return null;
+        try
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            return await container.GetExitCodeAsync(deadline.Token).WaitAsync(deadline.Token);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     void DisposeAfterFailedStart(Exception failure)
     {
         try
@@ -358,6 +397,8 @@ public abstract class ChronicleFixture : IChronicleFixture
 
         var retryCount = 0;
         Exception? failure;
+        long? exitCode = null;
+        var logTail = string.Empty;
         do
         {
             try
@@ -368,52 +409,17 @@ public abstract class ChronicleFixture : IChronicleFixture
 
                 await _timings.Run("container-start-attempt", () => StartOwnedContainer(container));
             }
-            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
+            catch (Exception e) when (IsRetryableStartFailure(e))
             {
-                // Rootless and some non-Docker runtimes reject this sysctl at container creation.
-                // Retry without it only for an explicit rejection; other startup errors retain their usual handling.
-                if (_reserveKernelPorts && (e is DockerApiException || e.InnerException is DockerApiException)
-                    && (e.Message.Contains("sysctl", StringComparison.OrdinalIgnoreCase)
-                        || e.InnerException?.Message.Contains("sysctl", StringComparison.OrdinalIgnoreCase) == true))
-                {
-                    _reserveKernelPorts = false;
-                    Console.WriteLine("Container runtime rejected the reserved-port sysctl; retrying without it.");
-                }
-
-                Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
                 failure = e;
-
-                // Rebuild before retrying. A container instance holds the host port it was built with, so a
-                // bind-time conflict is identical on every attempt - all the retries fail the same way, none of
-                // them says a port is the reason, and the tier is wedged for as long as the retries take.
-                // Rebuilding allocates a fresh port, which is the only thing that can make the retry mean
-                // anything.
-                try
-                {
-                    await DisposeOwnedContainer(container);
-                    container = BuildOwnedContainer();
-                    _container = container;
-                }
-                catch (Exception cleanup)
-                {
-                    KernelFixtureCertificate.ReportCleanupFailure(e, cleanup);
-                    ExceptionDispatchInfo.Throw(e);
-                }
-
+                logTail = await ReadStartupLogs(container);
+                exitCode = await ReadTerminalExitCode(container, retryCount);
+                container = await RebuildAfterStartFailure(container, e);
                 IntegrationTimings.CurrentPhase?.Retry();
                 await _timings.Run("container-start-retry-delay", () => Task.Delay(2000));
             }
 
-            try
-            {
-                var logs = await container.GetLogsAsync();
-                Console.WriteLine(logs.Stdout);
-                Console.WriteLine(logs.Stderr);
-            }
-            catch (Exception logException)
-            {
-                Console.WriteLine($"Could not retrieve container logs: {logException.Message}");
-            }
+            if (failure is null) await ReadStartupLogs(container);
         }
         while (failure is not null && ++retryCount < 10);
 
@@ -424,11 +430,41 @@ public abstract class ChronicleFixture : IChronicleFixture
             // every subsequent GetMappedPublicPort call would surface as a confusing
             // ArgumentOutOfRangeException far away from the real cause.
             throw new InvalidOperationException(
-                $"Failed to start container '{container.Image.FullName}' after {retryCount} attempts.",
+                ContainerStartFailureMessage.Describe(container.Image.FullName, retryCount, exitCode, logTail, 20),
                 failure);
         }
 
         _started = true;
         Console.WriteLine("We have started the container successfully.");
+    }
+
+    async Task<IContainer> RebuildAfterStartFailure(IContainer container, Exception failure)
+    {
+        // Rootless and some non-Docker runtimes reject this sysctl at container creation.
+        // Retry without it only for an explicit rejection; other startup errors retain their usual handling.
+        if (_reserveKernelPorts && IsPortReservationRejected(failure))
+        {
+            _reserveKernelPorts = false;
+            Console.WriteLine("Container runtime rejected the reserved-port sysctl; retrying without it.");
+        }
+        Console.WriteLine($"Failed to start the container: {failure.Message} - retrying...");
+
+        // Rebuild before retrying. A container instance holds the host port it was built with, so a
+        // bind-time conflict is identical on every attempt - all the retries fail the same way, none of
+        // them says a port is the reason, and the tier is wedged for as long as the retries take.
+        // Rebuilding allocates a fresh port, which is the only thing that can make the retry mean
+        // anything.
+        try
+        {
+            await DisposeOwnedContainer(container);
+            container = BuildOwnedContainer();
+            _container = container;
+        }
+        catch (Exception cleanup)
+        {
+            KernelFixtureCertificate.ReportCleanupFailure(failure, cleanup);
+            ExceptionDispatchInfo.Throw(failure);
+        }
+        return container;
     }
 }

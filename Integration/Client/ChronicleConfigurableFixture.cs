@@ -86,6 +86,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     IContainer? _databaseContainer;
     IContainer? _outOfProcessMongoContainer;
+    ReusableBackingContainer? _mongoDatabase;
     KernelFailureGuard? _kernelFailureGuard;
 #pragma warning disable CA2213 // _outOfProcessKernelContainer is a reference to the container the base class owns and disposes via base.DisposeAsync.
     IContainer? _outOfProcessKernelContainer;
@@ -176,7 +177,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             }
             try
             {
-                await DisposeAuxiliaryContainer(_outOfProcessMongoContainer, () => _outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
+                await DisposeAuxiliaryContainer(_outOfProcessMongoContainer, () => _mongoDatabase?.DisposeAsync() ?? _outOfProcessMongoContainer?.DisposeAsync() ?? ValueTask.CompletedTask);
             }
             catch (Exception error)
             {
@@ -486,9 +487,16 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
 
     string BuildAndStartMongoDB(INetwork network)
     {
-        using var timing = IntegrationTimings.BeginCurrent("auxiliary-mongo-start");
-        timing?.Failure();
+        _mongoDatabase ??= new(
+            () => BuildMongoDBContainer(network),
+            StartMongoDB,
+            container => LifecycleHooks?.ContainerBuilt?.Invoke(container));
+        _outOfProcessMongoContainer = _mongoDatabase.GetOrStart().GetAwaiter().GetResult();
+        return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";
+    }
 
+    static IContainer BuildMongoDBContainer(INetwork network)
+    {
         // Initiate the replica set using the docker-network hostname as the member name so
         // that drivers connecting from another container (the kernel) follow the SRV record
         // back to a name the docker DNS can resolve. Initiating with 'localhost' breaks
@@ -503,7 +511,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
         // hands over to the next before Docker has released the previous binding, and
         // lets multiple test processes run side-by-side. The host port is discovered
         // dynamically through MongoDBContainer.GetMappedPublicPort by every caller.
-        _outOfProcessMongoContainer = new ContainerBuilder(ChronicleInProcessFixture.ImageName)
+        return new ContainerBuilder(ChronicleInProcessFixture.ImageName)
             .WithImage(ChronicleInProcessFixture.ImageName)
             .WithCommand("/bin/sh", "-c", replicaSetCommand)
             .WithTmpfsMount("/data/db", AccessMode.ReadWrite)
@@ -514,21 +522,22 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
                 .UntilInternalTcpPortIsAvailable(27017)
                 .UntilCommandIsCompleted("/bin/sh", "-c", "mongosh --quiet --eval 'rs.status().ok' | grep -q 1"))
             .Build();
+    }
 
-        LifecycleHooks?.ContainerBuilt?.Invoke(_outOfProcessMongoContainer);
+    static async Task StartMongoDB(IContainer container)
+    {
+        using var timing = IntegrationTimings.BeginCurrent("auxiliary-mongo-start");
+        timing?.Failure();
         try
         {
-            _outOfProcessMongoContainer.StartAsync().GetAwaiter().GetResult();
+            await container.StartAsync();
         }
         catch (Exception ex)
         {
-            var diagnostics = MongoContainerStartupDiagnostics.Collect(_outOfProcessMongoContainer);
-            var disposal = MongoContainerStartupDiagnostics.Dispose(_outOfProcessMongoContainer);
-            throw new MongoContainerFailedToStart($"The out-of-process MongoDB container failed to start.\n{diagnostics}{disposal}", ex);
+            var diagnostics = MongoContainerStartupDiagnostics.Collect(container);
+            throw new MongoContainerFailedToStart($"The out-of-process MongoDB container failed to start.\n{diagnostics}", ex);
         }
-
         timing?.Success();
-        return $"mongodb://{MongoDbHostName}:27017/?replicaSet=rs0";
     }
 
     string BuildAndStartPostgreSql(INetwork network)
