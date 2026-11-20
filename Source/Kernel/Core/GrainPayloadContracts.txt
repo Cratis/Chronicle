@@ -1605,6 +1605,7 @@ json Cratis.Chronicle.Storage.Observation.ObserverState
 enum Cratis.Chronicle.Storage.Observation.ObserverSubscriptionKind : int
   ClientReactor = 1
   ClientReducer = 2
+  CollapsingProjection = 7
   EventStoreSubscription = 6
   KernelReactor = 4
   None = 0
