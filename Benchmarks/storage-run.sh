@@ -21,8 +21,12 @@ while [ $# -gt 0 ]; do
         --repetitions)
             repetitions="${2:-}"
             case "$repetitions" in
-                ""|*[!0-9]*|0) echo "--repetitions needs a positive integer." >&2; exit 64 ;;
+                ""|*[!0-9]*) echo "--repetitions needs a positive integer." >&2; exit 64 ;;
             esac
+            if [ "$((10#$repetitions))" -lt 1 ]; then
+                echo "--repetitions needs a positive integer." >&2
+                exit 64
+            fi
             shift 2 ;;
         *) passthrough+=("$1"); shift ;;
     esac

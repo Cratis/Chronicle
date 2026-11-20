@@ -15,6 +15,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Testcontainers.MsSql;
@@ -39,7 +40,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
         NullLogger<UniqueConstraintMigrator>.Instance);
     IContainer? _container;
     string _connectionString = string.Empty;
-    CountingConnectionInterceptor _interceptor = null!;
+    IInterceptor[] _interceptors = [];
 
     /// <inheritdoc/>
     public StorageProvider Provider => provider;
@@ -50,7 +51,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <inheritdoc/>
     public async Task Start()
     {
-        _interceptor = new(Counter);
+        _interceptors = CountingInterceptors.For(Counter);
         var password = $"Benchmark-{Guid.NewGuid():N}!";
         switch (provider)
         {
@@ -85,7 +86,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <inheritdoc/>
     public IEventSequenceStorage CreateSequence()
     {
-        var host = new EventSequenceStorageHost(Configure<Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.EventSequenceDbContext>, null, BenchmarkEvents.CreateIdentities(), BenchmarkEvents.CreateEventTypes(), _interceptor);
+        var host = new EventSequenceStorageHost(Configure<Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.EventSequenceDbContext>, null, BenchmarkEvents.CreateIdentities(), BenchmarkEvents.CreateEventTypes(), _interceptors);
         Counter.Reset();
         _hosts.Add(host);
         return host.Open();
@@ -176,6 +177,17 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
         if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
     }
 
+    /// <summary>Gets the runtime type of the connection the kernel's contexts get, which must be the provider's own.</summary>
+    /// <returns>The connection type.</returns>
+    public Type ConnectionType()
+    {
+        var builder = new DbContextOptionsBuilder<DbContext>();
+        Configure(builder);
+        builder.AddInterceptors(_interceptors);
+        using var context = new DbContext(builder.Options);
+        return context.Database.GetDbConnection().GetType();
+    }
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Only called with constant diagnostic queries.")]
     static async Task<object?> Scalar(System.Data.Common.DbConnection connection, string sql)
     {
@@ -200,7 +212,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     {
         var builder = new DbContextOptionsBuilder<UniqueConstraintDbContext>();
         Configure(builder);
-        builder.AddConceptAsSupport().AddInterceptors(_interceptor);
+        builder.AddConceptAsSupport().AddInterceptors(_interceptors);
 #pragma warning disable CA2000 // The scope returned below owns the context.
         var context = new UniqueConstraintDbContext(builder.Options, tableName, _migrator);
 #pragma warning restore CA2000

@@ -54,8 +54,6 @@ try
                 .WithToolchain(InProcessNoEmitToolchain.Instance)
                 .WithStrategy(RunStrategy.Monitoring)
                 .WithLaunchCount(1)
-                .WithInvocationCount(1)
-                .WithUnrollFactor(1)
                 .WithWarmupCount(options.Profile.WarmupCount)
                 .WithIterationCount(options.Profile.IterationCount);
             var config = ManualConfig.CreateEmpty()
@@ -66,7 +64,7 @@ try
                 .WithOptions(ConfigOptions.DisableOptimizationsValidator)
                 .WithArtifactsPath(Path.Combine(providerDirectory, "bdn"));
             var summaries = BenchmarkSwitcher.FromAssembly(typeof(StorageBenchmark).Assembly).Run(["--filter", options.Filter], config);
-            Measurements.Commit(options.Profile.IterationCount);
+            await CountedPass.Run(typeof(StorageBenchmark).Assembly, options.Profile.IterationCount, options.Filter);
             var verdict = RunVerdict.Of(summaries, Measurements.TotalErrors());
             if (!verdict.Succeeded)
             {

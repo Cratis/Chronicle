@@ -8,47 +8,37 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 
 /// <summary>
 /// Collects the <see cref="OperationStats"/> of every benchmark case in a run and writes them as `counts.json`.
-/// Every invocation is first held as pending; only <see cref="Commit"/> turns the last invocations of a case, the
-/// ones BenchmarkDotNet ran as measured iterations, into counts. Warmup and jitting invocations never reach the stats.
+/// Invocations are only counted inside a <see cref="Counting"/> scope, which only the counted pass opens (see
+/// <see cref="CountedPass"/>). BenchmarkDotNet's own invocations (jitting, pilot, warmup, actual) run outside any
+/// scope, so they can never reach the stats.
 /// </summary>
 public static class Measurements
 {
     static readonly ConcurrentDictionary<string, OperationStats> _stats = new(StringComparer.Ordinal);
-    static readonly ConcurrentDictionary<string, List<InvocationRecord>> _pending = new(StringComparer.Ordinal);
+    static volatile bool _counting;
+
+    /// <summary>Gets a value indicating whether invocations are currently counted.</summary>
+    public static bool IsCounting => _counting;
 
     /// <summary>Gets the stats for a case, creating them on first use.</summary>
     /// <param name="key">The case key: benchmark, provider and parameters.</param>
     /// <returns>The stats.</returns>
     public static OperationStats For(string key) => _stats.GetOrAdd(key, static _ => new());
 
-    /// <summary>Holds one invocation until the case is committed.</summary>
-    /// <param name="key">The case key.</param>
-    /// <param name="record">What the invocation did.</param>
-    public static void Hold(string key, InvocationRecord record)
+    /// <summary>Opens a scope in which invocations are counted.</summary>
+    /// <returns>The scope; dispose it to stop counting.</returns>
+    public static IDisposable Counting()
     {
-        var list = _pending.GetOrAdd(key, static _ => []);
-        lock (list) list.Add(record);
+        _counting = true;
+        return new CountingScope();
     }
 
-    /// <summary>
-    /// Counts the last invocations of every pending case and discards the rest. With the monitoring strategy
-    /// BenchmarkDotNet runs one invocation per iteration and the measured iterations come last, after jitting and warmup.
-    /// </summary>
-    /// <param name="measuredIterations">How many measured iterations the profile runs.</param>
-    public static void Commit(int measuredIterations)
+    /// <summary>Counts one invocation, when a <see cref="Counting"/> scope is open. Otherwise it is ignored.</summary>
+    /// <param name="key">The case key.</param>
+    /// <param name="record">What the invocation did.</param>
+    public static void Record(string key, InvocationRecord record)
     {
-        foreach (var (key, list) in _pending.ToArray())
-        {
-            InvocationRecord[] measured;
-            lock (list)
-            {
-                measured = [.. list.Skip(Math.Max(0, list.Count - measuredIterations))];
-                list.Clear();
-            }
-
-            var stats = For(key);
-            foreach (var record in measured) stats.Apply(record);
-        }
+        if (_counting) For(key).Apply(record);
     }
 
     /// <summary>Gets the number of failed operations counted so far.</summary>
@@ -56,11 +46,7 @@ public static class Measurements
     public static long TotalErrors() => _stats.Values.Sum(_ => _.Errors);
 
     /// <summary>Clears everything collected.</summary>
-    public static void Clear()
-    {
-        _stats.Clear();
-        _pending.Clear();
-    }
+    public static void Clear() => _stats.Clear();
 
     /// <summary>Writes everything collected as JSON.</summary>
     /// <param name="path">The file to write.</param>
@@ -73,4 +59,9 @@ public static class Measurements
     /// <summary>Gets the keys collected so far.</summary>
     /// <returns>The keys.</returns>
     public static IReadOnlyCollection<string> Keys() => [.. _stats.Keys];
+
+    sealed class CountingScope : IDisposable
+    {
+        public void Dispose() => _counting = false;
+    }
 }

@@ -101,7 +101,7 @@ public class AppendBenchmark : StorageBenchmark
         var outcomes = await Task.WhenAll(writers);
         var latencies = outcomes.Where(_ => _.Elapsed is not null).Select(_ => _.Elapsed!.Value).ToArray();
         var failures = outcomes.Where(_ => _.Error is not null).Select(_ => _.Error!).ToArray();
-        Measurements.Hold(key, new InvocationRecord(latencies.Length, latencies.Length, Host.Counter.Snapshot().Since(before), latencies, failures.Length));
+        Measurements.Record(key, new InvocationRecord(latencies.Length, latencies.Length, Host.Counter.Snapshot().Since(before), latencies, failures.Length));
         if (failures.Length > 0) throw new AggregateException(failures);
     }
 }

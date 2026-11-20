@@ -427,14 +427,19 @@ Benchmarks/storage-run.sh --profile smoke --providers sqlite,pg,mongo --repetiti
 
 Both families count what reaches the database driver, so the numbers are comparable:
 
-- **SQL** is counted at the ADO.NET level by a wrapping connection, command and transaction. Every command
-  counts, whether EF Core or a direct `DbCommand` issued it. Transaction `Commit` and `Rollback` count as one
-  command each; `BEGIN` is not counted. Savepoint operations count under `savepoint`.
+- **SQL** is counted by EF Core command and transaction interceptors. They observe commands and never replace
+  the connection, so the kernel sees the provider's own connection type (`SqlConnection`, `NpgsqlConnection`,
+  `SqliteConnection`), which production code such as the schema lock recognizes. Every EF command counts;
+  transaction `Commit` and `Rollback` count as one command each; `BEGIN` is not counted; savepoint operations
+  count under `savepoint`. Known gap: commands the kernel issues directly on the connection (table and index
+  migrations, setup) bypass EF and are not counted; none of them sit on a measured path, and table setup is
+  warmed outside measurement.
 - **MongoDB** is counted from driver command events: every succeeded or failed command counts, including
   `commitTransaction` and `abortTransaction`. Housekeeping (`hello`, `ping`, authentication, `endSessions`)
   is ignored.
-- Only the measured iterations count. Jitting and warmup invocations are discarded, and unique-constraint
-  tables are warmed outside measurement.
+- Counting happens in a separate deterministic pass after BenchmarkDotNet's timing run: every case runs
+  its setup and then each benchmark method exactly the profile's iteration count of times. BenchmarkDotNet's
+  jitting, pilot and warmup invocations are never counted, because counting is only on inside that pass.
 - Failed operations never count as operations or events; they are counted as errors and fail the run.
 - The ledger reports the effective connection pool size of each client, not a requested default.
 
