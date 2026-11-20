@@ -403,6 +403,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
                     await Task.Delay(periodDelay);
                 }
 
+                if (Volatile.Read(ref _pendingItems) == 0) return;
+
                 await _queueEmptyEvent.WaitAsync();
             }
             else
@@ -444,6 +446,12 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             foreach (var subscription in _subscriptions.ToArray())
             {
                 if (!MayMatch(subscription, batchEventTypes, hasRedaction) || GetFilteredEvents(batch, subscription).Count == 0)
+                {
+                    continue;
+                }
+
+                // A stopping silo activates no dormant observer: it stays dormant for the safety net of the next owner.
+                if (IsStopping && _dormant.ContainsKey(subscription.ObserverKey))
                 {
                     continue;
                 }
