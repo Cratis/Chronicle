@@ -56,4 +56,9 @@ public class WebhookDefinition
     /// Gets or sets the generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the signing policy.
+    /// </summary>
+    public WebhookSigningMode Signing { get; set; } = WebhookSigningMode.None;
 }
