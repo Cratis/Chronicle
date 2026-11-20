@@ -53,6 +53,7 @@ jobs:
         run: |
           python3 .github/scripts/test-detect-hot-core-changes.py
           python3 .github/scripts/test-evaluate-hot-core-gate.py
+          python3 .github/scripts/test-evaluate-hot-core-gate-jobs.py
           python3 .github/scripts/detect-hot-core-changes.py --verify
 
       # Prints every matched path and, on ordinary pushes, how to request integration.
