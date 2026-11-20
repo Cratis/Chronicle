@@ -71,7 +71,7 @@ public class DormantTargetSweep(
     }
 
     /// <inheritdoc/>
-    public async Task<int> SilosLeft(IReadOnlyCollection<string> silos)
+    public async Task<int> SilosLeft(IReadOnlyCollection<string> silos, CancellationToken cancellationToken = default)
     {
         if (silos.Count == 0 || !records.CanBeRelied)
         {
@@ -82,21 +82,33 @@ public class DormantTargetSweep(
         using var gate = new SemaphoreSlim(MaxConcurrentNotifications);
         await Task.WhenAll(held.Select(async observer =>
         {
-            await gate.WaitAsync();
             try
             {
-                await wakeAdmission.WaitAsync(CancellationToken.None);
+                await gate.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            try
+            {
+                await wakeAdmission.WaitAsync(cancellationToken);
                 try
                 {
                     // The watchdog pass of a woken observer validates the clients its record names and drops the ones that are gone.
-                    await grainFactory.GetGrain<IObserver>(observer.Key).RunWatchdogOnce();
+                    await grainFactory.GetGrain<IObserver>(observer.Key).RunWatchdogOnce().WaitAsync(cancellationToken);
                 }
                 finally
                 {
                     wakeAdmission.Release();
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
+            {
+                // Stopping.
+            }
+            catch (Exception ex)
             {
                 logger.FailedToSweepDormantTarget(observer.Key.ObserverId, ex);
             }

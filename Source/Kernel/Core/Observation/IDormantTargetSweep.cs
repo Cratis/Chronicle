@@ -31,6 +31,7 @@ public interface IDormantTargetSweep
     /// Wakes every observer whose durable subscription names a client served from a silo that left the cluster, so it drops what the silo took with it.
     /// </summary>
     /// <param name="silos">The silos, as <c language="text">SiloAddress.ToParsableString()</c> writes them, that left the cluster.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> that stops the sweep, for example when this silo is shutting down.</param>
     /// <returns>The number of observers woken.</returns>
-    Task<int> SilosLeft(IReadOnlyCollection<string> silos);
+    Task<int> SilosLeft(IReadOnlyCollection<string> silos, CancellationToken cancellationToken = default);
 }

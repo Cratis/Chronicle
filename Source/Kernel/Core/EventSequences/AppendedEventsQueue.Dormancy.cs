@@ -335,6 +335,14 @@ public partial class AppendedEventsQueue
     /// </remarks>
     async Task<bool> WakeDormantObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
+        // A queue that is draining, or a silo that is stopping, must not activate a grain: the activation is refused or outlives
+        // the stop. The observer stays dormant, its events are durable, and the safety net of the queue that owns it next wakes
+        // it and it resumes from its cursor.
+        if (_isDraining || _stopBudget?.IsStopping == true)
+        {
+            return false;
+        }
+
         if (!TakeDormantMark(lane.ObserverKey))
         {
             return true;

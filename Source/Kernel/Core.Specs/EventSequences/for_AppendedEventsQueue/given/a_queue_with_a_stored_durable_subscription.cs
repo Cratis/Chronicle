@@ -51,6 +51,8 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
 
     protected virtual int SafetyNetSeconds => 900;
 
+    protected virtual IShutdownDrainBudget? StopBudget => null;
+
     internal virtual AppendedEventsQueueMetrics? CreateMetrics() => null;
 
     protected virtual IWakeAdmission CreateWakeAdmission() => new WakeAdmission(0, Environment.ProcessorCount);
@@ -84,6 +86,7 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
             Substitute.For<IMeter<AppendedEventsQueue>>(),
             Options.Create(options),
             Substitute.For<ILogger<AppendedEventsQueue>>(),
+            stopBudget: StopBudget,
             storage: _storage,
             clusterReleases: _clusterReleases,
             wakeAdmission: wakeAdmission ?? _wakeAdmission)

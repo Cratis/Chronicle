@@ -20,11 +20,13 @@ namespace Cratis.Chronicle.Observation;
 /// </remarks>
 /// <param name="sweep">The <see cref="IDormantTargetSweep"/> that wakes the observers.</param>
 /// <param name="clusterMembership">The <see cref="IClusterMembershipService"/> that tells when a silo leaves.</param>
+/// <param name="localSilo">The <see cref="ILocalSiloDetails"/> of this silo; a silo that sees itself leave is shutting down and sweeps nothing.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
 /// <param name="timeProvider">The optional <see cref="TimeProvider"/>.</param>
 public sealed class DormantSiloDepartures(
     IDormantTargetSweep sweep,
     IClusterMembershipService clusterMembership,
+    ILocalSiloDetails localSilo,
     ILogger<DormantSiloDepartures> logger,
     TimeProvider? timeProvider = null) : ILifecycleParticipant<ISiloLifecycle>, IDisposable
 {
@@ -32,6 +34,11 @@ public sealed class DormantSiloDepartures(
     /// How often the membership is looked at.
     /// </summary>
     internal static readonly TimeSpan CheckEvery = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// How long a stop waits for a sweep that is cancelled to return.
+    /// </summary>
+    internal static readonly TimeSpan StopWait = TimeSpan.FromSeconds(1);
 
     readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     HashSet<SiloAddress> _live = [];
@@ -48,8 +55,9 @@ public sealed class DormantSiloDepartures(
     /// <summary>
     /// Looks at the membership once and sweeps for the silos that left since the last look.
     /// </summary>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> that stops the sweep when the silo is stopping.</param>
     /// <returns>The number of observers woken.</returns>
-    internal async Task<int> CheckOnce()
+    internal async Task<int> CheckOnce(CancellationToken cancellationToken = default)
     {
         var snapshot = clusterMembership.CurrentSnapshot;
         if (snapshot is null)
@@ -60,12 +68,14 @@ public sealed class DormantSiloDepartures(
         var live = snapshot.Members.Values.Where(member => member.Status != SiloStatus.Dead).Select(member => member.SiloAddress).ToHashSet();
         var departed = _live.Where(silo => !live.Contains(silo)).ToArray();
         _live = live;
-        if (departed.Length == 0)
+
+        // A silo that finds itself among the departed is stopping, and what it would wake is going down with it.
+        if (departed.Length == 0 || departed.Contains(localSilo.SiloAddress) || cancellationToken.IsCancellationRequested)
         {
             return 0;
         }
 
-        var woken = await sweep.SilosLeft([.. departed.Select(silo => silo.ToParsableString())]);
+        var woken = await sweep.SilosLeft([.. departed.Select(silo => silo.ToParsableString())], cancellationToken);
         logger.DormantObserversSweptForDepartedSilos(string.Join(", ", departed.Select(silo => silo.ToString())), woken);
         return woken;
     }
@@ -85,13 +95,14 @@ public sealed class DormantSiloDepartures(
             return;
         }
 
+        // A sweep that is still calling observers must not hold the silo's shutdown up: it is cancelled and given a moment, and
+        // the next silo to look finds what it missed.
         await _cancellation.CancelAsync();
         try
         {
-            // A sweep that is still calling observers must not hold the silo's shutdown up; the next silo to look finds what it missed.
-            await _loop.WaitAsync(cancellationToken);
+            await _loop.WaitAsync(StopWait, _time, cancellationToken);
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is OperationCanceledException or TimeoutException)
         {
             // Stopping.
         }
@@ -106,7 +117,7 @@ public sealed class DormantSiloDepartures(
             {
                 try
                 {
-                    await CheckOnce();
+                    await CheckOnce(cancellationToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
