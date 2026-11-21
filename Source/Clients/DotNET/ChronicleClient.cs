@@ -66,7 +66,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly GlobalSeedRegistration _globalSeedRegistration = new();
 
     /// <summary>
-    /// The event stores handed out, keyed on the name and namespace that identify one.
+    /// The event stores handed out, keyed on their name, resolved namespace, and registration mode.
     /// </summary>
     /// <remarks>
     /// Lazy&lt;Task&lt;T&gt;&gt; with ExecutionAndPublication so that concurrent callers asking for the same event
@@ -291,12 +291,18 @@ public class ChronicleClient : IChronicleClient, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<IEventStore> GetEventStore(
+        EventStoreName name,
+        EventStoreNamespaceName? @namespace = null) => GetEventStore(name, @namespace, Options.RegistrationMode);
+
+    /// <inheritdoc/>
     public async Task<IEventStore> GetEventStore(
         EventStoreName name,
-        EventStoreNamespaceName? @namespace = null)
+        EventStoreNamespaceName? @namespace,
+        RegistrationMode registrationMode)
     {
         @namespace ??= ObserverDeliveryContext.NamespaceFor(name) ?? _namespaceResolver.Resolve();
-        var key = new EventStoreKey(name, @namespace);
+        var key = new EventStoreKey(name, @namespace, registrationMode);
 
         var lazyEventStore = _eventStores.GetOrAdd(
             key,
@@ -313,7 +319,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 // Its namespace was removed while this client was disconnected. Start over with a new one, which
                 // registers - and so creates the namespace - only because it is being used again.
                 _eventStores.TryRemove(new KeyValuePair<EventStoreKey, Lazy<Task<IEventStore>>>(key, lazyEventStore));
-                return await GetEventStore(name, @namespace);
+                return await GetEventStore(name, @namespace, registrationMode);
             }
 
             return eventStore;
@@ -519,7 +525,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.JsonSerializerOptions,
             Options.EnableEventTypeGenerationValidation,
             Microsoft.Extensions.Options.Options.Create(Options),
-            _loggerFactory);
+            _loggerFactory,
+            key.RegistrationMode);
         eventStore.UseGlobalSeedRegistration(_globalSeedRegistration);
 
         try
@@ -563,5 +570,5 @@ public class ChronicleClient : IChronicleClient, IDisposable
             .Where(_ => _.IsValueCreated && _.Value.IsCompletedSuccessfully)
             .Select(_ => _.Value.Result);
 
-    record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);
+    record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace, RegistrationMode RegistrationMode);
 }
