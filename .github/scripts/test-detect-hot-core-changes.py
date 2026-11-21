@@ -21,7 +21,7 @@ spec.loader.exec_module(detector)
 class HotCoreContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.root = detector.git(Path(__file__).parent, "rev-parse", "--show-toplevel").strip()
+        cls.root = SCRIPT.resolve().parents[2]
         cls.contract = detector.read_contract(cls.root)
 
     def test_5275_runtime_paths_are_hot_core(self):

@@ -32,12 +32,42 @@ jobs:
     steps:
       # workflow_run uses the event revision on the default branch for gate tools,
       # while the completed run's head is used only to select evidence.
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          path: gate-tools
-          sparse-checkout: .github/scripts
-          persist-credentials: false
+      - name: Materialise gate tools
+        env:
+          BASE_SHA: ${{ github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/gate-tools"
+          rm -rf "$tools"
+          mkdir -p "$tools"
+          git -C "$tools" init
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$BASE_SHA"
+          revision="$BASE_SHA"
+          required=(.github/scripts/evaluate-hot-core-gate.py .github/scripts/integration_lane_exclusions.py)
+          missing_tool() {
+            for path in "${required[@]}"; do
+              if ! git -C "$tools" cat-file -e "$revision:$path" 2>/dev/null; then
+                echo "$path"
+                return
+              fi
+            done
+          }
+          missing="$(missing_tool)"
+          if [ -n "$missing" ]; then
+            echo "::notice::Base lacks $missing; checking the default branch."
+            git -C "$tools" fetch --no-tags --depth=1 "$remote" "refs/heads/$DEFAULT_BRANCH"
+            revision="$(git -C "$tools" rev-parse FETCH_HEAD)"
+            missing="$(missing_tool)"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Trusted gate tools missing: $missing"
+            exit 1
+          fi
+          git -C "$tools" archive "$revision" .github | tar -x -C "$tools"
+          echo "::notice::Gate tools revision: $revision"
+          echo "GATE_TOOLS=$tools" >> "$GITHUB_ENV"
       # Confirm on first post-merge use that GITHUB_TOKEN can re-run failed jobs. If it cannot,
       # D3's unimplemented fallback is POST /repos/{repo}/check-runs with checks: write, name
       # hot-core-gate, this head_sha and conclusion success. The GitHub Actions app would own
@@ -49,4 +79,5 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           SOURCE_WORKFLOW: ${{ github.event.workflow_run.path }}
           PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-        run: python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py refresh
+        run: |
+          python3 -I -c 'import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); runpy.run_path(sys.argv.pop(1), run_name="__main__")' "$GATE_TOOLS/.github/scripts" "$GATE_TOOLS"/.github/scripts/evaluate-hot-core-gate.py refresh

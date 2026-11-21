@@ -84,21 +84,54 @@ jobs:
 
       # The PR checkout supplies diff data, never executable decision tools or policy.
       # Keep the trusted tree complete: its selection self-tests check directory mappings.
-      - name: Checkout gate tools
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
-          path: gate-tools
-          persist-credentials: false
+      - name: Materialise gate tools
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/gate-tools"
+          rm -rf "$tools"
+          mkdir -p "$tools"
+          git -C "$tools" init
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$BASE_SHA"
+          revision="$BASE_SHA"
+          required=(.github/scripts/detect-hot-core-changes.py .github/scripts/select-integration.py
+                    .github/scripts/requested_reuse.py .github/scripts/test-requested-reuse.py .github/scripts/test-select-integration.py
+                    .github/hot-core-paths.txt .github/CODEOWNERS .github/integration-selection.json)
+          missing_tool() {
+            for path in "${required[@]}"; do
+              if ! git -C "$tools" cat-file -e "$revision:$path" 2>/dev/null; then
+                echo "$path"
+                return
+              fi
+            done
+            for path in .github/scripts/detect-hot-core-changes.py .github/scripts/select-integration.py; do
+              if ! git -C "$tools" show "$revision:$path" | grep -F -- '--policy-root' > /dev/null; then
+                echo "$path (--policy-root)"
+                return
+              fi
+            done
+          }
+          missing="$(missing_tool)"
+          if [ -n "$missing" ]; then
+            echo "::notice::Base lacks $missing; checking the default branch."
+            git -C "$tools" fetch --no-tags --depth=1 "$remote" "refs/heads/$DEFAULT_BRANCH"
+            revision="$(git -C "$tools" rev-parse FETCH_HEAD)"
+            missing="$(missing_tool)"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Trusted gate tools missing: $missing"
+            exit 1
+          fi
+          git -C "$tools" archive "$revision" | tar -x -C "$tools"
+          echo "::notice::Gate tools revision: $revision"
+          echo "GATE_TOOLS=$tools" >> "$GITHUB_ENV"
 
       - name: Assert the hot-core contract is intact
         run: |
-          if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then
-            python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py --policy-root gate-tools --verify
-          else
-            echo "::notice::Using the base checkout for policy until the base contains --policy-root."
-            (cd gate-tools && python3 -E -s .github/scripts/detect-hot-core-changes.py --verify)
-          fi
+          python3 -I "$GATE_TOOLS"/.github/scripts/detect-hot-core-changes.py --policy-root "$GATE_TOOLS" --verify
 
       - name: Detect hot-core changes
         id: detect
@@ -107,13 +140,7 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
           RUN_INTEGRATION: "true"
         run: |
-          if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then
-            python3 -E -s gate-tools/.github/scripts/detect-hot-core-changes.py --policy-root gate-tools --base "$BASE_SHA" --head "$HEAD_SHA"
-          else
-            echo "::notice::Using the base checkout for policy until the base contains --policy-root."
-            git diff --name-only "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/requested-hot-core-files"
-            (cd gate-tools && python3 -E -s .github/scripts/detect-hot-core-changes.py --files-from "$RUNNER_TEMP/requested-hot-core-files")
-          fi
+          python3 -I "$GATE_TOOLS"/.github/scripts/detect-hot-core-changes.py --policy-root "$GATE_TOOLS" --base "$BASE_SHA" --head "$HEAD_SHA"
 
       # Decides how much of the matrix this push needs: nothing (an earlier run of this pull request already
       # passed and only ignorable files changed since), only the lanes the changed paths map to, or everything.
@@ -129,20 +156,12 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
-          python3 -E -s gate-tools/.github/scripts/test-requested-reuse.py
-          python3 -E -s gate-tools/.github/scripts/test-select-integration.py
-          policy_args=()
-          if grep -q -- '--policy-root' gate-tools/.github/scripts/select-integration.py; then
-            policy_args=(--policy-root "$GITHUB_WORKSPACE/gate-tools")
-          else
-            echo "::notice::Using the base checkout for policy until the base contains --policy-root."
-          fi
-          # Older selectors read policy relative to cwd. Git still reads only PR diff/history data.
-          GIT_DIR="$(git rev-parse --absolute-git-dir)"
-          export GIT_DIR
-          export GIT_WORK_TREE="$GITHUB_WORKSPACE"
-          cd gate-tools
-          python3 -E -s .github/scripts/select-integration.py "${policy_args[@]}" --base "$BASE_SHA" --head "$HEAD_SHA" --touched "$TOUCHED" \
+          trusted_python() {
+            python3 -I -c 'import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); runpy.run_path(sys.argv.pop(1), run_name="__main__")' "$GATE_TOOLS/.github/scripts" "$@"
+          }
+          trusted_python "$GATE_TOOLS"/.github/scripts/test-requested-reuse.py
+          trusted_python "$GATE_TOOLS"/.github/scripts/test-select-integration.py
+          trusted_python "$GATE_TOOLS"/.github/scripts/select-integration.py --policy-root "$GATE_TOOLS" --base "$BASE_SHA" --head "$HEAD_SHA" --touched "$TOUCHED" \
             --repo "$GITHUB_REPOSITORY" --pull-request "$PR_NUMBER" --event "$EVENT_NAME" --head-repo "$HEAD_REPO"
 
   hot-core-gate-requested:
