@@ -8,24 +8,21 @@ using ProtoBuf.Grpc;
 
 namespace Cratis.Chronicle.Services.for_StoreCapabilityGuard;
 
-public class when_a_server_call_has_no_http_context
+[Collection("SystemStoreGuard")]
+public class when_a_server_call_has_no_http_context : for_SystemStoreGuard.given.an_in_process_request
 {
-    [Fact]
-    public async Task should_refuse_without_using_in_process_services()
+    IAuthorizationDecisions _decisions;
+    bool _permitted;
+
+    void Establish() => _decisions = _httpContext.RequestServices.GetRequiredService<IAuthorizationDecisions>();
+
+    async Task Because()
     {
-        var previous = SystemStoreGuard.InProcessServices;
-        var decisions = Substitute.For<IAuthorizationDecisions>();
-        await using var services = new ServiceCollection().AddSingleton(decisions).BuildServiceProvider();
-        try
-        {
-            SystemStoreGuard.InProcessServices = services;
-            var context = new CallContext(new object(), new FakeServerCallContext(null));
-            (await StoreCapabilityGuard.Permits(context, new QueryRouting("store", "ns"))).ShouldBeFalse();
-            decisions.ReceivedCalls().ShouldBeEmpty();
-        }
-        finally
-        {
-            SystemStoreGuard.InProcessServices = previous;
-        }
+        BeginRequest();
+        _permitted = await StoreCapabilityGuard.Permits(
+            new CallContext(new object(), new FakeServerCallContext(null)), new QueryRouting("shop", "tenant"));
     }
+
+    [Fact] void should_refuse_without_using_the_ambient_administrator() => _permitted.ShouldBeFalse();
+    [Fact] void should_not_use_the_ambient_request_services() => _decisions.ReceivedCalls().ShouldBeEmpty();
 }
