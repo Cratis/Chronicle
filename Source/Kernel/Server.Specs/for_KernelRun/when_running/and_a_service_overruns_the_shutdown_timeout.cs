@@ -9,10 +9,19 @@ namespace Cratis.Chronicle.Server.for_KernelRun.when_running;
 public class and_a_service_overruns_the_shutdown_timeout : given.a_host
 {
     KernelRunResult _result;
+    readonly given.a_manual_time_provider _timeProvider = new();
+    readonly given.StopOverrunningService _service = new();
 
-    void Establish() => BuildHost(_ => _.AddSingleton<IHostedService, given.StopOverrunningService>(), _shutdownTimeout);
+    void Establish() => BuildHost(_ => _.AddSingleton<IHostedService>(_service), _shutdownTimeout);
 
-    async Task Because() => _result = await Run();
+    async Task Because()
+    {
+        var run = KernelRun.RunAsync(_host, _stopRequest.Token, _timeProvider);
+        await _service.Stopping.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
+        _timeProvider.Expire();
+        _service.Complete();
+        _result = await run.WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System);
+    }
 
     [Fact] void should_be_a_timed_out_stop() => _result.Outcome.ShouldEqual(KernelRunOutcome.StopTimedOut);
     [Fact] void should_not_have_a_failure() => _result.Failure.ShouldBeNull();

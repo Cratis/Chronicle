@@ -81,8 +81,8 @@ internal sealed partial class ChronicleServerStartupTask
     /// </remarks>
     async Task RecoverPersistedJobs(IReadOnlyList<EventStoreName> eventStores, CancellationToken cancellationToken)
     {
-        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        budget.CancelAfter(_jobRecoveryBudget);
+        using var deadline = new CancellationTokenSource(_jobRecoveryBudget, _timeProvider);
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         try
         {
             foreach (var eventStore in eventStores)
@@ -176,12 +176,6 @@ internal sealed partial class ChronicleServerStartupTask
                 foreach (var store in stores)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (store.Complete)
-                    {
-                        units += store.Namespaces;
-                        continue;
-                    }
-
                     failed += await RunDeferredEventStore(store, pass, delay, token);
                     units += store.Namespaces;
                 }
@@ -214,6 +208,8 @@ internal sealed partial class ChronicleServerStartupTask
 
     async Task<int> RunDeferredEventStore(DeferredEventStore store, int pass, TimeSpan delay, CancellationToken token)
     {
+        if (store.Complete) return 0;
+
         var started = _timeProvider.GetTimestamp();
         var eventStore = store.Name;
 
