@@ -12,6 +12,8 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 /// </summary>
 public class and_one_namespace_fails_while_another_times_out : given.a_startup_task
 {
+    readonly TaskCompletionSource _bothNamespacesStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    int _startedNamespaces;
     EventStoreNamespaceName _timingOutNamespace;
     IJobsManager _timingOutJobsManager;
     Exception _error;
@@ -24,8 +26,15 @@ public class and_one_namespace_fails_while_another_times_out : given.a_startup_t
         _eventStoreStorage.GetNamespace(_timingOutNamespace).Returns(_namespaceStorage);
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace, _timingOutNamespace]));
 
-        _timingOutJobsManager.Rehydrate().Returns(_ => Task.FromException(new TimeoutException("Response did not arrive on time")));
-        _jobsManager.Rehydrate().Returns(_ => Task.FromException(new InvalidOperationException("A real failure in one namespace")));
+        _timingOutJobsManager.Rehydrate().Returns(_ => FailAfterBothNamespacesStart(new TimeoutException("Response did not arrive on time")));
+        _jobsManager.Rehydrate().Returns(_ => FailAfterBothNamespacesStart(new InvalidOperationException("A real failure in one namespace")));
+    }
+
+    async Task FailAfterBothNamespacesStart(Exception exception)
+    {
+        if (Interlocked.Increment(ref _startedNamespaces) == 2) _bothNamespacesStarted.SetResult();
+        await _bothNamespacesStarted.Task;
+        throw exception;
     }
 
     async Task Because() => _error = await Catch.Exception(() => Execute().WaitAsync(TimeSpan.FromSeconds(30)));
