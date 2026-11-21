@@ -150,20 +150,25 @@ public interface IEventStoreNamespaceStorage
     Task<IEnumerable<EventSequenceId>> GetEventSequences();
 
     /// <summary>
-    /// Checks whether the namespace has ever held any persisted data.
+    /// Checks whether any event sequence in the namespace contains a persisted event.
     /// </summary>
-    /// <returns>True if the namespace has been used for something - an appended event, a job, an observer -
-    /// false if it has never been touched.</returns>
+    /// <returns>True if an event sequence contains an event, false otherwise.</returns>
     /// <remarks>
-    /// A namespace can be registered - and rediscovered on every server restart - long before anything is ever
-    /// written to it; some products register a namespace per tenant regardless of whether that tenant ever uses
-    /// event sourcing. Eagerly rehydrating jobs, reactors and event sequences for such a namespace materializes
-    /// its underlying storage (for example a whole MongoDB database) for no reason. Callers that only need to
-    /// rehydrate state that could genuinely exist - not create state that has no reason to exist yet - check this
-    /// first and skip the namespace entirely when it is false. The namespace's storage is still materialized
-    /// correctly, lazily, the moment it receives its first genuine write.
+    /// Known operational state, empty event sequence handles, and sequence snapshots do not establish event presence.
+    /// Unknown or auxiliary physical containers with rows may conservatively report true, avoiding missed history.
+    /// This read-only check does not materialize storage. Recovery callers should use <see cref="HasPersistedState"/>.
     /// </remarks>
     Task<bool> HasData();
+
+    /// <summary>
+    /// Checks conservatively whether the namespace has persisted operational state that may require recovery.
+    /// </summary>
+    /// <returns>True if the namespace may have persisted state, even without events; false if unused.</returns>
+    /// <remarks>
+    /// Use this check before recovering jobs, observers, and other state independently of event presence.
+    /// It preserves the provider's existing namespace-use check, including its provisioning behavior.
+    /// </remarks>
+    Task<bool> HasPersistedState();
 
     /// <summary>
     /// Get the <see cref="IEventSequenceStorage"/> for a specific <see cref="EventSequenceId"/>.

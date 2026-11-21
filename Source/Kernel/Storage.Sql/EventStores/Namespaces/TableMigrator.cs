@@ -134,35 +134,13 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger, IO
     /// <inheritdoc/>
     public async Task<bool> ColumnExists(TContext context, string tableName, string columnName)
     {
-        var connection = context.Database.GetDbConnection();
-        await connection.OpenAsync();
-
-        try
+        var query = context.Database switch
         {
-            await using var command = connection.CreateCommand();
-
-            if (context.Database.IsSqlServer())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table AND COLUMN_NAME = @column";
-            }
-            else if (context.Database.IsNpgsql())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @table AND column_name = @column";
-            }
-            else
-            {
-                command.CommandText = "SELECT COUNT(*) FROM pragma_table_xinfo(@table) WHERE name = @column";
-            }
-
-            command.AddName("table", tableName);
-            command.AddName("column", columnName);
-            var result = await command.ExecuteScalarAsync();
-            return Convert.ToInt32(result) > 0;
-        }
-        finally
-        {
-            await connection.CloseAsync();
-        }
+            var database when database.IsSqlServer() => "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA COLLATE DATABASE_DEFAULT = SCHEMA_NAME() COLLATE DATABASE_DEFAULT AND TABLE_NAME COLLATE DATABASE_DEFAULT = @table COLLATE DATABASE_DEFAULT AND COLUMN_NAME COLLATE DATABASE_DEFAULT = @column COLLATE DATABASE_DEFAULT",
+            var database when database.IsNpgsql() => "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @table AND column_name = @column",
+            _ => "SELECT COUNT(*) FROM pragma_table_xinfo(@table) WHERE name = @column"
+        };
+        return await CatalogEntryExists(context, query, [("table", tableName), ("column", columnName)]);
     }
 
     /// <summary>
@@ -173,27 +151,24 @@ public class TableMigrator<TContext>(ILogger<TableMigrator<TContext>> logger, IO
     /// <returns>True if the table exists; false otherwise.</returns>
     internal static async Task<bool> TableExists(TContext context, string tableName)
     {
+        var query = context.Database switch
+        {
+            var database when database.IsSqlServer() => "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA COLLATE DATABASE_DEFAULT = SCHEMA_NAME() COLLATE DATABASE_DEFAULT AND TABLE_NAME COLLATE DATABASE_DEFAULT = @table COLLATE DATABASE_DEFAULT",
+            var database when database.IsNpgsql() => "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = @table",
+            _ => "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@table"
+        };
+        return await CatalogEntryExists(context, query, [("table", tableName)]);
+    }
+
+    static async Task<bool> CatalogEntryExists(TContext context, string query, IEnumerable<(string Name, string Value)> parameters)
+    {
         var connection = context.Database.GetDbConnection();
         await connection.OpenAsync();
-
         try
         {
             await using var command = connection.CreateCommand();
-
-            if (context.Database.IsSqlServer())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table";
-            }
-            else if (context.Database.IsNpgsql())
-            {
-                command.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = @table";
-            }
-            else
-            {
-                command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@table";
-            }
-
-            command.AddName("table", tableName);
+            command.CommandText = query;
+            foreach (var (name, value) in parameters) command.AddName(name, value);
             var result = await command.ExecuteScalarAsync();
             return Convert.ToInt32(result) > 0;
         }

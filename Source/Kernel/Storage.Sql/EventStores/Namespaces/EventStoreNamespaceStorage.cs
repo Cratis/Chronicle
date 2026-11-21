@@ -163,12 +163,11 @@ public class EventStoreNamespaceStorage(
     public IClosedStreamsConstraintStorage GetClosedStreamsConstraints(EventSequenceId eventSequenceId) => new ClosedStreams.ClosedStreamsConstraintStorage(eventStore, @namespace, eventSequenceId, database);
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// SQL does not materialize a database per namespace, but the same "has this namespace ever been used" signal
-    /// still matters for deciding whether eager rehydration has anything to do - so it is answered the same way as
-    /// the other backends: whether any event sequence has recorded state for this namespace.
-    /// </remarks>
-    public async Task<bool> HasData()
+    public Task<bool> HasData() => database.NamespaceHasEvents(eventStore, @namespace);
+
+    /// <inheritdoc/>
+    /// <remarks>Preserves the conservative namespace-use check for recovery independently of event presence.</remarks>
+    public async Task<bool> HasPersistedState()
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
         return await scope.DbContext.EventSequences.AnyAsync() ||

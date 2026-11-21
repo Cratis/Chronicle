@@ -52,7 +52,7 @@ public class ReactorsReactor(IReactors reactors, IEventTypes eventTypes, IStorag
     public async Task NamespaceAdded(NamespaceAdded @event, EventContext context)
     {
         var namespaceStorage = storage.GetEventStore(@event.EventStore).GetNamespace(@event.Namespace);
-        if (!await namespaceStorage.HasData())
+        if (!await namespaceStorage.HasPersistedState())
         {
             return;
         }
