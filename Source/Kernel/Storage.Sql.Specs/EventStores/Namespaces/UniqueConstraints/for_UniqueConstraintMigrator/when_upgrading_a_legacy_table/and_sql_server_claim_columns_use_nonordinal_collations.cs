@@ -11,11 +11,12 @@ public class and_sql_server_claim_columns_use_nonordinal_collations(SqlServerFix
     async Task Establish()
     {
         var connection = await fixture.CreateDatabase();
-        Configure(connection, () => fixture.QueueDatabaseDrop(connection));
+        await Configure(connection, () => fixture.QueueDatabaseDrop(connection));
     }
 
     Task Because() => CheckUpgrades();
 
+    [Fact] void should_exercise_different_database_and_server_collations() => VerifyMetadataCollations();
     [Fact] void should_preserve_rows_column_shapes_and_index_definitions() => VerifyPreservation();
     [Fact] void should_make_new_and_legacy_identity_columns_ordinal() => VerifyCollations();
     [Fact] void should_fail_closed_and_retry_unsupported_dependencies() => VerifyFailures();

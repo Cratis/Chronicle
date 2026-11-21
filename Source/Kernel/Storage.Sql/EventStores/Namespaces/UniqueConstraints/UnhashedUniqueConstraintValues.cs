@@ -23,7 +23,7 @@ internal static class UnhashedUniqueConstraintValues
         var value = context.GetService<ISqlGenerationHelper>().DelimitIdentifier("Value");
         if (context.Database.IsSqlServer())
         {
-            return $"DATALENGTH({value}) <> 128 OR {value} COLLATE Latin1_General_100_BIN2 LIKE '%[^0-9a-f]%'";
+            return $"DATALENGTH({value}) <> 128 OR {value} COLLATE Latin1_General_100_BIN2 LIKE '%[^0-9a-f]%' COLLATE Latin1_General_100_BIN2";
         }
 
         return context.Database.IsNpgsql()

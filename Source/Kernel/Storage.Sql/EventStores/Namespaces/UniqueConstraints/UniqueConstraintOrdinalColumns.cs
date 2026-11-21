@@ -21,6 +21,16 @@ internal static class UniqueConstraintOrdinalColumns
     internal const string SqlServerCollation = "Latin1_General_100_BIN2";
 
     /// <summary>
+    /// Resolves claim tables without concatenating catalog strings, whose collation can differ
+    /// from database expressions and parameters. Normalize every metadata comparison operand
+    /// to DATABASE_DEFAULT; claim data comparisons retain the binary identity collation.
+    /// </summary>
+    internal const string SqlServerTableObjectId =
+        "(SELECT t.object_id FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id " +
+        "WHERE s.name COLLATE DATABASE_DEFAULT = SCHEMA_NAME() COLLATE DATABASE_DEFAULT " +
+        "AND t.name COLLATE DATABASE_DEFAULT = @table COLLATE DATABASE_DEFAULT)";
+
+    /// <summary>
     /// Changes only claim identity collations, preserving column shapes and dependent index definitions atomically.
     /// </summary>
     /// <param name="context">The context connected to the namespace database.</param>
@@ -57,8 +67,8 @@ internal static class UniqueConstraintOrdinalColumns
             "CONVERT(bit, CASE WHEN is_computed = 0 AND user_type_id = system_type_id " +
             "AND is_sparse = 0 AND is_column_set = 0 AND encryption_type IS NULL " +
             "AND generated_always_type = 0 AND is_hidden = 0 AND is_masked = 0 THEN 0 ELSE 1 END) " +
-            "FROM sys.columns WHERE object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME(@table)) " +
-            "AND name IN ('EventSourceId', 'Value')";
+            $"FROM sys.columns WHERE object_id = {SqlServerTableObjectId} " +
+            "AND name COLLATE DATABASE_DEFAULT IN (N'EventSourceId' COLLATE DATABASE_DEFAULT, N'Value' COLLATE DATABASE_DEFAULT)";
         await using var command = MetadataCommand(table, query);
         await using var reader = await command.ExecuteReaderAsync();
         var columns = new List<Column>();
@@ -98,12 +108,12 @@ internal static class UniqueConstraintOrdinalColumns
             "LEFT JOIN sys.key_constraints kc ON kc.parent_object_id = i.object_id AND kc.unique_index_id = i.index_id " +
             "JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id " +
             "JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id " +
-            "WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME(@table)) " +
+            $"WHERE i.object_id = {SqlServerTableObjectId} " +
             "AND EXISTS (SELECT 1 FROM sys.index_columns dependency " +
             "JOIN sys.columns identity_column ON identity_column.object_id = dependency.object_id " +
             "AND identity_column.column_id = dependency.column_id " +
             "WHERE dependency.object_id = i.object_id AND dependency.index_id = i.index_id " +
-            "AND identity_column.name IN ('EventSourceId', 'Value')) " +
+            "AND identity_column.name COLLATE DATABASE_DEFAULT IN (N'EventSourceId' COLLATE DATABASE_DEFAULT, N'Value' COLLATE DATABASE_DEFAULT)) " +
             "ORDER BY i.index_id, ic.key_ordinal, ic.index_column_id";
         await using var command = MetadataCommand(table, query);
         await using var reader = await command.ExecuteReaderAsync();
@@ -121,7 +131,7 @@ internal static class UniqueConstraintOrdinalColumns
         var name = reader.GetString(0);
         if (indexes.Count == 0 || indexes[^1].Name != name)
         {
-            indexes.Add(new(name, reader.IsDBNull(1) ? null : reader.GetString(1).Trim(), reader.GetBoolean(2), reader.GetByte(3) == 1, reader.IsDBNull(4) ? null : reader.GetString(4)));
+            indexes.Add(new(name, reader.IsDBNull(1) ? null : reader.GetString(1).Trim(), reader.IsDBNull(4) ? null : reader.GetString(4)) { Unique = reader.GetBoolean(2), Clustered = reader.GetByte(3) == 1 });
         }
         var index = indexes[^1];
         var column = sql.DelimitIdentifier(reader.GetString(5));
@@ -159,8 +169,10 @@ internal static class UniqueConstraintOrdinalColumns
         internal string Identifier => Sql.DelimitIdentifier(Name);
     }
 
-    sealed record Index(string Name, string? Constraint, bool Unique, bool Clustered, string? Filter)
+    sealed record Index(string Name, string? Constraint, string? Filter)
     {
+        internal bool Unique { get; init; }
+        internal bool Clustered { get; init; }
         internal List<string> Keys { get; } = [];
         internal List<string> Included { get; } = [];
 

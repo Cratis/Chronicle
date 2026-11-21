@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Microsoft.Data.SqlClient;
@@ -19,13 +20,20 @@ public abstract class an_ordinal_claim_upgrade : Specification
     readonly List<string[]> _collations = [];
     readonly List<Exception?> _failures = [];
     string _connection;
+    string _serverCollation;
+    string _databaseCollation;
     Func<Task> _drop;
     IUniqueConstraintMigrator _migrator;
 
-    protected void Configure(string connection, Func<Task> drop)
+    protected async Task Configure(string connection, Func<Task> drop)
     {
         _connection = connection;
         _drop = drop;
+        _serverCollation = (await Query("SELECT CONVERT(nvarchar(128), SERVERPROPERTY('Collation'))", string.Empty)).Single();
+        var collation = string.Equals(_serverCollation, "Latin1_General_100_CI_AS", StringComparison.OrdinalIgnoreCase)
+            ? "SQL_Latin1_General_CP1_CI_AS" : "Latin1_General_100_CI_AS";
+        await Execute($"ALTER DATABASE CURRENT COLLATE {collation}");
+        _databaseCollation = (await Query("SELECT CONVERT(nvarchar(128), DATABASEPROPERTYEX(DB_NAME(), 'Collation'))", string.Empty)).Single();
         _migrator = new UniqueConstraintMigrator(
             new TableMigrator<UniqueConstraintDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintDbContext>>>()),
             new TableMigrator<UniqueConstraintValuesDbContext>(Substitute.For<ILogger<TableMigrator<UniqueConstraintValuesDbContext>>>()),
@@ -44,6 +52,8 @@ public abstract class an_ordinal_claim_upgrade : Specification
             await CheckNewTable(mode);
         }
     }
+
+    protected void VerifyMetadataCollations() => _databaseCollation.ShouldNotEqual(_serverCollation);
 
     protected void VerifyPreservation()
     {
@@ -142,21 +152,23 @@ public abstract class an_ordinal_claim_upgrade : Specification
 
     async Task<string[]> Snapshot(string table)
     {
-        var columns = await Query("SELECT CONCAT(name, ':', TYPE_NAME(user_type_id), ':', max_length, ':', is_nullable, ':', ISNULL(OBJECT_DEFINITION(default_object_id), '')) FROM sys.columns WHERE object_id = OBJECT_ID(@table) ORDER BY column_id", table);
+        // Read catalog text separately and assemble snapshots in C#: concatenating it in SQL
+        // mixes catalog, database-default, and persisted-definition collations.
+        var columns = await Query("SELECT name, TYPE_NAME(user_type_id), max_length, is_nullable, OBJECT_DEFINITION(default_object_id) FROM sys.columns WHERE object_id = OBJECT_ID(@table) ORDER BY column_id", table);
         var indexes = await Query(
             """
-            SELECT CONCAT(i.name, ':', i.type, ':', i.is_unique, ':', ISNULL(kc.type, ''), ':', c.name, ':', ic.key_ordinal, ':', ic.is_descending_key, ':', ic.is_included_column, ':', ISNULL(i.filter_definition, ''), ':', i.fill_factor)
+            SELECT i.name, i.type, i.is_unique, kc.type, c.name, ic.key_ordinal, ic.is_descending_key, ic.is_included_column, i.filter_definition, i.fill_factor
             FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
             JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
             LEFT JOIN sys.key_constraints kc ON kc.parent_object_id = i.object_id AND kc.unique_index_id = i.index_id
             WHERE i.object_id = OBJECT_ID(@table) ORDER BY i.name, ic.index_column_id
             """,
             table);
-        var rows = await Query($"SELECT CONCAT(EventSourceId COLLATE DATABASE_DEFAULT, ':', Value COLLATE DATABASE_DEFAULT, ':', SequenceNumber, ':', Subject COLLATE DATABASE_DEFAULT) FROM {table} ORDER BY EventSourceId COLLATE Latin1_General_100_BIN2", table);
+        var rows = await Query($"SELECT EventSourceId, Value, SequenceNumber, Subject FROM {table} ORDER BY EventSourceId COLLATE Latin1_General_100_BIN2", table);
         return [.. columns, .. indexes, .. rows];
     }
 
-    Task<string[]> Collations(string table) => Query("SELECT collation_name FROM sys.columns WHERE object_id = OBJECT_ID(@table) AND name IN ('EventSourceId', 'Value') ORDER BY name", table);
+    Task<string[]> Collations(string table) => Query("SELECT collation_name FROM sys.columns WHERE object_id = OBJECT_ID(@table) AND name COLLATE DATABASE_DEFAULT IN (N'EventSourceId' COLLATE DATABASE_DEFAULT, N'Value' COLLATE DATABASE_DEFAULT) ORDER BY name", table);
 
     async Task<string[]> Query(string query, string table)
     {
@@ -166,7 +178,11 @@ public abstract class an_ordinal_claim_upgrade : Specification
         command.Parameters.AddWithValue("@table", table);
         await using var reader = await command.ExecuteReaderAsync();
         var result = new List<string>();
-        while (await reader.ReadAsync()) result.Add(reader.GetString(0));
+        while (await reader.ReadAsync())
+        {
+            result.Add(string.Join(':', Enumerable.Range(0, reader.FieldCount)
+                .Select(index => reader.IsDBNull(index) ? string.Empty : Convert.ToString(reader.GetValue(index), CultureInfo.InvariantCulture))));
+        }
         return result.ToArray();
     }
 
