@@ -278,7 +278,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertNotIn("if [ -f", step["run"])
 
     def test_gate_tools_use_the_base_revision_with_no_persisted_credentials(self):
-        revision = "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}"
+        revision = "${{ github.event.pull_request.base.sha }}"
         for job_id in ("detect", "hot-core-gate"):
             steps = self.hot_core["jobs"][job_id]["steps"]
             checkouts = [step["with"] for step in steps
@@ -351,7 +351,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             self.assertFalse(step.get("uses", "").startswith("actions/checkout@"))
             self.assertNotIn("${{", step.get("run", ""))
         tools = job["steps"][0]
-        self.assertEqual("${{ github.sha }}", tools["env"]["BASE_SHA"])
+        self.assertEqual("${{ github.event.pull_request.base.sha }}", tools["env"]["BASE_SHA"])
         self.assertIn('tools="$RUNNER_TEMP/gate-tools"', tools["run"])
         self.assertNotIn("pull_request_target", self.refresh["on"])
         refresh_step = job["steps"][-1]

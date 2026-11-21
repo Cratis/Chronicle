@@ -53,7 +53,7 @@ jobs:
       # Isolated Python loads sibling modules only from the trusted scripts directory.
       - name: Materialise gate tools
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
@@ -62,8 +62,24 @@ jobs:
           mkdir -p "$tools"
           git -C "$tools" init
           remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
-          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$BASE_SHA"
+          default_revision() {
+            local ref="refs/heads/$DEFAULT_BRANCH" listing sha
+            if ! listing="$(git ls-remote --refs "$remote" "$ref")"; then
+              echo "::error::Cannot resolve trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            sha="${listing%%$'\t'*}"
+            if [[ ! "$sha" =~ ^[0-9a-fA-F]{40}$ || "$listing" != "$sha"$'\t'"$ref" ]]; then
+              echo "::error::Invalid trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            printf '%s\n' "$sha"
+          }
           revision="$BASE_SHA"
+          if [ -z "$revision" ]; then
+            revision="$(default_revision)"
+          fi
+          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
           required=(.github/scripts/detect-hot-core-changes.py .github/scripts/evaluate-hot-core-gate.py
                     .github/scripts/assert-build-affecting-paths.py .github/scripts/integration_lane_exclusions.py
                     .github/scripts/test-detect-hot-core-changes.py .github/scripts/test-evaluate-hot-core-gate.py
@@ -83,8 +99,8 @@ jobs:
           missing="$(missing_tool)"
           if [ -n "$missing" ]; then
             echo "::notice::Base lacks $missing; checking the default branch."
-            git -C "$tools" fetch --no-tags --depth=1 "$remote" "refs/heads/$DEFAULT_BRANCH"
-            revision="$(git -C "$tools" rev-parse FETCH_HEAD)"
+            revision="$(default_revision)"
+            git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
             missing="$(missing_tool)"
           fi
           if [ -n "$missing" ]; then
@@ -276,7 +292,7 @@ jobs:
       # integration or creating a check-run. Completion refresh re-derives the verdict from finished jobs.
       - name: Materialise gate tools
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
@@ -285,8 +301,24 @@ jobs:
           mkdir -p "$tools"
           git -C "$tools" init
           remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
-          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$BASE_SHA"
+          default_revision() {
+            local ref="refs/heads/$DEFAULT_BRANCH" listing sha
+            if ! listing="$(git ls-remote --refs "$remote" "$ref")"; then
+              echo "::error::Cannot resolve trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            sha="${listing%%$'\t'*}"
+            if [[ ! "$sha" =~ ^[0-9a-fA-F]{40}$ || "$listing" != "$sha"$'\t'"$ref" ]]; then
+              echo "::error::Invalid trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            printf '%s\n' "$sha"
+          }
           revision="$BASE_SHA"
+          if [ -z "$revision" ]; then
+            revision="$(default_revision)"
+          fi
+          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
           required=(.github/scripts/evaluate-hot-core-gate.py .github/scripts/integration_lane_exclusions.py)
           missing_tool() {
             for path in "${required[@]}"; do
@@ -299,8 +331,8 @@ jobs:
           missing="$(missing_tool)"
           if [ -n "$missing" ]; then
             echo "::notice::Base lacks $missing; checking the default branch."
-            git -C "$tools" fetch --no-tags --depth=1 "$remote" "refs/heads/$DEFAULT_BRANCH"
-            revision="$(git -C "$tools" rev-parse FETCH_HEAD)"
+            revision="$(default_revision)"
+            git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
             missing="$(missing_tool)"
           fi
           if [ -n "$missing" ]; then

@@ -13,8 +13,19 @@ import unittest
 import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / "workflows"
-TRUSTED_REF = "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}"
+TRUSTED_REF = "${{ github.event.pull_request.base.sha }}"
 WORKFLOW_NAMES = ("hot-core-gate.yml", "hot-core-gate-refresh.yml", "requested-integration.yml")
+
+
+@dataclass(frozen=True)
+class ToolScenario:
+    missing: str = None
+    missing_option: bool = False
+    dispatch: bool = False
+
+    @property
+    def uses_default_tools(self):
+        return any((self.missing == "base", self.missing_option, self.dispatch))
 
 
 @dataclass(frozen=True)
@@ -126,6 +137,8 @@ class TrustedToolsMaterialisation(unittest.TestCase):
                 self.assertIn('::error::Trusted gate tools missing: $missing', step["run"])
                 self.assertIn('::notice::Gate tools revision: $revision', step["run"])
                 self.assertEqual("${{ github.event.repository.default_branch }}", step["env"]["DEFAULT_BRANCH"])
+                self.assertEqual(TRUSTED_REF, step["env"]["BASE_SHA"])
+                self.assertNotIn("github.sha", str(step))
                 self.assertNotIn("${{", step["run"])
                 self.assertNotIn("GITHUB_WORKSPACE", step["run"])
 
@@ -163,7 +176,7 @@ class TrustedToolsMaterialisation(unittest.TestCase):
         self.git(root, "commit", "-m", message)
         return self.git(root, "rev-parse", "HEAD")
 
-    def fixture(self, directory, step, missing, missing_option=False):
+    def fixture(self, directory, step, scenario):
         root = Path(directory)
         remote = root / "remote" / "repo.git"
         remote.mkdir(parents=True)
@@ -176,16 +189,17 @@ class TrustedToolsMaterialisation(unittest.TestCase):
             target = remote / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text('print("BASE")\n# --policy-root\n', encoding="utf-8")
-        if missing:
+        if scenario.missing:
             tool.unlink()
-        if missing_option:
+        if scenario.missing_option:
             tool.write_text('print("BASE")\n', encoding="utf-8")
         base = self.commit(remote, "Base tools")
-        if missing == "base" or missing_option:
+        if scenario.uses_default_tools:
             tool.write_text('print("DEFAULT")\n# --policy-root\n', encoding="utf-8")
             self.commit(remote, "Default branch tools")
         workspace = root / "head"
         self.git(root, "clone", str(remote), str(workspace))
+        self.git(workspace, "checkout", "-b", "pr-branch")
         (workspace / "gate-tools").symlink_to(".")
         head_tool = workspace / paths[0]
         head_tool.parent.mkdir(parents=True, exist_ok=True)
@@ -194,27 +208,31 @@ class TrustedToolsMaterialisation(unittest.TestCase):
         self.git(workspace, "config", "user.email", "spec@example.test")
         self.git(workspace, "config", "user.name", "Spec")
         self.commit(workspace, "Head tree with gate-tools symlink")
+        self.git(workspace, "push", "origin", "HEAD:refs/heads/pr-branch")
         return root, workspace, base, paths[0]
 
-    def simulate(self, step, missing=None, missing_option=False):
+    def simulate(self, step, scenario=ToolScenario()):
         with tempfile.TemporaryDirectory() as directory:
-            root, workspace, base, tool = self.fixture(directory, step, missing, missing_option)
+            root, workspace, base, tool = self.fixture(directory, step, scenario)
             runner = root / "runner-temp"
             runner.mkdir()
             env_file = root / "github-env"
             env_file.touch()
             env = {**os.environ, "RUNNER_TEMP": str(runner), "GITHUB_WORKSPACE": str(workspace),
                    "GITHUB_SERVER_URL": (root / "remote").as_uri(), "GITHUB_REPOSITORY": "repo",
-                   "BASE_SHA": base, "DEFAULT_BRANCH": "main", "GITHUB_ENV": str(env_file)}
+                   "BASE_SHA": "" if scenario.dispatch else base, "DEFAULT_BRANCH": "main", "GITHUB_ENV": str(env_file),
+                   "GITHUB_OUTPUT": str(root / "github-output"),
+                   "GITHUB_SHA": self.git(workspace, "rev-parse", "HEAD"), "GITHUB_REF": "refs/heads/pr-branch",
+                   "GITHUB_EVENT_NAME": "workflow_dispatch" if scenario.dispatch else "pull_request"}
             result = subprocess.run(["bash", "-c", step["run"]], cwd=workspace, env=env, text=True, capture_output=True)
-            if missing == "both":
+            if scenario.missing == "both":
                 self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
                 self.assertIn(f"::error::Trusted gate tools missing: {tool}", result.stdout)
                 self.assertEqual("", env_file.read_text())
                 return
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             tools = runner / "gate-tools"
-            expected = "DEFAULT" if missing or missing_option else "BASE"
+            expected = "DEFAULT" if scenario.uses_default_tools else "BASE"
             self.assertIn(expected, (tools / tool).read_text())
             self.assertNotIn("HEAD tools", (tools / tool).read_text())
             self.assertEqual(f"GATE_TOOLS={tools}\n", env_file.read_text())
@@ -222,6 +240,10 @@ class TrustedToolsMaterialisation(unittest.TestCase):
             self.assertIn("HEAD tools", (workspace / tool).read_text())
             self.assertFalse(tools.is_relative_to(workspace))
             self.assertIn("::notice::Gate tools revision:", result.stdout)
+            if scenario.dispatch:
+                default = self.git(root / "remote" / "repo.git", "rev-parse", "main")
+                self.assertIn(f"::notice::Gate tools revision: {default}\n", result.stdout)
+                self.assertNotIn(f"::notice::Gate tools revision: {env['GITHUB_SHA']}\n", result.stdout)
             self.run_decisions(step, DecisionRun(workspace, env, tools, expected))
 
     def run_decisions(self, materialiser, run):
@@ -243,18 +265,60 @@ class TrustedToolsMaterialisation(unittest.TestCase):
     def test_missing_base_tool_uses_default_branch_not_head(self):
         for filename, job_id, step in materialisers():
             with self.subTest(workflow=filename, job=job_id):
-                self.simulate(step, missing="base")
+                self.simulate(step, ToolScenario(missing="base"))
 
     def test_missing_tool_in_both_trusted_revisions_fails_closed(self):
         for filename, job_id, step in materialisers():
             with self.subTest(workflow=filename, job=job_id):
-                self.simulate(step, missing="both")
+                self.simulate(step, ToolScenario(missing="both"))
+
+    def test_non_default_branch_dispatch_uses_default_head_never_github_sha(self):
+        for filename, job_id, step in materialisers():
+            with self.subTest(workflow=filename, job=job_id):
+                self.simulate(step, ToolScenario(dispatch=True))
+
+    def assert_default_resolution_fails(self, step, listing, status):
+        mock_git = '''git() {
+          if [ "$1" = ls-remote ]; then
+            printf '%s\\n' "$LISTING"
+            return "$LOOKUP_STATUS"
+          fi
+          command git "$@"
+        }
+        '''
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            env_file = root / "github-env"
+            env_file.touch()
+            env = {**os.environ, "BASE_SHA": "", "DEFAULT_BRANCH": "main", "RUNNER_TEMP": str(root),
+                   "GITHUB_SERVER_URL": root.as_uri(), "GITHUB_REPOSITORY": "missing",
+                   "GITHUB_ENV": str(env_file), "LISTING": listing, "LOOKUP_STATUS": str(status)}
+            result = subprocess.run(["bash", "-c", mock_git + step["run"]], env=env, text=True, capture_output=True)
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            error = "Cannot resolve" if status else "Invalid"
+            self.assertIn(f"::error::{error} trusted gate tools default-branch head: refs/heads/main", result.stderr)
+            self.assertEqual("", env_file.read_text())
+
+    def test_missing_or_invalid_default_branch_head_fails_closed(self):
+        sha = "a" * 40
+        listings = ("", "not-a-sha\trefs/heads/main", f"{sha[:-1]}\trefs/heads/main",
+                    f"{'g' * 40}\trefs/heads/main", f"{sha}\trefs/heads/pr-branch",
+                    f"{sha}\trefs/heads/main\n{sha}\trefs/heads/main", f"{sha} refs/heads/main")
+        for filename, job_id, step in materialisers():
+            for listing in listings:
+                with self.subTest(workflow=filename, job=job_id, listing=listing):
+                    self.assert_default_resolution_fails(step, listing, 0)
+
+    def test_failed_anonymous_default_branch_lookup_fails_closed(self):
+        for filename, job_id, step in materialisers():
+            with self.subTest(workflow=filename, job=job_id):
+                self.assert_default_resolution_fails(step, "", 1)
 
     def test_missing_base_policy_option_uses_default_branch(self):
         for filename, job_id, step in materialisers():
             if "--policy-root" in step["run"]:
                 with self.subTest(workflow=filename, job=job_id):
-                    self.simulate(step, missing_option=True)
+                    self.simulate(step, ToolScenario(missing_option=True))
 
 
 if __name__ == "__main__":
