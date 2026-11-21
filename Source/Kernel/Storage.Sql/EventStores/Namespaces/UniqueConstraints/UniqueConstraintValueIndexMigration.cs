@@ -114,7 +114,7 @@ internal static class UniqueConstraintValueIndexMigration
 
         // The pre-check and ALTER share the same transaction and exclusive table lock.
         await DropIndex(context, table, index);
-        await context.Database.ExecuteSqlRawAsync($"ALTER TABLE {table} ALTER COLUMN [Value] NVARCHAR(200) NOT NULL");
+        await context.Database.ExecuteSqlRawAsync($"ALTER TABLE {table} ALTER COLUMN [Value] NVARCHAR(200) COLLATE {UniqueConstraintOrdinalColumns.SqlServerCollation} NOT NULL");
         return true;
     }
 

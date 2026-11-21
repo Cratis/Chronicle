@@ -32,7 +32,7 @@ public abstract class batch_parity_scenarios : a_provider_batch_storage
             Save("owner", "held", scope: "other"), Save("scoped-taker", "held", scope: "other"),
             Remove("owner"), Save("claimant", "held"), Save("moving", "new"),
             RemoveValue("moving", "old"), RemoveValue("claimant", "held"),
-            Save("next", "held"), new(UniqueConstraintIndexChangeKind.Save, "nothing", 1UL, "")]);
+            Save("next", "held"), Save("nothing", "unclaimed", 1UL)]);
         await CheckClaims([new("other", "old"), new("other", "new"), new("next", "held"), new("other", "release")]);
         await CheckChanges([Save("racer", "held"), Remove("moving"), Save("other", "new")]);
     }
