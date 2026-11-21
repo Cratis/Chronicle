@@ -111,17 +111,10 @@ try
 }
 finally
 {
-    var loadAtEnd = MachineLoad.Current();
-    foreach (var ledger in ledgers)
-    {
-        await File.WriteAllTextAsync(Path.Combine(resultDirectory, ledger.Provider, "ledger.json"), ledger.WithLoadAtEnd(loadAtEnd).ToJson());
-    }
-
-    await File.WriteAllTextAsync(Path.Combine(resultDirectory, "summary.md"), RunSummary.Combine(ledgers, resultDirectory, cutShort));
-    await ProviderHosts.DisposeAll();
+    exitCode = await new RunCompletion(ledgers, resultDirectory, cutShort, exitCode).Finish(ProviderHosts.DisposeAll);
 }
 
-return cutShort ? 4 : exitCode;
+return exitCode;
 
 async Task<T> WithinBudget<T>(Task<T> work)
 {

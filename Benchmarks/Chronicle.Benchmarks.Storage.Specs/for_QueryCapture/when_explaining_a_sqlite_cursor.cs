@@ -7,19 +7,14 @@ using Xunit;
 
 namespace Cratis.Chronicle.Benchmarks.Storage.for_QueryCapture;
 
+[Collection(nameof(StorageRunOptionsCollection))]
 public class when_explaining_a_sqlite_cursor : Specification
 {
     SqlProviderHost _host = default!;
     string _plan = default!;
     string _indexes = default!;
     string _report = default!;
-    readonly string _directory = Path.Combine(RepositoryRoot(), ".ai-work", "harness-batch", "spec-plans", Guid.NewGuid().ToString("N"));
-    static string RepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (!File.Exists(Path.Combine(directory.FullName, ".git")) && !Directory.Exists(Path.Combine(directory.FullName, ".git"))) directory = directory.Parent ?? throw new InvalidOperationException("Repository root not found.");
-        return directory.FullName;
-    }
+    readonly string _directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
     async Task Establish()
     {
         _host = new(StorageProvider.Sqlite);
@@ -38,7 +33,17 @@ public class when_explaining_a_sqlite_cursor : Specification
         await PlanCapture.Run(_host, 10, _directory);
         _report = await File.ReadAllTextAsync(Path.Combine(_directory, "plans.md"));
     }
-    async Task Destroy() => await _host.DisposeAsync();
+    async Task Destroy()
+    {
+        try
+        {
+            await _host.DisposeAsync();
+        }
+        finally
+        {
+            if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
+        }
+    }
     [Fact] void should_capture_the_first_page() => _report.ShouldContain("## cursor-page");
     [Fact] void should_capture_the_deep_page() => _report.ShouldContain("## cursor-deep");
     [Fact] void should_capture_the_type_filter() => _report.ShouldContain("## type-filtered");
