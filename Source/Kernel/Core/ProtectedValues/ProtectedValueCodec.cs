@@ -45,6 +45,21 @@ public static class ProtectedValueCodec
     }
 
     /// <summary>
+    /// Encrypt a JSON value under a managed <see cref="EncryptionKey"/>, binding it to the key-storage address it is written under.
+    /// </summary>
+    /// <param name="encryption"><see cref="IEncryption"/> to encrypt with.</param>
+    /// <param name="key"><see cref="EncryptionKey"/> to encrypt under.</param>
+    /// <param name="value"><see cref="JsonNode"/> to encrypt.</param>
+    /// <param name="revision">The concrete revision used to encrypt.</param>
+    /// <param name="address">The key-storage address the value is written under and released from.</param>
+    /// <returns>The encrypted value, as a base64 <see cref="JsonValue"/>.</returns>
+    public static JsonNode Encrypt(IEncryption encryption, EncryptionKey key, JsonNode value, EncryptionKeyRevision revision, ProtectedValueAddress address)
+    {
+        var encrypted = encryption.Encrypt(Encoding.UTF8.GetBytes(value.ToString()), key, revision, address);
+        return JsonValue.Create(Convert.ToBase64String(encrypted));
+    }
+
+    /// <summary>
     /// Decrypt ciphertext bytes under a managed <see cref="EncryptionKey"/>, producing the original JSON value.
     /// </summary>
     /// <param name="encryption"><see cref="IEncryption"/> to decrypt with.</param>
@@ -81,12 +96,12 @@ public static class ProtectedValueCodec
     }
 
     /// <summary>
-    /// Try to decode a string value as ciphertext <see cref="Encrypt"/> could have produced.
+    /// Try to decode a string value as ciphertext <see cref="Encrypt(IEncryption, EncryptionKey, JsonNode, EncryptionKeyRevision)"/> could have produced.
     /// </summary>
     /// <param name="encryption"><see cref="IEncryption"/> whose shape the bytes are checked against.</param>
     /// <param name="value">The string value to check.</param>
     /// <param name="encrypted">The decoded ciphertext bytes, when the value carries the expected shape.</param>
-    /// <returns>True when the value could have been produced by <see cref="Encrypt"/>, false otherwise.</returns>
+    /// <returns>True when the value could have been produced by <see cref="Encrypt(IEncryption, EncryptionKey, JsonNode, EncryptionKeyRevision)"/>, false otherwise.</returns>
     /// <remarks>
     /// Only a value this encryption produced can be decoded here. One that carries none of its shape was never
     /// encrypted under a managed key - it is resolved in memory at the query edge for display, or it predates the

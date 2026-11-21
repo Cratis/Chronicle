@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Cryptography;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage.Compliance;
 
 namespace Cratis.Chronicle.Compliance;
@@ -10,24 +11,60 @@ namespace Cratis.Chronicle.Compliance;
 /// Protects values using fresh AES-256-GCM data keys wrapped with a managed RSA key.
 /// </summary>
 /// <remarks>
-/// Reads v1 and revision-aware v2 CENV envelopes, and legacy raw RSA PKCS#1 values.
-/// Writes remain v1 until all production replicas can read v2. Downgrade after enabling v2 writes is unsupported.
+/// Reads v1, revision-aware v2 and signed-identity v3 CENV envelopes, and legacy raw RSA PKCS#1 values.
+/// A v3 envelope is written only by <see cref="Encrypt(byte[], EncryptionKey, EncryptionKeyRevision, ProtectedValueAddress)"/>, and only once
+/// <see cref="KeyIdentityFloor"/> is reached, so no silo that cannot read v3 is running when it is first written. Every other write is v1.
+/// Downgrade after v3 writes is unsupported: an older reader fails closed on version 3.
 /// </remarks>
 public class Encryption : IEncryption
 {
-    /// <summary>Reader-first rollout: flip only after every production replica supports v2 reads.</summary>
-    internal const byte WriterVersion = 1;
     const int KeySize = 2048;
     const int DataKeySizeInBytes = 32;
     const int LegacyCiphertextSizeInBytes = KeySize / 8;
     static readonly RSAEncryptionPadding _keyWrapPadding = RSAEncryptionPadding.OaepSHA256;
     static readonly EncryptionKeyReserve _reserve = new(GenerateKeyPair, Environment.ProcessorCount);
+    readonly IClusterReleases? _releases;
+    readonly EnvelopeSigningKeys _signingKeys;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Encryption"/> class that never writes a signed identity.
+    /// </summary>
+    public Encryption()
+        : this(null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Encryption"/> class.
+    /// </summary>
+    /// <param name="releases">The <see cref="IClusterReleases"/> that gates v3 writes, or null to keep writing v1.</param>
+    public Encryption(IClusterReleases? releases)
+        : this(releases, EnvelopeSigningKeys.Shared)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Encryption"/> class with an explicit cache of certified signing keys.
+    /// </summary>
+    /// <param name="releases">The <see cref="IClusterReleases"/> that gates v3 writes, or null to keep writing v1.</param>
+    /// <param name="signingKeys">The cache of certified signing keys.</param>
+    internal Encryption(IClusterReleases? releases, EnvelopeSigningKeys signingKeys)
+    {
+        _releases = releases;
+        _signingKeys = signingKeys;
+    }
 
     /// <inheritdoc/>
     public EncryptionKey GenerateKey() => _reserve.Take();
 
     /// <inheritdoc/>
-    public byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision) => EncryptEnvelope(bytes, new(key, revision), WriterVersion);
+    public byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision) => EncryptEnvelope(bytes, new(key, revision), 1);
+
+    /// <inheritdoc/>
+    public byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision, ProtectedValueAddress address) =>
+        KeyIdentityFloor.IsReached(_releases)
+            ? EncryptSigned(bytes, new(key, revision), address)
+            : EncryptEnvelope(bytes, new(key, revision), 1);
 
     /// <inheritdoc/>
     public bool IsEncrypted(byte[] bytes) => EncryptionEnvelope.HasMagic(bytes) || bytes.Length == LegacyCiphertextSizeInBytes;
@@ -122,5 +159,46 @@ public class Encryption : IEncryption
     {
         using var rsa = RSA.Create(KeySize);
         return new(rsa.ExportRSAPublicKey(), rsa.ExportRSAPrivateKey());
+    }
+
+    byte[] EncryptSigned(byte[] bytes, EncryptionKeyAtRevision pair, ProtectedValueAddress address)
+    {
+        var commitment = EnvelopeSigning.Commit(address);
+        using var signing = _signingKeys.Begin(pair.Key, pair.Revision, commitment);
+
+        // Never cache a data key: a fresh key per value prevents nonce reuse under the same AES key.
+        var dataKey = RandomNumberGenerator.GetBytes(DataKeySizeInBytes);
+        try
+        {
+            var wrappedKey = WrapDataKey(dataKey, pair.Key);
+            while (true)
+            {
+                var signer = signing.Acquire();
+                var envelope = new EncryptionEnvelope
+                {
+                    Header = EncryptionEnvelope.CreateSignedHeader(pair.Revision, (pair.Key.Public, signer.Certificate, signer.SigningKey), wrappedKey.Length),
+                    PublicKey = pair.Key.Public,
+                    Certificate = signer.Certificate,
+                    SigningKey = signer.SigningKey,
+                    WrappedKey = wrappedKey,
+                    Nonce = RandomNumberGenerator.GetBytes(EncryptionEnvelope.NonceSize),
+                    Tag = new byte[EncryptionEnvelope.TagSize],
+                    Ciphertext = new byte[bytes.Length],
+                    Revision = pair.Revision
+                };
+                using var aes = new AesGcm(dataKey, EncryptionEnvelope.TagSize);
+                aes.Encrypt(envelope.Nonce, bytes, envelope.Ciphertext, envelope.Tag, envelope.AssociatedData);
+
+                // Ordinary invalidation retries; erasure revokes this write's operation, so its next acquisition fails.
+                if (signer.TrySign(EnvelopeSigning.ValueMessage(envelope, commitment), out var signature))
+                {
+                    return (envelope with { Signature = signature }).Bytes();
+                }
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(dataKey);
+        }
     }
 }

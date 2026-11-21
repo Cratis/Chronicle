@@ -62,7 +62,7 @@ public class PIICompliancePropertyValueHandler(
         }
 
         var pair = await provisioner.EnsureKeyWithRevisionFor(eventStore, eventStoreNamespace, identifier);
-        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value, pair.Revision), new(ProtectionKind.Pii, identifier, pair.Key, pair.Revision));
+        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value, pair.Revision, new(eventStore, eventStoreNamespace, identifier)), new(ProtectionKind.Pii, identifier, pair.Key, pair.Revision));
     }
 
     /// <inheritdoc/>
@@ -78,6 +78,17 @@ public class PIICompliancePropertyValueHandler(
         }
 
         using var scope = ReleaseKeys.BeginScope();
+        if (ErasedValueClassifier.Handles(encrypted))
+        {
+            var classified = await ErasedValueClassifier.Classify(encryptionKeyStore, encryption, (eventStore, eventStoreNamespace, identifier), encrypted, value);
+            if (classified.Status == ProtectedValueReleaseStatus.Erased)
+            {
+                return classified;
+            }
+
+            return await ReleaseKeys.Complete(() => classified);
+        }
+
         try
         {
             var released = await ReleaseEncrypted((eventStore, eventStoreNamespace, identifier), encrypted, false);
@@ -106,6 +117,8 @@ public class PIICompliancePropertyValueHandler(
     /// with recorded erasure, the overwhelmingly likely cause is pre-erasure ciphertext; permanently failing
     /// the stored-event migration would block every later event of the type. Only strict release treats such
     /// unwrap failures as erased. Key-storage failures and authenticated-payload corruption still propagate.
+    /// A value that carries a signed managed-key identity is not subject to that rule: it is erased only when its
+    /// signatures verify at this address and the fence records its key, and any other failure propagates (#4619).
     /// </remarks>
     public async Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
