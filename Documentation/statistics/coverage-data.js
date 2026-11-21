@@ -3556,13 +3556,13 @@ window.COVERAGE_DATA = {
   "schemaVersion": 2,
   "latestAttempt": {
     "state": "measured",
-    "attemptedAt": 1795226067947,
+    "attemptedAt": 1795238377140,
     "observer": {
       "releaseContext": "unverified",
-      "runId": 44852809484,
+      "runId": 44870300139,
       "runAttempt": 1,
-      "executionSha": "f1b23b4ca50fece0cd416ceb138b44099c16a1dd",
-      "requestedVersion": "19.178.2"
+      "executionSha": "c841868848029b50b6e51482cf05696c8687dde8",
+      "requestedVersion": "19.178.3"
     }
   },
   "measurement": {
