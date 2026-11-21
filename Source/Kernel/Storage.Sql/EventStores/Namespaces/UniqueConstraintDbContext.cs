@@ -68,7 +68,8 @@ public class UniqueConstraintDbContext(DbContextOptions<UniqueConstraintDbContex
             var value = entity.Property(e => e.Value).IsRequired();
             if (Database.IsSqlServer())
             {
-                value.HasMaxLength(200);
+                value.HasMaxLength(200).UseCollation(UniqueConstraintOrdinalColumns.SqlServerCollation);
+                entity.Property(e => e.EventSourceId).UseCollation(UniqueConstraintOrdinalColumns.SqlServerCollation);
             }
             entity.Property(e => e.SequenceNumber).IsRequired();
         });
