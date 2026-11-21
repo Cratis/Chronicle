@@ -5,6 +5,7 @@ using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
@@ -45,6 +46,11 @@ public class UniqueConstraintValuesDbContext(DbContextOptions<UniqueConstraintVa
             entity.HasKey(_ => _.Value);
             entity.Property(_ => _.Value).HasMaxLength(200).IsRequired();
             entity.Property(_ => _.EventSourceId).HasMaxLength(200).IsRequired();
+            if (Database.IsSqlServer())
+            {
+                entity.Property(_ => _.Value).UseCollation(UniqueConstraintOrdinalColumns.SqlServerCollation).Metadata.SetValueComparer(new ValueComparer<string>(false));
+                entity.Property(_ => _.EventSourceId).UseCollation(UniqueConstraintOrdinalColumns.SqlServerCollation).Metadata.SetValueComparer(new ValueComparer<string>(false));
+            }
             entity.Property(_ => _.SequenceNumber).IsRequired();
             entity.HasIndex(_ => _.EventSourceId);
             entity.Property(_ => _.Subject).HasMaxLength(UniqueConstraintMigrator.SubjectMaxLength);
