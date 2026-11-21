@@ -10,6 +10,7 @@ using Xunit;
 
 namespace Cratis.Chronicle.Benchmarks.Storage.for_AppendBenchmark;
 
+[Collection(nameof(StorageRunOptionsCollection))]
 public class when_enumerating_cases_for_every_profile : Specification
 {
     readonly Dictionary<string, string[]> _expected = [];
@@ -36,7 +37,9 @@ public class when_enumerating_cases_for_every_profile : Specification
                 StorageRunOptions.Current = StorageRunOptions.Parse(["--profile", profile.Name, "--providers", "sqlite,postgres,sqlserver,mongo"]);
                 _expected[profile.Name] = ExpectedCases(profile);
                 _timed[profile.Name] = [.. _benchmarks.SelectMany(type => BenchmarkConverter.TypeToBenchmarks(type, DefaultConfig.Instance).BenchmarksCases)
-                    .Select(@case => Key(@case.Descriptor.Type, @case.Descriptor.WorkloadMethod.Name,
+                    .Select(@case => Key(
+                        @case.Descriptor.Type,
+                        @case.Descriptor.WorkloadMethod.Name,
                         @case.Parameters.Items.Select(parameter => (parameter.Name, parameter.Value))))];
                 _counted[profile.Name] = [.. _benchmarks.SelectMany(CountedCases)];
             }
@@ -67,9 +70,9 @@ public class when_enumerating_cases_for_every_profile : Specification
     static IEnumerable<string> CountedCases(Type type) =>
         CountedPass.Combinations(type).SelectMany(combination => type.GetMethods()
             .Where(method => Attribute.IsDefined(method, typeof(BenchmarkAttribute)))
-            .Select(method => Key(type, method.Name, combination.Select(parameter => (parameter.Property.Name, parameter.Value)))));
+            .Select(method => Key(type, method.Name, combination.Select(parameter => (parameter.Property.Name, (object?)parameter.Value)))));
 
-    static string Key(Type type, string method, IEnumerable<(string Name, object Value)> parameters) =>
+    static string Key(Type type, string method, IEnumerable<(string Name, object? Value)> parameters) =>
         $"{type.Name}.{method}/{string.Join('/', parameters.OrderBy(_ => _.Name, StringComparer.Ordinal).Select(_ => $"{_.Name}={_.Value}"))}";
 
     void VerifyCases(Dictionary<string, string[]> actual)

@@ -15,6 +15,7 @@ public abstract class AppendBenchmark : StorageBenchmark
     /// <param name="storage">The sequence storage.</param>
     /// <param name="sequenceNumber">The sequence number.</param>
     /// <returns>The task.</returns>
+    /// <exception cref="InvalidOperationException">The append failed.</exception>
     protected static async Task Append(IEventSequenceStorage storage, ulong sequenceNumber)
     {
         var type = BenchmarkEvents.TypeAt(sequenceNumber);
