@@ -338,6 +338,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
     internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
 
+    [LoggerMessage(LogLevel.Warning, "Stalled observer job {JobId} can never be resumed (its steps were stopped and the job still reads as running); stopping it so the observer can start a new one")]
+    internal static partial void StoppingObserverJobThatCannotBeResumed(this ILogger<Observer> logger, JobId jobId);
+
     [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed: {Reason}")]
     internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId, string reason);
 
