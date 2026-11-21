@@ -1,7 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -31,6 +34,33 @@ public record ObserverSubscriberContext(object? Metadata)
     /// It is an input of the deterministic webhook message id (see <c language="csharp">WebhookMessageIds</c>).
     /// </summary>
     public ReplayEpoch? ReplayEpoch { get; init; }
+
+    /// <summary>
+    /// Gets the stored events before compliance release, for a subscriber resolving a different generation.
+    /// </summary>
+    public IReadOnlyList<AppendedEvent> UnreleasedEvents { get; init; } = [];
+
+    /// <summary>
+    /// Retains stored content only for subscribers that can resolve a new generation at delivery time.
+    /// </summary>
+    /// <param name="events">The events before compliance release.</param>
+    /// <param name="subscriberType">The subscriber type.</param>
+    /// <returns>The delivery context with the stored events when needed.</returns>
+    public ObserverSubscriberContext WithUnreleasedEvents(IEnumerable<AppendedEvent> events, Type subscriberType) =>
+        subscriberType.IsAssignableTo(typeof(IWebhookObserverSubscriber)) || subscriberType.IsAssignableTo(typeof(IEventStoreSubscriptionObserverSubscriber))
+            ? this with { UnreleasedEvents = events.ToArray() }
+            : this;
+
+    /// <summary>
+    /// Gets stored content while retaining the incoming delivery context, including replay state.
+    /// </summary>
+    /// <param name="incoming">The event being delivered.</param>
+    /// <returns>The unreleased event with the incoming context.</returns>
+    public AppendedEvent? GetUnreleasedEvent(AppendedEvent incoming)
+    {
+        var stored = UnreleasedEvents.SingleOrDefault(@event => @event.Context.SequenceNumber == incoming.Context.SequenceNumber);
+        return stored is null ? null : stored with { Context = incoming.Context with { EventType = stored.Context.EventType, Hash = stored.Context.Hash } };
+    }
 
     /// <summary>
     /// Gets how long is left before the caller stops accepting a result.

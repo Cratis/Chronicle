@@ -32,6 +32,7 @@ public class with_only_a_non_default_target_generation : given.a_subscriber_with
         source.GetFor(type.Id, 2).Returns(targetSchema);
         _events = _events.Take(2).Select(@event => @event with { Context = @event.Context with { EventType = new(type.Id, 3) } }).ToArray();
         var stored = _events.ToArray();
+        _unreleasedEvents = stored;
         _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox")
             .GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => stored.Single(@event => @event.Context.SequenceNumber == call.Arg<EventSequenceNumber>()));
         _generationRelease.Release(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>())

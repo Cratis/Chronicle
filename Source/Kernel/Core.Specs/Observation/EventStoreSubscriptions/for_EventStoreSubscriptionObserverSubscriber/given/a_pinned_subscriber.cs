@@ -41,6 +41,7 @@ public class a_pinned_subscriber : a_subscriber_with_events
     protected void StoreEvents()
     {
         var stored = _events.ToArray();
+        _unreleasedEvents = stored;
         _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox")
             .GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => stored.Single(@event => @event.Context.SequenceNumber == call.Arg<EventSequenceNumber>()));
     }
@@ -50,6 +51,7 @@ public class a_pinned_subscriber : a_subscriber_with_events
         var types = _storage.GetEventStore(store).EventTypes;
         types.GetAllGenerationsForEventType(Arg.Is<EventType>(_ => _.Id == (EventTypeId)"event-type-1")).Returns(generations.Select(generation => new EventTypeSchema(new("event-type-1", generation), EventTypeOwner.Client, EventTypeSource.Code, _schema)).ToArray());
         types.GetDefinition("event-type-1").Returns(new EventTypeDefinition("event-type-1", EventTypeOwner.Client, false, generations.Select(generation => new EventTypeGenerationDefinition(generation, _schema)), []));
+        types.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(call => call.Arg<IEnumerable<EventType>>().Select(type => new EventTypeSchema(type, EventTypeOwner.Client, EventTypeSource.Code, _schema)).ToArray());
         foreach (var generation in generations)
         {
             types.HasFor("event-type-1", generation).Returns(true);

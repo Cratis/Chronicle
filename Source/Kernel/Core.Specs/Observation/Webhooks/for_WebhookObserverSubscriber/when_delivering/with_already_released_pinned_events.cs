@@ -11,7 +11,7 @@ public class with_already_released_pinned_events : given.a_webhook_delivery
         _metadata.ClearReceivedCalls();
     }
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
     [Fact] void should_preserve_the_released_payload() => _receiver.Payloads.Single().ShouldEqual(Fixture("pinned"));
     [Fact] void should_not_release_values_twice() => _metadata.ReceivedCalls().ShouldBeEmpty();
 }

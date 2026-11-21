@@ -41,6 +41,7 @@ public class with_a_stale_generation : Specification
             .Returns(call => [((IEnumerable<AppendedEvent>)call[3]).Single() with { Context = _event.Context with { EventType = new("customer", 1) } }]);
         silo.AddService(generationRelease);
         var definitionStorage = Substitute.For<Cratis.Chronicle.Storage.IStorage>();
+        definitionStorage.GetEventStore("store").EventTypes.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
         definitionStorage.GetEventStore("store").Webhooks.Get("webhook").Returns(_definition);
         definitionStorage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log")
             .GetEventAt(42).Returns(_ => _event);
@@ -52,7 +53,7 @@ public class with_a_stale_generation : Specification
         _event = new(EventContext.EmptyWithEventSourceId("customer-1") with { EventType = new("customer", 2), SequenceNumber = 42, AppendedGeneration = 2 }, new ExpandoObject());
     }
 
-    async Task Because() => _result = await _grain.OnNext(new Key("customer-1", ArrayIndexers.NoIndexers), [_event], new(null));
+    async Task Because() => _result = await _grain.OnNext(new Key("customer-1", ArrayIndexers.NoIndexers), [_event], new(null) { UnreleasedEvents = [_event] });
 
     [Fact] async Task should_deliver_the_current_pin() => await _mediator.Received(1).Deliver("store", _definition.Target, Arg.Any<Key>(), Arg.Is<IEnumerable<AppendedEvent>>(_ => _.Single().Context.EventType == new EventType("customer", 1)), Arg.Any<string?>(), Arg.Any<TimeSpan?>());
     [Fact] void should_acknowledge_the_delivered_event() => _result.LastSuccessfulObservation.ShouldEqual(_event.Context.SequenceNumber);

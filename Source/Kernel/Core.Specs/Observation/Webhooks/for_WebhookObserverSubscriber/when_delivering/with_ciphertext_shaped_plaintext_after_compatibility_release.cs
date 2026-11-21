@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -18,7 +19,9 @@ public class with_ciphertext_shaped_plaintext_after_compatibility_release : give
 
     async Task Establish()
     {
+        _events = _events.Select(@event => @event with { Context = @event.Context with { ObservationState = EventObservationState.Initial } }).ToArray();
         _stored = _events.ToArray();
+        _context = _context with { UnreleasedEvents = _stored };
         _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log")
             .GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => _stored.Single(@event => @event.Context.SequenceNumber == call.Arg<EventSequenceNumber>()));
         _silo.StorageManager.GetStorage<WebhookDefinition>(typeof(WebhookObserverSubscriber).FullName).State = _webhookDefinition with
@@ -31,12 +34,17 @@ public class with_ciphertext_shaped_plaintext_after_compatibility_release : give
         _metadata.ReleaseStrict(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(call => ReleaseOnce(call.Arg<JsonObject>()));
         _events = await new EventCompliance(_metadata, _converter, new OwnGenerationSchemaCache()).Release(_events, _schemas);
+        _events = _events.Select(@event => @event with { Context = @event.Context with { ObservationState = EventObservationState.Replay } }).ToArray();
+        _context = JsonSerializer.Deserialize<ObserverSubscriberContext>(JsonSerializer.Serialize(_context, _jsonOptions), _jsonOptions)!;
+        _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log").ClearReceivedCalls();
     }
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
 
-    [Fact] void should_deliver_every_payload_slot_without_a_second_release() => _receiver.Payloads.Single().ShouldEqual(Fixture("pinned").Replace("Ada Lovelace", "enc:plaintext"));
+    [Fact] void should_deliver_every_payload_slot_without_a_second_release() => _receiver.Payloads.Single().ShouldEqual(Fixture("pinned").Replace("Ada Lovelace", "enc:plaintext").Replace($"\"observationState\":{(int)EventObservationState.Initial}", $"\"observationState\":{(int)EventObservationState.Replay}"));
     [Fact] void should_never_release_plaintext_again() => _repeatedReleases.ShouldEqual(0);
+    [Fact] void should_preserve_replay_in_the_http_payload() => JsonNode.Parse(_receiver.Payloads.Single())!["events"]!.AsArray().Select(@event => @event!["context"]!["observationState"]!.GetValue<int>()).ShouldEachConformTo(state => state == (int)EventObservationState.Replay);
+    [Fact] void should_not_reload_each_event() => _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log").DidNotReceive().GetEventAt(Arg.Any<EventSequenceNumber>());
     [Fact] void should_acknowledge_the_batch() => _deliveryResult.LastSuccessfulObservation.Value.ShouldEqual(44ul);
     [Fact] void should_preserve_stored_history() => _stored[1].OriginalContent.ShouldEqual("{\"name\":\"original-ciphertext\"}");
     [Fact] void should_preserve_the_shared_stored_content() => ((IDictionary<string, object?>)_stored[0].Content)["name"].ShouldEqual("ciphertext");

@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSub
 public class with_ciphertext_shaped_plaintext_after_compatibility_release : given.a_pinned_subscriber
 {
     AppendedEvent _stored;
+    AppendedEvent _selected;
     int _repeatedReleases;
 
     async Task Establish()
@@ -23,10 +24,12 @@ public class with_ciphertext_shaped_plaintext_after_compatibility_release : give
         var converter = new ExpandoObjectConverter(Substitute.For<ITypeFormats>());
         _stored = _events[0] with
         {
+            Context = _events[0].Context with { ObservationState = EventObservationState.Initial },
             Content = converter.ToExpandoObject(new JsonObject { ["message"] = "ciphertext" }, _schema),
             OriginalContent = "{\"message\":\"ciphertext\"}",
             Revisions = [new(1, CorrelationId.NotSet, [], Concepts.Identities.Identity.System, DateTimeOffset.UnixEpoch, "{\"message\":\"ciphertext\"}")]
         };
+        _unreleasedEvents = [_stored];
         _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox")
             .GetEventAt(42UL).Returns(_stored);
         _metadata.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
@@ -36,12 +39,23 @@ public class with_ciphertext_shaped_plaintext_after_compatibility_release : give
         var schemas = new uint[] { 1, 2 }.Select(generation => new EventType("event-type-1", generation))
             .ToDictionary(type => type, type => new EventTypeSchema(type, EventTypeOwner.Client, EventTypeSource.Code, _schema));
         _events = await new EventCompliance(_metadata, converter, new OwnGenerationSchemaCache()).Release([_stored], schemas);
+        _events = _events.Select(@event => @event with { Context = @event.Context with { ObservationState = EventObservationState.Replay } }).ToArray();
+        _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox").ClearReceivedCalls();
     }
 
-    async Task Because() => _result = await Forward();
+    async Task Because()
+    {
+        _result = await Forward();
+        var source = _storage.GetEventStore("Admin");
+        var target = _storage.GetEventStore("Lobby");
+        _selected = await new EventStoreSubscriptionTargetGeneration(source.EventTypes, target.EventTypes, _generationRelease, "Admin", "Lobby", new ObserverSubscriberContext("Lobby") { UnreleasedEvents = [_stored] })
+            .Release(_events[0], new Dictionary<EventTypeId, EventType>());
+    }
 
     [Fact] void should_release_for_the_lower_target_generation() => ForwardedContent()["message"]!.GetValue<string>().ShouldEqual("enc:plaintext");
     [Fact] void should_never_release_plaintext_again() => _repeatedReleases.ShouldEqual(0);
+    [Fact] void should_keep_the_incoming_replay_context() => _selected.Context.ObservationState.ShouldEqual(EventObservationState.Replay);
+    [Fact] void should_not_reload_each_event() => _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox").DidNotReceive().GetEventAt(Arg.Any<EventSequenceNumber>());
     [Fact] void should_succeed() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
     [Fact] void should_acknowledge_the_source_position() => _result.LastSuccessfulObservation.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_preserve_stored_history() => _stored.OriginalContent.ShouldEqual("{\"message\":\"ciphertext\"}");

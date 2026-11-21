@@ -21,7 +21,7 @@ public class with_signing_after_generation_release : given.a_subscriber_with_sig
         _release.Release(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns([_released]);
     }
 
-    Task Because() => _subscriber.OnNext("partition", _events, new(null));
+    Task Because() => _subscriber.OnNext("partition", _events, new(null) { UnreleasedEvents = _events });
 
     [Fact] void should_identify_the_released_batch() => _identities.Single()!.Batches.Single().First.ShouldEqual(_released.Context.SequenceNumber);
     [Fact] void should_deliver_the_released_batch() => _batches.Single().Single().ShouldEqual(_released);

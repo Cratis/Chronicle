@@ -66,7 +66,7 @@ public class WebhookObserverSubscriber(
             // Read the committed policy once, rather than relying on a possibly stale grain snapshot.
             var definition = await storage.GetEventStore(_key.EventStore).Webhooks.Get(_key.ObserverId);
             if (definition.Signing is not (WebhookSigningMode.None or WebhookSigningMode.Ed25519)) throw new WebhookSigningUnavailable();
-            batch = (await ReleaseMismatches(events, definition)).ToArray();
+            batch = (await ReleaseMismatches(events, definition, context)).ToArray();
 
             // A signed webhook is never delivered unsigned: with nothing to sign there is nothing to send.
             if (definition.Signing == WebhookSigningMode.Ed25519 && batch.Length == 0)
@@ -130,7 +130,7 @@ public class WebhookObserverSubscriber(
             ? WebhookMessageIdentity.ForEvents(_key, partition, batch, context.ReplayEpoch)
             : null;
 
-    async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(IEnumerable<AppendedEvent> events, WebhookDefinition definition)
+    async Task<IEnumerable<AppendedEvent>> ReleaseMismatches(IEnumerable<AppendedEvent> events, WebhookDefinition definition, ObserverSubscriberContext context)
     {
         if (definition.GenerationDelivery != EventGenerationDelivery.Pinned)
         {
@@ -149,10 +149,9 @@ public class WebhookObserverSubscriber(
                     schemas[pin] = await storage.GetEventStore(_key.EventStore).EventTypes.GetFor(pin.Id, pin.Generation);
                 }
 
-                // The observer already released history. Select from protected storage instead of
-                // passing plaintext through compliance again when the definition changes its pin.
-                var stored = await storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace)
-                    .GetEventSequence(_key.EventSequenceId).GetEventAt(@event.Context.SequenceNumber);
+                // Select retained stored content, never released history or another storage read.
+                // The incoming delivery context (including Replay) belongs to this dispatch.
+                var stored = context.GetUnreleasedEvent(@event) ?? throw new PinnedEventTypeGenerationUnavailable(pin);
                 released.AddRange(await generationRelease.Release(_key.EventStore, [pin], schemas, [stored]));
             }
             else
