@@ -82,6 +82,13 @@ test('missing or human-owned tracker fails safely', async () => {
     assert.equal(f.writes.length, 0);
 });
 
+test('main reports the specific failure code instead of a generic bucket', async () => {
+    const output = [];
+    const code = await main({ environment: { GITHUB_REPOSITORY: repo, GITHUB_TOKEN: 'fixture' }, argv: ['--bogus'], now, output: line => output.push(line) });
+    assert.equal(code, 1);
+    assert.equal(JSON.parse(output[0]).error, 'unknown-argument');
+});
+
 test('foreign, PR, wrong-path and wrong-branch runs cannot establish green', async () => {
     const f = fixture([run(1, 1, 'success', { head_branch: 'other' }), run(2, 1, 'success', { path: 'other.yml' }), run(3, 1, 'success', { head_repository: { full_name: 'other/repo' } }), run(4, 1, 'success', { event: 'pull_request' })]);
     assert.equal((await f.check()).verdict, 'stale');
