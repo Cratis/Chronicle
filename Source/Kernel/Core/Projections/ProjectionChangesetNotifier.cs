@@ -37,6 +37,7 @@ public class ProjectionChangesetNotifier(
     readonly HashSet<IReadModelChangesetSubscriber> _subscribers = [];
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     IGrainTimer? _publishTimer;
+    TaskCompletionSource _watchedPublication = new(TaskCreationOptions.RunContinuationsAsynchronously);
     bool _isPublishing;
     long _lastPublished;
     bool _hasPublished;
@@ -58,7 +59,7 @@ public class ProjectionChangesetNotifier(
     }
 
     /// <inheritdoc/>
-    public async Task Subscribe(IReadModelChangesetSubscriber subscriber)
+    public Task Subscribe(IReadModelChangesetSubscriber subscriber)
     {
         var wasUnwatched = _subscribers.Count == 0;
         if (_subscribers.Add(subscriber))
@@ -66,20 +67,23 @@ public class ProjectionChangesetNotifier(
             logger.Subscribed(this.GetPrimaryKeyString(), _subscribers.Count);
         }
 
-        // Becoming watched is always published, never throttled. Otherwise the watch is refreshed by subscribing again,
-        // so a subscribe past the republish window renews the watch state.
-        if (wasUnwatched && !_isPublishing)
+        // Becoming watched is always published, never throttled, including a reopen during an outstanding close.
+        // Subscribe is AlwaysInterleave: awaiting the timer's publication must not hold up Notify or NotifyMany.
+        if (wasUnwatched || _watchedPublication.Task.IsFaulted)
         {
-            // The first subscriber is acknowledged only once the watch state has been published, so a removal handled right
-            // after the watch is established cannot miss its parent notifications. Failures are logged by the publication.
-            _publishTimer?.Dispose();
-            _publishTimer = null;
-            await PublishWatchState();
+            if (_watchedPublication.Task.IsCompleted)
+            {
+                _watchedPublication = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            SchedulePublish();
         }
-        else if (wasUnwatched || WatchNeedsRefresh())
+        else if (WatchNeedsRefresh())
         {
             SchedulePublish();
         }
+
+        return _watchedPublication.Task;
     }
 
     /// <inheritdoc/>
@@ -88,6 +92,7 @@ public class ProjectionChangesetNotifier(
         _subscribers.Remove(subscriber);
         if (_subscribers.Count == 0)
         {
+            _watchedPublication.TrySetCanceled();
             SchedulePublish();
         }
 
@@ -134,8 +139,8 @@ public class ProjectionChangesetNotifier(
             return;
         }
 
-        // Interleaved one-shot timer: the watch state goes to every silo, which must neither delay Subscribe or Unsubscribe
-        // nor hold the turn of this non-reentrant activation while it does.
+        // Interleaved one-shot timer: the watch state goes to every silo, which must neither delay notifications or Unsubscribe
+        // nor hold the turn of this non-reentrant activation while Subscribe waits for its acknowledgement.
         _publishTimer = this.RegisterGrainTimer(
             async _ =>
             {
@@ -182,10 +187,18 @@ public class ProjectionChangesetNotifier(
             await projectionsServiceClient.SetWatchState(key.EventStore, key.Namespace, key.ObserverId, isWatched);
             _hasPublished = true;
             _lastPublished = _timeProvider.GetTimestamp();
+            if (isWatched)
+            {
+                _watchedPublication.TrySetResult();
+            }
         }
         catch (Exception ex)
         {
             logger.PublishingWatchStateFailed(ex, this.GetPrimaryKeyString(), isWatched);
+            if (isWatched)
+            {
+                _watchedPublication.TrySetException(ex);
+            }
         }
     }
 }

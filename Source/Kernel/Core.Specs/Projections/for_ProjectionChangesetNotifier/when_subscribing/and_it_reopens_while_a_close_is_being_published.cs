@@ -9,7 +9,13 @@ namespace Cratis.Chronicle.Projections.for_ProjectionChangesetNotifier.when_subs
 public class and_it_reopens_while_a_close_is_being_published : given.a_subscribed_notifier
 {
     readonly List<bool> _published = [];
-    readonly TaskCompletionSource _closeCompleted = new();
+    readonly TaskCompletionSource _closeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _closeCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _reopenEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _reopenCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    bool _acknowledgedDuringClose;
+    bool _acknowledgedBeforeWatched;
+    bool _acknowledgedAfterWatched;
 
     async Task Because()
     {
@@ -18,21 +24,36 @@ public class and_it_reopens_while_a_close_is_being_published : given.a_subscribe
             {
                 var isWatched = call.Arg<bool>();
                 _published.Add(isWatched);
-                return isWatched ? Task.CompletedTask : _closeCompleted.Task;
+                if (isWatched)
+                {
+                    _reopenEntered.SetResult();
+                    return _reopenCompleted.Task;
+                }
+
+                _closeEntered.SetResult();
+                return _closeCompleted.Task;
             });
 
-        await _silo.TimerRegistry.FireAllAsync();
         await _notifier.Unsubscribe(_subscribers[0]);
         await _notifier.Unsubscribe(_subscribers[1]);
         var closing = _silo.TimerRegistry.FireAllAsync();
+        await _closeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Still inside the republish window, and the close has not completed yet.
-        await _notifier.Subscribe(Substitute.For<IReadModelChangesetSubscriber>());
+        var reopening = _notifier.Subscribe(Substitute.For<IReadModelChangesetSubscriber>());
+        _acknowledgedDuringClose = reopening.IsCompleted;
         _closeCompleted.SetResult();
-        await closing;
-        await _silo.TimerRegistry.FireAllAsync();
+        await _reopenEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _acknowledgedBeforeWatched = reopening.IsCompleted;
+        _reopenCompleted.SetResult();
+        await closing.WaitAsync(TimeSpan.FromSeconds(5));
+        await reopening.WaitAsync(TimeSpan.FromSeconds(5));
+        _acknowledgedAfterWatched = reopening.IsCompletedSuccessfully;
     }
 
     [Fact] void should_end_with_the_projection_published_as_watched() => _published[^1].ShouldBeTrue();
     [Fact] void should_publish_the_close_and_then_the_reopen() => _published.ShouldEqual([false, true]);
+    [Fact] void should_not_acknowledge_the_reopen_during_the_close() => _acknowledgedDuringClose.ShouldBeFalse();
+    [Fact] void should_not_acknowledge_the_reopen_before_watched_is_published() => _acknowledgedBeforeWatched.ShouldBeFalse();
+    [Fact] void should_acknowledge_the_reopen_after_watched_is_published() => _acknowledgedAfterWatched.ShouldBeTrue();
 }

@@ -314,10 +314,9 @@ public class ProjectionObserverSubscriber(
         if (ReadModelChangeBookkeeping.DeclaresProperty(schema, WellKnownProperties.LastHandledEventSequenceNumber))
         {
             // State read later than the event may already carry a higher number; the bookkeeping value never goes backwards.
-            var stored = model[WellKnownProperties.LastHandledEventSequenceNumber] is JsonValue storedValue && storedValue.TryGetValue<ulong>(out var storedNumber)
-                ? storedNumber
-                : 0UL;
-            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(Math.Max(change.EventSequenceNumber.Value, stored));
+            var stored = state.GetLastHandledEventSequenceNumber();
+            var sequenceNumber = stored.IsUnavailable ? change.EventSequenceNumber.Value : Math.Max(change.EventSequenceNumber.Value, stored.Value);
+            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(sequenceNumber);
         }
 
         ReadModelChangeBookkeeping.CopyLegacySubjectLineage(state, model);
