@@ -86,6 +86,9 @@ internal sealed class BenchmarkDatabase(SqlBenchmarkOptions options) : IDatabase
 
     /// <inheritdoc/>
     public Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
+    public Task<bool> NamespaceHasEvents(EventStoreName eventStore, EventStoreNamespaceName @namespace) => throw new NotSupportedException();
 #if DEVELOPMENT
     /// <inheritdoc/>
     public Task Wipe() => throw new NotSupportedException();
