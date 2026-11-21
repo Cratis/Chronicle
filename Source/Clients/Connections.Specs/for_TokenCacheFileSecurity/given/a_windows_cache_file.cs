@@ -14,7 +14,7 @@ public class a_windows_cache_file : Specification
         if (OperatingSystem.IsWindows())
         {
             _directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(_directory);
+            TokenCacheFileSecurity.CreateDirectory(_directory);
             _path = Path.Combine(_directory, "token.json");
             using var stream = TokenCacheFileSecurity.CreateFile(_path);
         }

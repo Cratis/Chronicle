@@ -24,10 +24,12 @@ internal static class TokenCacheFileSecurity
     {
         if (OperatingSystem.IsWindows())
         {
+            using var identity = WindowsIdentity.GetCurrent();
             var security = new DirectorySecurity();
+            security.SetOwner(identity.User!);
             security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
             security.AddAccessRule(new FileSystemAccessRule(
-                WindowsIdentity.GetCurrent().User!,
+                identity.User!,
                 FileSystemRights.FullControl,
                 InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
                 PropagationFlags.None,
@@ -84,10 +86,12 @@ internal static class TokenCacheFileSecurity
     [SupportedOSPlatform("windows")]
     static FileStream CreateWindowsFile(string path)
     {
+        using var identity = WindowsIdentity.GetCurrent();
         var security = new FileSecurity();
+        security.SetOwner(identity.User!);
         security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
         security.AddAccessRule(new FileSystemAccessRule(
-            WindowsIdentity.GetCurrent().User!, FileSystemRights.FullControl, AccessControlType.Allow));
+            identity.User!, FileSystemRights.FullControl, AccessControlType.Allow));
         return new FileInfo(path).Create(
             System.IO.FileMode.CreateNew,
             FileSystemRights.FullControl,
