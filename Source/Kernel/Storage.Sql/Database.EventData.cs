@@ -67,7 +67,7 @@ public partial class Database
             command.CommandText = "SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema = COALESCE(@schema, current_schema())";
             if (context.Database.IsSqlite())
             {
-                command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'";
+                command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND substr(name, 1, 7) <> 'sqlite_'";
             }
             else if (context.Database.IsSqlServer())
             {
