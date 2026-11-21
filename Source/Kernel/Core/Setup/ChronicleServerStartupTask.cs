@@ -3,7 +3,6 @@
 
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Patching;
-using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -12,19 +11,17 @@ using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Generations.Admission;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
-using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Kernel;
-using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Recommendations;
 using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Setup.Authentication;
 using Cratis.Chronicle.Storage;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -52,6 +49,7 @@ namespace Orleans.Hosting;
 /// <param name="generationFloorAdmission">Optional read-only generation admission; defaults to the real storage-backed admission.</param>
 /// <param name="storeEntitlementsCache">The local silo's entitlement snapshot cache.</param>
 /// <param name="federationRegistry">Optional federation registry whose configured bindings and grants are bootstrapped at startup.</param>
+/// <param name="applicationLifetime">Optional host lifetime whose stopping signal also stops the deferred background work.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -70,7 +68,7 @@ namespace Orleans.Hosting;
 /// <see cref="SiblingSiloInstability"/>, which stays provider-agnostic.
 /// </para>
 /// </remarks>
-internal sealed class ChronicleServerStartupTask(
+internal sealed partial class ChronicleServerStartupTask(
     IStorage storage,
     IEventTypes eventTypes,
     IReactors reactors,
@@ -89,7 +87,8 @@ internal sealed class ChronicleServerStartupTask(
     TimeProvider? timeProvider = null,
     IGenerationFloorAdmission? generationFloorAdmission = null,
     Cratis.Chronicle.Security.IStoreEntitlementsCache? storeEntitlementsCache = null,
-    Cratis.Chronicle.Federation.IFederationRegistry? federationRegistry = null) : ILifecycleParticipant<ISiloLifecycle>
+    Cratis.Chronicle.Federation.IFederationRegistry? federationRegistry = null,
+    IHostApplicationLifetime? applicationLifetime = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
@@ -134,6 +133,11 @@ internal sealed class ChronicleServerStartupTask(
     /// </remarks>
     const int BusyWaitsBeforeEscalating = 10;
 
+    /// <summary>
+    /// How long startup spends registering kernel projections before the rest are left to the background retries.
+    /// </summary>
+    static readonly TimeSpan _kernelProjectionRegistrationBudget = TimeSpan.FromMinutes(1);
+
     static readonly TimeSpan _initialRetryDelay = TimeSpan.FromSeconds(2);
     static readonly TimeSpan _roundDelay = TimeSpan.FromMinutes(1);
     static readonly TimeSpan _maxBusySiloDelay = TimeSpan.FromMinutes(1);
@@ -148,10 +152,10 @@ internal sealed class ChronicleServerStartupTask(
             nameof(ChronicleServerStartupTask),
             ServiceLifecycleStage.Active,
             Execute,
-            _ =>
+            async cancellationToken =>
             {
                 kernelProjectionRetries.Stop();
-                return Task.CompletedTask;
+                await StopDeferredWork(cancellationToken);
             });
     }
 
@@ -168,10 +172,24 @@ internal sealed class ChronicleServerStartupTask(
 
     async Task Execute(CancellationToken cancellationToken)
     {
+        var started = _timeProvider.GetTimestamp();
+        var phaseStarted = started;
+
+        void CompletePhase(string phase)
+        {
+            logger.StartupPhaseCompleted(phase, _timeProvider.GetElapsedTime(phaseStarted));
+            phaseStarted = _timeProvider.GetTimestamp();
+        }
+
+        // Everything between here and the end of this method decides whether this silo serves requests correctly, so
+        // it is the only work readiness waits for. Anything that merely warms grains on other silos is deferred, see
+        // StartDeferredWork: grains activate on first use and repair themselves, so deferring them delays work, not
+        // correctness. A sibling that is busy must never be able to hold this silo out of the cluster.
         RefuseIncompatibleCluster();
         await RefuseMisplacedSystemData();
         await WarnAboutRetainedLegacySystemData();
         await (generationFloorAdmission ?? new GenerationFloorAdmission(storage)).Admit(cancellationToken);
+        CompletePhase("Admission");
 
         Task Step(string step, Func<Task> action) => RunStep(step, action, cancellationToken);
 
@@ -180,13 +198,18 @@ internal sealed class ChronicleServerStartupTask(
 
         // Apply patches before other grains start
         await Step(nameof(IPatchRunner.ApplyPatches), () => ApplyPatches(cancellationToken));
-
         await Step("EnsureDefaultSystemNamespace", grainFactory.GetGrain<INamespaces>(EventStoreName.System).EnsureDefault);
 
         // Register reactors for the system event store first, so ReactorsReactor can process EventStoreAdded/NamespaceAdded events
         await Step("DiscoverAndRegisterSystemReactors", () => reactors.DiscoverAndRegister(EventStoreName.System, EventStoreNamespaceName.Default, cancellationToken));
+        CompletePhase("SystemEventStore");
 
         var allEventStores = await storage.GetEventStores().WaitAsync(cancellationToken);
+        var eventStoresToServe = new List<EventStoreName>();
+
+        // One shared budget: a sibling that cannot answer must not cost every store its own timeout.
+        using var kernelProjectionBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        kernelProjectionBudget.CancelAfter(_kernelProjectionRegistrationBudget);
         foreach (var eventStore in allEventStores)
         {
             // A registry entry without a usable name cannot be addressed as a grain; starting it would stop the silo
@@ -197,47 +220,20 @@ internal sealed class ChronicleServerStartupTask(
                 continue;
             }
 
+            eventStoresToServe.Add(eventStore);
+
+            // Kept: appends validate against the registered event types of this store.
             if (eventStore != EventStoreName.System)
             {
                 await Step("DiscoverAndRegisterEventTypes", () => eventTypes.DiscoverAndRegister(eventStore));
             }
-            try
-            {
-                await Step("ReconcileLifecycleOccurrences", grainFactory.GetGrain<ILifecycleOccurrences>(eventStore.Value).Ensure);
-            }
-            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
-            {
-                logger.FailedReconcilingLifecycleOccurrences(exception, eventStore.Value);
-            }
-            await RehydrateOccurrences(eventStore, null, cancellationToken);
-            var namespaces = grainFactory.GetGrain<INamespaces>(eventStore);
-            await Step("EnsureDefaultNamespace", namespaces.EnsureDefault);
 
-            var eventStoreSubscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(eventStore);
-            await Step("EnsureEventStoreSubscriptions", eventStoreSubscriptionsManager.Ensure);
-
-            var readModelsManager = grainFactory.GetGrain<IReadModelsManager>(eventStore);
-            await Step("EnsureReadModels", readModelsManager.Ensure);
-
-            var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
-            await Step("EnsureProjections", projectionsManager.Ensure);
-
-            // Persisted kernel definitions are registered with the local engine below even when this is
-            // deferred. Changed definitions reach every silo's engine when the background retry succeeds.
-            await RegisterKernelProjections(eventStore, cancellationToken);
-
-            var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventStore);
-            await Step("EnsureWebhooks", webhooksManager.Ensure);
-
-            var capturesManager = grainFactory.GetGrain<ICapturesManager>(eventStore);
-            await Step("EnsureCaptures", capturesManager.Ensure);
-
-            var projectionDefinitions = await projectionsManager.GetProjectionDefinitions().WaitAsync(cancellationToken);
-            await Step("RegisterPersistedProjectionDefinitions", () => RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions));
-
-            // Bound the namespace fan-out so starting a store with many tenants does not flood the cluster.
-            await Parallel.ForEachAsync(await namespaces.GetAll().WaitAsync(cancellationToken), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken }, (namespaceName, token) => new ValueTask(RehydrateNamespace(eventStore, namespaceName, token)));
+            // Kept, but bounded: the kernel's own read models and projections of this version are what the
+            // Workbench and API read. A failure or an exhausted budget is handed to the background retries.
+            await RegisterKernelProjections(eventStore, kernelProjectionBudget.Token, cancellationToken);
         }
+
+        CompletePhase("EventStores");
 
         await EnsureAdministrator(cancellationToken);
         if (federationRegistry is not null)
@@ -249,15 +245,17 @@ internal sealed class ChronicleServerStartupTask(
 #if DEVELOPMENT
         await Step(nameof(IAuthenticationService.EnsureDefaultClientCredentials), authenticationService.EnsureDefaultClientCredentials);
 #endif
+        CompletePhase("Authentication");
+
+        logger.StartupCompleted(_timeProvider.GetElapsedTime(started));
+        StartDeferredWork(eventStoresToServe);
     }
 
     async Task RehydrateNamespace(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken token)
     {
-        // The steps here run on the per-namespace token. Parallel.ForEachAsync cancels it when another
-        // namespace fails and then waits for every body to finish, so a body still waiting on a busy silo
-        // with the outer token would keep the failure from ever reaching the host.
-        Task NamespaceStep(string step, Func<Task> action) => RunStep(step, action, token);
-
+        // Deferred work runs in the background, so a step that cannot be completed - a sibling that is busy, a
+        // timeout - fails the namespace and is retried by the next pass with a backoff, rather than waiting
+        // in place. Nothing here can hold up readiness or stop the host.
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
         var hasData = await namespaceStorage.HasData().WaitAsync(token);
 
@@ -283,13 +281,13 @@ internal sealed class ChronicleServerStartupTask(
             return;
         }
 
-        await NamespaceStep("DiscoverAndRegisterReactors", () => reactors.DiscoverAndRegister(eventStore, namespaceName, token));
+        await reactors.DiscoverAndRegister(eventStore, namespaceName, token).WaitAsync(token);
 
         var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
-        await NamespaceStep("RehydrateJobs", jobsManager.Rehydrate);
-        await NamespaceStep("RehydrateEventSequences", grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate);
-        await NamespaceStep("RehydrateObservers", () => RehydrateReducerAndReactorObservers(eventStore, namespaceName));
-        await NamespaceStep("BootstrapObserverAlerts", () => BootstrapObserverAlerts(eventStore, namespaceName));
+        await jobsManager.Rehydrate().WaitAsync(token);
+        await grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate().WaitAsync(token);
+        await RehydrateReducerAndReactorObservers(eventStore, namespaceName).WaitAsync(token);
+        await BootstrapObserverAlerts(eventStore, namespaceName).WaitAsync(token);
     }
 
     async Task PruneOrphanedRecommendations(EventStoreName eventStore, EventStoreNamespaceName namespaceName, CancellationToken token)
@@ -376,9 +374,22 @@ internal sealed class ChronicleServerStartupTask(
         }
     }
 
-    async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken cancellationToken)
+    async Task RegisterKernelProjections(EventStoreName eventStore, CancellationToken budget, CancellationToken cancellationToken)
     {
-        if (!await TryRunStep("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore), cancellationToken))
+        var registered = false;
+        if (!budget.IsCancellationRequested)
+        {
+            try
+            {
+                registered = await TryRunStep("DiscoverAndRegisterKernelProjections", () => kernelProjections.DiscoverAndRegister(eventStore), budget);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // The budget ran out; the retries own it from here.
+            }
+        }
+
+        if (!registered)
         {
             logger.DeferringKernelProjectionRegistration(eventStore, MaxAttempts);
             kernelProjectionRetries.Defer(eventStore);
