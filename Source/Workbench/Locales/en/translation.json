@@ -7,7 +7,12 @@
             "no": "No",
             "save": "Save"
         },
-        "loading": "Loading…"
+        "loading": "Loading…",
+        "headers": {
+            "valueSet": "Value set",
+            "notSet": "Not set",
+            "unavailable": "Value unavailable"
+        }
     },
     "layout": {
         "topBar": {
