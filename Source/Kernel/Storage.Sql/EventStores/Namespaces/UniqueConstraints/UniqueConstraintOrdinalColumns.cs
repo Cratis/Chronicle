@@ -31,24 +31,27 @@ internal static class UniqueConstraintOrdinalColumns
         if (!context.Database.IsSqlServer()) return;
 
         await using var transaction = context.Database.CurrentTransaction is null ? await context.Database.BeginTransactionAsync() : null;
-        var sql = context.GetService<ISqlGenerationHelper>();
-        var table = sql.DelimitIdentifier(tableName);
-        await UniqueConstraintValueIndexMigration.LockTable(context, table);
-        var columns = await ReadColumns(context, tableName);
-        if (columns.Count > 0)
-        {
-            var indexes = await ReadIndexes(context, tableName);
-            foreach (var index in indexes) await context.Database.ExecuteSqlRawAsync(index.Drop(sql, table));
-            foreach (var column in columns)
-            {
-                await context.Database.ExecuteSqlRawAsync($"ALTER TABLE {table} ALTER COLUMN {sql.DelimitIdentifier(column.Name)} NVARCHAR({column.Length}) COLLATE {SqlServerCollation} {(column.Nullable ? "NULL" : "NOT NULL")}");
-            }
-            foreach (var index in indexes) await context.Database.ExecuteSqlRawAsync(index.Create(sql, table));
-        }
+        var table = new Table(context, tableName);
+        await UniqueConstraintValueIndexMigration.LockTable(context, table.Identifier);
+        var columns = await ReadColumns(table);
+        if (columns.Count > 0) await MigrateColumns(table, columns);
         if (transaction is not null) await transaction.CommitAsync();
     }
 
-    static async Task<List<Column>> ReadColumns(DbContext context, string tableName)
+    static async Task MigrateColumns(Table table, IReadOnlyCollection<Column> columns)
+    {
+        var indexes = await ReadIndexes(table);
+        await ExecuteStatements(table, indexes.Select(index => index.Drop(table)));
+        await ExecuteStatements(table, columns.Select(column => column.Alter(table)));
+        await ExecuteStatements(table, indexes.Select(index => index.Create(table)));
+    }
+
+    static async Task ExecuteStatements(Table table, IEnumerable<string> statements)
+    {
+        foreach (var statement in statements) await table.Context.Database.ExecuteSqlRawAsync(statement);
+    }
+
+    static async Task<List<Column>> ReadColumns(Table table)
     {
         const string query = "SELECT name, TYPE_NAME(system_type_id), max_length, is_nullable, collation_name, " +
             "CONVERT(bit, CASE WHEN is_computed = 0 AND user_type_id = system_type_id " +
@@ -56,30 +59,30 @@ internal static class UniqueConstraintOrdinalColumns
             "AND generated_always_type = 0 AND is_hidden = 0 AND is_masked = 0 THEN 0 ELSE 1 END) " +
             "FROM sys.columns WHERE object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME(@table)) " +
             "AND name IN ('EventSourceId', 'Value')";
-        await using var command = MetadataCommand(context, tableName, query);
+        await using var command = MetadataCommand(table, query);
         await using var reader = await command.ExecuteReaderAsync();
         var columns = new List<Column>();
         var count = 0;
         while (await reader.ReadAsync())
         {
             count++;
-            var column = ReadColumn(reader, tableName);
+            var column = ReadColumn(reader, table);
             if (column is not null) columns.Add(column);
         }
-        if (count != 2) throw Unsupported(tableName);
+        if (count != 2) throw Unsupported(table.Name);
         return columns;
     }
 
-    static Column? ReadColumn(DbDataReader reader, string tableName)
+    static Column? ReadColumn(DbDataReader reader, Table table)
     {
-        if (reader.IsDBNull(4)) throw Unsupported(tableName);
+        if (reader.IsDBNull(4)) throw Unsupported(table.Name);
         if (string.Equals(reader.GetString(4), SqlServerCollation, StringComparison.OrdinalIgnoreCase)) return null;
-        if (reader.GetString(1) != "nvarchar" || reader.GetBoolean(5)) throw Unsupported(tableName);
+        if (reader.GetString(1) != "nvarchar" || reader.GetBoolean(5)) throw Unsupported(table.Name);
         var length = reader.GetInt16(2);
         return new(reader.GetString(0), length == -1 ? "MAX" : (length / 2).ToString(System.Globalization.CultureInfo.InvariantCulture), reader.GetBoolean(3));
     }
 
-    static async Task<List<Index>> ReadIndexes(DbContext context, string tableName)
+    static async Task<List<Index>> ReadIndexes(Table table)
     {
         const string query = "SELECT i.name, kc.type, i.is_unique, i.type, i.filter_definition, " +
             "c.name, ic.key_ordinal, ic.is_descending_key, ic.is_included_column, " +
@@ -102,13 +105,13 @@ internal static class UniqueConstraintOrdinalColumns
             "WHERE dependency.object_id = i.object_id AND dependency.index_id = i.index_id " +
             "AND identity_column.name IN ('EventSourceId', 'Value')) " +
             "ORDER BY i.index_id, ic.key_ordinal, ic.index_column_id";
-        await using var command = MetadataCommand(context, tableName, query);
+        await using var command = MetadataCommand(table, query);
         await using var reader = await command.ExecuteReaderAsync();
         var indexes = new List<Index>();
         while (await reader.ReadAsync())
         {
-            if (reader.GetByte(3) is not (1 or 2) || reader.GetInt32(9) != 1) throw Unsupported(tableName);
-            AppendIndex(indexes, reader, context.GetService<ISqlGenerationHelper>());
+            if (reader.GetByte(3) is not (1 or 2) || reader.GetInt32(9) != 1) throw Unsupported(table.Name);
+            AppendIndex(indexes, reader, table.Sql);
         }
         return indexes;
     }
@@ -127,16 +130,16 @@ internal static class UniqueConstraintOrdinalColumns
         else throw Unsupported(name);
     }
 
-    static DbCommand MetadataCommand(DbContext context, string tableName, string query)
+    static DbCommand MetadataCommand(Table table, string query)
     {
-        var command = context.Database.GetDbConnection().CreateCommand();
+        var command = table.Context.Database.GetDbConnection().CreateCommand();
 #pragma warning disable CA2100 // Only fixed metadata queries supplied by this class; the table name is a parameter.
         command.CommandText = query;
 #pragma warning restore CA2100
-        command.Transaction = context.Database.CurrentTransaction!.GetDbTransaction();
+        command.Transaction = table.Context.Database.CurrentTransaction!.GetDbTransaction();
         var parameter = command.CreateParameter();
         parameter.ParameterName = "@table";
-        parameter.Value = tableName;
+        parameter.Value = table.Name;
         command.Parameters.Add(parameter);
         return command;
     }
@@ -144,28 +147,38 @@ internal static class UniqueConstraintOrdinalColumns
     static InvalidOperationException Unsupported(string tableName) =>
         new($"Cannot migrate unique constraint table '{tableName}' to ordinal SQL Server collation: unsupported column or index dependency. Repair the schema while preserving claims before retrying.");
 
-    sealed record Column(string Name, string Length, bool Nullable);
+    sealed record Column(string Name, string Length, bool Nullable)
+    {
+        internal string Alter(Table table) =>
+            $"ALTER TABLE {table.Identifier} ALTER COLUMN {table.Sql.DelimitIdentifier(Name)} NVARCHAR({Length}) COLLATE {SqlServerCollation} {(Nullable ? "NULL" : "NOT NULL")}";
+    }
+
+    sealed record Table(DbContext Context, string Name)
+    {
+        internal ISqlGenerationHelper Sql => Context.GetService<ISqlGenerationHelper>();
+        internal string Identifier => Sql.DelimitIdentifier(Name);
+    }
 
     sealed record Index(string Name, string? Constraint, bool Unique, bool Clustered, string? Filter)
     {
         internal List<string> Keys { get; } = [];
         internal List<string> Included { get; } = [];
 
-        internal string Drop(ISqlGenerationHelper sql, string table) => Constraint is null
-            ? $"DROP INDEX {sql.DelimitIdentifier(Name)} ON {table}"
-            : $"ALTER TABLE {table} DROP CONSTRAINT {sql.DelimitIdentifier(Name)}";
+        internal string Drop(Table table) => Constraint is null
+            ? $"DROP INDEX {table.Sql.DelimitIdentifier(Name)} ON {table.Identifier}"
+            : $"ALTER TABLE {table.Identifier} DROP CONSTRAINT {table.Sql.DelimitIdentifier(Name)}";
 
-        internal string Create(ISqlGenerationHelper sql, string table)
+        internal string Create(Table table)
         {
             var kind = Clustered ? "CLUSTERED" : "NONCLUSTERED";
             var keys = string.Join(", ", Keys);
             if (Constraint is not null)
             {
-                return $"ALTER TABLE {table} ADD CONSTRAINT {sql.DelimitIdentifier(Name)} {(Constraint == "PK" ? "PRIMARY KEY" : "UNIQUE")} {kind} ({keys})";
+                return $"ALTER TABLE {table.Identifier} ADD CONSTRAINT {table.Sql.DelimitIdentifier(Name)} {(Constraint == "PK" ? "PRIMARY KEY" : "UNIQUE")} {kind} ({keys})";
             }
             var included = Included.Count == 0 ? string.Empty : $" INCLUDE ({string.Join(", ", Included)})";
             var filter = Filter is null ? string.Empty : $" WHERE {Filter}";
-            return $"CREATE {(Unique ? "UNIQUE " : string.Empty)}{kind} INDEX {sql.DelimitIdentifier(Name)} ON {table} ({keys}){included}{filter}";
+            return $"CREATE {(Unique ? "UNIQUE " : string.Empty)}{kind} INDEX {table.Sql.DelimitIdentifier(Name)} ON {table.Identifier} ({keys}){included}{filter}";
         }
     }
 }
