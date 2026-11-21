@@ -58,12 +58,19 @@ public class a_performing_job_step : Specification
             }
         };
 
+    static IEventTypesStorage EventTypesWithCachedDefinitions()
+    {
+        var storage = Substitute.For<IEventTypesStorage>();
+        storage.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
+        return storage;
+    }
+
     async Task Establish()
     {
         var eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
         var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
-        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventTypesStorage = EventTypesWithCachedDefinitions();
 
         _storage = Substitute.For<Storage.IStorage>();
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);

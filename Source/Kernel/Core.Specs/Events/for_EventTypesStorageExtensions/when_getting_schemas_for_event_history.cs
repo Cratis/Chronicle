@@ -17,8 +17,10 @@ public class when_getting_schemas_for_event_history : Specification
     void Establish()
     {
         _storage = Substitute.For<IEventTypesStorage>();
-        _storage.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns(Enumerable.Range(1, 4)
-            .Select(generation => new EventTypeSchema(new("person", (uint)generation), EventTypeOwner.Client, EventTypeSource.Code, JsonSchema.FromJson("{}"))).ToArray());
+        var schemas = Enumerable.Range(1, 4)
+            .Select(generation => new EventTypeSchema(new("person", (uint)generation), EventTypeOwner.Client, EventTypeSource.Code, JsonSchema.FromJson("{}"))).ToArray();
+        _storage.GetDefinition("person").Returns(new EventTypeDefinition("person", EventTypeOwner.Client, false, schemas.Select(schema => new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)), []));
+        _storage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(schemas);
     }
 
     async Task Because()
@@ -34,5 +36,5 @@ public class when_getting_schemas_for_event_history : Specification
     }
 
     [Fact] void should_resolve_current_generational_original_and_revision_schemas() => _schemas.Keys.OrderBy(type => type.Generation.Value).ShouldEqual(Enumerable.Range(1, 4).Select(generation => new EventType("person", (uint)generation)));
-    [Fact] void should_load_registered_generations_once() => _storage.Received(1).GetAllGenerationsForEventType(Arg.Any<EventType>());
+    [Fact] void should_load_registered_generations_once() => _storage.Received(1).GetDefinition("person");
 }

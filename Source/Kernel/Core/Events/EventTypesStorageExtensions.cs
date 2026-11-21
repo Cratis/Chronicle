@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Schemas;
@@ -13,6 +15,12 @@ namespace Cratis.Chronicle.Events;
 /// </summary>
 public static class EventTypesStorageExtensions
 {
+    /// <summary>
+    /// Registration replaces the cached definition. Keying misses by that snapshot automatically invalidates
+    /// negative lookups when a generation is registered, without retaining obsolete definitions.
+    /// </summary>
+    static readonly ConditionalWeakTable<EventTypeDefinition, ConcurrentDictionary<EventTypeGeneration, bool>> _registrations = new();
+
     /// <summary>
     /// Make sure the schemas hold the schema of the exact event type - including its generation - of every event.
     /// </summary>
@@ -44,20 +52,11 @@ public static class EventTypesStorageExtensions
             return;
         }
 
-        // GetFor can relabel a substituted schema with an absent requested generation.
-        // Enumerating registrations leaves absent history on the unchanged fallback path.
-        var stored = new List<EventTypeSchema>();
-        foreach (var eventType in missing.DistinctBy(type => type.Id))
+        foreach (var group in missing.GroupBy(type => type.Id))
         {
-            stored.AddRange(await eventTypes.GetAllGenerationsForEventType(eventType));
-        }
-
-        foreach (var eventType in missing)
-        {
-            var schema = stored.FirstOrDefault(_ => _.Type.Id == eventType.Id && _.Type.Generation == eventType.Generation);
-            if (schema is not null)
+            foreach (var schema in await GetRegisteredSchemas(eventTypes, group))
             {
-                schemas[eventType] = schema;
+                schemas[schema.Type] = schema;
             }
         }
     }
@@ -72,6 +71,17 @@ public static class EventTypesStorageExtensions
     {
         var stored = await eventTypes.GetFor([eventType]);
         return stored.FirstOrDefault(_ => _.Type.Id == eventType.Id && _.Type.Generation == eventType.Generation)?.Schema;
+    }
+
+    static async Task<IEnumerable<EventTypeSchema>> GetRegisteredSchemas(IEventTypesStorage eventTypes, IGrouping<EventTypeId, EventType> missing)
+    {
+        var definition = await eventTypes.GetDefinition(missing.Key);
+        var registrations = _registrations.GetValue(definition, _ => new());
+        var registered = missing.Where(type => registrations.GetOrAdd(type.Generation, static (generation, snapshot) => snapshot.Generations.Any(candidate => candidate.Generation == generation), definition)).ToArray();
+        if (registered.Length == 0) return [];
+
+        // GetFor can substitute an absent generation. Only ask for registrations from the cached definition.
+        return (await eventTypes.GetFor(registered)).Where(schema => registered.Contains(schema.Type));
     }
 
     static IEnumerable<EventType> HistoryEventTypesFor(AppendedEvent @event)

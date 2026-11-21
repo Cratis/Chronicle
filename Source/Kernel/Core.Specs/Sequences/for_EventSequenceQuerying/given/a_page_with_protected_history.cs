@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 
@@ -15,7 +16,8 @@ public class a_page_with_protected_history : Events.for_EventCompliance.given.an
     {
         _storage = Substitute.For<IStorage>();
         var store = _storage.GetEventStore((EventStoreName)"store");
-        store.EventTypes.GetAllGenerationsForEventType(Arg.Any<global::Cratis.Chronicle.Concepts.Events.EventType>()).Returns(call => _schemas.Values.Where(schema => schema.Type.Id == call.Arg<global::Cratis.Chronicle.Concepts.Events.EventType>().Id));
+        store.EventTypes.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.Client, false, _schemas.Values.Where(schema => schema.Type.Id == call.Arg<EventTypeId>()).Select(schema => new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)), []));
+        store.EventTypes.GetFor(Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns(call => call.Arg<IEnumerable<Concepts.Events.EventType>>().Where(_schemas.ContainsKey).Select(type => _schemas[type]).ToArray());
         var cursor = Substitute.For<IEventCursor>();
         cursor.MoveNext().Returns(true, false);
         cursor.Current.Returns([_event]);

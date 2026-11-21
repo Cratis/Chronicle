@@ -12,7 +12,7 @@ public class and_registered_schema_storage_fails : given.an_event_type_stored_at
     readonly Dictionary<EventType, EventTypeSchema> _schemas = [];
     Exception? _actual;
 
-    void Establish() => _eventTypes.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns(_ => Task.FromException<IEnumerable<EventTypeSchema>>(_expected));
+    void Establish() => _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(_ => Task.FromException<IEnumerable<EventTypeSchema>>(_expected));
 
     async Task Because()
     {
