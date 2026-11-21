@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 /// <param name="connectionString">The fixture database connection string.</param>
 internal sealed partial class SqlPlanQueries(StorageProvider provider, string connectionString)
 {
-    [GeneratedRegex("FROM\\s+\"(?<table>[^\"]+)\"", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, 1000)]
+    [GeneratedRegex("FROM\\s+(?:(?:\"[^\"]+\"|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\.\\s*)?(?:\"(?<table>[^\"]+)\"|(?<table>[A-Za-z_][A-Za-z0-9_$]*))", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex TableName { get; }
 
     /// <summary>Explains a captured SELECT without modifying the measured command counter.</summary>
@@ -28,7 +28,7 @@ internal sealed partial class SqlPlanQueries(StorageProvider provider, string co
         _ => Task.FromResult("not captured")
     };
 
-    /// <summary>Lists indexes for the first quoted table in the generated SELECT.</summary>
+    /// <summary>Lists indexes for the first table in the generated SELECT.</summary>
     /// <param name="query">The captured SELECT.</param>
     /// <returns>The index definitions, or a failure as text.</returns>
     public Task<string> IndexDefinitions(CapturedQuery query)
