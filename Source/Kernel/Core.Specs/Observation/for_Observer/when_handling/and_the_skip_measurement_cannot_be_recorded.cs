@@ -58,8 +58,8 @@ public class and_the_skip_measurement_cannot_be_recorded : given.an_observer_wit
     }
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
-    [Fact] void should_still_skip_the_queued_event() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-    [Fact] void should_still_advance_past_the_queued_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)104UL);
+    [Fact] void should_hold_the_queued_event_for_repair() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_keep_the_queued_event_pending_despite_the_measurement_failure() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)102UL);
     [Fact] void should_still_clear_the_recovered_failure() => _failedPartitionsStorage.State.IsFailed((Key)"P").ShouldBeFalse();
     [Fact] void should_have_attempted_the_measurement() => _measurementWasAttempted.ShouldBeTrue();
     [Fact] void should_still_log_the_warning() => _recordedLogs.SuspectedSkipWarnings.Count().ShouldEqual(1);

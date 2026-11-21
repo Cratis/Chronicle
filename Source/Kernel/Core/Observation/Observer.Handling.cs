@@ -88,6 +88,7 @@ public partial class Observer
 
         if (!ShouldHandleEvent(partition))
         {
+            RememberHeldBackDeliveries(partition, events);
             NoteHeldBackEvents(partition, events);
             return;
         }
@@ -112,7 +113,7 @@ public partial class Observer
         }
         finally
         {
-            EvaluateSuspectedSkips();
+            await EvaluateAndRepairMissedDeliveries();
         }
     }
 
@@ -419,6 +420,9 @@ public partial class Observer
         return false;
     }
 
+    bool HasNoApplicableEvents(IEnumerable<AppendedEvent> events) =>
+        (!State.SubscribesToAllEvents && !HasSubscribedEvent(events)) || ExcludedByFilters([.. events]);
+
     async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
         var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
@@ -426,23 +430,11 @@ public partial class Observer
         // An observer subscribed to all events has no fixed event type list to match against - every event is
         // of interest to it by definition, so this "none of these events are ones we're subscribed to" fast
         // path never applies to it.
-        if (!State.SubscribesToAllEvents && !HasSubscribedEvent(events))
+        if (HasNoApplicableEvents(events))
         {
             State = State with
             {
-                NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-            };
-            RecordedHandlingState();
-            await WriteProgressStateDebounced();
-            return;
-        }
-
-        if (ExcludedByFilters([.. events]))
-        {
-            State = State with
-            {
-                NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
+                NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(observedTailEventSequenceNumber.Next())),
                 TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
             };
             RecordedHandlingState();
@@ -459,7 +451,7 @@ public partial class Observer
         var tailEventSequenceNumber = _pageFloor ?? State.NextEventSequenceNumber;
 
         var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
-        NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
+        if (await RepairDiscardedDeliveries(partition, events, tailEventSequenceNumber)) return;
         var configuration = await configurationProvider.GetFor(_observerKeyText);
         if (ExceedsLiveBudget(configuration, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
         {
@@ -573,7 +565,7 @@ public partial class Observer
                         stateChanged = true;
                         State = State with
                         {
-                            NextEventSequenceNumber = CursorAfter(result.LastSuccessfulObservation.Next()),
+                            NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(result.LastSuccessfulObservation.Next())),
                             TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
@@ -587,6 +579,7 @@ public partial class Observer
                                 : previousLastHandled,
                         };
 
+                        CompleteHeldBackDelivery(partition, result.LastSuccessfulObservation);
                         var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
                         handledCountsPerEventType = handledEvents.CountByEventType();
                         State = WithIncrementedRunningTotals(State, handledCountsPerEventType);
