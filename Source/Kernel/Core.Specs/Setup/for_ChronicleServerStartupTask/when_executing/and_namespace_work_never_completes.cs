@@ -21,7 +21,7 @@ public class and_namespace_work_never_completes : given.a_startup_task_with_pers
     [Fact] void should_complete_startup() => _error.ShouldBeNull();
     [Fact] void should_run_the_final_authentication_step() => _bootstrapClientsEnsured.ShouldBeTrue();
     [Fact] void should_report_startup_completed() => LogEntries.Any(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.StartupCompleted)).ShouldBeTrue();
-    [Fact] void should_report_every_startup_phase() => LogEntries.Count(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.StartupPhaseCompleted)).ShouldEqual(4);
+    [Fact] void should_report_every_startup_phase() => LogEntries.Count(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.StartupPhaseCompleted)).ShouldEqual(5);
     [Fact] void should_still_be_working_in_the_background() => _startupTask.DeferredWork.IsCompleted.ShouldBeFalse();
     [Fact] void should_not_have_reported_the_background_work_finished() => LogEntries.Any(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.DeferredStartupWorkFinished)).ShouldBeFalse();
 }

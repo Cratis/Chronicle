@@ -32,8 +32,8 @@ public class and_one_namespace_fails_while_another_times_out : given.a_startup_t
 
     [Fact] void should_not_fail_the_host() => _error.ShouldBeNull();
     [Fact] void should_complete_startup() => _bootstrapClientsEnsured.ShouldBeTrue();
-    [Fact] async Task should_retry_the_failing_namespace_every_pass() => await _jobsManager.Received(6).Rehydrate();
-    [Fact] async Task should_retry_the_timing_out_namespace_every_pass() => await _timingOutJobsManager.Received(6).Rehydrate();
+    [Fact] async Task should_retry_the_failing_namespace_at_startup_and_every_pass() => await _jobsManager.Received(7).Rehydrate();
+    [Fact] async Task should_retry_the_timing_out_namespace_at_startup_and_every_pass() => await _timingOutJobsManager.Received(7).Rehydrate();
     [Fact] void should_back_off_between_passes() => RequestedDelays.Take(3).ShouldContainOnly([TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(20)]);
     [Fact] void should_report_giving_up() => LogEntries.Count(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.DeferredStartupWorkGaveUp)).ShouldEqual(1);
 }

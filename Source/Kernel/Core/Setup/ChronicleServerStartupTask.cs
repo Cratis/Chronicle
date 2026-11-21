@@ -50,6 +50,7 @@ namespace Orleans.Hosting;
 /// <param name="storeEntitlementsCache">The local silo's entitlement snapshot cache.</param>
 /// <param name="federationRegistry">Optional federation registry whose configured bindings and grants are bootstrapped at startup.</param>
 /// <param name="applicationLifetime">Optional host lifetime whose stopping signal also stops the deferred background work.</param>
+/// <param name="jobRecoveryBudget">Optional budget for resuming persisted jobs before the node reports ready; defaults to 30 seconds.</param>
 /// <remarks>
 /// Every step in <see cref="Execute"/> is a grain call that can land on a sibling silo, and every
 /// silo runs this task as it starts. A sibling that has not stabilized yet answers none of them, and
@@ -88,7 +89,8 @@ internal sealed partial class ChronicleServerStartupTask(
     IGenerationFloorAdmission? generationFloorAdmission = null,
     Cratis.Chronicle.Security.IStoreEntitlementsCache? storeEntitlementsCache = null,
     Cratis.Chronicle.Federation.IFederationRegistry? federationRegistry = null,
-    IHostApplicationLifetime? applicationLifetime = null) : ILifecycleParticipant<ISiloLifecycle>
+    IHostApplicationLifetime? applicationLifetime = null,
+    TimeSpan? jobRecoveryBudget = null) : ILifecycleParticipant<ISiloLifecycle>
 {
     /// <summary>
     /// How many times a step is attempted before its failure is believed.
@@ -143,6 +145,7 @@ internal sealed partial class ChronicleServerStartupTask(
     static readonly TimeSpan _maxBusySiloDelay = TimeSpan.FromMinutes(1);
 
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    readonly TimeSpan _jobRecoveryBudget = jobRecoveryBudget ?? TimeSpan.FromSeconds(30);
     readonly TimeSpan _busySiloWaitLimit = options.Value.Startup.BusySiloWaitLimit;
 
     /// <inheritdoc/>
@@ -235,6 +238,9 @@ internal sealed partial class ChronicleServerStartupTask(
 
         CompletePhase("EventStores");
 
+        await RecoverPersistedJobs(eventStoresToServe, cancellationToken);
+        CompletePhase("JobRecovery");
+
         await EnsureAdministrator(cancellationToken);
         if (federationRegistry is not null)
         {
@@ -283,8 +289,11 @@ internal sealed partial class ChronicleServerStartupTask(
 
         await reactors.DiscoverAndRegister(eventStore, namespaceName, token).WaitAsync(token);
 
-        var jobsManager = grainFactory.GetJobsManager(eventStore, namespaceName);
-        await jobsManager.Rehydrate().WaitAsync(token);
+        if (!_recoveredJobs.ContainsKey((eventStore, namespaceName)))
+        {
+            await grainFactory.GetJobsManager(eventStore, namespaceName).Rehydrate().WaitAsync(token);
+        }
+
         await grainFactory.GetEventSequences(eventStore, namespaceName).Rehydrate().WaitAsync(token);
         await RehydrateReducerAndReactorObservers(eventStore, namespaceName).WaitAsync(token);
         await BootstrapObserverAlerts(eventStore, namespaceName).WaitAsync(token);

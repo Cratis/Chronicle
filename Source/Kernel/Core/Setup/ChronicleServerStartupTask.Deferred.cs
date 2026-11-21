@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Namespaces;
@@ -45,6 +46,7 @@ internal sealed partial class ChronicleServerStartupTask
     static readonly TimeSpan _maxDeferredDelay = TimeSpan.FromMinutes(2);
 
     readonly Lock _deferredLock = new();
+    readonly System.Collections.Concurrent.ConcurrentDictionary<(EventStoreName EventStore, EventStoreNamespaceName Namespace), bool> _recoveredJobs = new();
     CancellationTokenSource? _deferredCancellation;
     Task _deferredWork = Task.CompletedTask;
 
@@ -62,6 +64,48 @@ internal sealed partial class ChronicleServerStartupTask
         }
 
         return delay < _maxDeferredDelay ? delay : _maxDeferredDelay;
+    }
+
+    /// <summary>
+    /// Resumes the persisted jobs of every namespace within a budget, before the node reports ready.
+    /// </summary>
+    /// <param name="eventStores">The event stores to recover jobs for.</param>
+    /// <param name="cancellationToken">The token cancelling startup.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A job interrupted by a restart is resumed from its persisted state. Clients are refused until the node is ready,
+    /// so resuming it first means a client that reconnects registers its observers against the recovered job rather than
+    /// racing it - the order a restart has always had. The calls may reach grains on a busy sibling, so the whole step
+    /// shares one budget: once it is spent, or a call fails, the namespaces not yet recovered are left to the background
+    /// work, which resumes them as soon as the sibling answers. Readiness is therefore delayed by at most the budget.
+    /// </remarks>
+    async Task RecoverPersistedJobs(IReadOnlyList<EventStoreName> eventStores, CancellationToken cancellationToken)
+    {
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(_jobRecoveryBudget);
+        try
+        {
+            foreach (var eventStore in eventStores)
+            {
+                var namespaces = await grainFactory.GetGrain<INamespaces>(eventStore).GetAll().WaitAsync(budget.Token);
+                await Parallel.ForEachAsync(
+                    namespaces,
+                    new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentDeferredNamespaces * 2, CancellationToken = budget.Token },
+                    async (namespaceName, token) =>
+                    {
+                        if (await storage.GetEventStore(eventStore).GetNamespace(namespaceName).HasData().WaitAsync(token))
+                        {
+                            await grainFactory.GetJobsManager(eventStore, namespaceName).Rehydrate().WaitAsync(token);
+                        }
+
+                        _recoveredJobs[(eventStore, namespaceName)] = true;
+                    });
+            }
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.JobRecoveryDeferred(exception, _jobRecoveryBudget);
+        }
     }
 
     void StartDeferredWork(IReadOnlyList<EventStoreName> eventStores)

@@ -102,4 +102,7 @@ internal static partial class ChronicleServerStartupTaskLogging
 
     [LoggerMessage(LogLevel.Error, "Background startup work aborted unexpectedly. Grains still activate and repair themselves on first use; the next restart repeats this work")]
     internal static partial void DeferredStartupWorkAborted(this ILogger<ChronicleServerStartupTask> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming persisted jobs did not finish within {Budget}; the remaining namespaces are resumed in the background")]
+    internal static partial void JobRecoveryDeferred(this ILogger<ChronicleServerStartupTask> logger, Exception exception, TimeSpan budget);
 }
