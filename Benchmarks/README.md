@@ -416,11 +416,11 @@ under `output/<stamp>/<provider>/`.
 Benchmarks/storage-run.sh --profile smoke --providers sqlite,pg,mongo --repetitions 3
 ```
 
-- Profiles: `smoke` and `medium` (1M events; needs `--yes-i-know-this-is-long`, exit 2 without it).
+- Profiles: `smoke`, `short` (10k events, 1/8/32 writers, two warmups and ten measured iterations, 256-byte payloads) and `medium` (1M events; needs `--yes-i-know-this-is-long`, exit 2 without it). Both `smoke` and `short` run without confirmation; batch sizes remain 10/100/1,000 and constraint batches 1/50/500.
 - The run refuses to measure when the machine load exceeds `--max-load` (default 0.7 x CPU count) and exits 3.
   Never compare numbers taken under load; results are comparable only when the ledgers match.
 - Containers need Docker. MongoDB runs as a single-node replica set; other topologies are not implemented.
-- **Baselines come from the `Storage benchmarks` workflow** (`.github/workflows/storage-benchmarks.yml`) on a GitHub-hosted runner, not from a developer machine: a workstation is never quiet enough. It runs the smoke profile on pull requests that touch the harness and on demand (`workflow_dispatch`, smoke only; `medium` needs confirmation and hours), waits for the runner to go quiet, uploads the results as the `storage-benchmark-results` artifact and writes the summary table to the job summary. `storage-run.sh` is for checking the harness itself, not for taking baselines.
+- **Baselines come from the `Storage benchmarks` workflow** (`.github/workflows/storage-benchmarks.yml`) on a GitHub-hosted runner, not from a developer machine: a workstation is never quiet enough. It runs the smoke profile on pull requests that touch the harness and offers `smoke` or `short` on demand (`workflow_dispatch`; `medium` needs confirmation and hours). Dispatch defaults to SQLite, PostgreSQL, SQL Server and MongoDB; pull requests omit SQL Server to avoid its image pull and startup cost. The job budget is 45 minutes for smoke and 120 minutes for short, including build and quiet-runner wait time. Short is estimated at 60–90 minutes across all four providers, not a measured runtime; if it exceeds about 75 minutes, split providers across dispatches rather than reducing iterations. The profile's timeout is descriptive, not enforced by the harness; the workflow job enforces the budget. The workflow waits for the runner to go quiet, uploads the results as the `storage-benchmark-results` artifact and writes the summary table to the job summary. `storage-run.sh` is for checking the harness itself, not for taking baselines.
 - Specs: `Chronicle.Benchmarks.Storage.Specs`.
 - A run exits non-zero when any benchmark fails, produces no report, or any measured operation fails.
 

@@ -3,7 +3,7 @@ name: Storage benchmarks
 # Baselines for the storage-provider benchmark harness (Chronicle.Benchmarks.Storage) come from this workflow
 # on a GitHub-hosted runner, never from a developer machine: a workstation is never quiet enough for numbers
 # that are compared across runs. Pull requests that touch the harness run the smoke profile so the harness
-# is proven to run; workflow_dispatch runs the smoke profile on demand. The medium profile needs an explicit
+# is proven to run; workflow_dispatch offers smoke and short, including SQL Server by default. The medium profile needs an explicit
 # confirmation and hours of runtime, so it is not offered here. There is no schedule.
 # The runner is always GitHub-hosted: this repository is public, so a pull_request job must never reach
 # self-hosted infrastructure.
@@ -15,11 +15,12 @@ on:
         type: choice
         options:
           - smoke
+          - short
         default: smoke
       providers:
-        description: 'Comma-separated providers (sqlite, postgres, mongo)'
+        description: 'Comma-separated providers (sqlite, postgres, sqlserver, mongo)'
         required: false
-        default: sqlite,postgres,mongo
+        default: sqlite,postgres,sqlserver,mongo
   pull_request:
     paths:
       - 'Benchmarks/Chronicle.Benchmarks.Storage/**'
@@ -38,7 +39,7 @@ jobs:
   storage-benchmarks:
     name: Storage benchmarks
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event.inputs.profile == 'short' && 120 || 45 }}
     env:
       PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
       PROVIDERS: ${{ github.event.inputs.providers || 'sqlite,postgres,mongo' }}
