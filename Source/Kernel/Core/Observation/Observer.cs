@@ -267,43 +267,13 @@ public partial class Observer(
     {
         try
         {
-            if (_removed || !_observerExists)
-            {
-                await base.OnDeactivateAsync(reason, cancellationToken);
-                return;
-            }
-
-            using (logger.BeginObserverScope(_observerId, _observerKey))
-            {
-                logger.Deactivating(reason.ReasonCode, reason.Description);
-            }
-
-            await DrainWebhookProbe();
-            await FlushDebouncedProgressState();
-            if (!_observerExists)
-            {
-                await base.OnDeactivateAsync(reason, cancellationToken);
-                return;
-            }
-
-            // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
-            // One released as dormant keeps its subscription - the record in its state and the entry in the queue - so an event wakes it.
-            // If the queue cannot keep it (an event reached its lane since the release was asked for), it leaves the ordinary way.
-            var keepsSubscription = reason.ReasonCode != DeactivationReasonCode.ShuttingDown &&
-                IsReleasedAsDormant &&
-                await KeepQueueEntryForDormantRelease();
-            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle && !keepsSubscription)
-            {
-                ForgetDurableSubscription();
-                await TransitionTo<Disconnected>();
-                await PersistForgottenDurableSubscription();
-                await base.OnDeactivateAsync(reason, cancellationToken);
-            }
+            await Deactivate(reason, cancellationToken);
         }
-        finally
+        catch (Exception ex) when (cancellationToken.IsCancellationRequested)
         {
-            ReleaseGauge();
-            Dispose();
+            // The runtime stops waiting for this task once the deactivation timeout cancels the token, and goes on to
+            // dispose the activation. Nothing observes the outcome any more, so record it instead of leaving it unobserved.
+            logger.DeactivationOutlivedItsTimeout(ex);
         }
     }
 
@@ -946,7 +916,51 @@ public partial class Observer(
         !_subscription.EventTypes.Any() &&
         !State.SubscribesToAllEvents;
 
-    bool CannotWriteState() => _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
+    async Task Deactivate(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_removed || !_observerExists)
+            {
+                await base.OnDeactivateAsync(reason, cancellationToken);
+                return;
+            }
+
+            using (logger.BeginObserverScope(_observerId, _observerKey))
+            {
+                logger.Deactivating(reason.ReasonCode, reason.Description);
+            }
+
+            await DrainWebhookProbe();
+            await FlushDebouncedProgressState();
+            if (!_observerExists)
+            {
+                await base.OnDeactivateAsync(reason, cancellationToken);
+                return;
+            }
+
+            // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
+            // One released as dormant keeps its subscription - the record in its state and the entry in the queue - so an event wakes it.
+            // If the queue cannot keep it (an event reached its lane since the release was asked for), it leaves the ordinary way.
+            var keepsSubscription = reason.ReasonCode != DeactivationReasonCode.ShuttingDown &&
+                IsReleasedAsDormant &&
+                await KeepQueueEntryForDormantRelease();
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle && !keepsSubscription)
+            {
+                ForgetDurableSubscription();
+                await TransitionTo<Disconnected>();
+                await PersistForgottenDurableSubscription();
+                await base.OnDeactivateAsync(reason, cancellationToken);
+            }
+        }
+        finally
+        {
+            ReleaseGauge();
+            Dispose();
+        }
+    }
+
+    bool CannotWriteState() => _disposed || _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
 
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
 

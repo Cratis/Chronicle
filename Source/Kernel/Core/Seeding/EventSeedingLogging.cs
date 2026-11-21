@@ -26,6 +26,9 @@ internal static partial class EventSeedingLogMessages
     [LoggerMessage(LogLevel.Error, "The event sequence rejected a batch of {Count} seeded events for event store '{EventStore}' in namespace '{Namespace}' - none of them were appended. Violated constraints: {ConstraintNames}. Errors: {ErrorCount}. Concurrency violations: {ConcurrencyViolationCount}. The batch has not been recorded as seeded and will be offered again on the next seeding run.")]
     internal static partial void SeededEventsRejected(this ILogger<EventSeeding> logger, int count, string eventStore, string @namespace, string constraintNames, int errorCount, int concurrencyViolationCount);
 
+    [LoggerMessage(LogLevel.Warning, "A constraint index is still unavailable and the seeding run's retry wait budget cannot accommodate another delay for {Count} seeded events for event store '{EventStore}' in namespace '{Namespace}'. The batch has not been recorded as seeded and will be offered again on the next seeding run.")]
+    internal static partial void SeededEventsDeferredByConstraintIndex(this ILogger<EventSeeding> logger, int count, string eventStore, string @namespace);
+
     [LoggerMessage(LogLevel.Error, "One or more namespaces did not seed everything they were given for event store '{EventStore}' - the global seed tracking is left uncommitted so the entries are dispatched again on the next seeding run")]
     internal static partial void NamespaceSeedingIncomplete(this ILogger<EventSeeding> logger, string eventStore);
 }

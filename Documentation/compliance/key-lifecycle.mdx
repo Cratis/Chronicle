@@ -141,7 +141,34 @@ Release and persistence are separate steps, and they differ between the two path
 - Stored-event migration protects the result in an erasure-aware way, writing empty values for erased properties into the new generation.
 - Revision uses the ordinary protect step, which refuses an erased subject with `EncryptionKeyErased` until a new lifecycle is authorized with `AllowNewEncryptionKeyFor`.
 
-The unwrap rule has a limit. It applies only to corruption that makes the data-key unwrap itself fail (`EncryptionKeyUnwrapFailed`). For a subject with a recorded erasure, such a corrupt data key looks the same as pre-erasure ciphertext, so it is migrated as erased and cannot be told apart today. This is tracked in [issue 4619](https://github.com/Cratis/Chronicle/issues/4619). Corruption of the authenticated payload is not covered: it still aborts the write, as does any unwrap failure for a subject with no recorded erasure.
+The unwrap rule has a limit for legacy values. It applies only to corruption that makes the data-key unwrap itself fail (`EncryptionKeyUnwrapFailed`). For a subject with a recorded erasure, such a corrupt data key looks the same as pre-erasure ciphertext, so a value written by an older version (the original envelope, raw RSA-wrapped data or the version 2 envelope) is migrated as erased and cannot be told apart from corruption until it is protected again. Chronicle does not persist coverage for those values; that is tracked separately in [issue 5411](https://github.com/Cratis/Chronicle/issues/5411) and is not provided here. Corruption of the authenticated payload is not covered: it still aborts the write, as does any unwrap failure for a subject with no recorded erasure.
+
+### Values that carry a verified key identity
+
+A value protected by a version that includes the key-identity release carries a version 3 envelope, which closes that limit. The envelope embeds the managed key's public key and a signature over the value, so Chronicle can prove after erasure which key protected it, even though the private key and the stored key are gone. The identity is bound to the address the value is stored at: the event store, namespace and key identifier (the subject identifier for PII). The binding does not include a property path. Chronicle treats a version 3 value as erased only when all of these hold:
+
+- The signatures verify at the address being read, using only the embedded public key and certificate.
+- The fingerprint of the embedded public key is recorded in the erasure fence for the subject.
+
+Chronicle reaches that decision without searching retained key revisions, so it does not depend on how many older revisions a store keeps.
+
+Everything else fails closed. Strict release throws instead of returning an empty value when:
+
+- A signature does not verify, including a value that was moved to a different address or had any byte changed.
+- The value is corrupted while its key is still live, or corrupted after erasure: the signatures no longer verify, so it is never reported as erased.
+- The key identity, the key or the fence cannot be read.
+- The envelope header is malformed or its version is unknown.
+- The value claims a key whose fingerprint is not in the fence and the key itself is missing.
+
+A live value is verified at its read address too, so a replayed value fails even while its key exists. Lenient release, `ReleaseReportingErasure` and `TryRelease` behave as before. Values written by older versions keep the legacy strict behavior described above.
+
+The embedded public key, certificate and address commitment are not secret, and the address commitment does not hide the identifier: someone who can guess a subject identifier can test the guess against a stored value. Do not treat the envelope as confidential metadata. Replaying a whole stored value at the same address leaves it unchanged and is not a forgery. Anyone able to rewrite stored events can still delete a value; what they cannot do is substitute another value that verifies after erasure, because no signing key survives.
+
+A recognized envelope begins with the four bytes `CENV`. A legacy value that happens to begin with those bytes (roughly one in 2^32) is rejected as malformed instead of being treated as raw ciphertext.
+
+#### Rolling out verified identities
+
+Readers that understand version 3 ship first. Chronicle writes version 3 only when the cluster release manifest shows that every silo is on a release at or above the key-identity boundary. A mixed or unpublished cluster keeps writing the older envelope, and the decision is re-evaluated whenever the manifest changes. Do not downgrade after version 3 values were written: older releases throw on version 3 and fail closed. A version 3 value costs about 700 bytes more than before.
 
 ## The threat model
 

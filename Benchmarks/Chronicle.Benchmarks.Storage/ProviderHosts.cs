@@ -24,24 +24,52 @@ internal static class ProviderHosts
     /// <returns>The hosts.</returns>
     public static IReadOnlyCollection<Task<IStorageProviderHost>> Started() => [.. _hosts.Values.Where(_ => _.IsValueCreated).Select(_ => _.Value)];
 
-    /// <summary>Disposes every started host.</summary>
-    /// <returns>The task.</returns>
-    public static async Task DisposeAll()
+    /// <summary>Disposes started hosts within a single 60-second shutdown grace period.</summary>
+    /// <returns>The bounded teardown task.</returns>
+    public static Task DisposeAll()
     {
-        foreach (var started in Started())
-        {
-            try
-            {
-                await (await started).DisposeAsync();
-            }
-            catch (Exception error)
-            {
-                // A host that never started has nothing to dispose.
-                await Console.Error.WriteLineAsync($"Host disposal skipped: {error.Message}");
-            }
-        }
-
+        var started = Started();
         _hosts.Clear();
+        return DisposeAll(started, TimeSpan.FromSeconds(60));
+    }
+
+    /// <summary>Bounds disposal without waiting for unfinished startup tasks.</summary>
+    /// <param name="started">The startup tasks to tear down.</param>
+    /// <param name="grace">The total shutdown grace period.</param>
+    /// <returns>The bounded teardown task.</returns>
+    internal static async Task DisposeAll(IEnumerable<Task<IStorageProviderHost>> started, TimeSpan grace)
+    {
+        var disposal = Task.WhenAll(started.Select(DisposeOrDefer));
+        try
+        {
+            await disposal.WaitAsync(grace);
+        }
+        catch (TimeoutException)
+        {
+            await Console.Error.WriteLineAsync("Host disposal skipped: shutdown grace period exhausted.");
+        }
+    }
+
+    static Task DisposeOrDefer(Task<IStorageProviderHost> startup)
+    {
+        if (startup.IsCompleted) return DisposeCompleted(startup);
+
+        // A late host is still cleaned up, but its startup cannot hold the harness exit open.
+        _ = startup.ContinueWith(DisposeCompleted, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default).Unwrap();
+        return Task.CompletedTask;
+    }
+
+    static async Task DisposeCompleted(Task<IStorageProviderHost> started)
+    {
+        try
+        {
+            await (await started).DisposeAsync();
+        }
+        catch (Exception error)
+        {
+            // A host that never started has nothing to dispose.
+            await Console.Error.WriteLineAsync($"Host disposal skipped: {error.Message}");
+        }
     }
 
     static async Task<IStorageProviderHost> StartAsync(StorageProvider provider)

@@ -96,7 +96,8 @@ public static class SchemaMetadataExtensions
             return value;
         }
 
-        var result = HasSchemaMetadata(schema, KeyFor(category), [], 0);
+        var key = KeyFor(category);
+        var result = WalkSchemaMetadata(schema, new(candidate => candidate.ExtensionData?.ContainsKey(key) ?? false, []), 0);
         if (category == SchemaMetadataCategory.Compliance)
         {
             schema.CachedHasComplianceMetadata = result;
@@ -134,7 +135,7 @@ public static class SchemaMetadataExtensions
     /// present at all.
     /// </remarks>
     public static bool HasSchemaMetadata(this JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate) =>
-        HasMatchingSchemaMetadata(schema, category, predicate, [], 0);
+        WalkSchemaMetadata(schema, new(candidate => candidate.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)), []), 0);
 
     /// <summary>
     /// Check recursively whether the schema has metadata for any known category.
@@ -157,87 +158,29 @@ public static class SchemaMetadataExtensions
     internal static string KeyFor(SchemaMetadataCategory category) =>
         category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
 
-    static bool HasMatchingSchemaMetadata(JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate, HashSet<JsonSchema> visited, int depth)
+    static bool WalkSchemaMetadata(JsonSchema schema, MetadataTraversal context, int depth)
     {
-        // Same traversal shape and termination guards as HasSchemaMetadata(JsonSchema, string, HashSet, int)
-        // below - see its remarks - but this walk has to read and test each entry's metadata type rather than
-        // stop at "the key exists", so it cannot share that method's cheap ContainsKey check or its cache.
-        var actual = schema.ActualSchema;
-        if (depth > MaxSchemaMetadataTraversalDepth || !visited.Add(actual))
+        // Inspect every reference hop, including annotations beside $ref. Count hops against the same
+        // depth budget as child schemas, so recursive child/reference graphs cannot restart the limit.
+        var chain = schema.ReferenceChain;
+        for (var hop = 0; hop < chain.Count && depth + hop <= MaxSchemaMetadataTraversalDepth; hop++)
         {
-            return false;
+            var candidate = chain[hop];
+            if (!context.Visited.Add(candidate)) continue;
+            if (context.Matches(candidate)) return true;
+            if (MetadataChildren(candidate).Any(child => WalkSchemaMetadata(child, context, depth + hop + 1))) return true;
         }
-
-        var hasMatch = new[] { schema, actual }.Distinct()
-            .SelectMany(candidate => candidate.GetSchemaMetadata(category))
-            .Any(metadata => predicate(metadata.metadataType));
-
-        if (!hasMatch && actual.Properties.Count > 0)
-        {
-            foreach (var property in actual.GetFlattenedProperties())
-            {
-                hasMatch = HasMatchingSchemaMetadata(property, category, predicate, visited, depth + 1);
-                if (hasMatch) break;
-            }
-        }
-
-        if (!hasMatch && actual.Item is not null)
-        {
-            hasMatch = HasMatchingSchemaMetadata(actual.Item, category, predicate, visited, depth + 1);
-        }
-
-        if (!hasMatch && actual.AdditionalPropertiesSchema is not null)
-        {
-            hasMatch = HasMatchingSchemaMetadata(actual.AdditionalPropertiesSchema, category, predicate, visited, depth + 1);
-        }
-
-        return hasMatch;
+        return false;
     }
 
-    static bool HasSchemaMetadata(JsonSchema schema, string key, HashSet<JsonSchema> visited, int depth)
-    {
-        // Walking a schema graph to look for metadata has to contend with recursive read models (e.g. a child
-        // collection of the model's own type). Two termination guards:
-        //   1. A visited set keyed on the resolved ActualSchema, which recognises a cycle whenever
-        //      references resolve back to one shared definition object.
-        //   2. A depth bound, because NJsonSchema does not guarantee a stable identity for schemas
-        //      reached through $ref/Item — its accessors can hand back a fresh wrapper on each
-        //      access, so (1) alone is not enough for every shape. The bound guarantees termination
-        //      regardless of identity, and does not cause false negatives: schema metadata is
-        //      shallow, so anything real is found long before this depth.
-        var actual = schema.ActualSchema;
-        if (depth > MaxSchemaMetadataTraversalDepth || !visited.Add(actual))
-        {
-            return false;
-        }
+    static IEnumerable<JsonSchema> MetadataChildren(JsonSchema schema) =>
+        schema.Properties.Values.Concat(MetadataCompositions(schema))
+            .Concat(new[] { schema.Item, schema.AdditionalPropertiesSchema }.OfType<JsonSchema>());
 
-        // A reference can carry metadata beside $ref as well as on the referenced schema.
-        var hasMetadata = new[] { schema, actual }.Any(candidate => candidate.ExtensionData?.ContainsKey(key) ?? false);
-
-        if (!hasMetadata && actual.Properties.Count > 0)
-        {
-            foreach (var property in actual.GetFlattenedProperties())
-            {
-                hasMetadata = HasSchemaMetadata(property, key, visited, depth + 1);
-                if (hasMetadata) break;
-            }
-        }
-
-        // Metadata can live on an array's element type — e.g. IReadOnlyList<Email> where Email is a [PII]
-        // concept, or a list of objects carrying [PII]/[Encrypted] members. Without descending into the item
-        // schema, list-valued metadata is missed entirely and stored in the clear.
-        if (!hasMetadata && actual.Item is not null)
-        {
-            hasMetadata = HasSchemaMetadata(actual.Item, key, visited, depth + 1);
-        }
-
-        if (!hasMetadata && actual.AdditionalPropertiesSchema is not null)
-        {
-            hasMetadata = HasSchemaMetadata(actual.AdditionalPropertiesSchema, key, visited, depth + 1);
-        }
-
-        return hasMetadata;
-    }
+    static IEnumerable<JsonSchema> MetadataCompositions(JsonSchema schema) => schema.AllOf.Count > 0
+        ? schema.AllOf
+        : schema.AnyOf.Where(candidate => candidate.Type != JsonObjectType.Null &&
+            !(candidate.HasReference && candidate.Reference?.Type == JsonObjectType.Null)).Take(1);
 
     static void ConvertIfNeeded(JsonSchema schema, string key)
     {
@@ -267,4 +210,6 @@ public static class SchemaMetadataExtensions
             .Select(x => new ComplianceSchemaMetadata(x.MetadataTypeStr!, x.Details!))
             .ToList();
     }
+
+    sealed record MetadataTraversal(Func<JsonSchema, bool> Matches, HashSet<JsonSchema> Visited);
 }

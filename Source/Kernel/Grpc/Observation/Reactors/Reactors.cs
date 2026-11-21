@@ -229,9 +229,13 @@ internal sealed class Reactors(
                     }
                 }
 
+                var observerGrain = grainFactory.GetGrain<IObserver>(new ObserverKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId));
                 await ClientSubscriptionKeeper.KeepWhileConnected(
                     () => ClientSubscriptionKeeper.KeepSubscription(
-                        ClientSubscriptionKeeper.ConfirmFromDurableSubscription(clientObserver.IsSubscriptionIntact, dormantObservers, key),
+                        ClientSubscriptionKeeper.ConfirmFromDurableSubscription(
+                            ClientSubscriptionKeeper.ConfirmFromObserver(clientObserver.IsSubscriptionIntact, observerGrain, registration.ConnectionId),
+                            dormantObservers,
+                            key),
                         () => clientObserver.KeepSubscription(definition)),
                     SubscriptionCheckSchedule.From(options.Value),
                     siloDepartures,

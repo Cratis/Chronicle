@@ -341,16 +341,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// Handles a timed-out connection attempt, failing the caller only after a connection has been established.
     /// </summary>
     /// <exception cref="ConnectionTimedOut">Thrown when an established connection times out.</exception>
-    internal void HandleConnectTimedOut()
-    {
-        if (_hasEverConnected)
-        {
-            _logger.TimedOut();
-            throw new ConnectionTimedOut();
-        }
-
-        _logger.NotAcceptingConnectionsYet(DescribeEndpoint(CurrentServerAddress), _connectTimeout);
-    }
+    internal void HandleConnectTimedOut() => HandleConnectTimedOut(DescribeCurrentEndpoint());
 
     /// <summary>
     /// Asks the server whether it still serves what this client expects, and refuses to connect when it does not.
@@ -510,12 +501,24 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
+    void HandleConnectTimedOut(string candidates)
+    {
+        if (_hasEverConnected)
+        {
+            _logger.TimedOut(candidates, _connectTimeout);
+            throw new ConnectionTimedOut(candidates, _connectTimeout);
+        }
+
+        _logger.NotAcceptingConnectionsYet(candidates, _connectTimeout);
+    }
+
     async Task ConnectInternal()
     {
         _logger.Connecting(_connectionString.Redacted);
         DisposeCurrentAttempt();
 
         var untried = await ResolveCandidates();
+        var candidates = untried.Count == 0 ? _connectionString.Redacted : string.Join(", ", untried.Select(DescribeEndpoint));
         var connected = untried.Count > 0 && await TryConnectToAnyCandidate(untried);
 
         if (_skipKeepAlive)
@@ -524,7 +527,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // caller; returning normally would report success with no services and no connected lifecycle (#3948).
             if (!connected)
             {
-                throw new ConnectionTimedOut();
+                throw new ConnectionTimedOut(candidates, _connectTimeout);
             }
 
             return;
@@ -548,7 +551,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             // Only once a connection has been established, though. A kernel that has not come up yet while its
             // client starts is ordinary, and a host that cannot boot through it is worse than one that keeps
             // trying - so the first connect keeps waiting on the watchdog rather than failing its caller.
-            HandleConnectTimedOut();
+            HandleConnectTimedOut(candidates);
         }
     }
 

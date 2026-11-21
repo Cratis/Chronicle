@@ -36,7 +36,6 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
     static readonly TimeSpan _defaultMaxSelectionJitter = TimeSpan.FromMilliseconds(250);
 
     readonly bool _ownsHttpClient;
-    readonly HttpMessageHandler? _httpMessageHandler;
     readonly HttpClient _httpClient;
     readonly int _maxSelectionJitterMilliseconds;
     readonly string _scheme;
@@ -88,15 +87,17 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
         }
         else
         {
-            _httpMessageHandler = new SocketsHttpHandler
+            ProbeHandler = new SocketsHttpHandler
             {
+                // Retire idle probe connections so reconnects can resolve a replacement host address.
+                PooledConnectionLifetime = TimeSpan.FromSeconds(30),
                 SslOptions = new SslClientAuthenticationOptions
                 {
                     RemoteCertificateValidationCallback =
                         CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null, certificateAuthorities)
                 }
             };
-            _httpClient = new HttpClient(_httpMessageHandler);
+            _httpClient = new HttpClient(ProbeHandler);
         }
 
         if (disableTls)
@@ -106,6 +107,11 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
             _httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
         }
     }
+
+    /// <summary>
+    /// Gets the owned probe handler, or null when an HTTP client was supplied.
+    /// </summary>
+    internal HttpMessageHandler? ProbeHandler { get; }
 
     /// <inheritdoc/>
     public async Task<ChronicleServerAddress> Next(IReadOnlyList<ChronicleServerAddress> serverAddresses)
@@ -147,7 +153,7 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
         if (_ownsHttpClient)
         {
             _httpClient.Dispose();
-            _httpMessageHandler?.Dispose();
+            ProbeHandler?.Dispose();
         }
     }
 

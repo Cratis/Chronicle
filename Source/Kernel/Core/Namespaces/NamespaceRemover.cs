@@ -119,9 +119,15 @@ public class NamespaceRemover(
         var fallbackSequences = (await namespaceStorage.GetEventSequences()).ToArray();
         foreach (var state in await namespaceStorage.Observers.GetAll())
         {
-            foreach (var eventSequenceId in definitions.TryGetValue(state.Identifier, out var sequence) ? [sequence] : fallbackSequences)
+            if (definitions.TryGetValue(state.Identifier, out var sequence))
             {
-                await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId)));
+                await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(new ObserverKey(state.Identifier, eventStore, @namespace, sequence)));
+                continue;
+            }
+
+            foreach (var eventSequenceId in fallbackSequences)
+            {
+                await RemoveObserverWithoutDefinition(new ObserverKey(state.Identifier, eventStore, @namespace, eventSequenceId));
             }
         }
 
@@ -130,6 +136,18 @@ public class NamespaceRemover(
         foreach (var (observerKey, _) in await GetObserverReminders(eventStore, @namespace))
         {
             await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(observerKey));
+        }
+    }
+
+    async Task RemoveObserverWithoutDefinition(ObserverKey key)
+    {
+        try
+        {
+            await UnsubscribeAndRemove(grainFactory.GetGrain<IObserver>(key));
+        }
+        catch (ObserverKeyDoesNotMatchDefinition)
+        {
+            logger.SkippingMismatchingObserverAddress(key);
         }
     }
 

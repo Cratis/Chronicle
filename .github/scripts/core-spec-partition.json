@@ -134,6 +134,10 @@
             "weight": 0.0006317356200622306
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_AsyncGate.",
+            "weight": 0.0000005
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_BoundedPageDelivery.",
             "weight": 0.0010287435587840238
         },

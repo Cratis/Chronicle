@@ -13,10 +13,10 @@ public class when_applying_with_a_rotated_key : given.a_property_handler
     void Establish()
     {
         _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.Default, EncryptedValueKeyIdentifiers.ForSubject("subject")).Returns(new EncryptionKeyAtRevision(_key, 8));
-        _encryption.Encrypt(Arg.Any<byte[]>(), _key, (EncryptionKeyRevision)8u).Returns([1]);
+        _encryption.Encrypt(Arg.Any<byte[]>(), _key, (EncryptionKeyRevision)8u, Arg.Any<ProtectedValueAddress>()).Returns([1]);
     }
 
     async Task Because() => await _handler.Apply(EventStoreName.NotSet, EventStoreNamespaceName.Default, "subject", JsonValue.Create("value"));
 
-    [Fact] void should_pass_the_concrete_revision_to_encryption() => _encryption.Received(1).Encrypt(Arg.Any<byte[]>(), _key, (EncryptionKeyRevision)8u);
+    [Fact] void should_pass_the_concrete_revision_to_encryption() => _encryption.Received(1).Encrypt(Arg.Any<byte[]>(), _key, (EncryptionKeyRevision)8u, Arg.Any<ProtectedValueAddress>());
 }

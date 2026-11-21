@@ -224,6 +224,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
     internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
 
+    [LoggerMessage(LogLevel.Warning, "Observer deactivation did not finish before the runtime stopped waiting for it; the remaining teardown was abandoned")]
+    internal static partial void DeactivationOutlivedItsTimeout(this ILogger<Observer> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
 
@@ -337,6 +340,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
     internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Stalled observer job {JobId} can never be resumed (its steps were stopped and the job still reads as running); stopping it so the observer can start a new one")]
+    internal static partial void StoppingObserverJobThatCannotBeResumed(this ILogger<Observer> logger, JobId jobId);
 
     [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed: {Reason}")]
     internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId, string reason);
