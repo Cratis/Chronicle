@@ -35,7 +35,7 @@ public class EventCursor(
     readonly IIdentityStorage _identityStorage = identityStorage;
     readonly CancellationToken _cancellationToken = cancellationToken;
     readonly int _batchSize = batchSize;
-    int _currentOffset;
+    ulong? _lastSequenceNumber;
     bool _hasMore = true;
 
     /// <inheritdoc/>
@@ -59,9 +59,8 @@ public class EventCursor(
             return false;
         }
 
-        var batchQuery = _query
+        var batchQuery = ContinueAfterLastRead()
             .OrderBy(e => e.SequenceNumber)
-            .Skip(_currentOffset)
             .Take(_batchSize);
         var eventEntries = await (IncludeHistory ? batchQuery : batchQuery.WithoutHistory())
             .ToListAsync(_cancellationToken);
@@ -84,7 +83,7 @@ public class EventCursor(
         }
 
         Current = appendedEvents;
-        _currentOffset += eventEntries.Count;
+        _lastSequenceNumber = eventEntries[^1].SequenceNumber;
         _hasMore = eventEntries.Count == _batchSize;
 
         return true;
@@ -92,4 +91,14 @@ public class EventCursor(
 
     /// <inheritdoc/>
     public void Dispose() => _scope.Dispose();
+
+    IQueryable<EventEntry> ContinueAfterLastRead()
+    {
+        if (_lastSequenceNumber is not { } lastSequenceNumber)
+        {
+            return _query;
+        }
+
+        return _query.Where(entry => entry.SequenceNumber > lastSequenceNumber);
+    }
 }
