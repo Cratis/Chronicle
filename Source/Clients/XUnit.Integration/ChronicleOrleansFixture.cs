@@ -11,6 +11,7 @@ using KernelCore::Cratis.Chronicle.Namespaces;
 using KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -327,6 +328,13 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
     async Task BootstrapKernelCore()
     {
+        // The client connects and registers in the background once the host has started. Wait for that first, so the
+        // kernel bootstrap below cannot create namespace storage while event types and constraints are still registering.
+        foreach (var startup in Services.GetServices<IHostedService>().OfType<ChronicleClientStartup>())
+        {
+            await startup.Completion.WaitAsync(TimeSpan.FromMinutes(2));
+        }
+
         var grainFactory = Services.GetRequiredService<IGrainFactory>();
         var eventTypes = Services.GetRequiredService<KernelCore::Cratis.Chronicle.EventTypes.IEventTypes>();
         var kernelReactors = Services.GetRequiredService<IReactors>();

@@ -30,6 +30,14 @@ internal sealed class ChronicleClientStartup(
     Func<bool> shouldConnect,
     Action<ILogger>? onStarted = null) : IHostedService
 {
+    readonly TaskCompletionSource _completed = CompletedWhenStopping(lifetime.ApplicationStopping);
+
+    /// <summary>
+    /// Gets a task that completes once the background startup has finished: connected and registered, failed, skipped or abandoned because the host is stopping.
+    /// It never faults, so awaiting it never fails the caller. Intended for test infrastructure that needs deterministic ordering.
+    /// </summary>
+    public Task Completion => _completed.Task;
+
     /// <inheritdoc/>
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -46,7 +54,18 @@ internal sealed class ChronicleClientStartup(
     }
 
     /// <inheritdoc/>
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _completed.TrySetResult();
+        return Task.CompletedTask;
+    }
+
+    static TaskCompletionSource CompletedWhenStopping(CancellationToken stopping)
+    {
+        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        stopping.Register(() => completed.TrySetResult());
+        return completed;
+    }
 
     async Task ConnectInBackground(CancellationToken stopping)
     {
@@ -67,6 +86,10 @@ internal sealed class ChronicleClientStartup(
         catch (Exception ex)
         {
             logger.CouldNotConnectOnStartup(ex);
+        }
+        finally
+        {
+            _completed.TrySetResult();
         }
     }
 }
