@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Connections;
 /// transient token-endpoint outage does not interrupt an otherwise healthy session. Failed fetch
 /// attempts are throttled so an outage does not turn every RPC into a token request.
 /// </remarks>
-public class OAuthTokenProvider : ITokenProvider, IDisposable
+public class OAuthTokenProvider : ITokenProvider, IDisposable, ITokenCacheBindingProvider
 {
     /// <summary>
     /// Assumed token lifetime in seconds when the token response carries no expires_in.
@@ -39,6 +39,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     readonly HttpMessageHandler _httpMessageHandler;
     readonly TimeProvider _timeProvider;
     string? _accessToken;
+    TokenCacheBinding? _acquiredTokenBinding;
     DateTimeOffset _refreshAt = DateTimeOffset.MinValue;
     DateTimeOffset _expiresAt = DateTimeOffset.MinValue;
     DateTimeOffset _lastFailedFetch = DateTimeOffset.MinValue;
@@ -201,6 +202,9 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     }
 
     /// <inheritdoc/>
+    TokenCacheBinding? ITokenCacheBindingProvider.AcquiredTokenBinding => _acquiredTokenBinding;
+
+    /// <inheritdoc/>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
     {
         if (HasFreshToken())
@@ -262,6 +266,10 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         _refreshLock.Dispose();
         _httpMessageHandler.Dispose();
     }
+
+    /// <inheritdoc/>
+    ValueTask<TokenCacheBinding?> ITokenCacheBindingProvider.GetCurrentCacheBinding(CancellationToken cancellationToken) =>
+        ValueTask.FromResult<TokenCacheBinding?>(new(_tokenEndpoint(), _clientId));
 
     /// <summary>
     /// Creates a <see cref="HttpMessageHandler"/> for external authorities that always validates the server certificate.
@@ -327,6 +335,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             var root = document.RootElement;
 
             _accessToken = root.GetProperty("access_token").GetString();
+            _acquiredTokenBinding = new(tokenEndpoint, _clientId);
             var expiresIn = root.TryGetProperty("expires_in", out var expiresInProp) ? expiresInProp.GetInt32() : DefaultExpiresInSeconds;
 
             _expiresAt = _timeProvider.GetUtcNow().AddSeconds(expiresIn);

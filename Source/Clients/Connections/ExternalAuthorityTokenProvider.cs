@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Connections;
 /// discovery is remembered for a short delay, during which the same failure is rethrown without contacting the
 /// authority again, so an outage does not turn every RPC into a discovery request. Redirects are never followed.
 /// </remarks>
-internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposable
+internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposable, ITokenCacheBindingProvider
 {
     const string DiscoveryPath = "/.well-known/openid-configuration";
 
@@ -97,6 +97,12 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
     }
 
     /// <inheritdoc/>
+    TokenCacheBinding? ITokenCacheBindingProvider.AcquiredTokenBinding =>
+        _inner is ITokenCacheBindingProvider { AcquiredTokenBinding: { } binding }
+            ? binding with { Authority = _authority.AbsoluteUri }
+            : null;
+
+    /// <inheritdoc/>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default) =>
         await (await GetInner(cancellationToken)).GetAccessToken(cancellationToken);
 
@@ -117,6 +123,14 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
         {
             _handler.Dispose();
         }
+    }
+
+    /// <inheritdoc/>
+    async ValueTask<TokenCacheBinding?> ITokenCacheBindingProvider.GetCurrentCacheBinding(CancellationToken cancellationToken)
+    {
+        ITokenCacheBindingProvider inner = await GetInner(cancellationToken);
+        var binding = await inner.GetCurrentCacheBinding(cancellationToken);
+        return binding is null ? null : binding with { Authority = _authority.AbsoluteUri };
     }
 
     /// <summary>

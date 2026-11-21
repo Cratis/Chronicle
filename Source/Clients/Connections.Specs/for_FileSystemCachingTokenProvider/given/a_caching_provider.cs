@@ -19,7 +19,10 @@ public class a_caching_provider : Specification
     {
         _directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         _cacheFile = Path.Combine(_directory, "nested", "token.json");
-        _inner = Substitute.For<ITokenProvider>();
+        _inner = Substitute.For<ITokenProvider, ITokenCacheBindingProvider>();
+        var binding = new TokenCacheBinding("https://server.example/connect/token", "client-one");
+        ((ITokenCacheBindingProvider)_inner).GetCurrentCacheBinding(Arg.Any<CancellationToken>()).Returns(binding);
+        ((ITokenCacheBindingProvider)_inner).AcquiredTokenBinding.Returns(binding);
         _provider = new FileSystemCachingTokenProvider(_inner, _cacheFile);
     }
 
