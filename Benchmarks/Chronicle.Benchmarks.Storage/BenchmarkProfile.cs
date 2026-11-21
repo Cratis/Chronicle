@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 /// The sizes and iteration counts of one benchmark run. A profile bounds the run: nothing is measured
 /// beyond what the profile names.
 /// </summary>
-/// <param name="Name">The profile name, `smoke` or `medium`.</param>
+/// <param name="Name">The profile name, `smoke`, `short` or `medium`.</param>
 /// <param name="Workload">The sizes the workloads are measured at.</param>
 /// <param name="PayloadBytes">The size of the event payload.</param>
 /// <param name="Plan">The iteration counts and the time budget.</param>
@@ -15,6 +15,10 @@ public sealed record BenchmarkProfile(string Name, WorkloadShape Workload, int P
 {
     /// <summary>Gets the bounded profile: one thousand events, one warmup, three iterations, a few minutes.</summary>
     public static BenchmarkProfile Smoke { get; } = new("smoke", new([1_000], [1, 8], [10, 100, 1_000], [1, 50, 500]), 256, new(1, 3, 20, false));
+
+    /// <summary>Gets the hosted on-demand profile: ten thousand events, two warmups and ten measured iterations.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1720:Identifier contains type name", Justification = "Short is the benchmark profile name, not a numeric type.")]
+    public static BenchmarkProfile Short { get; } = new("short", new([10_000], [1, 8, 32], [10, 100, 1_000], [1, 50, 500]), 256, new(2, 10, 120, false));
 
     /// <summary>Gets the on-demand profile: ten thousand and one million events. Long; never part of a gate.</summary>
     public static BenchmarkProfile Medium { get; } = new("medium", new([10_000, 1_000_000], [1, 8, 32], [10, 100, 1_000], [1, 50, 500]), 256, new(1, 5, 240, true));
@@ -50,8 +54,9 @@ public sealed record BenchmarkProfile(string Name, WorkloadShape Workload, int P
     public static BenchmarkProfile Parse(string name) => name.ToLowerInvariant() switch
     {
         "smoke" => Smoke,
+        "short" => Short,
         "medium" => Medium,
-        _ => throw new ArgumentException($"Unknown profile '{name}'. Use smoke or medium.", nameof(name))
+        _ => throw new ArgumentException($"Unknown profile '{name}'. Use smoke, short or medium.", nameof(name))
     };
 
     /// <summary>Gets a copy with a different payload size.</summary>

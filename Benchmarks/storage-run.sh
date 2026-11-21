@@ -4,7 +4,7 @@
 #
 # Runs the storage-provider benchmark harness (Chronicle.Benchmarks.Storage).
 #
-# Usage: storage-run.sh [--profile smoke|medium] [--providers sqlite,pg,mssql,mongo]
+# Usage: storage-run.sh [--profile smoke|short|medium] [--providers sqlite,pg,mssql,mongo]
 #                       [--repetitions N] [--max-load X] [--output DIR] [extra harness flags]
 #
 # Exit codes: 0 ok, 1 a benchmark or measured operation failed, 64 bad usage, 2 medium profile not confirmed, 3 machine too loaded (nothing measured).

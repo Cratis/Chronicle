@@ -94,11 +94,26 @@ public sealed class EventSequenceStorageHost : IDisposable
     /// Opens a storage instance over the hosted table.
     /// </summary>
     /// <returns>The storage.</returns>
-    public IEventSequenceStorage Open()
+    public IEventSequenceStorage Open() => Open(null);
+
+    /// <summary>
+    /// Opens a storage instance over the hosted table with optional namespace storage.
+    /// </summary>
+    /// <param name="namespaceContext">Creates a namespace context owned by each returned scope, or null to leave namespace storage unconfigured.</param>
+    /// <returns>The storage.</returns>
+    public IEventSequenceStorage Open(Func<NamespaceDbContext>? namespaceContext)
     {
         var database = Substitute.For<IDatabase>();
         database.EventSequenceTable(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<string>())
             .Returns(_ => Task.FromResult(new DbContextScope<EventSequenceDbContext>(CreateContext(), () => { })));
+        if (namespaceContext is not null)
+        {
+            database.Namespace(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>())
+                .Returns(_ => new DbContextScope<NamespaceDbContext>(namespaceContext(), () => { }));
+            database.ExistingNamespace(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>())
+                .Returns(_ => new DbContextScope<NamespaceDbContext>(namespaceContext(), () => { }));
+        }
+
         return new EventSequenceStorage(
             "test-store",
             "test-namespace",

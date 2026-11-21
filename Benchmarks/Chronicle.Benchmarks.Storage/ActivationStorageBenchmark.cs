@@ -8,8 +8,7 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 
 /// <summary>
 /// The storage reads an event sequence performs when it activates: its saved state and its tail sequence numbers.
-/// This measures the storage half of #27 on every provider; the warm/cold/post-crash grain activation itself needs
-/// the Clustering fixture and is a follow-up.
+/// This measures storage reads on every provider; warm/cold/post-crash grain activation is tracked separately in #6045.
 /// </summary>
 [MemoryDiagnoser]
 public class ActivationStorageBenchmark : StorageBenchmark
@@ -23,7 +22,14 @@ public class ActivationStorageBenchmark : StorageBenchmark
     {
         await StartHost();
         _storage = Host.CreateSequence();
-        await Seed(_storage, Profile.EventCounts.Min());
+        var count = Profile.EventCounts.Min();
+        await Seed(_storage, count);
+        await _storage.SaveState(new EventSequenceState
+        {
+            SequenceNumber = (ulong)count,
+            TailSequenceNumberPerEventType = (await _storage.GetTailSequenceNumbersForEventTypes([BenchmarkEvents.Selected, BenchmarkEvents.Other])).ToDictionary(pair => pair.Key.Id, pair => pair.Value)
+        });
+        Host.Counter.Reset();
     }
 
     /// <summary>Reads the sequence state.</summary>
