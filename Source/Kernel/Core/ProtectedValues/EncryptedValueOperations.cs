@@ -57,7 +57,7 @@ static class EncryptedValueOperations
         ProtectionKind kind)
     {
         var pair = await provisioner.EnsureKeyWithRevisionFor(eventStore, eventStoreNamespace, keyIdentifier);
-        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value, pair.Revision), new(kind, keyIdentifier, pair.Key, pair.Revision));
+        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value, pair.Revision, new(eventStore, eventStoreNamespace, keyIdentifier)), new(kind, keyIdentifier, pair.Key, pair.Revision));
     }
 
     /// <summary>

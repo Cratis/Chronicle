@@ -28,6 +28,8 @@ public class EncryptionKeyCacheGrainService(
     /// <inheritdoc/>
     public Task Evict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
     {
+        // Certified signing keys never outlive the subject's key: erasure drops them from this silo's memory too.
+        EnvelopeSigningKeys.Shared.Evict(EnvelopeSigning.Commit(new(eventStore, eventStoreNamespace, identifier)));
         if (keyStore is IEvictEncryptionKeyCache evictable)
         {
             evictable.EvictFromCache(eventStore, eventStoreNamespace, identifier);
