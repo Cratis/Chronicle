@@ -70,6 +70,7 @@ public sealed class UnrecoverableProtectedValueReporter
     internal void Report(Identity identity, EncryptionKeyUnrecoverable failure)
     {
         if (!Remember(identity)) return;
+
         // Paths can contain personal dictionary keys; keep them for deduplication, never for logging.
         _logger.UnrecoverableProtectedValue(identity.Store, identity.Namespace, identity.Phase, failure.InnerException?.GetType().Name ?? failure.GetType().Name, failure.AttemptedRevisions);
         _count();
