@@ -30,9 +30,12 @@ export function childCommand(executable, args) {
         return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
     })].join(' ');
 }
-export function invocation(info, { directory, filter, timeout, coverage = true }) {
+export function invocation(info, { directory, filter, timeout, coverage = true, classWatchdog = false }) {
     if (info.runner !== 'v3') fail(`${info.project}: executable v3 runner required`);
     const args = [info.dll, ...(filter ? ['-filterVSTest', filter] : []), '-result-trx', path.join(directory, 'results.trx')];
+    // Only ordinary mixed dispatch opts in. Other callers keep their reporters
+    // and whole-session deadline. Disable ANSI colors to keep xUnit's JSON parseable.
+    if (classWatchdog) args.push('-noAutoReporters', '-noColor', '-reporter', 'json', '-diagnostics', '-longRunning', '120');
     if (!coverage) return { command: 'dotnet', args, timeout };
     return { command: 'dotnet', args: ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'coverage.cobertura.xml'), childCommand('dotnet', args)], timeout };
 }
@@ -56,7 +59,9 @@ async function collectProject(info, options, execute) {
     const call = invocation(info, options);
     await access(path.resolve(options.root, info.dll));
     if ((await readdir(options.directory)).length) fail(`${info.project}: results directory must be fresh and empty`);
-    const child = await execute(call.command, call.args, { cwd: options.root, timeout: call.timeout });
+    const execution = { cwd: options.root, timeout: call.timeout };
+    if (options.classWatchdog) execution.specProgress = { directory: options.directory };
+    const child = await execute(call.command, call.args, execution);
     if (child.code !== 0) throw Object.assign(new Error(`${info.project}: child exited ${child.code}`), { exitCode: child.code });
     const identities = validateTrx(await readFile(path.join(options.directory, 'results.trx'), 'utf8'));
     if (options.coverage === false) {
@@ -222,7 +227,7 @@ export async function main(args = process.argv.slice(2), { root = process.cwd(),
         await mkdir(directory); // No reuse, caching or duplicate output assembly identities.
         const started = performance.now();
         const unitFilter = info.partFilter ? `${filter}&${info.partFilter}` : filter;
-        await runProject(info, { root, directory, filter: unitFilter, timeout: Number(timeouts[0][1]) }, execute);
+        await runProject(info, { root, directory, filter: unitFilter, timeout: Number(timeouts[0][1]), classWatchdog: true }, execute);
         const id = info.unitId ?? info.project;
         completed.push(id);
         console.log(`Spec project completed: ${id}; ${((performance.now() - started) / 1000).toFixed(3)} seconds including validation`);

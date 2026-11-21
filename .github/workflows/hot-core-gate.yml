@@ -67,7 +67,10 @@ jobs:
         run: |
           python3 -E -s gate-tools/.github/scripts/test-detect-hot-core-changes.py
           python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate.py
-          python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate-jobs.py
+          # Older trusted bases predate the split job-evidence specs; the PR build always runs them.
+          if [ -f gate-tools/.github/scripts/test-evaluate-hot-core-gate-jobs.py ]; then
+            python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate-jobs.py
+          fi
           policy_args=()
           if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then
             policy_args=(--policy-root gate-tools)
@@ -115,6 +118,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -237,8 +242,10 @@ jobs:
 
     steps:
       # Re-run-failed-jobs reuses detect's outputs and re-evaluates evidence in this job.
-      # The evaluator keeps this check running while exact-head ordinary specs are still running;
-      # missing evidence and integration/detection failures still fail closed immediately.
+      # needs.requested holds the same-run verdict until the called workflow finishes; skipped means not requested.
+      # Exact-head ordinary specs keep only the existing bounded wait. Out-of-run Requested Integration
+      # and exhausted specs waits return a notice and non-zero (never a pending success), without polling
+      # integration or creating a check-run. Completion refresh re-derives the verdict from finished jobs.
       - name: Checkout gate script
         uses: actions/checkout@v4
         with:
