@@ -33,6 +33,7 @@ public class an_observer_releasing_pinned_history : an_observer
             new EventTypeSchema(_pin, EventTypeOwner.Client, EventTypeSource.Code, pinnedSchema)
         };
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(call => schemas.Where(schema => call.Arg<IEnumerable<EventType>>().Contains(schema.Type)));
+        _eventTypesStorage.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns(schemas);
         _eventTypesStorage.HasFor(_pin.Id, _pin.Generation).Returns(true);
         _eventTypesStorage.GetDefinition(_pin.Id).Returns(new EventTypeDefinition(_pin.Id, EventTypeOwner.Client, false, [new(1, firstSchema), new(2, pinnedSchema)], []));
         var metadata = Substitute.For<IJsonSchemaMetadataManager>();

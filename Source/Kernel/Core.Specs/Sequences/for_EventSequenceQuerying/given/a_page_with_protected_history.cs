@@ -15,7 +15,7 @@ public class a_page_with_protected_history : Events.for_EventCompliance.given.an
     {
         _storage = Substitute.For<IStorage>();
         var store = _storage.GetEventStore((EventStoreName)"store");
-        store.EventTypes.GetFor(Arg.Any<IEnumerable<global::Cratis.Chronicle.Concepts.Events.EventType>>()).Returns(call => _schemas.Values.Where(schema => call.Arg<IEnumerable<global::Cratis.Chronicle.Concepts.Events.EventType>>().Contains(schema.Type)));
+        store.EventTypes.GetAllGenerationsForEventType(Arg.Any<global::Cratis.Chronicle.Concepts.Events.EventType>()).Returns(call => _schemas.Values.Where(schema => schema.Type.Id == call.Arg<global::Cratis.Chronicle.Concepts.Events.EventType>().Id));
         var cursor = Substitute.For<IEventCursor>();
         cursor.MoveNext().Returns(true, false);
         cursor.Current.Returns([_event]);

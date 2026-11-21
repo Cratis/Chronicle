@@ -23,6 +23,7 @@ public class an_event_type_stored_at_two_generations : Specification
         _second_generation_schema = new(second_generation, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema { Description = "second" });
 
         _eventTypes = Substitute.For<IEventTypesStorage>();
+        _eventTypes.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns([_first_generation_schema, _second_generation_schema]);
         _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>())
             .Returns(callInfo => Task.FromResult<IEnumerable<EventTypeSchema>>(
                 [.. callInfo.Arg<IEnumerable<EventType>>().Select(SchemaFor)]));

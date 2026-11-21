@@ -25,6 +25,7 @@ public class and_the_event_is_stored_at_a_later_generation_than_the_subscribed_o
         _first_generation_schema = new(_first_generation, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema { Description = "first" });
         _second_generation_schema = new(_second_generation, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema { Description = "second" });
 
+        _eventTypesStorage.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns([_first_generation_schema, _second_generation_schema]);
         _performState.EventTypes = [_first_generation];
         _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>())
             .Returns(callInfo => Task.FromResult<IEnumerable<EventTypeSchema>>(

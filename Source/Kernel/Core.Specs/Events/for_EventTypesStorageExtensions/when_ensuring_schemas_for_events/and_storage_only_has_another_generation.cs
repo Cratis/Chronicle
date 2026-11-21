@@ -10,7 +10,7 @@ public class and_storage_only_has_another_generation : given.an_event_type_store
 {
     Dictionary<EventType, EventTypeSchema> _schemas = [];
 
-    void Establish() => _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>())
+    void Establish() => _eventTypes.GetAllGenerationsForEventType(Arg.Any<EventType>())
         .Returns(Task.FromResult<IEnumerable<EventTypeSchema>>([_second_generation_schema]));
 
     async Task Because() => await _eventTypes.EnsureSchemasFor(_schemas, [EventStoredAt(first_generation)]);

@@ -44,7 +44,14 @@ public static class EventTypesStorageExtensions
             return;
         }
 
-        var stored = (await eventTypes.GetFor(missing)).ToArray();
+        // GetFor can relabel a substituted schema with an absent requested generation.
+        // Enumerating registrations leaves absent history on the unchanged fallback path.
+        var stored = new List<EventTypeSchema>();
+        foreach (var eventType in missing.DistinctBy(type => type.Id))
+        {
+            stored.AddRange(await eventTypes.GetAllGenerationsForEventType(eventType));
+        }
+
         foreach (var eventType in missing)
         {
             var schema = stored.FirstOrDefault(_ => _.Type.Id == eventType.Id && _.Type.Generation == eventType.Generation);

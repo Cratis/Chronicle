@@ -25,6 +25,8 @@ public class a_downcast_protected_token : Chronicle.EventSequences.Migrations.fo
         _pinnedSchemas = new Dictionary<EventType, EventTypeSchema> { [_pin] = new(_pin, EventTypeOwner.Server, EventTypeSource.Code, _schemas[0]) };
         _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(call => call.Arg<IEnumerable<EventType>>()
             .Select(type => new EventTypeSchema(type, EventTypeOwner.Server, EventTypeSource.Code, _schemas[type.Generation.Value - 1])).ToArray());
+        _eventTypes.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns(_schemas.Select((schema, index) =>
+            new EventTypeSchema(new(_pin.Id, (uint)index + 1), EventTypeOwner.Server, EventTypeSource.Code, schema)).ToArray());
         var cache = new EventTypeSchemaCache(_storage);
         _release = new(_storage, new EventCompliance(_manager, _converter, cache), _migrations, _manager, _converter, cache);
     }

@@ -14,7 +14,7 @@ public class and_several_events_share_a_type_and_generation : given.an_event_typ
         _schemas,
         [EventStoredAt(first_generation), EventStoredAt(first_generation), EventStoredAt(second_generation)]);
 
-    [Fact] void should_ask_storage_once_for_each_type_and_generation() =>
-        _eventTypes.Received(1).GetFor(Arg.Is<IEnumerable<EventType>>(_ => _.Count() == 2));
+    [Fact] void should_ask_storage_once_for_each_type() =>
+        _eventTypes.Received(1).GetAllGenerationsForEventType(Arg.Is<EventType>(_ => _.Id == first_generation.Id));
     [Fact] void should_hold_a_schema_for_each_generation() => _schemas.Count.ShouldEqual(2);
 }

@@ -15,7 +15,7 @@ public class and_event_type_schema_is_loaded_during_handling : given.an_observer
     void Establish()
     {
         _schema = new EventTypeSchema(event_type, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema());
-        _eventTypesStorage.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([_schema]);
+        _eventTypesStorage.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns([_schema]);
 
         _subscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(ObserverSubscriberResult.Ok(42UL));
@@ -23,7 +23,7 @@ public class and_event_type_schema_is_loaded_during_handling : given.an_observer
 
     async Task Because() => await _observer.Handle("Something", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
 
-    [Fact] void should_fetch_the_missing_schema_during_handling() => _eventTypesStorage.Received(1).GetFor(Arg.Any<IEnumerable<EventType>>());
+    [Fact] void should_fetch_the_missing_schema_during_handling() => _eventTypesStorage.Received(1).GetAllGenerationsForEventType(event_type);
 
     [Fact] void should_decrypt_using_the_loaded_schema() => _eventCompliance.Received(1).Release(
         Arg.Any<IEnumerable<AppendedEvent>>(),
