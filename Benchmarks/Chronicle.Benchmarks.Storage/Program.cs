@@ -51,7 +51,7 @@ try
             await File.WriteAllTextAsync(Path.Combine(providerDirectory, "ledger.json"), ledger.ToJson());
 
             var job = Job.Default
-                .WithToolchain(InProcessNoEmitToolchain.Instance)
+                .WithToolchain(InProcessNoEmitToolchain.Default)
                 .WithStrategy(RunStrategy.Monitoring)
                 .WithLaunchCount(1)
                 .WithWarmupCount(options.Profile.WarmupCount)
@@ -66,7 +66,7 @@ try
                 .AddColumnProvider(BenchmarkDotNet.Columns.DefaultColumnProviders.Instance)
                 .WithOptions(ConfigOptions.DisableOptimizationsValidator)
                 .WithArtifactsPath(Path.Combine(providerDirectory, "bdn"));
-            var summaries = BenchmarkSwitcher.FromAssembly(typeof(StorageBenchmark).Assembly).Run(["--filter", options.Filter], config);
+            var summaries = await BenchmarkSwitcher.FromAssembly(typeof(StorageBenchmark).Assembly).RunAsync(["--filter", options.Filter], config);
             await CountedPass.Run(typeof(StorageBenchmark).Assembly, options.Profile.IterationCount, options.Filter);
             var verdict = RunVerdict.Of(summaries, Measurements.TotalErrors());
             if (!verdict.Succeeded)

@@ -4,6 +4,6 @@
 using BenchmarkDotNet.Running;
 using Cratis.Chronicle.Benchmarks.SqlEventStorage;
 
-var summaries = BenchmarkSwitcher.FromAssembly(typeof(EventSequenceStorageBenchmark).Assembly).Run(args).ToArray();
+var summaries = (await BenchmarkSwitcher.FromAssembly(typeof(EventSequenceStorageBenchmark).Assembly).RunAsync(args)).ToArray();
 var failures = summaries.SelectMany(summary => summary.Reports).Count(report => !report.Success || report.ResultStatistics is null);
 return summaries.Length > 0 && failures == 0 && summaries.All(summary => !summary.HasCriticalValidationErrors) ? 0 : 1;

@@ -26,6 +26,10 @@ public class EventSequenceStorageBenchmark : IAsyncDisposable
     ulong _next = 10000;
     int _read;
 
+    /// <summary>Gets or sets the cancellation token supplied by the benchmark runner.</summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
     /// <summary>Gets or sets the SQL provider.</summary>
     [Params(SqlStorageProvider.PostgreSql, SqlStorageProvider.SqlServer)]
     public SqlStorageProvider Provider { get; set; }
@@ -104,17 +108,17 @@ public class EventSequenceStorageBenchmark : IAsyncDisposable
     /// <summary>Reads a bounded thousand-event range.</summary>
     /// <returns>The event count.</returns>
     [Benchmark]
-    public async Task<int> GetRange1000() => await Drain(await _storage.GetRange(0, 999));
+    public async Task<int> GetRange1000() => await Drain(await _storage.GetRange(0, 999, cancellationToken: CancellationToken));
 
     /// <summary>Reads catch-up events narrowed by event type.</summary>
     /// <returns>The event count.</returns>
     [Benchmark]
-    public async Task<int> CatchUpByEventType() => await Drain(await _storage.GetRange(0, 9999, eventTypes: [_eventType]));
+    public async Task<int> CatchUpByEventType() => await Drain(await _storage.GetRange(0, 9999, eventTypes: [_eventType], cancellationToken: CancellationToken));
 
     /// <summary>Reads a cursor from a deep sequence number.</summary>
     /// <returns>The event count.</returns>
     [Benchmark]
-    public async Task<int> CursorFromSequenceNumber() => await Drain(await _storage.GetFromSequenceNumber(5000));
+    public async Task<int> CursorFromSequenceNumber() => await Drain(await _storage.GetFromSequenceNumber(5000, cancellationToken: CancellationToken));
 
     static ExpandoObject Content()
     {
