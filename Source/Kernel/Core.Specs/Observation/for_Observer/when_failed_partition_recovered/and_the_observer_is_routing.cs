@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 
@@ -65,6 +66,7 @@ public class and_the_observer_is_routing : for_Observer.given.an_observer_with_s
     [Fact] void should_keep_the_recovered_last_handled_position() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual(_recovered);
     [Fact] void should_keep_the_moved_tail() => _stateStorage.State.TailEventSequenceNumber.ShouldEqual(_movedTail);
     [Fact] void should_remove_the_recovered_failure() => _failedPartitionsStorage.State.Partitions.Select(_ => _.Partition).ShouldNotContain(_partition);
+    [Fact] void should_clear_the_failed_partition_count() => _stateStorage.State.FailedPartitionCount.ShouldEqual(FailedPartitionCount.Zero);
     [Fact] void should_have_routed_from_the_pre_recovery_snapshot() => _eventSequence.Received(1).GetNextSequenceNumberGreaterOrEqualTo(_recovered, Arg.Any<IEnumerable<EventType>>());
     [Fact] void should_start_both_catch_ups_after_the_recovered_event() => _jobsManager.Received(2).Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Is<CatchUpObserverRequest>(_ => _.FromEventSequenceNumber == _recovered.Next()));
     [Fact] void should_never_request_catch_up_including_the_recovered_event() => _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Is<CatchUpObserverRequest>(_ => _.FromEventSequenceNumber <= _recovered));
