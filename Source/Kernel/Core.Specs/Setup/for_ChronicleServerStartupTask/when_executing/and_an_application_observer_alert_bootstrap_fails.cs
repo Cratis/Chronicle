@@ -32,8 +32,8 @@ public class and_an_application_observer_alert_bootstrap_fails : given.a_startup
 
     async Task Because() => _error = await Catch.Exception(Execute);
 
-    [Fact] void should_fail_startup_with_the_application_bootstrap_failure() => _error.ShouldEqual(_bootstrapFailure);
-    [Fact] async Task should_exhaust_the_required_bootstrap_retry_budget() => await _applicationObserver.Received(50).Ensure();
+    [Fact] void should_not_fail_startup() => _error.ShouldBeNull();
+    [Fact] async Task should_retry_in_the_background_once_per_pass() => await _applicationObserver.Received(6).Ensure();
     [Fact] async Task should_not_require_capture_alert_bootstrap() => await _captureObserver.DidNotReceive().Ensure();
-    [Fact] void should_not_run_the_final_authentication_step() => _bootstrapClientsEnsured.ShouldBeFalse();
+    [Fact] void should_complete_startup() => _bootstrapClientsEnsured.ShouldBeTrue();
 }
