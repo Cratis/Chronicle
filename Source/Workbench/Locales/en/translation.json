@@ -75,6 +75,7 @@
         "readModels": "Read Models",
         "identities": "Identities",
         "closedStreams": "Closed Streams",
+        "constraints": "Constraints",
         "general": {
             "groupLabel": "General",
             "eventTypes": "Event Types",
@@ -351,6 +352,7 @@
                 "empty": "No projections",
                 "actions": {
                     "new": "New",
+                    "newGraph": "New graph",
                     "save": "Save",
                     "preview": "Preview",
                     "timeMachine": "Time Machine",
@@ -366,6 +368,36 @@
                 "previewDisabledReasons": {
                     "emptyContent": "Editor is empty",
                     "validationErrors": "Fix validation errors first"
+                },
+                "graphPreview": {
+                    "notPreviewed": "Press Preview to run the events through the graph projection in memory. Nothing is saved and no graph database is needed",
+                    "summary": "{graph}: {nodes} nodes and {edges} edges from {events} events",
+                    "eventErrors": "Events the projection could not apply",
+                    "emptyNodes": "No nodes. Check that the events the projection reacts to are in the event store",
+                    "emptyEdges": "No edges",
+                    "tabs": {
+                        "nodes": "Nodes",
+                        "edges": "Edges",
+                        "view": "View"
+                    },
+                    "columns": {
+                        "label": "Label",
+                        "key": "Key",
+                        "type": "Type",
+                        "source": "Source",
+                        "target": "Target",
+                        "identity": "Identity",
+                        "properties": "Properties"
+                    },
+                    "view": {
+                        "root": "Start at",
+                        "depth": "Levels",
+                        "filterProperty": "Where",
+                        "anyProperty": "(no filter)",
+                        "filterValue": "equals",
+                        "read": "Read view",
+                        "errors": "The view could not be read"
+                    }
                 },
                 "dialogs": {
                     "unsavedChanges": {
@@ -838,6 +870,20 @@
                     "examples": "Example partitions (most recent, up to 10)",
                     "viewFailedPartitions": "View failed partitions"
                 }
+            },
+            "constraints": {
+                "title": "Constraints",
+                "description": "Rebuild all applicable unique and closing constraint indexes from the event log for this event store and namespace.",
+                "action": "Reindex constraints",
+                "dialog": {
+                    "title": "Reindex constraints",
+                    "message": "Rebuild all applicable constraint indexes? While the reindex runs, governed appends may wait."
+                },
+                "started": "Constraint reindex started.",
+                "viewJob": "Follow job {id} in Jobs",
+                "unauthorized": "You are not authorized to reindex constraints.",
+                "failed": "Constraint reindex could not be started.",
+                "invalid": "The constraint reindex request is invalid."
             },
             "closedStreams": {
                 "title": "Closed Streams",

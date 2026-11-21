@@ -26,6 +26,9 @@ public static class EventStoreSubscriptionDefinitionConverters
             GenerationDelivery = definition.GenerationDelivery,
             NamedTags = definition.NamedTags.Any()
                 ? JsonSerializer.Serialize(definition.NamedTags.Select(tag => new[] { tag.Name.Value, tag.Value }).ToArray())
+                : null,
+            SourceNamespaces = definition.SourceNamespaces.Any()
+                ? JsonSerializer.Serialize(definition.SourceNamespaces.Select(_ => _.Value).ToArray())
                 : null
         };
 
@@ -45,6 +48,10 @@ public static class EventStoreSubscriptionDefinitionConverters
             NamedTags = string.IsNullOrEmpty(definition.NamedTags)
                 ? []
                 : JsonSerializer.Deserialize<string[][]>(definition.NamedTags)!
-                    .Select(pair => new Concepts.Events.NamedTag(new Concepts.Events.TagName(pair[0]), pair[1])).ToArray()
+                    .Select(pair => new Concepts.Events.NamedTag(new Concepts.Events.TagName(pair[0]), pair[1])).ToArray(),
+            SourceNamespaces = string.IsNullOrEmpty(definition.SourceNamespaces)
+                ? []
+                : JsonSerializer.Deserialize<string[]>(definition.SourceNamespaces)!
+                    .Select(_ => new Concepts.EventStoreNamespaceName(_)).ToArray()
         };
 }

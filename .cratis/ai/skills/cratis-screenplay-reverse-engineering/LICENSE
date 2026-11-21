@@ -1,0 +1,15 @@
+# cratis-ai-managed: skills/cratis-screenplay-reverse-engineering/LICENSE
+Copyright (c) Cratis. All rights reserved.
+Licensed under the MIT license. See LICENSE file in the canonical Cratis/AI repository for the full license text.
+
+Third-party notices
+
+This skill restates, in Cratis wording, ideas from morluto/rea (https://github.com/morluto/rea),
+which is released under the MIT license: evidence rows that carry explicit unknowns, and the
+executable-intake approach (static before dynamic, per-kind techniques, tracing a feature across
+IPC, network and storage). No upstream text is reused.
+
+This skill refers to material that `cratis-screenplay-legacy-extraction` adapts from agentic-engineer
+and the Eventmodelers Build-Kits by Martin Dilger and Nebulit GmbH (https://nebulit.de), used with
+the explicit consent of Martin Dilger and Nebulit GmbH. That material remains credited to them; see
+the license file of that skill.

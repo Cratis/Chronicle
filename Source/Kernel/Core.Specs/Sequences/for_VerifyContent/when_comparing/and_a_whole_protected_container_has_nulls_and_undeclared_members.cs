@@ -24,7 +24,7 @@ public class and_a_whole_protected_container_has_nulls_and_undeclared_members : 
         _command = _command with { Content = """{"value":{"name":"private","optional":null,"undeclared":{"amount":0.1234567890123456789012345678,"nil":null}}}""" };
         var key = await _keys.TryGetFor((EventStoreName)"store", (EventStoreNamespaceName)"tenant", "subject");
         var document = JsonNode.Parse(_command.Content)!.AsObject();
-        document["value"] = ProtectedValueCodec.Encrypt(_encryption, key!, document["value"]!);
+        document["value"] = ProtectedValueCodec.Encrypt(_encryption, key!, document["value"]!, EncryptionKeyRevision.Initial);
         var content = _converter.ToExpandoObject(document, schema);
         var serialized = _storage.GetEventStore("store").GetNamespace("tenant").GetEventSequence("log").SerializeContentForVerification(content, schema);
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = serialized! } };

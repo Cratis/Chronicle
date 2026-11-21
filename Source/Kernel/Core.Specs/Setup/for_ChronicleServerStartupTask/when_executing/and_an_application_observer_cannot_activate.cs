@@ -12,7 +12,8 @@ public class and_an_application_observer_cannot_activate : given.a_startup_task_
 
     async Task Because() => _error = await Catch.Exception(Execute);
 
-    [Fact] void should_fail_startup_with_the_application_observer_failure() => _error.ShouldEqual(_activationFailure);
-    [Fact] async Task should_exhaust_the_required_rehydration_retry_budget() => await _reactorObserver.Received(50).Ensure();
-    [Fact] void should_not_run_the_final_authentication_step() => _bootstrapClientsEnsured.ShouldBeFalse();
+    [Fact] void should_not_fail_startup() => _error.ShouldBeNull();
+    [Fact] async Task should_retry_in_the_background_once_per_pass() => await _reactorObserver.Received(6).Ensure();
+    [Fact] void should_complete_startup() => _bootstrapClientsEnsured.ShouldBeTrue();
+    [Fact] void should_report_giving_up() => LogEntries.Any(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.DeferredStartupWorkGaveUp)).ShouldBeTrue();
 }

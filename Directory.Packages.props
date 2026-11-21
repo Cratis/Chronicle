@@ -17,8 +17,8 @@
     <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.6.5" />
     <!-- Cratis -->
     <!-- Cratis.Choreography requires at least Cratis.Fundamentals 7.32.0; a lower pin fails restore with NU1605. -->
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.34.0" />
-    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.34.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.34.3" />
+    <PackageVersion Include="Cratis.Metrics.Roslyn" Version="7.34.3" />
     <!-- Keep the Arc runtime packages aligned; Chronicle.Testing declares Arc dependencies for its embedded kernel. -->
     <PackageVersion Include="Cratis.Arc" Version="22.184.0" />
     <PackageVersion Include="Cratis.Arc.Core" Version="22.184.0" />
@@ -71,6 +71,7 @@
     <PackageVersion Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.4.2" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="10.4.2" />
     <PackageVersion Include="Microsoft.Orleans.Server" Version="10.4.2" />
+    <PackageVersion Include="Microsoft.Orleans.Connections.Security" Version="10.4.2" />
     <PackageVersion Include="Microsoft.Orleans.Serialization" Version="10.4.2" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.4.2" />
     <PackageVersion Include="Microsoft.Orleans.Serialization.SystemTextJson" Version="10.4.2" />
@@ -138,7 +139,7 @@
     <PackageVersion Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.3.14" />
     <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.7.2" />
-    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.16.0-preview.2" />
     <PackageVersion Include="humanizer" Version="3.0.10" />
     <PackageVersion Include="Mono.Cecil" Version="0.11.6" />
     <PackageVersion Include="NJsonSchema" Version="11.6.1" />

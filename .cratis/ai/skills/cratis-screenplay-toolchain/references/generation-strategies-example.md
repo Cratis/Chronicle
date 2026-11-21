@@ -53,6 +53,8 @@ module Shop
           invoiceNumber InvoiceNumber = invoiceNumber
           pickupTicket TicketNumber = pickupTicket
         returns orderId
+      screen Place
+        action PlaceOrder for screen
       specification PlacesWithPinnedValues
         given clock "2026-10-02T09:00:00Z"
         when PlaceOrder
@@ -104,6 +106,8 @@ module Shop
       command ReserveReference
         reference TenantOrderReference generated
         returns reference
+      screen ReserveReference
+        action ReserveReference for screen
       specification UsesThePinnedReference
         when ReserveReference
           generated reference = "shop-eu:order_example"

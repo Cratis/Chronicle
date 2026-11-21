@@ -108,7 +108,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Waiting for {Count} live deliveries to settle before choosing where catch-up starts")]
     internal static partial void WaitingForLiveDeliveriesBeforeCatchUp(this ILogger<Observer> logger, int count);
 
-    [LoggerMessage(LogLevel.Debug, "Skipping catch-up because observer is replaying")]
+    [LoggerMessage(LogLevel.Information, "Skipping catch-up because observer is replaying")]
     internal static partial void SkippingCatchUpBecauseObserverIsReplaying(this ILogger<Observer> logger);
 
     [LoggerMessage(LogLevel.Debug, "Waiting for catch-up handover to finish routing before replaying")]
@@ -180,13 +180,13 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Trace, "Entering catchup state")]
     internal static partial void Entering(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Existing catch up job running, will let it finish")]
+    [LoggerMessage(LogLevel.Information, "Existing catch up job running, will let it finish")]
     internal static partial void FinishingExistingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Existing catch up job found - resuming")]
+    [LoggerMessage(LogLevel.Information, "Existing catch up job found - resuming")]
     internal static partial void ResumingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Trace, "Start new catch up job from event sequence number {EventSequenceNumber}")]
+    [LoggerMessage(LogLevel.Information, "Start new catch up job from event sequence number {EventSequenceNumber}")]
     internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
 
     [LoggerMessage(LogLevel.Warning, "No catch-up job took ownership of the preparation - clearing it rather than waiting for a job that will never report")]
@@ -215,14 +215,17 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "The client {ConnectionId} that was superseded by a later registration is no longer connected. Dropping its registration.")]
     internal static partial void SupersededClientDisconnected(this ILogger<Observer> logger, ConnectionId connectionId);
 
-    [LoggerMessage(LogLevel.Information, "Client {ConnectionId} disconnected; subscribed to {SubscribedConnectionIds}: {Outcome}")]
+    [LoggerMessage(LogLevel.Debug, "Client {ConnectionId} disconnected; subscribed to {SubscribedConnectionIds}: {Outcome}")]
     internal static partial void ClientDisconnectedFromObserver(this ILogger<Observer> logger, ConnectionId connectionId, string subscribedConnectionIds, string outcome);
 
-    [LoggerMessage(LogLevel.Information, "Observer unsubscribed; it is now disconnected and receives no events until a client subscribes again")]
+    [LoggerMessage(LogLevel.Debug, "Observer unsubscribed; it is now disconnected and receives no events until a client subscribes again")]
     internal static partial void Unsubscribed(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
+    [LoggerMessage(LogLevel.Debug, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
     internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
+
+    [LoggerMessage(LogLevel.Warning, "Observer deactivation did not finish before the runtime stopped waiting for it; the remaining teardown was abandoned")]
+    internal static partial void DeactivationOutlivedItsTimeout(this ILogger<Observer> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
@@ -256,6 +259,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is behind from {NextEventSequenceNumber} but no longer subscribed on its appended-events queue. Re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedObserver(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "A silo left the cluster and the appended-events queue no longer holds the live subscription of the observer at {NextEventSequenceNumber}. Re-routing observer.")]
+    internal static partial void RestoringLiveSubscriptionAfterSiloDeparture(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Verifying the live subscription after a silo left the cluster failed; checking again on the next tick")]
+    internal static partial void VerifyingLiveSubscriptionFailed(this ILogger<Observer> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Scheduling live subscription checks after a silo left the cluster failed")]
+    internal static partial void OpeningDepartureChecksFailed(this ILogger<Observer> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);
@@ -293,7 +305,7 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Removing observer by operator request - unsubscribing, stopping its jobs and deactivating it")]
     internal static partial void RemovingObserver(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Pruned {Count} ignored recommendation(s) for the removed observer")]
+    [LoggerMessage(LogLevel.Information, "Pruned {Count} recommendation(s) for the removed observer")]
     internal static partial void PrunedIgnoredRecommendations(this ILogger<Observer> logger, int count);
 
     [LoggerMessage(LogLevel.Information, "Retiring observer - unsubscribing, discarding its failed partitions and clearing its alerts as removed while retaining quarantine")]
@@ -301,6 +313,18 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Replay could not prepare its job steps; quarantining the observer with the replay pending until the quarantine is cleared")]
     internal static partial void ReplayStepsCouldNotBePrepared(this ILogger<Observer> logger);
+
+    [LoggerMessage(LogLevel.Information, "Catch-up concluded without moving the observer while events of its types exist from {Next}. Retry {Attempt} in {Delay}")]
+    internal static partial void RetryingStaleCatchUp(this ILogger<Observer> logger, EventSequenceNumber next, int attempt, TimeSpan delay);
+
+    [LoggerMessage(LogLevel.Information, "Short catch-up retries exhausted after {Attempts} attempts while events of the observer's types exist from {Next}. Falling back to the zero-work backoff")]
+    internal static partial void StaleCatchUpRetriesExhausted(this ILogger<Observer> logger, int attempts, EventSequenceNumber next);
+
+    [LoggerMessage(LogLevel.Warning, "Could not look up events of the observer's types from {Next} after a catch-up that moved nothing. Using the zero-work backoff")]
+    internal static partial void CatchUpEventLookupFailed(this ILogger<Observer> logger, EventSequenceNumber next, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Looking up events of the observer's types from {Next} after a catch-up that moved nothing failed with {Error}. Using the zero-work backoff")]
+    internal static partial void CatchUpEventLookupErrored(this ILogger<Observer> logger, EventSequenceNumber next, GetSequenceNumberError error);
 
     [LoggerMessage(LogLevel.Warning, "A catch-up job concluded without moving the observer forward ({ConsecutiveLaps} in a row)")]
     internal static partial void CatchUpProducedNoWork(this ILogger<Observer> logger, int consecutiveLaps);
@@ -316,6 +340,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
     internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Stalled observer job {JobId} can never be resumed (its steps were stopped and the job still reads as running); stopping it so the observer can start a new one")]
+    internal static partial void StoppingObserverJobThatCannotBeResumed(this ILogger<Observer> logger, JobId jobId);
 
     [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed: {Reason}")]
     internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId, string reason);

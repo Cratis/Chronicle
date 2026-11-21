@@ -13,6 +13,12 @@ internal static partial class FederationPullServiceLogging
     [LoggerMessage(LogLevel.Debug, "Federation pull denied: {Reason}")]
     internal static partial void PullDenied(this ILogger<FederationPullService> logger, string reason);
 
+    [LoggerMessage(LogLevel.Debug, "Hosted federation peer refused: {Refusal}")]
+    internal static partial void HostedPeerRefused(this ILogger<FederationPullService> logger, FederationAdmissionRefusal refusal);
+
+    [LoggerMessage(LogLevel.Warning, "A hosted federation peer addressed a target other than the one its policy decides")]
+    internal static partial void HostedPeerAddressedOtherTarget(this ILogger<FederationPullService> logger);
+
     [LoggerMessage(LogLevel.Debug, "Federation pull throttled for link {LinkId}")]
     internal static partial void PullThrottled(this ILogger<FederationPullService> logger, string linkId);
 

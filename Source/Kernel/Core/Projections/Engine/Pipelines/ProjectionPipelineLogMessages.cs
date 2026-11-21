@@ -19,6 +19,9 @@ internal static partial class ProjectionPipelineLogMessages
     [LoggerMessage(LogLevel.Debug, "Optional projection page preparation failed; ordinary event handling will resolve reads")]
     internal static partial void PagePreparationFailed(this ILogger<ProjectionPipeline> logger, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Globally scoped projection {ProjectionId} is written without revision checks because {Reason}; concurrent namespaces can lose updates to a shared instance")]
+    internal static partial void GlobalProjectionWrittenWithoutRevisionChecks(this ILogger<ProjectionPipeline> logger, string projectionId, string reason);
+
     [LoggerMessage(LogLevel.Debug, "Completed all projection pipeline steps for event {SequenceNumber}")]
     internal static partial void CompletedAllSteps(this ILogger<ProjectionPipeline> logger, ulong sequenceNumber);
 }

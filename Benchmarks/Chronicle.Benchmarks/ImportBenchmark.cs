@@ -29,6 +29,12 @@ public class ImportBenchmark : IDisposable, IAsyncDisposable
     int _run;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Initializes the benchmark fixture and Chronicle client.
     /// </summary>
     /// <returns>A task that completes when setup is finished.</returns>
@@ -57,10 +63,10 @@ public class ImportBenchmark : IDisposable, IAsyncDisposable
     {
         var run = ++_run;
         var staging = Stopwatch.StartNew();
-        await using var import = await _helper!.EventLog.BeginImport(new ImportOptions { WaitForCommit = false });
-        var completed = import.Progress.FirstAsync(_ => _.State is ImportState.Completed or ImportState.Failed).ToTask();
-        await import.Add(Events(run, EventCount));
-        var closed = await import.Complete();
+        await using var import = await _helper!.EventLog.BeginImport(new ImportOptions { WaitForCommit = false }, CancellationToken);
+        var completed = import.Progress.FirstAsync(_ => _.State is ImportState.Completed or ImportState.Failed).ToTask(CancellationToken);
+        await import.Add(Events(run, EventCount), CancellationToken);
+        var closed = await import.Complete(CancellationToken);
         staging.Stop();
 
         var commit = Stopwatch.StartNew();

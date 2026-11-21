@@ -58,8 +58,7 @@ the SDK's own types occupy `lib/`. A build-time step (`GrpcClients`, using
 need a compile-time reference to the internalized contracts types. The mechanics are in
 [Internalization](../contributing/clients/internalization.md).
 
-That's possible because C# is Chronicle's own implementation language and NuGet's `ref`/`lib`
-split gives it a tool the other ecosystems don't have as cleanly. It is not a pattern to reach for
+That's possible because C# is Chronicle's own implementation language. It is not a pattern to reach for
 in a new client. The other three languages hide the seam a simpler way: publish the contracts
 package on its own, and let the idiomatic client's package name and its exports be the only thing
 a developer ever consumes directly. Nobody imports `@cratis/chronicle.contracts` in application
@@ -85,12 +84,6 @@ client's artifact-discovery machinery existed to build on: `io.cratis:chronicle-
 provides Spring auto-configuration, `ChronicleProperties`, and per-request namespace resolution
 (fixed, HTTP-header, subdomain, or authentication-claim based) — the direct JVM analogue of the
 ASP.NET Core package.
-
-TypeScript and Elixir don't have an equivalent yet (no Express/Fastify/NestJS package for
-TypeScript, no Phoenix package for Elixir). That's a genuine gap in those ecosystems today, not a
-sign the pattern doesn't apply — build a convenience package when your idiomatic client is stable
-enough to build one on top of, and there's an obvious dominant hosting framework in your language
-to target.
 
 A fourth, optional layer is worth knowing about too: an **in-process testing module**
 (`io.cratis:chronicle-testing` in Kotlin, `Cratis.Chronicle.Testing`/`Cratis.Chronicle.XUnit` in

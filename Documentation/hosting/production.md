@@ -32,7 +32,7 @@ Prepare these settings for the default production setup:
 | Setting | Environment variable | Why it is required |
 | --- | --- | --- |
 | Storage connection | `Cratis__Chronicle__Storage__ConnectionDetails` | Defaults to an empty string — there is no built-in fallback to connect to. Pair it with `Cratis__Chronicle__Storage__Type` when the backend is not MongoDB, which is what an unset type resolves to |
-| TLS certificate | `Cratis__Chronicle__Tls__CertificatePath` (and `__CertificatePassword`) | Required by default for port 35000 to multiplex gRPC and HTTP/1.1. Without it the server throws "No TLS certificate is configured" at startup. Explicit `Tls__Enabled=false` instead requires a private h2c backend behind an HTTPS proxy |
+| TLS certificate | `Cratis__Chronicle__Tls__CertificatePath` (and `__CertificatePassword`) | Required by default for port 35000 to multiplex gRPC and HTTP/1.1. Without it the server throws "No TLS certificate is configured" at startup. Explicit `Tls__Enabled=false` instead requires a private h2c backend behind an HTTPS proxy. In a MongoDB or SQL cluster the same certificate secures traffic between nodes, so its usages must include both `server auth` and `client auth`; see [TLS certificate requirements](configuration/tls.md#certificates-the-kernel-uses) |
 | Encryption certificate | `Cratis__Chronicle__EncryptionCertificate__CertificatePath` (and `__CertificatePassword`) | Protects the internal OAuth authority's signing and encryption keys. Without a certificate the server throws "An encryption certificate is required in production" at startup — unless the internal authority is not in play, see below |
 
 The internal OAuth authority issues authentication tokens and needs the encryption certificate. Turning the `oAuthAuthority` feature off, or setting `Cratis__Chronicle__Authentication__Authority` to an external authority, removes that startup requirement. See [Features](configuration/features.md). It does not remove the need to protect stored data: without a certificate, Data Protection writes keys unencrypted and webhook encryption throws `EncryptionCertificateNotConfigured` on first use.
@@ -259,6 +259,8 @@ Never publish the dedicated health port while `health.exclusive` is off. That po
 Complete administrator setup before making the service reachable by users. The production image creates the administrator without a password; setup requires the token from server logs or `Authentication:InitialAdminSetupToken`. Protect that token and remove it from configuration after setup. To avoid interactive setup, supply the initial password from your secret store through `Authentication:AdminUser`. See [Authentication](configuration/authentication.md).
 
 If one proxy host serves several instances by path, set `Workbench:BasePath` to the instance's prefix. The [Workbench configuration](configuration/workbench.md) explains how its URLs follow that prefix.
+
+Grant the MongoDB credential access to the kernel's own System event store databases (`_system`, `_system+es` and `_system+es+Default` by default) as well as to your event stores. A credential scoped to your application's databases only fails at startup. See [MongoDB permissions](configuration/mongodb-permissions.md).
 
 ## Scaling
 

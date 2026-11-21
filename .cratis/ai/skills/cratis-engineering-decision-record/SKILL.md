@@ -98,12 +98,18 @@ into an approval ceremony merely because this skill is available.
     text in place — that text is what people relied on. Correct a typo or add
     context under a dated banner that says what changed and why. Change the
     *choice* only with a new record.
-11. **Point both ways and sweep the citations.** The new record names the one it
-    replaces in `supersedes`; the replaced record's `status` becomes
-    `superseded` and it gains a `superseded-by` pointer forward, with its
-    original text preserved. Then find every work item, pull request body, and
-    commit trailer citing the old id and point it at the new one. A reader
-    arriving at either record must be able to reach the other.
+11. **Point both ways; cite the new record only on new work.** The new record
+    names the one it replaces in `supersedes`; the replaced record's `status`
+    becomes `superseded` and it gains a `superseded-by` pointer forward, with
+    its original text preserved. Keep committed trailers and existing issue and
+    pull request text as written: they record which decision governed that work,
+    and updating a committed trailer means rewriting history, which
+    `git-commits` forbids. Cite the new id on new commits and new work. For
+    open work, add a forward link only where the user or an applicable policy
+    authorizes that issue or pull request effect; authority to write a record does
+    not cover it, and never rewrite another author's text. A reader arriving at
+    either record must be able to reach the other and tell which one governed the
+    original implementation.
 
 Read [record-format.md](references/record-format.md) when authoring or updating a record or regenerating its index; it defines the exact front-matter fields, closed value sets, and index shape.
 

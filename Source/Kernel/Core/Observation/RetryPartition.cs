@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands.ModelBound;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
@@ -32,6 +33,25 @@ public record RetryPartition(string EventStore, string Namespace, string Observe
     {
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
-        return await grainFactory.GetGrain<IObserver>(key).TryStartRecoverJobForFailedPartition(Partition);
+        return await Start(grainFactory.GetGrain<IObserver>(key), key, Partition);
+    }
+
+    /// <summary>
+    /// Requests operator recovery for a partition and rejects outcomes that start no recovery.
+    /// </summary>
+    /// <param name="observer">The observer whose partition should be retried.</param>
+    /// <param name="key">The observer key used to identify a rejected recovery.</param>
+    /// <param name="partition">The failed partition to retry.</param>
+    /// <returns>The accepted recovery outcome.</returns>
+    /// <exception cref="FailedPartitionRecoveryCouldNotStart">The partition recovery could not be started.</exception>
+    internal static async Task<PartitionRecoveryOutcome> Start(IObserver observer, ObserverKey key, Key partition)
+    {
+        var outcome = await observer.TryStartRecoverJobForFailedPartition(partition);
+        if (outcome != PartitionRecoveryOutcome.Started)
+        {
+            throw new FailedPartitionRecoveryCouldNotStart(partition, key);
+        }
+
+        return outcome;
     }
 }

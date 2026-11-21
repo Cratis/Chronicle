@@ -10,6 +10,7 @@ Which skill owns each task next to the toolchain.
   `cratis-screenplay-specifications`, `cratis-screenplay-ui-composition`.
 - Sign-in providers, onboarding and the environment keys a model needs: `cratis-screenplay-authentication-and-onboarding`;
   creating the environment and setting secrets: `cratis-environments-and-secrets`.
+- Extension packages (contract, lock, restore, `cratis extension new` and `verify`): `cratis-screenplay-extension-packages`.
 - Rendering and gap-fill: `cratis-screenplay-render-and-gap-fill`,
   `cratis-stage-rendering-and-sandbox`.
 - Running systems (Chronicle server operations through the `cratis` CLI, with its authorization boundaries): `cratis-chronicle-cli-operations`.

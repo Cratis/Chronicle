@@ -90,14 +90,14 @@ The server and its generated password are shared with the Client suite through `
 
 ```bash
 dotnet build Integration/Neo4j/Neo4j.csproj -p:DisableDockerBuild=true
-dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+dotnet Integration/Neo4j/bin/Debug/net11.0/Cratis.Chronicle.Neo4j.Integration.dll
 ```
 
 It runs against `neo4j:5-community` in single database mode, where every namespace shares one database and is stamped on every node and edge. To run it with a database per namespace, point it at an Enterprise image, which accepts the Neo4j Evaluation Agreement for now (see [Cratis/Chronicle#5739](https://github.com/Cratis/Chronicle/issues/5739)):
 
 ```bash
 CHRONICLE_NEO4J_IMAGE=neo4j:5-enterprise CHRONICLE_NEO4J_DATABASE_MODE=PerNamespace \
-    dotnet Integration/Neo4j/bin/Debug/net10.0/Cratis.Chronicle.Neo4j.Integration.dll
+    dotnet Integration/Neo4j/bin/Debug/net11.0/Cratis.Chronicle.Neo4j.Integration.dll
 ```
 
 Asking for `PerNamespace` on an image with one database fails the fixture with a message naming the image. Specifications whose outcome depends on the mode assert the outcome of the mode they run in, so both lanes run the same specifications.
@@ -192,6 +192,18 @@ Use the service's connection string unchanged, including authentication, TLS, re
 The external service must support the MongoDB features used by the Storage specs, including multi-document transactions and change streams for event-sequence and observation specs. Grant permissions to create and drop databases, create indexes, read/write collections, and enumerate database names. Providing a connection string does not imply compatibility with a managed service; a failing spec can reveal an unsupported feature.
 
 Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` to return to the default container-backed Storage spec fixtures. `CHRONICLE_SPECS_MONGODB_IMAGE` applies only when these fixtures start MongoDB themselves.
+
+#### Checking a MongoDB-compatible service
+
+Use a non-production endpoint you control and set `CHRONICLE_MONGODB_CONNECTION_DETAILS` to the service's connection string, as above. Run only the MongoDB storage project:
+
+```bash
+dotnet test Source/Kernel/Storage.MongoDB.Specs/Storage.MongoDB.Specs.csproj --configuration Release
+```
+
+Only `Storage.MongoDB.Specs` supports external mode. The service identity needs the database, index, and read/write permissions described above. Record passes and failures per feature rather than treating successful appends as proof of compatibility. Failures caused by missing change-stream or collation support mean the service is unsupported; see [storage compatibility](../hosting/storage-compatibility.md) for the measured DocumentDB results and startup checks.
+
+The managed Azure DocumentDB service remains unverified. Someone with access must run this check manually against their own endpoint; CI does not test that service. Keep connection strings and credentials out of committed files, logs, and shared results. Unset `CHRONICLE_MONGODB_CONNECTION_DETAILS` when finished.
 
 ### Running a single test
 

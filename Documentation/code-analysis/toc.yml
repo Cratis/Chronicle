@@ -108,6 +108,14 @@
   href: CHR0056.mdx
 - name: CHR0057 - An artifact must target one read model
   href: CHR0057.mdx
+- name: CHR0058 - Self reducer method signature must match allowed signatures
+  href: CHR0058.mdx
+- name: CHR0059 - Self reducer lifecycle hook signature must match allowed signatures
+  href: CHR0059.mdx
+- name: CHR0060 - Self reducer method must be unambiguous
+  href: CHR0060.mdx
+- name: CHR0061 - Read model builder ownership must be unambiguous
+  href: CHR0061.mdx
 - name: CHR0062 - Concurrency applies across event sources
   href: CHR0062.mdx
 - name: CHR0063 - Scope stream does not match append
@@ -140,3 +148,11 @@
   href: CHR0076.mdx
 - name: "CHR0077 - Batch method matches an event type it does not observe"
   href: CHR0077.mdx
+- name: "CHR0078 - A graph view must be anchored at a node"
+  href: CHR0078.mdx
+- name: "CHR0079 - A relation of a graph view must follow an edge"
+  href: CHR0079.mdx
+- name: "CHR0080 - A relation of a graph view must lead to a view"
+  href: CHR0080.mdx
+- name: "CHR0081 - A graph view cannot be a node or an edge"
+  href: CHR0081.mdx

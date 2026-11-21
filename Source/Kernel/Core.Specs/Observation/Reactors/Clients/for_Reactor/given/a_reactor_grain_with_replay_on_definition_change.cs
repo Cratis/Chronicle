@@ -19,6 +19,8 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
     protected TestKitSilo _silo;
     protected ReactorDefinition _definition;
     protected IObserver _observerProbe;
+    protected IOptions<ChronicleOptions> _options;
+    protected INamespaces _namespacesGrain;
 
     async Task Establish()
     {
@@ -34,14 +36,16 @@ public class a_reactor_grain_with_replay_on_definition_change : Specification
         localSiloDetails.SiloAddress.Returns(SiloAddress.FromParsableString("127.0.0.1:11111@1"));
         _silo.AddService(localSiloDetails);
 
-        _silo.AddService(Options.Create(new ChronicleOptions
+        _options = Substitute.For<IOptions<ChronicleOptions>>();
+        _options.Value.Returns(new ChronicleOptions
         {
             Observers = new Observers { ReplayOnDefinitionChange = true }
-        }));
+        });
+        _silo.AddService(_options);
 
-        var namespacesGrain = Substitute.For<INamespaces>();
-        namespacesGrain.GetAll().Returns([]);
-        _silo.AddProbe(_ => namespacesGrain);
+        _namespacesGrain = Substitute.For<INamespaces>();
+        _namespacesGrain.GetAll().Returns([]);
+        _silo.AddProbe(_ => _namespacesGrain);
         var connectedClients = Substitute.For<IConnectedClients>();
         connectedClients.IsConnected(Arg.Any<Cratis.Chronicle.Concepts.Clients.ConnectionId>()).Returns(true);
         _silo.AddProbe(_ => connectedClients);

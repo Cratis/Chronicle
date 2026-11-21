@@ -17,6 +17,12 @@ namespace Cratis.Chronicle.Testing;
 internal sealed class InProcessNamespaceCasing(IStorage storage) : KernelCore::Cratis.Chronicle.Namespaces.INamespaceCasing
 {
     /// <inheritdoc/>
+    public void Forget(KernelEventStoreName eventStore, KernelNamespaceName @namespace)
+    {
+        // Resolutions read storage directly; there is no cache to invalidate.
+    }
+
+    /// <inheritdoc/>
     public async ValueTask<KernelNamespaceName> Canonicalize(KernelEventStoreName eventStore, KernelNamespaceName @namespace)
     {
         var namespaces = await storage.GetEventStore(eventStore).Namespaces.GetAll();

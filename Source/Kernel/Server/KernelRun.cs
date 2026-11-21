@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Server;
@@ -23,13 +22,16 @@ internal static class KernelRun
     /// </summary>
     /// <param name="host">The <see cref="IHost"/> to run.</param>
     /// <param name="stopRequest">A <see cref="CancellationToken"/> that requests the host to stop.</param>
+    /// <param name="timeProvider">Optional clock for the stop deadline and duration; defaults to <see cref="TimeProvider.System"/>.</param>
     /// <returns>The <see cref="KernelRunResult"/>.</returns>
     /// <remarks>
     /// A failure to start is rethrown, after the host is released, and is not part of the result.
     /// </remarks>
     /// <exception cref="AggregateException">Starting failed, and releasing the host afterwards failed too.</exception>
-    internal static async Task<KernelRunResult> RunAsync(IHost host, CancellationToken stopRequest)
+    internal static async Task<KernelRunResult> RunAsync(IHost host, CancellationToken stopRequest, TimeProvider? timeProvider = null)
     {
+        timeProvider ??= TimeProvider.System;
+
         // Resolved before running: releasing the host disposes the services these come from. The tokens stay
         // readable afterwards, since the lifetime does not dispose their sources and IsCancellationRequested never throws.
         var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
@@ -47,15 +49,15 @@ internal static class KernelRun
             await WaitForStopRequest(lifetime, stopRequest);
 
             phase = KernelRunPhase.Stopping;
-            var stopwatch = Stopwatch.StartNew();
-            using var deadline = new CancellationTokenSource(shutdownTimeout);
+            var started = timeProvider.GetTimestamp();
+            using var deadline = new CancellationTokenSource(shutdownTimeout, timeProvider);
             try
             {
                 await host.StopAsync(deadline.Token);
             }
             finally
             {
-                stopDuration = stopwatch.Elapsed;
+                stopDuration = timeProvider.GetElapsedTime(started);
                 stopTimedOut = deadline.IsCancellationRequested;
             }
 

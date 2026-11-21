@@ -16,4 +16,15 @@ public record AppendFailure(
     IEnumerable<ReactorConstraintViolation> ConstraintViolations,
     bool HasConcurrencyViolation,
     IEnumerable<string> Errors,
-    IEnumerable<EventSourceId> TargetEventSourceIds);
+    IEnumerable<EventSourceId> TargetEventSourceIds)
+{
+    /// <summary>
+    /// Gets whether the append was refused transiently without writing its events.
+    /// </summary>
+    public bool IsRetryable { get; init; }
+
+    /// <summary>
+    /// Gets the kernel's suggested delay before retrying the append, otherwise null.
+    /// </summary>
+    public TimeSpan? RetryAfter { get; init; }
+}

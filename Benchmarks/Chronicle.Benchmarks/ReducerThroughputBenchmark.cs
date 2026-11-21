@@ -33,6 +33,12 @@ public class ReducerThroughputBenchmark : IDisposable, IAsyncDisposable
     ChronicleClientHelper? _helper;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of events reduced in each benchmark invocation.
     /// </summary>
     [Params(10, 100, 1000)]

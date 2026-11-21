@@ -13,14 +13,13 @@ const int Seed = 20260829;
 
 using var loggerFactory = LoggerFactory.Create(static builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
-// A local kernel serves its dev certificate, which the client rejects unless told not to validate it. Overridable
-// so the sample can be pointed at a real deployment without editing it.
-var connectionString = Environment.GetEnvironmentVariable("CHRONICLE_CONNECTION_STRING")
-    ?? "chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000?skipTlsValidation=true";
+// Connects to a local development kernel with the client defaults. Overridable so the sample can be pointed at
+// a real deployment without editing it.
+var connectionString = Environment.GetEnvironmentVariable("CHRONICLE_CONNECTION_STRING");
 
 var identityProvider = new BaseIdentityProvider();
 var correlationIdAccessor = new CorrelationIdAccessor();
-var options = ChronicleOptions.FromConnectionString(connectionString);
+var options = connectionString is null ? new ChronicleOptions() : ChronicleOptions.FromConnectionString(connectionString);
 
 Console.WriteLine("Connecting to Chronicle...");
 using var client = new ChronicleClient(options, identityProvider: identityProvider, correlationIdAccessor: correlationIdAccessor, loggerFactory: loggerFactory);

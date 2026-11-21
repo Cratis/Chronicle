@@ -14,4 +14,14 @@ public class ConnectionTimedOut : Exception
     public ConnectionTimedOut() : base("Connection timed out when trying to connect to the Chronicle")
     {
     }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionTimedOut"/> class with the connection attempt's candidates.
+    /// </summary>
+    /// <param name="candidates">The redacted candidate server addresses.</param>
+    /// <param name="secondsToWait">The connection timeout in seconds.</param>
+    public ConnectionTimedOut(string candidates, int secondsToWait)
+        : base($"Connection timed out after {secondsToWait} seconds when trying to connect to Chronicle servers: {candidates}")
+    {
+    }
 }

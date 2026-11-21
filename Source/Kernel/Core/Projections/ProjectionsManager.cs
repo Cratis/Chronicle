@@ -34,6 +34,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="subscriptionThrottle">Host-wide projection subscription admission.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> the registration subscribe budget is measured against. Defaults to the system clock.</param>
+/// <param name="dormantObservers">The <see cref="IDormantObservers"/> that tells whether a projection's observer is dormant, and so subscribed, without waking it.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public partial class ProjectionsManager(
@@ -46,7 +47,8 @@ public partial class ProjectionsManager(
     IClusterMembershipService clusterMembership,
     ISubscriptionAdmission subscriptionThrottle,
     ILogger<ProjectionsManager> logger,
-    TimeProvider? timeProvider = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
+    TimeProvider? timeProvider = null,
+    IDormantObservers? dormantObservers = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
     /// <summary>
     /// How long a registration waits for its subscribe fan-out before handing what is left to the background repair.
@@ -79,6 +81,11 @@ public partial class ProjectionsManager(
     /// How many definitions are compared with their stored versions at the same time.
     /// </summary>
     const int ChangeDetectionConcurrency = 16;
+
+    /// <summary>
+    /// How many recommendations for ignored registrations are added at the same time.
+    /// </summary>
+    const int IgnoredRegistrationRecommendationConcurrency = 16;
 
     /// <summary>
     /// The most changed definitions a registration names in the log.
@@ -115,6 +122,7 @@ public partial class ProjectionsManager(
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
     readonly Dictionary<string, Task> _sharedRegistrations = [];
+    readonly HashSet<IgnoredRegistration> _recordedIgnoredRegistrations = [];
     bool _resubscribeRunning;
     DateTimeOffset? _registrationSubscribeDeadline;
     bool _resubscribeRequested;

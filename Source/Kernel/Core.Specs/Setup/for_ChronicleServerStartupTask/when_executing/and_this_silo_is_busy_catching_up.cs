@@ -35,7 +35,7 @@ public class and_this_silo_is_busy_catching_up : given.a_startup_task
     void Establish()
     {
         _busySilos.FindBusySilo(Arg.Any<Exception>()).Returns(new BusySilo(ThisSilo, true));
-        _eventStoreSubscriptionsManager.Ensure().Returns(_ => ++_calls <= TimesOut
+        _systemNamespaces.EnsureDefault().Returns(_ => ++_calls <= TimesOut
             ? Task.FromException(new TimeoutException("Response did not arrive on time"))
             : Task.CompletedTask);
     }

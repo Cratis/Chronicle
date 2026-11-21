@@ -16,9 +16,10 @@ public partial class Observer
     /// Identifies the durable wakeup dedicated to alert reconciliation.
     /// </summary>
     internal const string AlertReminderName = "chronicle-observer:alerts";
-    readonly SemaphoreSlim _alertMutationLock = new(1, 1);
-    readonly SemaphoreSlim _stateWriteLock = new(1, 1);
+    readonly AsyncGate _alertMutationLock = new();
+    readonly AsyncGate _stateWriteLock = new();
     readonly Dictionary<IncidentId, AlertClearedReason> _alertEndings = [];
+    volatile bool _disposed;
     Guid _alertLifecycleId;
     long _alertRevision;
     AlertDisposition _alertDisposition;
@@ -72,13 +73,22 @@ public partial class Observer
         State.RunningState == ObserverRunningState.Quarantined;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The runtime disposes the grain once deactivation ends - or once it stops waiting for a deactivation that outlived
+    /// its timeout - so a state write can still be in flight, or queued, at that point. The two locks are therefore
+    /// never disposed: they are <see cref="AsyncGate"/>s, which hold nothing to give back, whereas disposing a
+    /// semaphore under a holder makes its release throw and strands every waiter. Disposal instead seals
+    /// the activation: a write that has not started yet is skipped, and one already in flight runs to completion.
+    /// </remarks>
     public void Dispose()
     {
+        _disposed = true;
         _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
-        _alertMutationLock.Dispose();
-        _stateWriteLock.Dispose();
+        _shortCatchUpRetryTimer?.Dispose();
+        _departureCheckTimer?.Dispose();
+        StopWatchingSiloDepartures();
         GC.SuppressFinalize(this);
     }
 

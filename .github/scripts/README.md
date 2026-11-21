@@ -1,5 +1,11 @@
 # CI Scripts
 
+Requested PR integration waits for `integration-preflight`: wire/grain baselines, runner and matrix-generator
+specs, analyzers, client-snippet compilation, and the timing ratchet must all pass before any integration
+lane starts. Ordinary specs still run beside integration (#5865); nightly/dispatch ordering and all shard
+coverage are unchanged. `hot-core-gate` derives the same-run result through `needs`; out-of-run in-flight
+integration stays non-green with a waiting notice (no integration polling), then completion refresh re-evaluates it.
+
 ## Requested-integration reuse and rerun report
 
 `select-integration.py` retains the `skip|selected|full` contract. Reuse is limited to
@@ -36,7 +42,7 @@ The report performs only GET requests through `gh api`, with no GitHub writes.
 
 ## Core spec partitioning
 
-The four ordinary `specs-other` jobs still cover all 25 ordinary projects.
+The four ordinary `specs-other` jobs still cover all 26 ordinary projects.
 `Core.Specs.csproj` is planned as two units named
 `Core.Specs.csproj#core-part-K-of-2`; no workflow, artifact, or required-check name changes.
 Other projects retain their existing invocation. An unsharded invocation still runs Core once.

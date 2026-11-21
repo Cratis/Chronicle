@@ -1,0 +1,13 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Storage.Sinks;
+
+namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_one_transaction;
+
+public class and_a_keyed_from_and_a_join_set_the_same_property_on_sqlite_guarded : and_a_keyed_from_and_a_join_set_the_same_property<SqlSinkHarness>
+{
+    protected override SinkWriteMode Mode => SinkWriteMode.GuardedUpsert;
+
+    protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture], ConfigureOptions = given.retrying_on_timeout.Configure };
+}

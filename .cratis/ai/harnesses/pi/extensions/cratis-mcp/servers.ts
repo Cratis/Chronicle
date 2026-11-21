@@ -4,7 +4,7 @@
 
 import { join } from 'node:path';
 import { object, readJson, resolveProfiles, supportedSchema } from './configuration.ts';
-import type { CorpusServer, ServerSelection } from './CorpusServer.ts';
+import type { ServerSelection } from './CorpusServer.ts';
 
 const validId = /^[A-Za-z0-9_-]+$/;
 
@@ -23,13 +23,20 @@ function problem(entry: Record<string, unknown>): string | undefined {
     return undefined;
 }
 
-/** `mcpServers.<id>.enabled`: false opts out, a non-boolean is an error for that server only. */
-function optOut(overrides: Record<string, unknown>, id: string): 'enabled' | 'disabled' | string {
-    const override = overrides[id];
-    if (override === undefined) return 'enabled';
-    if (!object(override)) return 'the mcpServers configuration must be an object';
-    if (override.enabled === undefined || override.enabled === true) return 'enabled';
-    return override.enabled === false ? 'disabled' : 'mcpServers enabled must be a boolean';
+type Override = { enabled: boolean; eager: boolean } | { error: string };
+
+/** `mcpServers.<id>`: `enabled: false` opts out, `eager: true` registers at session start; a non-boolean is an error for that server only. */
+function readOverride(overrides: unknown, id: string): Override {
+    const override = object(overrides) ? overrides[id] : undefined;
+    if (override === undefined) return { enabled: true, eager: false };
+    if (!object(override)) return { error: 'the mcpServers configuration must be an object' };
+    if (override.enabled === false) return { enabled: false, eager: false };
+    const error = invalidFlag(override.enabled, 'enabled') ?? invalidFlag(override.eager, 'eager');
+    return error ? { error } : { enabled: true, eager: override.eager === true };
+}
+
+function invalidFlag(value: unknown, name: string): string | undefined {
+    return value === undefined || typeof value === 'boolean' ? undefined : `mcpServers ${name} must be a boolean`;
 }
 
 /** Select every stdio server whose profiles intersect the explicitly listed profiles (never composed ones), except Screenplay which keeps its own path. */
@@ -68,10 +75,10 @@ export function selectedCorpusServers(project: string, corpus: string): ServerSe
         const invalid = problem(entry);
         if (invalid) { selection.messages.push(`${label} was skipped: ${invalid}.`); continue; }
         const id = entry.id as string;
-        const state = object(overrides) ? optOut(overrides, id) : 'enabled';
-        if (state === 'disabled') continue;
-        if (state !== 'enabled') { selection.messages.push(`${label} was skipped: ${state}.`); continue; }
-        selection.servers.push({ id, command: entry.command as string, args: entry.args as string[], env: { ...(entry.env as Record<string, string> | undefined) } });
+        const override = readOverride(overrides, id);
+        if ('error' in override) { selection.messages.push(`${label} was skipped: ${override.error}.`); continue; }
+        if (!override.enabled) continue;
+        selection.servers.push({ id, command: entry.command as string, args: entry.args as string[], env: { ...(entry.env as Record<string, string> | undefined) }, eager: override.eager });
     }
     return selection;
 }

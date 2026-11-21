@@ -9,6 +9,8 @@ A function that scales to zero cannot hold a keep-alive stream or open observer 
 The serverless surface is experimental. Using it reports the compiler diagnostic `CHRX0001`, which you acknowledge by suppressing it in your project. See [Compatibility](#compatibility).
 
 HTTP delivery is not available yet. In this version serverless mode suits functions that append and read events. An observer that resolves to HTTP delivery fails at startup with `HttpDeliveryNotAvailable`, so a reactor or reducer does not run in a serverless client until a later version adds the receiver.
+
+To have Chronicle push events to a function today, register a [webhook](../../webhooks/index.mdx). [Webhook receivers](../../webhooks/receivers.md) covers the delivery guarantees, duplicate protection and security for that endpoint.
 :::
 
 ## Compatibility

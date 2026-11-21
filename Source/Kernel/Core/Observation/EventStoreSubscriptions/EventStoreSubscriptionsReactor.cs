@@ -38,7 +38,8 @@ public class EventStoreSubscriptionsReactor(IGrainFactory grainFactory, IStorage
             @event.EventTypes)
         {
             GenerationDelivery = @event.GenerationDelivery,
-            NamedTags = (@event.NamedTags ?? []).Select(_ => new NamedTag(new TagName(_.Name), _.Value)).ToArray()
+            NamedTags = (@event.NamedTags ?? []).Select(_ => new NamedTag(new TagName(_.Name), _.Value)).ToArray(),
+            SourceNamespaces = (@event.SourceNamespaces ?? []).ToArray()
         };
 
         var subscriptionsManager = grainFactory.GetGrain<IEventStoreSubscriptionsManager>(eventContext.EventStore.Value);

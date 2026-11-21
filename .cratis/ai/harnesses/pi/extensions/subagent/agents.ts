@@ -1,4 +1,7 @@
 // cratis-ai-managed: harnesses/pi/extensions/subagent/agents.ts
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 /**
  * Agent discovery + format normalization for the Cratis subagent tool.
  *
@@ -6,8 +9,8 @@
  * surfaced to Pi through generated Pi-native adapters in `.pi/agents/*.md`. The canonical
  * files use Claude/Copilot tool names such as `Read`/`Glob`/`Bash`; generated files use
  * Pi's lowercase names. This loader also normalizes canonical, user and legacy files
- * with the same tool-name map used by generation. Agents without a `model:` inherit
- * the dispatching session's model.
+ * with the same tool-name map used by generation. Model overrides, tiers and reviewer
+ * independence are retained for resolution against user configuration at dispatch.
  */
 
 import * as fs from "node:fs";
@@ -33,6 +36,8 @@ export interface AgentConfig {
 	 */
 	toolsError?: string;
 	model?: string;
+	modelTier?: string;
+	reviewIndependence?: string;
 	systemPrompt: string;
 	source: "package" | "user" | "project";
 	filePath: string;
@@ -48,6 +53,8 @@ type AgentFrontmatter = {
 	description?: unknown;
 	tools?: unknown;
 	model?: unknown;
+	modelTier?: unknown;
+	reviewIndependence?: unknown;
 };
 
 /**
@@ -97,6 +104,8 @@ function loadAgentsFromDir(dir: string, source: "package" | "user" | "project"):
 			tools: normalizeTools(frontmatter.tools),
 			toolsError: toolsErrorFor(frontmatter.name, frontmatter.tools),
 			model: typeof frontmatter.model === "string" ? frontmatter.model.trim() : undefined,
+			modelTier: typeof frontmatter.modelTier === "string" ? frontmatter.modelTier.trim() : undefined,
+			reviewIndependence: typeof frontmatter.reviewIndependence === "string" ? frontmatter.reviewIndependence.trim() : undefined,
 			systemPrompt: body,
 			source,
 			filePath,

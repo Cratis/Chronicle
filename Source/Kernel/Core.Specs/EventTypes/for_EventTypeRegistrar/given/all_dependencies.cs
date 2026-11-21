@@ -20,6 +20,7 @@ public class all_dependencies : Specification
     protected IEventTypesCacheClient _eventTypesCacheClient;
     protected IPatternCapture _patternCapture;
     protected EventTypeRegistrar _subject;
+    protected Concepts.Events.EventTypeDefinition[] _storedDefinitions = [];
 
     void Establish()
     {
@@ -33,15 +34,16 @@ public class all_dependencies : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.EventTypes.Returns(_eventTypesStorage);
         _grainFactory.GetGrain<IEventSequence>(Arg.Any<string>()).Returns(_systemEventSequence);
-        _eventTypesStorage.GetAllDefinitions().Returns([]);
+        _eventTypesStorage.GetAllDefinitions().Returns(_ => _storedDefinitions);
+        _eventTypesStorage.TryReplaceSchema(Arg.Any<Concepts.Events.EventTypeId>(), Arg.Any<Concepts.Events.EventTypeGeneration>(), Arg.Any<JsonSchema>(), Arg.Any<JsonSchema>())
+            .Returns(call => ReplaceStoredSchema(call.ArgAt<Concepts.Events.EventTypeId>(0), call.ArgAt<Concepts.Events.EventTypeGeneration>(1), call.ArgAt<JsonSchema>(2), call.ArgAt<JsonSchema>(3)));
         _eventTypesStorage.GetDefinition(Arg.Any<Concepts.Events.EventTypeId>()).Returns(call =>
             new Concepts.Events.EventTypeDefinition(call.Arg<Concepts.Events.EventTypeId>(), Concepts.Events.EventTypeOwner.Client, false, [], []));
         _eventTypesStorage.Register(Arg.Any<IEnumerable<Concepts.Events.EventTypeToRegister>>()).Returns([]);
         _subject = new EventTypeRegistrar(_grainFactory);
     }
 
-    protected void StoredEventTypes(params Concepts.Events.EventTypeDefinition[] definitions) =>
-        _eventTypesStorage.GetAllDefinitions().Returns(definitions);
+    protected void StoredEventTypes(params Concepts.Events.EventTypeDefinition[] definitions) => _storedDefinitions = definitions;
 
     protected static Concepts.Events.EventTypeDefinition StoredEventType(string eventTypeId, params (uint Generation, string Schema)[] generations) =>
         new(
@@ -52,4 +54,26 @@ public class all_dependencies : Specification
                 _.Generation,
                 JsonSchema.FromJsonAsync(_.Schema).GetAwaiter().GetResult())).ToArray(),
             []);
+
+    bool ReplaceStoredSchema(Concepts.Events.EventTypeId id, Concepts.Events.EventTypeGeneration generation, JsonSchema expected, JsonSchema schema)
+    {
+        var index = Array.FindIndex(_storedDefinitions, _ => _.Id == id);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        var definition = _storedDefinitions[index];
+        var existing = definition.Generations.FirstOrDefault(_ => _.Generation == generation);
+        if (existing is null || existing.Schema.ToJson() != expected.ToJson())
+        {
+            return false;
+        }
+
+        _storedDefinitions[index] = definition with
+        {
+            Generations = definition.Generations.Select(_ => _.Generation == generation ? new Concepts.Events.EventTypeGenerationDefinition(generation, schema) : _).ToArray()
+        };
+        return true;
+    }
 }

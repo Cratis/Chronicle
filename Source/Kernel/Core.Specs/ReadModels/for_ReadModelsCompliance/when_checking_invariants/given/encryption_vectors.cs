@@ -15,11 +15,12 @@ public class encryption_vectors : IEncryption
 {
     readonly Encryption _encryption = new();
     readonly EncryptionKey _proposedKey = new Encryption().GenerateKey();
-    readonly ConcurrentDictionary<(string Key, string Bytes), byte[]> _encrypted = new();
+    readonly ConcurrentDictionary<(string Key, EncryptionKeyRevision Revision, string Bytes), byte[]> _encrypted = new();
     readonly ConcurrentDictionary<(string Key, string Bytes), byte[]> _decrypted = new();
 
     public EncryptionKey GenerateKey() => _proposedKey;
     public bool IsEncrypted(byte[] bytes) => _encryption.IsEncrypted(bytes);
-    public byte[] Encrypt(byte[] bytes, EncryptionKey key) => _encrypted.GetOrAdd((key.Fingerprint, Convert.ToBase64String(bytes)), static (_, args) => args.Encryption.Encrypt(args.Bytes, args.Key), (Encryption: _encryption, Bytes: bytes, Key: key));
+    public bool TryGetKeyRevision(byte[] bytes, out EncryptionKeyRevision revision) => _encryption.TryGetKeyRevision(bytes, out revision);
+    public byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision) => _encrypted.GetOrAdd((key.Fingerprint, revision, Convert.ToBase64String(bytes)), static (_, args) => args.Encryption.Encrypt(args.Bytes, args.Key, args.Revision), (Encryption: _encryption, Bytes: bytes, Key: key, Revision: revision));
     public byte[] Decrypt(byte[] bytes, EncryptionKey key) => _decrypted.GetOrAdd((key.Fingerprint, Convert.ToBase64String(bytes)), static (_, args) => args.Encryption.Decrypt(args.Bytes, args.Key), (Encryption: _encryption, Bytes: bytes, Key: key));
 }

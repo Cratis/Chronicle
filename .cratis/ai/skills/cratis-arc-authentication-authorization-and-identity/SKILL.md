@@ -111,6 +111,13 @@ Current behavior:
   The context carries `Principal`, `Target`, `Resource` and `ReceivedAt`.
   The old synchronous `IAuthorizationEvaluator.IsAuthorized` rejects policy-bearing
   declarations.
+- **Policies that decide from recorded state.** Derive from
+  `StateAwareAuthorizationPolicy<TState>` (implement `GetKey`, `Read`, `Decide`) and
+  register it like any named policy. It fails closed: a missing key, absent state, a
+  failed read and a rejecting decision all deny and none throws. It is the hand-written
+  counterpart of a Screenplay policy with `reads`. Admission only: later state changes
+  do not revoke. Requires Arc 22.181.0. Read
+  [authorization](references/authorization.md#policies-that-decide-from-recorded-state).
 - **Schemes.** `AuthenticationSchemes` is honored on the ASP.NET Core host and
   rejected at startup on the standalone Core host.
 - **Composition.** Stacked attributes **AND**; only a role list is OR. A method's
@@ -212,6 +219,13 @@ behavior.
 
 Arc tenancy is request-scoped tenant *resolution*. It is not Chronicle's tenant
 namespace isolation — that is separate guidance.
+
+## Headless reusable modules
+
+A reusable module that must work in any host ships backend contracts only:
+commands, queries, events and the identity/claims integration. It has no pages,
+routes, styling or UI components. Sign-in, consent and profile UI belong to the
+host application, which composes the module's endpoints.
 
 ## Frontend
 

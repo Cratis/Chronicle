@@ -26,13 +26,33 @@ public class EncryptionKeyCacheGrainService(
     ILoggerFactory loggerFactory) : GrainService(grainId, silo, loggerFactory), IEncryptionKeyCacheGrainService
 {
     /// <inheritdoc/>
-    public Task Evict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier)
-    {
-        if (keyStore is IEvictEncryptionKeyCache evictable)
-        {
-            evictable.EvictFromCache(eventStore, eventStoreNamespace, identifier);
-        }
+    public Task Evict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier) =>
+        EvictFor(keyStore, EnvelopeSigningKeys.Shared, new(eventStore, eventStoreNamespace, identifier));
 
-        return Task.CompletedTask;
+    /// <summary>Invalidates local key caches, revoking only writes covered by the freshly read durable fence.</summary>
+    /// <param name="keyStore">The local key store.</param>
+    /// <param name="signingKeys">The signing-key cache.</param>
+    /// <param name="address">The key-storage address.</param>
+    /// <returns>The cache invalidation task.</returns>
+    internal static async Task EvictFor(IEncryptionKeyStorage keyStore, EnvelopeSigningKeys signingKeys, ProtectedValueAddress address)
+    {
+        var commitment = EnvelopeSigning.Commit(address);
+        try
+        {
+            if (keyStore is IEvictEncryptionKeyCache evictable)
+            {
+                evictable.EvictFromCache(address.EventStore, address.Namespace, address.Identifier);
+            }
+
+            // Authorization uses the same grain method as erasure. Its live successor is not covered by this fence.
+            var erasure = await keyStore.GetErasureForRelease(address.EventStore, address.Namespace, address.Identifier);
+            signingKeys.Evict(commitment, erasure);
+        }
+        catch
+        {
+            // Even when storage is unavailable, erasure must dispose cached signers and prevent stale retries.
+            signingKeys.Evict(commitment, revokeAll: true);
+            throw;
+        }
     }
 }

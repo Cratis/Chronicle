@@ -10,12 +10,13 @@ namespace Cratis.Chronicle.Server.Authentication.for_ServiceCollectionExtensions
 
 public class discovered_controllers : chronicle_authentication_services
 {
-    protected IEnumerable<Type> DiscoverControllers(bool authenticationEnabled)
+    protected IEnumerable<Type> DiscoverControllers(bool authenticationEnabled, Configuration.HttpAuthentication? http = null)
     {
         // The server hosts MVC through the Workbench API, which adds the controllers; the order matches the host.
         using var provider = BuildServices(
             authenticationEnabled: authenticationEnabled,
-            configureServices: services => services.AddControllers()).ServiceProvider;
+            configureServices: services => services.AddControllers(),
+            http: http).ServiceProvider;
 
         var manager = provider.GetRequiredService<ApplicationPartManager>();
         foreach (var assembly in new[] { typeof(AuthorizationController).Assembly, typeof(UnrelatedController).Assembly })

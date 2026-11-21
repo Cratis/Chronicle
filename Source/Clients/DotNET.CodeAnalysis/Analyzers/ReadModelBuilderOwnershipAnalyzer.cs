@@ -23,7 +23,11 @@ public sealed class ReadModelBuilderOwnershipAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(Analyze, SymbolKind.NamedType);
+        context.RegisterCompilationStartAction(start =>
+        {
+            var builders = new Lazy<ILookup<ITypeSymbol, INamedTypeSymbol>>(() => IndexBuilders(start.Compilation, start.CancellationToken));
+            start.RegisterSymbolAction(symbol => Analyze(symbol, builders), SymbolKind.NamedType);
+        });
     }
 
     static DiagnosticDescriptor CreateRule(DiagnosticSeverity severity) => new(
@@ -34,28 +38,42 @@ public sealed class ReadModelBuilderOwnershipAnalyzer : DiagnosticAnalyzer
         severity,
         isEnabledByDefault: true);
 
-    static void Analyze(SymbolAnalysisContext context)
+    static void Analyze(SymbolAnalysisContext context, Lazy<ILookup<ITypeSymbol, INamedTypeSymbol>> index)
     {
         var model = (INamedTypeSymbol)context.Symbol;
         if (!SelfReducerPolicy.IsSelf(model, context.Compilation)) return;
-        if (WellKnownTypes.ImplementsIReactor(model, context.Compilation) || HasMapping(model) || Targets(model, model, context.Compilation))
+        if (HasConflictingOwnership(model, context.Compilation, index.Value[model]))
         {
             context.ReportDiagnostic(Diagnostic.Create(Rule, model.Locations.FirstOrDefault(), DiagnosticSeverity.Error, null, null, model.Name, model.Name));
             return;
         }
-        var builders = SelfReducerPolicy.Types(context.Compilation.Assembly.GlobalNamespace).Where(type =>
-            !SelfReducerPolicy.Equal(type, model) && Targets(type, model, context.Compilation));
-        foreach (var builder in builders)
+        foreach (var builder in index.Value[model].Where(type => !SelfReducerPolicy.Equal(type, model)))
         {
             // Different clients can own different registrations; a second declaration does not prove a conflict.
             context.ReportDiagnostic(Diagnostic.Create(Rule, model.Locations.FirstOrDefault(), model.Name, builder.Name));
         }
     }
 
-    static bool Targets(INamedTypeSymbol builder, INamedTypeSymbol model, Compilation compilation) => builder.AllInterfaces.Any(contract =>
-        (SelfReducerPolicy.Equal(contract.OriginalDefinition, compilation.GetTypeByMetadataName(WellKnownTypes.IReducerForName)) ||
-         SelfReducerPolicy.Equal(contract.OriginalDefinition, compilation.GetTypeByMetadataName(WellKnownTypes.IProjectionForName))) &&
-        SelfReducerPolicy.Equal(contract.TypeArguments.FirstOrDefault(), model));
+    static bool HasConflictingOwnership(INamedTypeSymbol model, Compilation compilation, IEnumerable<INamedTypeSymbol> builders) =>
+        WellKnownTypes.ImplementsIReactor(model, compilation) || HasMapping(model) || builders.Any(builder => SelfReducerPolicy.Equal(builder, model));
+
+    static ILookup<ITypeSymbol, INamedTypeSymbol> IndexBuilders(Compilation compilation, CancellationToken cancellationToken)
+    {
+        var symbols = WellKnownSymbols.For(compilation);
+        var reducer = symbols.Get(WellKnownTypes.IReducerForName);
+        var projection = symbols.Get(WellKnownTypes.IProjectionForName);
+        return SelfReducerPolicy.Types(compilation.Assembly.GlobalNamespace)
+            .SelectMany(builder => Targets(builder, reducer, projection, cancellationToken).Select(model => (Model: model, Builder: builder)))
+            .ToLookup(pair => pair.Model, pair => pair.Builder, (IEqualityComparer<ITypeSymbol>)SymbolEqualityComparer.Default);
+    }
+
+    static IEnumerable<ITypeSymbol> Targets(INamedTypeSymbol builder, INamedTypeSymbol? reducer, INamedTypeSymbol? projection, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return builder.AllInterfaces.Where(contract => contract.IsGenericType &&
+                (SelfReducerPolicy.Equal(contract.OriginalDefinition, reducer) || SelfReducerPolicy.Equal(contract.OriginalDefinition, projection)))
+            .Select(contract => contract.TypeArguments[0]).Distinct<ITypeSymbol>(SymbolEqualityComparer.Default);
+    }
 
     static IEnumerable<AttributeData> PropertyAttributes(INamedTypeSymbol model)
     {

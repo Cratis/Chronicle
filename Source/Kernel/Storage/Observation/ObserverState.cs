@@ -123,6 +123,15 @@ public record ObserverState(
     public WebhookProbeState? WebhookProbe { get; init; }
 
     /// <summary>
+    /// Gets the durable subscription (decision 0034), or null when the observer is not subscribed or has not recorded one.
+    /// </summary>
+    /// <remarks>
+    /// Written in the same state write that records a (re)subscription and cleared when the observer unsubscribes. It is
+    /// advisory: it never changes how a resident observer delivers, and a reader validates it before relying on it.
+    /// </remarks>
+    public ObserverDurableSubscription? DurableSubscription { get; init; }
+
+    /// <summary>
     /// Gets or inits the next <see cref="EventSequenceNumber"/> that the observer is expecting to be handling.
     /// </summary>
     public EventSequenceNumber NextEventSequenceNumber

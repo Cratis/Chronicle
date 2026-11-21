@@ -6,15 +6,17 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.ProtectedValues;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;
@@ -67,144 +69,183 @@ public class EventStoreSubscriptionObserverSubscriber(
         var inboxSequenceId = new EventSequenceId($"{EventSequenceId.InboxPrefix}{_key.EventStore}");
         var inboxSequence = grainFactory.GetEventSequence(inboxSequenceId, targetEventStore, targetNamespace);
 
-        var lastSuccessfullyForwardedSequenceNumber = EventSequenceNumber.Unavailable;
+        var generation = new EventStoreSubscriptionTargetGeneration(storage.GetEventStore(_key.EventStore).EventTypes, storage.GetEventStore(targetEventStore).EventTypes, generationRelease, _key.EventStore, targetEventStore);
+        var state = new ForwardingState(inboxSequence, targetEventStore, targetNamespace, generation);
         try
         {
-            // Read committed policy, not the manager grain: replay/reconciliation can await this delivery.
-            // Resolve on every batch so an old Compatibility job also observes a deliberate mode update.
-            var definitions = (await storage.GetEventStore(targetEventStore).EventStoreSubscriptions.GetAll())
-                .Where(_ => _.SourceEventStore == _key.EventStore).ToArray();
-            var definition = definitions.SingleOrDefault(_ => $"{_.Identifier.Value}->{targetEventStore.Value}" == _key.ObserverId.Value)
-                ?? definitions.SingleOrDefault(_ => _.Identifier.Value == _key.ObserverId.Value);
-            if (definition?.GenerationDelivery == EventGenerationDelivery.Pinned)
-            {
-                EventStoreSubscriptionGenerationValidation.ValidatePins(definition.EventTypes);
-            }
-
-            var pins = definition?.GenerationDelivery == EventGenerationDelivery.Pinned
-                ? definition.EventTypes.Distinct().ToDictionary(_ => _.Id)
-                : new Dictionary<EventTypeId, EventType>();
-            var schemas = new Dictionary<EventType, EventTypeSchema>();
-            var copiedSubjects = new HashSet<Subject>();
+            var definition = await ResolveDefinition(targetEventStore);
+            state.Pins = BuildPins(definition);
             foreach (var incoming in events)
             {
-                if (definition is not null && !EventStoreSubscriptionTagFilter.Matches(definition.NamedTags, incoming.Context.NamedTags))
+                if (!IsForSubscription(definition, incoming))
                 {
-                    // Filtered out before forwarding: never copied into the target inbox, but processed so the observer moves past it.
-                    lastSuccessfullyForwardedSequenceNumber = incoming.Context.SequenceNumber;
+                    // Never copied into the target inbox, but processed so the observer moves past it.
+                    state.LastForwarded = incoming.Context.SequenceNumber;
                     continue;
                 }
 
-                var @event = await ReleaseForCurrentPin(incoming, pins, schemas, targetEventStore);
-                if (copiedSubjects.Add(@event.Context.Subject))
-                {
-                    await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, targetEventStore, targetNamespace);
-                }
-                var content = SerializeContent(@event.Content);
-                var namedTags = @event.Context.NamedTags.ToArray();
-                var appendResult = namedTags.Length == 0
-                    ? await inboxSequence.Append(
-                        @event.Context.EventSourceType,
-                        @event.Context.EventSourceId,
-                        @event.Context.EventStreamType,
-                        @event.Context.EventStreamId,
-                        @event.Context.EventType,
-                        content,
-                        @event.Context.CorrelationId,
-                        @event.Context.Causation,
-                        @event.Context.CausedBy,
-                        @event.Context.Tags,
-                        ConcurrencyScope.None,
-                        occurred: @event.Context.Occurred,
-                        subject: @event.Context.Subject)
-                    : await inboxSequence.Append(
-                        @event.Context.EventSourceType,
-                        @event.Context.EventSourceId,
-                        @event.Context.EventStreamType,
-                        @event.Context.EventStreamId,
-                        @event.Context.EventType,
-                        content,
-                        @event.Context.CorrelationId,
-                        @event.Context.Causation,
-                        @event.Context.CausedBy,
-                        @event.Context.Tags,
-                        ConcurrencyScope.None,
-                        @event.Context.Occurred,
-                        @event.Context.Subject,
-                        namedTags);
-
+                var (@event, appendResult) = await ForwardEvent(incoming, state);
                 if (!appendResult.IsSuccess)
                 {
-                    var failureKind = appendResult switch
-                    {
-                        { HasConstraintViolations: true } => "constraint violation",
-                        { HasConcurrencyViolations: true } => "concurrency violation",
-                        { HasErrors: true } => "append error",
-                        _ => "unknown append failure"
-                    };
-                    logger.FailedForwardingEvent(_key, targetEventStore, inboxSequenceId, @event.Context.EventType.Id, failureKind);
-                    return ObserverSubscriberResult.Failed(
-                        lastSuccessfullyForwardedSequenceNumber,
-                        $"Inbox append {failureKind} for event type '{@event.Context.EventType.Id}'");
+                    return FailAppend(state, @event, appendResult, inboxSequenceId);
                 }
 
-                lastSuccessfullyForwardedSequenceNumber = @event.Context.SequenceNumber;
+                state.LastForwarded = @event.Context.SequenceNumber;
             }
 
             logger.SuccessfullyForwardedEvents(_key, targetEventStore, inboxSequenceId);
-            return ObserverSubscriberResult.Ok(lastSuccessfullyForwardedSequenceNumber);
+            return ObserverSubscriberResult.Ok(state.LastForwarded);
+        }
+        catch (EventStoreSubscriptionGenerationUnavailable ex)
+        {
+            logger.ErrorForwardingEvents(ex, _key, targetEventStore, inboxSequenceId);
+            return ObserverSubscriberResult.Failed(state.LastForwarded, ex.Message) with { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition };
         }
         catch (Exception ex)
         {
             logger.ErrorForwardingEvents(ex, _key, targetEventStore, inboxSequenceId);
             return new ObserverSubscriberResult(
                 ObserverSubscriberState.Failed,
-                lastSuccessfullyForwardedSequenceNumber,
+                state.LastForwarded,
                 [ex.Message],
                 ex.StackTrace ?? string.Empty);
         }
     }
 
-    async Task<AppendedEvent> ReleaseForCurrentPin(
-        AppendedEvent @event,
-        Dictionary<EventTypeId, EventType> pins,
-        Dictionary<EventType, EventTypeSchema> schemas,
+    static Dictionary<EventTypeId, EventType> BuildPins(EventStoreSubscriptionDefinition? definition) =>
+        definition?.GenerationDelivery == EventGenerationDelivery.Pinned
+            ? definition.EventTypes.Distinct().ToDictionary(_ => _.Id)
+            : [];
+
+    static string DescribeFailureKind(AppendResult appendResult) => appendResult switch
+    {
+        { HasConstraintViolations: true } => "constraint violation",
+        { HasConcurrencyViolations: true } => "concurrency violation",
+        { HasErrors: true } => "append error",
+        _ => "unknown append failure"
+    };
+
+    static Task<AppendResult> AppendToInbox(IEventSequence inboxSequence, AppendedEvent @event, JsonObject content)
+    {
+        var namedTags = @event.Context.NamedTags.ToArray();
+        return namedTags.Length == 0
+            ? inboxSequence.Append(
+                @event.Context.EventSourceType,
+                @event.Context.EventSourceId,
+                @event.Context.EventStreamType,
+                @event.Context.EventStreamId,
+                @event.Context.EventType,
+                content,
+                @event.Context.CorrelationId,
+                @event.Context.Causation,
+                @event.Context.CausedBy,
+                @event.Context.Tags,
+                ConcurrencyScope.None,
+                occurred: @event.Context.Occurred,
+                subject: @event.Context.Subject)
+            : inboxSequence.Append(
+                @event.Context.EventSourceType,
+                @event.Context.EventSourceId,
+                @event.Context.EventStreamType,
+                @event.Context.EventStreamId,
+                @event.Context.EventType,
+                content,
+                @event.Context.CorrelationId,
+                @event.Context.Causation,
+                @event.Context.CausedBy,
+                @event.Context.Tags,
+                ConcurrencyScope.None,
+                @event.Context.Occurred,
+                @event.Context.Subject,
+                namedTags);
+    }
+
+    static string DescribeViolations(AppendResult appendResult)
+    {
+        const int maxViolations = 5;
+        var violations = appendResult.ConstraintViolations.ToArray();
+        if (violations.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        // Only schema violations carry their message: it holds the path and kind, never values. Other constraint
+        // messages (such as unique) may contain the offending values and stay out of the failure text.
+        var described = violations.Take(maxViolations).Select(_ => _.ConstraintType == ConstraintType.Schema
+            ? $"{_.ConstraintType} '{_.ConstraintName.Value}' ({_.Message.Value})"
+            : $"{_.ConstraintType} '{_.ConstraintName.Value}'");
+        var more = violations.Length > maxViolations ? $" and {violations.Length - maxViolations} more" : string.Empty;
+        return $": {string.Join(", ", described)}{more}";
+    }
+
+    async Task<EventStoreSubscriptionDefinition?> ResolveDefinition(EventStoreName targetEventStore)
+    {
+        // Read committed policy, not the manager grain: replay/reconciliation can await this delivery.
+        // Resolve on every batch so an old Compatibility job also observes a deliberate mode update.
+        var definitions = (await storage.GetEventStore(targetEventStore).EventStoreSubscriptions.GetAll())
+            .Where(_ => _.SourceEventStore == _key.EventStore).ToArray();
+        var definition = definitions.SingleOrDefault(_ => $"{_.Identifier.Value}->{targetEventStore.Value}" == _key.ObserverId.Value)
+            ?? definitions.SingleOrDefault(_ => _.Identifier.Value == _key.ObserverId.Value);
+        if (definition?.GenerationDelivery == EventGenerationDelivery.Pinned)
+        {
+            EventStoreSubscriptionGenerationValidation.ValidatePins(definition.EventTypes);
+        }
+
+        return definition;
+    }
+
+    bool IsForSubscription(EventStoreSubscriptionDefinition? definition, AppendedEvent incoming)
+    {
+        // Not for this subscription: no committed definition (fail closed - a removed subscription whose observer could not
+        // be revoked must not keep forwarding unfiltered), a source namespace it does not list (defense in depth behind the
+        // manager revoking the observer) or a tag filter mismatch.
+        if (definition is null)
+        {
+            logger.NoDefinitionForObserver(_key);
+            return false;
+        }
+
+        return SubscriptionObservation.Observes(definition, _key.Namespace)
+            && EventStoreSubscriptionTagFilter.Matches(definition.NamedTags, incoming.Context.NamedTags);
+    }
+
+    async Task<(AppendedEvent Event, AppendResult Result)> ForwardEvent(AppendedEvent incoming, ForwardingState state)
+    {
+        var @event = await state.Generation.Release(incoming, state.Pins);
+        if (state.CopiedSubjects.Add(@event.Context.Subject))
+        {
+            await CopyEncryptionKeyIfMissingForTargetStore(@event.Context.Subject, state.TargetEventStore, state.TargetNamespace);
+        }
+
+        var content = await MapToTargetSchema(SerializeContent(@event.Content), @event.Context.EventType, state.TargetSchemas, state.TargetEventStore);
+        return (@event, await AppendToInbox(state.InboxSequence, @event, content));
+    }
+
+    ObserverSubscriberResult FailAppend(ForwardingState state, AppendedEvent @event, AppendResult appendResult, EventSequenceId inboxSequenceId)
+    {
+        var failureKind = DescribeFailureKind(appendResult);
+        logger.FailedForwardingEvent(_key, state.TargetEventStore, inboxSequenceId, @event.Context.EventType.Id, failureKind);
+        return ObserverSubscriberResult.Failed(
+            state.LastForwarded,
+            $"Inbox append {failureKind} for event type '{@event.Context.EventType.Id}'{DescribeViolations(appendResult)}");
+    }
+
+    async Task<JsonObject> MapToTargetSchema(
+        JsonObject content,
+        EventType eventType,
+        Dictionary<EventType, JsonSchema?> targetSchemas,
         EventStoreName targetEventStore)
     {
-        if (pins.Count == 0)
+        if (!targetSchemas.TryGetValue(eventType, out var schema))
         {
-            return @event;
+            var eventTypes = storage.GetEventStore(targetEventStore).EventTypes;
+            schema = await eventTypes.HasFor(eventType.Id, eventType.Generation)
+                ? (await eventTypes.GetFor(eventType.Id, eventType.Generation)).Schema
+                : null;
+            targetSchemas[eventType] = schema;
         }
 
-        // Redaction markers for subscribed original types also arrive on replay and retry. They have
-        // their own kernel schema, not the original type's pin, and contain no content to migrate.
-        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction)
-        {
-            await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(targetEventStore).EventTypes, @event.Context.EventType);
-            return @event;
-        }
-
-        if (!pins.TryGetValue(@event.Context.EventType.Id, out var pin))
-        {
-            throw new PinnedEventTypeGenerationUnavailable(@event.Context.EventType);
-        }
-
-        // Validate per event, before any key propagation or inbox append. A later failure must report
-        // the prefix already forwarded, and target registrations may change independently of the source.
-        await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(targetEventStore).EventTypes, pin);
-        if (pin == @event.Context.EventType)
-        {
-            // The observer has already released this generation; never decrypt its plaintext again.
-            return @event;
-        }
-
-        if (!schemas.ContainsKey(pin))
-        {
-            schemas[pin] = await EventStoreSubscriptionGenerationValidation.GetExactSchema(storage.GetEventStore(_key.EventStore).EventTypes, pin);
-        }
-
-        var released = await generationRelease.Release(_key.EventStore, [pin], schemas, [@event]);
-        return released.Single();
+        return schema is null ? content : EventStoreSubscriptionContentCasing.Map(content, schema);
     }
 
     JsonObject SerializeContent(System.Dynamic.ExpandoObject content)
@@ -250,5 +291,24 @@ public class EventStoreSubscriptionObserverSubscriber(
         // data that outlives the crypto-shred this whole feature exists to perform. The pair of event stores and
         // the namespace are what an operator needs to know a copy happened and where to look.
         logger.CopiedEncryptionKeyToTargetEventStore(_key.EventStore, targetEventStore, targetNamespace);
+    }
+
+    sealed class ForwardingState(IEventSequence inboxSequence, EventStoreName targetEventStore, EventStoreNamespaceName targetNamespace, EventStoreSubscriptionTargetGeneration generation)
+    {
+        public IEventSequence InboxSequence { get; } = inboxSequence;
+
+        public EventStoreName TargetEventStore { get; } = targetEventStore;
+
+        public EventStoreNamespaceName TargetNamespace { get; } = targetNamespace;
+
+        public Dictionary<EventTypeId, EventType> Pins { get; set; } = [];
+
+        public EventStoreSubscriptionTargetGeneration Generation { get; } = generation;
+
+        public Dictionary<EventType, JsonSchema?> TargetSchemas { get; } = [];
+
+        public HashSet<Subject> CopiedSubjects { get; } = [];
+
+        public EventSequenceNumber LastForwarded { get; set; } = EventSequenceNumber.Unavailable;
     }
 }

@@ -22,6 +22,33 @@ message CommandResult {
    string ExceptionStackTrace = 5;
    string AuthorizationFailureReason = 6;
 }
+message CommandResult_CreateFederationEnrollmentResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   CreateFederationEnrollmentResponse Response = 7;
+}
+message CommandResult_RedeemFederationEnrollmentResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   string AuthorizationFailureReason = 6;
+   RedeemFederationEnrollmentResponse Response = 7;
+}
+message CreateFederationEnrollmentRequest {
+   string Subject = 1;
+   string Instance = 2;
+}
+message CreateFederationEnrollmentResponse {
+   string Id = 1;
+   string Code = 2;
+   SerializableDateTimeOffset ExpiresAt = 3;
+}
 message FederatedEvent {
    uint64 SequenceNumber = 1;
    string EventType = 2;
@@ -61,6 +88,32 @@ message FederationBindingResponse {
    SerializableDateTimeOffset LastDelivery = 15;
    string LastError = 16;
 }
+enum FederationDirection {
+   AcceptorOutbound = 0;
+   AcceptorInbound = 1;
+}
+message FederationEnrollmentResponse {
+   string Id = 1;
+   string Subject = 2;
+   string Instance = 3;
+   SerializableDateTimeOffset CreatedAt = 4;
+   SerializableDateTimeOffset ExpiresAt = 5;
+   string CreatedBy = 6;
+   string Status = 7;
+}
+message FederationEnrollmentStatusResponse {
+   bool Enrolled = 1;
+   string Identity = 2;
+   string Serial = 3;
+   SerializableDateTimeOffset NotAfter = 4;
+   SerializableDateTimeOffset RenewAfter = 5;
+   string Endpoint = 6;
+   string AuthorityFingerprint = 7;
+   bool Expired = 8;
+   bool Connected = 9;
+   SerializableDateTimeOffset LastExchange = 10;
+   string LastError = 11;
+}
 message FederationGrantInformationResponse {
    string Id = 1;
    string ClientPin = 2;
@@ -74,6 +127,50 @@ message FederationGrantInformationResponse {
    uint64 EventsDelivered = 10;
    uint64 BytesDelivered = 11;
    uint64 Throttled = 12;
+}
+message FederationIssuedCertificateResponse {
+   string Serial = 1;
+   string EnrollmentId = 2;
+   string Subject = 3;
+   string Instance = 4;
+   string Identity = 5;
+   SerializableDateTimeOffset NotBefore = 6;
+   SerializableDateTimeOffset NotAfter = 7;
+   string Reason = 8;
+   string Status = 9;
+}
+message FederationPolicyEntry {
+   FederationDirection Direction = 1;
+   string EventStore = 2;
+   string Namespace = 3;
+   bool AllPublic = 4;
+   repeated string EventTypes = 5;
+}
+message FederationPolicyResponse {
+   string Subject = 1;
+   FederationPolicyStatus Status = 2;
+   repeated FederationPolicyEntry Entries = 3;
+   string ChangedBy = 4;
+}
+enum FederationPolicyStatus {
+   Active = 0;
+   Suspended = 1;
+   Revoked = 2;
+}
+message FederationSubjectLinkResponse {
+   string Subject = 1;
+   bool Connected = 2;
+   SerializableDateTimeOffset LastActivity = 3;
+   SerializableDateTimeOffset OutboundLastPull = 4;
+   uint64 OutboundEvents = 5;
+   uint64 OutboundBytes = 6;
+   uint64 OutboundThrottled = 7;
+   string InboundState = 8;
+   SerializableDateTimeOffset InboundLastReceived = 9;
+   uint64 InboundEvents = 10;
+   uint64 InboundBytes = 11;
+   uint64 InboundLag = 12;
+   string LastError = 13;
 }
 message PullRequest {
    string EventStore = 1;
@@ -90,6 +187,14 @@ message QueryResult_FederatedEventBatchResponse {
    string ExceptionStackTrace = 5;
    FederatedEventBatchResponse Data = 6;
 }
+message QueryResult_FederationEnrollmentStatusResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   FederationEnrollmentStatusResponse Data = 6;
+}
 message QueryResult_IEnumerable_FederationBindingResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
    bool IsAuthorized = 2;
@@ -97,6 +202,14 @@ message QueryResult_IEnumerable_FederationBindingResponse {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    repeated FederationBindingResponse Data = 6;
+}
+message QueryResult_IEnumerable_FederationEnrollmentResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationEnrollmentResponse Data = 6;
 }
 message QueryResult_IEnumerable_FederationGrantInformationResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -106,12 +219,70 @@ message QueryResult_IEnumerable_FederationGrantInformationResponse {
    string ExceptionStackTrace = 5;
    repeated FederationGrantInformationResponse Data = 6;
 }
+message QueryResult_IEnumerable_FederationIssuedCertificateResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationIssuedCertificateResponse Data = 6;
+}
+message QueryResult_IEnumerable_FederationPolicyResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationPolicyResponse Data = 6;
+}
+message QueryResult_IEnumerable_FederationSubjectLinkResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   repeated FederationSubjectLinkResponse Data = 6;
+}
+message RedeemFederationEnrollmentRequest {
+   string Code = 1;
+}
+message RedeemFederationEnrollmentResponse {
+   string Identity = 1;
+   string Serial = 2;
+   SerializableDateTimeOffset NotAfter = 3;
+   string Endpoint = 4;
+   bool AlreadyEnrolled = 5;
+}
+message ResumeFederationPolicyRequest {
+   string Subject = 1;
+}
+message RevokeFederationEnrollmentRequest {
+   string Id = 1;
+}
 message RevokeFederationLinkRequest {
    string Id = 1;
+}
+message RevokeFederationPolicyDirectionRequest {
+   string Subject = 1;
+   FederationDirection Direction = 2;
+}
+message RevokeFederationPolicyRequest {
+   string Subject = 1;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {
    string Value = 1;
+}
+message ServeBatch {
+   uint64 RequestId = 1;
+   FederatedEventBatchResponse Batch = 2;
+}
+message ServePullRequest {
+   uint64 RequestId = 1;
+   uint64 FromSequenceNumber = 2;
+   int32 Limit = 3;
+   repeated string EventTypes = 4;
+   string Status = 5;
 }
 message SetFederationGrantRequest {
    string Id = 1;
@@ -120,6 +291,17 @@ message SetFederationGrantRequest {
    repeated string Namespaces = 4;
    bool AllPublic = 5;
    repeated string EventTypes = 6;
+}
+message SetFederationPolicyRequest {
+   string Subject = 1;
+   FederationDirection Direction = 2;
+   string EventStore = 3;
+   string Namespace = 4;
+   bool AllPublic = 5;
+   repeated string EventTypes = 6;
+}
+message SuspendFederationPolicyRequest {
+   string Subject = 1;
 }
 message UnbindFederationPeerRequest {
    string Id = 1;
@@ -137,12 +319,28 @@ enum ValidationResultSeverity {
 }
 service Federation {
    rpc AllBindings (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationBindingResponse);
+   rpc AllEnrollments (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationEnrollmentResponse);
    rpc AllGrants (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationGrantInformationResponse);
+   rpc AllIssuedCertificates (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationIssuedCertificateResponse);
+   rpc AllPolicies (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationPolicyResponse);
+   rpc AllSubjectLinks (.google.protobuf.Empty) returns (QueryResult_IEnumerable_FederationSubjectLinkResponse);
    rpc BindFederationPeer (BindFederationPeerRequest) returns (CommandResult);
+   rpc CreateFederationEnrollment (CreateFederationEnrollmentRequest) returns (CommandResult_CreateFederationEnrollmentResponse);
+   rpc CurrentEnrollmentStatus (.google.protobuf.Empty) returns (QueryResult_FederationEnrollmentStatusResponse);
+   rpc RedeemFederationEnrollment (RedeemFederationEnrollmentRequest) returns (CommandResult_RedeemFederationEnrollmentResponse);
+   rpc ResumeFederationPolicy (ResumeFederationPolicyRequest) returns (CommandResult);
+   rpc RevokeFederationEnrollment (RevokeFederationEnrollmentRequest) returns (CommandResult);
    rpc RevokeFederationLink (RevokeFederationLinkRequest) returns (CommandResult);
+   rpc RevokeFederationPolicy (RevokeFederationPolicyRequest) returns (CommandResult);
+   rpc RevokeFederationPolicyDirection (RevokeFederationPolicyDirectionRequest) returns (CommandResult);
    rpc SetFederationGrant (SetFederationGrantRequest) returns (CommandResult);
+   rpc SetFederationPolicy (SetFederationPolicyRequest) returns (CommandResult);
+   rpc SuspendFederationPolicy (SuspendFederationPolicyRequest) returns (CommandResult);
    rpc UnbindFederationPeer (UnbindFederationPeerRequest) returns (CommandResult);
 }
 service FederationPull {
    rpc Pull (PullRequest) returns (QueryResult_FederatedEventBatchResponse);
+}
+service FederationServe {
+   rpc Serve (stream ServeBatch) returns (stream ServePullRequest);
 }

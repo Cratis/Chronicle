@@ -515,21 +515,13 @@ public static class EventEntryConverter
     /// <returns>The generation to read.</returns>
     public static uint GetReadGeneration(EventEntry entry)
     {
-        if (string.IsNullOrEmpty(entry.Content))
+        var contentDict = DeserializeGenerationContent(entry);
+        if (contentDict is null)
         {
             return EventTypeGeneration.First.Value;
         }
 
-        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
-        if (contentDict is null || contentDict.Count == 0)
-        {
-            return EventTypeGeneration.First.Value;
-        }
-
-        if (entry.Type != GlobalEventTypes.Redaction
-            && entry.RevisedGeneration is { } revised
-            && contentDict.TryGetValue(revised.ToString(), out var revisedContent)
-            && revisedContent.ValueKind == JsonValueKind.Object)
+        if (IsReadFromRevision(entry, contentDict, out var revised))
         {
             return revised;
         }
@@ -647,40 +639,60 @@ public static class EventEntryConverter
         return expando;
     }
 
-    static object? ConvertJsonElementToClrValue(JsonElement element)
+    static Dictionary<string, JsonElement>? DeserializeGenerationContent(EventEntry entry)
     {
-        switch (element.ValueKind)
+        if (string.IsNullOrEmpty(entry.Content))
         {
-            case JsonValueKind.Object:
-                return ConvertJsonObjectToExpando(element);
-            case JsonValueKind.Array:
-                var items = new List<object?>();
-                foreach (var item in element.EnumerateArray())
-                {
-                    items.Add(ConvertJsonElementToClrValue(item));
-                }
-
-                return items.ToArray();
-            case JsonValueKind.String:
-                return element.GetString();
-            case JsonValueKind.Number:
-                if (element.TryGetInt64(out var l))
-                {
-                    return l;
-                }
-
-                if (element.TryGetUInt64(out var unsigned))
-                {
-                    return unsigned;
-                }
-
-                return element.TryGetDecimal(out var decimalValue) ? decimalValue : element.GetDouble();
-            case JsonValueKind.True:
-                return true;
-            case JsonValueKind.False:
-                return false;
-            default:
-                return null;
+            return null;
         }
+
+        var contentDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(entry.Content, _jsonSerializerOptions);
+        return contentDict is null || contentDict.Count == 0 ? null : contentDict;
+    }
+
+    static bool IsReadFromRevision(EventEntry entry, Dictionary<string, JsonElement> contentDict, out uint revised)
+    {
+        revised = entry.RevisedGeneration ?? 0u;
+        return entry.Type != GlobalEventTypes.Redaction
+            && entry.RevisedGeneration is not null
+            && contentDict.TryGetValue(revised.ToString(), out var revisedContent)
+            && revisedContent.ValueKind == JsonValueKind.Object;
+    }
+
+    static object? ConvertJsonElementToClrValue(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.Object => ConvertJsonObjectToExpando(element),
+        JsonValueKind.Array => ConvertJsonArrayToClrValues(element),
+        JsonValueKind.String => element.GetString(),
+        JsonValueKind.Number => ConvertJsonNumberToClrValue(element),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        _ => null
+    };
+
+    static object?[] ConvertJsonArrayToClrValues(JsonElement element)
+    {
+        var items = new List<object?>();
+        foreach (var item in element.EnumerateArray())
+        {
+            items.Add(ConvertJsonElementToClrValue(item));
+        }
+
+        return items.ToArray();
+    }
+
+    static object ConvertJsonNumberToClrValue(JsonElement element)
+    {
+        if (element.TryGetInt64(out var l))
+        {
+            return l;
+        }
+
+        if (element.TryGetUInt64(out var unsigned))
+        {
+            return unsigned;
+        }
+
+        return element.TryGetDecimal(out var decimalValue) ? decimalValue : element.GetDouble();
     }
 }

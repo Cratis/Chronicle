@@ -96,7 +96,12 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
     {
         // If this event was deferred or key is permanently unresolvable, don't try to resolve futures.
         // Nothing having been stored since resolution last drained the futures store also skips the grain call.
-        if (context.IsDeferred || context.IsUnresolvable || !_futuresTracker.HasPending)
+        if (context.IsDeferred || context.IsUnresolvable)
+        {
+            return context;
+        }
+
+        if (!_futuresTracker.HasPending)
         {
             return context;
         }
@@ -109,6 +114,11 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
         {
             _futuresTracker.HasPending = false;
             return context;
+        }
+
+        if (projection.SupportsFencedGlobalWrites)
+        {
+            throw new FencedWriteNotSupportedException($"projection '{projection.Identifier}' has persisted futures; clear them before it can be written with revision checks");
         }
 
         _logger.FoundPendingFutures(futures.Count(), projection.Identifier);
@@ -269,6 +279,7 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
     {
         var resolvedAny = true;
         var latestResolvedEvent = context.Event;
+        var resolutionContext = context;
         var queuedFutures = new HashSet<ProjectionFutureId>();
         IEnumerable<ProjectionFuture> futures = [];
         while (resolvedAny)
@@ -276,11 +287,18 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
             resolvedAny = false;
             futures = await _projectionFutures.GetFutures();
 
-            foreach (var future in futures.Where(future => !queuedFutures.Contains(future.Id)))
+            foreach (var future in futures.Where(future => !queuedFutures.Contains(future.Id)).OrderBy(future => future.Event.Context.SequenceNumber))
             {
-                if (!await TryResolveFuture(projection, context, future, queuedFutures))
+                if (!await TryResolveFuture(projection, resolutionContext, future, queuedFutures))
                 {
                     continue;
+                }
+
+                // Keep the main changeset separate for saving, but let the next future see all
+                // successful changes queued so far, including children introduced in this turn.
+                if (context.PendingFutureSaves.LastOrDefault() is { } pendingSave)
+                {
+                    resolutionContext = context with { Changeset = pendingSave.Changeset };
                 }
 
                 resolvedAny = true;
@@ -296,6 +314,8 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
 
     async Task<bool> TryResolveFuture(IProjection projection, ProjectionEventContext context, ProjectionFuture future, HashSet<ProjectionFutureId> queuedFutures)
     {
+        // A stored future holds the event as read back from storage, not as the projection received it.
+        future = future with { Event = projection.ForProjection(future.Event) };
         try
         {
             var parentKey = ConvertParentKey(projection, future);

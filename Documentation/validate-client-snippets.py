@@ -19,7 +19,18 @@ FENCE_RE = re.compile(r"```([^\s`]+)[^\n]*\n(.*?)\n```", re.DOTALL)
 USING_DIRECTIVE_RE = re.compile(r"^using\s+(?:static\s+)?[A-Za-z_][A-Za-z0-9_.]*(?:\s*=\s*[A-Za-z_][A-Za-z0-9_.]*)?\s*;$")
 VALIDATION_EXCLUDED_PREFIXES = ("legacy/",)
 
+# Aliases, not whole-namespace imports: a global Microsoft.AspNetCore.Http import makes Chronicle's [Tags] ambiguous.
+SNIPPET_USING_ALIASES = {
+    "webhooks/signature-verification/verify": [
+        "using HttpRequest = Microsoft.AspNetCore.Http.HttpRequest;",
+        "using Results = Microsoft.AspNetCore.Http.Results;",
+    ],
+}
+
 BODY_SNIPPETS = {
+    "webhooks/signature-verification/verify": """
+        Microsoft.AspNetCore.Builder.WebApplication app = default!;
+    """,
     "get-started/client-flow": "",
     "hosting/client-tracing/identifier-tracing": """
         string[] args = [];
@@ -146,6 +157,7 @@ GRAPH_PREFIX = "projections/graph/"
 GRAPH_NAMESPACE_ROOT = "Cratis.Chronicle.Docs.GraphProjections"
 GRAPH_USINGS = """
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Graphs;
 using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.Graphs;
 using Cratis.Chronicle.Projections.ModelBound;
@@ -167,6 +179,10 @@ GRAPH_MODEL = """
 [Graph("Organization")] [Edge("MEMBER_OF")] [EdgeFrom<MemberAdded>(sourceKey: nameof(MemberAdded.PersonId), targetKey: nameof(MemberAdded.GroupId))]
 public record MemberOf([Source<Person>] Guid PersonId, [Target<Group>] Guid GroupId, DateTimeOffset Since);
 """.strip()
+GRAPH_VIEWS = """
+[ViewOf<Person>] public record PersonWithGroups([Key] Guid Id, string Name, [Follows<MemberOf>] IReadOnlyList<GroupMembership> Groups);
+[ViewOf<Group>] public record GroupMembership(Guid Id, string Name, [FromEdge] DateTimeOffset Since);
+""".strip()
 GRAPH_STAND_INS = {
     "projections/graph/model-bound": "",
     "projections/graph/counters": "",
@@ -177,12 +193,22 @@ GRAPH_STAND_INS = {
 """.strip(),
     "projections/graph/sink": "",
     "projections/graph/testing": GRAPH_MODEL,
+    "projections/graph/views": GRAPH_MODEL,
+    "projections/graph/views-query": GRAPH_MODEL + "\n" + GRAPH_VIEWS,
+    "projections/graph/views-testing": GRAPH_MODEL + "\n" + GRAPH_VIEWS,
 }
 GRAPH_BODY_SNIPPETS = {
     "projections/graph/sink": """
         IServiceCollection services = new ServiceCollection();
     """,
     "projections/graph/testing": """
+        var personId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+    """,
+    "projections/graph/views-query": """
+        IGraph graph = default!;
+    """,
+    "projections/graph/views-testing": """
         var personId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
     """,
@@ -419,6 +445,8 @@ def generate_source() -> str:
             and using not in DECLARATION_ALIASED_USINGS.get(relative_path, ())
         )
 
+        usings.update(SNIPPET_USING_ALIASES.get(relative_path, []))
+
         site_namespace = site_concepts_namespace(relative_path)
         if site_namespace is not None:
             if relative_path in BODY_SNIPPETS:
@@ -480,6 +508,7 @@ def generate_project() -> str:
         <ProjectReference Include="../../Source/Clients/Aspire/Aspire.csproj" />
         <ProjectReference Include="../../Source/Clients/AspNetCore/AspNetCore.csproj" />
         <ProjectReference Include="../../Source/Clients/Testing/Testing.csproj" />
+        <ProjectReference Include="../../Source/Clients/Workbench/Workbench.csproj" />
         <ProjectReference Include="../../Source/Clients/XUnit.Integration.v3/XUnit.Integration.v3.csproj" />
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">

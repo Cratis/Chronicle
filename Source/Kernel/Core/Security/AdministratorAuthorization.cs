@@ -27,6 +27,7 @@ public class AdministratorAuthorization(IOptions<ChronicleOptions> options, IAdm
             var authentication = options.Value.Authentication;
             if (!authentication.Enabled) return true;
             if (principal.Identity?.IsAuthenticated is not true) return false;
+            if (TrustedProxyUsers.Is(principal)) return TrustedProxyUsers.IsAdministrator(principal, authentication);
             if (!authentication.UseInternalAuthority) return ExternalAdministratorClaims.Grants(principal, authentication.ExternalAdministratorClaim);
             if (!principal.HasClaim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User)) return false;
             var subject = principal.FindFirst("sub")?.Value ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;

@@ -31,6 +31,7 @@ public class when_handling : Specification
             new Key("one", Properties.ArrayIndexers.NoIndexers),
             new Key("two", Properties.ArrayIndexers.NoIndexers)
         ]));
+        _observer.TryStartRecoverJobForFailedPartition(Arg.Any<Key>()).Returns(PartitionRecoveryOutcome.Started);
         _grainFactory = Substitute.For<IGrainFactory>();
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
     }
@@ -40,5 +41,6 @@ public class when_handling : Specification
     [Fact] void should_address_the_observers_inbox() => _grainFactory.Received(1).GetGrain<IObserver>(_key);
 
     [Fact] void should_tell_how_many_partitions_were_failed() => _result.FailedPartitions.ShouldEqual(2);
-    [Fact] void should_ask_the_observer_to_recover_them_in_bounded_batches() => _observer.Received(1).TryRecoverAllFailedPartitions();
+    [Fact] void should_request_an_operator_retry_for_each_partition() => _observer.Received(2).TryStartRecoverJobForFailedPartition(Arg.Any<Key>());
+    [Fact] void should_not_use_the_automatic_recovery_path() => _observer.DidNotReceive().TryRecoverAllFailedPartitions();
 }

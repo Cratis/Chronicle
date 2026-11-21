@@ -14,7 +14,7 @@ using Cratis.Chronicle.Storage.Sinks;
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_reading_instances;
 
 /// <summary>
-/// The projection pipeline reads state back through <see cref="ISink.FindOrDefault"/>, which keeps returning
+/// The projection pipeline reads state back through <see cref="ISink.FindOrDefault(Key)"/>, which keeps returning
 /// the stored flattened id: only queries rebuild the key object.
 /// </summary>
 public class and_the_projection_pipeline_reads_a_composite_key : Specification

@@ -83,6 +83,4 @@ Once you choose a size, check both ends of the transfer using [Server limits](#s
 
 Setting either property to `null` removes that client-side limit. It does not restore gRPC's default receive limit. Keep an explicit bound unless you intend to allow messages without a client-side size limit.
 
-The .NET snippet below has stale comments saying `null` uses a 4 MB default. Those comments are incorrect: each assignment removes its corresponding client-side limit.
-
 <ChronicleClientTabs snippet="configuration/grpc-message-size/null-values" />

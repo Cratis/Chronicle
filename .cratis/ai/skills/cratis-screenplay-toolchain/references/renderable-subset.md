@@ -68,7 +68,7 @@ This table is a reading of the renderer's admission, not a render result: run th
 | Enum numbers / compliance | explicit enum numbers (v12); concept `[PII]` or scoped `[Encrypted]` + `[NotAudited]` (v13), property-level `[NotAudited]` for protected command inputs | protected identities/enums (`-040`); explicit subject lineage remains unadmitted |
 | Specifications | command scenarios and supported single-hop reaction appends; Stage's `admission.md` | appends outside the single-hop subset and commands cascading into reactions (`-011`); `then no readmodel` (`-027`); an unauthenticated caller carrying roles or claims (`-011`); command `given clock` renders only whole milliseconds at or after 1970 |
 | v9 and v10 | reaction/reducer `from` filters; role/authenticated `runs as`; bounded source-event captures and outbound public projection | unsupported public-event production (`-032`), foreign-event uses (`-033`) and Translate shapes (`-024`); claim-reading/opaque `runs as` gates (`-034`); legacy `from` (`-035`); per-production route overrides (`-036`) |
-| Stored event names (v16) | `[EventType("storedName")]` retains stored identity while the class follows the model name | changed/unreadable destination event ids: `STAGE-EVENT-002`, CLI `CLI-RENDER-016` |
+| Stored event names (v16) | `[EventType("storedName")]` is a retained id (stored identity) while the class follows the model name | changed/unreadable destination event ids: `STAGE-EVENT-002`, CLI `CLI-RENDER-016` |
 | No events / redelivery (v17) | otherwise admitted command no-event specs; one production-only reaction no-effect spec; located redelivery to one trigger with productions or one supported invocation | fan-out, deeper cascades, constraints, read/query expectations, redelivery with refusal branches, appends with no observer: `-011` |
 | Refusal branches (v19) | ordered Arc `OnRefused`/`Acknowledge`, refusal values and supported single-hop append specs | same-event multi-trigger refusal groups, localized `$refusal.message`, ambiguous multiple-constraint `$refusal.constraint`: `-039`; specification limits: `-011` |
 | Evolved events | initial revisions only (migrations are not rendered) | `STAGE-ESM-026` |
@@ -110,8 +110,8 @@ ids into routing to fit a renderer (PLAY0515).
   older renderers refuse snapshot lists with STAGE-ESM-010.
   context/single-result filters, and opaque `scoped to` block binding; a `performer` query is left out of the executable model ([version gate](executable-subset.md#code-attachments-what-binds-what-never-does)). Keep a list the domain needs and report
   the capability gap; marking it `observable` or keying it is a modeling decision for the user.
-- Attached file/inline handlers bind beside unconditional `produces` with a resolved body
-  and Stage renders a C# body; otherwise they refuse PLAY0800 (version gate:
+- Attached file/inline handlers bind beside unconditional `produces`, or a `may produce` block
+  (ESM v35), with a resolved body; Stage renders a C# body beside `produces`. Otherwise they refuse PLAY0800 (version gate:
   [executable subset](executable-subset.md)).
   Pending handlers beside unconditional
   productions bind v23 but Stage still refuses rendering STAGE-IMPL-002 even in

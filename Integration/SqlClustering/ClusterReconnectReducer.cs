@@ -12,6 +12,12 @@ public class ClusterReconnectReducer
 
     public bool HasHandled(Guid id, EventSequenceNumber sequence) => _handled.ContainsKey((id, sequence));
 
+    /// <summary>
+    /// Gets the highest event sequence number handled so far, or null when nothing was handled.
+    /// </summary>
+    /// <returns>The highest handled <see cref="EventSequenceNumber"/>, or null.</returns>
+    public EventSequenceNumber? HighestHandled() => _handled.IsEmpty ? null : new EventSequenceNumber(_handled.Keys.Max(handled => handled.Sequence.Value));
+
     public Task<ClusterReducedEvent?> Reduce(ClusterEventAppended @event, ClusterReducedEvent? current, EventContext context)
     {
         _handled.TryAdd((@event.Id, context.SequenceNumber), 0);

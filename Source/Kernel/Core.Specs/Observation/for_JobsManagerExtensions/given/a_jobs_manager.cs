@@ -77,6 +77,21 @@ public class a_jobs_manager : Specification
             concludedJobs: concludedJobs,
             maxJobsToDrop: maxJobsToDrop);
 
+    protected async Task StartOrResumeWith(Func<CatchUpObserverRequest, Task<CatchUpObserverRequest>>? stampBeforeStart = null, Func<IObserverJobRequest, bool>? isObsolete = null) =>
+        _result = await _jobsManager.StartOrResumeObserverJobReportingDrops<ICatchUpObserver, CatchUpObserverRequest>(
+            NullLogger.Instance,
+            () => _request,
+            requestPredicate: null,
+            onAlreadyRunningJob: () => Record(() => _onAlreadyRunningJobWasCalled = true),
+            onResume: () => Record(() => _onResumeWasCalled = true),
+            onStartNew: () => Record(() => _onStartNewWasCalled = true),
+            onResumeRefused: () => Record(() => _onResumeRefusedWasCalled = true),
+            concludedJobs: null,
+            maxJobsToDrop: 0,
+            onJobsDropped: null,
+            stampBeforeStart: stampBeforeStart,
+            isObsolete: isObsolete);
+
     static Task Record(Action record)
     {
         record();

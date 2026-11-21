@@ -82,6 +82,8 @@ public static class ServiceCollectionExtensions
                 .AddAdministratorPolicies();
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.Administrator);
             services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.AdministratorOperations);
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.FederationEnrollment);
+            services.AddArcAnonymousAspNetAuthorizationPolicy(WellKnownAuthorizationPolicies.FederationManagement);
 
             // The sign-in controllers need the Identity stack skipped above, so they are left out of MVC rather
             // than mapped and failing with a 500 when activated. Their routes answer 404, like the Identity API.
@@ -107,6 +109,16 @@ public static class ServiceCollectionExtensions
         services.AddOpenIddictIfEnabled(chronicleOptions, encryptionCertificateRing);
 
         var bearerScheme = chronicleOptions.Authentication.UseInternalAuthority ? OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme : JwtBearerDefaults.AuthenticationScheme;
+        var authentication = chronicleOptions.Authentication;
+
+        // With a trusted proxy authenticating HTTP callers, the Workbench's own password sign-in is not offered.
+        // The token endpoint stays: gRPC clients still exchange their client credentials there.
+        if (authentication.Http.IsTrustedProxy)
+        {
+            services.AddSingleton(new TrustedProxyPeers(chronicleOptions));
+            services.AddMvcCore().ConfigureApplicationPartManager(manager =>
+                manager.FeatureProviders.Add(new TrustedProxyControllerFeatureProvider()));
+        }
 
         // Use a policy scheme that tries cookie first, then bearer token
         var authBuilder = services.AddAuthentication(options =>
@@ -124,8 +136,16 @@ public static class ServiceCollectionExtensions
                     return bearerScheme;
                 }
 
-                // Otherwise, if there's a cookie, use cookie authentication
-                if (context.Request.Cookies.ContainsKey(CookieAntiforgeryMiddleware.AuthenticationCookieName))
+                // A trusted proxy's identity headers, on an HTTP request. The handler still checks that the peer is a
+                // trusted proxy and fails the request otherwise, rather than falling through to another scheme.
+                if (TrustedProxyAuthenticationHandler.Applies(context.Request, authentication))
+                {
+                    return TrustedProxyAuthenticationHandler.SchemeName;
+                }
+
+                // Otherwise, if there's a cookie, use cookie authentication. Behind a trusted proxy Chronicle issues no
+                // cookies of its own, so one left over from password sign-in must not let a user around the proxy.
+                if (!authentication.Http.IsTrustedProxy && context.Request.Cookies.ContainsKey(CookieAntiforgeryMiddleware.AuthenticationCookieName))
                 {
                     return IdentityConstants.ApplicationScheme;
                 }
@@ -149,6 +169,11 @@ public static class ServiceCollectionExtensions
         // MapIdentityApi's login/refresh endpoints also support ASP.NET Identity's protected bearer tickets.
         // Keep that scheme distinct from OAuth JWT validation; both are validated by their own handler.
         authBuilder.AddBearerToken(IdentityConstants.BearerScheme);
+
+        if (authentication.Http.IsTrustedProxy)
+        {
+            authBuilder.AddScheme<AuthenticationSchemeOptions, TrustedProxyAuthenticationHandler>(TrustedProxyAuthenticationHandler.SchemeName, null);
+        }
 
         // Add cookie authentication for Identity API endpoints
         authBuilder.AddCookie(IdentityConstants.ApplicationScheme, options =>
@@ -181,6 +206,7 @@ public static class ServiceCollectionExtensions
         services.AddChronicleAdministratorAuthorization();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, ExternalAdministratorClaimValidation>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, EventStoreAccessConfigurationValidation>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<Configuration.ChronicleOptions>, TrustedProxyAuthenticationValidation>());
         services.AddHostedService<AdministratorPolicyStartupWarning>();
 
         // Reads the grants the startup task loaded: given once the silo is active, never from a hosted service (#4040).
@@ -189,7 +215,9 @@ public static class ServiceCollectionExtensions
 
     static AuthorizationBuilder AddAdministratorPolicies(this AuthorizationBuilder builder, params string[] authenticationSchemes) => builder
         .AddPolicy(WellKnownAuthorizationPolicies.Administrator, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new AdministratorRequirement()))
-        .AddPolicy(WellKnownAuthorizationPolicies.AdministratorOperations, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new SystemStoreOperationRequirement()));
+        .AddPolicy(WellKnownAuthorizationPolicies.AdministratorOperations, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new SystemStoreOperationRequirement()))
+        .AddPolicy(WellKnownAuthorizationPolicies.FederationEnrollment, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new FederationEnrollmentRequirement()))
+        .AddPolicy(WellKnownAuthorizationPolicies.FederationManagement, policy => AdministratorPolicy(policy, authenticationSchemes).AddRequirements(new FederationManagementRequirement()));
 
     /// <summary>
     /// Shapes an administrator policy. With authentication disabled there are no schemes and the handlers decide alone;

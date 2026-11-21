@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 
@@ -17,7 +18,8 @@ public interface IGraphProjectionFactory
     /// <param name="definition">The <see cref="ProjectionDefinition"/>, which has graph mappings.</param>
     /// <param name="readModel">The <see cref="ReadModelDefinition"/> whose schema describes the graph.</param>
     /// <param name="fingerprint">The definition fingerprint of the projection.</param>
+    /// <param name="eventTypeSchemas">The <see cref="EventTypeSchema">schemas</see> of the event types the projection can receive.</param>
     /// <returns>The <see cref="IProjection"/>.</returns>
     /// <exception cref="InvalidGraphProjection">Thrown when the definition does not fit the graph.</exception>
-    IProjection Create(ProjectionDefinition definition, ReadModelDefinition readModel, string fingerprint);
+    IProjection Create(ProjectionDefinition definition, ReadModelDefinition readModel, string fingerprint, IEnumerable<EventTypeSchema> eventTypeSchemas);
 }

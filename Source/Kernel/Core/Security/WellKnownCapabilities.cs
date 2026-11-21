@@ -38,6 +38,16 @@ public static class WellKnownCapabilities
     /// </summary>
     public static readonly Capability ReadAlerts = "chronicle.alerts.read";
 
+    /// <summary>
+    /// Enrolling this kernel with a hosted federation authority and reading its enrollment status.
+    /// </summary>
+    public static readonly Capability EnrollFederation = "chronicle.federation.enroll";
+
+    /// <summary>
+    /// Managing the hosted federation this kernel is the authority for: its enrollments, issued certificates, subject policies and links.
+    /// </summary>
+    public static readonly Capability ManageFederation = "chronicle.federation.manage";
+
     /// <summary>Reading an ordinary event store.</summary>
     public static readonly Capability ReadEventStore = "chronicle.event-store.read";
 
@@ -67,7 +77,9 @@ public static class WellKnownCapabilities
     {
         AdministerSecurity,
         OperateEventStore,
-        AccessSystemStore
+        AccessSystemStore,
+        EnrollFederation,
+        ManageFederation
     };
 
     /// <summary>Maps store-scoped capabilities to their required access.</summary>

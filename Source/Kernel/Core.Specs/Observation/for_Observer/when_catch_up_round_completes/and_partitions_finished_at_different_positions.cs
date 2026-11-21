@@ -19,6 +19,7 @@ public class and_partitions_finished_at_different_positions : given.an_observer_
 
     async Task Establish()
     {
+        PersistStartedPartitionCatchUps();
         _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 9UL };
         await _observer.RegisterCatchingUpPartitions(["A", "B"]);
         _eventSequence.GetTailSequenceNumber().Returns((EventSequenceNumber)12UL);
@@ -53,8 +54,8 @@ public class and_partitions_finished_at_different_positions : given.an_observer_
         await _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
     }
 
-    [Fact] void should_currently_skip_the_live_event() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-    [Fact] void should_currently_advance_past_the_drained_partition() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)13UL);
+    [Fact] void should_hold_the_live_event_for_repair() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_keep_the_drained_partition_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"B");
     [Fact] void should_report_one_suspected_skip() => _suspectedSkips.ShouldEqual(1);
-    [Fact] void should_currently_probe_only_above_the_skipped_event() => _eventSequence.DidNotReceive().GetNextSequenceNumberGreaterOrEqualTo(Arg.Is<EventSequenceNumber>(number => number <= (EventSequenceNumber)10UL), Arg.Any<IEnumerable<EventType>>());
+    [Fact] void should_probe_from_the_missed_event() => _eventSequence.Received().GetNextSequenceNumberGreaterOrEqualTo(Arg.Is<EventSequenceNumber>(number => number <= (EventSequenceNumber)10UL), Arg.Any<IEnumerable<EventType>>());
 }

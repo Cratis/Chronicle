@@ -6,7 +6,7 @@
 
 ## Stop, drain and admission
 
-Requires Cratis.Orleans 1.20.0 for `IJobs.StopAndDrain(key, jobId, timeout)` and the grain protocols `IJobDrain` / `IJobStepDrain`. Unlike ordinary stop acceptance, `Drained` means no step code can run, final outcomes/checkpoints are durable and completion/stop hooks finished. Other outcomes are `TimedOut` (call again), `Completed`, `NotFound` and `UnknownJobType`. `TimeSpan.Zero` polls. Add the method to hand-written `IJobs` implementations. Enable only after every silo supports it. A pending drain survives reactivation and refuses resume; a timeout is not proof of quiescence. Hooks can repeat or be missed after a crash, so keep them idempotent rather than collecting results only there.
+Requires 1.20.0 for `IJobs.StopAndDrain(key, jobId, timeout)` and the grain protocols `IJobDrain` / `IJobStepDrain`. Unlike ordinary stop acceptance, `Drained` means no step code can run, final outcomes/checkpoints are durable and completion/stop hooks finished. Other outcomes are `TimedOut` (call again), `Completed`, `NotFound` and `UnknownJobType`. `TimeSpan.Zero` polls. Add the method to hand-written `IJobs` implementations. Enable only after every silo supports it. A pending drain survives reactivation and refuses resume; a timeout is not proof of quiescence. Hooks can repeat or be missed after a crash, so keep them idempotent rather than collecting results only there.
 
 Requires 1.21.0 for owner admission: implement `IJobAdmission.MayRun(JobAdmissionRequest, CancellationToken)` and register with `siloBuilder.AddJobAdmission<T>()` on every silo that hosts those job types. Every admission must allow; none means allow. It runs before start, every resume and each later stage. Refusals return `StartJobError.NotAdmitted` / `CannotResumeJobError.NotAdmitted`; manager resume returns false. A refused running job is stopped/drained, and a refused later stage stops the job. Exceptions/timeouts are failures, not refusals; a later stage retries an unanswered admission on a timer.
 
@@ -42,7 +42,7 @@ A completed stop sets `StopFinalized` after all required notifications have succ
 
 ## Independent controller and worker placement
 
-Requires 1.30.0 for `Cratis.Orleans.Hosting` extensions on `ISiloBuilder`:
+Requires 1.30.0 for `Cratis.Choreography.Hosting` extensions on `ISiloBuilder`:
 
 - `AddJobPlacement()` or `AddJobPlacement<TDirector>()` opts controllers into `JobsPlacementStrategy`.
 - `AddJobStepPlacement()` or `AddJobStepPlacement<TDirector>()` opts workers into `JobStepsPlacementStrategy`, including recovered steps.

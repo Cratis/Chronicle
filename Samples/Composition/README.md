@@ -35,7 +35,7 @@ dotnet run --project Samples/Composition
 ## What to verify
 
 - **DNS SRV discovery**: the web apps' connection string is
-  `chronicle+srv://...@chronicle.local/?srvNameServer=127.0.0.1:8053` - they find the kernels
+  `chronicle+srv://chronicle.local/?srvNameServer=127.0.0.1:8053` - they find the kernels
   purely through the SRV records (`dig -p 8053 @127.0.0.1 _chronicle._tcp.chronicle.local SRV`).
 - **Least-connections spread**: app-1 and app-2 each ask both kernels how many clients they
   already have (`GET /connections/count`) before connecting, so they reliably land on different

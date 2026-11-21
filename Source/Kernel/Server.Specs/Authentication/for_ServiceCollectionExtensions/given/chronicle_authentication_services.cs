@@ -17,8 +17,9 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
         SharedDataProtectionKeys? sharedKeys = null,
         bool authenticationEnabled = false,
         bool useInternalAuthority = false,
-        Action<IServiceCollection>? configureServices = null) =>
-        BuildServices(new(authenticationEnabled, useInternalAuthority, null), sharedKeys, configureServices);
+        Action<IServiceCollection>? configureServices = null,
+        Configuration.HttpAuthentication? http = null) =>
+        BuildServices(new(authenticationEnabled, useInternalAuthority, null, http), sharedKeys, configureServices);
 
     protected ChronicleAuthenticationServices BuildServicesWithExternalAdministratorClaim(
         Configuration.ExternalAdministratorClaim externalAdministratorClaim,
@@ -30,7 +31,7 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
         SharedDataProtectionKeys? sharedKeys,
         Action<IServiceCollection>? configureServices)
     {
-        var (authenticationEnabled, useInternalAuthority, externalAdministratorClaim) = scenario;
+        var (authenticationEnabled, useInternalAuthority, externalAdministratorClaim, http) = scenario;
         sharedKeys ??= new();
         var dataProtectionKeys = sharedKeys.CreateGrain();
         var grainFactory = Substitute.For<IGrainFactory>();
@@ -57,7 +58,8 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
             {
                 Enabled = authenticationEnabled,
                 Authority = authenticationEnabled && !useInternalAuthority ? "https://identity.example" : null,
-                ExternalAdministratorClaim = externalAdministratorClaim
+                ExternalAdministratorClaim = externalAdministratorClaim,
+                Http = http ?? new()
             }
         });
 
@@ -79,7 +81,8 @@ public class chronicle_authentication_services : for_CertificateLoader.given.a_c
     protected sealed record AuthenticationScenario(
         bool AuthenticationEnabled,
         bool UseInternalAuthority,
-        Configuration.ExternalAdministratorClaim? ExternalAdministratorClaim);
+        Configuration.ExternalAdministratorClaim? ExternalAdministratorClaim,
+        Configuration.HttpAuthentication? Http = null);
 
     protected sealed record ChronicleAuthenticationServices(
         ServiceProvider ServiceProvider,

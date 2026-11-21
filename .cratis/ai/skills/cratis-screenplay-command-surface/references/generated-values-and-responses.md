@@ -12,6 +12,7 @@
 - Version and freshness
 - Responses and pre-generation boundaries
 - What the CLI and Stage realize
+- Create command with a generated identifier
 
 `generated` properties and `returns` bind/reference-execute (ESM v7).
 Concept generation strategies and whole-source freshness bind as ESM v15. The CLI and Stage
@@ -309,3 +310,21 @@ assertions against captured values; v15 captures also check strategy shape.
 The in-memory Stage executor instead requires deterministic fixtures and returns
 Unsupported(IdentityAllocation) when missing. Build and run generated Debug
 specifications separately; source reading is not a render or runtime result.
+
+## Create command with a generated identifier
+
+```screenplay excerpt
+command RegisterOrganization
+  organizationId OrganizationId generated identifier
+  name           OrganizationName
+  produces event OrganizationRegistered
+    name OrganizationName = name
+  returns organizationId
+specification RegistersAnOrganization
+  when RegisterOrganization
+    for "11111111-1111-1111-1111-111111111111"
+    name = "Acme"
+  then OrganizationRegistered
+    for "11111111-1111-1111-1111-111111111111"
+    name = "Acme"
+```

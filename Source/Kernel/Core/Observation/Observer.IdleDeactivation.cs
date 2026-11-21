@@ -35,6 +35,16 @@ public partial class Observer
         !_removed &&
         !_subscription.IsSubscribed &&
         (!_observerExists || State.RunningState == ObserverRunningState.Disconnected) &&
+        NothingIsOwed;
+
+    /// <summary>
+    /// Gets whether the observer owes nothing: no recovery, failure, replay, catch-up, pending write or alert work.
+    /// </summary>
+    /// <remarks>
+    /// The conditions an idle observer (<see cref="IsIdle"/>) and a dormant one (<see cref="IsDormant"/>) share. Neither is
+    /// released while any of them holds, because the activation is what carries the work out.
+    /// </remarks>
+    bool NothingIsOwed =>
         !IsQuarantined &&
         !State.IsReplaying &&
         State.ReplayingPartitions.Count == 0 &&

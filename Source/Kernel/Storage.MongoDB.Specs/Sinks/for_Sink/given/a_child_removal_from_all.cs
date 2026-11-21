@@ -40,10 +40,10 @@ public class a_child_removal_from_all : Specification
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new JsonSchema() },
             []);
-        var collection = _collection = Substitute.For<IMongoCollection<BsonDocument>>();
+        _collection = Substitute.For<IMongoCollection<BsonDocument>>();
         var collections = Substitute.For<ISinkCollections>();
-        collections.GetCollection().Returns(collection);
-        collection.UpdateManyAsync(
+        collections.GetCollection().Returns(_collection);
+        _collection.UpdateManyAsync(
             Arg.Any<FilterDefinition<BsonDocument>>(),
             Arg.Any<UpdateDefinition<BsonDocument>>(),
             Arg.Any<UpdateOptions>(),

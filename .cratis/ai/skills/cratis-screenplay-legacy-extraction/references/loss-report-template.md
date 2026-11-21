@@ -3,7 +3,7 @@
 
 File: `.ai-work/screenplay/<model-slug>/legacy/LOSS.md`. Purpose: say plainly what the candidate model
 does **not** know, so nobody mistakes it for a complete description of the system. Keep it
-short; cite evidence rows (`E12`) and questions (`Q3`) instead of repeating content.
+short; cite evidence rows (`LX-E12`) and questions (`Q3`) instead of repeating content.
 
 ```markdown
 # Loss report: <system> -> <model> (source identity <commit + digest from the source-identity helper>)

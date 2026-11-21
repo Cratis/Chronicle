@@ -7,14 +7,13 @@ namespace Cratis.Chronicle.Observation.for_ObserverPartitionCommands;
 
 /// <summary>
 /// The other direction of the same pairing - asking to recover a partition must not quietly replay it instead. The
-/// command must also hand back whatever outcome the grain reports, rather than swallowing it - an operator retrying
-/// a partition through this command deserves the same honest answer the grain itself computed.
+/// command must also return the accepted recovery outcome; a request that cannot start recovery fails the command.
 /// </summary>
 public class when_recovering_a_partition : given.an_observer_grain
 {
     PartitionRecoveryOutcome _result;
 
-    void Establish() => _observer.TryStartRecoverJobForFailedPartition(Partition).Returns(PartitionRecoveryOutcome.PartitionQuarantined);
+    void Establish() => _observer.TryStartRecoverJobForFailedPartition(Partition).Returns(PartitionRecoveryOutcome.Started);
 
     async Task Because() => _result = await new RetryPartition(EventStore, Namespace, ObserverIdentifier, string.Empty, Partition).Handle(_grainFactory, _storage);
 
@@ -22,5 +21,5 @@ public class when_recovering_a_partition : given.an_observer_grain
 
     [Fact] void should_recover_the_partition() => _observer.Received(1).TryStartRecoverJobForFailedPartition(Partition);
     [Fact] void should_not_replay_the_partition() => _observer.DidNotReceive().ReplayPartition(Arg.Any<Concepts.Keys.Key>());
-    [Fact] void should_return_the_outcome_the_grain_reported() => _result.ShouldEqual(PartitionRecoveryOutcome.PartitionQuarantined);
+    [Fact] void should_return_the_outcome_the_grain_reported() => _result.ShouldEqual(PartitionRecoveryOutcome.Started);
 }

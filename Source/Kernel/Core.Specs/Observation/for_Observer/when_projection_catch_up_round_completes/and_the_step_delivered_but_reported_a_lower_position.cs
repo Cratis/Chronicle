@@ -10,13 +10,13 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Observation.for_Observer.when_projection_catch_up_round_completes;
 
 /// <summary>
-/// A step that delivered an event but reported a lower position cannot be told from a skipped event, so it is
-/// suspected - once, and never as anything stronger.
+/// A step reporting too little coverage must retain pending work rather than advance past its held-back event.
 /// </summary>
 public class and_the_step_delivered_but_reported_a_lower_position : given.an_observer_with_skip_detection
 {
     async Task Establish()
     {
+        PersistStartedPartitionCatchUps();
         _definitionStorage.State = _definitionStorage.State with { Type = ObserverType.Projection };
         _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 9UL };
         await _observer.RegisterCatchingUpPartitions(["A"]);
@@ -34,7 +34,7 @@ public class and_the_step_delivered_but_reported_a_lower_position : given.an_obs
         await _observer.CaughtUp(JobId.NotSet, 9UL, 9UL);
     }
 
-    [Fact] void should_measure_exactly_one_suspected_skip() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
-    [Fact] void should_warn_once_that_it_is_only_a_suspicion() => _recordedLogs.SuspectedSkipWarnings.Single().ShouldContain("suspicion, not proof");
-    [Fact] void should_name_the_partition_and_the_sequence_number() => _recordedLogs.SuspectedSkipWarnings.Single().ShouldContain("partition A, first at sequence number 10");
+    [Fact] void should_not_measure_a_skip_that_was_prevented() => _metrics.For(EventsSuspectedSkipped).ShouldBeEmpty();
+    [Fact] void should_not_warn_for_a_skip_that_was_prevented() => _recordedLogs.SuspectedSkipWarnings.ShouldBeEmpty();
+    [Fact] void should_keep_the_unproven_delivery_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"A");
 }

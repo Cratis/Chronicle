@@ -91,6 +91,7 @@ public sealed record Services(
     Security.IAdministrators? _administrators;
     Occurrences.IOccurrences? _occurrences;
     Imports.IImports? _imports;
+    global::Cratis.Chronicle.Contracts.Federation.IFederation? _federation;
 
     /// <inheritdoc/>
     public Security.IAdministrators Administrators
@@ -104,6 +105,13 @@ public sealed record Services(
     {
         get => _occurrences ?? throw new NotSupportedException("Occurrences are not supported by this service container.");
         init => _occurrences = value;
+    }
+
+    /// <inheritdoc/>
+    public global::Cratis.Chronicle.Contracts.Federation.IFederation Federation
+    {
+        get => _federation ?? throw new NotSupportedException("Federation is not supported by this service container.");
+        init => _federation = value;
     }
 
     /// <summary>

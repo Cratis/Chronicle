@@ -80,6 +80,8 @@ module Work
         produces TaskClosed
           for taskId
           reason = "done"
+      screen CloseTask
+        action CloseTask for screen
       specification ClosingAnUnknownTask
         when CloseTask
           taskId = "missing"

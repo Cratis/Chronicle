@@ -39,6 +39,8 @@ module Moorings
           for berthId
           name      BerthName   = name
           maxLength BoatLength  = maxLength
+      screen RegisterBerth
+        action RegisterBerth for screen
       specification RegisteringABerth
         given caller
           authenticated
@@ -63,6 +65,8 @@ module Moorings
           for berthId
           name      BerthName   = name
           maxLength BoatLength  = maxLength
+      screen UpdateBerth
+        action UpdateBerth for screen
 
     slice StateView BerthList
       readmodel BerthSummary
@@ -195,6 +199,8 @@ module Moorings
           for berthId
           name      BerthName   = name
           maxLength BoatLength  = maxLength
+      screen RegisterBerth
+        action RegisterBerth for screen
       specification RegisteringABerth
         given caller
           authenticated
@@ -226,6 +232,8 @@ module Moorings
         produces event BerthLengthLimitRaised
           for berthId
           maxLength BoatLength = newMaxLength
+      screen RaiseBerthLengthLimit
+        action RaiseBerthLengthLimit for screen
       specification RaisingTheLimit
         given caller
           authenticated

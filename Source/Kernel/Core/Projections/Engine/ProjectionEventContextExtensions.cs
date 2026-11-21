@@ -88,6 +88,7 @@ public static class ProjectionEventContextExtensions
     /// <param name="eventCompliance">Optional handler for releasing a stored join event's compliance and security fields before projecting it.</param>
     /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
     /// <param name="releasePinnedEvent">Optional pinned-generation release boundary, replacing compatibility release.</param>
+    /// <param name="forProjection">Optional preparation of the released join event for the projection.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
@@ -97,7 +98,8 @@ public static class ProjectionEventContextExtensions
         ILogger logger,
         IEventCompliance? eventCompliance = null,
         JsonSchema? joinEventSchema = null,
-        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null)
+        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null,
+        Func<AppendedEvent, AppendedEvent>? forProjection = null)
     {
         // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the
         // synchronous Rx Subject pipeline. HandleEvent.Perform commits the changeset immediately
@@ -129,7 +131,8 @@ public static class ProjectionEventContextExtensions
                         maybeLastEvent =>
                         {
                             if (!maybeLastEvent.HasValue) return;
-                            var lastEvent = ReleaseJoinEvent((AppendedEvent)maybeLastEvent, eventCompliance, joinEventSchema, releasePinnedEvent);
+                            var releasedEvent = ReleaseJoinEvent((AppendedEvent)maybeLastEvent, eventCompliance, joinEventSchema, releasePinnedEvent);
+                            var lastEvent = forProjection?.Invoke(releasedEvent) ?? releasedEvent;
 
                             var changeset = context.Changeset.ResolvedJoin(
                                 onModelProperty,

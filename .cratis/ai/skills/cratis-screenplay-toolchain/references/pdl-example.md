@@ -32,6 +32,8 @@ module Shop
         produces event LineAdded
           lineNumber Int = 1
           sku String = "A-1"
+      screen PlaceOrder
+        action PlaceOrder for screen
       specification PlacingAnOrder
         when PlaceOrder
           orderId    = "7a1c2e30-4b5d-4e6f-8a9b-0c1d2e3f4a5b"
@@ -59,6 +61,8 @@ module Shop
         lineNumber Int
         produces event LineRemoved
           lineNumber Int = lineNumber
+      screen RemoveLine
+        action RemoveLine for screen
     slice StateChange ShipOrder
       command ShipOrder
         orderId OrderId identifier
@@ -66,10 +70,14 @@ module Shop
         produces event Shipped
           carrier String = carrier
         produces event ShippingCleared
+      screen ShipOrder
+        action ShipOrder for screen
     slice StateChange CancelOrder
       command CancelOrder
         orderId OrderId identifier
         produces event OrderCancelled
+      screen CancelOrder
+        action CancelOrder for screen
       specification CancellingAnOrder
         given OrderPlaced
           for "7a1c2e30-4b5d-4e6f-8a9b-0c1d2e3f4a5b"
@@ -87,6 +95,8 @@ module Shop
         produces event CustomerRenamed
           name String = name
         produces event CustomerDeleted
+      screen RenameCustomer
+        action RenameCustomer for screen
     slice StateView OrderOverview
       readmodel OrderView
         orderId      OrderId
@@ -138,6 +148,8 @@ module Work
           title String = title
         produces event IssueTitleCorrected
           title String = title
+      screen OpenIssue
+        action OpenIssue for screen
     slice StateChange OpenPullRequest
       command OpenPullRequest
         issueId IssueId identifier
@@ -145,6 +157,8 @@ module Work
         produces event PullRequestCreated
         produces event BuildCompleted
           status String = status
+      screen OpenPullRequest
+        action OpenPullRequest for screen
     slice StateView WorkItems
       readmodel BacklogItem
         issueId IssueId
@@ -179,6 +193,8 @@ module Bank
         produces event Withdrawn
           amount Decimal = amount
         produces event Frozen
+      screen Deposit
+        action Deposit for screen
       specification Depositing
         when Deposit
           accountId = "5d1f0c2e-8a47-4c1b-9b3e-6f2a7c9d1e10"

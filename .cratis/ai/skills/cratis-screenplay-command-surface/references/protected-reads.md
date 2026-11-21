@@ -48,6 +48,8 @@ module Stock
           quantity = Current.quantity
       event Allocated
         quantity Int
+      screen Allocate
+        action Allocate for screen
 ```
 
 ## Admission and paths

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Seeding;
 using context = Cratis.Chronicle.Integration.for_EventSeeding.when_a_seeded_batch_is_rejected.context;
 
@@ -31,10 +32,14 @@ public class when_a_seeded_batch_is_rejected(context context) : Given<context>(c
         public override IEnumerable<Type> ConstraintTypes => [typeof(UniqueBadgeConstraint)];
         public override IEnumerable<Type> EventTypes => [typeof(BadgeIssued), typeof(OfficeOpened)];
 
-        void Establish()
+        async Task Establish()
         {
             TheOffice = Guid.NewGuid().ToString();
             TheOtherOffice = Guid.NewGuid().ToString();
+
+            // Registering the unique constraint can start a reindex even in a fresh MongoDB namespace.
+            // Wait for it so both seed runs test constraint violations rather than index availability.
+            await EventStore.Jobs.WaitForThereToBeNoJobs(TimeSpan.FromSeconds(30), JobStatus.CompletedSuccessfully);
         }
 
         async Task Because()

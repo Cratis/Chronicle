@@ -36,6 +36,17 @@ public interface IAppendResult
     bool HasErrors { get; }
 
     /// <summary>
+    /// Gets whether the kernel refused this attempt transiently without writing its events.
+    /// </summary>
+    /// <remarks>Defaults to false for older implementations and kernels that supply no retry metadata.</remarks>
+    bool IsRetryable => false;
+
+    /// <summary>
+    /// Gets the kernel's suggested delay before retrying, otherwise null.
+    /// </summary>
+    TimeSpan? RetryAfter => null;
+
+    /// <summary>
     /// Gets a value indicating whether the concurrency check was actually performed for the operation.
     /// </summary>
     /// <remarks>

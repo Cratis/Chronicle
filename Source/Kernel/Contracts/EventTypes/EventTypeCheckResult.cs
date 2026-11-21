@@ -49,4 +49,10 @@ public class EventTypeCheckResult
     /// </summary>
     [ProtoMember(6)]
     public string Path { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Classification.
+    /// </summary>
+    [ProtoMember(7)]
+    public string Classification { get; set; } = string.Empty;
 }

@@ -45,6 +45,7 @@ public static class WorkbenchWebApplicationBuilderExtensions
         var builder = services
             .AddOptions<ChronicleWorkbenchOptions>()
             .ValidateDataAnnotations()
+            .Validate(options => WorkbenchListener.IsValidAddress(options.Address), "Workbench Address must be empty, localhost, or a valid IP address.")
             .ValidateOnStart();
 
         if (configure != default)

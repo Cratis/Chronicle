@@ -10,7 +10,13 @@ public class when_legacy_global_replay_is_cleaned_up : given.a_projection_replay
 {
     Exception _flushError;
 
-    void Establish() => _projection.Scope.Returns(ProjectionScope.Global);
+    void Establish()
+    {
+        _projection.Scope.Returns(ProjectionScope.Global);
+
+        // Binding construction observes activity; only calls made by replay cleanup belong to this assertion.
+        _projectionPipeline.ClearReceivedCalls();
+    }
 
     async Task Because() => _flushError = await Catch.Exception(() => _handler.FlushReplayFor(_observerDetails));
 

@@ -154,7 +154,7 @@ export const AddProject = ({ closeDialog }: DialogProps) => {
 };
 ```
 
-(If the app has a localization convention, route these labels through it — see [typescript.md](../rules/typescript.md). It is product policy, not a Cratis rule.)
+(If the app has a localization convention, route these labels through it — see the `typescript.md` rule. It is product policy, not a Cratis rule.)
 
 ### Non-command dialog — use `Dialog` from `@cratis/components/Dialogs`
 
@@ -228,12 +228,7 @@ export const Projects = () => {
 
 ## Browser verification (optional)
 
-If the workspace has `workbench.browser.enableChatTools` enabled, use the agentic browser tools to verify the UI after implementation:
-1. Open the app page in the integrated browser.
-2. Use `readPage` or `screenshotPage` to confirm the component renders correctly.
-3. Use `clickElement` or `typeInPage` to test interactive elements.
-
-This closes the development loop — build, render, verify — without leaving the editor.
+Browser tools are a capability, not authority, and only the `browser-operator` agent receives them (`browser.md`). Do not drive a browser yourself, even when the workspace enables editor browser tools. To verify the UI after implementation, hand `browser-operator` the URL, the scope, the permit and the artifact directory, and use its evidence record. Production stays read-only and sign-in stops for a human. If no `browser-operator` is available, report the UI as unverified rather than using browser tools directly.
 
 ---
 

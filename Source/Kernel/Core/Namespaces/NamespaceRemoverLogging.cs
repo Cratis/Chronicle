@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Namespaces;
@@ -13,4 +14,7 @@ internal static partial class NamespaceRemoverLogging
 
     [LoggerMessage(LogLevel.Information, "Removed namespace '{Namespace}' from event store '{EventStore}'")]
     internal static partial void RemovedNamespace(this ILogger<NamespaceRemover> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Debug, "Skipping observer address '{ObserverKey}' that is on another event sequence")]
+    internal static partial void SkippingMismatchingObserverAddress(this ILogger<NamespaceRemover> logger, ObserverKey observerKey);
 }

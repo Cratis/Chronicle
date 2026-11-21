@@ -39,21 +39,27 @@ class ArtifactHandoff(unittest.TestCase):
         self.producers = {}
         for job in ("workbench", "kernel-development"):
             for upload in action_steps(job, "actions/upload-artifact"):
-                name = upload["with"]["name"]
-                self.producers[name] = job
-                # Model upload-artifact's directory-root layout, not a cache restore.
-                output = self.root / "producer" / job / upload["with"]["path"]
-                output.mkdir(parents=True)
-                self.artifacts[name] = output
-                if job == "workbench":
-                    (output / "index.html").write_text("Workbench entry point")
-                    (output / "assets").mkdir()
-                    (output / "assets/app.js").write_text("Workbench bundle")
-                else:
-                    for architecture in ("x64", "arm64"):
-                        (output / architecture).mkdir()
-                        for filename in SERVER_FILES:
-                            (output / architecture / filename).write_text("DEVELOPMENT kernel")
+                self.create_artifact(job, upload)
+
+    def create_artifact(self, job, upload):
+        name = upload["with"]["name"]
+        self.producers[name] = job
+        # Model upload-artifact's directory-root layout, not a cache restore.
+        output = self.root / "producer" / job / upload["with"]["path"]
+        output.mkdir(parents=True)
+        self.artifacts[name] = output
+        if job == "workbench":
+            (output / "index.html").write_text("Workbench entry point")
+            (output / "assets").mkdir()
+            (output / "assets/app.js").write_text("Workbench bundle")
+        else:
+            self.create_kernel_files(output)
+
+    def create_kernel_files(self, output):
+        for architecture in ("x64", "arm64"):
+            (output / architecture).mkdir()
+            for filename in SERVER_FILES:
+                (output / architecture / filename).write_text("DEVELOPMENT kernel")
 
     def prepare(self, job):
         consumer = self.root / job
@@ -64,17 +70,23 @@ class ArtifactHandoff(unittest.TestCase):
         for step in JOBS[job]["steps"]:
             if step.get("name") == stop:
                 break
-            if step.get("uses", "").startswith("actions/download-artifact@"):
-                artifact = self.artifacts[step["with"]["name"]]
-                shutil.copytree(artifact, consumer / step["with"]["path"], dirs_exist_ok=True)
-            if "run" in step:
-                result = subprocess.run(
-                    ["bash", "-euo", "pipefail", "-c", step["run"]],
-                    cwd=consumer, capture_output=True, text=True, check=False,
-                )
-                if result.returncode:
-                    return consumer, result
+            failure = self.prepare_step(step, consumer)
+            if failure is not None:
+                return consumer, failure
         return consumer, None
+
+    def prepare_step(self, step, consumer):
+        if step.get("uses", "").startswith("actions/download-artifact@"):
+            artifact = self.artifacts[step["with"]["name"]]
+            shutil.copytree(artifact, consumer / step["with"]["path"], dirs_exist_ok=True)
+        if "run" in step:
+            result = subprocess.run(
+                ["bash", "-euo", "pipefail", "-c", step["run"]],
+                cwd=consumer, capture_output=True, text=True, check=False,
+            )
+            if result.returncode:
+                return result
+        return None
 
     def test_consumers_depend_on_the_exact_artifact_producers(self):
         for job in ("publish-docker", "publish-nuget-packages"):
@@ -96,6 +108,22 @@ class ArtifactHandoff(unittest.TestCase):
                 path = cache["with"]["path"]
                 self.assertNotIn("Server/out", path)
                 self.assertNotIn("Workbench/wwwroot", path)
+
+    def test_pull_request_jobs_only_restore_caches(self):
+        restores = []
+        for job in JOBS.values():
+            for step in job["steps"]:
+                action = step.get("uses", "")
+                self.assertFalse(action.startswith(("actions/cache@", "actions/cache/save@")))
+                if action.startswith("actions/cache/restore@"):
+                    restores.append(step)
+        self.assertTrue(restores)
+        for restore in restores:
+            self.assertNotIn("restore-keys", restore["with"])
+            self.assertNotIn("**/yarn.lock", restore["with"]["path"].splitlines())
+        workbench_cache = action_steps("workbench", "actions/cache/restore")
+        self.assertEqual(1, len(workbench_cache))
+        self.assertEqual("${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}", workbench_cache[0]["with"]["key"])
 
     def test_docker_receives_complete_development_and_workbench_outputs_without_caches(self):
         consumer, failure = self.prepare("publish-docker")
@@ -131,6 +159,45 @@ class ArtifactHandoff(unittest.TestCase):
         _, failure = self.prepare("publish-docker")
         self.assertIsNotNone(failure)
         self.assertIn("runtimeconfig.json", failure.stdout)
+
+
+class WorkbenchYarnCacheOnMain(unittest.TestCase):
+    """Pull requests only restore the yarn cache, so main must save one they can hit."""
+
+    def setUp(self):
+        workflow = yaml.load((ROOT / ".github/workflows/workbench-yarn-cache.yml").read_text(), Loader=yaml.BaseLoader)
+        self.trigger = workflow["on"]
+        self.steps = workflow["jobs"]["save-yarn-cache"]["steps"]
+        self.restore = action_steps("workbench", "actions/cache/restore")[0]
+
+    def uses(self, action):
+        return [step for step in self.steps if step.get("uses", "").startswith(action + "@")]
+
+    def test_runs_on_pushes_to_main_only(self):
+        self.assertEqual(["main"], self.trigger["push"]["branches"])
+        self.assertNotIn("pull_request", self.trigger)
+        self.assertNotIn("pull_request_target", self.trigger)
+
+    def test_saves_exactly_the_paths_and_key_pull_requests_restore(self):
+        lookup, = self.uses("actions/cache/restore")
+        save, = self.uses("actions/cache/save")
+        self.assertEqual(self.restore["with"]["key"], lookup["with"]["key"])
+        self.assertEqual("${{ steps.%s.outputs.cache-primary-key }}" % lookup["id"], save["with"]["key"])
+        self.assertEqual(self.restore["with"]["path"], lookup["with"]["path"])
+        self.assertEqual(self.restore["with"]["path"], save["with"]["path"])
+
+    def test_resolves_the_yarn_cache_directory_the_same_way(self):
+        def directory_step(steps):
+            return next(step for step in steps if step.get("id") == "yarn-cache-dir-path")
+
+        def setup_node_index(steps):
+            return next(index for index, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
+
+        pull_request = JOBS["workbench"]["steps"]
+        self.assertEqual(directory_step(pull_request)["run"], directory_step(self.steps)["run"])
+        self.assertNotIn("working-directory", directory_step(self.steps))
+        self.assertLess(self.steps.index(directory_step(self.steps)), setup_node_index(self.steps))
+        self.assertLess(pull_request.index(directory_step(pull_request)), setup_node_index(pull_request))
 
 
 class NightlyFeedHandoff(unittest.TestCase):
@@ -206,14 +273,7 @@ class NightlyFeedHandoff(unittest.TestCase):
             def shell(script, env=environment):
                 return subprocess.run(['bash', '-euo', 'pipefail', '-c', script], cwd=checkout,
                                       env=env, capture_output=True, text=True)
-            guard = self.steps['Verify frozen main checkout']['run']
-            self.assertEqual(0, shell(guard).returncode)
-            self.assertNotEqual(0, shell(guard, {**environment, 'EXECUTION_REF': 'refs/heads/other'}).returncode)
-            self.assertNotEqual(0, shell(guard, {**environment, 'EXPECTED_SHA': '0' * 40}).returncode)
-            self.assertNotEqual(0, shell(guard, {**environment, 'EXECUTION_REPOSITORY': 'fork/Chronicle'}).returncode)
-            git(checkout, 'remote', 'set-url', 'origin', 'https://example.invalid/fork')
-            self.assertNotEqual(0, shell(guard).returncode)
-            git(checkout, 'remote', 'set-url', 'origin', canonical)
+            self.assert_main_guard(shell, environment, git, checkout, canonical)
             stats = checkout / 'Documentation/statistics/coverage-data.js'
             stats.parent.mkdir(parents=True)
             stats.write_text('statistics')
@@ -251,6 +311,16 @@ class NightlyFeedHandoff(unittest.TestCase):
             self.assertIn('CONFLICT', conflict.stdout)
             self.assertEqual(remote_head, git(remote, 'rev-parse', 'refs/heads/main').stdout)
             self.assertEqual('', git(checkout, 'branch', '--show-current').stdout.strip())
+
+    def assert_main_guard(self, shell, environment, git, checkout, canonical):
+        guard = self.steps['Verify frozen main checkout']['run']
+        self.assertEqual(0, shell(guard).returncode)
+        self.assertNotEqual(0, shell(guard, {**environment, 'EXECUTION_REF': 'refs/heads/other'}).returncode)
+        self.assertNotEqual(0, shell(guard, {**environment, 'EXPECTED_SHA': '0' * 40}).returncode)
+        self.assertNotEqual(0, shell(guard, {**environment, 'EXECUTION_REPOSITORY': 'fork/Chronicle'}).returncode)
+        git(checkout, 'remote', 'set-url', 'origin', 'https://example.invalid/fork')
+        self.assertNotEqual(0, shell(guard).returncode)
+        git(checkout, 'remote', 'set-url', 'origin', canonical)
 
 
 if __name__ == "__main__":

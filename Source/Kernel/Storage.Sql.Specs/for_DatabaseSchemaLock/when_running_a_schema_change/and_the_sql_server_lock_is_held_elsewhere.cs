@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using Cratis.Chronicle.Storage.Sql.Sinks;
+using Microsoft.Data.SqlClient;
 
 namespace Cratis.Chronicle.Storage.Sql.for_DatabaseSchemaLock.when_running_a_schema_change;
 
@@ -13,43 +14,81 @@ public class and_the_sql_server_lock_is_held_elsewhere(SqlServerFixture fixture)
     Exception _error;
     bool _changed;
     bool _reacquired;
+    bool _holderReleased;
     bool _holderDisposed;
+    Guid _holderConnectionId;
+    int _holderSessionId;
 
     async Task Establish()
     {
         _holder = NewConnection();
-        await _holder.OpenAsync();
-        await SchemaLock.Acquire(_holder, Resource, TimeSpan.Zero);
+        await RunStage("holder-open", () => _holder.OpenAsync());
+        var holder = (SqlConnection)_holder;
+        _holderConnectionId = holder.ClientConnectionId;
+        _holderSessionId = holder.ServerProcessId;
+        await RunStage("holder-acquire", () => SchemaLock.Acquire(_holder, Resource, TimeSpan.Zero));
     }
 
     async Task Because()
     {
-        _error = await Catch.Exception(() => DatabaseSchemaLock.Run(
+        _error = await Catch.Exception(() => RunStage("contended-acquire", () => DatabaseSchemaLock.Run(
             NewContext(),
             () =>
             {
                 _changed = true;
                 return Task.CompletedTask;
             },
-            TimeSpan.FromMilliseconds(300)));
-        await SchemaLock.Release(_holder, Resource);
-        await _holder.DisposeAsync();
+            TimeSpan.FromMilliseconds(300))));
+        await RunStage("holder-release", () => SchemaLock.Release(_holder, Resource));
+        _holderReleased = true;
+        await RunStage("holder-dispose", () => _holder.DisposeAsync().AsTask());
         _holderDisposed = true;
-        await DatabaseSchemaLock.Run(
+        await RunStage("reacquire", () => DatabaseSchemaLock.Run(
             NewContext(),
             () =>
             {
                 _reacquired = true;
                 return Task.CompletedTask;
             },
-            TimeSpan.Zero);
+            TimeSpan.Zero));
+    }
+
+    async Task RunStage(string stage, Func<Task> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (SqlException exception)
+        {
+            ReportFailure(stage, exception);
+            throw;
+        }
+    }
+
+    void ReportFailure(string stage, SqlException exception)
+    {
+        try
+        {
+            var errors = string.Join("; ", exception.Errors.Cast<SqlError>().Select(error => $"Number={error.Number},State={error.State},Class={error.Class},Procedure={error.Procedure},Line={error.LineNumber}"));
+            var diagnostic = $"DatabaseSchemaLock Stage={stage}, Database={_holder.Database}, " +
+                $"HolderSessionId={_holderSessionId}, HolderConnectionId={_holderConnectionId}, HolderState={_holder.State}, " +
+                $"HolderPooling={new SqlConnectionStringBuilder(ConnectionString).Pooling}, HolderReleased={_holderReleased}, HolderDisposed={_holderDisposed}, " +
+                $"FailureConnectionId={exception.ClientConnectionId}, Errors=[{errors}]";
+            exception.Data["DatabaseSchemaLockDiagnostic"] = diagnostic;
+            Console.Error.WriteLine(diagnostic);
+        }
+        catch (Exception diagnosticException)
+        {
+            exception.Data["DatabaseSchemaLockDiagnosticFailure"] = diagnosticException.GetType().Name;
+        }
     }
 
     async Task Destroy()
     {
         if (!_holderDisposed)
         {
-            await _holder.DisposeAsync();
+            await RunStage("holder-cleanup", () => _holder.DisposeAsync().AsTask());
         }
     }
 

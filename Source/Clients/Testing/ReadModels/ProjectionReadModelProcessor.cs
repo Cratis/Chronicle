@@ -9,16 +9,13 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
-using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
-using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
 using Cratis.Json;
-using Cratis.Serialization;
 using Microsoft.Extensions.Logging;
 using FrameworkNullLoggerFactory = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory;
 using KernelAppendedEvent = KernelConcepts::Cratis.Chronicle.Concepts.Events.AppendedEvent;
@@ -128,17 +125,11 @@ internal static partial class ProjectionReadModelProcessor
     {
         var readModelType = context.ReadModelType;
         var eventStore = context.EventStore;
-        var eventTypes = context.EventTypes;
         var eventContexts = context.EventContexts;
         var schema = context.SchemaGenerator.GenerateForReadModel(readModelType);
 
         var kernelReadModelDefinition = BuildKernelReadModelDefinition(readModelType, schema);
-        var kernelProjectionDefinition = KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
-            projectionDefinition,
-            KernelConceptsNs::Projections.ProjectionOwner.Client) with
-        {
-            EventSequenceId = new(context.InputSequenceId?.Value ?? (eventContexts is null ? ReadModelEvents.SequenceId.Value : eventStore.EventLog.Id.Value))
-        };
+        var kernelProjectionDefinition = ToKernelProjectionDefinition(projectionDefinition, context);
 
         var eventsList = events.ToList();
 
@@ -150,7 +141,7 @@ internal static partial class ProjectionReadModelProcessor
             persist: eventContexts is null || context.InputSequenceId is not null,
             seededEvents: seededEvents,
             inputSequenceId: context.InputSequenceId);
-        var eventTypeSchemas = await eventStore.TestingStore.Store.EventTypes.GetFor(eventTypes.All.Select(ToKernelEventType));
+        var eventTypeSchemas = await eventStore.TestingStore.Store.EventTypes.GetFor(context.EventTypes.All.Select(ToKernelEventType));
         var projectionFactory = CreateProjectionFactory(eventStore.TestingStore.Storage);
 
         var engineProjection = await projectionFactory.Create(
@@ -168,109 +159,32 @@ internal static partial class ProjectionReadModelProcessor
             ? CreateSeedStateFromInitialState(initialState, schema)
             : CreateInitialStateFromSchema(schema, engineProjection);
 
-        var statesByKey = new Dictionary<object, ExpandoObject>();
-
-        // Capture the first non-deferred key resolved for the root projection. In production, MongoDB
-        // upserts each read model document with `_id` = this key value, and the BSON deserializer maps
-        // `_id` back onto the read model's identifier property (the property marked [Key] / [Subject]
-        // or conventionally named "Id"). The in-memory test harness skips the MongoDB round-trip, so
-        // we mirror that mapping ourselves before serializing the state — otherwise identifier
-        // properties whose only source is the event-source ID surface as null in _scenario.Instance.
-        KernelKey? rootKey = null;
-        var explicitInitialStateIsPresent = initialState is not null;
-
         using var inMemorySink = new InMemorySink(kernelReadModelDefinition, _typeFormats);
-        var seededKeys = new HashSet<object>();
+        var run = new FoldRun
+        {
+            Projection = engineProjection,
+            ProjectionDefinition = kernelProjectionDefinition,
+            Storage = inMemoryEventSequenceStorage,
+            Sink = inMemorySink,
+            ReadModelType = readModelType,
+            CreateSeedState = CreateSeedState,
+            StrictEventSubscription = strictEventSubscription,
+            ExplicitInitialStateIsPresent = initialState is not null
+        };
+
         foreach (var (key, instance) in seededInstances ?? [])
         {
-            var stateKey = inMemorySink.GetKeyValue(new KernelKey(key, ArrayIndexers.NoIndexers));
-            statesByKey[stateKey] = CreateSeedStateFromInitialState(instance, schema);
-            inMemorySink.Collection[stateKey] = CreateSeedStateFromInitialState(instance, schema);
-            seededKeys.Add(stateKey);
+            run.Seed(key, () => CreateSeedStateFromInitialState(instance, schema));
         }
 
-        // Retry deferred keys at each releasing event, before later seeded key changes can participate.
-        var deferredEvents = new Queue<KernelAppendedEvent>();
-        var deferredChildren = new List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)>();
-        foreach (var @event in appendedEvents)
-        {
-            var (eventKey, eventRemoved) = await ProcessSingleEvent(engineProjection, kernelProjectionDefinition, inMemoryEventSequenceStorage, inMemorySink, @event, statesByKey, CreateSeedState, deferredEvents, deferredChildren, strictEventSubscription);
-            PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType);
-            rootKey ??= eventKey;
-            if (eventRemoved)
-            {
-                explicitInitialStateIsPresent = false;
-            }
-
-            if (eventKey is not null)
-            {
-                var (releasedKey, removed) = await ReleaseDeferredEvents(
-                    engineProjection,
-                    inMemoryEventSequenceStorage,
-                    inMemorySink,
-                    @event,
-                    statesByKey,
-                    CreateSeedState,
-                    deferredEvents,
-                    deferredChildren,
-                    () => PreserveSeededIdentifiers(inMemorySink, statesByKey, seededKeys, readModelType));
-                rootKey ??= releasedKey;
-                if (removed)
-                {
-                    explicitInitialStateIsPresent = false;
-                }
-            }
-        }
-
-        if (deferredEvents.Count > 0)
-        {
-            var @event = deferredEvents.Peek();
-            throw new InvalidOperationException(
-                $"Could not resolve parent key for event '{@event.Context.EventType.Id}' (EventSourceId '{@event.Context.EventSourceId}'). " +
-                "Ensure the parent event is included in the scenario and appended before the child event.");
-        }
-
-        if (deferredChildren.Count > 0)
-        {
-            var (child, @event) = deferredChildren[0];
-            throw new InvalidOperationException(
-                $"Could not resolve parent key for child collection '{child.Path}' for event '{@event.Context.EventType.Id}' (EventSourceId '{@event.Context.EventSourceId}'). " +
-                "Ensure the parent event is included in the scenario and appended before the child event.");
-        }
+        await run.ProcessEvents(appendedEvents);
+        run.ThrowIfEventsAreUnresolved();
 
         // Read every materialized instance per-key from the sink, which keeps one document per resolved
         // root key — so a multi-source projection (e.g. a join whose join-source event was seeded first)
         // can be asserted against the intended instance via InstanceForEventSourceId.
         var instances = BuildInstancesFromSink<TReadModel>(inMemorySink, readModelType);
-        if (seededKeys.Count > 0 && instances.Count == 1)
-        {
-            return (instances.Values.Single(), instances);
-        }
-
-        // An explicit initial state remains materialized through empty changesets until an actual root removal.
-        // Otherwise presence comes from the same per-key sink state that backs Instances: deferred, joined, or
-        // unsubscribed no-ops cannot create an id-only model, while a later constructive event recreates it.
-        var hasPrimary = explicitInitialStateIsPresent ||
-            (rootKey is not null && await inMemorySink.FindOrDefault(rootKey) is not null);
-        if (!hasPrimary)
-        {
-            return (seededKeys.Count > 0 ? instances.Values.FirstOrDefault() : null, instances);
-        }
-
-        var state = rootKey is not null && statesByKey.TryGetValue(inMemorySink.GetKeyValue(rootKey), out var rootState)
-            ? rootState
-            : CreateSeedState();
-
-        InjectIdentifierFromKey(state, rootKey, readModelType);
-
-        // Serialize with the same options used to deserialize so concept values — both scalar and the
-        // elements of a concept collection (e.g. IReadOnlyList<MyConcept>) — are written in their
-        // unwrapped primitive form. Without these options a concept CLR object serializes as an object
-        // ({ "value": ... }), which the concept-aware deserializer then rejects when it expects the
-        // underlying primitive.
-        var json = JsonSerializer.Serialize(state, Globals.JsonSerializerOptions);
-        var primary = (TReadModel?)JsonSerializer.Deserialize(json, readModelType, _readModelSerializerOptions);
-        return (primary, instances);
+        return (await SelectPrimary(run, instances), instances);
     }
 
     /// <summary>
@@ -306,22 +220,36 @@ internal static partial class ProjectionReadModelProcessor
     internal static JsonSchema GetReadModelSchema(Type readModelType, IJsonSchemaGenerator schemaGenerator) =>
         BuildKernelReadModelDefinition(readModelType, schemaGenerator.GenerateForReadModel(readModelType)).GetSchemaForLatestGeneration();
 
-    static void PreserveSeededIdentifiers(InMemorySink sink, Dictionary<object, ExpandoObject> statesByKey, HashSet<object> seededKeys, Type readModelType)
-    {
-        var identifier = IdentifierProperty.Find(readModelType);
-        if (identifier is null || seededKeys.Count == 0) return;
-
-        // InMemorySink injects id from the storage key on every write. For an explicitly seeded document,
-        // keep the identifier held by its projected state instead; it need not equal that storage key.
-        var property = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifier.Name);
-        foreach (var key in seededKeys)
+    static KernelConceptsNs::Projections.Definitions.ProjectionDefinition ToKernelProjectionDefinition(
+        Contracts.Projections.ProjectionDefinition projectionDefinition,
+        ReadModelFoldContext context) =>
+        KernelGrpc::Cratis.Chronicle.Services.Projections.Definitions.ProjectionDefinitionConverters.ToChronicle(
+            projectionDefinition,
+            KernelConceptsNs::Projections.ProjectionOwner.Client) with
         {
-            if (statesByKey.TryGetValue(key, out var state) && sink.Collection.TryGetValue(key, out var document) &&
-                ((IDictionary<string, object?>)state).TryGetValue(property, out var value))
-            {
-                ((IDictionary<string, object?>)document)[property] = value;
-            }
+            EventSequenceId = new(context.InputSequenceId?.Value ?? (context.EventContexts is null ? ReadModelEvents.SequenceId.Value : context.EventStore.EventLog.Id.Value))
+        };
+
+    static async Task<TReadModel?> SelectPrimary<TReadModel>(FoldRun run, Dictionary<EventSourceId, TReadModel> instances)
+        where TReadModel : class
+    {
+        if (run.HasSeededInstances && instances.Count == 1)
+        {
+            return instances.Values.Single();
         }
+
+        if (!await run.HasPrimaryInstance())
+        {
+            return run.HasSeededInstances ? instances.Values.FirstOrDefault() : null;
+        }
+
+        // Serialize with the same options used to deserialize so concept values — both scalar and the
+        // elements of a concept collection (e.g. IReadOnlyList<MyConcept>) — are written in their
+        // unwrapped primitive form. Without these options a concept CLR object serializes as an object
+        // ({ "value": ... }), which the concept-aware deserializer then rejects when it expects the
+        // underlying primitive.
+        var json = JsonSerializer.Serialize(run.GetPrimaryState(), Globals.JsonSerializerOptions);
+        return (TReadModel?)JsonSerializer.Deserialize(json, run.ReadModelType, _readModelSerializerOptions);
     }
 
     /// <summary>
@@ -357,37 +285,6 @@ internal static partial class ProjectionReadModelProcessor
         }
 
         return instances;
-    }
-
-    /// <summary>
-    /// Mirrors MongoDB's `_id` → identifier property mapping for the in-memory test harness.
-    /// Finds the read model's identifier property (preferring <c language="csharp">[Key]</c>, then <c language="csharp">[Subject]</c>,
-    /// then a property named "Id" by convention) and writes the resolved projection key value into
-    /// the state under that property's camel-cased name — unless an event mapping has already
-    /// populated that property.
-    /// </summary>
-    /// <param name="state">The projection state ExpandoObject to inject into.</param>
-    /// <param name="key">The resolved projection key, or <see langword="null"/> if no event resolved one.</param>
-    /// <param name="readModelType">The runtime read model type.</param>
-    static void InjectIdentifierFromKey(ExpandoObject state, KernelKey? key, Type readModelType)
-    {
-        if (key is null || key.Value is null) return;
-
-        var identifierProperty = IdentifierProperty.Find(readModelType);
-        if (identifierProperty is null) return;
-
-        var propertyName = AcronymFriendlyJsonCamelCaseNamingPolicy.Instance.ConvertName(identifierProperty.Name);
-        var stateDict = (IDictionary<string, object?>)state;
-
-        // Don't overwrite an explicit projection mapping (e.g. [SetFrom<T>] or [SetFromContext<T>]
-        // that wrote to the identifier property). The MongoDB analogue is: if the projection
-        // updates `_id`, that update wins; we only fill in `_id` when no update touched it.
-        if (stateDict.TryGetValue(propertyName, out var existing) && existing is not null)
-        {
-            return;
-        }
-
-        stateDict[propertyName] = key.Value;
     }
 
     /// <summary>
@@ -448,93 +345,6 @@ internal static partial class ProjectionReadModelProcessor
         return initialState;
     }
 
-    static async Task<(KernelKey? Key, bool Removed)> ProcessSingleEvent(
-        KernelProjectionEngine::IProjection projection,
-        KernelConceptsNs::Projections.Definitions.ProjectionDefinition kernelProjectionDefinition,
-        IEventSequenceStorage eventSequenceStorage,
-        InMemorySink sink,
-        KernelAppendedEvent @event,
-        Dictionary<object, ExpandoObject> statesByKey,
-        Func<ExpandoObject> createSeedState,
-        Queue<KernelAppendedEvent> deferredEvents,
-        List<(KernelProjectionEngine::IProjection Child, KernelAppendedEvent Event)> deferredChildren,
-        bool strictEventSubscription)
-    {
-        // The production projection engine filters the event stream to the types the projection
-        // subscribes to, so an event a projection does not handle never reaches it. A seeded stream
-        // may legitimately carry such unrelated events (e.g. an audit/marker event); skip them here
-        // rather than letting GetKeyResolverFor throw MissingKeyResolverForEventType. HasKeyResolverFor
-        // is the exact predicate for "would GetKeyResolverFor succeed" (same resolver map), and the
-        // root projection's map includes child ([ChildrenFrom]) event types, so this is a faithful
-        // no-op filter for nested/join scenarios too. In strict mode the same condition is surfaced as a
-        // loud error instead, so a spec that opted in can catch the genuine mistake of seeding the wrong event.
-        if (!projection.HasKeyResolverFor(@event.Context.EventType))
-        {
-            if (strictEventSubscription)
-            {
-                throw new UnsubscribedEventSeeded(@event.Context.EventType.Id.ToString());
-            }
-
-            return (null, false);
-        }
-
-        KernelProjectionEngine::KeyResolverResult keyResult;
-
-        // A root-level [Join] source enriches an existing root document; use the kernel resolver and skip
-        // unmatched roots so the in-memory sink doesn't materialize a phantom (see JoinKeyResolver). A null
-        // root means the row doesn't exist yet — skip; ResolveJoin backfills when the FROM event arrives.
-        var (isRootJoinSource, resolvedRootKey, joinKey) = await JoinKeyResolver.TryResolveRootJoinKey(projection, kernelProjectionDefinition, eventSequenceStorage, sink, @event);
-        if (isRootJoinSource)
-        {
-            if (resolvedRootKey is null)
-            {
-                return (null, false);
-            }
-
-            // The resolved root key identifies the row; the join matches on the value resolved from its key expression.
-            // Preserve both, just as ForJoin does in the production ResolveKey step.
-            keyResult = KernelProjectionEngine::KeyResolverResult.Resolved(resolvedRootKey, joinKey);
-        }
-        else
-        {
-            try
-            {
-                keyResult = await projection.GetKeyResolverFor(@event.Context.EventType)(eventSequenceStorage, sink, @event);
-            }
-            catch (FormatException) when (projection.GetOperationTypeFor(@event.Context.EventType).HasFlag(KernelProjectionEngine::ProjectionOperationType.Join))
-            {
-                // Defensive fallback for a nested/child [Join] whose join key can't be force-converted to the
-                // identifier type: skip rather than crash the scenario (root joins are handled above).
-                return (null, false);
-            }
-        }
-
-        if (keyResult is KernelProjectionEngine::DeferredKey)
-        {
-            deferredEvents.Enqueue(@event);
-            return (null, false);
-        }
-
-        var key = (keyResult as KernelProjectionEngine::ResolvedKey)!.Key;
-
-        // A child-level [Join] source resolves onto a child of an existing root; re-anchor onto that root
-        // (keeping the array indexers) so the child is updated in place rather than duplicated into a phantom
-        // (see JoinKeyResolver). A null root means the child doesn't exist yet — skip; ResolveJoin backfills it.
-        var (isChildJoinSource, childJoinRootKey) = await JoinKeyResolver.TryResolveChildJoinRootKey(projection, sink, @event, key);
-        if (isChildJoinSource)
-        {
-            if (childJoinRootKey is null)
-            {
-                return (null, false);
-            }
-
-            key = key with { Value = childJoinRootKey.Value };
-        }
-
-        var removed = await ApplyResolvedEvent(projection, eventSequenceStorage, sink, @event, key, statesByKey, createSeedState, deferredChildren, (keyResult as KernelProjectionEngine::ResolvedKey)!.JoinKey);
-        return (key, removed);
-    }
-
     /// <summary>
     /// Applies an event whose key is resolved to the state of the instance that key addresses, and to the sink.
     /// </summary>
@@ -566,12 +376,7 @@ internal static partial class ProjectionReadModelProcessor
         object? joinKey = null)
     {
         var stateKey = sink.GetKeyValue(key);
-        if (!statesByKey.TryGetValue(stateKey, out var state))
-        {
-            state = createSeedState();
-            SetKeyOnSeedState(projection, state, key);
-            statesByKey[stateKey] = state;
-        }
+        var state = GetOrCreateState(projection, key, stateKey, statesByKey, createSeedState);
 
         var changeset = new Changeset<KernelAppendedEvent, ExpandoObject>(_objectComparer, @event, state);
         var context = new KernelProjectionEngine::ProjectionEventContext(
@@ -590,10 +395,7 @@ internal static partial class ProjectionReadModelProcessor
 
         // The live pipeline writes the instance for a root event that creates it even when the event changes nothing
         // (SetInitialState), so an event without properties still brings its read model into existence.
-        var createsInstance = !projection.HasParent &&
-            projection.Accepts(@event.Context.EventType) &&
-            context.CreatesInstance &&
-            !changeset.HasBeenRemoved() &&
+        var createsInstance = IsRootInstanceCreation(projection, @event, context, changeset) &&
             await sink.FindOrDefault(key) is null;
 
         // Apply to the sink BEFORE mutating the instance state. The sink clones the changeset's InitialState —
@@ -604,17 +406,49 @@ internal static partial class ProjectionReadModelProcessor
             await sink.ApplyChanges(key, changeset, @event.Context.SequenceNumber);
         }
 
+        RemoveChildrenFromAllStates(changeset, statesByKey);
+
+        statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
+        return removed;
+    }
+
+    static ExpandoObject GetOrCreateState(
+        KernelProjectionEngine::IProjection projection,
+        KernelKey key,
+        object stateKey,
+        Dictionary<object, ExpandoObject> statesByKey,
+        Func<ExpandoObject> createSeedState)
+    {
+        if (!statesByKey.TryGetValue(stateKey, out var state))
+        {
+            state = createSeedState();
+            SetKeyOnSeedState(projection, state, key);
+            statesByKey[stateKey] = state;
+        }
+
+        return state;
+    }
+
+    static bool IsRootInstanceCreation(
+        KernelProjectionEngine::IProjection projection,
+        KernelAppendedEvent @event,
+        KernelProjectionEngine::ProjectionEventContext context,
+        Changeset<KernelAppendedEvent, ExpandoObject> changeset) =>
+        !projection.HasParent &&
+        projection.Accepts(@event.Context.EventType) &&
+        context.CreatesInstance &&
+        !changeset.HasBeenRemoved();
+
+    static void RemoveChildrenFromAllStates(Changeset<KernelAppendedEvent, ExpandoObject> changeset, Dictionary<object, ExpandoObject> statesByKey)
+    {
         foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
         {
             var segments = childRemovedFromAll.ChildrenProperty.Segments.Select(segment => segment.Value).ToArray();
             foreach (var parentState in statesByKey.Values)
             {
-                RemoveFromCollection(parentState, segments, 0, childRemovedFromAll.IdentifiedByProperty, childRemovedFromAll.Key);
+                RemoveFromCollection(parentState, segments, childRemovedFromAll.IdentifiedByProperty, childRemovedFromAll.Key);
             }
         }
-
-        statesByKey[stateKey] = removed ? new ExpandoObject() : ApplyActualChanges(key, changeset.Changes, state);
-        return removed;
     }
 
     /// <summary>
@@ -715,12 +549,7 @@ internal static partial class ProjectionReadModelProcessor
                 continue;
             }
 
-            var keyResolver = child.GetKeyResolverFor(eventType);
-            if (!context.TryGetResolvedKey(keyResolver, out var keyResult))
-            {
-                keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
-                context.MemoizeResolvedKey(keyResolver, keyResult);
-            }
+            var keyResult = await ResolveChildKey(child, context, eventSequenceStorage, sink);
 
             // The kernel stores a deferred child for redelivery once its parent exists. The harness
             // retries that branch after processing the seeded events; an unresolvable key is still skipped.
@@ -741,183 +570,19 @@ internal static partial class ProjectionReadModelProcessor
         }
     }
 
-    static ExpandoObject ApplyActualChanges(KernelKey key, IEnumerable<Change> changes, ExpandoObject state)
+    static async Task<KernelProjectionEngine::KeyResolverResult> ResolveChildKey(
+        KernelProjectionEngine::IProjection child,
+        KernelProjectionEngine::ProjectionEventContext context,
+        IEventSequenceStorage eventSequenceStorage,
+        InMemorySink sink)
     {
-        foreach (var change in changes)
+        var keyResolver = child.GetKeyResolverFor(context.Event.Context.EventType);
+        if (!context.TryGetResolvedKey(keyResolver, out var keyResult))
         {
-            switch (change)
-            {
-                case PropertiesChanged<ExpandoObject>:
-                    ApplyPropertyDifferences((change as PropertiesChanged<ExpandoObject>)!.Differences, state);
-                    break;
-
-                case ChildAdded childAdded:
-                    InjectChildIdentifierFromKey(childAdded);
-                    var items = EnsureChildCollection(state, childAdded);
-                    items.InsertChild(childAdded.Child, childAdded.Ordering, childAdded.IdentifiedByProperty);
-                    break;
-
-                case ChildRemoved childRemoved:
-                    ApplyChildRemoved(state, childRemoved);
-                    break;
-
-                case NestedCleared nestedCleared:
-                    if (state.TryGetExistingPath(nestedCleared.NestedProperty, nestedCleared.ArrayIndexers) is { } existingParent)
-                    {
-                        ((IDictionary<string, object?>)existingParent)[nestedCleared.NestedProperty.LastSegment.Value] = null;
-                    }
-                    break;
-
-                case Joined joined:
-                    state = ApplyActualChanges(key, joined.Changes, state);
-                    break;
-
-                case ResolvedJoin resolvedJoin:
-                    state = ApplyActualChanges(key, resolvedJoin.Changes, state);
-                    break;
-            }
+            keyResult = await keyResolver(eventSequenceStorage, sink, context.Event);
+            context.MemoizeResolvedKey(keyResolver, keyResult);
         }
 
-        return state;
-    }
-
-    /// <summary>
-    /// Removes a child from its collection in the projection state, mirroring how the production sinks
-    /// apply a <see cref="ChildRemoved"/> change. Walks the children property path and removes from every
-    /// matching leaf collection the item whose identifier property equals the removed key.
-    /// </summary>
-    /// <param name="state">The projection state to mutate.</param>
-    /// <param name="childRemoved">The <see cref="ChildRemoved"/> change to apply.</param>
-    static void ApplyChildRemoved(ExpandoObject state, ChildRemoved childRemoved)
-    {
-        var segments = childRemoved.ChildrenProperty.Segments.Select(s => s.Value).ToArray();
-        RemoveFromCollection(state, segments, 0, childRemoved.IdentifiedByProperty, childRemoved.Key);
-    }
-
-    static void RemoveFromCollection(IDictionary<string, object?> current, string[] segments, int index, PropertyPath identifiedByProperty, object key)
-    {
-        if (index >= segments.Length || !current.TryGetValue(segments[index], out var value) || value is not System.Collections.IEnumerable enumerable)
-        {
-            return;
-        }
-
-        var items = enumerable.Cast<object>().ToList();
-
-        if (index == segments.Length - 1)
-        {
-            items.RemoveAll(item =>
-                item is ExpandoObject expando &&
-                ChildIdentity.TryGetValue(expando, identifiedByProperty, out var idValue) &&
-                Equals(NormalizeStateValue(idValue), NormalizeStateValue(key)));
-            current[segments[index]] = items;
-            return;
-        }
-
-        // Intermediate collection — recurse into each element to reach the leaf collection.
-        foreach (var item in items.OfType<ExpandoObject>())
-        {
-            RemoveFromCollection(item, segments, index + 1, identifiedByProperty, key);
-        }
-    }
-
-    static void ApplyPropertyDifferences(IEnumerable<PropertyDifference> differences, ExpandoObject state)
-    {
-        foreach (var difference in differences)
-        {
-            if (difference.IsRemoval)
-            {
-                difference.PropertyPath.RemoveValue(state, NormalizeArrayIndexers(difference.ArrayIndexers));
-                continue;
-            }
-
-            difference.PropertyPath.SetValue(state, NormalizeStateValue(difference.Changed)!, NormalizeArrayIndexers(difference.ArrayIndexers));
-        }
-    }
-
-    static List<object> EnsureChildCollection(ExpandoObject state, ChildAdded childAdded)
-    {
-        var normalizedIndexers = NormalizeArrayIndexers(childAdded.ArrayIndexers).All.ToArray();
-        var current = (IDictionary<string, object?>)state;
-
-        foreach (var indexer in normalizedIndexers.Take(Math.Max(0, normalizedIndexers.Length - 1)))
-        {
-            var collectionName = indexer.ArrayProperty.LastSegment.Value;
-            var collection = current.TryGetValue(collectionName, out var existingCollection) && existingCollection is System.Collections.IEnumerable existingEnumerable
-                ? existingEnumerable.Cast<object>().ToList()
-                : [];
-
-            var element = !indexer.IdentifierProperty.IsSet &&
-                indexer.Identifier is int index &&
-                collection.Count > index
-                    ? collection[index] as ExpandoObject
-                    : collection
-                        .OfType<ExpandoObject>()
-                        .SingleOrDefault(item =>
-                            ChildIdentity.TryGetValue(item, indexer.IdentifierProperty, out var value) &&
-                            Equals(NormalizeStateValue(value), NormalizeStateValue(indexer.Identifier)));
-
-            if (element is null)
-            {
-                element = new ExpandoObject();
-                if (indexer.IdentifierProperty.IsSet)
-                {
-                    indexer.IdentifierProperty.SetValue(element, NormalizeStateValue(indexer.Identifier)!, ArrayIndexers.NoIndexers);
-                }
-
-                collection.Add(element);
-                current[collectionName] = collection;
-            }
-
-            current = element;
-        }
-
-        var targetCollectionName = childAdded.ChildrenProperty.LastSegment.Value;
-        if (current.TryGetValue(targetCollectionName, out var targetCollection) &&
-            targetCollection is System.Collections.IEnumerable targetEnumerable)
-        {
-            var items = targetEnumerable.Cast<object>().ToList();
-            current[targetCollectionName] = items;
-            return items;
-        }
-
-        var newItems = new List<object>();
-        current[targetCollectionName] = newItems;
-        return newItems;
-    }
-
-    static ArrayIndexers NormalizeArrayIndexers(ArrayIndexers arrayIndexers) =>
-        arrayIndexers.IsEmpty
-            ? ArrayIndexers.NoIndexers
-            : new ArrayIndexers(arrayIndexers.All.Select(indexer => indexer with { Identifier = NormalizeStateValue(indexer.Identifier)! }));
-
-    static object? NormalizeStateValue(object? value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        var type = value.GetType();
-        var isSpecified = type.GetProperty("IsSpecified");
-        var wrappedValue = type.GetProperty("Value");
-
-        if (isSpecified?.PropertyType == typeof(bool) && wrappedValue is not null)
-        {
-            return wrappedValue.GetValue(value);
-        }
-
-        return value;
-    }
-
-    static void InjectChildIdentifierFromKey(ChildAdded childAdded)
-    {
-        if (childAdded.Child is not ExpandoObject childState ||
-            !childAdded.IdentifiedByProperty.IsSet ||
-            childAdded.IdentifiedByProperty.IsRoot)
-        {
-            return;
-        }
-
-        childAdded.IdentifiedByProperty.SetValue(childState, NormalizeStateValue(childAdded.Key)!, ArrayIndexers.NoIndexers);
+        return keyResult;
     }
 }

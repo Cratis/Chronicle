@@ -21,6 +21,8 @@ public class DecryptInitialState(
     EventStoreName eventStore,
     EventStoreNamespaceName eventStoreNamespace) : ICanPerformProjectionPipelineStep
 {
+    static readonly string[] _fencingProperties = [WellKnownProperties.Revision, WellKnownProperties.Incarnation, WellKnownProperties.LastHandledByNamespace];
+
     /// <inheritdoc/>
     public async ValueTask<ProjectionEventContext> Perform(IProjection projection, ProjectionEventContext context)
     {
@@ -70,6 +72,13 @@ public class DecryptInitialState(
         if (initialized is not null)
         {
             releasedState[WellKnownProperties.ReadModelInstanceInitialized] = initialized;
+        }
+
+        // The sink-owned fencing bookkeeping is not part of the schema, so Release's schema conversion drops it.
+        // A fenced write compares against it, so it is carried over from the state as stored.
+        foreach (var property in _fencingProperties.Where(initialState.ContainsKey))
+        {
+            releasedState[property] = initialState[property];
         }
 
         context.Changeset.InitialState = released;

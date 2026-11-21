@@ -17,6 +17,6 @@ for the released ESM v9 boundary and quoted opaque origins.
 
 Use `system`, `uses` and inline/standalone `operation` declarations to state
 external work in the authored production sequence, with execute/compensate phase
-intent. These remain unadmitted (PLAY0268), not post-commit reactions. Read
+intent. Operations remain unadmitted (PLAY0268), as do systems when no system declares an ability (any ability admits every system at ESM v50); none are post-commit reactions. Read
 [operation intent](operations.md) for forms, boundaries and checked
 failure/compensation specification syntax.
