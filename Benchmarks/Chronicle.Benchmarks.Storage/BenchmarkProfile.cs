@@ -14,17 +14,20 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 public sealed record BenchmarkProfile(string Name, WorkloadShape Workload, int PayloadBytes, RunPlan Plan)
 {
     /// <summary>Gets the bounded profile: one thousand events, one warmup, three iterations, a few minutes.</summary>
-    public static BenchmarkProfile Smoke { get; } = new("smoke", new([1_000], [1, 8], [10, 100, 1_000], [1, 50, 500]), 256, new(1, 3, 20, false));
+    public static BenchmarkProfile Smoke { get; } = new("smoke", new([1_000], [1, 8], [10, 100, 1_000], [1, 50, 500], [500, 1_000, 2_000]), 256, new(1, 3, 20, false));
 
     /// <summary>Gets the hosted on-demand profile: ten thousand events, two warmups and ten measured iterations.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1720:Identifier contains type name", Justification = "Short is the benchmark profile name, not a numeric type.")]
-    public static BenchmarkProfile Short { get; } = new("short", new([10_000], [1, 8, 32], [10, 100, 1_000], [1, 50, 500]), 256, new(2, 10, 120, false));
+    public static BenchmarkProfile Short { get; } = new("short", new([10_000], [1, 8, 32], [10, 100, 1_000], [1, 50, 500], [2_500, 5_000, 10_000, 20_000]), 256, new(2, 10, 120, false));
 
     /// <summary>Gets the on-demand profile: ten thousand and one million events. Long; never part of a gate.</summary>
-    public static BenchmarkProfile Medium { get; } = new("medium", new([10_000, 1_000_000], [1, 8, 32], [10, 100, 1_000], [1, 50, 500]), 256, new(1, 5, 240, true));
+    public static BenchmarkProfile Medium { get; } = new("medium", new([10_000, 1_000_000], [1, 8, 32], [10, 100, 1_000], [1, 50, 500], [10_000, 100_000, 1_000_000]), 256, new(1, 5, 240, true));
 
     /// <summary>Gets the number of seeded events for the catch-up and activation workloads.</summary>
     public IReadOnlyList<int> EventCounts => Workload.EventCounts;
+
+    /// <summary>Gets the ascending sizes used only for catch-up scaling.</summary>
+    public IReadOnlyList<int> CatchUpCounts => Workload.CatchUpCounts ?? Workload.EventCounts;
 
     /// <summary>Gets the writer counts for the concurrent append workloads.</summary>
     public IReadOnlyList<int> Concurrency => Workload.Concurrency;

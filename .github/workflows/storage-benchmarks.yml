@@ -39,7 +39,7 @@ jobs:
   storage-benchmarks:
     name: Storage benchmarks
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ github.event.inputs.profile == 'short' && 120 || 45 }}
+    timeout-minutes: ${{ github.event.inputs.profile == 'short' && 150 || 45 }}
     env:
       PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
       PROVIDERS: ${{ github.event.inputs.providers || 'sqlite,postgres,mongo' }}

@@ -26,18 +26,27 @@ public static class RunSummary
             builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {provider} | {gapCase} | — | — | — | {reason} |");
         }
 
+        var scaling = ScalingReport.FromMeasurements();
+        if (scaling.Length > 0) builder.AppendLine().AppendLine("## Catch-up scaling").AppendLine().Append(scaling);
         return builder.ToString();
     }
 
     /// <summary>Combines the providers' parts and states whether the providers are comparable.</summary>
     /// <param name="ledgers">The ledgers of the providers that ran.</param>
     /// <param name="resultDirectory">The result folder holding each provider's part.</param>
+    /// <param name="cutShort">Whether the run exhausted its profile budget.</param>
     /// <returns>The summary.</returns>
-    public static string Combine(IReadOnlyList<SettingsLedger> ledgers, string resultDirectory)
+    public static string Combine(IReadOnlyList<SettingsLedger> ledgers, string resultDirectory, bool cutShort = false)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("# Storage benchmark summary")
-            .AppendLine()
+        builder.AppendLine("# Storage benchmark summary");
+        if (cutShort)
+        {
+            var profile = StorageRunOptions.Current.Profile;
+            builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"> **Run cut short:** the {profile.Name} profile budget of {profile.TimeoutMinutes} minutes ran out; only the cases below completed.");
+        }
+
+        builder.AppendLine()
             .AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Durability: **{DurabilityClassifier.ComparabilityLabel(ledgers.Select(_ => _.DurabilityClass))}**")
             .AppendLine();
         foreach (var ledger in ledgers) builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"- {ledger.Provider}: {ledger.DurabilityClass}");
@@ -45,9 +54,38 @@ public static class RunSummary
         foreach (var ledger in ledgers)
         {
             var part = Path.Combine(resultDirectory, ledger.Provider, "summary-part.md");
-            if (File.Exists(part)) builder.Append(File.ReadAllText(part));
+            if (File.Exists(part)) builder.Append(RowsFromPart(part));
         }
 
+        if (cutShort) AppendUnlistedParts(builder, ledgers, resultDirectory);
+
+        AppendArtifacts(builder, resultDirectory, "scaling.md", "Catch-up scaling");
+        AppendArtifacts(builder, resultDirectory, "plans.md", "Query plans");
         return builder.ToString();
+    }
+
+    static void AppendUnlistedParts(StringBuilder builder, IReadOnlyList<SettingsLedger> ledgers, string directory)
+    {
+        if (!Directory.Exists(directory)) return;
+        var providers = ledgers.Select(_ => _.Provider).ToHashSet(StringComparer.Ordinal);
+        foreach (var part in Directory.EnumerateFiles(directory, "summary-part.md", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+        {
+            if (!providers.Contains(Path.GetFileName(Path.GetDirectoryName(part))!)) builder.Append(RowsFromPart(part));
+        }
+    }
+
+    static string RowsFromPart(string path) => File.ReadAllText(path).Split("\n## Catch-up scaling\n", 2, StringSplitOptions.None)[0];
+
+    static void AppendArtifacts(StringBuilder builder, string directory, string file, string heading)
+    {
+        if (!Directory.Exists(directory)) return;
+        var artifacts = Directory.EnumerateFiles(directory, file, SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
+        if (artifacts.Length == 0) return;
+        builder.AppendLine().AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"## {heading}").AppendLine();
+        foreach (var artifact in artifacts)
+        {
+            builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"[{Path.GetFileName(Path.GetDirectoryName(artifact))}/{file}]({Path.GetRelativePath(directory, artifact).Replace('\\', '/')})").AppendLine();
+            if (file == "scaling.md") builder.AppendLine(File.ReadAllText(artifact));
+        }
     }
 }

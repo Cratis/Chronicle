@@ -66,6 +66,7 @@ public static class BenchmarkEvents
     public static IEventTypesStorage CreateEventTypes()
     {
         var types = Substitute.For<IEventTypesStorage>();
+        types.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(true);
         types.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call =>
             new EventTypeSchema(new EventType(call.Arg<EventTypeId>(), EventTypeGeneration.First), EventTypeOwner.None, EventTypeSource.Unknown, new JsonSchema()));
         return types;
