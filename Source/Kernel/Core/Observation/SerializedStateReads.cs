@@ -10,11 +10,13 @@ namespace Cratis.Chronicle.Observation;
 /// Orleans refuses a read of a persistent state while another read of it is in flight. An observer reads the
 /// same state from turns that can interleave, so each read waits for the one before it and then reads fresh -
 /// sharing the earlier read would hand back data older than something the caller has since written or moved.
-/// One instance guards one state; reads of different states do not wait for each other.
+/// One instance guards one state; reads of different states do not wait for each other. The gate is never disposed:
+/// an activation can be torn down while a read is in flight or queued, and disposing a semaphore under a holder
+/// makes its release throw and strands its waiters, so it is an <see cref="AsyncGate"/>, which has nothing to dispose.
 /// </remarks>
-internal sealed class SerializedStateReads : IDisposable
+internal sealed class SerializedStateReads
 {
-    readonly SemaphoreSlim _gate = new(1, 1);
+    readonly AsyncGate _gate = new();
 
     /// <summary>
     /// Performs a read once no other read through this instance is in flight.
@@ -30,22 +32,7 @@ internal sealed class SerializedStateReads : IDisposable
         }
         finally
         {
-            ReleaseUnlessDisposed();
-        }
-    }
-
-    /// <inheritdoc/>
-    public void Dispose() => _gate.Dispose();
-
-    void ReleaseUnlessDisposed()
-    {
-        try
-        {
             _gate.Release();
-        }
-        catch (ObjectDisposedException)
-        {
-            // The activation was disposed while a read was in flight; nothing is left to release.
         }
     }
 }
