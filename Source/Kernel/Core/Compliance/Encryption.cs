@@ -132,6 +132,35 @@ public class Encryption : IEncryption
         }
     }
 
+    static byte[] WrapDataKey(byte[] dataKey, EncryptionKey key)
+    {
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPublicKey(key.Public, out _);
+        return rsa.Encrypt(dataKey, _keyWrapPadding);
+    }
+
+    static byte[] DecryptRsa(byte[] bytes, EncryptionKey key, RSAEncryptionPadding padding)
+    {
+        using var rsa = RSA.Create();
+
+        // Invalid key material is an operational failure, not a reason to try another revision.
+        rsa.ImportRSAPrivateKey(key.Private, out _);
+        try
+        {
+            return rsa.Decrypt(bytes, padding);
+        }
+        catch (CryptographicException ex)
+        {
+            throw new EncryptionKeyUnwrapFailed(ex);
+        }
+    }
+
+    static EncryptionKey GenerateKeyPair()
+    {
+        using var rsa = RSA.Create(KeySize);
+        return new(rsa.ExportRSAPublicKey(), rsa.ExportRSAPrivateKey());
+    }
+
     byte[] EncryptSigned(byte[] bytes, EncryptionKeyAtRevision pair, ProtectedValueAddress address)
     {
         var commitment = EnvelopeSigning.Commit(address);
@@ -170,34 +199,5 @@ public class Encryption : IEncryption
         {
             CryptographicOperations.ZeroMemory(dataKey);
         }
-    }
-
-    static byte[] WrapDataKey(byte[] dataKey, EncryptionKey key)
-    {
-        using var rsa = RSA.Create();
-        rsa.ImportRSAPublicKey(key.Public, out _);
-        return rsa.Encrypt(dataKey, _keyWrapPadding);
-    }
-
-    static byte[] DecryptRsa(byte[] bytes, EncryptionKey key, RSAEncryptionPadding padding)
-    {
-        using var rsa = RSA.Create();
-
-        // Invalid key material is an operational failure, not a reason to try another revision.
-        rsa.ImportRSAPrivateKey(key.Private, out _);
-        try
-        {
-            return rsa.Decrypt(bytes, padding);
-        }
-        catch (CryptographicException ex)
-        {
-            throw new EncryptionKeyUnwrapFailed(ex);
-        }
-    }
-
-    static EncryptionKey GenerateKeyPair()
-    {
-        using var rsa = RSA.Create(KeySize);
-        return new(rsa.ExportRSAPublicKey(), rsa.ExportRSAPrivateKey());
     }
 }

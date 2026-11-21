@@ -57,7 +57,7 @@ internal sealed class EnvelopeSigningKeys
         var cacheKey = (EnvelopeSigning.Fingerprint(key.Public), revision.Value, Convert.ToHexString(commitment));
         while (true)
         {
-            var lazy = _keys.GetOrAdd(cacheKey, _ => new Lazy<EnvelopeSigningKey>(() => Certify(key, revision, commitment)));
+            var lazy = _keys.GetOrAdd(cacheKey, static (_, state) => new Lazy<EnvelopeSigningKey>(() => state.Keys.Certify(state.Key, state.Revision, state.Commitment)), (Keys: this, Key: key, Revision: revision, Commitment: commitment));
             EnvelopeSigningKey signingKey;
             try
             {
@@ -113,8 +113,7 @@ internal sealed class EnvelopeSigningKeys
         lock (_evictionLock)
         {
             if (_keys.Count <= _capacity) return;
-            var oldest = _keys.Where(_ => _.Value.IsValueCreated).OrderBy(_ => _.Value.Value.LastUsed).Take(EvictionBatch).ToArray();
-            foreach (var entry in oldest)
+            foreach (var entry in _keys.Where(_ => _.Value.IsValueCreated).OrderBy(_ => _.Value.Value.LastUsed).Take(EvictionBatch).ToArray())
             {
                 Remove(entry);
             }

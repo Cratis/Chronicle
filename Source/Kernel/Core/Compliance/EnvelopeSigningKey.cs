@@ -61,6 +61,17 @@ internal sealed class EnvelopeSigningKey : IDisposable
         }
     }
 
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        lock (_lock)
+        {
+            if (_retired) return;
+            _retired = true;
+            _signer.Dispose();
+        }
+    }
+
     /// <summary>Signs a message unless the key has been retired.</summary>
     /// <param name="message">The message.</param>
     /// <param name="signature">The IEEE P1363 signature.</param>
@@ -78,17 +89,6 @@ internal sealed class EnvelopeSigningKey : IDisposable
             _remainingSignatures--;
             signature = _signer.SignData(message, HashAlgorithmName.SHA256, EnvelopeSigning.ValueSignatureFormat);
             return true;
-        }
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        lock (_lock)
-        {
-            if (_retired) return;
-            _retired = true;
-            _signer.Dispose();
         }
     }
 }

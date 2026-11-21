@@ -164,7 +164,7 @@ internal sealed record EncryptionEnvelope
             throw new CryptographicException("Invalid encryption envelope component length.");
         }
 
-        var publicKeyOffset = SignedHeaderSize;
+        const int publicKeyOffset = SignedHeaderSize;
         var certificateOffset = publicKeyOffset + publicKeyLength;
         var signingKeyOffset = certificateOffset + certificateLength;
         var wrappedKeyOffset = signingKeyOffset + signingKeyLength;

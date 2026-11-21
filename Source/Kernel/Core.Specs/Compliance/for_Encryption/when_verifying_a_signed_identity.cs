@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts;
-
 namespace Cratis.Chronicle.Compliance.for_Encryption;
 
 public class when_verifying_a_signed_identity : given.a_signed_value
