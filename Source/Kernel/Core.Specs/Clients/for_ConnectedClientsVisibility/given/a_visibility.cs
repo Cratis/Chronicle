@@ -36,14 +36,16 @@ public class a_visibility : Specification
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object?>(), Arg.Any<string>())
             .Returns(AuthorizationResult.Failed());
         var options = Options.Create(new ChronicleOptions { Authentication = new() { Enabled = AuthenticationEnabled } });
-        _visibility = new(options, _ownership, new Microsoft.AspNetCore.Http.HttpContextAccessor());
+        _visibility = new(options, _ownership, new Microsoft.AspNetCore.Http.HttpContextAccessor(), new ServiceCollection().AddSingleton(_authorization).BuildServiceProvider());
         _clients = [new ConnectedClient { ConnectionId = "alice-connection" }, new ConnectedClient { ConnectionId = "bob-connection" }];
     }
 
     protected ConnectionCaller CallerFor(ConnectionOwner owner)
     {
-        var services = new ServiceCollection().AddSingleton(_authorization).BuildServiceProvider();
-        return new(owner, new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", owner.Subject)], "test")), services);
+        // A request's services are disposed once it ends; the visibility must not depend on them.
+        var disposedRequestServices = new ServiceCollection().BuildServiceProvider();
+        disposedRequestServices.Dispose();
+        return new(owner, new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", owner.Subject)], "test")), disposedRequestServices);
     }
 
     protected void MakeAdministrator() =>
