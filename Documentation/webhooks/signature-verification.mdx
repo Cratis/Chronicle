@@ -1,6 +1,6 @@
 ---
 title: "Verify Chronicle webhook signatures"
-description: Verify that a Cratis Chronicle webhook delivery came from your Kernel and was not changed or replayed, using Ed25519 signatures and the event store's public keys.
+description: Verify that a Chronicle webhook delivery came from your Kernel and was not changed or replayed, using Ed25519 signatures and the event store public keys.
 ---
 
 A signed delivery lets the receiver prove that the Kernel sent a request and that nobody changed the body on the way. Signing is opt in per webhook: register it with `WithSigning(WebhookSigningMode.Ed25519)`, as described in [Signing](./index.mdx#signing). Verification does not replace [authenticating the Kernel](./receivers.md#authenticating-the-kernel-to-your-receiver); use both.
