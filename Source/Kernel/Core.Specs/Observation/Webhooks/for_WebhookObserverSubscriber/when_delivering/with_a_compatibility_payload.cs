@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
@@ -14,11 +13,7 @@ public class with_a_compatibility_payload : given.a_webhook_delivery
     {
         _webhookDefinition = _webhookDefinition with { GenerationDelivery = EventGenerationDelivery.Compatibility };
         _silo.StorageManager.GetStorage<WebhookDefinition>(typeof(WebhookObserverSubscriber).FullName).State = _webhookDefinition;
-        var schemas = new Dictionary<EventType, Concepts.EventTypes.EventTypeSchema>
-        {
-            [new(_pin.Id, 1)] = new(new(_pin.Id, 1), EventTypeOwner.Client, EventTypeSource.Code, _firstSchema)
-        };
-        _events = (await new EventCompliance(_metadata, _converter, new OwnGenerationSchemaCache()).Release(_events, schemas)).ToArray();
+        _events = (await new EventCompliance(_metadata, _converter, new OwnGenerationSchemaCache()).Release(_events, _schemas)).ToArray();
     }
 
     async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));

@@ -84,6 +84,8 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
         _webhook.GetDefinition().Returns(_ => _webhookDefinition);
         _silo.AddProbe(_ => _webhook);
         _eventTypes.GetFor(_pin.Id, _pin.Generation).Returns(_schemas[_pin]);
+        _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(call => call.Arg<IEnumerable<EventType>>()
+            .Where(_schemas.ContainsKey).Select(type => _schemas[type]).ToArray());
         _logger = new();
         _silo.AddService<ILogger<WebhookObserverSubscriber>>(_logger);
         _silo.AddService(_storage);
