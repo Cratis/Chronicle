@@ -4,7 +4,7 @@
 """Exercise gate/refresh decisions, API boundaries, and the CLI with recorded inputs."""
 
 import argparse
-from contextlib import redirect_stdout
+from contextlib import chdir, redirect_stdout
 import importlib.util
 import io
 import json
@@ -397,7 +397,21 @@ class BuildPathDetection(unittest.TestCase):
                              gate.detect_build(argparse.Namespace(base="base", head="pr-head")))
             run.assert_called_once_with(["git", "diff", "--no-renames", "--name-only", "-z", "base...pr-head"],
                                         capture_output=True, text=True, check=True)
-            match.assert_called_once_with(["Source/tést.cs", "Docs/old name.md"], ".")
+            match.assert_called_once_with(["Source/tést.cs", "Docs/old name.md"], SCRIPT.resolve().parents[2])
+
+    def test_detect_ignores_build_filters_in_the_data_checkout(self):
+        trusted = SCRIPT.resolve().parents[2]
+        with tempfile.TemporaryDirectory() as directory:
+            workflow = Path(directory, ".github/workflows/dotnet-build.yml")
+            workflow.parent.mkdir(parents=True)
+            workflow.write_text('on:\n  pull_request:\n    paths:\n      - "Documentation/**"\n')
+            diff = subprocess.CompletedProcess([], 0, stdout="Source/Kernel/Storage/EventStore.cs\0")
+            with patch.dict(os.environ, {}, clear=True), chdir(directory), \
+                    patch.object(gate.subprocess, "run", return_value=diff), \
+                    patch.object(gate, "build_triggered", wraps=gate.build_triggered) as match:
+                self.assertEqual((True, "build-triggered=true"),
+                                 gate.detect_build(argparse.Namespace(base="base", head="pr-head")))
+                match.assert_called_once_with(["Source/Kernel/Storage/EventStore.cs"], trusted)
 
     def test_detect_errors_fail_closed_without_emitting_an_output(self):
         for error in (subprocess.CalledProcessError(1, "git", stderr="bad diff"), ValueError("bad filter")):
