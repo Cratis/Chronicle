@@ -329,6 +329,22 @@ test('API identity failures name the offending ids, records and attempts', () =>
     assert.throws(() => selectProducerArtifacts(badJobs, goodArtifacts, retryContext),
         /jobs .*invalid id -5 \(specs-other \(1\) attempt 1\)/);
 });
+test('API identity failures format malformed JSON values safely and cap the list', () => {
+    for (const mutate of [job => { job.id = -1; job.name = { toString: null }; }, job => { job.id = { toString: null }; }]) {
+        const [jobs, artifacts] = producerFixture();
+        mutate(jobs[0].jobs[0]);
+        assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext),
+            error => !(error instanceof TypeError) && /^Invalid\/duplicate producer API identities: jobs/.test(error.message));
+    }
+    const [jobs, artifacts] = producerFixture();
+    jobs[0].jobs.forEach(job => { job.id = -job.id; });
+    for (let i = jobs[0].jobs.length; i < 12; i++) jobs[0].jobs.push({ id: -(i + 1000), name: `extra-${i}`, run_attempt: 1 });
+    jobs[0].total_count = jobs[0].jobs.length;
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), error => {
+        assert.equal(error.message.split('; ').length, 11);
+        return error.message.endsWith('; +2 more') && (error.message.match(/invalid id/g) ?? []).length === 10;
+    });
+});
 test('API identity validation accepts failed-job re-run artifacts with distinct ids', () => {
     const [jobs, artifacts] = producerFixture([1, 2, 1, 1]);
     artifacts[0].artifacts.push({ ...artifacts[0].artifacts[1], id: 900, created_at: '2026-11-01T00:01:15Z' });

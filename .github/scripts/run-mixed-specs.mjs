@@ -79,8 +79,12 @@ function apiPageRecords(page, key) {
     return page[key];
 }
 const MAX_OFFENDERS = 10;
+function printable(value) {
+    if (value === null || ['string', 'number', 'boolean', 'bigint', 'undefined'].includes(typeof value)) return String(value);
+    try { return JSON.stringify(value) ?? '<unprintable>'; } catch { return '<unprintable>'; }
+}
 function describeRecord(record) {
-    return `${record?.name ?? 'unnamed'} attempt ${record?.run_attempt ?? 'n/a'}`;
+    return `${printable(record?.name ?? 'unnamed')} attempt ${printable(record?.run_attempt ?? 'n/a')}`;
 }
 function identityOffenders(records) {
     const byId = new Map();
@@ -90,8 +94,8 @@ function identityOffenders(records) {
     }
     const offenders = [];
     for (const [id, group] of byId) {
-        if (!positiveId(id)) offenders.push(`invalid id ${String(id)} (${group.map(describeRecord).join(', ')})`);
-        else if (group.length > 1) offenders.push(`duplicate id ${id} (${group.map(describeRecord).join(', ')})`);
+        if (!positiveId(id)) offenders.push(`invalid id ${printable(id)} (${group.map(describeRecord).join(', ')})`);
+        else if (group.length > 1) offenders.push(`duplicate id ${printable(id)} (${group.map(describeRecord).join(', ')})`);
     }
     const shown = offenders.slice(0, MAX_OFFENDERS).join('; ');
     return offenders.length > MAX_OFFENDERS ? `${shown}; +${offenders.length - MAX_OFFENDERS} more` : shown;
