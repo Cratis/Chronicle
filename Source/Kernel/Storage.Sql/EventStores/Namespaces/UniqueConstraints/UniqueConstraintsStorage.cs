@@ -25,7 +25,7 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> the storage is for.</param>
 /// <param name="eventSequenceId">The <see cref="EventSequenceId"/> the storage is for.</param>
 /// <param name="database">The <see cref="IDatabase"/> to use for operations.</param>
-public class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueConstraintsStorage
+public partial class UniqueConstraintsStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IDatabase database) : IUniqueConstraintsStorage, IUniqueConstraintsBatchStorage
 {
     readonly SqlStorageTelemetry _telemetry = SqlStorageTelemetry.For(database);
 
