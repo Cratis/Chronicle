@@ -145,7 +145,7 @@ The unwrap rule has a limit for legacy values. It applies only to corruption tha
 
 ### Values that carry a verified key identity
 
-A value protected by a version that includes the key-identity release carries a version 3 envelope, which closes that limit. The envelope embeds the managed key's public key and a signature over the value, so Chronicle can prove after erasure which key protected it, even though the private key and the stored key are gone. The identity is bound to the address the value is stored at: the event store, namespace, subject identifier and property path. Chronicle treats a version 3 value as erased only when all of these hold:
+A value protected by a version that includes the key-identity release carries a version 3 envelope, which closes that limit. The envelope embeds the managed key's public key and a signature over the value, so Chronicle can prove after erasure which key protected it, even though the private key and the stored key are gone. The identity is bound to the address the value is stored at: the event store, namespace and key identifier (the subject identifier for PII). The binding does not include a property path. Chronicle treats a version 3 value as erased only when all of these hold:
 
 - The signatures verify at the address being read, using only the embedded public key and certificate.
 - The fingerprint of the embedded public key is recorded in the erasure fence for the subject.
