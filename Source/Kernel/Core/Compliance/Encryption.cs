@@ -164,6 +164,7 @@ public class Encryption : IEncryption
     byte[] EncryptSigned(byte[] bytes, EncryptionKeyAtRevision pair, ProtectedValueAddress address)
     {
         var commitment = EnvelopeSigning.Commit(address);
+        using var signing = _signingKeys.Begin(pair.Key, pair.Revision, commitment);
 
         // Never cache a data key: a fresh key per value prevents nonce reuse under the same AES key.
         var dataKey = RandomNumberGenerator.GetBytes(DataKeySizeInBytes);
@@ -172,7 +173,7 @@ public class Encryption : IEncryption
             var wrappedKey = WrapDataKey(dataKey, pair.Key);
             while (true)
             {
-                var signer = _signingKeys.Acquire(pair.Key, pair.Revision, commitment);
+                var signer = signing.Acquire();
                 var envelope = new EncryptionEnvelope
                 {
                     Header = EncryptionEnvelope.CreateSignedHeader(pair.Revision, (pair.Key.Public, signer.Certificate, signer.SigningKey), wrappedKey.Length),
@@ -188,7 +189,7 @@ public class Encryption : IEncryption
                 using var aes = new AesGcm(dataKey, EncryptionEnvelope.TagSize);
                 aes.Encrypt(envelope.Nonce, bytes, envelope.Ciphertext, envelope.Tag, envelope.AssociatedData);
 
-                // A signer retired by eviction or erasure between acquiring and signing is replaced, never used after disposal.
+                // Ordinary invalidation retries; erasure revokes this write's operation, so its next acquisition fails.
                 if (signer.TrySign(EnvelopeSigning.ValueMessage(envelope, commitment), out var signature))
                 {
                     return (envelope with { Signature = signature }).Bytes();

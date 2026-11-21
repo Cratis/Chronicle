@@ -19,8 +19,7 @@ internal sealed class EnvelopeSigningKeys
 {
     const int EvictionBatch = 64;
     readonly Dictionary<(string Fingerprint, uint Revision, string Commitment), Lazy<EnvelopeSigningKey>> _keys = new();
-    readonly HashSet<(string Fingerprint, string Commitment)> _identities = [];
-    readonly HashSet<(string Fingerprint, string Commitment)> _revoked = [];
+    readonly HashSet<SigningOperation> _active = [];
     readonly object _evictionLock = new();
     readonly Func<EncryptionKey, EncryptionKeyRevision, byte[], EnvelopeSigningKey> _certify;
     readonly int _capacity;
@@ -57,17 +56,57 @@ internal sealed class EnvelopeSigningKeys
         }
     }
 
-    /// <summary>Gets a usable signing key for the revision and address, certifying a new one when needed.</summary>
+    /// <summary>Gets the number of writes whose signing retries are still in flight.</summary>
+    internal int ActiveCount
+    {
+        get
+        {
+            lock (_evictionLock) return _active.Count;
+        }
+    }
+
+    /// <summary>Begins a write, retaining revocation state until its entire acquire/sign retry loop ends.</summary>
     /// <param name="key">The managed key.</param>
     /// <param name="revision">The revision of the managed key.</param>
     /// <param name="commitment">The address commitment.</param>
-    /// <returns>A usable signing key.</returns>
-    internal EnvelopeSigningKey Acquire(EncryptionKey key, EncryptionKeyRevision revision, byte[] commitment)
+    /// <returns>The write's signing operation, which must be disposed after signing or failure.</returns>
+    internal SigningOperation Begin(EncryptionKey key, EncryptionKeyRevision revision, byte[] commitment)
     {
-        var cacheKey = (EnvelopeSigning.Fingerprint(key.Public), revision.Value, Convert.ToHexString(commitment));
+        lock (_evictionLock)
+        {
+            var operation = new SigningOperation(this, key, revision, commitment);
+            _active.Add(operation);
+            return operation;
+        }
+    }
+
+    /// <summary>Invalidates an address's cached signers and revokes in-flight writes covered by its erasure fence.</summary>
+    /// <param name="commitment">The address commitment.</param>
+    /// <param name="erasure">The durable erasure fence, or null for ordinary invalidation.</param>
+    /// <param name="revokeAll">Whether an unreadable fence requires failing all in-flight writes closed.</param>
+    internal void Evict(byte[] commitment, EncryptionKeyErasure? erasure = null, bool revokeAll = false)
+    {
+        var hex = Convert.ToHexString(commitment);
+        lock (_evictionLock)
+        {
+            foreach (var operation in _active.Where(_ => _.CacheKey.Commitment == hex))
+            {
+                if (revokeAll || operation.IsCoveredBy(erasure)) operation.Revoked = true;
+            }
+
+            foreach (var entry in _keys.Where(_ => _.Key.Commitment == hex).ToArray())
+            {
+                Remove(entry);
+            }
+        }
+    }
+
+    EnvelopeSigningKey Acquire(SigningOperation operation)
+    {
+        var cacheKey = operation.CacheKey;
         while (true)
         {
-            var lazy = GetOrAdd(cacheKey, () => _certify(key, revision, commitment));
+            var lazy = GetOrAdd(operation);
             EnvelopeSigningKey signingKey;
             try
             {
@@ -86,41 +125,27 @@ internal sealed class EnvelopeSigningKeys
         }
     }
 
-    /// <summary>Evicts and disposes every key bound to an address, as subject erasure requires.</summary>
-    /// <param name="commitment">The address commitment.</param>
-    internal void Evict(byte[] commitment)
-    {
-        var hex = Convert.ToHexString(commitment);
-        lock (_evictionLock)
-        {
-            // Remember identities even after capacity eviction: an in-flight writer may still hold the managed key.
-            foreach (var identity in _identities.Where(_ => _.Commitment == hex).ToArray())
-            {
-                _revoked.Add(identity);
-                _identities.Remove(identity);
-            }
-
-            foreach (var entry in _keys.Where(_ => _.Key.Commitment == hex).ToArray())
-            {
-                Remove(entry);
-            }
-        }
-    }
-
-    Lazy<EnvelopeSigningKey> GetOrAdd((string Fingerprint, uint Revision, string Commitment) cacheKey, Func<EnvelopeSigningKey> certify)
+    Lazy<EnvelopeSigningKey> GetOrAdd(SigningOperation operation)
     {
         lock (_evictionLock)
         {
-            var identity = (cacheKey.Fingerprint, cacheKey.Commitment);
-            if (_revoked.Contains(identity)) throw new CryptographicException("The managed signing key has been evicted.");
-            _identities.Add(identity);
-            if (!_keys.TryGetValue(cacheKey, out var lazy))
+            if (operation.Revoked) throw new CryptographicException("The managed signing key has been evicted.");
+            if (!_keys.TryGetValue(operation.CacheKey, out var lazy))
             {
-                lazy = new(certify);
-                _keys.Add(cacheKey, lazy);
+                lazy = new(() => _certify(operation.Key, operation.Revision, operation.Commitment));
+                _keys.Add(operation.CacheKey, lazy);
             }
 
             return lazy;
+        }
+    }
+
+    void Complete(SigningOperation operation)
+    {
+        lock (_evictionLock)
+        {
+            _active.Remove(operation);
+            operation.Revoked = true;
         }
     }
 
@@ -174,5 +199,53 @@ internal sealed class EnvelopeSigningKeys
         if (!_keys.TryGetValue(entry.Key, out var current) || current != entry.Value) return;
         _keys.Remove(entry.Key);
         if (entry.Value.IsValueCreated) entry.Value.Value.Dispose();
+    }
+
+    /// <summary>A write's revocation state, held across every acquire/sign retry and released when the write ends.</summary>
+    internal sealed class SigningOperation : IDisposable
+    {
+        readonly EnvelopeSigningKeys _owner;
+
+        /// <summary>Initializes a new instance of the <see cref="SigningOperation"/> class.</summary>
+        /// <param name="owner">The cache tracking this write.</param>
+        /// <param name="key">The write's managed key.</param>
+        /// <param name="revision">The managed-key revision.</param>
+        /// <param name="commitment">The address commitment.</param>
+        internal SigningOperation(EnvelopeSigningKeys owner, EncryptionKey key, EncryptionKeyRevision revision, byte[] commitment)
+        {
+            _owner = owner;
+            Key = key;
+            Revision = revision;
+            Commitment = commitment;
+            CacheKey = (EnvelopeSigning.Fingerprint(key.Public), revision.Value, Convert.ToHexString(commitment));
+        }
+
+        /// <summary>Gets the write's managed key.</summary>
+        internal EncryptionKey Key { get; }
+
+        /// <summary>Gets the managed-key revision.</summary>
+        internal EncryptionKeyRevision Revision { get; }
+
+        /// <summary>Gets the address commitment.</summary>
+        internal byte[] Commitment { get; }
+
+        /// <summary>Gets the identity of the cached signer.</summary>
+        internal (string Fingerprint, uint Revision, string Commitment) CacheKey { get; }
+
+        /// <summary>Gets or sets a value indicating whether this write can no longer acquire a signer.</summary>
+        internal bool Revoked { get; set; }
+
+        /// <inheritdoc/>
+        public void Dispose() => _owner.Complete(this);
+
+        /// <summary>Acquires a signer, refusing to resume a write revoked during an earlier attempt.</summary>
+        /// <returns>The write's current signing key.</returns>
+        internal EnvelopeSigningKey Acquire() => _owner.Acquire(this);
+
+        /// <summary>Determines whether the fence covers this write's managed key.</summary>
+        /// <param name="erasure">The durable erasure fence, if any.</param>
+        /// <returns>Whether the revision or material is erased.</returns>
+        internal bool IsCoveredBy(EncryptionKeyErasure? erasure) => erasure is not null &&
+            (CacheKey.Revision <= erasure.ErasedThrough.Value || erasure.ErasedKeyFingerprints.Contains(CacheKey.Fingerprint, StringComparer.Ordinal));
     }
 }
