@@ -5,7 +5,10 @@ using System.Data;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints;
+using Cratis.Chronicle.Storage.Sql.EventStores.Occurrences;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Row = Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.UniqueConstraintBatchModel.Row;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
@@ -32,17 +35,31 @@ public partial class UniqueConstraintsStorage
 
         var values = claims.Select(claim => claim.Value.Value).Distinct().ToArray();
         List<Row> rows;
+        bool sqlServer;
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
             await using var scope = await database.UniqueConstraintValuesTable(eventStore, @namespace, GetValuesTableName(definition.Name, scopeKey));
             rows = await ReadRows(scope.DbContext.Entries, nameof(Row.Value), values, cancellationToken);
+            sqlServer = scope.DbContext.Database.IsSqlServer();
         }
         else
         {
             await using var scope = await database.UniqueConstraintTable(eventStore, @namespace, GetTableName(definition.Name, scopeKey));
             rows = await ReadRows(scope.DbContext.Entries, nameof(Row.Value), values, cancellationToken);
+            sqlServer = scope.DbContext.Database.IsSqlServer();
         }
 
+        var padded = claims.Any(Padded) || rows.Exists(Padded);
+        if (sqlServer && padded)
+        {
+            var sequential = new List<(bool, EventSequenceNumber)>();
+            foreach (var claim in claims)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                sequential.Add(await IsAllowed(claim.EventSourceId, definition, claim.Value, scopeKey));
+            }
+            return sequential;
+        }
         var owners = rows.DistinctBy(row => row.Value).ToDictionary(row => row.Value);
         return claims.Select(claim => owners.TryGetValue(claim.Value.Value, out var owner)
             ? (owner.EventSourceId == claim.EventSourceId.Value, (EventSequenceNumber)(ulong)owner.SequenceNumber)
@@ -83,16 +100,42 @@ public partial class UniqueConstraintsStorage
         return rows;
     }
 
-    static Task<IReadOnlyCollection<int>> ApplyModel<T>(
+    static bool Padded(string? value) => value?.EndsWith(' ') == true;
+
+    static bool Padded(Row row) => Padded(row.EventSourceId) || Padded(row.Value);
+
+    static bool Padded(UniqueConstraintClaim claim) => Padded(claim.EventSourceId.Value) || Padded(claim.Value.Value);
+
+    static bool Padded(UniqueConstraintIndexChange change) => Padded(change.EventSourceId.Value) || Padded(change.Value?.Value);
+
+    static bool IsRecoverableConflict(Exception error)
+    {
+        // Non-retrying EF execution strategies wrap transient provider failures.
+        if (error is InvalidOperationException { InnerException: { } inner }) return IsRecoverableConflict(inner);
+        if (StorageWriteConflicts.IsUnique(error)) return true;
+        if (StorageWriteConflicts.IsTransactionConflict(error)) return true;
+        return IsSqlServerLockTimeout(error);
+    }
+
+    static bool IsSqlServerLockTimeout(Exception error) => error switch
+    {
+        SqlException { Number: 1222 } => true,
+        DbUpdateException { InnerException: { } inner } => IsSqlServerLockTimeout(inner),
+        RetryLimitExceededException { InnerException: { } inner } => IsSqlServerLockTimeout(inner),
+        _ => false
+    };
+
+    static Task<IReadOnlyCollection<int>?> ApplyModel<T>(
         DbContext context,
         DbSet<T> entries,
         UniqueConstraintMode mode,
         UniqueConstraintIndexChange[] changes,
         Func<Row, T> createEntry,
         CancellationToken cancellationToken)
-        where T : class => context.Database.CreateExecutionStrategy().ExecuteAsync<IReadOnlyCollection<int>>(async () =>
+        where T : class => context.Database.CreateExecutionStrategy().ExecuteAsync<IReadOnlyCollection<int>?>(async () =>
         {
             context.ChangeTracker.Clear();
+            if (context.Database.IsSqlServer() && changes.Any(Padded)) return null;
 
             // Keep ownership reads and their replacement writes in the same serializable unit.
             // A concurrent release/reclaim must not let a stale delete remove the new owner.
@@ -102,20 +145,24 @@ public partial class UniqueConstraintsStorage
             var initial = (await ReadRows(entries, nameof(Row.Value), values, cancellationToken))
                 .Concat(await ReadRows(entries, nameof(Row.EventSourceId), sources, cancellationToken))
                 .Distinct().ToArray();
+            if (context.Database.IsSqlServer() && initial.Any(Padded)) return null;
             var model = new UniqueConstraintBatchModel(mode, initial);
-            var refused = new List<int>();
-            for (var index = 0; index < changes.Length; index++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!model.Apply(changes[index]))
-                {
-                    refused.Add(index);
-                }
-            }
+            var refused = ApplyToModel(model, changes, cancellationToken);
             await Flush(context, entries, mode, initial, model.Rows, createEntry, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return refused;
         });
+
+    static List<int> ApplyToModel(UniqueConstraintBatchModel model, UniqueConstraintIndexChange[] changes, CancellationToken cancellationToken)
+    {
+        var refused = new List<int>();
+        for (var index = 0; index < changes.Length; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!model.Apply(changes[index])) refused.Add(index);
+        }
+        return refused;
+    }
 
     static async Task Flush<T>(DbContext context, DbSet<T> entries, UniqueConstraintMode mode, Row[] initial, IEnumerable<Row> final, Func<Row, T> createEntry, CancellationToken cancellationToken)
         where T : class
@@ -147,19 +194,22 @@ public partial class UniqueConstraintsStorage
         {
             return await UniqueConstraintIndexChanges.ApplySequentially(this, definition, changes, cancellationToken);
         }
+        IReadOnlyCollection<int>? result;
         try
         {
-            return await ApplyScopeModel(definition, scopeKey, changes, cancellationToken);
+            result = await ApplyScopeModel(definition, scopeKey, changes, cancellationToken);
         }
-        catch (DbUpdateException error) when (IsUniqueViolation(error))
+        catch (Exception error) when (IsRecoverableConflict(error))
         {
             // The scope's transaction has been disposed (and rolled back) before retrying.
-            _telemetry.RecoveredCollision("unique-constraint-batch");
+            cancellationToken.ThrowIfCancellationRequested();
+            if (StorageWriteConflicts.IsUnique(error)) _telemetry.RecoveredCollision("unique-constraint-batch");
             return await UniqueConstraintIndexChanges.ApplySequentially(this, definition, changes, cancellationToken);
         }
+        return result ?? await UniqueConstraintIndexChanges.ApplySequentially(this, definition, changes, cancellationToken);
     }
 
-    async Task<IReadOnlyCollection<int>> ApplyScopeModel(UniqueConstraintDefinition definition, string scopeKey, UniqueConstraintIndexChange[] changes, CancellationToken cancellationToken)
+    async Task<IReadOnlyCollection<int>?> ApplyScopeModel(UniqueConstraintDefinition definition, string scopeKey, UniqueConstraintIndexChange[] changes, CancellationToken cancellationToken)
     {
         if (definition.Mode == UniqueConstraintMode.PerValue)
         {
