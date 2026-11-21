@@ -16,7 +16,7 @@ public class CatchUpReadBenchmark : StorageBenchmark
     IEventSequenceStorage _storage = null!;
 
     /// <summary>Gets the event counts of this run, for `ParamsSource`.</summary>
-    public static IEnumerable<int> Counts => Profile.EventCounts;
+    public static IEnumerable<int> Counts => Profile.CatchUpCounts;
 
     /// <summary>Gets or sets how many events the sequence holds.</summary>
     [ParamsSource(nameof(Counts))]

@@ -19,21 +19,25 @@ public static class CountedPass
     /// <param name="assembly">The assembly holding the benchmarks.</param>
     /// <param name="iterations">How many times each benchmark method runs.</param>
     /// <param name="filter">The BenchmarkDotNet style glob filter (`*` selects everything).</param>
-    /// <returns>The task.</returns>
-    public static async Task Run(Assembly assembly, int iterations, string filter)
+    /// <returns>Whether the pass was cut short by the budget.</returns>
+    public static Task<bool> Run(Assembly assembly, int iterations, string filter) =>
+        Run(assembly.GetTypes().Where(_ => _.IsSubclassOf(typeof(StorageBenchmark)) && !_.IsAbstract), iterations, filter);
+
+    /// <summary>Runs selected fixture types without starting BenchmarkDotNet.</summary>
+    /// <param name="types">The fixture types.</param>
+    /// <param name="iterations">The number of measured iterations.</param>
+    /// <param name="filter">The method filter.</param>
+    /// <returns>Whether the budget cut the pass short.</returns>
+    internal static async Task<bool> Run(IEnumerable<Type> types, int iterations, string filter)
     {
-        var selector = new Regex("^" + Regex.Escape(filter).Replace("\\*", ".*", StringComparison.Ordinal) + "$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
-        foreach (var type in assembly.GetTypes().Where(_ => _.IsSubclassOf(typeof(StorageBenchmark)) && !_.IsAbstract).OrderBy(_ => _.FullName, StringComparer.Ordinal))
+        try
         {
-            var methods = type.GetMethods().Where(_ => Attribute.IsDefined(_, typeof(BenchmarkAttribute)) && selector.IsMatch($"{type.FullName}.{_.Name}")).ToArray();
-            if (methods.Length == 0) continue;
-            foreach (var combination in Combinations(type))
-            {
-                var provider = combination.Where(_ => _.Value is StorageProvider).Select(_ => (StorageProvider?)_.Value).FirstOrDefault();
-                var measured = methods.Where(_ => provider is null || KnownGaps.ReasonFor(provider.Value, _.Name) is null).ToArray();
-                if (measured.Length == 0) continue;
-                await RunCase(type, combination, measured, iterations);
-            }
+            await RunTypes(types, iterations, filter);
+            return false;
+        }
+        catch (Exception error) when (error.GetBaseException() is BudgetExceededException)
+        {
+            return true;
         }
     }
 
@@ -57,19 +61,38 @@ public static class CountedPass
         return combinations;
     }
 
+    static async Task RunTypes(IEnumerable<Type> types, int iterations, string filter)
+    {
+        var selector = new Regex("^" + Regex.Escape(filter).Replace("\\*", ".*", StringComparison.Ordinal) + "$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        foreach (var type in types.OrderBy(_ => _.FullName, StringComparer.Ordinal))
+        {
+            var methods = type.GetMethods().Where(_ => Attribute.IsDefined(_, typeof(BenchmarkAttribute)) && selector.IsMatch($"{type.FullName}.{_.Name}")).ToArray();
+            if (methods.Length == 0) continue;
+            foreach (var combination in Combinations(type))
+            {
+                RunBudget.Current.ThrowIfExpired();
+                var provider = combination.Where(_ => _.Value is StorageProvider).Select(_ => (StorageProvider?)_.Value).FirstOrDefault();
+                var measured = methods.Where(_ => provider is null || KnownGaps.ReasonFor(provider.Value, _.Name) is null).ToArray();
+                if (measured.Length == 0) continue;
+                await RunCase(type, combination, measured, iterations);
+            }
+        }
+    }
+
     static async Task RunCase(Type type, IReadOnlyList<(PropertyInfo Property, object Value)> combination, MethodInfo[] methods, int iterations)
     {
         var instance = Activator.CreateInstance(type)!;
         foreach (var (property, value) in combination) property.SetValue(instance, value);
-        await Invoke(instance, type.GetMethods().Where(_ => Attribute.IsDefined(_, typeof(GlobalSetupAttribute))));
         try
         {
+            await Invoke(instance, type.GetMethods().Where(_ => Attribute.IsDefined(_, typeof(GlobalSetupAttribute))));
             using (Measurements.Counting())
             {
                 foreach (var method in methods)
                 {
                     for (var iteration = 0; iteration < iterations; iteration++)
                     {
+                        RunBudget.Current.ThrowIfExpired();
                         await InvokeCounted(instance, method);
                     }
                 }
@@ -86,6 +109,10 @@ public static class CountedPass
         try
         {
             await Invoke(instance, [method]);
+        }
+        catch (Exception error) when (error.GetBaseException() is BudgetExceededException)
+        {
+            throw;
         }
         catch (Exception error)
         {

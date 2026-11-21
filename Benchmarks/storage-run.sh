@@ -7,7 +7,7 @@
 # Usage: storage-run.sh [--profile smoke|short|medium] [--providers sqlite,pg,mssql,mongo]
 #                       [--repetitions N] [--max-load X] [--output DIR] [extra harness flags]
 #
-# Exit codes: 0 ok, 1 a benchmark or measured operation failed, 64 bad usage, 2 medium profile not confirmed, 3 machine too loaded (nothing measured).
+# Exit codes: 0 ok, 1 a benchmark or measured operation failed, 64 bad usage, 2 medium profile not confirmed, 3 machine too loaded (nothing measured), 4 profile time budget exhausted (partial results kept).
 # The medium profile (1M events) needs --yes-i-know-this-is-long.
 set -u
 
