@@ -4,7 +4,7 @@
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.ProtectedValues.given;
+using Cratis.Chronicle.given;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.Logging;

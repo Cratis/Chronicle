@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Cratis.Chronicle.ProtectedValues.given;
+namespace Cratis.Chronicle.given;
 
 /// <summary>
 /// Captures rendered messages, structured state and exceptions for protected-value privacy specs.

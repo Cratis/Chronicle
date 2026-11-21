@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Compliance;
-using Cratis.Chronicle.ProtectedValues.given;
+using Cratis.Chronicle.given;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.ProtectedValues.for_UnrecoverableProtectedValueReporter;
@@ -22,12 +22,13 @@ public class when_reporting_a_personal_identifier : Specification
         _failure = new(3, new InvalidOperationException($"Cannot release {Identifier}"));
     }
 
-    void Because() => _reporter.Report(new("store", "namespace", Identifier, "contact.email", "Release"), _failure);
+    void Because() => _reporter.Report(new("store", "namespace", Identifier, $"contacts.{Identifier}", "Release"), _failure);
 
     [Fact] void should_log_one_error() => _logger.Entries.Select(_ => _.Level).ShouldContainOnly(LogLevel.Error);
     [Fact] void should_count_the_failure() => _count.ShouldEqual(1);
     [Fact] void should_identify_the_store_and_namespace() => _logger.Entries.Single().Message.ShouldContain("store/namespace");
-    [Fact] void should_identify_the_property_and_phase() => _logger.Entries.Single().Message.ShouldContain("at contact.email during Release");
+    [Fact] void should_identify_the_phase() => _logger.Entries.Single().Message.ShouldContain("during Release");
+    [Fact] void should_omit_the_potentially_personal_property_path() => _logger.Entries.Single().State.Select(_ => _.Key).ShouldNotContain("PropertyPath");
     [Fact] void should_record_the_exception_type() => _logger.Entries.Single().State.Single(_ => _.Key == "ExceptionType").Value.ShouldEqual(nameof(InvalidOperationException));
     [Fact] void should_record_the_attempted_revisions() => _logger.Entries.Single().State.Single(_ => _.Key == "AttemptedRevisions").Value.ShouldEqual(3);
     [Fact] void should_not_name_the_identifier_in_the_message() => _logger.Entries.Single().Message.ShouldNotContain(Identifier);
