@@ -543,10 +543,10 @@ internal sealed class ReadModels(
                 localSiloDetails.SiloAddress.ToParsableString());
             var subscriber = grainFactory.GetGrain<IReadModelChangesetSubscriber>(subscriberKey);
             var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(definition.ObserverIdentifier.Value, request.EventStore, request.Namespace));
-            await notifier.Subscribe(subscriber);
-
             try
             {
+                await notifier.Subscribe(subscriber);
+
                 // Notify the client that the watch subscription is now active. Any changeset produced
                 // from this point on reaches the forwarder registered above.
                 observer.OnNext(new ReadModelChangeset { Subscribed = true });
@@ -555,8 +555,14 @@ internal sealed class ReadModels(
             }
             finally
             {
-                await notifier.Unsubscribe(subscriber).ConfigureAwait(false);
-                changesetMediator.Unsubscribe(subscriptionId);
+                try
+                {
+                    await notifier.Unsubscribe(subscriber).ConfigureAwait(false);
+                }
+                finally
+                {
+                    changesetMediator.Unsubscribe(subscriptionId);
+                }
             }
         });
     }

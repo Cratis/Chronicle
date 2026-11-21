@@ -5,6 +5,8 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
+using Orleans.Serialization.Invocation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -27,6 +29,7 @@ namespace Cratis.Chronicle.Projections;
 /// hosting each watch connection.
 /// </remarks>
 [KeepAlive]
+[MayInterleave(nameof(IsSubscription))]
 public class ProjectionChangesetNotifier(
     ILogger<ProjectionChangesetNotifier> logger,
     IProjectionsServiceClient projectionsServiceClient,
@@ -41,6 +44,14 @@ public class ProjectionChangesetNotifier(
     bool _isPublishing;
     long _lastPublished;
     bool _hasPublished;
+
+    /// <summary>
+    /// Determines whether a subscription may interleave, including calls from older silos without the caller-side flag.
+    /// </summary>
+    /// <param name="request">The incoming or running request.</param>
+    /// <returns>Whether the request is a notifier subscription.</returns>
+    public static bool IsSubscription(IInvokable request) =>
+        request?.GetInterfaceType() == typeof(IProjectionChangesetNotifier) && request.GetMethodName() == nameof(Subscribe);
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -68,7 +79,7 @@ public class ProjectionChangesetNotifier(
         }
 
         // Becoming watched is always published, never throttled, including a reopen during an outstanding close.
-        // Subscribe is AlwaysInterleave: awaiting the timer's publication must not hold up Notify or NotifyMany.
+        // Server-side MayInterleave also covers older callers: awaiting publication must not hold up Notify or NotifyMany.
         if (wasUnwatched || _watchedPublication.Task.IsFaulted)
         {
             if (_watchedPublication.Task.IsCompleted)
@@ -195,9 +206,10 @@ public class ProjectionChangesetNotifier(
         catch (Exception ex)
         {
             logger.PublishingWatchStateFailed(ex, this.GetPrimaryKeyString(), isWatched);
-            if (isWatched)
+            if (isWatched && _watchedPublication.TrySetException(ex))
             {
-                _watchedPublication.TrySetException(ex);
+                // Only an unacknowledged opening is rolled back; a failed refresh must retain established watches.
+                _subscribers.Clear();
             }
         }
     }
