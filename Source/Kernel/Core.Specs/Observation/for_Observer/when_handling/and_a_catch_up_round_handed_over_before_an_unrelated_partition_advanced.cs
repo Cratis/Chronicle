@@ -3,6 +3,7 @@
 
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
@@ -10,7 +11,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
 /// <summary>
-/// The handover that concludes the round ends preparation ownership even though the held back event is not yet below the position, so a partition completing afterwards is reported once.
+/// Handover retains the held-back event as pending work before an unrelated partition can advance past it.
 /// </summary>
 public class and_a_catch_up_round_handed_over_before_an_unrelated_partition_advanced : given.an_observer_with_skip_detection
 {
@@ -46,5 +47,6 @@ public class and_a_catch_up_round_handed_over_before_an_unrelated_partition_adva
     }
 
     [Fact] void should_not_report_before_the_position_crosses_the_event() => _reportsBeforeCrossing.ShouldEqual(0);
-    [Fact] void should_report_exactly_one_suspected_skip() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
+    [Fact] void should_not_report_a_skip_that_was_prevented() => _metrics.For(EventsSuspectedSkipped).ShouldBeEmpty();
+    [Fact] void should_keep_the_held_back_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"Q");
 }

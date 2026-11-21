@@ -40,6 +40,7 @@ public partial class Observer
             logger.SkippingCatchUpBecauseObserverIsReplaying();
             _isPreparingCatchup = false;
             NotePreparationEnded();
+            await RepairMissedDeliveries();
             return;
         }
 
@@ -166,6 +167,7 @@ public partial class Observer
         State.CatchingUpPartitions.Remove(partition);
         _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
+        CompleteHeldBackDelivery(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         EvaluateSuspectedSkips();
@@ -235,7 +237,8 @@ public partial class Observer
 
         Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         Skips.PreparationEnded();
-        EvaluateSuspectedSkips();
+        QueueUnownedHeldBackDeliveries();
+        await EvaluateAndRepairMissedDeliveries();
         Skips.ClearJobReported();
         await WriteStateAsync();
 
@@ -481,7 +484,7 @@ public partial class Observer
                 logger.NoCatchUpJobTookOwnership();
                 _isPreparingCatchup = false;
                 NotePreparationEnded();
-                return Task.CompletedTask;
+                return RepairMissedDeliveries();
             },
             _concludedCatchUpJobs,
             0,
@@ -507,6 +510,9 @@ public partial class Observer
         {
             Skips.Release(partition, ownership);
         }
+
+        CompleteHeldBackDelivery(partition, lastHandledEventSequenceNumber);
+        await EvaluateAndRepairMissedDeliveries();
     }
 
     async Task ProbeAndStartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead)
