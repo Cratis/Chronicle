@@ -27,7 +27,9 @@ public abstract class an_ordinal_claim_upgrade : Specification
 
     protected async Task Configure(string connection, Func<Task> drop)
     {
-        _connection = connection;
+        // Altering the database collation invalidates pooled sessions ("Resetting the connection results in a
+        // different state than the initial login"), so this fixture always opens fresh connections.
+        _connection = new SqlConnectionStringBuilder(connection) { Pooling = false }.ConnectionString;
         _drop = drop;
         _serverCollation = (await Query("SELECT CONVERT(nvarchar(128), SERVERPROPERTY('Collation'))", string.Empty)).Single();
         var collation = string.Equals(_serverCollation, "Latin1_General_100_CI_AS", StringComparison.OrdinalIgnoreCase)
