@@ -152,7 +152,7 @@ public abstract class an_ordinal_claim_upgrade : Specification
             WHERE i.object_id = OBJECT_ID(@table) ORDER BY i.name, ic.index_column_id
             """,
             table);
-        var rows = await Query($"SELECT CONCAT(EventSourceId, ':', Value, ':', SequenceNumber, ':', Subject) FROM {table} ORDER BY EventSourceId COLLATE Latin1_General_100_BIN2", table);
+        var rows = await Query($"SELECT CONCAT(EventSourceId COLLATE DATABASE_DEFAULT, ':', Value COLLATE DATABASE_DEFAULT, ':', SequenceNumber, ':', Subject COLLATE DATABASE_DEFAULT) FROM {table} ORDER BY EventSourceId COLLATE Latin1_General_100_BIN2", table);
         return [.. columns, .. indexes, .. rows];
     }
 

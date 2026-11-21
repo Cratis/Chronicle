@@ -19,6 +19,8 @@ public abstract class batch_recovery_scenarios : a_provider_batch_storage
         {
             await CheckFailure(mode, new DbUpdateException("unrelated write failure"));
             await CheckFailure(mode, new InvalidOperationException("not a provider conflict"));
+            await CheckFailure(mode, new InvalidOperationException("wrapped unrelated failure", new InvalidOperationException("not a provider conflict")));
+            await CheckFailure(mode, new InvalidOperationException("wrapped cancellation", new OperationCanceledException("injected cancellation")));
             await CheckFailure(mode, new OperationCanceledException("injected cancellation"));
             await CheckFailure(mode, null);
             await CheckCanceledConflict(mode);

@@ -110,6 +110,8 @@ public partial class UniqueConstraintsStorage
 
     static bool IsRecoverableConflict(Exception error)
     {
+        // Non-retrying EF execution strategies wrap transient provider failures.
+        if (error is InvalidOperationException { InnerException: { } inner }) return IsRecoverableConflict(inner);
         if (StorageWriteConflicts.IsUnique(error)) return true;
         if (StorageWriteConflicts.IsTransactionConflict(error)) return true;
         return IsSqlServerLockTimeout(error);

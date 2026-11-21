@@ -16,7 +16,8 @@ public static class transaction_conflicts
         Exception[] native = [new SqliteException("busy", 5), new SqliteException("locked", 6),
             new PostgresException("serialization", "ERROR", "ERROR", PostgresErrorCodes.SerializationFailure),
             new PostgresException("deadlock", "ERROR", "ERROR", PostgresErrorCodes.DeadlockDetected), SqlServer(1205), SqlServer(1222)];
-        return native.SelectMany(error => new[] { error, new DbUpdateException("transaction conflict", error) });
+        return native.SelectMany(error => new[] { error, new DbUpdateException("transaction conflict", error) })
+            .SelectMany(error => new[] { error, new InvalidOperationException("likely transient failure", error) });
     }
 
     static SqlException SqlServer(int number)

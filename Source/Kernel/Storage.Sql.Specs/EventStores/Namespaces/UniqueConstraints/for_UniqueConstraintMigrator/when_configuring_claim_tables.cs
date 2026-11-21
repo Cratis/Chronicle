@@ -13,6 +13,7 @@ public class when_configuring_claim_tables : Specification
     const string Ordinal = "Latin1_General_100_BIN2";
     readonly List<(string?[] Collations, string Script)> _sqlServer = [];
     readonly List<string?> _otherProviders = [];
+    readonly List<int> _trackedCounts = [];
 
     void Because()
     {
@@ -39,12 +40,26 @@ public class when_configuring_claim_tables : Specification
         foreach (var collation in _otherProviders) collation.ShouldBeNull();
     }
 
+    [Fact]
+    void should_track_case_distinct_claim_identities_in_both_models()
+    {
+        foreach (var count in _trackedCounts) count.ShouldEqual(2);
+    }
+
     void Check(Action<DbContextOptionsBuilder> configure, bool sqlServer)
     {
         using var sources = new UniqueConstraintDbContext(Options<UniqueConstraintDbContext>(configure), "source_claims", Substitute.For<IUniqueConstraintMigrator>());
         using var values = new UniqueConstraintValuesDbContext(Options<UniqueConstraintValuesDbContext>(configure), "value_claims", Substitute.For<IUniqueConstraintMigrator>());
         Capture(sources, typeof(UniqueConstraintIndexEntry), sqlServer);
         Capture(values, typeof(UniqueConstraintValueEntry), sqlServer);
+        sources.Entries.AddRange(
+            new UniqueConstraintIndexEntry { EventSourceId = "Owner", Value = "Value" },
+            new UniqueConstraintIndexEntry { EventSourceId = "owner", Value = "value" });
+        values.Entries.AddRange(
+            new UniqueConstraintValueEntry { EventSourceId = "Owner", Value = "Value" },
+            new UniqueConstraintValueEntry { EventSourceId = "owner", Value = "value" });
+        _trackedCounts.Add(sources.ChangeTracker.Entries().Count());
+        _trackedCounts.Add(values.ChangeTracker.Entries().Count());
     }
 
     void Capture(DbContext context, Type entry, bool sqlServer)
