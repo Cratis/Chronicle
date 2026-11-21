@@ -18,13 +18,13 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="options">The server configuration.</param>
 /// <param name="ownership">The <see cref="IConnectionOwnership"/> telling who opened each connection.</param>
 /// <param name="httpContextAccessor">The <see cref="IHttpContextAccessor"/> for the current request.</param>
-/// <param name="services">The application <see cref="IServiceProvider"/>, used to authorize callers after their request has ended.</param>
+/// <param name="services">The application <see cref="IServiceProvider"/>, used to authorize callers after their request has ended. Without it no caller is an administrator.</param>
 [Singleton]
 public class ConnectedClientsVisibility(
     IOptions<ChronicleOptions> options,
     IConnectionOwnership ownership,
     IHttpContextAccessor httpContextAccessor,
-    IServiceProvider services) : IConnectedClientsVisibility
+    IServiceProvider? services = null) : IConnectedClientsVisibility
 {
     /// <inheritdoc/>
     public ConnectionCaller CurrentCaller() =>
@@ -46,7 +46,7 @@ public class ConnectedClientsVisibility(
 
     async Task<bool> IsAdministrator(ConnectionCaller caller)
     {
-        if (caller.Principal is null) return false;
+        if (caller.Principal is null || services is null) return false;
 
         // An observable query keeps filtering long after the request that opened it has ended, and its scoped services are disposed by
         // then. The caller's identity is all that is needed, so authorize in a scope of our own.
