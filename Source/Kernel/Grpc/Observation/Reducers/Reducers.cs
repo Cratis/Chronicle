@@ -306,10 +306,14 @@ internal sealed class Reducers(
                         }
                     }
 
+                    var observerGrain = grainFactory.GetGrain<IObserver>(new ObserverKey(registration.Reducer.ReducerId, registration.EventStore, registration.Namespace, registration.Reducer.EventSequenceId));
                     await ClientSubscriptionKeeper.KeepWhileConnected(
                         () => reducerDefinition.IsActive
                             ? ClientSubscriptionKeeper.KeepSubscription(
-                                ClientSubscriptionKeeper.ConfirmFromDurableSubscription(clientObserver!.IsSubscriptionIntact, dormantObservers, new ConnectedObserverKey(registration.Reducer.ReducerId, registration.EventStore, registration.Namespace, registration.Reducer.EventSequenceId, registration.ConnectionId)),
+                                ClientSubscriptionKeeper.ConfirmFromDurableSubscription(
+                                    ClientSubscriptionKeeper.ConfirmFromObserver(clientObserver!.IsSubscriptionIntact, observerGrain, registration.ConnectionId),
+                                    dormantObservers,
+                                    new ConnectedObserverKey(registration.Reducer.ReducerId, registration.EventStore, registration.Namespace, registration.Reducer.EventSequenceId, registration.ConnectionId)),
                                 () => clientObserver.KeepSubscription(reducerDefinition))
                             : KeepInactive(clientObserver!, reducerDefinition),
                         SubscriptionCheckSchedule.From(options.Value),
