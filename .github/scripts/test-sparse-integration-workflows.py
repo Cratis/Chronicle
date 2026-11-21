@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -272,8 +273,70 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_hot_core_summary_spec_runs_in_ci(self):
         step = next(step for step in self.hot_core["jobs"]["detect"]["steps"]
                     if step.get("name") == "Assert the hot-core contract is intact")
+        self.assertIn("python3 -E -s gate-tools/.github/scripts/test-detect-hot-core-changes.py", step["run"])
+        self.assertIn("python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate.py", step["run"])
+
+    def test_gate_tools_use_the_base_revision_with_no_persisted_credentials(self):
+        revision = "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}"
+        for job_id in ("detect", "hot-core-gate"):
+            steps = self.hot_core["jobs"][job_id]["steps"]
+            checkouts = [step["with"] for step in steps
+                         if step.get("uses", "").startswith("actions/checkout@")]
+            tools = next(checkout for checkout in checkouts if checkout.get("path") == "gate-tools")
+            with self.subTest(job=job_id):
+                self.assertEqual(revision, tools["ref"])
+                self.assertIn(tools["sparse-checkout"], (".github", ".github/scripts"))
+                self.assertTrue(all(checkout["persist-credentials"] == "false" for checkout in checkouts))
+                commands = "\n".join(step.get("run", "") for step in steps)
+                self.assertNotIn("python3 .github/scripts/", commands)
+                self.assertIn("python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py", commands)
+                for command in commands.splitlines():
+                    if "python3 " in command:
+                        self.assertTrue(command.strip().startswith("python3 -E -s gate-tools/.github/scripts/"))
+        data = self.hot_core["jobs"]["detect"]["steps"][0]["with"]
+        self.assertEqual("0", data["fetch-depth"])
+        self.assertNotIn("ref", data)
+        self.assertNotIn("path", data)
+
+    def test_detection_policy_uses_the_trusted_checkout_with_support_for_older_bases(self):
+        detect = self.hot_core["jobs"]["detect"]
+        self.assertEqual({"contents": "read"}, detect["permissions"])
+        tools = next(step["with"] for step in detect["steps"] if step.get("name") == "Checkout gate tools")
+        self.assertEqual(".github", tools["sparse-checkout"])
+        commands = "\n".join(step.get("run", "") for step in detect["steps"])
+        policy_commands = [line for line in commands.splitlines()
+                           if "gate-tools/.github/scripts/detect-hot-core-changes.py " in line]
+        self.assertEqual(2, len(policy_commands))
+        self.assertTrue(all('"${policy_args[@]}"' in line for line in policy_commands))
+        selection = ('policy_args=()\n'
+                     "if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then\n"
+                     '  policy_args=(--policy-root gate-tools)\n'
+                     'else\n'
+                     '  echo "::notice::Policy provenance hardening activates once the base contains --policy-root."\n'
+                     'fi\n')
+        steps = detect["steps"]
+        for name in ("Assert the hot-core contract is intact", "Detect hot-core changes"):
+            step = next(step for step in steps if step.get("name") == name)
+            with self.subTest(step=name):
+                self.assertIn(selection, step["run"])
+
+    def test_build_tests_the_pull_requests_own_gate_scripts(self):
+        step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"]
+                    if step.get("name") == "Spec prerelease artifact handoff without caches")
         self.assertIn("python3 .github/scripts/test-detect-hot-core-changes.py", step["run"])
         self.assertIn("python3 .github/scripts/test-evaluate-hot-core-gate.py", step["run"])
+
+    def test_gate_imports_ignore_the_data_directory_and_python_environment(self):
+        script = Path(__file__).with_name("evaluate-hot-core-gate.py").resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            for module in ("json", "integration_lane_exclusions", "sitecustomize"):
+                Path(directory, f"{module}.py").write_text("raise RuntimeError('data module imported')\n")
+            env = {**os.environ, "PYTHONPATH": directory, "PYTHONUSERBASE": directory}
+            result = subprocess.run([sys.executable, "-E", "-s", str(script), "--help"],
+                                    cwd=directory, env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stderr)
+        self.assertIn("detect-build", result.stdout)
 
     def test_refresh_is_default_branch_only_and_least_privilege(self):
         self.assertEqual({"workflow_run": {"workflows": [self.requested["name"], self.build["name"]],
@@ -290,14 +353,16 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             self.assertIn(guard, job["if"])
         for step in job["steps"]:
             if step.get("uses", "").startswith("actions/checkout@"):
-                self.assertNotIn("ref", step["with"])
+                self.assertEqual("${{ github.sha }}", step["with"]["ref"])
+                self.assertEqual("gate-tools", step["with"]["path"])
+                self.assertEqual(".github/scripts", step["with"]["sparse-checkout"])
                 self.assertEqual("false", step["with"]["persist-credentials"])
             self.assertNotIn("${{", step.get("run", ""))
         self.assertNotIn("pull_request_target", self.refresh["on"])
         refresh_step = job["steps"][-1]
         self.assertEqual("${{ github.event.workflow_run.head_sha }}", refresh_step["env"]["HEAD_SHA"])
         self.assertEqual("${{ github.event.workflow_run.path }}", refresh_step["env"]["SOURCE_WORKFLOW"])
-        self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py refresh", refresh_step["run"])
+        self.assertEqual("python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py refresh", refresh_step["run"])
         self.assertEqual("false", self.refresh["concurrency"]["cancel-in-progress"])
         # workflow_run.event stays pull_request for labeled, synchronize and reopened alike.
         self.assertEqual("github.event.workflow_run.event == 'pull_request' && "
@@ -441,7 +506,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         detect = next(step for step in self.requested["jobs"]["requested-detect-hot-core"]["steps"]
                       if step.get("id") == "detect")
         self.assertEqual("${{ github.sha }}", detect["env"]["HEAD_SHA"])
-        self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py gate", step["run"])
+        self.assertEqual("python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py gate", step["run"])
         self.assertEqual("always()", job["if"])
 
     def test_requested_run_names_the_head_and_skipped_matrix_fails(self):

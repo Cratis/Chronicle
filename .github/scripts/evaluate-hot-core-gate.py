@@ -50,7 +50,8 @@ def detect_build(arguments):
         result = subprocess.run(["git", "diff", "--no-renames", "--name-only", "-z",
                                  f"{arguments.base}...{arguments.head}"],
                                 capture_output=True, text=True, check=True)
-        triggered = build_triggered([path for path in result.stdout.split("\0") if path], ".")
+        triggered = build_triggered([path for path in result.stdout.split("\0") if path],
+                                    Path(__file__).resolve().parents[2])
     message = f"build-triggered={str(triggered).lower()}"
     if output := os.environ.get("GITHUB_OUTPUT"):
         with open(output, "a", encoding="utf-8") as file:
