@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Namespaces.for_NamespaceRemover;
 
