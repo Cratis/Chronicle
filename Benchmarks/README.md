@@ -447,6 +447,69 @@ Both families count what reaches the database driver, so the numbers are compara
 - Failed operations never count as operations or events; they are counted as errors and fail the run.
 - The ledger reports the effective connection pool size of each client, not a requested default.
 
+### Separating harness allocations from storage allocations
+
+The executable uses fixed, non-recording schema and identity fixtures. Its SQL host caches immutable
+provider/interceptor options, but creates and disposes a fresh context and scope for each operation.
+It does not reuse a context across overlapping reads. The two registered first-generation schemas
+remain empty, `HasFor` remains true for those schemas, and both converters preserve the string payload.
+The old recording substitutes and linked SQL correctness-test host exist only in the specs as controls.
+This changes the allocation baseline; do not compare new runs directly with pre-cleanup results.
+
+`for_AllocationAttribution` in the storage specs provides cheap allocation diagnostics without
+BenchmarkDotNet or a database container. It compares the control from `500d19c180` with the cleaned
+harness using identical 256-event, 256-byte, 50%-selected datasets. Both SQL arms enable EF service
+provider caching and the same command interceptors with query capture disabled. SQLite uses its real
+storage implementation; MongoDB uses the real `EventConverter` over prebuilt stored events, not a mock
+converter or a server read. Both SQLite drains consume every event in three default-size pages and
+issue six driver commands (one event query and one named-tag query per page).
+
+Each diagnostic performs setup, warmup, measurement and cleanup on one dedicated thread. It samples
+`GC.GetAllocatedBytesForCurrentThread`, checks that every Task (including every cursor `MoveNext`)
+has already completed successfully, and rejects incomplete work instead of blocking and undercounting
+it. Delegates, filters, stored Mongo events and output formatting are outside the sampled window.
+Each ordinary boundary has 64 warmup and 64 measured calls; each event-vector boundary has 16 of each.
+No process-wide GC counter, elapsed-time comparison or timing benchmark is involved. The specs emit
+`ALLOC | ...` rows to their test output; use the scoped storage-spec build and runner rather than
+`storage-run.sh` to reproduce these diagnostics.
+
+One local Release diagnostic on Darwin arm64, .NET SDK 11.0.100, produced the following bytes per call.
+These are allocation observations, **not throughput or latency baselines**. Deltas are legacy minus
+clean and identify removable harness overhead at that boundary. Clean values still include necessary
+context/scope, interception and fixed-fixture interaction costs; they are not exclusive production
+allocation stacks. Inclusive rows overlap and must not be added to the component rows.
+
+| Boundary | Legacy B/call | Clean B/call | Removed harness B/call |
+| --- | ---: | ---: | ---: |
+| Identity lookup | 992.00 | 0.00 | 992.00 |
+| Schema `HasFor` | 296.00 | 0.00 | 296.00 |
+| Schema `GetFor` | 1,112.00 | 0.00 | 1,112.00 |
+| Namespace options construction/reuse only | 40,984.00 | 0.00 | 40,984.00 |
+| `IDatabase` dispatch + context/scope, cached options in both arms | 9,016.12 | 8,512.00 | 504.12 |
+| SQLite `GetState`, inclusive | 107,245.25 | 65,600.00 | 41,645.25 |
+| SQLite `GetTail`, inclusive | 107,298.62 | 69,176.00 | 38,122.62 |
+| SQLite per-type tails, inclusive | 120,452.75 | 82,392.00 | 38,060.75 |
+| SQLite full drain, inclusive | 3,845,294.50 | 3,590,855.00 | 254,439.50 |
+| Mongo `EventConverter`, 256-event vector | 2,736,806.50 | 2,033,664.00 | 703,142.50 |
+| Residual snapshot/`InvocationRecord` construction only, unchanged | 872.00 | 872.00 | 0.00 |
+
+The last row isolates two `CommandCounter.Snapshot` calls, `Since`, a one-element latency array and
+`InvocationRecord` construction. It excludes clocks, statistics accumulation, output and export;
+it is neither total accounting cost nor a storage cost. The no-op allocation probe reports zero bytes.
+
+| Event boundary | Legacy B/event | Clean B/event | Removed harness B/event |
+| --- | ---: | ---: | ---: |
+| SQLite full drain | 15,020.68 | 14,026.78 | 993.90 |
+| Mongo converter only | 10,690.65 | 7,944.00 | 2,746.65 |
+
+The large per-call SQL options allocation was harness-owned. SQLite's remaining 65–82 KB metadata-read
+boundaries and 14 KB/event full drain justify investigating EF query/materialization and
+`EventEntryConverter`/schema-content conversion before changing production code. Mongo's remaining
+7,944 B/event is converter work, including context, generation, schema-content and Task/result
+construction; it does not include a Mongo driver read. These are production follow-up candidates,
+not fixes or exclusive call-stack attribution. Remote runner verification of Mongo full drains and
+both clean/control command counts is still pending; these local rows cannot establish it.
+
 ## Results
 
 Benchmark results are exported in JSON format compatible with BenchmarkDotNet and GitHub Actions benchmark visualization.
