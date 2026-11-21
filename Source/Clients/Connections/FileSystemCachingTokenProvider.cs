@@ -15,15 +15,16 @@ namespace Cratis.Chronicle.Connections;
 /// <remarks>
 /// <para>
 /// Wraps an inner <see cref="ITokenProvider"/> and caches its result on disk. On the next
-/// invocation the cached token is returned directly if it has not expired, avoiding any
-/// network round-trips to the token endpoint.
+/// invocation the cached token is returned directly if it has not expired and its endpoint and client
+/// binding can be verified against the inner provider. Providers without a known binding do not reuse
+/// or write persisted tokens. Old caches without a binding are discarded on the next acquisition.
 /// </para>
 /// <para>
 /// The cache file holds a bearer token, so it is created readable and writable by the current user only
 /// (mode 0600 on Unix, in a directory created with mode 0700) and replaced atomically, so a reader never
 /// sees a partial file. The location is whatever path the caller supplies for the cache file, which should be
-/// inside the user's own profile and unique per server and client identity. Prefer the scoped constructor
-/// to bind the cache to that server and identity. On Windows the directory and temporary file are created
+/// inside the user's own profile and unique per server and client identity. The scoped constructor
+/// adds a caller-supplied scope to the endpoint and client binding. On Windows the directory and temporary file are created
 /// with protected current-user-only access control lists. A JWT's expiry less a safety margin can shorten,
 /// but never extend, the configured lifetime.
 /// </para>
@@ -65,7 +66,7 @@ public class FileSystemCachingTokenProvider(
     /// <inheritdoc/>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
     {
-        var cached = ReadCache();
+        var cached = ReadCache(await CurrentBinding(cancellationToken));
         if (cached is not null && DateTimeOffset.UtcNow < cached.Expiry)
         {
             return cached.AccessToken;
@@ -74,19 +75,13 @@ public class FileSystemCachingTokenProvider(
         await Lock.WaitAsync(cancellationToken);
         try
         {
-            cached = ReadCache();
+            cached = ReadCache(await CurrentBinding(cancellationToken));
             if (cached is not null && DateTimeOffset.UtcNow < cached.Expiry)
             {
                 return cached.AccessToken;
             }
 
-            var token = await innerProvider.GetAccessToken(cancellationToken);
-            if (token is not null)
-            {
-                WriteCache(new TokenCache(token, ExpiryOf(token), _scopeHash));
-            }
-
-            return token;
+            return CacheToken(await AcquireToken(cancellationToken));
         }
         finally
         {
@@ -101,13 +96,7 @@ public class FileSystemCachingTokenProvider(
         try
         {
             DeleteCache();
-            var token = await innerProvider.Refresh(cancellationToken);
-            if (token is not null)
-            {
-                WriteCache(new TokenCache(token, ExpiryOf(token), _scopeHash));
-            }
-
-            return token;
+            return CacheToken(await RefreshToken(cancellationToken));
         }
         finally
         {
@@ -123,6 +112,8 @@ public class FileSystemCachingTokenProvider(
             disposable.Dispose();
         }
     }
+
+    static bool HasKnownBinding(TokenCacheBinding? binding) => binding?.IsKnown() == true;
 
     static uint LockIndexFor(string path)
     {
@@ -174,9 +165,49 @@ public class FileSystemCachingTokenProvider(
             : expiry;
     }
 
-    TokenCache? ReadCache()
+    async Task<TokenWithBinding?> AcquireToken(CancellationToken cancellationToken)
     {
-        if (!File.Exists(cacheFilePath))
+        if (innerProvider is ITokenCacheBindingProvider provider)
+        {
+            return await provider.GetTokenWithBinding(cancellationToken);
+        }
+
+        var token = await innerProvider.GetAccessToken(cancellationToken);
+        return token is null ? null : new(token, null);
+    }
+
+    async Task<TokenWithBinding?> RefreshToken(CancellationToken cancellationToken)
+    {
+        if (innerProvider is ITokenCacheBindingProvider provider)
+        {
+            return await provider.RefreshTokenWithBinding(cancellationToken);
+        }
+
+        var token = await innerProvider.Refresh(cancellationToken);
+        return token is null ? null : new(token, null);
+    }
+
+    string? CacheToken(TokenWithBinding? token)
+    {
+        if (token is not null)
+        {
+            WriteCache(new TokenCache(token.AccessToken, ExpiryOf(token.AccessToken), _scopeHash, token.Binding));
+        }
+
+        return token?.AccessToken;
+    }
+
+    ValueTask<TokenCacheBinding?> CurrentBinding(CancellationToken cancellationToken) =>
+        innerProvider is ITokenCacheBindingProvider provider
+            ? provider.GetCurrentCacheBinding(cancellationToken)
+            : ValueTask.FromResult<TokenCacheBinding?>(null);
+
+    bool MatchesBinding(TokenCache cache, TokenCacheBinding? binding) =>
+        cache.Binding == binding && (_scopeHash is null || cache.ScopeHash == _scopeHash);
+
+    TokenCache? ReadCache(TokenCacheBinding? binding)
+    {
+        if (!HasKnownBinding(binding) || !File.Exists(cacheFilePath))
         {
             return null;
         }
@@ -190,7 +221,7 @@ public class FileSystemCachingTokenProvider(
             }
 
             var cache = JsonSerializer.Deserialize<TokenCache>(stream, _jsonOptions);
-            return _scopeHash is null || cache?.ScopeHash == _scopeHash ? cache : null;
+            return cache is { AccessToken.Length: > 0 } && MatchesBinding(cache, binding) ? cache : null;
         }
         catch
         {
@@ -200,6 +231,11 @@ public class FileSystemCachingTokenProvider(
 
     void WriteCache(TokenCache cache)
     {
+        if (!HasKnownBinding(cache.Binding))
+        {
+            return;
+        }
+
         var temporaryPath = $"{cacheFilePath}.{Guid.NewGuid():N}.tmp";
         try
         {
@@ -228,5 +264,5 @@ public class FileSystemCachingTokenProvider(
 
     void DeleteCache() => TryDeleteFile(cacheFilePath);
 
-    record TokenCache(string AccessToken, DateTimeOffset Expiry, string? ScopeHash = null);
+    record TokenCache(string AccessToken, DateTimeOffset Expiry, string? ScopeHash = null, TokenCacheBinding? Binding = null);
 }
