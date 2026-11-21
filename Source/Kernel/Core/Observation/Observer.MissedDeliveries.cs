@@ -15,17 +15,15 @@ public partial class Observer
     {
         var before = previous ?? State.NextEventSequenceNumber;
         if (candidate <= before) return candidate;
-        var outstanding = Failures.Partitions.Where(_ => _.Partition != partition)
-            .Select(_ => _.RecoveryCursor?.Position ?? _.LastAttempt.SequenceNumber)
-            .Concat(_heldBackDeliveries.Where(_ => _.Key != partition).Select(_ => _.Value.First));
-        foreach (var pending in outstanding.Where(_ => _.IsActualValue && _ < candidate))
+        var outstanding = _heldBackDeliveries.Where(_ => _.Key != partition).Select(_ => _.Value.First);
+        foreach (var pending in outstanding.Where(_ => _.IsActualValue && _ >= before))
         {
-            candidate = pending;
+            if (pending < candidate) candidate = pending;
         }
 
-        // Existing failures can already be behind the live cursor. They retain their own recovery position;
-        // only a missed-delivery repair deliberately rewinds the observer-wide position.
-        return candidate < before ? before : candidate;
+        // Failed partitions retain their own recovery position. Only missed-delivery repair deliberately
+        // rewinds the observer-wide position, including held-back bounds already behind the previous cursor.
+        return candidate;
     }
 
     bool PartitionHasPendingWork(Key partition) => Failures.IsFailed(partition) ||
@@ -106,7 +104,7 @@ public partial class Observer
         }
     }
 
-    bool CanRepairMissedDeliveries() => IsObserverLive() && IsActiveAndNotQuarantined() && _subscription.IsSubscribed;
+    bool CanRepairMissedDeliveries() => IsObserverLive() && IsActiveAndNotQuarantined() && _subscription.IsSubscribed && !CannotWriteState();
 
     async Task RepairMissedDelivery(Key partition, EventSequenceNumber first)
     {
@@ -115,8 +113,11 @@ public partial class Observer
         if (first < State.NextEventSequenceNumber)
         {
             State = State with { NextEventSequenceNumber = first };
-            await WriteStateAsync();
         }
+
+        // Always write, even when a previous suspended attempt already changed the in-memory position.
+        await WriteStateAsync();
+        if (!CanRepairMissedDeliveries()) return;
 
         try
         {

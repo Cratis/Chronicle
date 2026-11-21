@@ -7,7 +7,7 @@ using Cratis.Chronicle.Concepts.Keys;
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
 /// <summary>
-/// Live progress on Q must not move the resume position past the event still awaiting recovery on P.
+/// Live progress on Q leaves P's independent recovery position intact without pinning the shared cursor.
 /// </summary>
 public class and_live_progress_passes_another_partitions_failed_event : given.an_observer_with_skip_detection
 {
@@ -21,7 +21,8 @@ public class and_live_progress_passes_another_partitions_failed_event : given.an
 
     async Task Because() => await _observer.Handle("Q", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 105UL)]);
 
-    [Fact] void should_keep_the_resume_position_at_the_failed_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)102UL);
+    [Fact] void should_advance_the_shared_cursor() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)106UL);
+    [Fact] void should_retain_the_failed_partitions_recovery_position() => _failedPartitionsStorage.State.Partitions.Single().LastAttempt.SequenceNumber.ShouldEqual((EventSequenceNumber)102UL);
     [Fact] void should_keep_the_failure_pending() => _failedPartitionsStorage.State.IsFailed((Key)"P").ShouldBeTrue();
     [Fact] void should_record_the_successful_live_delivery() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)105UL);
 }

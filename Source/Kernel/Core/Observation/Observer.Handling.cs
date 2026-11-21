@@ -50,6 +50,8 @@ public partial class Observer
     public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo)
     {
         Skips.JobReported(partition);
+        Skips.Delivered(partition, handledUpTo);
+        CompleteHeldBackDelivery(partition, handledUpTo);
         if (IsRetired || _removed || !_observerExists) return;
         if (!_handledEventsReports.TryTake(reportedBy, partition, handledUpTo)) return;
 
@@ -63,6 +65,8 @@ public partial class Observer
         foreach (var report in reports)
         {
             Skips.JobReported(report.Partition);
+            Skips.Delivered(report.Partition, report.HandledUpTo);
+            CompleteHeldBackDelivery(report.Partition, report.HandledUpTo);
         }
 
         if (IsRetired || _removed || !_observerExists) return;
