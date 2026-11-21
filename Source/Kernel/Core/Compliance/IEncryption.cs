@@ -25,6 +25,19 @@ public interface IEncryption
     /// <returns>Encrypted bytes.</returns>
     byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision);
 
+    /// <summary>
+    /// Encrypt bytes with a key, binding the value to the key-storage address it is written under.
+    /// </summary>
+    /// <param name="bytes">Bytes to encrypt.</param>
+    /// <param name="key">Key to use.</param>
+    /// <param name="revision">The concrete revision of the key used.</param>
+    /// <param name="address">The key-storage address the value is written under and released from.</param>
+    /// <returns>Encrypted bytes.</returns>
+    /// <remarks>
+    /// An implementation that cannot sign the address writes without it, which strict release treats as legacy.
+    /// </remarks>
+    byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision, ProtectedValueAddress address) => Encrypt(bytes, key, revision);
+
     /// <summary>Reads the key revision from a v2 envelope without decrypting it.</summary>
     /// <param name="bytes">The encrypted bytes.</param>
     /// <param name="revision">The recorded revision, when present.</param>
@@ -43,7 +56,7 @@ public interface IEncryption
     /// Check whether bytes carry the shape this encryption produces.
     /// </summary>
     /// <param name="bytes">Bytes to check.</param>
-    /// <returns>True if the bytes could have been produced by <see cref="Encrypt"/>, false otherwise.</returns>
+    /// <returns>True if the bytes could have been produced by <see cref="Encrypt(byte[], EncryptionKey, EncryptionKeyRevision)"/>, false otherwise.</returns>
     /// <remarks>
     /// This tells apart a value that was encrypted from one that never was, so that releasing a value which
     /// was never protected can be a no-op instead of an error. It is a structural check on the format only —

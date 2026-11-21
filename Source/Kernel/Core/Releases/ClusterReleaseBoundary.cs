@@ -30,6 +30,14 @@ public static class ClusterReleaseBoundary
     public static readonly SemanticVersion DormantObservers = new(19, 173, 0);
 
     /// <summary>
+    /// Gets the first release that writes protected values with a verifiable managed-key identity (#4619).
+    /// </summary>
+    /// <remarks>
+    /// Earlier silos cannot read that envelope, so it is written only while every silo runs one release at or after this one.
+    /// </remarks>
+    public static readonly SemanticVersion KeyIdentity = new(19, 179, 0);
+
+    /// <summary>
     /// Finds the releases in a cluster that this release cannot exchange grain calls with because of a boundary.
     /// </summary>
     /// <param name="local">The release of this silo.</param>

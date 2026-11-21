@@ -8,4 +8,5 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 /// <param name="Concurrency">The writer counts for the concurrent append workloads.</param>
 /// <param name="BatchSizes">The batch sizes for `AppendMany`.</param>
 /// <param name="ConstraintBatchSizes">The governed batch sizes for the uniqueness read workload.</param>
-public sealed record WorkloadShape(IReadOnlyList<int> EventCounts, IReadOnlyList<int> Concurrency, IReadOnlyList<int> BatchSizes, IReadOnlyList<int> ConstraintBatchSizes);
+/// <param name="CatchUpCounts">Optional catch-up sizes, independent of activation sizes.</param>
+public sealed record WorkloadShape(IReadOnlyList<int> EventCounts, IReadOnlyList<int> Concurrency, IReadOnlyList<int> BatchSizes, IReadOnlyList<int> ConstraintBatchSizes, IReadOnlyList<int>? CatchUpCounts = null);

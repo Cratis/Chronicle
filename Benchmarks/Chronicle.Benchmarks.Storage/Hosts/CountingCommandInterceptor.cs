@@ -11,7 +11,8 @@ namespace Cratis.Chronicle.Benchmarks.Storage.Hosts;
 /// the kernel sees the provider's own connection type, exactly as in production.
 /// </summary>
 /// <param name="counter">The counter to record into.</param>
-internal sealed class CountingCommandInterceptor(CommandCounter counter) : DbCommandInterceptor
+/// <param name="capture">Optional labelled query capture.</param>
+internal sealed class CountingCommandInterceptor(CommandCounter counter, QueryCapture? capture = null) : DbCommandInterceptor
 {
     /// <inheritdoc/>
     public override InterceptionResult<int> NonQueryExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<int> result) => Count(command, result);
@@ -21,18 +22,24 @@ internal sealed class CountingCommandInterceptor(CommandCounter counter) : DbCom
         ValueTask.FromResult(Count(command, result));
 
     /// <inheritdoc/>
-    public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result) => Count(command, result);
+    public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result) => Capture(command, result);
 
     /// <inheritdoc/>
     public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) =>
-        ValueTask.FromResult(Count(command, result));
+        ValueTask.FromResult(Capture(command, result));
 
     /// <inheritdoc/>
-    public override InterceptionResult<object> ScalarExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<object> result) => Count(command, result);
+    public override InterceptionResult<object> ScalarExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<object> result) => Capture(command, result);
 
     /// <inheritdoc/>
     public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<object> result, CancellationToken cancellationToken = default) =>
-        ValueTask.FromResult(Count(command, result));
+        ValueTask.FromResult(Capture(command, result));
+
+    InterceptionResult<T> Capture<T>(DbCommand command, InterceptionResult<T> result)
+    {
+        capture?.Record(command);
+        return Count(command, result);
+    }
 
     InterceptionResult<T> Count<T>(DbCommand command, InterceptionResult<T> result)
     {

@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.ProtectedValues.for_EncryptedNamespaceValueHandler;
 /// </summary>
 public class when_applying_values_for_two_different_documents : given.a_property_handler
 {
-    void Establish() => _encryption.Encrypt(Arg.Any<byte[]>(), _key, Arg.Any<EncryptionKeyRevision>()).Returns(Encoding.UTF8.GetBytes("cipher"));
+    void Establish() => _encryption.Encrypt(Arg.Any<byte[]>(), _key, Arg.Any<EncryptionKeyRevision>(), Arg.Any<ProtectedValueAddress>()).Returns(Encoding.UTF8.GetBytes("cipher"));
 
     async Task Because()
     {

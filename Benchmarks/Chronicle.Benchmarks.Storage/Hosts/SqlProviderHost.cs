@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Benchmarks.Storage.Hosts;
 /// interceptor counting every command.
 /// </summary>
 /// <param name="provider">Which SQL provider to host.</param>
-internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProviderHost
+internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProviderHost, IQueryPlanHost
 {
     const string PostgreSqlImage = "postgres:16-alpine";
     readonly List<EventSequenceStorageHost> _hosts = [];
@@ -50,9 +50,18 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     public CommandCounter Counter { get; } = new();
 
     /// <inheritdoc/>
+    public QueryCapture Capture { get; } = new();
+
+    /// <inheritdoc/>
+    public Task<string> Explain(CapturedQuery query) => new SqlPlanQueries(provider, _connectionString).Explain(query);
+
+    /// <inheritdoc/>
+    public Task<string> IndexDefinitions(CapturedQuery query) => new SqlPlanQueries(provider, _connectionString).IndexDefinitions(query);
+
+    /// <inheritdoc/>
     public async Task Start()
     {
-        _interceptors = CountingInterceptors.For(Counter);
+        _interceptors = CountingInterceptors.For(Counter, Capture);
         var password = $"Benchmark-{Guid.NewGuid():N}!";
         switch (provider)
         {

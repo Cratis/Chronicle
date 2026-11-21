@@ -12,6 +12,7 @@ public class when_parsing_short : Specification
 
     void Because() => _profile = BenchmarkProfile.Parse("short");
 
+    [Fact] void should_scale_catch_up_across_four_sizes() => _profile.CatchUpCounts.ShouldEqual<int>(2_500, 5_000, 10_000, 20_000);
     [Fact] void should_name_the_profile() => _profile.Name.ShouldEqual("short");
     [Fact] void should_seed_ten_thousand_events() => _profile.EventCounts.ShouldEqual<int>(10_000);
     [Fact] void should_include_thirty_two_writers() => _profile.Concurrency.ShouldEqual<int>(1, 8, 32);

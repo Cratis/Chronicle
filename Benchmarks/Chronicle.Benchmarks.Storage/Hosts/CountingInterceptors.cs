@@ -10,6 +10,7 @@ internal static class CountingInterceptors
 {
     /// <summary>Creates the command and transaction interceptors for a counter.</summary>
     /// <param name="counter">The counter.</param>
+    /// <param name="capture">Optional labelled query capture.</param>
     /// <returns>The interceptors.</returns>
-    public static IInterceptor[] For(CommandCounter counter) => [new CountingCommandInterceptor(counter), new CountingTransactionInterceptor(counter)];
+    public static IInterceptor[] For(CommandCounter counter, QueryCapture? capture = null) => [new CountingCommandInterceptor(counter, capture), new CountingTransactionInterceptor(counter)];
 }
