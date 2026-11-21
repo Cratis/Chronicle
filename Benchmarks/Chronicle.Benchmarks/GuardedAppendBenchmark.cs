@@ -33,6 +33,12 @@ public class GuardedAppendBenchmark : IDisposable, IAsyncDisposable
     int _nextValue;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the initial number of events in each key's history.
     /// </summary>
     [Params(10, 1000)]

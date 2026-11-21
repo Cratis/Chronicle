@@ -25,6 +25,12 @@ public class ConcurrentDecisionReadBenchmark : IDisposable, IAsyncDisposable
     DecisionRead<BenchmarkMaterializedReadModel>[] _results = [];
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of concurrent reads in a measured batch.
     /// </summary>
     [Params(1, 8, 32)]
@@ -60,7 +66,7 @@ public class ConcurrentDecisionReadBenchmark : IDisposable, IAsyncDisposable
     [Benchmark]
     public async Task<DecisionRead<BenchmarkMaterializedReadModel>[]> ConcurrentDecisionReads()
     {
-        _results = await Task.WhenAll(_keys.Take(Workers).Select(_ => _reads.GetDetached<BenchmarkMaterializedReadModel>(_)));
+        _results = await Task.WhenAll(_keys.Take(Workers).Select(_ => _reads.GetDetached<BenchmarkMaterializedReadModel>(_, CancellationToken)));
         return _results;
     }
 

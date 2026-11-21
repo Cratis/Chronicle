@@ -25,7 +25,7 @@ internal static class Program
 
         var benchmarkArguments = HasFilter(args) ? args : ["--filter", "*", .. args];
         var config = Configuration();
-        var summaries = BenchmarkSwitcher.FromAssembly(typeof(AppendBenchmark).Assembly).Run(benchmarkArguments, config);
+        var summaries = await BenchmarkSwitcher.FromAssembly(typeof(AppendBenchmark).Assembly).RunAsync(benchmarkArguments, config);
 
         return BenchmarkRunOutcome.ExitCodeFor(summaries, Console.Error);
     }

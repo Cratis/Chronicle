@@ -19,5 +19,5 @@ if (args.Contains("--idle-calls"))
     return await IdleCalls.Run(args);
 }
 
-var summaries = BenchmarkSwitcher.FromAssembly(typeof(AppendGenerationProtectionBenchmark).Assembly).Run(args).ToArray();
+var summaries = (await BenchmarkSwitcher.FromAssembly(typeof(AppendGenerationProtectionBenchmark).Assembly).RunAsync(args)).ToArray();
 return summaries.Length > 0 && summaries.All(summary => !summary.HasCriticalValidationErrors && summary.Reports.All(report => report.Success)) ? 0 : 1;

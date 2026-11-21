@@ -9,5 +9,5 @@ using Cratis.Chronicle.Benchmarks.ClientStartup;
 
 var config = ManualConfig.Create(DefaultConfig.Instance)
     .AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Default));
-var summaries = BenchmarkSwitcher.FromAssembly(typeof(ClientStartupBenchmark).Assembly).Run(args, config).ToArray();
+var summaries = (await BenchmarkSwitcher.FromAssembly(typeof(ClientStartupBenchmark).Assembly).RunAsync(args, config)).ToArray();
 return summaries.Length == 0 || summaries.Any(summary => summary.HasCriticalValidationErrors || summary.Reports.Any(report => !report.Success)) ? 1 : 0;
