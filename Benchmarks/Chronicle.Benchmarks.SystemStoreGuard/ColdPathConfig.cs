@@ -11,5 +11,5 @@ namespace Cratis.Chronicle.Benchmarks.SystemStoreGuard;
 public sealed class ColdPathConfig : ManualConfig
 {
     /// <summary>Initializes a new instance of the <see cref="ColdPathConfig"/> class.</summary>
-    public ColdPathConfig() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Default).WithInvocationCount(EntitledCaller.RequestCount).WithUnrollFactor(1).WithWarmupCount(10));
+    public ColdPathConfig() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Instance).WithInvocationCount(EntitledCaller.RequestCount).WithUnrollFactor(1).WithWarmupCount(10));
 }

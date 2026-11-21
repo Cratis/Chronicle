@@ -34,7 +34,7 @@ internal static class Program
     {
         if (Environment.GetEnvironmentVariable("CRATIS_BENCHMARK_INPROCESS") == "1")
         {
-            return ManualConfig.Create(DefaultConfig.Instance).AddJob(Job.Default.WithToolchain(InProcessEmitToolchain.Default).WithWarmupCount(3).WithIterationCount(15).AsMutator());
+            return ManualConfig.Create(DefaultConfig.Instance).AddJob(Job.Default.WithToolchain(InProcessEmitToolchain.Instance).WithWarmupCount(3).WithIterationCount(15).AsMutator());
         }
         if (Environment.GetEnvironmentVariable("CRATIS_BENCHMARK_SERIAL_BUILD") == "1")
         {

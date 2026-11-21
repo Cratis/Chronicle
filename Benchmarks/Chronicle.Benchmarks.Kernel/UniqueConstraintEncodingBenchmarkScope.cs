@@ -115,6 +115,6 @@ public class UniqueConstraintEncodingBenchmarkScope
 
     sealed class UniqueConstraintEncodingScopeConfiguration : ManualConfig
     {
-        public UniqueConstraintEncodingScopeConfiguration() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Default));
+        public UniqueConstraintEncodingScopeConfiguration() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Instance));
     }
 }

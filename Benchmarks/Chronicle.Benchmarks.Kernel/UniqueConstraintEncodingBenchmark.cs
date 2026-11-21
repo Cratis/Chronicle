@@ -93,6 +93,6 @@ public class UniqueConstraintEncodingBenchmark
 
     sealed class UniqueConstraintEncodingConfiguration : ManualConfig
     {
-        public UniqueConstraintEncodingConfiguration() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Default));
+        public UniqueConstraintEncodingConfiguration() => AddJob(Job.MediumRun.WithToolchain(InProcessEmitToolchain.Instance));
     }
 }
