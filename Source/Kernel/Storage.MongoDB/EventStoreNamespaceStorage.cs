@@ -270,5 +270,8 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
     }
 
     /// <inheritdoc/>
-    public Task<bool> HasData() => _eventStoreNamespaceDatabase.HasAnyCollections();
+    public Task<bool> HasData() => _eventStoreNamespaceDatabase.HasEvents();
+
+    /// <inheritdoc/>
+    public Task<bool> HasPersistedState() => _eventStoreNamespaceDatabase.HasAnyCollections();
 }

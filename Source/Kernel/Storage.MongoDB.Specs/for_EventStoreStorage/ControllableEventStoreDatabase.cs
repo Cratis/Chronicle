@@ -102,6 +102,8 @@ public sealed class ControllableEventStoreDatabase : IEventStoreDatabase, IDispo
 
         public Task EnsureIndexesForEventSequence(EventSequenceId eventSequenceId) => Task.CompletedTask;
 
+        public Task<bool> HasEvents() => Task.FromResult(false);
+
         public Task<bool> HasAnyCollections() => Task.FromResult(true);
 
         public Task<bool> HasOwnDatabase() => Task.FromResult(true);

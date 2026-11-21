@@ -60,6 +60,14 @@ public interface IDatabase
     Task<DbContextScope<NamespaceDbContext>?> ExistingNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
     /// <summary>
+    /// Checks existing namespace tables for persisted events without provisioning or migrating storage.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <returns>Whether a physical event table contains an event, independently of sequence snapshots.</returns>
+    Task<bool> NamespaceHasEvents(EventStoreName eventStore, EventStoreNamespaceName @namespace);
+
+    /// <summary>
     /// Gets the <see cref="DbContextOptions{JobsDbContext}"/> for the Cratis.Choreography job system's storage in
     /// the database of an event store namespace - the same database the namespace's own DbContext uses.
     /// </summary>

@@ -35,7 +35,8 @@ public class when_namespace_added_with_no_data : given.a_reactors_reactor
             EventSequenceNumber.First,
             new CorrelationId(Guid.NewGuid()));
 
-        _namespaceStorage.HasData().Returns(Task.FromResult(false));
+        _namespaceStorage.HasData().Returns(Task.FromResult(true));
+        _namespaceStorage.HasPersistedState().Returns(Task.FromResult(false));
     }
 
     async Task Because() => await _reactor.NamespaceAdded(_event, _context);
