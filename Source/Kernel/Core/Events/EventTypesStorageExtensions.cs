@@ -33,7 +33,7 @@ public static class EventTypesStorageExtensions
         // A redaction marker is not a registered event type and carries no compliance metadata, so it is never looked
         // up - otherwise every batch holding one would query storage again for a schema that does not exist.
         var missing = events
-            .Select(_ => _.Context.EventType)
+            .SelectMany(HistoryEventTypesFor)
             .Where(_ => _.Id != GlobalEventTypes.Redaction)
             .Distinct()
             .Where(_ => !schemas.ContainsKey(_))
@@ -65,5 +65,25 @@ public static class EventTypesStorageExtensions
     {
         var stored = await eventTypes.GetFor([eventType]);
         return stored.FirstOrDefault(_ => _.Type.Id == eventType.Id && _.Type.Generation == eventType.Generation)?.Schema;
+    }
+
+    static IEnumerable<EventType> HistoryEventTypesFor(AppendedEvent @event)
+    {
+        var id = @event.Context.EventType.Id;
+        yield return @event.Context.EventType;
+        foreach (var generation in @event.GenerationalContent.Keys)
+        {
+            yield return new(id, (uint)generation);
+        }
+
+        if (!string.IsNullOrEmpty(@event.OriginalContent))
+        {
+            yield return new(id, EventTypeGeneration.First);
+        }
+
+        foreach (var revision in @event.Revisions)
+        {
+            yield return new(id, revision.EventTypeGeneration);
+        }
     }
 }
