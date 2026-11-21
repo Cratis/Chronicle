@@ -30,6 +30,10 @@ public class ProtectedReleaseBenchmark
     AppendFingerprintInput _input = null!;
     StoredAppendFingerprint _fingerprint = null!;
 
+    /// <summary>Gets or sets the cancellation token supplied by the benchmark runner.</summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
     /// <summary>Gets or sets whether each operation starts with cold key material.</summary>
     [Params(false, true)]
     public bool Cold { get; set; }
@@ -55,7 +59,7 @@ public class ProtectedReleaseBenchmark
         EvictIfCold();
         using var scope = ReleaseKeys.BeginScope();
         for (var index = 0; index < 10; index++) await _manager.Release("store", "ns", _schema, "subject", _protected);
-        await ReleaseKeys.Complete(() => true);
+        await ReleaseKeys.Complete(() => true, CancellationToken);
     }
 
     /// <summary>Release a status-bearing watch delta in its own scope.</summary>
@@ -110,6 +114,6 @@ public class ProtectedReleaseBenchmark
 
     sealed class BenchmarkConfiguration : ManualConfig
     {
-        public BenchmarkConfiguration() => AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Instance));
+        public BenchmarkConfiguration() => AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Default));
     }
 }

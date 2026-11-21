@@ -25,6 +25,10 @@ public class ArcFilterBenchmark : IDisposable
     EntitledCaller _unentitledAudited = null!;
     EntitledCaller _unentitledEnforced = null!;
 
+    /// <summary>Gets or sets the cancellation token supplied by the benchmark runner.</summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
     /// <summary>Gets or sets whether the authorization filter is present.</summary>
     [Params(false, true)]
     public bool Guarded { get; set; }
