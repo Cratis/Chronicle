@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using ContractReadModels = Cratis.Chronicle.Contracts.ReadModels;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -95,12 +96,16 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         // never leaks the subscription established for the previous connection.
         prior?.Dispose();
 
+        var isReducer = _eventStore.Reducers.HasFor<TReadModel>();
+        var eventSequenceId = isReducer
+            ? _eventStore.Reducers.GetHandlerForReadModelType(typeof(TReadModel)).EventSequenceId
+            : EventSequenceId.Log;
         var request = new ContractReadModels.WatchRequest
         {
             EventStore = _eventStore.Name,
             Namespace = _eventStore.Namespace,
             ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
-            EventSequenceId = EventSequences.EventSequenceId.Log
+            EventSequenceId = eventSequenceId
         };
         _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
         var subscription = _serverObservable.Subscribe(
@@ -112,26 +117,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
                     return;
                 }
 
-                var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
-                var changeContext = EventContext.From(
-                    _eventStore.Name,
-                    changeset.Namespace,
-                    EventType.Unknown,
-                    EventSourceType.Default,
-                    changeset.ModelKey,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    changeset.EventSequenceNumber,
-                    changeset.CorrelationId,
-                    changeset.Occurred);
-
-                _observable.OnNext(new ReadModelChangeset<TReadModel>(
-                    changeset.Namespace,
-                    changeset.ModelKey,
-                    readModel,
-                    changeset.Removed,
-                    ToChangeType(changeset.ChangeType),
-                    changeContext));
+                _observable.OnNext(ToChangeset(changeset, isReducer));
             },
             _ => ResetForReconnect(),
             ResetForReconnect);
@@ -164,6 +150,24 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         ContractReadModels.ReadModelChangeType.Removed => ReadModelChangeType.Removed,
         _ => ReadModelChangeType.Modified
     };
+
+    ReadModelChangeset<TReadModel> ToChangeset(ContractReadModels.ReadModelChangeset changeset, bool isReducer) => new(
+        changeset.Namespace,
+        changeset.ModelKey,
+        isReducer && changeset.Removed ? default : JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions),
+        changeset.Removed,
+        ToChangeType(changeset.ChangeType),
+        EventContext.From(
+            _eventStore.Name,
+            changeset.Namespace,
+            EventType.Unknown,
+            EventSourceType.Default,
+            changeset.ModelKey,
+            EventStreamType.All,
+            EventStreamId.Default,
+            changeset.EventSequenceNumber,
+            changeset.CorrelationId,
+            changeset.Occurred));
 
     Task ClientConnected()
     {
