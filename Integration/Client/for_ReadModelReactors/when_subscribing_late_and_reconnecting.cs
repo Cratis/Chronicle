@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.for_ReadModelReactors.when_subscribing_late_and_reconnecting.context;
 
 namespace Cratis.Chronicle.Integration.for_ReadModelReactors;
@@ -20,8 +19,9 @@ public class when_subscribing_late_and_reconnecting(context setup) : Given<conte
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             var token = timeout.Token;
-            await Handler.WaitTillSubscribed().WaitAsync(token);
-            await EventStore.ReadModels.GetWatcherFor<ReducedModel>().Subscribed.WaitAsync(token);
+            Subscribe();
+            await Ready(token);
+            Subscription!.Dispose();
             var first = await EventStore.EventLog.Append("existing", new Reduction(1));
             await ReactorFrames.WaitFor("existing", ReadModelChangeType.Added, first.SequenceNumber, token);
             Subscribe();
@@ -30,7 +30,7 @@ public class when_subscribing_late_and_reconnecting(context setup) : Given<conte
             await EventStore.Connection.Lifecycle.Disconnected();
             await EventStore.Connection.Connect();
 
-            // This waits for the new subscription task and acknowledges a fresh marker in BOTH consumers.
+            // A fresh sentinel must be acknowledged by BOTH consumers after reconnect.
             await Ready(token);
             ReconnectedSequence = await Append("existing", new Reduction(3), ReadModelChangeType.Modified, token);
         }

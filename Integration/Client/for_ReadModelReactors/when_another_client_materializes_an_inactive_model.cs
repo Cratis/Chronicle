@@ -57,7 +57,7 @@ public class when_another_client_materializes_an_inactive_model(context setup) :
             var handler = store.Reducers.GetHandlerFor<WatchedReducer<ReducedModel>>();
             ActiveHandler = handler.IsActive;
             await handler.WaitTillSubscribed().WaitAsync(token);
-            await store.ReadModels.GetWatcherFor<ReducedModel>().Subscribed.WaitAsync(token);
+            await ReducerWatchReadiness.WaitFor(store, ActiveWatch, ActiveReactor, token);
             var result = await store.EventLog.Append("remote", new Reduction(7));
             await ActiveWatch.WaitFor("remote", ReadModelChangeType.Added, result.SequenceNumber, token);
             await ActiveReactor.WaitFor("remote", ReadModelChangeType.Added, result.SequenceNumber, token);

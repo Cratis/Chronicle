@@ -32,8 +32,7 @@ public class a_watched_reducer(ChronicleFixture fixture) : Specification<Chronic
     protected async Task Ready(CancellationToken token)
     {
         await Handler.WaitTillSubscribed().WaitAsync(token);
-        await EventStore.ReadModels.GetWatcherFor<ReducedModel>().Subscribed.WaitAsync(token);
-        await Append($"ready-{Guid.NewGuid():N}", new Reduction(1), ReadModelChangeType.Added, token);
+        await ReducerWatchReadiness.WaitFor(EventStore, WatchFrames, ReactorFrames, token);
     }
 
     protected async Task<EventSequenceNumber> Append(string key, Reduction @event, ReadModelChangeType type, CancellationToken token)
