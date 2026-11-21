@@ -35,6 +35,14 @@ public class a_pinned_subscriber : a_subscriber_with_events
             GenerationalContent = new Dictionary<int, string> { [1] = "{\"message\":\"ciphertext\"}", [2] = "{\"message\":\"new-generation\"}" },
             GenerationalHashes = new Dictionary<int, EventHash> { [1] = "first-hash", [2] = "second-hash" }
         }];
+        StoreEvents();
+    }
+
+    protected void StoreEvents()
+    {
+        var stored = _events.ToArray();
+        _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox")
+            .GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => stored.Single(@event => @event.Context.SequenceNumber == call.Arg<EventSequenceNumber>()));
     }
 
     protected void RegisterGenerations(EventStoreName store, params uint[] generations)

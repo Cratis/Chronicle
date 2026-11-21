@@ -149,7 +149,11 @@ public class WebhookObserverSubscriber(
                     schemas[pin] = await storage.GetEventStore(_key.EventStore).EventTypes.GetFor(pin.Id, pin.Generation);
                 }
 
-                released.AddRange(await generationRelease.Release(_key.EventStore, [pin], schemas, [@event]));
+                // The observer already released history. Select from protected storage instead of
+                // passing plaintext through compliance again when the definition changes its pin.
+                var stored = await storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace)
+                    .GetEventSequence(_key.EventSequenceId).GetEventAt(@event.Context.SequenceNumber);
+                released.AddRange(await generationRelease.Release(_key.EventStore, [pin], schemas, [stored]));
             }
             else
             {

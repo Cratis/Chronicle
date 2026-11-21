@@ -83,9 +83,7 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
         _webhook = Substitute.For<IWebhook>();
         _webhook.GetDefinition().Returns(_ => _webhookDefinition);
         _silo.AddProbe(_ => _webhook);
-        _eventTypes.GetFor(_pin.Id, _pin.Generation).Returns(_schemas[_pin]);
-        _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(call => call.Arg<IEnumerable<EventType>>()
-            .Where(_schemas.ContainsKey).Select(type => _schemas[type]).ToArray());
+        ConfigureEventStorage();
         _logger = new();
         _silo.AddService<ILogger<WebhookObserverSubscriber>>(_logger);
         _silo.AddService(_storage);
@@ -107,6 +105,17 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
 
     protected static string Fixture(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Observation", "Webhooks", "for_WebhookObserverSubscriber", "Fixtures", $"{name}.json")).Trim();
     void Destroy() => _httpClient.Dispose();
+
+    void ConfigureEventStorage()
+    {
+        var stored = _events.ToArray();
+        _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log")
+            .GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => stored.Single(@event => @event.Context.SequenceNumber == call.Arg<EventSequenceNumber>()));
+        _eventTypes.GetFor(_pin.Id, _pin.Generation).Returns(_schemas[_pin]);
+        _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns(call => call.Arg<IEnumerable<EventType>>()
+            .Where(_schemas.ContainsKey).Select(type => _schemas[type]).ToArray());
+        _eventTypes.GetAllGenerationsForEventType(Arg.Any<EventType>()).Returns(call => _schemas.Values.Where(schema => schema.Type.Id == call.Arg<EventType>().Id).ToArray());
+    }
 
     public sealed class PayloadReceiver : HttpMessageHandler
     {

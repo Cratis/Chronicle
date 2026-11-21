@@ -42,6 +42,8 @@ public class with_a_stale_generation : Specification
         silo.AddService(generationRelease);
         var definitionStorage = Substitute.For<Cratis.Chronicle.Storage.IStorage>();
         definitionStorage.GetEventStore("store").Webhooks.Get("webhook").Returns(_definition);
+        definitionStorage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log")
+            .GetEventAt(42).Returns(_ => _event);
         silo.AddService(definitionStorage);
         var storage = Substitute.For<IStorage<WebhookDefinition>>();
         storage.State = _definition;

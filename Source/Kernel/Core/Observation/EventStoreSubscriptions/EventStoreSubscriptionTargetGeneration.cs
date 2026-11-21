@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -17,7 +18,8 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="release">The generation release service.</param>
 /// <param name="sourceStore">The source event store.</param>
 /// <param name="targetStore">The target event store.</param>
-public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, IEventTypesStorage target, IEventGenerationRelease release, EventStoreName sourceStore, EventStoreName targetStore)
+/// <param name="sourceSequence">The source sequence containing protected event history.</param>
+public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, IEventTypesStorage target, IEventGenerationRelease release, EventStoreName sourceStore, EventStoreName targetStore, IEventSequenceStorage sourceSequence)
 {
     readonly Dictionary<EventTypeId, EventTypeGeneration[]> _generations = [];
     readonly Dictionary<EventType, EventTypeSchema> _schemas = [];
@@ -46,7 +48,10 @@ public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, I
             {
                 _schemas[selected] = await EventStoreSubscriptionGenerationValidation.GetExactSchema(source, selected);
             }
-            var released = await release.Release(sourceStore, [selected], _schemas, [incoming]);
+
+            // History on incoming is already plaintext. Re-select only from protected storage.
+            var stored = await sourceSequence.GetEventAt(incoming.Context.SequenceNumber);
+            var released = await release.Release(sourceStore, [selected], _schemas, [stored]);
             return released.Single();
         }
         catch (Exception exception) when (exception is EventTypeGenerationNotRegisteredForObserver or PinnedEventTypeGenerationUnavailable)
