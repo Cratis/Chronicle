@@ -14,9 +14,9 @@ public class many_tracked_keys : a_key_store
     readonly SemaphoreSlim _started = new(0);
     protected int _reads;
 
-    protected void TrackKeys()
+    protected void TrackKeys(int count = 64)
     {
-        foreach (var index in Enumerable.Range(0, 64))
+        foreach (var index in Enumerable.Range(0, count))
         {
             EncryptionKeyIdentifier identifier = $"subject-{index}";
             ReleaseKeys.Track(_keys, (EventStoreName.NotSet, EventStoreNamespaceName.NotSet, identifier), _pair);

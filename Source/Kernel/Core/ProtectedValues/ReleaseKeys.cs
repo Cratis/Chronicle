@@ -96,12 +96,13 @@ public static class ReleaseKeys
         var memo = _current.Value;
         if (memo is null) return handoff();
         var attempt = memo.BeginAttempt(cancellationToken);
+        var stalePasses = 0;
         while (true)
         {
             attempt.Check();
             var uses = memo.Uses.Keys.ToArray();
             var observations = memo.Observations?.ToArray() ?? [];
-            var checkedReads = await memo.ReadAll(uses.Select(use => use.Key).Concat(observations.Select(observation => observation.Key)), attempt);
+            var checkedReads = await memo.ReadAll(uses.Select(use => use.Key).Concat(observations.Select(observation => observation.Key)), attempt, refreshAll: stalePasses >= 2);
             foreach (var use in uses)
             {
                 var snapshot = checkedReads[use.Key];
@@ -116,6 +117,7 @@ public static class ReleaseKeys
             // Refresh can itself stall. All reads must still be inside the lease at the actual hand-off.
             attempt.Check();
             if (checkedReads.Values.All(memo.IsFresh)) return handoff();
+            stalePasses++;
         }
     }
 
@@ -202,20 +204,18 @@ public static class ReleaseKeys
         /// <returns>The bounded validation attempt.</returns>
         public ReleaseAttempt BeginAttempt(CancellationToken cancellationToken) => new(clock, grace * 3, cancellationToken);
 
-        public async Task<Dictionary<FenceKey, Snapshot>> ReadAll(IEnumerable<FenceKey> keys, ReleaseAttempt attempt)
+        public Task<Dictionary<FenceKey, Snapshot>> ReadAll(IEnumerable<FenceKey> keys, ReleaseAttempt attempt, bool refreshAll)
         {
             const int maxConcurrentReads = 32;
-            var snapshots = new Dictionary<FenceKey, Snapshot>(new FenceKeyComparer());
-            foreach (var batch in keys.Distinct(new FenceKeyComparer()).Chunk(maxConcurrentReads))
+            var distinctKeys = keys.Distinct(new FenceKeyComparer()).ToArray();
+            if (refreshAll)
             {
-                var reads = await Task.WhenAll(batch.Select(key => Read(key, attempt)));
-                for (var index = 0; index < batch.Length; index++)
-                {
-                    snapshots.Add(batch[index], reads[index]);
-                }
+                // Batched retries could not keep every fence fresh; align all read starts in one wave.
+                foreach (var key in distinctKeys) _reads.TryRemove(key, out _);
             }
 
-            return snapshots;
+            var batches = distinctKeys.Chunk(refreshAll ? int.MaxValue : maxConcurrentReads);
+            return ReadBatches(batches, attempt);
         }
 
         public async Task<Snapshot> Read(FenceKey key, ReleaseAttempt attempt)
@@ -240,6 +240,21 @@ public static class ReleaseKeys
                 if (IsFresh(snapshot)) return snapshot;
                 _reads.TryRemove(new KeyValuePair<FenceKey, Lazy<Task<Snapshot>>>(key, pending));
             }
+        }
+
+        async Task<Dictionary<FenceKey, Snapshot>> ReadBatches(IEnumerable<FenceKey[]> batches, ReleaseAttempt attempt)
+        {
+            var snapshots = new Dictionary<FenceKey, Snapshot>(new FenceKeyComparer());
+            foreach (var batch in batches)
+            {
+                var reads = await Task.WhenAll(batch.Select(key => Read(key, attempt)));
+                for (var index = 0; index < batch.Length; index++)
+                {
+                    snapshots.Add(batch[index], reads[index]);
+                }
+            }
+
+            return snapshots;
         }
 
         async Task<Snapshot> ReadFresh(FenceKey key)

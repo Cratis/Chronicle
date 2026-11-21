@@ -105,6 +105,8 @@ keep-alive stream and a client-side watchdog:
   changed), re-run load-balancer selection (the server that dropped isn't guaranteed to be the one
   to reconnect to), and re-run the compatibility check.
 
+The .NET client bypasses its SRV response cache on every attempt and retires owned least-connections probe connections after 30 seconds; individual handshake failures are debug diagnostics, while a failed overall attempt reports the redacted candidates and timeout.
+
 ## Several silos behind a load balancer
 
 The session stream (`Connect`), observer streams (`Observe`), projection registrations and

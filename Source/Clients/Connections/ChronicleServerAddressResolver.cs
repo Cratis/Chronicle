@@ -37,7 +37,11 @@ public class ChronicleServerAddressResolver(ILookupClient? lookupClient = null) 
         }
 
         var serviceName = $"{SrvServicePrefix}.{connectionString.ServerAddress.Host}";
-        var response = await GetLookupClientFor(connectionString).QueryAsync(serviceName, QueryType.SRV);
+
+        // Reconnects must see replacement records even while the previous response's TTL is still valid.
+        var response = await GetLookupClientFor(connectionString).QueryAsync(
+            new DnsQuestion(serviceName, QueryType.SRV),
+            new DnsQueryAndServerOptions { UseCache = false });
         var addresses = response.Answers
             .OfType<SrvRecord>()
             .OrderBy(record => record.Priority)
