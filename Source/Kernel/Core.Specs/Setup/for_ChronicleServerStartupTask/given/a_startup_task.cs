@@ -87,9 +87,11 @@ public class a_startup_task : Specification
 
     protected virtual Cratis.Chronicle.Configuration.ChronicleOptions ServerOptions => new();
 
-    protected virtual TimeSpan? JobRecoveryBudget => null;
+    protected virtual TimeSpan? JobRecoveryBudget => Timeout.InfiniteTimeSpan;
 
     protected IReadOnlyList<TimeSpan> RequestedDelays => _timeProvider.Delays;
+
+    protected virtual TimeProvider GetTimeProvider() => _timeProvider;
 
     void EstablishStartupTask()
     {
@@ -109,7 +111,7 @@ public class a_startup_task : Specification
             _busySilos,
             Microsoft.Extensions.Options.Options.Create(ServerOptions),
             new StartupLogger(_logMessages, _logEntries),
-            _timeProvider,
+            GetTimeProvider(),
             jobRecoveryBudget: JobRecoveryBudget);
     }
 
