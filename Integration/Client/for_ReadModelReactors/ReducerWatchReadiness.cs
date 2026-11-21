@@ -11,25 +11,42 @@ public static class ReducerWatchReadiness
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
-        while (true)
+        var acknowledgements = new List<Task>();
+        try
         {
-            using var attempt = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
-            attempt.CancelAfter(TimeSpan.FromSeconds(2));
-            try
+            while (true)
             {
-                // A missed pre-subscription frame is retried with a fresh generation, never an old acknowledgement.
+                // Fresh keys retry missed pre-subscription frames without abandoning slow acknowledgements.
                 // Scenario assertions select their own keys and ignore these sentinel keys.
                 var key = $"ready-{Guid.NewGuid():N}";
                 var result = await store.EventLog.Append(key, new Reduction(1)).WaitAsync(timeout.Token);
                 result.IsSuccess.ShouldBeTrue();
-                await Task.WhenAll(
-                    watch.WaitFor(key, ReadModelChangeType.Added, result.SequenceNumber, attempt.Token),
-                    reactor.WaitFor(key, ReadModelChangeType.Added, result.SequenceNumber, attempt.Token));
-                return;
+                acknowledgements.Add(Task.WhenAll(
+                    watch.WaitFor(key, ReadModelChangeType.Added, result.SequenceNumber, timeout.Token),
+                    reactor.WaitFor(key, ReadModelChangeType.Added, result.SequenceNumber, timeout.Token)));
+                if (await WaitForAny(acknowledgements, timeout.Token)) return;
             }
-            catch (OperationCanceledException) when (!timeout.IsCancellationRequested)
-            {
-            }
+        }
+        finally
+        {
+            await timeout.CancelAsync();
+        }
+    }
+
+    static async Task<bool> WaitForAny(List<Task> acknowledgements, CancellationToken cancellationToken)
+    {
+        using var retry = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        retry.CancelAfter(TimeSpan.FromSeconds(2));
+        try
+        {
+            // This timer permits another sentinel; every acknowledgement keeps the overall deadline.
+            var completed = await Task.WhenAny(acknowledgements).WaitAsync(retry.Token);
+            await completed;
+            return true;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return false;
         }
     }
 }

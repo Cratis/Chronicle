@@ -17,22 +17,23 @@ public class when_subscribing_late_and_reconnecting(context setup) : Given<conte
 
         async Task Because()
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-            var token = timeout.Token;
             Subscribe();
-            await Ready(token);
+            await Ready();
             Subscription!.Dispose();
+            using var firstTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             var first = await EventStore.EventLog.Append("existing", new Reduction(1));
-            await ReactorFrames.WaitFor("existing", ReadModelChangeType.Added, first.SequenceNumber, token);
+            await ReactorFrames.WaitFor("existing", ReadModelChangeType.Added, first.SequenceNumber, firstTimeout.Token);
             Subscribe();
-            await Ready(token);
-            LateSequence = await Append("existing", new Reduction(2), ReadModelChangeType.Modified, token);
+            await Ready();
+            using var lateTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            LateSequence = await Append("existing", new Reduction(2), ReadModelChangeType.Modified, lateTimeout.Token);
             await EventStore.Connection.Lifecycle.Disconnected();
             await EventStore.Connection.Connect();
 
             // A fresh sentinel must be acknowledged by BOTH consumers after reconnect.
-            await Ready(token);
-            ReconnectedSequence = await Append("existing", new Reduction(3), ReadModelChangeType.Modified, token);
+            await Ready();
+            using var reconnectedTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            ReconnectedSequence = await Append("existing", new Reduction(3), ReadModelChangeType.Modified, reconnectedTimeout.Token);
         }
     }
 

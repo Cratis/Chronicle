@@ -35,7 +35,6 @@ public class when_another_client_materializes_an_inactive_model(context setup) :
 
         async Task Because()
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             using var inactive = CreateClient(false);
             using var active = CreateClient(true);
             var localStore = await inactive.GetEventStore(EventStore.Name, EventStore.Namespace);
@@ -47,17 +46,20 @@ public class when_another_client_materializes_an_inactive_model(context setup) :
             await activeStore.DiscoverAll();
             await activeStore.RegisterAll();
             using var remoteWatch = activeStore.ReadModels.Watch<ReducedModel>().Subscribe(change => ActiveWatch.Record(change.ChangeType, change.ChangeContext!));
-            await ObserveRemoteWrite(activeStore, timeout.Token);
+            await ObserveRemoteWrite(activeStore);
             inactive.EvictEventStores();
             active.EvictEventStores();
         }
 
-        async Task ObserveRemoteWrite(IEventStore store, CancellationToken token)
+        async Task ObserveRemoteWrite(IEventStore store)
         {
             var handler = store.Reducers.GetHandlerFor<WatchedReducer<ReducedModel>>();
             ActiveHandler = handler.IsActive;
-            await handler.WaitTillSubscribed().WaitAsync(token);
-            await ReducerWatchReadiness.WaitFor(store, ActiveWatch, ActiveReactor, token);
+            using var readiness = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await handler.WaitTillSubscribed().WaitAsync(readiness.Token);
+            await ReducerWatchReadiness.WaitFor(store, ActiveWatch, ActiveReactor, readiness.Token);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var token = timeout.Token;
             var result = await store.EventLog.Append("remote", new Reduction(7));
             await ActiveWatch.WaitFor("remote", ReadModelChangeType.Added, result.SequenceNumber, token);
             await ActiveReactor.WaitFor("remote", ReadModelChangeType.Added, result.SequenceNumber, token);

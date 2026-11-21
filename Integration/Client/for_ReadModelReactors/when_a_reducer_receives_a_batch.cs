@@ -17,10 +17,10 @@ public class when_a_reducer_receives_a_batch(context setup) : Given<context>(set
 
         async Task Because()
         {
+            Subscribe();
+            await Ready();
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             var token = timeout.Token;
-            Subscribe();
-            await Ready(token);
 
             // AppendMany persists and enqueues the two same-key events together; the reducer's page bound is two.
             var result = await EventStore.EventLog.AppendMany("batch", [new Reduction(1), new Reduction(2)]);

@@ -17,10 +17,10 @@ public class when_observing_reducer_changes(context setup) : Given<context>(setu
 
         async Task Because()
         {
+            Subscribe();
+            await Ready();
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             var token = timeout.Token;
-            Subscribe();
-            await Ready(token);
             Sequences.Add(await Append("target", new Reduction(1), ReadModelChangeType.Added, token));
             Sequences.Add(await Append("target", new Reduction(2), ReadModelChangeType.Modified, token));
             Sequences.Add(await Append("target", new Reduction(0, "remove"), ReadModelChangeType.Removed, token));
