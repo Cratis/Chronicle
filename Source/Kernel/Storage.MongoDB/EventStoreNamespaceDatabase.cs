@@ -29,6 +29,49 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
     /// </summary>
     internal static readonly string[] ObsoleteEventIndexNames = ["eventSourceId", "eventTypeId", "eventStreamType", "contentHashes"];
 
+    /// <summary>
+    /// Known namespace operational state. Unknown names remain candidates so custom sequences
+    /// and auxiliary collections populated by events cannot hide event history.
+    /// </summary>
+    static readonly HashSet<string> _nonEventCollections = new(StringComparer.Ordinal)
+    {
+        WellKnownCollectionNames.EventSequences,
+        WellKnownCollectionNames.EventSequenceMutationHeads,
+        WellKnownCollectionNames.EventSequenceMutationHistory,
+        WellKnownCollectionNames.Observers,
+        WellKnownCollectionNames.ObserverDefinitionChangeProgress,
+        WellKnownCollectionNames.ObserverDefinitionChangeContinuations,
+        WellKnownCollectionNames.ObserverDefinitionChangeRestartPlans,
+        WellKnownCollectionNames.ObserverDefinitionChangeInventory,
+        WellKnownCollectionNames.AlertIncidents,
+        WellKnownCollectionNames.FailedPartitions,
+        WellKnownCollectionNames.InFlightEvents,
+        WellKnownCollectionNames.ObserverHandledCounts,
+        WellKnownCollectionNames.Identities,
+        WellKnownCollectionNames.EncryptionKeys,
+        WellKnownCollectionNames.EncryptionKeyErasures,
+        WellKnownCollectionNames.Jobs,
+        WellKnownCollectionNames.JobSteps,
+        WellKnownCollectionNames.FailedJobSteps,
+        WellKnownCollectionNames.JobStepPlans,
+        WellKnownCollectionNames.Recommendations,
+        WellKnownCollectionNames.BehaviorPatterns,
+        WellKnownCollectionNames.ReplayContexts,
+        WellKnownCollectionNames.ReplayedReadModels,
+        WellKnownCollectionNames.EventSeeds,
+        WellKnownCollectionNames.Imports,
+        WellKnownCollectionNames.ImportChunks,
+        WellKnownCollectionNames.ProjectionFutures,
+        WellKnownCollectionNames.Occurrences,
+        WellKnownCollectionNames.OccurrenceClaimFences,
+        WellKnownCollectionNames.TriggerDefinitions,
+        WellKnownCollectionNames.LifecycleFanOutIntents,
+        WellKnownCollectionNames.ScheduleDefinitions,
+        WellKnownCollectionNames.ScheduleCursors,
+        WellKnownCollectionNames.SkippedRanges,
+        WellKnownCollectionNames.EffectReceipts
+    };
+
     readonly IMongoDatabase _database;
     readonly string _requestedDatabaseName;
     readonly ConcurrentDictionary<EventSequenceId, bool> _indexedEventSequences = [];
@@ -134,6 +177,28 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
         }
 
         await Client.DropDatabaseAsync(databaseName).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasEvents()
+    {
+        using var names = await _database.ListCollectionNamesAsync().ConfigureAwait(false);
+        while (await names.MoveNextAsync().ConfigureAwait(false))
+        {
+            foreach (var name in names.Current.Where(IsEventCollectionCandidate))
+            {
+                var collection = _database.GetCollection<BsonDocument>(name);
+                using var events = await collection.FindAsync(
+                    FilterDefinition<BsonDocument>.Empty,
+                    new FindOptions<BsonDocument, BsonDocument> { Projection = new BsonDocument("_id", 1), Limit = 1, BatchSize = 1 }).ConfigureAwait(false);
+                if (await events.AnyAsync().ConfigureAwait(false))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <inheritdoc/>
@@ -243,6 +308,12 @@ public class EventStoreNamespaceDatabase : IEventStoreNamespaceDatabase
             Builders<Event>.IndexKeys.Ascending(_ => _.Type),
             Builders<Event>.IndexKeys.Descending(_ => _.SequenceNumber)),
         new CreateIndexOptions { Name = "eventSourceId_eventTypeId_sequenceNumber", Background = true });
+
+    static bool IsEventCollectionCandidate(string name) =>
+        !_nonEventCollections.Contains(name) &&
+        !name.StartsWith("system.", StringComparison.Ordinal) &&
+        name != WellKnownCollectionNames.CapabilityProbe &&
+        !name.StartsWith(WellKnownCollectionNames.CapabilityProbePrefix, StringComparison.Ordinal);
 
     string GetCollectionNameFor(EventSequenceId eventSequenceId) => eventSequenceId.Value;
 }

@@ -263,7 +263,7 @@ internal sealed partial class ChronicleServerStartupTask(
         // timeout - fails the namespace and is retried by the next pass with a backoff, rather than waiting
         // in place. Nothing here can hold up readiness or stop the host.
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(namespaceName);
-        var hasData = await namespaceStorage.HasData().WaitAsync(token);
+        var hasData = await namespaceStorage.HasPersistedState().WaitAsync(token);
 
         // Capture must be ready for the first append even in a namespace created before this restart.
         // There will be no new NamespaceAdded broadcast for an already registered namespace.
