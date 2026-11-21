@@ -7,6 +7,6 @@ namespace Cratis.Chronicle.ProtectedValues;
 
 internal static partial class UnrecoverableProtectedValueReporterLogMessages
 {
-    [LoggerMessage(LogLevel.Error, "Unrecoverable protected value in {EventStore}/{Namespace} for {Identifier} at {PropertyPath} during {Phase}: {ExceptionType}, attempted revisions {AttemptedRevisions}.")]
-    internal static partial void UnrecoverableProtectedValue(this ILogger logger, string eventStore, string @namespace, string identifier, string propertyPath, string phase, string exceptionType, int attemptedRevisions);
+    [LoggerMessage(LogLevel.Error, "Unrecoverable protected value in {EventStore}/{Namespace} at {PropertyPath} during {Phase}: {ExceptionType}, attempted revisions {AttemptedRevisions}.")]
+    internal static partial void UnrecoverableProtectedValue(this ILogger logger, string eventStore, string @namespace, string propertyPath, string phase, string exceptionType, int attemptedRevisions);
 }

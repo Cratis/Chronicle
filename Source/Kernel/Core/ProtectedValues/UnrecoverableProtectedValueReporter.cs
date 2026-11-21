@@ -70,7 +70,7 @@ public sealed class UnrecoverableProtectedValueReporter
     internal void Report(Identity identity, EncryptionKeyUnrecoverable failure)
     {
         if (!Remember(identity)) return;
-        _logger.UnrecoverableProtectedValue(identity.Store, identity.Namespace, identity.Identifier, identity.Path, identity.Phase, failure.InnerException?.GetType().Name ?? failure.GetType().Name, failure.AttemptedRevisions);
+        _logger.UnrecoverableProtectedValue(identity.Store, identity.Namespace, identity.Path, identity.Phase, failure.InnerException?.GetType().Name ?? failure.GetType().Name, failure.AttemptedRevisions);
         _count();
     }
 
