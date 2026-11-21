@@ -3,6 +3,7 @@
 
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Monads;
@@ -10,7 +11,7 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
 /// <summary>
-/// Events held back while a catch-up round is preparing belong to that round until it hands over. When the round concludes without reaching the event, the handover reports exactly one suspected skip.
+/// When preparation hands over without reaching a held-back event, that event must remain pending rather than be skipped.
 /// </summary>
 public class and_a_catch_up_is_preparing_and_the_round_did_not_reach_the_held_back_event : given.an_observer_with_skip_detection
 {
@@ -21,6 +22,7 @@ public class and_a_catch_up_is_preparing_and_the_round_did_not_reach_the_held_ba
 
     async Task Establish()
     {
+        PersistStartedPartitionCatchUps();
         _jobsManager
             .Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
             .Returns(
@@ -41,7 +43,7 @@ public class and_a_catch_up_is_preparing_and_the_round_did_not_reach_the_held_ba
         _catchUp = _observer.CatchUp();
         await _observer.Handle("Q", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 102UL)]);
 
-        // An unrelated partition completing moves the position past Q@102 and evaluates.
+        // An unrelated partition completing must not move the position past Q@102.
         await _observer.FailedPartitionRecovered("P", 103UL);
         _measurementsBeforeHandover = _metrics.For(EventsSuspectedSkipped).Count();
         _warningsBeforeHandover = _recordedLogs.SuspectedSkipWarnings.Count();
@@ -53,6 +55,7 @@ public class and_a_catch_up_is_preparing_and_the_round_did_not_reach_the_held_ba
 
     [Fact] void should_not_measure_before_the_round_hands_over() => _measurementsBeforeHandover.ShouldEqual(0);
     [Fact] void should_not_warn_before_the_round_hands_over() => _warningsBeforeHandover.ShouldEqual(0);
-    [Fact] void should_measure_exactly_one_suspected_skip_at_handover() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
-    [Fact] void should_warn_once_at_handover() => _recordedLogs.SuspectedSkipWarnings.Count().ShouldEqual(1);
+    [Fact] void should_not_measure_a_skip_that_was_prevented() => _metrics.For(EventsSuspectedSkipped).ShouldBeEmpty();
+    [Fact] void should_not_warn_for_a_skip_that_was_prevented() => _recordedLogs.SuspectedSkipWarnings.ShouldBeEmpty();
+    [Fact] void should_keep_the_held_back_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"Q");
 }

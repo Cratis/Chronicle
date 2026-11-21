@@ -9,7 +9,7 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
 /// <summary>
-/// Events held back on both sides of the position are reported one at a time, as the position crosses each of them.
+/// Repair of the first crossed event must also keep later held-back events pending.
 /// </summary>
 public class and_held_back_events_span_next : given.an_observer_with_skip_detection
 {
@@ -37,5 +37,6 @@ public class and_held_back_events_span_next : given.an_observer_with_skip_detect
     }
 
     [Fact] void should_only_report_the_crossed_event_first() => _measurementsAfterFirstRound.SequenceEqual([1]).ShouldBeTrue();
-    [Fact] void should_report_the_other_when_it_is_crossed() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1, 1]).ShouldBeTrue();
+    [Fact] void should_not_cross_the_other_event_while_repair_owns_it() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
+    [Fact] void should_keep_the_later_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"Q");
 }

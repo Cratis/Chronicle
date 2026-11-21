@@ -20,6 +20,7 @@ public class and_live_delivery_for_another_partition_arrived : given.an_observer
 
     async Task Establish()
     {
+        PersistStartedPartitionCatchUps();
         _definitionStorage.State = _definitionStorage.State with { Type = ObserverType.Projection };
         _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 9UL };
         await _observer.RegisterCatchingUpPartitions(["A"]);
@@ -55,9 +56,9 @@ public class and_live_delivery_for_another_partition_arrived : given.an_observer
         await _observer.CaughtUp(JobId.NotSet, 9UL, 9UL);
     }
 
-    [Fact] void should_currently_skip_the_catching_up_partition_event() => _subscriber.DidNotReceive().OnNext((Key)"A", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_hold_the_catching_up_partition_event_for_repair() => _subscriber.DidNotReceive().OnNext((Key)"A", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_handle_the_other_partition_live() => _subscriber.Received(1).OnNext((Key)"B", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-    [Fact] void should_currently_keep_the_live_position_past_the_dropped_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)13UL);
-    [Fact] void should_report_one_suspected_skip() => _suspectedSkips.ShouldEqual(1);
-    [Fact] void should_currently_probe_only_above_the_skipped_event() => _eventSequence.DidNotReceive().GetNextSequenceNumberGreaterOrEqualTo(Arg.Is<EventSequenceNumber>(number => number <= (EventSequenceNumber)10UL), Arg.Any<IEnumerable<EventType>>());
+    [Fact] void should_keep_the_held_back_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"A");
+    [Fact] void should_not_report_a_skip_that_was_prevented() => _suspectedSkips.ShouldEqual(0);
+    [Fact] void should_probe_from_the_missed_event() => _eventSequence.Received().GetNextSequenceNumberGreaterOrEqualTo(Arg.Is<EventSequenceNumber>(number => number <= (EventSequenceNumber)10UL), Arg.Any<IEnumerable<EventType>>());
 }
