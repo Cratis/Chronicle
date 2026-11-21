@@ -84,6 +84,7 @@ static class EncryptedValueOperations
             return new(value, ProtectedValueReleaseStatus.Plain);
         }
 
+        VerifySignedIdentity(encrypted, new(eventStore, eventStoreNamespace, keyIdentifier));
         using var scope = ReleaseKeys.BeginScope();
         var released = await new ProtectedValueRelease(encryptionKeyStore, encryption, (eventStore, eventStoreNamespace, keyIdentifier), encrypted).Release()
             ?? throw new MissingEncryptionKey(keyIdentifier);
@@ -119,6 +120,7 @@ static class EncryptedValueOperations
             return value;
         }
 
+        if (strict) VerifySignedIdentity(encrypted, new(eventStore, eventStoreNamespace, keyIdentifier));
         using var scope = ReleaseKeys.BeginScope();
         var release = new ProtectedValueRelease(encryptionKeyStore, encryption, (eventStore, eventStoreNamespace, keyIdentifier), encrypted);
         var released = strict ? await release.Release() : await release.ReleaseOrEmpty();
@@ -138,5 +140,13 @@ static class EncryptedValueOperations
         }
 
         return await ReleaseKeys.Complete(() => released);
+    }
+
+    static void VerifySignedIdentity(byte[] encrypted, ProtectedValueAddress address)
+    {
+        if (ErasedValueClassifier.Handles(encrypted))
+        {
+            EnvelopeSigning.Verify(EncryptionEnvelope.Read(encrypted), address);
+        }
     }
 }
