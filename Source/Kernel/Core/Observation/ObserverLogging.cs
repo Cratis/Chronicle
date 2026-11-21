@@ -224,6 +224,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
     internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
 
+    [LoggerMessage(LogLevel.Warning, "Observer deactivation did not finish before the runtime stopped waiting for it; the remaining teardown was abandoned")]
+    internal static partial void DeactivationOutlivedItsTimeout(this ILogger<Observer> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
 

@@ -26,7 +26,7 @@ public class an_observer_whose_state_write_can_be_held : an_observer
     {
         _stateWrite.Block = true;
         var deactivation = _observer.OnDeactivateAsync(reason, cancellation);
-        await _stateWrite.Writing.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _stateWrite.Writing.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         return deactivation;
     }
 }

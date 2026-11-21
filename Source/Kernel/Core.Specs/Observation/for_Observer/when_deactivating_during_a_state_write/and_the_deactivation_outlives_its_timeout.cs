@@ -15,7 +15,7 @@ public class and_the_deactivation_outlives_its_timeout : given.an_observer_whose
             _timeout.Token);
 
         // The runtime cancels the token, stops waiting and disposes the grain; the abandoned task is the only one left to see the outcome.
-        _timeout.Cancel();
+        await _timeout.CancelAsync();
         _observer.Dispose();
         _stateWrite.Release.SetResult();
         _error = await Catch.Exception(async () => await deactivation);

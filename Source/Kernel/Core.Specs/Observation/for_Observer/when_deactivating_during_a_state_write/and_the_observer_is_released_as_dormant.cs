@@ -21,7 +21,7 @@ public class and_the_observer_is_released_as_dormant : for_Observer.when_going_d
 
         // A callback the runtime does not wait for (a timer or a reminder that was already running) reaches the observer
         // after the release has finished and the grain was disposed.
-        _lateTurnError = await Catch.Exception(async () => await _observer.ReportAlertState());
+        _lateTurnError = await Catch.Exception(_observer.ReportAlertState);
     }
 
     [Fact] async Task should_have_kept_the_subscription_for_the_release() => await _appendedEventsQueues.Received(1).TryMarkDormant(_observerKey);
