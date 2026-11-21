@@ -3,9 +3,6 @@
 
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
-using Cratis.Chronicle.Concepts.Identities;
-using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
@@ -63,21 +60,9 @@ public static class BenchmarkEvents
 
     /// <summary>Builds the event types storage every provider is given: it knows the benchmark types and nothing else.</summary>
     /// <returns>The storage.</returns>
-    public static IEventTypesStorage CreateEventTypes()
-    {
-        var types = Substitute.For<IEventTypesStorage>();
-        types.HasFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(true);
-        types.GetFor(Arg.Any<EventTypeId>(), Arg.Any<EventTypeGeneration?>()).Returns(call =>
-            new EventTypeSchema(new EventType(call.Arg<EventTypeId>(), EventTypeGeneration.First), EventTypeOwner.None, EventTypeSource.Unknown, new JsonSchema()));
-        return types;
-    }
+    public static IEventTypesStorage CreateEventTypes() => new BenchmarkEventTypes();
 
     /// <summary>Builds the identity storage every provider is given.</summary>
     /// <returns>The storage.</returns>
-    public static IIdentityStorage CreateIdentities()
-    {
-        var identities = Substitute.For<IIdentityStorage>();
-        identities.GetFor(Arg.Any<IEnumerable<IdentityId>>()).Returns(Identity.System);
-        return identities;
-    }
+    public static IIdentityStorage CreateIdentities() => new BenchmarkIdentities();
 }
