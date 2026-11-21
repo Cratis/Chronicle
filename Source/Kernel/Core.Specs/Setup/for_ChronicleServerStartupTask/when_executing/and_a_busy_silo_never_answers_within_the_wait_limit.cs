@@ -26,7 +26,7 @@ public class and_a_busy_silo_never_answers_within_the_wait_limit : given.a_start
     void Establish()
     {
         _busySilos.FindBusySilo(Arg.Any<Exception>()).Returns(new BusySilo("10.0.0.1:11111:42", true));
-        _eventStoreSubscriptionsManager.Ensure().Returns(_ =>
+        _systemNamespaces.EnsureDefault().Returns(_ =>
         {
             _calls++;
             return Task.FromException(new TimeoutException("Response did not arrive on time"));
@@ -40,5 +40,5 @@ public class and_a_busy_silo_never_answers_within_the_wait_limit : given.a_start
     [Fact] void should_wait_up_to_the_limit() => (Waited >= _limit).ShouldBeTrue();
     [Fact] void should_not_wait_a_whole_backoff_past_the_limit() => (Waited < _limit + TimeSpan.FromMinutes(1)).ShouldBeTrue();
     [Fact] void should_stop_calling() => _calls.ShouldEqual(RequestedDelays.Count + 1);
-    [Fact] void should_not_go_on_to_later_steps() => _readModelsManager.DidNotReceive().Ensure();
+    [Fact] void should_not_go_on_to_later_steps() => _eventTypes.DidNotReceive().DiscoverAndRegister(_eventStore);
 }

@@ -205,9 +205,24 @@ public class a_startup_task : Specification
         await new SerializableFailureIncomingCallFilter().Invoke(context);
     }
 
+    /// <summary>
+    /// Runs startup and then waits for the deferred background work it started, so a spec sees the whole outcome.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
     protected Task Execute() => Execute(CancellationToken.None);
 
-    protected Task Execute(CancellationToken cancellationToken)
+    protected async Task Execute(CancellationToken cancellationToken)
+    {
+        await ExecuteStartup(cancellationToken);
+        await _startupTask.DeferredWork;
+    }
+
+    /// <summary>
+    /// Runs only what readiness waits for.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token for startup.</param>
+    /// <returns>Awaitable task.</returns>
+    protected Task ExecuteStartup(CancellationToken cancellationToken = default)
     {
         var execute = typeof(ChronicleServerStartupTask).GetMethod("Execute", BindingFlags.Instance | BindingFlags.NonPublic)!;
         return (Task)execute.Invoke(_startupTask, [cancellationToken])!;

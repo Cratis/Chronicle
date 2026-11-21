@@ -20,7 +20,7 @@ public class and_shutdown_cancels_a_busy_silo_wait : given.a_startup_task
     void Establish()
     {
         _busySilos.FindBusySilo(Arg.Any<Exception>()).Returns(new BusySilo("10.0.0.1:11111:42", true));
-        _eventStoreSubscriptionsManager.Ensure().Returns(async _ =>
+        _systemNamespaces.EnsureDefault().Returns(async _ =>
         {
             if (++_calls == CallsBeforeShutdown) await _cancellation.CancelAsync();
             throw new TimeoutException("Response did not arrive on time");
