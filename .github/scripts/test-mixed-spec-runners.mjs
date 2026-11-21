@@ -317,6 +317,41 @@ test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, in
     reject(j => { j.jobs.push({ ...j.jobs[0], id: 999 }); j.total_count++; });
     reject((j, a) => { a.artifacts.push({ ...a.artifacts[0], id: 999 }); a.total_count++; });
 });
+test('API identity failures name the offending ids, records and attempts', () => {
+    const [jobs, artifacts] = producerFixture();
+    const twin = { ...artifacts[0].artifacts[0], run_attempt: 2 };
+    artifacts[0].artifacts.push(twin);
+    artifacts[0].total_count++;
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext),
+        /Invalid\/duplicate producer API identities: artifacts .*duplicate id 100 \(coverage-results-specs-other-1 attempt n\/a, coverage-results-specs-other-1 attempt 2\)/);
+    const [badJobs, goodArtifacts] = producerFixture();
+    badJobs[0].jobs[0].id = -5;
+    assert.throws(() => selectProducerArtifacts(badJobs, goodArtifacts, retryContext),
+        /jobs .*invalid id -5 \(specs-other \(1\) attempt 1\)/);
+});
+test('API identity failures format malformed JSON values safely and cap the list', () => {
+    for (const mutate of [job => { job.id = -1; job.name = { toString: null }; }, job => { job.id = { toString: null }; }]) {
+        const [jobs, artifacts] = producerFixture();
+        mutate(jobs[0].jobs[0]);
+        assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext),
+            error => !(error instanceof TypeError) && /^Invalid\/duplicate producer API identities: jobs/.test(error.message));
+    }
+    const [jobs, artifacts] = producerFixture();
+    jobs[0].jobs.forEach(job => { job.id = -job.id; });
+    for (let i = jobs[0].jobs.length; i < 12; i++) jobs[0].jobs.push({ id: -(i + 1000), name: `extra-${i}`, run_attempt: 1 });
+    jobs[0].total_count = jobs[0].jobs.length;
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), error => {
+        assert.equal(error.message.split('; ').length, 11);
+        return error.message.endsWith('; +2 more') && (error.message.match(/invalid id/g) ?? []).length === 10;
+    });
+});
+test('API identity validation accepts failed-job re-run artifacts with distinct ids', () => {
+    const [jobs, artifacts] = producerFixture([1, 2, 1, 1]);
+    artifacts[0].artifacts.push({ ...artifacts[0].artifacts[1], id: 900, created_at: '2026-11-01T00:01:15Z' });
+    artifacts[0].total_count++;
+    // Identity validation passes; the later per-shard artifact rules still reject the extra same-name artifact.
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), error => !/identities/.test(error.message) && /producer artifact/i.test(error.message));
+});
 test('producer API acquisition paginates latest attempts and propagates unavailable/malformed evidence', async () => {
     const context = { ...retryContext, runAttempt: '1' };
     const pages = producerFixture();
