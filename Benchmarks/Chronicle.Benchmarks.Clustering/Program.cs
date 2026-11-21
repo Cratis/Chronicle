@@ -60,7 +60,7 @@ if (args.Contains("--live-interleave", StringComparer.Ordinal))
 }
 
 var benchmarkArguments = HasFilter(args) ? args : ["--filter", "*", .. args];
-BenchmarkSwitcher.FromAssembly(typeof(Cratis.Chronicle.Benchmarks.Clustering.ClusteredAppendBenchmark).Assembly).Run(benchmarkArguments);
+await BenchmarkSwitcher.FromAssembly(typeof(Cratis.Chronicle.Benchmarks.Clustering.ClusteredAppendBenchmark).Assembly).RunAsync(benchmarkArguments);
 
 static bool HasFilter(string[] arguments) =>
     arguments.Any(argument =>

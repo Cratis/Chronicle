@@ -157,6 +157,7 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.AddSingleton(sp => sp.GetRequiredService<IStorage>().System.Applications);
         builder.Services.TryAddSingleton<IBusySilos, BusySilos>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, ChronicleServerStartupTask>();
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Configuration.ShutdownStageTimings>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Compliance.EncryptionKeyFenceProtocol>();
         builder.Services.AddSingleton(sp => new Cratis.Chronicle.Storage.Compliance.EncryptionKeyErasureOptions
         {

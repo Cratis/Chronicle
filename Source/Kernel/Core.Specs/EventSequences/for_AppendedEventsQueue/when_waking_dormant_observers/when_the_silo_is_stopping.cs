@@ -9,6 +9,7 @@ public class when_the_silo_is_stopping : given.a_queue_with_a_stored_durable_sub
 {
     int _woken;
     bool _stillDormant;
+    Observation.IObserver _dormantObserver;
 
     protected override IShutdownDrainBudget? StopBudget
     {
@@ -25,7 +26,7 @@ public class when_the_silo_is_stopping : given.a_queue_with_a_stored_durable_sub
     {
         var id = IdInQueue(0, "stopping");
         Store(id, Storage.Observation.ObserverSubscriptionKind.ClientReactor);
-        ObserverFor(KeyOf(id), () =>
+        _dormantObserver = ObserverFor(KeyOf(id), () =>
         {
             Interlocked.Increment(ref _woken);
             return Task.CompletedTask;
@@ -41,5 +42,6 @@ public class when_the_silo_is_stopping : given.a_queue_with_a_stored_durable_sub
     }
 
     [Fact] void should_not_activate_an_observer_on_a_silo_that_is_stopping() => _woken.ShouldEqual(0);
+    [Fact] void should_not_catch_it_up_on_a_silo_that_is_stopping() => _dormantObserver.DidNotReceive().CatchUp();
     [Fact] void should_leave_it_dormant_for_the_safety_net_of_the_next_owner() => _stillDormant.ShouldBeTrue();
 }

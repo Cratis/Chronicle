@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -272,8 +273,74 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_hot_core_summary_spec_runs_in_ci(self):
         step = next(step for step in self.hot_core["jobs"]["detect"]["steps"]
                     if step.get("name") == "Assert the hot-core contract is intact")
+        self.assertIn("python3 -E -s gate-tools/.github/scripts/test-detect-hot-core-changes.py", step["run"])
+        self.assertIn("python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate.py", step["run"])
+        self.assertIn("if [ -f gate-tools/.github/scripts/test-evaluate-hot-core-gate-jobs.py ]; then\n"
+                      "  python3 -E -s gate-tools/.github/scripts/test-evaluate-hot-core-gate-jobs.py\n"
+                      "fi", step["run"])
+
+    def test_gate_tools_use_the_base_revision_with_no_persisted_credentials(self):
+        revision = "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}"
+        for job_id in ("detect", "hot-core-gate"):
+            steps = self.hot_core["jobs"][job_id]["steps"]
+            checkouts = [step["with"] for step in steps
+                         if step.get("uses", "").startswith("actions/checkout@")]
+            tools = next(checkout for checkout in checkouts if checkout.get("path") == "gate-tools")
+            with self.subTest(job=job_id):
+                self.assertEqual(revision, tools["ref"])
+                self.assertIn(tools["sparse-checkout"], (".github", ".github/scripts"))
+                self.assertTrue(all(checkout["persist-credentials"] == "false" for checkout in checkouts))
+                commands = "\n".join(step.get("run", "") for step in steps)
+                self.assertNotIn("python3 .github/scripts/", commands)
+                self.assertIn("python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py", commands)
+                for command in commands.splitlines():
+                    if "python3 " in command:
+                        self.assertTrue(command.strip().startswith("python3 -E -s gate-tools/.github/scripts/"))
+        data = self.hot_core["jobs"]["detect"]["steps"][0]["with"]
+        self.assertEqual("0", data["fetch-depth"])
+        self.assertNotIn("ref", data)
+        self.assertNotIn("path", data)
+
+    def test_detection_policy_uses_the_trusted_checkout_with_support_for_older_bases(self):
+        detect = self.hot_core["jobs"]["detect"]
+        self.assertEqual({"contents": "read"}, detect["permissions"])
+        tools = next(step["with"] for step in detect["steps"] if step.get("name") == "Checkout gate tools")
+        self.assertEqual(".github", tools["sparse-checkout"])
+        commands = "\n".join(step.get("run", "") for step in detect["steps"])
+        policy_commands = [line for line in commands.splitlines()
+                           if "gate-tools/.github/scripts/detect-hot-core-changes.py " in line]
+        self.assertEqual(2, len(policy_commands))
+        self.assertTrue(all('"${policy_args[@]}"' in line for line in policy_commands))
+        selection = ('policy_args=()\n'
+                     "if grep -q -- '--policy-root' gate-tools/.github/scripts/detect-hot-core-changes.py; then\n"
+                     '  policy_args=(--policy-root gate-tools)\n'
+                     'else\n'
+                     '  echo "::notice::Policy provenance hardening activates once the base contains --policy-root."\n'
+                     'fi\n')
+        steps = detect["steps"]
+        for name in ("Assert the hot-core contract is intact", "Detect hot-core changes"):
+            step = next(step for step in steps if step.get("name") == name)
+            with self.subTest(step=name):
+                self.assertIn(selection, step["run"])
+
+    def test_build_tests_the_pull_requests_own_gate_scripts(self):
+        step = next(step for step in self.build["jobs"]["dotnet-build"]["steps"]
+                    if step.get("name") == "Spec prerelease artifact handoff without caches")
         self.assertIn("python3 .github/scripts/test-detect-hot-core-changes.py", step["run"])
         self.assertIn("python3 .github/scripts/test-evaluate-hot-core-gate.py", step["run"])
+        self.assertIn("python3 .github/scripts/test-evaluate-hot-core-gate-jobs.py", step["run"])
+
+    def test_gate_imports_ignore_the_data_directory_and_python_environment(self):
+        script = Path(__file__).with_name("evaluate-hot-core-gate.py").resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            for module in ("json", "integration_lane_exclusions", "sitecustomize"):
+                Path(directory, f"{module}.py").write_text("raise RuntimeError('data module imported')\n")
+            env = {**os.environ, "PYTHONPATH": directory, "PYTHONUSERBASE": directory}
+            result = subprocess.run([sys.executable, "-E", "-s", str(script), "--help"],
+                                    cwd=directory, env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stderr)
+        self.assertIn("detect-build", result.stdout)
 
     def test_refresh_is_default_branch_only_and_least_privilege(self):
         self.assertEqual({"workflow_run": {"workflows": [self.requested["name"], self.build["name"]],
@@ -290,17 +357,20 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             self.assertIn(guard, job["if"])
         for step in job["steps"]:
             if step.get("uses", "").startswith("actions/checkout@"):
-                self.assertNotIn("ref", step["with"])
+                self.assertEqual("${{ github.sha }}", step["with"]["ref"])
+                self.assertEqual("gate-tools", step["with"]["path"])
+                self.assertEqual(".github/scripts", step["with"]["sparse-checkout"])
                 self.assertEqual("false", step["with"]["persist-credentials"])
             self.assertNotIn("${{", step.get("run", ""))
         self.assertNotIn("pull_request_target", self.refresh["on"])
         refresh_step = job["steps"][-1]
         self.assertEqual("${{ github.event.workflow_run.head_sha }}", refresh_step["env"]["HEAD_SHA"])
         self.assertEqual("${{ github.event.workflow_run.path }}", refresh_step["env"]["SOURCE_WORKFLOW"])
-        self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py refresh", refresh_step["run"])
+        self.assertEqual("python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py refresh", refresh_step["run"])
         self.assertEqual("false", self.refresh["concurrency"]["cancel-in-progress"])
         # workflow_run.event stays pull_request for labeled, synchronize and reopened alike.
         self.assertEqual("github.event.workflow_run.event == 'pull_request' && "
+                         "github.event.workflow_run.status == 'completed' && "
                          "(github.event.workflow_run.conclusion == 'success' || "
                          "github.event.workflow_run.path == '.github/workflows/dotnet-build.yml') && "
                          "github.event.workflow_run.head_repository.full_name == github.repository", job["if"])
@@ -316,6 +386,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(event=event, conclusion=conclusion, path=path, same_repo=same_repo):
                 self.assertEqual(expected, evaluate_boolean_condition(job["if"], {
                     "github.event.workflow_run.event": event,
+                    "github.event.workflow_run.status": "completed",
                     "github.event.workflow_run.conclusion": conclusion,
                     "github.event.workflow_run.path": path,
                     "github.event.workflow_run.head_repository.full_name == github.repository": same_repo,
@@ -441,7 +512,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         detect = next(step for step in self.requested["jobs"]["requested-detect-hot-core"]["steps"]
                       if step.get("id") == "detect")
         self.assertEqual("${{ github.sha }}", detect["env"]["HEAD_SHA"])
-        self.assertEqual("python3 .github/scripts/evaluate-hot-core-gate.py gate", step["run"])
+        self.assertEqual("python3 -E -s gate-tools/.github/scripts/evaluate-hot-core-gate.py gate", step["run"])
         self.assertEqual("always()", job["if"])
 
     def test_requested_run_names_the_head_and_skipped_matrix_fails(self):
@@ -465,18 +536,78 @@ class SparseIntegrationWorkflows(unittest.TestCase):
         self.assertEqual(evaluator.EVIDENCE_JOB, name.replace("${{ " + EFFECTIVE_LABEL + " }}", "run-integration"))
         self.assertEqual("hot-core-gate", evaluator.GATE_JOB)
 
-    def test_requested_integration_starts_after_builds_beside_specs(self):
+    def test_requested_integration_starts_after_builds_and_preflight_beside_specs(self):
         jobs = self.build["jobs"]
         for job_id in ("integration", "integration-api", "mongodb", "neo4j"):
             with self.subTest(job=job_id):
                 job = jobs[job_id]
                 self.assertNotIn("specs", job["needs"])
+                self.assertIn("integration-preflight", job["needs"])
+                self.assertIn("(github.event_name != 'pull_request' || needs.integration-preflight.result == 'success')",
+                              job["if"])
                 self.assertNotIn("needs.specs", job["if"])
                 self.assertIn("!cancelled()", job["if"])
                 self.assertIn("needs.dotnet-build.result == 'success'", job["if"])
                 self.assertIn("(github.event_name != 'pull_request' || inputs.integration_requested)", job["if"])
         self.assertIn("needs.dotnet-build-development.result == 'success'", jobs["integration"]["if"])
         self.assertIn("github.actor != 'dependabot[bot]'", jobs["integration"]["if"])
+
+    def test_preflight_requires_only_the_cheap_deterministic_checks(self):
+        jobs = self.build["jobs"]
+        preflight = jobs["integration-preflight"]
+        checks = {"wire-compatibility", "grain-compatibility", "spec-runner-checks", "analyzers",
+                  "preflight-client-snippets", "preflight-timing-ratchet"}
+        self.assertEqual(checks | {GATE}, set(preflight["needs"]))
+        self.assertIn("always()", preflight["if"])
+        step = preflight["steps"][0]
+        self.assertEqual({"${{ needs." + check + ".result }}" for check in checks}, set(step["env"].values()))
+        for failed in checks:
+            results = dict.fromkeys(preflight["needs"], "success")
+            results[failed] = "failure"
+            self.assertTrue(condition_allows(preflight, ConditionContext("pull_request", True, results)))
+            env = {name: results[value.split(".")[1]] for name, value in step["env"].items()}
+            self.assertNotEqual(0, subprocess.run(["bash", "-c", step["run"]], env=env).returncode)
+        self.assertEqual(0, subprocess.run(["bash", "-c", step["run"]],
+                                          env=dict.fromkeys(step["env"], "success")).returncode)
+        for event, requested in (("schedule", True), ("workflow_dispatch", True), ("pull_request", False)):
+            results = dict.fromkeys(preflight["needs"], "skipped")
+            self.assertFalse(condition_allows(preflight, ConditionContext(event, requested, results)))
+        self.assertNotIn("integration-preflight", jobs["specs"]["needs"])
+        for name, job in jobs.items():
+            if name.startswith("coverage-"):
+                self.assertNotIn("integration-preflight", job.get("needs", []))
+
+    def test_preflight_commands_match_the_standalone_checks(self):
+        jobs = self.build["jobs"]
+        for inline, filename, standalone in (
+                ("preflight-client-snippets", "client-snippets.yml", "verify"),
+                ("preflight-timing-ratchet", "timing-coupling-ratchet.yml", "timing-coupling-ratchet")):
+            job = jobs[inline]
+            commands = lambda steps: [step["run"].replace('"$GITHUB_TOKEN"', "${{ secrets.GITHUB_TOKEN }}")
+                                      for step in steps if "run" in step]
+            self.assertEqual(commands(workflow(filename)["jobs"][standalone]["steps"]), commands(job["steps"]))
+            self.assertEqual("ubuntu-latest", job["runs-on"])
+            self.assertIn("github.event_name == 'pull_request'", job["if"])
+            self.assertIn("inputs.integration_requested", job["if"])
+            self.assertNotIn("draft", job["if"])
+        registry = next(step for step in jobs["preflight-client-snippets"]["steps"]
+                        if step["name"] == "Add GitHub Package Registry to NuGet")
+        self.assertEqual({"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}"}, registry["env"])
+        self.assertNotIn("${{ secrets.GITHUB_TOKEN }}", registry["run"])
+        runner_commands = [step.get("run") for step in jobs["spec-runner-checks"]["steps"]]
+        self.assertIn("python3 .github/scripts/test-generate-integration-matrix.py", runner_commands)
+
+    def test_preflight_blocks_only_requested_pr_lanes_not_nightly_or_dispatch(self):
+        jobs = self.build["jobs"]
+        for lane, event, result in product(("integration", "integration-api", "mongodb", "neo4j"),
+                                           ("pull_request", "schedule", "workflow_dispatch"),
+                                           ("success", "failure", "cancelled", "skipped")):
+            job = jobs[lane]
+            results = dict.fromkeys(job["needs"], "success")
+            results["integration-preflight"] = result
+            with self.subTest(lane=lane, event=event, preflight=result):
+                self.assertEqual(event != "pull_request" or result == "success",
+                                 condition_allows(job, ConditionContext(event, True, results)))
 
     def test_sql_specs_run_in_parallel_without_reducing_coverage(self):
         jobs = self.build["jobs"]
@@ -790,13 +921,13 @@ class SparseIntegrationWorkflows(unittest.TestCase):
     def test_integration_requires_selected_output_but_allows_skipped_sibling(self):
         job = self.build["jobs"]["integration"]
         self.assertEqual({"dotnet-build", "dotnet-build-development",
-                          "dotnet-build-development-requested"}, set(prerequisites_of(job)))
+                          "dotnet-build-development-requested", "integration-preflight"}, set(prerequisites_of(job)))
         states = ("success", "failure", "cancelled", "skipped")
         for event, requested, specs, development, release, cancelled in product(
                 ("pull_request", "schedule", "workflow_dispatch"), (False, True),
                 states, states, states, (False, True)):
             is_pr = event == "pull_request"
-            results = {"dotnet-build": release, "specs": specs,
+            results = {"dotnet-build": release, "specs": specs, "integration-preflight": "success",
                        "dotnet-build-development": "skipped" if is_pr else development,
                        "dotnet-build-development-requested": development if is_pr else "skipped"}
             expected = (not cancelled and release == "success" and development == "success"

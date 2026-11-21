@@ -49,6 +49,12 @@ public class PassiveVersusMaterializedReadModelBenchmark : IDisposable, IAsyncDi
     int _nextInstanceIndex;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of events making up each resolved read model instance.
     /// </summary>
     [Params(10, 100)]

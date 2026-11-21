@@ -16,6 +16,7 @@ import { coreSpecFixture } from './core-spec-fixture.mjs';
 import { coreUnitId } from './core-spec-partition.mjs';
 import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
 import { receiptFor, verifyReceipts } from './spec-shards.mjs';
+import { SpecHangWatchdog } from './spec-hang-watchdog.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
@@ -145,10 +146,10 @@ test('selection rejects mixed cores, missing assets, stale versions and local fl
 test('documented collector grammar has one child argument with a bare executable and quoted arguments', () => {
     const info = { runner: 'v3', dll: '/a folder/Different.Assembly.dll' };
     const filter = 'FullyQualifiedName~a&FullyQualifiedName!~b|Name="quoted"';
-    const call = invocation(info, { root: '/repo', directory: '/fresh output', filter, timeout: 123 });
+    const call = invocation(info, { root: '/repo', directory: '/fresh output', filter, timeout: 123, classWatchdog: true });
     assert.deepEqual(call.args.slice(0, 9), ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', '/fresh output/coverage.cobertura.xml']);
     assert.equal(call.args.length, 10);
-    assert.equal(call.args[9], 'dotnet "/a folder/Different.Assembly.dll" "-filterVSTest" "FullyQualifiedName~a&FullyQualifiedName!~b|Name=\\"quoted\\"" "-result-trx" "/fresh output/results.trx"');
+    assert.equal(call.args[9], 'dotnet "/a folder/Different.Assembly.dll" "-filterVSTest" "FullyQualifiedName~a&FullyQualifiedName!~b|Name=\\"quoted\\"" "-result-trx" "/fresh output/results.trx" "-noAutoReporters" "-noColor" "-reporter" "json" "-diagnostics" "-longRunning" "120"');
     assert.equal(childCommand('dotnet', ['a\\', 'a\\"b', '$(touch evil);&|']), 'dotnet "a\\\\" "a\\\\\\"b" "$(touch evil);&|"');
     assert.throws(() => childCommand('dotnet', ['line\nbreak']));
     for (const executable of ['"dotnet"', '/a folder/dotnet', 'dotnet;rm', '']) assert.throws(() => childCommand(executable, []), /plain path/);
@@ -205,7 +206,8 @@ test('MOCK collector nonzero 37 is exact and project progress is streamed before
     const lines = [];
     t.mock.method(console, 'log', line => lines.push(line));
     let calls = 0;
-    await assert.rejects(runProject(info, options, async () => {
+    await assert.rejects(runProject(info, options, async (command, args, execution) => {
+        assert.deepEqual(execution, { cwd: options.root, timeout: options.timeout });
         calls++;
         assert.deepEqual(lines, [`[specs] start project=${info.project} elapsed=0ms exit=pending`]);
         return { code: 37 };
@@ -531,9 +533,11 @@ async function ordinaryDispatch(mode) {
         }
         assert.equal(queried.length, 38, 'validate every selection before any child');
         launched.push(args);
+        const directory = path.dirname(args[8]);
+        assert.deepEqual(options.specProgress, { directory });
+        assert.ok(args[9].endsWith('"-noAutoReporters" "-noColor" "-reporter" "json" "-diagnostics" "-longRunning" "120"'));
         if (mode === 'failed-shard') return { code: 7 };
         assert.equal(options.timeout, 1234);
-        const directory = path.dirname(args[8]);
         const filter = args[9];
         assert.ok(filter.includes(ordinaryFilter));
         assert.ok(filter.includes('Name!~excluded&Name!~also'));
@@ -601,6 +605,152 @@ test('MOCK external deadline kills collector/child group and rejects incomplete 
     }
     assert.equal(live, false, `MOCK descendant ${pid} still live`);
     await assert.rejects(readFile(path.join(options.directory, 'coverage.cobertura.xml')));
+});
+
+// Native xUnit JSON uses $type and PascalCase metadata; finish messages only
+// carry IDs. In particular a shared fixture can hang before any test-starting.
+const classStarting = (id = 'class-1', name = 'Specs.when_shared_fixture_hangs') => ({
+    $type: 'test-class-starting', TestClassUniqueID: id, TestClassName: name
+});
+const classFinished = (id = 'class-1') => ({ $type: 'test-class-finished', TestClassUniqueID: id });
+const testStarting = { $type: 'test-starting', TestClassUniqueID: 'class-1', TestUniqueID: 'test-1', TestDisplayName: 'Specs.should_finish' };
+const testFinished = { $type: 'test-finished', TestClassUniqueID: 'class-1', TestUniqueID: 'test-1' };
+
+async function watchdogFixture(env = {}) {
+    const options = await fixture();
+    const lines = [];
+    const specProgress = { directory: options.directory, env, report: line => lines.push(line) };
+    return { ...options, lines, specProgress };
+}
+async function fakeRunner(options, messages, ending = 'process.exit(0);') {
+    const script = path.join(options.root, 'fake-runner.mjs');
+    await writeFile(script, `for (const line of ${JSON.stringify(messages)}) console.log(line);\n${ending}\n`);
+    return runProcess(process.execPath, [script], { timeout: options.timeout, specProgress: options.specProgress });
+}
+
+test('watchdog matches concurrent classes/tests by ID, warns once, and ignores completed classes', async () => {
+    const options = await watchdogFixture();
+    let now = 0;
+    const watcher = new SpecHangWatchdog({ ...options.specProgress, now: () => now });
+    const consume = message => watcher.consume(JSON.stringify(message));
+    consume(classStarting());
+    consume(testStarting);
+    consume(classStarting('class-2', 'Specs.other'));
+    now = 119999;
+    watcher.check(() => assert.fail('too early'));
+    assert.equal(options.lines.some(line => line.startsWith('::warning::')), false);
+    now = 120000;
+    watcher.check(() => assert.fail('warning must not kill'));
+    watcher.check(() => assert.fail('warning must not kill'));
+    assert.equal(options.lines.filter(line => line.startsWith('::warning::')).length, 2);
+    assert.match(options.lines.join('\n'), /::warning::Long-running spec class Specs.when_shared_fixture_hangs/);
+    consume(testFinished);
+    consume(classFinished());
+    consume(classFinished('class-2'));
+    now = 600000;
+    watcher.check(() => assert.fail('finished class must not kill'));
+    assert.equal(watcher.classes.size, 0);
+    assert.equal(watcher.tests.size, 0);
+    const progress = await readFile(path.join(options.directory, 'class-progress.log'), 'utf8');
+    assert.match(progress, /class finish Specs.when_shared_fixture_hangs elapsed=120.0s/);
+});
+
+test('JSON reporter keeps diagnostics, failures, captured output and unknown messages visible', async () => {
+    const options = await watchdogFixture();
+    const watcher = new SpecHangWatchdog(options.specProgress);
+    watcher.consume(JSON.stringify(testStarting));
+    const messages = [
+        { $type: 'diagnostic-message', Message: 'fixture diagnostic\nsecond line' },
+        { $type: 'internal-diagnostic-message', Message: 'runner diagnostic' },
+        { $type: 'error', Messages: ['runner error'], StackTraces: ['runner stack'] },
+        { $type: 'test-failed', TestUniqueID: 'test-1', Messages: ['assertion failed'], StackTraces: ['test stack'], Output: 'failure output' },
+        { $type: 'test-output', TestUniqueID: 'test-1', Output: 'captured\noutput' },
+        { $type: 'future-message', Value: 'preserve unknown payload' }
+    ];
+    for (const message of messages) watcher.consume(JSON.stringify(message));
+    watcher.consume('collector stderr-style output');
+    assert.deepEqual(options.lines, [
+        '[diagnostic-message]\nfixture diagnostic\nsecond line',
+        '[internal-diagnostic-message]\nrunner diagnostic',
+        '[error]\nrunner error\nrunner stack',
+        '[test-failed] Specs.should_finish\nassertion failed\ntest stack\nfailure output',
+        '[test-output] Specs.should_finish\ncaptured\noutput',
+        JSON.stringify(messages.at(-1)),
+        'collector stderr-style output'
+    ]);
+});
+
+test('watchdog rejects invalid timeout configuration before launching', async () => {
+    for (const value of ['0', '-1', 'no', 'Infinity', '']) {
+        const options = await watchdogFixture({ SPEC_CLASS_HANG_TIMEOUT_SECONDS: value });
+        await assert.rejects(fakeRunner(options, []), /SPEC_CLASS_HANG_TIMEOUT_SECONDS must be a positive number/);
+    }
+});
+
+test('LOCAL fake JSON runner completes without a kill, passes non-JSON through, and preserves exit codes', async () => {
+    for (const exitCode of [0, 37]) {
+        const options = await watchdogFixture({ SPEC_CLASS_HANG_TIMEOUT_SECONDS: '0.2' });
+        const messages = ['collector output', '{not json}', ...[classStarting(), testStarting, testFinished, classFinished()].map(JSON.stringify)];
+        const result = await fakeRunner(options, messages, `process.exitCode = ${exitCode};`);
+        assert.equal(result.code, exitCode);
+        assert.deepEqual(options.lines.slice(0, 2), ['collector output', '{not json}']);
+        assert.match(options.lines.join('\n'), /class finish Specs.when_shared_fixture_hangs/);
+        assert.equal(options.lines.some(line => line.startsWith('::error::')), false);
+        await assert.rejects(readFile(path.join(options.directory, 'spec-hang-summary.txt')), { code: 'ENOENT' });
+    }
+});
+
+test('LOCAL fake JSON runner hang names every open class/test, saves partial progress, and kills the tree with 125', async () => {
+    const options = await watchdogFixture({ SPEC_CLASS_HANG_TIMEOUT_SECONDS: '0.2', SPEC_CLASS_HANG_WARN_SECONDS: '0.05' });
+    options.timeout = 3000;
+    const pidFile = path.join(options.root, 'hang-descendant.pid');
+    const ending = `const { spawn } = await import('node:child_process');
+        const { writeFileSync } = await import('node:fs');
+        const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'inherit' });
+        writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+        setInterval(() => {}, 1000);`;
+    const started = performance.now();
+    const messages = [classStarting(), classStarting('class-2', 'Specs.also_open'), testStarting].map(JSON.stringify);
+    await assert.rejects(fakeRunner(options, messages, ending), error => error.exitCode === 125);
+    assert.ok(performance.now() - started < 2000, 'watchdog must beat the outer deadline');
+    const summary = await readFile(path.join(options.directory, 'spec-hang-summary.txt'), 'utf8');
+    for (const name of ['Specs.when_shared_fixture_hangs', 'Specs.also_open', 'Specs.should_finish']) {
+        assert.ok(summary.includes(name));
+        assert.ok(options.lines.some(line => line.startsWith('::error::') && line.includes(name)));
+    }
+    assert.match(summary, /elapsed=0.[2-9]s/);
+    assert.ok(options.lines.some(line => line.startsWith('::warning::')));
+    assert.match(await readFile(path.join(options.directory, 'class-progress.log'), 'utf8'), /class start Specs.when_shared_fixture_hangs/);
+    const pid = Number(await readFile(pidFile, 'utf8'));
+    let live = true;
+    for (let attempt = 0; attempt < 30 && live; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        try { process.kill(pid, 0); } catch (error) { assert.equal(error.code, 'ESRCH'); live = false; }
+    }
+    assert.equal(live, false, `hang descendant ${pid} still live`);
+});
+
+test('watchdog identifies a shared fixture hang with no running test', async () => {
+    const options = await watchdogFixture();
+    let now = 0;
+    const watcher = new SpecHangWatchdog({ ...options.specProgress, now: () => now });
+    watcher.consume(JSON.stringify(classStarting()));
+    now = 300000;
+    let failure;
+    watcher.check(error => { failure = error; });
+    assert.equal(failure.exitCode, 125);
+    assert.match(await readFile(path.join(options.directory, 'spec-hang-summary.txt'), 'utf8'), /Specs.when_shared_fixture_hangs elapsed=300.0s/);
+});
+
+test('LOCAL outer session timeout keeps exit 124 and persists open classes and tests', async () => {
+    const options = await watchdogFixture();
+    options.timeout = 500;
+    await assert.rejects(fakeRunner(options, [classStarting(), testStarting].map(JSON.stringify), 'setInterval(() => {}, 1000);'), error => error.exitCode === 124);
+    const summary = await readFile(path.join(options.directory, 'spec-hang-summary.txt'), 'utf8');
+    assert.match(summary, /TestSessionTimeout exceeded/);
+    assert.match(summary, /Specs.when_shared_fixture_hangs/);
+    assert.match(summary, /Specs.should_finish/);
+    assert.match(await readFile(path.join(options.directory, 'class-progress.log'), 'utf8'), /class start/);
 });
 
 const probeScript = path.resolve('.github/scripts/verify-mixed-specs-collector.mjs');

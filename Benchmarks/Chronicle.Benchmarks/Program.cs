@@ -25,7 +25,7 @@ internal static class Program
 
         var benchmarkArguments = HasFilter(args) ? args : ["--filter", "*", .. args];
         var config = Configuration();
-        var summaries = BenchmarkSwitcher.FromAssembly(typeof(AppendBenchmark).Assembly).Run(benchmarkArguments, config);
+        var summaries = await BenchmarkSwitcher.FromAssembly(typeof(AppendBenchmark).Assembly).RunAsync(benchmarkArguments, config);
 
         return BenchmarkRunOutcome.ExitCodeFor(summaries, Console.Error);
     }
@@ -34,7 +34,7 @@ internal static class Program
     {
         if (Environment.GetEnvironmentVariable("CRATIS_BENCHMARK_INPROCESS") == "1")
         {
-            return ManualConfig.Create(DefaultConfig.Instance).AddJob(Job.Default.WithToolchain(InProcessEmitToolchain.Instance).WithWarmupCount(3).WithIterationCount(15).AsMutator());
+            return ManualConfig.Create(DefaultConfig.Instance).AddJob(Job.Default.WithToolchain(InProcessEmitToolchain.Default).WithWarmupCount(3).WithIterationCount(15).AsMutator());
         }
         if (Environment.GetEnvironmentVariable("CRATIS_BENCHMARK_SERIAL_BUILD") == "1")
         {
