@@ -23,6 +23,8 @@ public class and_projection_registration_fails_without_attribution : given.a_sta
 
     async Task Because() => _exception = await Catch.Exception(Execute);
 
-    [Fact] void should_propagate_the_failure() => _exception.ShouldEqual(_registrationFailure);
-    [Fact] void should_not_continue_rehydrating() => _jobsManager.DidNotReceive().Rehydrate();
+    [Fact] void should_not_fail_startup() => _exception.ShouldBeNull();
+    [Fact] void should_report_the_failure_for_the_event_store() => LogEntries.Any(_ => _.Event == nameof(ChronicleServerStartupTaskLogging.DeferredStartupWorkUnitFailed) && _.Exception == _registrationFailure).ShouldBeTrue();
+    [Fact] async Task should_retry_once_per_pass() => await _projectionsServiceClient.Received(6).Register(_eventStore, Arg.Any<IEnumerable<ProjectionDefinition>>());
+    [Fact] void should_resume_jobs_only_at_startup() => _jobsManager.Received(1).Rehydrate();
 }

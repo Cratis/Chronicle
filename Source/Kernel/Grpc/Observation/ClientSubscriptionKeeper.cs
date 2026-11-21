@@ -140,6 +140,46 @@ internal static class ClientSubscriptionKeeper
             return await isIntact();
         };
 
+    /// <summary>
+    /// Confirms that a subscription is intact by asking the observer itself, without calling the client grain of the stream.
+    /// </summary>
+    /// <param name="isIntact">The check that asks the observer's client grain, used whenever the observer does not know the client.</param>
+    /// <param name="observer">The <see cref="IObserver"/> served by the stream.</param>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> of the client the stream belongs to.</param>
+    /// <returns>A check that is true when the observer knows the client, as a subscription target or as a superseded registration.</returns>
+    /// <remarks>
+    /// <para>
+    /// A client grain exists per stream, and every call to it keeps its activation resident. A keeper that goes through it on every
+    /// check therefore keeps one activation per stream alive for as long as the client is connected, which for a service with several
+    /// replicas is several activations per observer. Whether the observer holds the client is the observer's own knowledge: when it
+    /// does, there is nothing to restore, so the client grain is not called and goes idle until it is needed. An observer that does
+    /// not know the client, a webhook-served observer, a failing call or an older silo all fall back to the call, which restores
+    /// whatever was lost.
+    /// </para>
+    /// <para>
+    /// A superseded registration counts as known. It receives nothing until it is promoted; when a promotion fails, the registration
+    /// is no longer known and the next check restores it, so it is found at the safety-net interval and no longer by a check every
+    /// revise interval for as long as the client stays connected.
+    /// </para>
+    /// </remarks>
+    public static Func<Task<bool>> ConfirmFromObserver(Func<Task<bool>> isIntact, IObserver observer, ConnectionId connectionId) =>
+        async () =>
+        {
+            try
+            {
+                if (await observer.KnowsClient(connectionId))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Falls through to the call below.
+            }
+
+            return await isIntact();
+        };
+
     static async Task<bool> WaitForCheck(TimeSpan interval, Task departure, TimeProvider timeProvider, CancellationToken cancellationToken)
     {
         using var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
