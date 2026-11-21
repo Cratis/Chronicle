@@ -175,7 +175,7 @@ public class Encryption : IEncryption
                 var signer = _signingKeys.Acquire(pair.Key, pair.Revision, commitment);
                 var envelope = new EncryptionEnvelope
                 {
-                    Header = EncryptionEnvelope.CreateSignedHeader(pair.Revision, pair.Key.Public, signer.Certificate, signer.SigningKey, wrappedKey.Length),
+                    Header = EncryptionEnvelope.CreateSignedHeader(pair.Revision, (pair.Key.Public, signer.Certificate, signer.SigningKey), wrappedKey.Length),
                     PublicKey = pair.Key.Public,
                     Certificate = signer.Certificate,
                     SigningKey = signer.SigningKey,

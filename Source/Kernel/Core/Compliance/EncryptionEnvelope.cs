@@ -85,13 +85,12 @@ internal sealed record EncryptionEnvelope
 
     /// <summary>Creates a v3 header: the fixed prefix followed by the embedded identity parts.</summary>
     /// <param name="revision">The concrete managed-key revision.</param>
-    /// <param name="publicKey">The managed key public part.</param>
-    /// <param name="certificate">The certificate over the signing key.</param>
-    /// <param name="signingKey">The ephemeral signing public key.</param>
+    /// <param name="identity">The managed key public part, the certificate over the signing key and the ephemeral signing public key.</param>
     /// <param name="wrappedKeyLength">The size of the wrapped data key.</param>
     /// <returns>The serialized header, which is the AES-GCM associated data.</returns>
-    internal static byte[] CreateSignedHeader(EncryptionKeyRevision revision, byte[] publicKey, byte[] certificate, byte[] signingKey, int wrappedKeyLength)
+    internal static byte[] CreateSignedHeader(EncryptionKeyRevision revision, (byte[] PublicKey, byte[] Certificate, byte[] SigningKey) identity, int wrappedKeyLength)
     {
+        var (publicKey, certificate, signingKey) = identity;
         var header = new byte[SignedHeaderSize];
         _magic.CopyTo(header, 0);
         header[4] = 3;
@@ -159,7 +158,7 @@ internal sealed record EncryptionEnvelope
         var certificateLength = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(11));
         var signingKeyLength = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(13));
         var wrappedKeyLength = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(15));
-        if (publicKeyLength == 0 || certificateLength == 0 || signingKeyLength == 0 || wrappedKeyLength == 0)
+        if (new[] { publicKeyLength, certificateLength, signingKeyLength, wrappedKeyLength }.Contains((ushort)0))
         {
             throw new CryptographicException("Invalid encryption envelope component length.");
         }

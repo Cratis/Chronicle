@@ -78,7 +78,7 @@ internal static class EnvelopeSigning
     /// <exception cref="EncryptionEnvelopeBindingFailed">Either signature, or the embedded material, does not verify.</exception>
     internal static string Verify(EncryptionEnvelope envelope, ProtectedValueAddress address)
     {
-        if (envelope.Version != 3 || envelope.PublicKey is null || envelope.Certificate is null || envelope.SigningKey is null || envelope.Signature is null || envelope.Revision is null)
+        if (!CarriesSignedIdentity(envelope))
         {
             throw new EncryptionEnvelopeBindingFailed("the value does not carry a signed identity");
         }
@@ -86,28 +86,40 @@ internal static class EnvelopeSigning
         var commitment = Commit(address);
         try
         {
-            using var rsa = RSA.Create();
-            rsa.ImportRSAPublicKey(envelope.PublicKey, out _);
-            var certificateMessage = CertificateMessage(envelope.Revision, commitment, envelope.PublicKey, envelope.SigningKey);
-            if (!rsa.VerifyData(certificateMessage, envelope.Certificate, HashAlgorithmName.SHA256, RSASignaturePadding.Pss))
-            {
-                throw new EncryptionEnvelopeBindingFailed("the certificate does not verify at this address");
-            }
-
-            using var ecdsa = ECDsa.Create();
-            ecdsa.ImportSubjectPublicKeyInfo(envelope.SigningKey, out _);
-            if (ecdsa.KeySize != EcdsaKeySize
-                || !ecdsa.VerifyData(ValueMessage(envelope, commitment), envelope.Signature, HashAlgorithmName.SHA256, ValueSignatureFormat))
-            {
-                throw new EncryptionEnvelopeBindingFailed("the value signature does not verify at this address");
-            }
+            VerifyCertificate(envelope, commitment);
+            VerifyValueSignature(envelope, commitment);
         }
         catch (CryptographicException ex)
         {
             throw new EncryptionEnvelopeBindingFailed("the embedded key material is malformed", ex);
         }
 
-        return Fingerprint(envelope.PublicKey);
+        return Fingerprint(envelope.PublicKey!);
+    }
+
+    static bool CarriesSignedIdentity(EncryptionEnvelope envelope) =>
+        envelope.Version == 3 && new object?[] { envelope.PublicKey, envelope.Certificate, envelope.SigningKey, envelope.Signature, envelope.Revision }.All(_ => _ is not null);
+
+    static void VerifyCertificate(EncryptionEnvelope envelope, byte[] commitment)
+    {
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPublicKey(envelope.PublicKey!, out _);
+        var certificateMessage = CertificateMessage(envelope.Revision!, commitment, envelope.PublicKey!, envelope.SigningKey!);
+        if (!rsa.VerifyData(certificateMessage, envelope.Certificate!, HashAlgorithmName.SHA256, RSASignaturePadding.Pss))
+        {
+            throw new EncryptionEnvelopeBindingFailed("the certificate does not verify at this address");
+        }
+    }
+
+    static void VerifyValueSignature(EncryptionEnvelope envelope, byte[] commitment)
+    {
+        using var ecdsa = ECDsa.Create();
+        ecdsa.ImportSubjectPublicKeyInfo(envelope.SigningKey!, out _);
+        if (ecdsa.KeySize != EcdsaKeySize
+            || !ecdsa.VerifyData(ValueMessage(envelope, commitment), envelope.Signature!, HashAlgorithmName.SHA256, ValueSignatureFormat))
+        {
+            throw new EncryptionEnvelopeBindingFailed("the value signature does not verify at this address");
+        }
     }
 
     static byte[] Frame(string label, params byte[][] fields)
