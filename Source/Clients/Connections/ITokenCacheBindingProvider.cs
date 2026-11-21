@@ -9,9 +9,18 @@ namespace Cratis.Chronicle.Connections;
 internal interface ITokenCacheBindingProvider
 {
     /// <summary>
-    /// Gets the binding of the last successfully acquired token, not a newly selected endpoint.
+    /// Gets a token and its binding captured together under the provider's token lock.
     /// </summary>
-    TokenCacheBinding? AcquiredTokenBinding { get; }
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An immutable snapshot, or null when no token is available.</returns>
+    Task<TokenWithBinding?> GetTokenWithBinding(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Refreshes a token and captures its binding under the provider's token lock.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>An immutable snapshot, or null when no token is available.</returns>
+    Task<TokenWithBinding?> RefreshTokenWithBinding(CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets the binding currently expected by the provider, discovering the endpoint if necessary.

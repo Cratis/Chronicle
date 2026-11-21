@@ -10,6 +10,8 @@ internal sealed class TokenCacheEndpointHandler : HttpMessageHandler
 {
     internal string TokenEndpoint { get; set; } = "https://idp.example/oauth/token";
 
+    internal string AccessToken { get; set; } = "acquired-token";
+
     internal int DiscoveryRequests { get; private set; }
 
     internal int TokenRequests { get; private set; }
@@ -25,7 +27,7 @@ internal sealed class TokenCacheEndpointHandler : HttpMessageHandler
         else
         {
             TokenRequests++;
-            response = JsonSerializer.Serialize(new { access_token = "acquired-token", expires_in = 3600 });
+            response = JsonSerializer.Serialize(new { access_token = AccessToken, expires_in = 3600 });
         }
 
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(response) });

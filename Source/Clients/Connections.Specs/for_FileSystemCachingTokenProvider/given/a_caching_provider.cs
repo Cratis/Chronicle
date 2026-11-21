@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.Connections.for_FileSystemCachingTokenProvider.given;
 
 public class a_caching_provider : Specification
 {
+    internal TokenCacheBinding _binding;
     protected ITokenProvider _inner;
     protected FileSystemCachingTokenProvider _provider;
     protected string _directory;
@@ -20,9 +21,13 @@ public class a_caching_provider : Specification
         _directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         _cacheFile = Path.Combine(_directory, "nested", "token.json");
         _inner = Substitute.For<ITokenProvider, ITokenCacheBindingProvider>();
-        var binding = new TokenCacheBinding("https://server.example/connect/token", "client-one");
-        ((ITokenCacheBindingProvider)_inner).GetCurrentCacheBinding(Arg.Any<CancellationToken>()).Returns(binding);
-        ((ITokenCacheBindingProvider)_inner).AcquiredTokenBinding.Returns(binding);
+        _binding = new("https://server.example/connect/token", "client-one");
+        var bound = (ITokenCacheBindingProvider)_inner;
+        bound.GetCurrentCacheBinding(Arg.Any<CancellationToken>()).Returns(_binding);
+        bound.GetTokenWithBinding(Arg.Any<CancellationToken>()).Returns(call =>
+            WithBinding(_inner.GetAccessToken(call.Arg<CancellationToken>()), _binding));
+        bound.RefreshTokenWithBinding(Arg.Any<CancellationToken>()).Returns(call =>
+            WithBinding(_inner.Refresh(call.Arg<CancellationToken>()), _binding));
         _provider = new FileSystemCachingTokenProvider(_inner, _cacheFile);
     }
 
@@ -33,6 +38,12 @@ public class a_caching_provider : Specification
         {
             Directory.Delete(_directory, true);
         }
+    }
+
+    static async Task<TokenWithBinding?> WithBinding(Task<string?> acquisition, TokenCacheBinding binding)
+    {
+        var token = await acquisition;
+        return token is null ? null : new(token, binding);
     }
 
     protected string CacheProperty(string name)

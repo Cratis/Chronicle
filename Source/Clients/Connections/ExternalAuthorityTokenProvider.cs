@@ -97,12 +97,6 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
     }
 
     /// <inheritdoc/>
-    TokenCacheBinding? ITokenCacheBindingProvider.AcquiredTokenBinding =>
-        _inner is ITokenCacheBindingProvider { AcquiredTokenBinding: { } binding }
-            ? binding with { Authority = _authority.AbsoluteUri }
-            : null;
-
-    /// <inheritdoc/>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default) =>
         await (await GetInner(cancellationToken)).GetAccessToken(cancellationToken);
 
@@ -126,6 +120,20 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
     }
 
     /// <inheritdoc/>
+    async Task<TokenWithBinding?> ITokenCacheBindingProvider.GetTokenWithBinding(CancellationToken cancellationToken)
+    {
+        ITokenCacheBindingProvider inner = await GetInner(cancellationToken);
+        return WithAuthority(await inner.GetTokenWithBinding(cancellationToken));
+    }
+
+    /// <inheritdoc/>
+    async Task<TokenWithBinding?> ITokenCacheBindingProvider.RefreshTokenWithBinding(CancellationToken cancellationToken)
+    {
+        ITokenCacheBindingProvider inner = await GetInner(cancellationToken, bypassThrottle: true);
+        return WithAuthority(await inner.RefreshTokenWithBinding(cancellationToken));
+    }
+
+    /// <inheritdoc/>
     async ValueTask<TokenCacheBinding?> ITokenCacheBindingProvider.GetCurrentCacheBinding(CancellationToken cancellationToken)
     {
         ITokenCacheBindingProvider inner = await GetInner(cancellationToken);
@@ -138,6 +146,11 @@ internal sealed class ExternalAuthorityTokenProvider : ITokenProvider, IDisposab
     /// </summary>
     /// <returns>The <see cref="HttpMessageHandler"/>.</returns>
     internal HttpMessageHandler GetMessageHandler() => _handler;
+
+    TokenWithBinding? WithAuthority(TokenWithBinding? token) =>
+        token?.Binding is { } binding
+            ? token with { Binding = binding with { Authority = _authority.AbsoluteUri } }
+            : token;
 
     async Task<OAuthTokenProvider> GetInner(CancellationToken cancellationToken, bool bypassThrottle = false)
     {

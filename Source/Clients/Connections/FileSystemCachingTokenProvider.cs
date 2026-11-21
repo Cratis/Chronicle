@@ -63,8 +63,6 @@ public class FileSystemCachingTokenProvider(
 
     SemaphoreSlim Lock => _fileLocks[_lockIndex];
 
-    TokenCacheBinding? AcquiredBinding => (innerProvider as ITokenCacheBindingProvider)?.AcquiredTokenBinding;
-
     /// <inheritdoc/>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
     {
@@ -83,13 +81,7 @@ public class FileSystemCachingTokenProvider(
                 return cached.AccessToken;
             }
 
-            var token = await innerProvider.GetAccessToken(cancellationToken);
-            if (token is not null)
-            {
-                WriteCache(new TokenCache(token, ExpiryOf(token), _scopeHash, AcquiredBinding));
-            }
-
-            return token;
+            return CacheToken(await AcquireToken(cancellationToken));
         }
         finally
         {
@@ -104,13 +96,7 @@ public class FileSystemCachingTokenProvider(
         try
         {
             DeleteCache();
-            var token = await innerProvider.Refresh(cancellationToken);
-            if (token is not null)
-            {
-                WriteCache(new TokenCache(token, ExpiryOf(token), _scopeHash, AcquiredBinding));
-            }
-
-            return token;
+            return CacheToken(await RefreshToken(cancellationToken));
         }
         finally
         {
@@ -177,6 +163,38 @@ public class FileSystemCachingTokenProvider(
         return IssuerExpiryOf(token) is { } issuerExpiry && issuerExpiry - _expirySkew < expiry
             ? issuerExpiry - _expirySkew
             : expiry;
+    }
+
+    async Task<TokenWithBinding?> AcquireToken(CancellationToken cancellationToken)
+    {
+        if (innerProvider is ITokenCacheBindingProvider provider)
+        {
+            return await provider.GetTokenWithBinding(cancellationToken);
+        }
+
+        var token = await innerProvider.GetAccessToken(cancellationToken);
+        return token is null ? null : new(token, null);
+    }
+
+    async Task<TokenWithBinding?> RefreshToken(CancellationToken cancellationToken)
+    {
+        if (innerProvider is ITokenCacheBindingProvider provider)
+        {
+            return await provider.RefreshTokenWithBinding(cancellationToken);
+        }
+
+        var token = await innerProvider.Refresh(cancellationToken);
+        return token is null ? null : new(token, null);
+    }
+
+    string? CacheToken(TokenWithBinding? token)
+    {
+        if (token is not null)
+        {
+            WriteCache(new TokenCache(token.AccessToken, ExpiryOf(token.AccessToken), _scopeHash, token.Binding));
+        }
+
+        return token?.AccessToken;
     }
 
     ValueTask<TokenCacheBinding?> CurrentBinding(CancellationToken cancellationToken) =>

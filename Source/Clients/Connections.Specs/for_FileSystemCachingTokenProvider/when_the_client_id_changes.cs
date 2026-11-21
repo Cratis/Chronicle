@@ -14,7 +14,7 @@ public class when_the_client_id_changes : given.a_caching_provider
         _inner.ClearReceivedCalls();
         var binding = new TokenCacheBinding("https://server.example/connect/token", "client-two");
         ((ITokenCacheBindingProvider)_inner).GetCurrentCacheBinding(Arg.Any<CancellationToken>()).Returns(binding);
-        ((ITokenCacheBindingProvider)_inner).AcquiredTokenBinding.Returns(binding);
+        _binding = binding;
         _inner.GetAccessToken(Arg.Any<CancellationToken>()).Returns("new-client-token");
     }
 
