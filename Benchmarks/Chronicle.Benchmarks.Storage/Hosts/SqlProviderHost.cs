@@ -16,6 +16,7 @@ using DotNet.Testcontainers.Containers;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Testcontainers.MsSql;
@@ -81,6 +82,10 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
             default:
                 throw new ArgumentOutOfRangeException(nameof(provider));
         }
+
+        await using var context = CreateNamespaceContext();
+        await context.Database.MigrateAsync();
+        Counter.Reset();
     }
 
     /// <inheritdoc/>
@@ -89,7 +94,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
         var host = new EventSequenceStorageHost(Configure<Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.EventSequenceDbContext>, null, BenchmarkEvents.CreateIdentities(), BenchmarkEvents.CreateEventTypes(), _interceptors);
         Counter.Reset();
         _hosts.Add(host);
-        return host.Open();
+        return host.Open(CreateNamespaceContext);
     }
 
     /// <inheritdoc/>
@@ -206,6 +211,18 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
             _ => builder.UseSqlServer(_connectionString)
         };
         builder.EnableServiceProviderCaching(true);
+    }
+
+    NamespaceDbContext CreateNamespaceContext()
+    {
+        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
+        Configure(builder);
+        builder.AddConceptAsSupport().AddInterceptors(_interceptors);
+
+        // Namespace migrations must run in release order, as in the kernel's Database.BuildOptions.
+        if (provider == StorageProvider.PostgreSql) builder.ReplaceService<IMigrator, ReleaseOrderedNpgsqlMigrator>();
+        else builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
+        return new NamespaceDbContext(builder.Options);
     }
 
     async Task<DbContextScope<UniqueConstraintDbContext>> CreateConstraintScope(string tableName)
