@@ -25,6 +25,8 @@ public class and_the_event_type_is_ungoverned : given.a_rebuilding_constraint_in
         ConcurrencyScope.None);
 
     [Fact] void should_accept_the_event() => _result.IsSuccess.ShouldBeTrue();
+    [Fact] void should_not_report_retryability() => _result.IsRetryable.ShouldBeFalse();
+    [Fact] void should_not_suggest_a_retry_delay() => _result.RetryAfter.ShouldBeNull();
     [Fact] void should_store_the_event() => _log.Events.Count.ShouldEqual(3);
     [Fact] async Task should_leave_the_rebuilding_index_untouched() => (await Values("source")).ShouldContainOnly(Hash("current"));
 }

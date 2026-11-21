@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
@@ -160,6 +161,60 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
     }
 
     /// <inheritdoc/>
+    public async Task<bool> SaveLastSeenAt(ObserverId observerId, DateTimeOffset lastSeenAt, EventSequenceId owner)
+    {
+        if (observerId is null || string.IsNullOrEmpty(observerId.Value))
+        {
+            return false;
+        }
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var observerIdValue = observerId.Value;
+        var ownerValue = owner.Value;
+        var updated = await scope.DbContext.Observers
+            .Where(observer => observer.Id == observerIdValue && (observer.Owner == null || observer.Owner == ownerValue))
+            .ExecuteUpdateAsync(set => set.SetProperty(observer => observer.LastSeenAt, lastSeenAt));
+        return updated > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetLastSeenAt(IEnumerable<ObserverId> observerIds, DateTimeOffset startedAt)
+    {
+        var ids = observerIds.Where(id => id is not null && !string.IsNullOrEmpty(id.Value)).Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return new Dictionary<ObserverId, DateTimeOffset>();
+        }
+
+        await using var scope = await database.Namespace(eventStore, @namespace);
+
+        // The update only fills an absent value, so the earliest recorded time wins a race.
+        await scope.DbContext.Observers
+            .Where(observer => ids.Contains(observer.Id) && observer.LastSeenAt == null)
+            .ExecuteUpdateAsync(set => set.SetProperty(observer => observer.LastSeenAt, startedAt));
+
+        var known = await scope.DbContext.Observers
+            .Where(observer => ids.Contains(observer.Id) && observer.LastSeenAt != null)
+            .Select(observer => new { observer.Id, observer.LastSeenAt })
+            .ToListAsync();
+        return known.ToDictionary(_ => _.Id, _ => _.LastSeenAt!.Value);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var ownerValue = owner.Value;
+        var recorded = await scope.DbContext.Observers
+            .Where(observer => observer.Owner == ownerValue && observer.DurableSubscription != null)
+            .Select(observer => new { observer.Id, observer.DurableSubscription })
+            .ToListAsync();
+        return recorded.ToDictionary(
+            _ => new ObserverId(_.Id),
+            _ => JsonSerializer.Deserialize<ObserverDurableSubscription>(_.DurableSubscription!, ObserverStateJson.Options)!);
+    }
+
+    /// <inheritdoc/>
     public async Task Delete(ObserverId observerId)
     {
         if (observerId is null || string.IsNullOrEmpty(observerId.Value))
@@ -197,6 +252,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             ObserverWideClaim = existing.ObserverWideClaim,
             OwnershipRevision = existing.OwnershipRevision,
             RunningStateChangedAt = existing.RunningStateChangedAt,
+            LastSeenAt = existing.LastSeenAt,
             TypeSetControl = existing.TypeSetControl,
             Initialization = existing.Initialization,
             DeliveryFences = existing.DeliveryFences,
@@ -257,6 +313,7 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
             if (existing.Owner is not null && existing.Owner != entity.Owner) return false;
             PreserveControl(entity, existing);
             entity.RunningStateChangedAt = existing.RunningStateChangedAt;
+            entity.LastSeenAt = existing.LastSeenAt;
 
             // Owner is a concurrency token: the UPDATE atomically requires the read owner (this sequence or null).
             // Keep the existing control token as well, so competing control writes still fail their concurrency check.

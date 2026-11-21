@@ -22,6 +22,13 @@ public class when_getting_for_an_observer_with_a_full_override : given.a_provide
     [Fact] void should_apply_the_overridden_backoff_delay() => _result.BackoffDelay.ShouldEqual(5);
     [Fact] void should_apply_the_overridden_backoff_factor() => _result.ExponentialBackoffDelayFactor.ShouldEqual(3f);
     [Fact] void should_apply_the_overridden_maximum_backoff_delay() => _result.MaximumBackoffDelay.ShouldEqual(120);
+    [Fact] void should_keep_the_global_durable_subscription_mode() => _result.DurableSubscriptions.ShouldEqual(DurableSubscriptionMode.Off);
+    [Fact] void should_keep_the_global_dormant_period() => _result.DormantAfter.ShouldEqual(601);
+    [Fact] void should_keep_the_global_dormant_safety_net() => _result.DormantSafetyNet.ShouldEqual(1203);
+    [Fact] void should_keep_the_global_wake_limit() => _result.MaxConcurrentWakes.ShouldEqual(6);
+    [Fact] void should_keep_the_global_resume_bound() => _result.DormantResumeMaxEvents.ShouldEqual(77);
+    [Fact] void should_keep_the_global_durable_subscription_check_interval() => _result.DurableSubscriptionCheckInterval.ShouldEqual(TimeSpan.FromMinutes(31));
+    [Fact] void should_keep_the_global_unseen_removal_switch() => _result.UnseenRemovalEnabled.ShouldBeTrue();
     [Fact] void should_use_the_global_settings_for_an_observer_without_an_override() => _unrelated.ShouldBeSame(_global);
     [Fact] void should_not_match_a_bare_observer_id() => _bareId.ShouldBeSame(_global);
     [Fact] void should_not_match_a_key_in_a_different_case() => _differentCase.ShouldBeSame(_global);

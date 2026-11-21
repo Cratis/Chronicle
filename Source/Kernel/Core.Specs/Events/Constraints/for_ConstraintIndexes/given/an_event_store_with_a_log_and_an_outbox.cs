@@ -3,11 +3,13 @@
 
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
@@ -32,6 +34,8 @@ public class an_event_store_with_a_log_and_an_outbox : Specification
     protected List<ReindexConstraintsRequest> _startedReindexes;
     protected IEventSequence _log;
     protected IEventSequence _outbox;
+    protected IEventSequenceStorage _logStorage;
+    protected IEventSequenceStorage _outboxStorage;
     protected List<string> _calls;
 
     void Establish()
@@ -52,6 +56,8 @@ public class an_event_store_with_a_log_and_an_outbox : Specification
         _storage.GetEventStore(_eventStore).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(_namespace).Returns(_namespaceStorage);
         _namespaceStorage.HasData().Returns(true);
+        _logStorage = StorageFor(EventSequenceId.Log);
+        _outboxStorage = StorageFor(EventSequenceId.Outbox);
 
         _grainFactory.GetGrain<INamespaces>(_eventStore).Returns(_namespaces);
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace]));
@@ -72,6 +78,23 @@ public class an_event_store_with_a_log_and_an_outbox : Specification
         _outbox = EventSequenceFor(EventSequenceId.Outbox);
 
         _constraintIndexes = new ConstraintIndexes(_grainFactory, _storage, Substitute.For<ILogger<ConstraintIndexes>>());
+    }
+
+    IEventSequenceStorage StorageFor(EventSequenceId eventSequenceId)
+    {
+        var sequenceStorage = Substitute.For<IEventSequenceStorage>();
+        sequenceStorage.GetTailSequenceNumber(
+            Arg.Any<IEnumerable<EventType>?>(),
+            Arg.Any<EventSourceId?>(),
+            Arg.Any<EventSourceType?>(),
+            Arg.Any<EventStreamId?>(),
+            Arg.Any<EventStreamType?>()).Returns(_ =>
+            {
+                _calls.Add($"tail {eventSequenceId}");
+                return Task.FromResult(EventSequenceNumber.First);
+            });
+        _namespaceStorage.GetEventSequence(eventSequenceId).Returns(sequenceStorage);
+        return sequenceStorage;
     }
 
     IEventSequence EventSequenceFor(EventSequenceId eventSequenceId)

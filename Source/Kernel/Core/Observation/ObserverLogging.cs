@@ -224,6 +224,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Debug, "Observer deactivating ({ReasonCode}: {ReasonDescription})")]
     internal static partial void Deactivating(this ILogger<Observer> logger, DeactivationReasonCode reasonCode, string reasonDescription);
 
+    [LoggerMessage(LogLevel.Warning, "Observer deactivation did not finish before the runtime stopped waiting for it; the remaining teardown was abandoned")]
+    internal static partial void DeactivationOutlivedItsTimeout(this ILogger<Observer> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
 
@@ -256,6 +259,15 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is behind from {NextEventSequenceNumber} but no longer subscribed on its appended-events queue. Re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedObserver(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Warning, "A silo left the cluster and the appended-events queue no longer holds the live subscription of the observer at {NextEventSequenceNumber}. Re-routing observer.")]
+    internal static partial void RestoringLiveSubscriptionAfterSiloDeparture(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
+
+    [LoggerMessage(LogLevel.Debug, "Verifying the live subscription after a silo left the cluster failed; checking again on the next tick")]
+    internal static partial void VerifyingLiveSubscriptionFailed(this ILogger<Observer> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Scheduling live subscription checks after a silo left the cluster failed")]
+    internal static partial void OpeningDepartureChecksFailed(this ILogger<Observer> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);
@@ -328,6 +340,9 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Information, "Resuming stalled observer job {JobId}")]
     internal static partial void ResumingStalledObserverJob(this ILogger<Observer> logger, JobId jobId);
+
+    [LoggerMessage(LogLevel.Warning, "Stalled observer job {JobId} can never be resumed (its steps were stopped and the job still reads as running); stopping it so the observer can start a new one")]
+    internal static partial void StoppingObserverJobThatCannotBeResumed(this ILogger<Observer> logger, JobId jobId);
 
     [LoggerMessage(LogLevel.Debug, "Stalled observer job {JobId} was not resumed: {Reason}")]
     internal static partial void StalledObserverJobNotResumed(this ILogger<Observer> logger, JobId jobId, string reason);

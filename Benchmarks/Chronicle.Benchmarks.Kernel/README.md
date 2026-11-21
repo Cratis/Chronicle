@@ -36,6 +36,29 @@ dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benc
 
 Compare runs with different `--count` values, or `dotnet-gcdump report` output from two runs, to attribute the growth to types. Results from November 2026 are in [decision 0030](../../decisions/0030-release-idle-unsubscribed-observers.md).
 
+### Dormant phase
+
+`--observer-footprint --dormant` adds a dormant phase after the subscribed measurement, for [decision 0034](../../decisions/0034-release-dormant-subscribed-observers.md). It sets `observers.dormantAfter` to `--dormant-after`, waits for the kernel to release the dormant observers, and reports three things for the observers that stay subscribed throughout:
+
+1. **released**: the live heap, the retained heap per measured observer, the resident activations of every grain type (the twelve largest), and over a window with nothing appended the grain calls per observer per minute, the bytes allocated per observer per minute and the process CPU.
+2. **wake**: the time to wake one observer at a time (median, 95th percentile and maximum over `--wake-samples` observers), then the time to wake all of them in batches of 100. Waking is a call to the observer, which activates it; a kernel that has not released the observer answers from memory.
+3. **woken**: the same figures as released, once every observer is resident again.
+
+```sh
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --observer-footprint --dormant --count 2000 --dormant-after 5 --window 30
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--dormant` | off | Runs the dormant phase after the subscribed measurement. |
+| `--dormant-after` | 0 | `observers.dormantAfter` in seconds. `0` keeps every subscribed observer resident, which is what every kernel did before the release existed. |
+| `--dormant-settle` | twice `--dormant-after` plus 10 s | Seconds to wait for the release before the released measurement. |
+| `--window` | 30 | Seconds of each idle window, with nothing appended. |
+| `--wake-samples` | 100 | Observers woken one at a time for the latency percentiles. |
+| `--watchdog` | 1 | `observers.watchdogInterval` in seconds. The default of the harness is much shorter than the kernel's 60 s, which multiplies every per-minute figure of the window; use `--watchdog 60 --window 125` for the cadence of a real kernel. |
+
+Without a release, released equals subscribed and the wake is a call to a resident grain: that is the baseline. The harness never appends events, so it measures the cost of being dormant and of an activation, not event-triggered wake-up through the appended events queue; that path is measured by the specifications and, in a real kernel, by the wake metrics of decision 0034.
+
 ### Lazy observer metric instruments
 
 An observer activation used to create all 17 of its metric instruments up front, each with its own copy of the scope's tags. They are now created the first time the observer records them, and the instruments of a scope share one copy of its tags. The command above, run twice on each build on .NET 11 under the default legacy metric names, measured:
@@ -78,6 +101,35 @@ One run of each with 2 000 observers over 125 s, default options otherwise:
 | `--without-keeper` | 0 | 0 | 0 | 0.231 cores |
 
 The keeper calls drop about thirtyfold. The busiest second in both runs is the first check of every subscription, one revise interval after it is kept; later safety-net checks are spread over the interval. The CPU difference between the two keeper runs is within run-to-run noise.
+
+## Idle observer calls
+
+The `--idle-calls` mode measures what subscribed observers cost an idle kernel. It starts the same in-process silo as `--observer-footprint`, subscribes a number of reactor observers to one client connection and leaves them alone, with nothing appended. After a settle period it counts every grain call, by interface and method, with an incoming grain call filter, and reports them per observer per minute together with the bytes the process allocated, the gen0 collections and the CPU used in the same window.
+
+```sh
+dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --idle-calls --count 1000 --seconds 30 --watchdog 5
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--count` | 1000 | Subscribed reactor observers. |
+| `--seconds` | 30 | How long to measure. |
+| `--watchdog` | 5 | `observers.watchdogInterval` in seconds. A shorter interval than the default 60 s fits several ticks into a short run, and multiplies the per-minute figures by the same factor. |
+| `--settle` | twice the watchdog interval plus 2 s | Seconds to wait after subscribing before the window starts. |
+
+The `IGrainTimerInvoker.InvokeCallbackAsync` line is the watchdog timer itself, one call per tick. The allocation figure is everything the process allocated in the window, so it includes the harness and the silo's housekeeping, and it is a comparison between builds, not a model of a production kernel.
+
+Two runs of 1 000 observers, 30 s, watchdog interval 5 s, on a machine under heavy load, before and after the shared lookups described below:
+
+| Build | `GetTailSequenceNumber` per observer per minute | `IsConnected` per observer per minute | All grain calls per observer per minute | Allocated per observer per minute |
+| --- | --- | --- | --- | --- |
+| Before | 12.0, 12.0 | 12.0, 12.0 | 36.2, 36.2 | 251 433 B, 251 965 B |
+| After | 3.5, 4.0 | 2.8, 3.1 | 18.5, 19.3 | 136 449 B, 142 255 B |
+
+The watchdog of every observer asks whether its client connection is still registered and what the tail of its event sequence is. Lookups for the same connection, or the same event sequence, that are running at the same moment share one answer; nothing is cached, so no answer is older than one grain call and a disconnect or a new event is noticed on the same tick as before. All the observers of this harness share one connection and one event sequence and tick together, so most of their lookups overlap. Observers in a real kernel tick at different moments, and share fewer lookups.
+
+What the harness does not cover: it is a single silo with in-memory storage, so it has no cross-silo grain calls, no serialization of grain-call payloads and no MongoDB or SQL reads, which is where most of an idle kernel's per-call cost is. A grain call here is local and returns as soon as it is scheduled.
 
 ## Comparing a change with a baseline
 

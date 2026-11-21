@@ -26,6 +26,8 @@ public class a_connection_with_several_endpoints : Specification
     protected a_logger_that_remembers_messages<ChronicleConnection> _logger;
     protected ManualTimeProvider _time;
     protected IConnectionLifecycle _lifecycle;
+    protected IChronicleServerAddressResolver _resolver;
+    protected readonly List<CallInvoker> _callInvokers = [];
     protected ILoadBalancerStrategy _loadBalancer;
     protected ITaskFactory _tasks;
     protected CancellationTokenSource _cancellation;
@@ -36,6 +38,7 @@ public class a_connection_with_several_endpoints : Specification
     protected Dictionary<ChronicleServerAddress, int> _connectsPerServer;
     protected Dictionary<ChronicleServerAddress, Func<Task<CompatibilityResponse>>> _compatibility;
     protected int _disconnectedCalls;
+    protected int _keepAlivesAnswered;
     readonly Channel<TaskCompletionSource> _watchdogDelays = Channel.CreateUnbounded<TaskCompletionSource>();
     readonly object _changeGate = new();
     TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -62,10 +65,10 @@ public class a_connection_with_several_endpoints : Specification
         }
 
         CreateLifecycle();
-        var resolver = CreateResolver();
+        _resolver = CreateResolver();
         CreateLoadBalancer();
         CreateTaskFactory();
-        CreateConnection(resolver);
+        CreateConnection(_resolver);
     }
 
     void CreateLifecycle()
@@ -151,13 +154,20 @@ public class a_connection_with_several_endpoints : Specification
             loadBalancerStrategy: _loadBalancer,
             timeProvider: _time)
         {
-            ConnectionServiceFactory = (address, _) =>
+            ConnectionServiceFactory = (address, callInvoker) =>
             {
+                _callInvokers.Add(callInvoker);
                 var service = Substitute.For<IConnectionService>();
                 service.CheckCompatibility(Arg.Any<CompatibilityRequest>())
                     .Returns(_ => _compatibility.TryGetValue(address, out var check)
                         ? check()
                         : Task.FromResult(new CompatibilityResponse { IsCompatible = true }));
+                service.ConnectionKeepAlive(Arg.Any<ConnectionKeepAlive>())
+                    .Returns(_ =>
+                    {
+                        Interlocked.Increment(ref _keepAlivesAnswered);
+                        return Task.CompletedTask;
+                    });
                 service.Connect(Arg.Any<ConnectRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
                     .Returns(_ =>
                     {

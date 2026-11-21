@@ -83,6 +83,10 @@ public partial class Observer
         var recorded = _stateRecordedDuringTransitionHook;
         _stateHandedToTransitionHook = null;
         _stateRecordedDuringTransitionHook = null;
+
+        // Failures are authoritative: recovery can record progress before removing the failed partition, and
+        // count-only changes need not record handling progress at all. Never retain a hook's snapshot count.
+        State = State with { FailedPartitionCount = Failures.Partitions.Count() };
         if (handed is null || recorded is null)
         {
             return;

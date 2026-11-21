@@ -15,6 +15,7 @@ internal static class WebhookDefinitionConverter
     /// </summary>
     /// <param name="definition">The <see cref="WebhookDefinition"/> to convert.</param>
     /// <returns>The converted <see cref="Contracts.Observation.Webhooks.WebhookDefinition"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The signing mode is undefined.</exception>
     internal static Contracts.Observation.Webhooks.WebhookDefinition ToContract(this WebhookDefinition definition) =>
         new()
         {
@@ -22,6 +23,12 @@ internal static class WebhookDefinitionConverter
             EventTypes = definition.EventTypes.Select(_ => _.ToContract()).ToArray(),
             Identifier = definition.Identifier.Value,
             GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)definition.GenerationDelivery,
+            Signing = definition.Signing switch
+            {
+                WebhookSigningMode.None => Contracts.Observation.Webhooks.WebhookSigningMode.Disabled,
+                WebhookSigningMode.Ed25519 => Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519,
+                _ => throw new ArgumentOutOfRangeException(nameof(definition), definition.Signing, "The webhook signing mode is not supported.")
+            },
             IsActive = definition.IsActive,
             IsReplayable = definition.IsReplayable,
             IsInactive = !definition.IsActive,

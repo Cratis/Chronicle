@@ -51,6 +51,32 @@ export const Login = withViewModel(LoginViewModel, ({ viewModel }) => {
         );
     }
 
+    if (viewModel.isTrustedProxy) {
+        return (
+            <div className={css.loginContainer}>
+                <div className={css.loginCard}>
+                    <div className={css.loginHeader}>
+                        <img src={chronicleLogo} alt="Chronicle" className={css.loginLogo} style={{ filter: 'brightness(0) invert(1)' }} />
+                        <p className={css.loginSubtitle}>Sign in to continue</p>
+                    </div>
+                    <div className={css.loginForm}>
+                        <Message
+                            severity="info"
+                            text="Your session has expired or could not be verified. A reverse proxy manages sign-in for this Chronicle - select Sign in to continue through it."
+                            className={css.errorMessage}
+                        />
+                        <Button
+                            type="button"
+                            label="Sign In"
+                            className={css.loginButton}
+                            onClick={() => viewModel.retrySignIn()}
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={css.loginContainer}>
             <div className={css.loginCard}>

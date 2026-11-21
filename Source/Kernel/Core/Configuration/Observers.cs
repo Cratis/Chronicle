@@ -11,6 +11,11 @@ namespace Cratis.Chronicle.Configuration;
 public class Observers
 {
     /// <summary>
+    /// The recommended period, and the one used when <see cref="UnseenRemovalAfter"/> is not a positive value.
+    /// </summary>
+    public static readonly TimeSpan DefaultUnseenRemovalAfter = TimeSpan.FromDays(7);
+
+    /// <summary>
     /// Gets the upper bound on how many job steps run in parallel.
     /// </summary>
     /// <remarks>
@@ -212,6 +217,116 @@ public class Observers
     /// <see cref="WatchdogInterval"/>. Defaults to 900 seconds (15 minutes); 0 keeps every observer resident.
     /// </remarks>
     public int IdleDeactivationAfter { get; init; } = 900;
+
+    /// <summary>
+    /// Gets whether, and how, an observer records its subscription in its state document.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="DurableSubscriptionMode.Release"/>: the subscription is written and cleared with the
+    /// observer's state, and a subscribed observer that has nothing to do is released after <see cref="DormantAfter"/>
+    /// and woken from the record. <see cref="DurableSubscriptionMode.Shadow"/> writes the record and compares it with
+    /// the live subscriptions of the appended events queue without releasing or waking anything.
+    /// <see cref="DurableSubscriptionMode.Off"/> writes none and clears any that is stored. A server-level setting
+    /// (decision 0034).
+    /// </remarks>
+    public DurableSubscriptionMode DurableSubscriptions { get; init; } = DurableSubscriptionMode.Release;
+
+    /// <summary>
+    /// Gets how many seconds a subscribed observer that has nothing to do stays resident before it is released.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 900 seconds (15 minutes), the same as <see cref="IdleDeactivationAfter"/>; 0 keeps every subscribed
+    /// observer resident. A released observer is woken by the appended events queue when an event it observes arrives,
+    /// and by the safety net (<see cref="DormantSafetyNet"/>). Applies to client reactors, client reducers and
+    /// projections only, and only while <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Release"/>
+    /// and every silo of the cluster runs the same release, which supports it. An observer resumes from its persisted
+    /// cursor when it wakes (decision 0034). A server-level setting.
+    /// </remarks>
+    public int DormantAfter { get; init; } = 900;
+
+    /// <summary>
+    /// Gets how many seconds pass at most before a dormant observer is woken, whether or not an event arrived.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 900 seconds (15 minutes). Each observer's interval is jittered so wake-ups do not line up. It bounds
+    /// how long a lost wake-up can delay delivery to a dormant observer, and costs about one activation per dormant
+    /// observer per interval. The wake-ups are driven by the appended events queue, so no timer or activation is held
+    /// for a dormant observer. Values below 1 select the default. A server-level setting (decision 0034).
+    /// </remarks>
+    public int DormantSafetyNet { get; init; } = 900;
+
+    /// <summary>
+    /// Gets how many dormant observers one silo wakes at the same time.
+    /// </summary>
+    /// <remarks>
+    /// One event that many dormant observers watch for wakes all of them; this bounds how many are activated at once
+    /// on a silo, so a burst becomes a short queue instead of a spike. The others wait for a place and are delivered
+    /// to afterwards. Defaults to 0 (automatic): two per processor, at least 4 and at most 16, the same as
+    /// <see cref="MaxConcurrentSubscriptions"/>. Values below 1 select the automatic limit. A server-level setting
+    /// (decision 0034).
+    /// </remarks>
+    public int MaxConcurrentWakes { get; init; }
+
+    /// <summary>
+    /// Gets how many events a woken observer may read and deliver from its cursor before the wake falls back to a catch-up job.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 1000. An observer that was dormant normally wakes for the one or two events that woke it; a larger gap
+    /// is what the catch-up job exists for, so the observer resumes through it instead of delivering inside its
+    /// activation. Values below 1 select the default. A server-level setting (decision 0034).
+    /// </remarks>
+    public int DormantResumeMaxEvents { get; init; } = 1000;
+
+    /// <summary>
+    /// Gets how often each appended events queue compares its live subscriptions with the stored durable ones.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 15 minutes. The comparison reads the observer states of the queue's event store and namespace once
+    /// per interval and only counts disagreements; it never changes a subscription. It runs only while
+    /// <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Shadow"/>. A zero or negative value
+    /// falls back to the default.
+    /// </remarks>
+    public TimeSpan DurableSubscriptionCheckInterval { get; init; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Gets whether the kernel removes client reactors and reducers that no client has subscribed to for <see cref="UnseenRemovalAfter"/>.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see langword="false"/>: nothing is ever removed unless an operator turns this on, because a removed reactor replays
+    /// from the start when its client returns and handles the whole history again. While it is off the kernel does not sweep
+    /// and removes nothing, but it still records when each client observer was last seen, so turning the removal on later does
+    /// not start every clock from zero. This is a server-level setting.
+    /// </remarks>
+    public bool UnseenRemovalEnabled { get; init; }
+
+    /// <summary>
+    /// Gets how long a client reactor or reducer can go without any client holding a subscription to it, in every namespace,
+    /// before the kernel removes it and its records, when <see cref="UnseenRemovalEnabled"/> is on.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 7 days, which is the recommended period; a zero or negative value falls back to the default. Removal
+    /// deletes the observer's definition, state, failed partitions, jobs and reminders, never a reducer's read model data.
+    /// When the client connects again the observer is registered as new and replays from the start, so a reactor handles the
+    /// whole history again. Projections, webhooks and kernel observers are never removed. This is a server-level setting.
+    /// </remarks>
+    public TimeSpan UnseenRemovalAfter { get; init; } = DefaultUnseenRemovalAfter;
+
+    /// <summary>
+    /// Gets how often each silo looks for client observers that have not been seen for <see cref="UnseenRemovalAfter"/>, when <see cref="UnseenRemovalEnabled"/> is on.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 1 hour. The sweep reads storage and only activates an observer that is a candidate for removal. A zero or
+    /// negative value falls back to the default.
+    /// </remarks>
+    public TimeSpan UnseenRemovalSweepInterval { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Gets how many observers one storage read of the unseen-observer sweep covers.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 100. A value below 1 falls back to the default.
+    /// </remarks>
+    public int UnseenRemovalBatchSize { get; init; } = 100;
 
     /// <summary>
     /// Gets the number of consecutive progress-only batches after which the observer's

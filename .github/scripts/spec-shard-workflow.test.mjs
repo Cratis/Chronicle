@@ -43,8 +43,8 @@ test('only independent verifications leave the build; every moved check remains 
         assert.equal(workflow.split(`- name: ${name}\n`).length - 1, 1);
     }
     assert.doesNotMatch(packages + pack, /continue-on-error:/);
-    assert.match(packages, /if: needs\.already-ran\.outputs\.skip != 'true'/);
-    assert.deepEqual(dependencies('package-verification'), ['already-ran', 'dotnet-build']);
+    assert.match(packages, /needs\.already-ran\.outputs\.skip != 'true'/);
+    assert.deepEqual(dependencies('package-verification'), ['already-ran', 'dotnet-build', 'package-pack-check']);
     for (const shard of ['specs-other', 'specs-sql']) {
         assert.deepEqual(dependencies(shard), ['already-ran', 'dotnet-build']);
     }
@@ -109,6 +109,7 @@ test('package verification stamps exactly the version dotnet-build derived', () 
 
 test('all shipped frameworks, diagnostic guards, consumer restore, Docker and stable pack stay covered', () => {
     const clients = step(packages, moved[0]);
+    assert.match(clients, /if: github\.event_name != 'pull_request'/);
     assert.match(clients, /find \.\/Source\/Clients -name "\*\.csproj" ! -name "\*\.Specs\.csproj"/);
     assert.match(clients, /dotnet sln "\$solution_dir\/ClientPackages\.slnx" add --include-references=false "\$\{projects\[@\]\}" \.\/Source\/Kernel\/Contracts\/Contracts\.csproj/);
     assert.equal(clients.match(/dotnet build /g)?.length, 1);
@@ -117,6 +118,7 @@ test('all shipped frameworks, diagnostic guards, consumer restore, Docker and st
     assert.match(guards, /ROLLING_GUARD_PACK_ALL_FRAMEWORKS: "true"/);
     assert.match(guards, /node \.github\/scripts\/verify-rolling-delivery-build\.mjs/);
     assert.match(guards, /for framework in net10\.0 net11\.0/);
+    assert.match(step(packages, moved[2]), /dotnet pack \.\/Source\/Clients\/Packages\.slnf --no-build --no-restore --configuration Release/);
     assert.match(step(packages, moved[2]), /verify-packed-consumer-restore\.sh "\$PACKED_VERSION" "\$feed"/);
     const docker = step(packages, moved[3]);
     assert.match(docker, /if: github\.event_name == 'pull_request' && !inputs\.integration_requested/);
@@ -171,9 +173,64 @@ test('publish-equivalent pack runs independently with the same setup and restore
     assert.match(pack, /if: needs\.already-ran\.outputs\.skip != 'true' && github\.event_name == 'pull_request'/);
     assert.ok(dependencies('specs').includes('package-pack-check'));
     for (const name of ['Checkout code', 'Setup .Net', 'Cache NuGet packages', 'Restore obj cache', 'Add GitHub Package Registry to NuGet']) {
-        assert.equal(step(pack, name).replace(/^ +#.*\n/gm, '').trim(), step(packages, name).replace(/^ +#.*\n/gm, '').trim());
+        const setup = job => step(job, name).replace(/^ +#.*\n/gm, '').replace(/^        if: github\.event_name != 'pull_request'\n/m, '').trim();
+        assert.equal(setup(pack), setup(packages));
     }
     assert.doesNotMatch(pack, /actions\/cache\/save|actions\/download-artifact|derive-build-version|CRATIS_CHRONICLE_BUILD_VERSION/);
+});
+
+test('package artifact reuse is PR-only and fails closed without both successful producers', () => {
+    const condition = packages.match(/^    if: >-\n((?:      .+\n)+)/m)[1].trim().replace(/\s+/g, ' ');
+    assert.equal(condition, "!cancelled() && needs.already-ran.outputs.skip != 'true' && needs.dotnet-build.result == 'success' && (needs.package-pack-check.result == 'success' || (github.event_name != 'pull_request' && needs.package-pack-check.result == 'skipped'))");
+    for (const name of ['Download client package build output', 'Extract client package build output', 'Restore client package dependencies']) {
+        assert.match(step(packages, name), /if: github\.event_name == 'pull_request'/);
+    }
+    assert.match(step(packages, 'Download client package build output'), /name: client-package-build-output/);
+    const restore = step(packages, 'Restore client package dependencies');
+    assert.match(restore, /dotnet restore \.\/Source\/Clients\/Packages\.slnf -p:IsPackaging=true -p:Version=99\.0\.0 -p:PackageVersion=99\.0\.0/);
+    assert.doesNotMatch(restore, /dotnet (?:build|pack|publish)/);
+    assert.ok(packages.indexOf('Restore client package dependencies') < packages.indexOf(moved[1]));
+    assert.match(step(packages, 'Restore obj cache'), /if: github\.event_name != 'pull_request'/);
+    assert.ok(packages.indexOf('Extract Release build output') < packages.indexOf('Extract client package build output'));
+    assert.ok(packages.indexOf('Extract client package build output') < packages.indexOf(moved[1]));
+    const upload = step(pack, 'Upload client package build output');
+    for (const field of ['name: client-package-build-output', 'path: client-package-build-output.tar.zst', 'retention-days: 1', 'compression-level: 0', 'if-no-files-found: error']) {
+        assert.ok(upload.includes(field), `Missing artifact setting: ${field}`);
+    }
+    assert.ok(pack.indexOf(moved[4]) < pack.indexOf('Archive client package build output'));
+});
+
+test('client artifact roundtrip preserves both frameworks and obj without overwriting the server', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chronicle-client-artifact-'));
+    try {
+        const projects = ['Source/Clients/DotNET', 'Source/Kernel/Contracts'];
+        for (const project of projects) {
+            const assembly = project.endsWith('DotNET') ? 'Cratis.Chronicle' : 'Cratis.Chronicle.Contracts';
+            for (const framework of ['net10.0', 'net11.0']) {
+                await mkdir(join(root, project, 'bin/Release', framework), { recursive: true });
+                await writeFile(join(root, project, 'bin/Release', framework, `${assembly}.dll`), framework);
+            }
+            await mkdir(join(root, project, 'obj'), { recursive: true });
+            await writeFile(join(root, project, 'obj/project.assets.json'), 'pack inputs');
+        }
+        const run = name => step(pack, name).match(/run: \|\n([\s\S]+)/)[1];
+        const archived = spawnSync('bash', ['-c', run('Archive client package build output')], { cwd: root, encoding: 'utf8' });
+        assert.equal(archived.status, 0, archived.stderr);
+        await writeFile(join(root, 'Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll'), 'single-framework build');
+        await mkdir(join(root, 'Source/Kernel/Server/bin'), { recursive: true });
+        await writeFile(join(root, 'Source/Kernel/Server/bin/server.dll'), 'server build');
+        const extract = step(packages, 'Extract client package build output').match(/run: \|\n([\s\S]+)/)[1];
+        const extracted = spawnSync('bash', ['-c', extract], { cwd: root, encoding: 'utf8' });
+        assert.equal(extracted.status, 0, extracted.stderr);
+        assert.equal(await readFile(join(root, 'Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll'), 'utf8'), 'net11.0');
+        assert.equal(await readFile(join(root, 'Source/Clients/DotNET/obj/project.assets.json'), 'utf8'), 'pack inputs');
+        assert.equal(await readFile(join(root, 'Source/Kernel/Server/bin/server.dll'), 'utf8'), 'server build');
+        await rm(join(root, 'Source/Clients/DotNET/bin/Release/net10.0'), { recursive: true });
+        const incomplete = spawnSync('bash', ['-c', run('Archive client package build output')], { cwd: root, encoding: 'utf8' });
+        assert.notEqual(incomplete.status, 0, 'missing framework output must fail the producer');
+    } finally {
+        await rm(root, { recursive: true, force: true });
+    }
 });
 
 test('pack result fails closed, permitting skipped only outside pull requests', () => {
@@ -219,6 +276,35 @@ test('single build receives the find-derived client set, including new projects 
     }
 });
 
+for (const [job, runName, suffix] of [
+    ['specs-other', 'Run tests with coverage', '-${{ matrix.shard }}'],
+    ['specs-sql', 'Run SQL specs with coverage', '-${{ matrix.shard }}'],
+    ['integration-api', 'Run API integration tests with coverage', ''],
+    ['mongodb', 'Run MongoDB integration tests with coverage', ''],
+    ['neo4j', 'Run Neo4j integration tests with coverage (${{ matrix.lane }})', '-${{ matrix.lane }}']
+]) {
+    test(`${job} keeps crash minidumps for failed jobs`, () => {
+        // Cratis/Chronicle#5630: the test host intermittently dies with SIGSEGV and no dump was kept.
+        const run = step(jobs.get(job), runName);
+        const env = run.match(/^        env:\n([\s\S]*?)(?=^        \S)/m)?.[1];
+        assert.ok(env, 'Crash dump settings must be on the test-run step');
+        assert.match(env, /^          DOTNET_DbgEnableMiniDump: 1$/m);
+        assert.match(env, /^          DOTNET_DbgMiniDumpType: 1$/m);
+        assert.ok(env.includes('DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp\n'));
+        const script = run.split('        run: |\n')[1];
+        assert.ok(script, 'The test-run step must prepare the dump directory');
+        const mkdir = script.indexOf('mkdir -p "$RUNNER_TEMP/crash-dumps"');
+        assert.ok(mkdir >= 0 && mkdir < script.indexOf('node .github/scripts/run-'));
+        const upload = step(jobs.get(job), 'Upload crash dumps');
+        assert.match(upload, /^        if: failure\(\)$/m);
+        assert.match(upload, /uses: actions\/upload-artifact@/);
+        assert.ok(upload.includes(`          name: crash-dumps-${job}${suffix}\n`));
+        assert.ok(upload.includes('          path: ${{ runner.temp }}/crash-dumps/\n'));
+        assert.match(upload, /^          if-no-files-found: ignore$/m);
+        assert.match(upload, /^          retention-days: 3$/m);
+    });
+}
+
 test('three-shard workflow matches the planner and refreshed timing samples', async () => {
     const other = jobs.get('specs-other');
     const matrix = JSON.parse(other.match(/shard: (\[[^\]]+\])/)[1]);
@@ -237,8 +323,8 @@ test('three-shard workflow matches the planner and refreshed timing samples', as
     assert.equal(plan.length, ORDINARY_SHARDS);
     assert.ok(plan.every(shard => shard.projects.length && shard.defaulted.length === 0));
     const projects = plan.flatMap(shard => shard.projects);
-    assert.equal(projects.length, 25 + CORE_PARTS);
-    assert.equal(new Set(projects).size, 25 + CORE_PARTS);
+    assert.equal(projects.length, 26 + CORE_PARTS);
+    assert.equal(new Set(projects).size, 26 + CORE_PARTS);
     assert.equal(projects.filter(project => project.includes('#core-part-')).length, CORE_PARTS);
     assert.ok(!projects.includes('Source/Kernel/Core.Specs/Core.Specs.csproj'));
     // Train 8 wall calibration includes 55 seconds per Core part and mean shard overhead.

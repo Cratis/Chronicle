@@ -16,12 +16,13 @@ namespace Cratis.Chronicle.Clients;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> to get grains with.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="dormantObservers">The <see cref="Observation.IDormantObservers"/> that reads a dormant observer's clients without waking it.</param>
 /// <remarks>
 /// A client connects to one silo, so no single silo knows the whole picture. Everything that wants the cluster view -
 /// the gRPC connection service and the read model the Workbench queries - asks here rather than each assembling the
 /// sweep itself.
 /// </remarks>
-public sealed class ConnectedClientsQuery(IGrainFactory grainFactory, IOptions<ChronicleOptions> options)
+public sealed class ConnectedClientsQuery(IGrainFactory grainFactory, IOptions<ChronicleOptions> options, Observation.IDormantObservers? dormantObservers = null)
 {
     readonly TimeSpan _observeInterval = TimeSpan.FromSeconds(options.Value.ConnectedClients.ObserveIntervalSeconds);
 
@@ -102,8 +103,26 @@ public sealed class ConnectedClientsQuery(IGrainFactory grainFactory, IOptions<C
     {
         var sequenceId = string.IsNullOrEmpty(eventSequenceId) ? EventSequenceId.Log : (EventSequenceId)eventSequenceId;
         var key = new ObserverKey(observerId, eventStore, @namespace, sequenceId);
-        var subscription = await grainFactory.GetGrain<Observation.IObserver>(key).GetSubscription();
         var clients = new List<ConnectedClient>();
+
+        // A dormant observer holds its clients in its durable subscription; reading them there leaves it dormant.
+        if (dormantObservers is not null && await dormantObservers.Find(key) is { } dormant)
+        {
+            foreach (var target in dormant.Targets)
+            {
+                var silo = SiloAddress.FromParsableString(target.Silo);
+                var connectedClients = grainFactory.GetConnectedClients(silo);
+                var connectionId = new Concepts.Clients.ConnectionId(target.ConnectionId);
+                if (await connectedClients.IsConnected(connectionId))
+                {
+                    clients.Add(ToContract(await connectedClients.GetConnectedClient(connectionId), silo));
+                }
+            }
+
+            return clients;
+        }
+
+        var subscription = await grainFactory.GetGrain<Observation.IObserver>(key).GetSubscription();
 
         foreach (var target in subscription.Targets.Where(_ => _.ConnectedClient is not null))
         {

@@ -4,4 +4,4 @@
 using BenchmarkDotNet.Running;
 using Cratis.Chronicle.Benchmarks.Roster;
 
-BenchmarkRunner.Run<AdministratorRosterBenchmark>();
+await BenchmarkRunner.RunAsync<AdministratorRosterBenchmark>();

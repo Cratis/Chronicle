@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Compliance;
 /// <param name="options">The configured grace.</param>
 /// <param name="logger">Non-sensitive startup diagnostics.</param>
 /// <param name="timeProvider">The heartbeat clock.</param>
+/// <param name="stopBudget">The shared kernel stop deadline that also bounds the stop; none leaves only the host token.</param>
 public sealed class EncryptionKeyFenceProtocol(
     IStorage storage,
     IEncryptionKeyStorage keys,
@@ -32,7 +33,8 @@ public sealed class EncryptionKeyFenceProtocol(
     IOptions<ClusterMembershipOptions> membership,
     IOptions<ChronicleOptions> options,
     ILogger<EncryptionKeyFenceProtocol> logger,
-    TimeProvider timeProvider) : ILifecycleParticipant<ISiloLifecycle>, IDisposable
+    TimeProvider timeProvider,
+    IShutdownDrainBudget? stopBudget = null) : ILifecycleParticipant<ISiloLifecycle>, IDisposable
 {
     readonly CancellationTokenSource _stop = new();
     Task _heartbeats = Task.CompletedTask;
@@ -103,7 +105,12 @@ public sealed class EncryptionKeyFenceProtocol(
     async Task Stop(CancellationToken cancellationToken)
     {
         await _stop.CancelAsync();
-        await _heartbeats;
+        using var bounded = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stopBudget?.Token ?? CancellationToken.None);
+        if (!await _heartbeats.CompletesBefore(bounded.Token))
+        {
+            // A publication blocked on storage outlived the stop; it was abandoned rather than hold the silo stop.
+            logger.HeartbeatStopAbandoned();
+        }
     }
 
     async Task Heartbeat()

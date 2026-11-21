@@ -42,6 +42,12 @@ public class ProjectionReplayBenchmark : IDisposable, IAsyncDisposable
     EventSequenceNumber _seededTail = EventSequenceNumber.Unavailable;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of events the projection is reconstructed from.
     /// </summary>
     [Params(1000, 10000)]
@@ -130,7 +136,8 @@ public class ProjectionReplayBenchmark : IDisposable, IAsyncDisposable
     async Task WaitUntilCaughtUp()
     {
         var handler = _helper!.EventStore.Projections.GetHandlerFor<BenchmarkProjection>();
-        using var cancellation = new CancellationTokenSource(_completionTimeout);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
+        cancellation.CancelAfter(_completionTimeout);
 
         while (true)
         {

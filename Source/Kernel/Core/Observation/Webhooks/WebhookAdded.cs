@@ -32,4 +32,9 @@ public record WebhookAdded(
     /// Gets the policy for delivering event generations.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the signing policy for deliveries.
+    /// </summary>
+    public WebhookSigningMode Signing { get; init; } = WebhookSigningMode.None;
 }

@@ -4,9 +4,12 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Security.given;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Services.for_QueryExecutor;
 
+[Collection("SystemStoreGuard")]
 public class when_executing_a_routed_query : given.a_routed_query
 {
     public static TheoryData<string> SystemSpellings() => new() { "System", "SYSTEM", "system", "SyStEm" };
@@ -115,7 +118,10 @@ public class when_executing_a_routed_query : given.a_routed_query
     {
         _authentication = new global::Cratis.Chronicle.Configuration.Authentication { Enabled = authenticationEnabled };
         var previous = SystemStoreGuard.InProcessServices;
+        var accessor = new HttpContextAccessor();
+        var previousRequest = accessor.HttpContext;
         SystemStoreGuard.InProcessServices = CreateServices();
+        SystemStoreGuard.InProcessServices.GetRequiredService<IHttpContextAccessor>().HttpContext = null;
         try
         {
             var probe = new Probe();
@@ -129,6 +135,7 @@ public class when_executing_a_routed_query : given.a_routed_query
         }
         finally
         {
+            accessor.HttpContext = previousRequest;
             SystemStoreGuard.InProcessServices = previous;
         }
     }

@@ -3,6 +3,7 @@
 
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Microsoft.Extensions.Logging;
@@ -35,8 +36,19 @@ internal static partial class ObservationJobLogMessages
     [LoggerMessage(LogLevel.Error, "Could not notify observer that replay completed; replay or recovery must be retried")]
     internal static partial void ReplayCompletionNotificationFailed(this ILogger<ReplayObserver> logger, Exception exception);
 
-    [LoggerMessage(LogLevel.Information, "CatchUpObserver prepared no job steps: {KeysEnumerated} keys enumerated, {FailedKeysSkipped} skipped as failed, {EventTypeCount} reader-scope event types")]
-    internal static partial void CatchUpPreparedNoSteps(this ILogger<IJob> logger, int keysEnumerated, int failedKeysSkipped, int eventTypeCount);
+    [LoggerMessage(LogLevel.Information, "CatchUpObserver prepared no job steps: {KeysEnumerated} keys enumerated, {FailedKeysSkipped} skipped as failed, {EventTypeCount} reader-scope event types. Event store: {EventStore}, namespace: {Namespace}, event sequence: {EventSequenceId}, from sequence number: {FromEventSequenceNumber}, using stored-definition scope: {UsingStoredDefinition}, wildcard scope: {IsWildcard}, reader-scope event types: [{EventTypes}]")]
+    internal static partial void CatchUpPreparedNoSteps(
+        this ILogger<IJob> logger,
+        int keysEnumerated,
+        int failedKeysSkipped,
+        int eventTypeCount,
+        string eventStore,
+        string @namespace,
+        EventSequenceId eventSequenceId,
+        EventSequenceNumber fromEventSequenceNumber,
+        bool usingStoredDefinition,
+        bool isWildcard,
+        string eventTypes);
 
     [LoggerMessage(LogLevel.Warning, "{JobName} prepared no job steps, so the job concludes without doing any work")]
     internal static partial void NoJobStepsPrepared(this ILogger<IJob> logger, string jobName);

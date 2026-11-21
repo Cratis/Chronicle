@@ -440,8 +440,7 @@ public static class WellKnownTypes
     /// <returns>True if the type implements IReactor, false otherwise.</returns>
     public static bool ImplementsIReactor(ITypeSymbol typeSymbol, Compilation compilation)
     {
-        var reactorInterface = compilation.GetTypeByMetadataName(IReactorName);
-        return reactorInterface != null && typeSymbol.AllInterfaces.Contains(reactorInterface, SymbolEqualityComparer.Default);
+        return WellKnownSymbols.For(compilation).Implements(typeSymbol, IReactorName);
     }
 
     /// <summary>
@@ -452,8 +451,7 @@ public static class WellKnownTypes
     /// <returns>True if the type implements IReducer, false otherwise.</returns>
     public static bool ImplementsIReducer(ITypeSymbol typeSymbol, Compilation compilation)
     {
-        var reducerInterface = compilation.GetTypeByMetadataName(IReducerName);
-        return reducerInterface != null && typeSymbol.AllInterfaces.Contains(reducerInterface, SymbolEqualityComparer.Default);
+        return WellKnownSymbols.For(compilation).Implements(typeSymbol, IReducerName);
     }
 
     /// <summary>
@@ -464,8 +462,7 @@ public static class WellKnownTypes
     /// <returns>True if the type implements IAggregateRoot, false otherwise.</returns>
     public static bool ImplementsIAggregateRoot(ITypeSymbol typeSymbol, Compilation compilation)
     {
-        var aggregateRootInterface = compilation.GetTypeByMetadataName(IAggregateRootName);
-        return aggregateRootInterface is not null && typeSymbol.AllInterfaces.Contains(aggregateRootInterface, SymbolEqualityComparer.Default);
+        return WellKnownSymbols.For(compilation).Implements(typeSymbol, IAggregateRootName);
     }
 
     /// <summary>
@@ -532,14 +529,7 @@ public static class WellKnownTypes
     /// <returns>True if the type implements IProjectionFor&lt;T&gt;, false otherwise.</returns>
     public static bool ImplementsIProjectionFor(ITypeSymbol typeSymbol, Compilation compilation)
     {
-        var projectionForInterface = compilation.GetTypeByMetadataName(IProjectionForName);
-        if (projectionForInterface is null)
-        {
-            return false;
-        }
-
-        return typeSymbol.AllInterfaces.Any(i =>
-            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, projectionForInterface));
+        return WellKnownSymbols.For(compilation).Implements(typeSymbol, IProjectionForName);
     }
 
     /// <summary>
@@ -550,14 +540,7 @@ public static class WellKnownTypes
     /// <returns>True if the type implements IConstraint, false otherwise.</returns>
     public static bool ImplementsIConstraint(ITypeSymbol typeSymbol, Compilation compilation)
     {
-        var constraintInterface = compilation.GetTypeByMetadataName(IConstraintName);
-        if (constraintInterface is null)
-        {
-            return false;
-        }
-
-        return typeSymbol.AllInterfaces.Any(i =>
-            SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, constraintInterface));
+        return WellKnownSymbols.For(compilation).Implements(typeSymbol, IConstraintName);
     }
 
     /// <summary>

@@ -185,7 +185,17 @@ public class CatchUpObserver(
         {
             // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
             using var observerScope = logger.BeginObserverKeyScope(request.ObserverKey);
-            logger.CatchUpPreparedNoSteps(keysEnumerated, failedKeysSkipped, readerScope.EventTypes.Count);
+            logger.CatchUpPreparedNoSteps(
+                keysEnumerated,
+                failedKeysSkipped,
+                readerScope.EventTypes.Count,
+                JobKey.Scope,
+                JobKey.Namespace,
+                request.ObserverKey.EventSequenceId,
+                request.FromEventSequenceNumber,
+                request.ReaderScope is null,
+                readerScope.IsWildcard,
+                string.Join(", ", readerScope.EventTypes));
         }
 
         await observer.RegisterCatchingUpPartitions(keysToCatchUp);

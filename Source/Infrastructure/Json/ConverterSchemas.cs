@@ -81,7 +81,7 @@ static class ConverterSchemas
     /// <param name="schema">The <see cref="JsonSchema"/> of the value.</param>
     /// <returns>True when the value is protected.</returns>
     public static bool HasProtectedValueMetadata(JsonSchema schema) =>
-        HasOwnProtectedMetadata(schema) || (schema.Reference is { } reference && HasOwnProtectedMetadata(reference));
+        schema.ReferenceChain.Any(HasOwnProtectedMetadata);
 
     static bool HasOwnProtectedMetadata(JsonSchema schema) =>
         (schema.HasComplianceMetadata() && schema.GetComplianceMetadata().Any()) ||

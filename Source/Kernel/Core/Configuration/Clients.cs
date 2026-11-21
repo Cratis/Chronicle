@@ -68,4 +68,15 @@ public class Clients
     /// Gets the interval in seconds between keep-alive messages sent to a connected client.
     /// </summary>
     public int KeepAliveIntervalSeconds { get; init; } = 1;
+
+    /// <summary>
+    /// Gets how the open stream of a client keeps its subscriptions in place.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ClientKeeperMode.SiloLocal"/> (the default) confirms a subscription from its durable subscription, a storage
+    /// read shared by every stream of a namespace, instead of calling the client's grains, so an observer released while
+    /// dormant is not woken by it and the client grains are not kept warm for it. It applies only while dormant release
+    /// applies (see <c language="json">observers.durableSubscriptions</c>); <see cref="ClientKeeperMode.Legacy"/> restores the call per check.
+    /// </remarks>
+    public ClientKeeperMode KeeperMode { get; init; } = ClientKeeperMode.SiloLocal;
 }

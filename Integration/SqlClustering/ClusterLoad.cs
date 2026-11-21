@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
@@ -41,6 +42,12 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     readonly CancellationTokenSource _stop = new();
     readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
     readonly string _source = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Reconnect probes append to their own event source so they cannot contend with the load
+    /// for optimistic concurrency on the load source. Verification reads both sources.
+    /// </summary>
+    readonly string _probeSource = Guid.NewGuid().ToString();
     readonly ClusterReconnectReducer _reconnectReducer = new();
 #if CHRONICLE_ROLLING_DIAGNOSTICS
     readonly ClusterLoadDeliveryDiagnostics _deliveryDiagnostics = new();
@@ -135,29 +142,73 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     /// </summary>
     /// <param name="timeout">The complete failover and delivery budget.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="TimeoutException">The append or its delivery to both observers missed the deadline; the message names which observer missed which event.</exception>
     public async Task WaitForReconnectProgress(TimeSpan timeout)
     {
         using var deadline = new CancellationTokenSource(timeout);
         using var poll = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
-        while (true)
+        var started = Stopwatch.StartNew();
+        (Guid Id, EventSequenceNumber Sequence)? acknowledged = null;
+        try
         {
-            var id = Guid.NewGuid();
-            var result = await TryAppend(id, deadline.Token);
-            if (result is null)
+            while (true)
             {
-                await poll.WaitForNextTickAsync(deadline.Token);
-                continue;
-            }
+                var id = Guid.NewGuid();
+                var result = await TryAppend(id, deadline.Token);
+                if (result is null)
+                {
+                    await poll.WaitForNextTickAsync(deadline.Token);
+                    continue;
+                }
 
-            var acknowledged = (id, result.SequenceNumber);
-            _acknowledged.Enqueue(acknowledged);
-            while (!_observed.Contains(acknowledged) || !_reconnectReducer.HasHandled(id, result.SequenceNumber))
-            {
-                await poll.WaitForNextTickAsync(deadline.Token);
-            }
+                acknowledged = (id, result.SequenceNumber);
+                _acknowledged.Enqueue(acknowledged.Value);
+                while (!_observed.Contains(acknowledged.Value) || !_reconnectReducer.HasHandled(id, result.SequenceNumber))
+                {
+                    await poll.WaitForNextTickAsync(deadline.Token);
+                }
 
-            return;
+                return;
+            }
         }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+        {
+            throw new TimeoutException(DescribeMissedReconnectProgress(timeout, started.Elapsed, acknowledged));
+        }
+    }
+
+    /// <summary>
+    /// Describes which observer did not receive which event when reconnect progress missed its deadline, from what the
+    /// load already holds, so the failure says where delivery stopped without waiting any longer.
+    /// </summary>
+    /// <param name="timeout">The deadline that was missed.</param>
+    /// <param name="elapsed">How long the wait took.</param>
+    /// <param name="acknowledged">The append that was acknowledged, or null when no append was acknowledged in time.</param>
+    /// <returns>The failure message.</returns>
+    string DescribeMissedReconnectProgress(TimeSpan timeout, TimeSpan elapsed, (Guid Id, EventSequenceNumber Sequence)? acknowledged)
+    {
+        var observed = _observed.ToArray();
+        var reactorHighest = observed.Length == 0 ? "none" : observed.Max(@event => @event.Sequence.Value).ToString(CultureInfo.InvariantCulture);
+        var reducerHighest = _reconnectReducer.HighestHandled()?.Value.ToString(CultureInfo.InvariantCulture) ?? "none";
+        var progress = $"reactor 'cluster-integrity' highest observed sequence {reactorHighest}, reducer '{nameof(ClusterReconnectReducer)}' highest handled sequence {reducerHighest}";
+        if (acknowledged is not { } append)
+        {
+            return $"No append was acknowledged within {timeout.TotalSeconds:0.#} s (elapsed {elapsed.TotalSeconds:0.0} s); {progress}.";
+        }
+
+        var missing = new List<string>();
+        if (!observed.Contains(append))
+        {
+            missing.Add("reactor 'cluster-integrity'");
+        }
+
+        if (!_reconnectReducer.HasHandled(append.Id, append.Sequence))
+        {
+            missing.Add($"reducer '{nameof(ClusterReconnectReducer)}'");
+        }
+
+        var observers = missing.Count == 0 ? "both observers until the deadline" : string.Join(" and ", missing);
+        return $"Event {append.Id} at sequence {append.Sequence.Value} was acknowledged but not delivered to {observers} within {timeout.TotalSeconds:0.#} s (elapsed {elapsed.TotalSeconds:0.0} s); {progress}.";
     }
 
     async Task<AppendResult?> TryAppend(Guid id, CancellationToken cancellationToken)
@@ -165,7 +216,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         AppendResult result;
         try
         {
-            var append = _store.EventLog.Append(_source, new ClusterEventAppended(id));
+            var append = _store.EventLog.Append(_probeSource, new ClusterEventAppended(id));
             _outstanding.Enqueue(append);
             result = await append.WaitAsync(cancellationToken);
         }
@@ -195,7 +246,9 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         // An attempt that timed out or lost its connection has an unknown outcome: it may or may not have been stored.
         // Such attempts are allowed in the log at most once, but every acknowledged append must be there exactly once.
         var allowed = acknowledged.Select(append => append.Id).Concat(_unknown).ToHashSet();
-        var stored = await _store.EventLog.GetForEventSourceIdAndEventTypes(_source, []);
+        var stored = (await _store.EventLog.GetForEventSourceIdAndEventTypes(_source, []))
+            .Concat(await _store.EventLog.GetForEventSourceIdAndEventTypes(_probeSource, []))
+            .ToArray();
         var storedEvents = stored.Select(@event => (((ClusterEventAppended)@event.Content).Id, @event.Context.SequenceNumber)).ToArray();
         try
         {
@@ -209,7 +262,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
             await WaitForObservationsToSettle(storedEvents, TimeSpan.FromSeconds(15));
             var storedIds = stored.Select(@event => ((ClusterEventAppended)@event.Content).Id).ToArray();
             var storedSequences = stored.Select(@event => @event.Context.SequenceNumber.Value).Order().ToArray();
-            Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Count}, observed={_observed.Count}");
+            Console.WriteLine($"Acknowledged={acknowledged.Length}, failed={_failures}, unknown={_unknown.Count}, stored={stored.Length}, observed={_observed.Count}");
             storedIds.Distinct().Count().ShouldEqual(storedIds.Length);
             storedIds.All(allowed.Contains).ShouldBeTrue();
             acknowledged.All(append => storedIds.Contains(append.Id)).ShouldBeTrue();
@@ -328,7 +381,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         {
             _unknown.Enqueue(id);
         }
-        Failed($"{id}: {string.Join(';', result.Errors)}");
+        Failed($"{id}: {AppendFailureDescription.Describe(result)}");
     }
 
     internal static bool IsUncertainAppend(AppendResult result) =>
@@ -336,7 +389,19 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
 
     internal static bool IsUncertainAppend(Exception exception) =>
         exception is RpcException or TimeoutException or ConnectionUnavailable or ConnectionTimedOut ||
-        IsUnavailableSiloAppend(exception.GetType().FullName, exception.Message);
+        IsUnavailableSiloAppend(exception.GetType().FullName, exception.Message) ||
+        IsSiloStoppingAppend(exception.GetType().FullName, exception.Message);
+
+    /// <summary>
+    /// A silo that is shutting down refuses requests with a CommandFailed saying "Silo stopping" (#6019). The refusal
+    /// may have raced the append, so the outcome is uncertain: recorded as unknown and still verified against the stream.
+    /// </summary>
+    /// <param name="exceptionType">The full exception type name.</param>
+    /// <param name="message">The failure message.</param>
+    /// <returns>Whether this is the shutdown refusal.</returns>
+    internal static bool IsSiloStoppingAppend(string? exceptionType, string message) =>
+        exceptionType == "Cratis.Chronicle.Contracts.Commands.CommandFailed" &&
+        message.StartsWith("Command failed: Silo stopping", StringComparison.Ordinal);
 
     /// <summary>
     /// Until the cluster has declared a killed or stopped silo dead, a surviving silo can still forward an append to
@@ -362,7 +427,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
 
         var endpoint = DepartedEndpoint.Match(message);
         return endpoint.Success &&
-            departed.Contains((endpoint.Groups["address"].Value, int.Parse(endpoint.Groups["generation"].Value, System.Globalization.CultureInfo.InvariantCulture)));
+            departed.Contains((endpoint.Groups["address"].Value, int.Parse(endpoint.Groups["generation"].Value, CultureInfo.InvariantCulture)));
     }
 
     internal static bool IsUnavailableSiloAppend(string? exceptionType, string message)

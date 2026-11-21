@@ -19,6 +19,7 @@ way - and a pattern missing from CODEOWNERS is the same disarming on the review 
 
 import argparse
 import os
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -179,8 +180,9 @@ def report(found, changed, run_integration=False):
     return True
 
 
-def verify(root, contract):
-    """Fails when a pattern matches nothing, or is not owned in CODEOWNERS."""
+def verify(root, contract, policy_root=None):
+    """Checks tracked files against the contract and owners from the policy checkout."""
+    policy_root = policy_root or root
     problems = []
 
     tracked = tracked_files(root)
@@ -192,7 +194,7 @@ def verify(root, contract):
                 f"gate is now disarmed for that area, or the pattern was never right - fix "
                 f"{CONTRACT} rather than deleting the entry.")
 
-    owned = owned_paths(root)
+    owned = owned_paths(policy_root)
     for area, pattern in contract:
         expected = as_codeowners_path(pattern)
         if expected not in owned:
@@ -207,7 +209,7 @@ def verify(root, contract):
 
     print(f"{len(contract)} hot-core patterns all match tracked files and all have an owner in {CODEOWNERS}.")
 
-    if PLACEHOLDER_MARKER in read_text(root, CODEOWNERS):
+    if PLACEHOLDER_MARKER in read_text(policy_root, CODEOWNERS):
         print(f"::warning file={CODEOWNERS}::{CODEOWNERS} still carries the {PLACEHOLDER_MARKER} "
               "marker, so its owner does not resolve. GitHub ignores a rule whose owner is not a real "
               "user or team with read access - the file parses and enforces nothing. Set the real "
@@ -246,13 +248,15 @@ def main():
     parser.add_argument("--head", default="HEAD", help="Head revision of the diff to inspect.")
     parser.add_argument("--files-from", help="Read changed paths from this file, or `-` for stdin.")
     parser.add_argument("--verify", action="store_true", help="Check the contract itself instead of a diff.")
+    parser.add_argument("--policy-root", default=Path(__file__).resolve().parents[2],
+                        help="Checkout containing the hot-core contract and CODEOWNERS.")
     arguments = parser.parse_args()
 
     root = git(os.getcwd(), "rev-parse", "--show-toplevel").strip()
-    contract = read_contract(root)
+    contract = read_contract(arguments.policy_root)
 
     if arguments.verify:
-        verify(root, contract)
+        verify(root, contract, arguments.policy_root)
         return
 
     changed = changed_files(root, arguments.base, arguments.head, arguments.files_from)

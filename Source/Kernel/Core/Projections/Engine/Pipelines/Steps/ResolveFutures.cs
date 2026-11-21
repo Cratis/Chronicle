@@ -116,6 +116,11 @@ public class ResolveFutures : ICanPerformProjectionPipelineStep
             return context;
         }
 
+        if (projection.SupportsFencedGlobalWrites)
+        {
+            throw new FencedWriteNotSupportedException($"projection '{projection.Identifier}' has persisted futures; clear them before it can be written with revision checks");
+        }
+
         _logger.FoundPendingFutures(futures.Count(), projection.Identifier);
         using var resolutionScope = ParentKeyResolutionScope.ForDeferredRelease(context.Event.Context.SequenceNumber);
 

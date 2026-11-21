@@ -19,6 +19,12 @@ public class DecisionReadBenchmark : IDisposable, IAsyncDisposable
     Guid _key;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of events in the key's history.
     /// </summary>
     [Params(10, 100, 1000, 10000)]
@@ -87,7 +93,7 @@ public class DecisionReadBenchmark : IDisposable, IAsyncDisposable
     [Benchmark]
     public async Task<BenchmarkMaterializedReadModel> DecisionRead()
     {
-        var read = await _reads.GetDetached<BenchmarkMaterializedReadModel>(_key);
+        var read = await _reads.GetDetached<BenchmarkMaterializedReadModel>(_key, CancellationToken);
         if (!read.Exists || read.Instance is null || read.Instance.Value != HistoryLength - 1)
         {
             throw new InvalidOperationException($"The decision read resolved value {read.Instance?.Value}, expected {HistoryLength - 1}.");

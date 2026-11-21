@@ -583,6 +583,7 @@ json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition
   isActive: bool
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner
+  signing: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningMode
   target: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTarget
 concept Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookId : string
 enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookOwner : int
@@ -608,6 +609,10 @@ enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKeyStatus : in
   Active = 0
   Overlap = 1
   Retired = 2
+enum Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningMode : int
+  Ed25519 = 1
+  HmacSha256 = 2
+  None = 0
 json Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookTarget
   authorization: Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookAuthorization
   headers: System.Collections.Generic.IReadOnlyDictionary<string,string>
@@ -906,7 +911,9 @@ json Cratis.Chronicle.EventSequences.AppendManyResult
   hasConcurrencyViolations: bool
   hasConstraintViolations: bool
   hasErrors: bool
+  isRetryable: bool
   isSuccess: bool
+  retryAfter: System.TimeSpan?
   sequenceNumbers: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventSequenceNumber>
 enum Cratis.Chronicle.EventSequences.AppendOutcome : int
   AlreadyAppended = 1
@@ -923,7 +930,9 @@ json Cratis.Chronicle.EventSequences.AppendResult
   hasConcurrencyViolations: bool
   hasConstraintViolations: bool
   hasErrors: bool
+  isRetryable: bool
   isSuccess: bool
+  retryAfter: System.TimeSpan?
   sequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 json Cratis.Chronicle.EventSequences.AppendedEventsQueueObserverSubscription
   allEventTypes: bool
@@ -1526,6 +1535,18 @@ json Cratis.Chronicle.Storage.Observation.ObserverDefinition
   isReplayable: bool
   owner: Cratis.Chronicle.Concepts.Observation.ObserverOwner
   type: Cratis.Chronicle.Concepts.Observation.ObserverType
+json Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription
+  deliversPages: bool
+  filters: Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionFilters
+  kind: Cratis.Chronicle.Storage.Observation.ObserverSubscriptionKind
+  targets: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionTarget>
+json Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionFilters
+  eventSourceType: string
+  eventStreamType: string
+  tags: System.Collections.Generic.IReadOnlyList<string>
+json Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionTarget
+  connectionId: string
+  silo: string
 json Cratis.Chronicle.Storage.Observation.ObserverEventTypeRetirement
   eventTypeId: Cratis.Chronicle.Concepts.Events.EventTypeId
   operationId: System.Guid
@@ -1558,6 +1579,7 @@ json Cratis.Chronicle.Storage.Observation.ObserverState
   alertRevision: long
   catchingUpPartitions: System.Collections.Generic.ISet<Cratis.Chronicle.Concepts.Keys.Key>
   deliveryFences: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Observation.DeliveryFenceState>
+  durableSubscription: Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription
   failedPartitionCount: Cratis.Chronicle.Concepts.Observation.FailedPartitionCount
   failedPartitions: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.FailedPartition>
   handledEventCount: Cratis.Chronicle.Concepts.Events.EventCount
@@ -1580,6 +1602,15 @@ json Cratis.Chronicle.Storage.Observation.ObserverState
   tailEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   typeSetControl: Cratis.Chronicle.Storage.Observation.ObserverTypeSetControl
   webhookProbe: Cratis.Chronicle.Storage.Observation.WebhookProbeState
+enum Cratis.Chronicle.Storage.Observation.ObserverSubscriptionKind : int
+  ClientReactor = 1
+  ClientReducer = 2
+  CollapsingProjection = 7
+  EventStoreSubscription = 6
+  KernelReactor = 4
+  None = 0
+  Projection = 3
+  Webhook = 5
 json Cratis.Chronicle.Storage.Observation.ObserverTypeSetChange
   additions: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Events.EventTypeId>
   initialTail: Cratis.Chronicle.Concepts.Events.EventSequenceNumber

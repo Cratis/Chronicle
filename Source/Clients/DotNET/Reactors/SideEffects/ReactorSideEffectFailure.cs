@@ -93,7 +93,11 @@ public record ReactorSideEffectFailure(IEnumerable<AppendFailure> AppendFailures
             constraintViolations,
             appendResult.HasConcurrencyViolations,
             errors,
-            targetEventSourceIds.Distinct().ToList());
+            targetEventSourceIds.Distinct().ToList())
+        {
+            IsRetryable = appendResult.IsRetryable,
+            RetryAfter = appendResult.RetryAfter
+        };
 
         return new([failure]);
     }

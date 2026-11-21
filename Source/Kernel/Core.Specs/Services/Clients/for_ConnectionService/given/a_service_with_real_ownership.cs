@@ -57,7 +57,7 @@ public class a_service_with_real_ownership : Specification
             new ConnectedClientsQuery(grainFactory, options),
             _openConnections,
             ownership,
-            new ConnectedClientsVisibility(options, ownership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
+            new ConnectedClientsVisibility(options, ownership, new Microsoft.AspNetCore.Http.HttpContextAccessor(), AuthenticatedCalls.ApplicationServices()),
             NullLogger<KernelConnectionService>.Instance,
             options);
     }

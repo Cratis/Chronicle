@@ -1,5 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Cratis.Chronicle.Configuration;
 namespace Cratis.Chronicle.Server;
@@ -11,6 +12,9 @@ namespace Cratis.Chronicle.Server;
 /// <remarks>
 /// The file is checked on a TLS handshake, at most once per check interval, rather than with a file system watcher,
 /// because watchers do not reliably see the atomic symlink swap Kubernetes uses to update mounted Secrets.
+/// A change is detected by the SHA-256 of the file content, read through any symbolic links. The write time and length
+/// of the path cannot be used: for a symbolic link they describe the link itself, and a Secret volume repoints a directory
+/// link next to the keystore link instead of touching the keystore link, so they never change.
 /// A file that cannot be read or parsed (for instance half-written) leaves the current certificate in place.
 /// Replaced certificates are not disposed, because handshakes already in flight may still hold them.
 /// </remarks>
@@ -23,7 +27,7 @@ internal sealed class ReloadingCertificate
     readonly Action<Exception>? _failed;
     readonly object _lock = new();
     volatile X509Certificate2 _current;
-    (DateTime Written, long Length) _loadedFrom;
+    string? _loadedFrom;
     long _nextCheck;
 
     /// <summary>
@@ -49,7 +53,7 @@ internal sealed class ReloadingCertificate
         _timeProvider = timeProvider;
         _reloaded = reloaded;
         _failed = failed;
-        _loadedFrom = Stamp();
+        _loadedFrom = Read()?.Stamp;
         _nextCheck = _timeProvider.GetTimestamp() + ToTicks(checkInterval);
     }
 
@@ -71,17 +75,24 @@ internal sealed class ReloadingCertificate
 
     long ToTicks(TimeSpan span) => (long)(span.TotalSeconds * _timeProvider.TimestampFrequency);
 
-    (DateTime Written, long Length) Stamp()
+    /// <summary>
+    /// Reads the keystore and computes the stamp that identifies its content.
+    /// </summary>
+    /// <returns>The stamp and the bytes it was computed from, or null when the file cannot be read.</returns>
+    (string Stamp, byte[] Content)? Read()
     {
         try
         {
-            // FileInfo follows symlinks, which is what a Kubernetes Secret volume uses.
-            var info = new FileInfo(_tls.CertificatePath!);
-            return info.Exists ? (info.LastWriteTimeUtc, info.Length) : default;
+            // File.ReadAllBytes opens the path, so it follows any chain of symbolic links to the file that is actually served.
+            // That matters for a Kubernetes Secret volume: the keystore is a link through ..data, and a renewal repoints
+            // ..data at a new directory without touching the keystore link. The write time and length of a FileInfo for
+            // that path describe the link itself and never change, so the content is what identifies a renewal.
+            var content = File.ReadAllBytes(_tls.CertificatePath!);
+            return (Convert.ToHexString(SHA256.HashData(content)), content);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return default;
+            return null;
         }
     }
 
@@ -95,20 +106,22 @@ internal sealed class ReloadingCertificate
         try
         {
             Interlocked.Exchange(ref _nextCheck, now + ToTicks(_checkInterval));
-            var stamp = Stamp();
-            if (stamp == default || stamp == _loadedFrom)
+            var read = Read();
+            if (read is null || read.Value.Stamp == _loadedFrom)
             {
                 return;
             }
 
+            var (stamp, content) = read.Value;
+
             try
             {
-                var certificate = X509CertificateLoader.LoadPkcs12FromFile(_tls.CertificatePath!, _tls.CertificatePassword);
+                var certificate = X509CertificateLoader.LoadPkcs12(content, _tls.CertificatePassword);
                 _current = certificate;
                 _loadedFrom = stamp;
                 _reloaded?.Invoke(certificate);
             }
-            catch (Exception ex) when (ex is IOException or System.Security.Cryptography.CryptographicException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException or CryptographicException or UnauthorizedAccessException)
             {
                 // Remember the stamp so a broken file is reported once, not on every check; the next change is tried again.
                 _loadedFrom = stamp;

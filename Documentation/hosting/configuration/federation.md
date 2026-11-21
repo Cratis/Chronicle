@@ -22,7 +22,7 @@ A link is one direction. Two services consuming each other are two links, each w
 | --- | --- | --- | --- |
 | `federation.enabled` | `Cratis__Chronicle__Federation__Enabled` | `false` | Opens the federation listener and runs consumer bindings. Setting it to `false` is a kill switch for every link |
 | `federation.port` | `Cratis__Chronicle__Federation__Port` | `35100` | Port of the listener. Must differ from the main and health ports |
-| `federation.certificatePath` | `Cratis__Chronicle__Federation__CertificatePath` | none | PKCS#12 certificate the listener presents. There is no fallback to the main TLS certificate |
+| `federation.certificatePath` | `Cratis__Chronicle__Federation__CertificatePath` | none | PKCS#12 certificate the listener presents. There is no fallback to the main [TLS certificate](tls.md#certificates-the-kernel-uses) |
 | `federation.certificatePasswordPath` | `Cratis__Chronicle__Federation__CertificatePasswordPath` | none | Path to a file holding the certificate password |
 | `federation.limits.maxBatchSize` | `Cratis__Chronicle__Federation__Limits__MaxBatchSize` | `500` | Events returned by one pull |
 | `federation.limits.maxEventsPerSecond` | `Cratis__Chronicle__Federation__Limits__MaxEventsPerSecond` | `5000` | Per-link event rate |
@@ -66,6 +66,8 @@ Write it as `sha256:<base64>`. In configuration:
 
 `AllPublic` covers every public event type. Set `AllPublic` to `false` and list `EventTypes` to grant specific types. Either way the ceiling is the set of public event types: a private or unspecified type is never delivered, whatever the grant says.
 
+`Grants` is empty by default. Within a grant, `Namespaces` defaults to `["Default"]` and must contain at least one nonempty name; `AllPublic` defaults to `false`, and `EventTypes` to an empty list. Set `ClientPin` and `EventStore`; neither has a usable default. When `AllPublic` is `false`, at least one nonempty `EventTypes` entry is required; an empty selection is rejected.
+
 Grants are changed at runtime through the `SetFederationGrant` and `RevokeFederationLink` commands, the Federation page of the Workbench or the CLI. Revoking a link stops its delivery at once and does not affect other links. Setting the grant again reinstates it. A consumer retries a denied link every 90 seconds, so a reinstated link resumes within that time.
 
 ## Set up a consumer binding
@@ -102,6 +104,8 @@ A binding maps the logical source name your code uses to a physical peer.
 ```
 
 `ClientCertificate` is the **name** of an entry in `Certificates`, never a secret value. The peer's server certificate is trusted only if its public key matches `ServerPin`. The chain and any certificate authority are ignored.
+
+`Bindings` and `Certificates` are empty by default. In a binding, `RemoteNamespace` and `TargetNamespace` default to `Default`; the other fields shown above have no usable defaults. `Endpoint` must be an absolute HTTPS URI. A referenced certificate needs a `Path` to an existing PKCS#12 file. `PasswordPath` is optional and has no default; set it when the certificate requires a password.
 
 In code nothing changes: an event contract marked `[EventStore("orders-service")]`, or an explicit subscription from `orders-service`, selects the event types. The consumer requests exactly those types, the producer intersects them with its grant, and the events are appended to the `inbox-orders-service` sequence of the target event store.
 
@@ -167,6 +171,7 @@ Hosted federation is served on the federation listener, so enable that first. Th
 | `Hosted:ListenerCertificateLifetime` | 30 days | The lifetime of the listener certificate the kernel issues itself. |
 | `Hosted:RequestsPerMinutePerSource` | 10 | How many requests one source address may make per minute, counted separately for fetching the authority and redeeming, and for renewing. |
 | `Hosted:MaxConcurrentEnrollmentRequests` | 16 | How many pre-authentication enrollment requests are served at once. More are refused with `503`. |
+| `Hosted:MaxConcurrentRenewalRequests` | 16 | How many renewal requests are served at once. Renewals have a separate pool so anonymous enrollment traffic cannot exhaust renewal capacity; excess requests receive `503`. |
 | `Hosted:KeyEncryptionKeyPath` | none | A file holding the key-encryption key that wraps the authority key. Required, see [Provision the key-encryption key](#provision-the-key-encryption-key). |
 | `Hosted:PreviousKeyEncryptionKeyPath` | none | The previous key-encryption key, kept readable while keys wrapped under it exist. |
 | `Hosted:Applications` | empty | Client ids of applications that may manage hosted federation (enrollments, issued certificates, subject policies and links) and nothing else. See [Let an operator application manage hosted federation](#let-an-operator-application-manage-hosted-federation). |
@@ -378,7 +383,7 @@ The dialer reconnects with backoff when the connection is lost and resumes both 
 | Setting | Meaning |
 | --- | --- |
 | `Enabled` | Dials the authority this kernel enrolled with. Off by default. |
-| `EventStore`, `Namespace` | The local event store whose inbox receives the authority's events and whose outbox is served to it. Dialing needs an event store. |
+| `EventStore`, `Namespace` | The local event store whose inbox receives the authority's events and whose outbox is served to it. `EventStore` has no default and is required for dialing; `Namespace` defaults to `Default`. |
 | `LogicalSource` | The source name your event store subscriptions use for the authority. Defaults to `hosted`. |
 | `Serve` | Also produces this kernel's public outbox to the authority over the same connection. Off by default; the authority still needs an `AcceptorInbound` entry for this kernel. |
 | `ServeEventTypes` | Limits what is served. Empty serves every public event type. |

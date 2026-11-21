@@ -16,7 +16,7 @@ public class when_resolving_srv_connection_string_without_records : Specificatio
         var lookupClient = Substitute.For<ILookupClient>();
         var response = Substitute.For<IDnsQueryResponse>();
         response.Answers.Returns([]);
-        lookupClient.QueryAsync(Arg.Any<string>(), QueryType.SRV, Arg.Any<QueryClass>(), Arg.Any<CancellationToken>()).Returns(response);
+        lookupClient.QueryAsync(Arg.Any<DnsQuestion>(), Arg.Is<DnsQueryAndServerOptions>(options => !options.UseCache), Arg.Any<CancellationToken>()).Returns(response);
         _resolver = new ChronicleServerAddressResolver(lookupClient);
         _connectionString = new ChronicleConnectionString("chronicle+srv://cluster.example.com");
     }

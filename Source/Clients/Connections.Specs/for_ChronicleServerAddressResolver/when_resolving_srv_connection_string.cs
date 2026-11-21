@@ -23,14 +23,18 @@ public class when_resolving_srv_connection_string : Specification
             CreateSrvRecord(priority: 0, weight: 1, port: 35000, target: "node1.example.com."),
             CreateSrvRecord(priority: 0, weight: 10, port: 35002, target: "node3.example.com.")
         ]);
-        _lookupClient.QueryAsync("_chronicle._tcp.cluster.example.com", QueryType.SRV, Arg.Any<QueryClass>(), Arg.Any<CancellationToken>()).Returns(response);
+        _lookupClient.QueryAsync(
+            Arg.Is<DnsQuestion>(question => question.QueryName.Value == "_chronicle._tcp.cluster.example.com." && question.QuestionType == QueryType.SRV),
+            Arg.Is<DnsQueryAndServerOptions>(options => !options.UseCache),
+            Arg.Any<CancellationToken>()).Returns(response);
         _resolver = new ChronicleServerAddressResolver(_lookupClient);
         _connectionString = new ChronicleConnectionString("chronicle+srv://cluster.example.com");
     }
 
     async Task Because() => _result = await _resolver.Resolve(_connectionString);
 
-    [Fact] void should_return_addresses_ordered_by_priority_then_weight() => _result.ShouldEqual(
+    [Fact]
+    void should_return_addresses_ordered_by_priority_then_weight() => _result.ShouldEqual(
         new ChronicleServerAddress("node3.example.com", 35002),
         new ChronicleServerAddress("node1.example.com", 35000),
         new ChronicleServerAddress("node2.example.com", 35001));

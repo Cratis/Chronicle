@@ -75,4 +75,34 @@ internal static partial class ChronicleServerStartupTaskLogging
 
     [LoggerMessage(LogLevel.Warning, "Skipping an event store registered without a name. Nothing can address it, so it is not started; remove the entry with an empty name from the cluster's event store registry")]
     internal static partial void SkippingEventStoreWithoutAName(this ILogger<ChronicleServerStartupTask> logger);
+
+    [LoggerMessage(LogLevel.Information, "Startup phase '{Phase}' completed in {Duration}")]
+    internal static partial void StartupPhaseCompleted(this ILogger<ChronicleServerStartupTask> logger, string phase, TimeSpan duration);
+
+    [LoggerMessage(LogLevel.Information, "Startup completed in {Duration}; deferred work continues in the background")]
+    internal static partial void StartupCompleted(this ILogger<ChronicleServerStartupTask> logger, TimeSpan duration);
+
+    [LoggerMessage(LogLevel.Information, "Background startup work started for {EventStores} event store(s)")]
+    internal static partial void DeferredStartupWorkStarted(this ILogger<ChronicleServerStartupTask> logger, int eventStores);
+
+    [LoggerMessage(LogLevel.Information, "Background startup work for event store '{EventStore}' completed in {Duration} ({Namespaces} namespace(s), {Failed} failed, pass {Pass})")]
+    internal static partial void DeferredStartupWorkEventStoreCompleted(this ILogger<ChronicleServerStartupTask> logger, EventStoreName eventStore, TimeSpan duration, int namespaces, int failed, int pass);
+
+    [LoggerMessage(LogLevel.Warning, "Background startup work for event store '{EventStore}' namespace '{Namespace}' failed; it will be retried in {Delay}")]
+    internal static partial void DeferredStartupWorkUnitFailed(this ILogger<ChronicleServerStartupTask> logger, Exception exception, EventStoreName eventStore, string @namespace, TimeSpan delay);
+
+    [LoggerMessage(LogLevel.Information, "Background startup work finished in {Duration}: {Units} unit(s), {Failed} still failing after {Passes} pass(es)")]
+    internal static partial void DeferredStartupWorkFinished(this ILogger<ChronicleServerStartupTask> logger, TimeSpan duration, int units, int failed, int passes);
+
+    [LoggerMessage(LogLevel.Warning, "Background startup work gave up on {Failed} unit(s) after {Passes} pass(es). Grains still activate and repair themselves on first use; the next restart repeats this work")]
+    internal static partial void DeferredStartupWorkGaveUp(this ILogger<ChronicleServerStartupTask> logger, int failed, int passes);
+
+    [LoggerMessage(LogLevel.Information, "Background startup work stopped after {Duration} because the silo is shutting down")]
+    internal static partial void DeferredStartupWorkStopped(this ILogger<ChronicleServerStartupTask> logger, TimeSpan duration);
+
+    [LoggerMessage(LogLevel.Error, "Background startup work aborted unexpectedly. Grains still activate and repair themselves on first use; the next restart repeats this work")]
+    internal static partial void DeferredStartupWorkAborted(this ILogger<ChronicleServerStartupTask> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Warning, "Resuming persisted jobs did not finish within {Budget}; the remaining namespaces are resumed in the background")]
+    internal static partial void JobRecoveryDeferred(this ILogger<ChronicleServerStartupTask> logger, Exception exception, TimeSpan budget);
 }

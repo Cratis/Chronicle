@@ -53,6 +53,16 @@ public class AppendResult
     public bool HasErrors => Errors.Any();
 
     /// <summary>
+    /// Gets whether this attempt was refused solely because a constraint index is unavailable.
+    /// </summary>
+    public bool IsRetryable => !HasConstraintViolations && !HasConcurrencyViolations && HasErrors && Errors.All(error => error == AppendError.ConstraintIndexUnavailable);
+
+    /// <summary>
+    /// Gets the suggested delay before retrying an index-unavailable refusal, otherwise null.
+    /// </summary>
+    public TimeSpan? RetryAfter => IsRetryable ? TimeSpan.FromSeconds(1) : null;
+
+    /// <summary>
     /// Gets a value indicating whether the concurrency check was actually performed for the append.
     /// </summary>
     /// <remarks>

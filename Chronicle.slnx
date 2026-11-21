@@ -4,6 +4,8 @@
         <Project Path="Benchmarks/Chronicle.Benchmarks.Clustering.Specs/Chronicle.Benchmarks.Clustering.Specs.csproj" />
         <Project Path="Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj" />
         <Project Path="Benchmarks/Chronicle.Benchmarks.SqlEventStorage/Chronicle.Benchmarks.SqlEventStorage.csproj" />
+        <Project Path="Benchmarks/Chronicle.Benchmarks.Storage.Specs/Chronicle.Benchmarks.Storage.Specs.csproj" />
+        <Project Path="Benchmarks/Chronicle.Benchmarks.Storage/Chronicle.Benchmarks.Storage.csproj" />
     </Folder>
     <Folder Name="/Source/Clients/">
         <Project Path="Source/Clients/Aspire/Aspire.csproj" />

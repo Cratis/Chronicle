@@ -7,6 +7,11 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    /// <summary>One read of a state at a time: Orleans refuses a read while another read of the same state is in flight.</summary>
+    readonly SerializedStateReads _stateReads = new();
+    readonly SerializedStateReads _definitionReads = new();
+    readonly SerializedStateReads _failureReads = new();
+
     /// <summary>
     /// Gets whether this activation's key addresses the event sequence the stored definition is on.
     /// </summary>
@@ -70,7 +75,7 @@ public partial class Observer
     /// <returns>Whether the activation relinquished ownership.</returns>
     async Task<bool> RelinquishOwnershipIfMoved()
     {
-        await observerDefinition.ReadStateAsync();
+        await _definitionReads.Read(observerDefinition.ReadStateAsync);
         if (KeyOwnsDefinition) return false;
         if (!_observerExists) return true;
 
@@ -100,7 +105,7 @@ public partial class Observer
         if (KeyOwnsDefinition) return;
 
         var activatedOn = Definition.EventSequenceId;
-        await observerDefinition.ReadStateAsync();
+        await _definitionReads.Read(observerDefinition.ReadStateAsync);
         if (!KeyOwnsDefinition) throw new ObserverKeyDoesNotMatchDefinition(_observerKey, Definition.EventSequenceId);
 
         // The definition is shared across namespaces, so a registration through another namespace's activation can

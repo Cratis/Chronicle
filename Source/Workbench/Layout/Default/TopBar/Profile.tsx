@@ -22,7 +22,7 @@ const ProfileItem = ({ icon, label, onClick }: { icon: any, label: string, onCli
 
 export const Profile = () => {
     const { isDarkMode, toggle: toggleDarkMode } = useDarkMode();
-    const { logout, isAuthenticationEnabled } = useAuth();
+    const { logout, canLogout } = useAuth();
     const [logoutError, setLogoutError] = useState('');
     const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
 
@@ -61,7 +61,7 @@ export const Profile = () => {
                                         {isDarkMode ?
                                             <ProfileItem icon={<icons.FaSun />} label={strings.layout.topBar.profile.lightMode} onClick={toggleDarkMode} /> :
                                             <ProfileItem icon={<icons.FaMoon />} label={strings.layout.topBar.profile.darkMode} onClick={toggleDarkMode} />}
-                                        {isAuthenticationEnabled && <ProfileItem icon={<icons.FaSignOutAlt />} label="Logout" onClick={handleLogout} />}
+                                        {canLogout && <ProfileItem icon={<icons.FaSignOutAlt />} label="Logout" onClick={handleLogout} />}
                                     </ul>
                                     {logoutError && <p role='alert'>{logoutError}</p>}
                                 </Popover.Content>
