@@ -9,7 +9,7 @@ using Microsoft.Win32.SafeHandles;
 namespace Cratis.Chronicle.Connections;
 
 /// <summary>
-/// Creates private token cache files and validates Unix cache permissions.
+/// Creates private token cache files and validates cache permissions and ownership.
 /// </summary>
 internal static class TokenCacheFileSecurity
 {
@@ -73,7 +73,7 @@ internal static class TokenCacheFileSecurity
     {
         if (OperatingSystem.IsWindows())
         {
-            return true;
+            return WindowsTokenCachePermissions.CanRead(handle);
         }
 
         const UnixFileMode shared = UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
