@@ -27,7 +27,7 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Error, "No Chronicle server accepted a connection within {TimeoutSeconds} seconds. Candidates: {Servers}")]
     internal static partial void TimedOut(this ILogger<ChronicleConnection> logger, string servers, int timeoutSeconds);
 
-    [LoggerMessage(LogLevel.Debug, "Could not complete the handshake with Chronicle server {Server}: {Reason}")]
+    [LoggerMessage(LogLevel.Warning, "Could not complete the handshake with Chronicle server {Server}: {Reason}")]
     internal static partial void EndpointHandshakeFailed(this ILogger<ChronicleConnection> logger, string server, string reason);
 
     [LoggerMessage(LogLevel.Warning, "The keep-alive stream from Chronicle server {Server} ended, reconnecting")]
