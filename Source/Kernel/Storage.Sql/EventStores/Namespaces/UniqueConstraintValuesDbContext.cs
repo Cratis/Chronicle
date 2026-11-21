@@ -45,6 +45,11 @@ public class UniqueConstraintValuesDbContext(DbContextOptions<UniqueConstraintVa
             entity.HasKey(_ => _.Value);
             entity.Property(_ => _.Value).HasMaxLength(200).IsRequired();
             entity.Property(_ => _.EventSourceId).HasMaxLength(200).IsRequired();
+            if (Database.IsSqlServer())
+            {
+                entity.Property(_ => _.Value).UseCollation(UniqueConstraintOrdinalColumns.SqlServerCollation);
+                entity.Property(_ => _.EventSourceId).UseCollation(UniqueConstraintOrdinalColumns.SqlServerCollation);
+            }
             entity.Property(_ => _.SequenceNumber).IsRequired();
             entity.HasIndex(_ => _.EventSourceId);
             entity.Property(_ => _.Subject).HasMaxLength(UniqueConstraintMigrator.SubjectMaxLength);
