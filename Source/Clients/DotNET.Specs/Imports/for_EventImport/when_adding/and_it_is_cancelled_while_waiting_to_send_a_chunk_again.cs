@@ -29,8 +29,11 @@ public class and_it_is_cancelled_while_waiting_to_send_a_chunk_again : given.an_
 
     async Task Because()
     {
-        await Import.Add(Events(2), _cancellation.Token);
-        _error = await Catch.Exception(() => Import.Complete());
+        _error = await Catch.Exception(async () =>
+        {
+            await Import.Add(Events(2), _cancellation.Token);
+            await Import.Complete();
+        });
     }
 
     void Destroy() => _cancellation.Dispose();
