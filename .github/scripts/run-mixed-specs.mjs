@@ -78,13 +78,31 @@ function apiPageRecords(page, key) {
     if (!Array.isArray(page?.[key])) fail(`Malformed producer API page: ${key}`);
     return page[key];
 }
+const MAX_OFFENDERS = 10;
+function describeRecord(record) {
+    return `${record?.name ?? 'unnamed'} attempt ${record?.run_attempt ?? 'n/a'}`;
+}
+function identityOffenders(records) {
+    const byId = new Map();
+    for (const record of records) {
+        const id = record?.id;
+        byId.set(id, [...(byId.get(id) ?? []), record]);
+    }
+    const offenders = [];
+    for (const [id, group] of byId) {
+        if (!positiveId(id)) offenders.push(`invalid id ${String(id)} (${group.map(describeRecord).join(', ')})`);
+        else if (group.length > 1) offenders.push(`duplicate id ${id} (${group.map(describeRecord).join(', ')})`);
+    }
+    const shown = offenders.slice(0, MAX_OFFENDERS).join('; ');
+    return offenders.length > MAX_OFFENDERS ? `${shown}; +${offenders.length - MAX_OFFENDERS} more` : shown;
+}
 function apiRecords(pages, key) {
     if (!Array.isArray(pages) || !pages.length) fail(`Missing producer API pages: ${key}`);
     const records = pages.flatMap(page => apiPageRecords(page, key));
     if (pages.some(page => page.total_count !== records.length)) fail(`Incomplete producer API pagination: ${key}`);
     const ids = records.map(record => record?.id);
     const validIds = [ids.every(positiveId), new Set(ids).size === ids.length].every(Boolean);
-    if (!validIds) fail(`Invalid/duplicate producer API identities: ${key}`);
+    if (!validIds) fail(`Invalid/duplicate producer API identities: ${key} — ${identityOffenders(records)}`);
     return records;
 }
 function producerCandidates(jobs, shard) {
