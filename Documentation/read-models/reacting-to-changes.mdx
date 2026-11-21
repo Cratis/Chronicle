@@ -27,7 +27,7 @@ A .NET handler can return `void`, `Task`, or `Task<T>`. Its first parameter acce
 
 ## Take dependencies
 
-In .NET, parameters after the read model are resolved from the service container, with `EventContext` supplied separately by the dispatcher. For a projection-backed watch, that context identifies the causing event's sequence number, occurrence time, and correlation ID. Reducer and materialized observations have less context, as described below.
+In .NET, parameters after the read model are resolved from the service container, with `EventContext` supplied separately by the dispatcher. For a projection-backed watch or a kernel-observed reducer, that context identifies the causing event's sequence number, occurrence time, and correlation ID. Local reducer and materialized observations have less context, as described below.
 
 Use constructor injection, method parameters, or both for your services:
 
@@ -47,7 +47,7 @@ A .NET handler can return events for Chronicle to append, using the same return 
 | `Modified` | The read model instance changed. |
 | `Removed` | The read model instance was removed. |
 
-For projection-backed read models watched through the change stream, the server supplies the change type and causing event context. This distinguishes an addition from a modification. Reducer-backed and materialized observations infer changes locally instead.
+For projection-backed read models and kernel-observed reducers watched through the change stream, the server supplies the change type and causing event context. This distinguishes an addition from a modification, including for late subscribers and after reconnection. Materialized observations infer changes locally instead.
 
 ## Watch through the materialized read model
 
@@ -67,7 +67,9 @@ Make handlers idempotent: processing the same change again must not duplicate it
 
 Materialized comparison uses serialized values keyed by `id`, `_id`, or `Id`. Its `EventContext` carries the model key but no causing event sequence number. Existing instances in the first snapshot are reported as `Added`; that does not mean they were just created.
 
-For reducer-backed models, the .NET reactor tracks keys locally to infer additions. The first observed non-removal for a key is `Added`; later ones are `Modified`, and removals remain `Removed`. This does not supply the original event context.
+In .NET, active reducers with event types use the kernel change stream for both `Watch<T>()` and read model reactors. A removal carries a default read model value and the causing event context. Reducer watches use the handler's event sequence.
+
+Passive, inactive, and no-event-type reducers keep the local fold stream. Every non-removal is `Modified`, including the first observed fold; removals are `Removed`. These local changes never infer `Added` and carry the model key without the causing event's context. They do not observe another client's kernel writes.
 
 If ordered, replayable processing is a requirement, [react to the domain event](../reactors/) rather than the derived read model. That page explains event-reactor delivery and partition handling so you can choose the appropriate processing model.
 
