@@ -10,6 +10,9 @@ import { absolutePath } from '../../Utils/basePath';
 import { clearAntiforgeryToken, refreshAntiforgeryToken } from './antiforgery';
 import { getAuthenticationMode } from './authenticationMode';
 
+const autoSignInKey = 'chronicle.trustedProxy.autoSignIn';
+const autoSignInWindowMs = 60_000;
+
 @injectable()
 export class LoginViewModel {
     username: string = '';
@@ -22,6 +25,7 @@ export class LoginViewModel {
     errorMessage: string = '';
     requiresPasswordChange: boolean = false;
     isInitialSetup: boolean = false;
+    private _navigating = false;
     isTrustedProxy: boolean = false;
     userId: Guid | null = null;
 
@@ -39,6 +43,11 @@ export class LoginViewModel {
             const mode = await getAuthenticationMode();
             if (mode.mode === 'trustedProxy') {
                 this.isTrustedProxy = true;
+                if (this.shouldSignInAutomatically()) {
+                    // Keep showing the spinner while the browser navigates to the proxy.
+                    this._navigating = true;
+                    this.retrySignIn();
+                }
                 return;
             }
 
@@ -52,7 +61,7 @@ export class LoginViewModel {
         } catch (error) {
             console.error('Failed to check initial setup status:', error);
         } finally {
-            this.isLoading = false;
+            this.isLoading = this._navigating;
         }
     }
 
@@ -180,6 +189,22 @@ export class LoginViewModel {
             this.errorMessage = 'Unable to complete the password change. Please try signing in again before retrying.';
         } finally {
             this.isLoggingIn = false;
+        }
+    }
+
+    /**
+     * A background request cannot follow the proxy's redirect to its sign-in, so the Workbench lands here without a session. Only a
+     * page navigation can sign in, so do it once without making the user click. A second arrival within the window means the proxy
+     * did sign the user in but Chronicle still refused them: show the message instead of redirecting in a loop.
+     */
+    private shouldSignInAutomatically(): boolean {
+        try {
+            const last = Number(sessionStorage.getItem(autoSignInKey) ?? 0);
+            if (Date.now() - last < autoSignInWindowMs) return false;
+            sessionStorage.setItem(autoSignInKey, Date.now().toString());
+            return true;
+        } catch {
+            return false;
         }
     }
 
