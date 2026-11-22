@@ -38,6 +38,7 @@ public class ReadModelPropertyMustHaveMappingSourceAnalyzer : DiagnosticAnalyzer
         "FromEventAttribute",
         "SetFromAttribute",
         "SetFromContextAttribute",
+        "SetFromEventSourceIdAttribute",
         SetValueAttributeName,
         NestedAttributeName,
         ChildrenFromAttributeName,

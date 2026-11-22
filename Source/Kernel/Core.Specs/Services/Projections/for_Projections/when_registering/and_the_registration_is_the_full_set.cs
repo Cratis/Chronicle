@@ -40,6 +40,7 @@ public class and_the_registration_is_the_full_set : Specification
         _service = new Projections(
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
+            new System.Text.Json.JsonSerializerOptions(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),

@@ -29,6 +29,7 @@ public class ChildrenCollectionPropertyAutoMapAnalyzer : DiagnosticAnalyzer
     [
         "SetFromAttribute",
         "SetFromContextAttribute",
+        "SetFromEventSourceIdAttribute",
         "SetValueAttribute",
         "AddFromAttribute",
         "SubtractFromAttribute",

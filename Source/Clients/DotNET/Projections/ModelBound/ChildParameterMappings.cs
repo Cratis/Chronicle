@@ -14,6 +14,7 @@ static class ChildParameterMappings
     static readonly Type[] _explicitMappingAttributes =
     [
         typeof(SetFromContextAttribute<>),
+        typeof(SetFromEventSourceIdAttribute<>),
         typeof(SetFromAttribute<>),
         typeof(AddFromAttribute<>),
         typeof(SubtractFromAttribute<>),
@@ -31,6 +32,7 @@ static class ChildParameterMappings
 
         ApplyFromEvery(scope, parameter, propertyName);
         ApplySetFromContext(scope, parameter, propertyName);
+        ApplySetFromEventSourceId(scope, parameter, propertyName);
 
         // [SetValue] is applied twice on purpose: first for every event, then again for the propagated events, so
         // that a propagated [SetValue] keeps taking precedence over other mappings of the same event and property.
@@ -82,6 +84,14 @@ static class ChildParameterMappings
                 propertyName,
                 contextPropertyName,
                 attribute is ISetFromContextAttribute { SetOnce: true });
+        }
+    }
+
+    static void ApplySetFromEventSourceId(ChildMappingScope scope, ParameterInfo parameter, string propertyName)
+    {
+        foreach (var (attribute, eventType) in parameter.GetAttributesOfGenericType<SetFromEventSourceIdAttribute<object>>())
+        {
+            scope.ChildrenDefinition.From.AddEventSourceIdMapping(scope.Context.GetOrCreateEventType(eventType), propertyName, attribute is ISetFromEventSourceIdAttribute { SetOnce: true });
         }
     }
 
