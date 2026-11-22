@@ -24,6 +24,12 @@ function inScope(path) {
         path.split('/').some(segment => segment.endsWith('.Specs'));
 }
 
+function isInScopeSourceFile(entry, path) {
+    if (!entry.isFile()) return false;
+    if (!path.endsWith('.cs')) return false;
+    return inScope(path);
+}
+
 function sourceFiles(root, directory) {
     const files = [];
     for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
@@ -31,7 +37,7 @@ function sourceFiles(root, directory) {
         if (entry.isDirectory()) {
             if (!excluded.has(entry.name)) files.push(...sourceFiles(root, path));
         }
-        if (entry.isFile() && path.endsWith('.cs') && inScope(path)) files.push(path);
+        if (isInScopeSourceFile(entry, path)) files.push(path);
     }
     return files;
 }
@@ -59,7 +65,7 @@ function runWidth(text, start, character) {
     return end - start;
 }
 
-function quotedOpening(text, start, quoteStart, braces, verbatim) {
+function quotedOpening(text, { start, quoteStart, braces, verbatim }) {
     if (text[quoteStart] !== '"') return null;
     // A verbatim prefix always opens with ONE quote, even when doubled quotes follow it.
     const quotes = verbatim ? 1 : runWidth(text, quoteStart, '"');
@@ -75,15 +81,15 @@ function stringOpening(text, token) {
     if (prefix === "'") {
         return { start, contentStart: start + 1, quote: "'", braces: 0, verbatim: false, state: 'character literal' };
     }
-    if (prefix.startsWith('"')) return quotedOpening(text, start, start, 0, false);
+    if (prefix.startsWith('"')) return quotedOpening(text, { start, quoteStart: start, braces: 0, verbatim: false });
     if (prefix === '@') {
         const braces = Number(text[start + 1] === '$');
-        return quotedOpening(text, start, start + 1 + braces, braces, true);
+        return quotedOpening(text, { start, quoteStart: start + 1 + braces, braces, verbatim: true });
     }
     if (prefix.startsWith('$')) {
         const next = start + prefix.length;
         const verbatim = text[next] === '@';
-        return quotedOpening(text, start, next + Number(verbatim), prefix.length, verbatim);
+        return quotedOpening(text, { start, quoteStart: next + Number(verbatim), braces: prefix.length, verbatim });
     }
     return null;
 }
