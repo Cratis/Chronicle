@@ -39,33 +39,39 @@ public class ConcurrentAppendBenchmark : AppendBenchmark
     /// <summary>Has every writer append one event to one shared sequence (sequence numbers from a shared atomic counter).</summary>
     /// <returns>The task.</returns>
     [Benchmark]
-    public Task ConcurrentOneSequence() => Concurrent(Key("append-concurrent-one-sequence", WriterCount), _ => _storage);
+    public Task ConcurrentOneSequence() => Concurrent(Key("append-concurrent-one-sequence", WriterCount), _ => _storage, sharedSequence: true);
 
     /// <summary>Has every writer append one event to a sequence of its own.</summary>
     /// <returns>The task.</returns>
     [Benchmark]
-    public Task ConcurrentManySequences() => Concurrent(Key("append-concurrent-many-sequences", WriterCount), index => _storages[index]);
+    public Task ConcurrentManySequences() => Concurrent(Key("append-concurrent-many-sequences", WriterCount), index => _storages[index], sharedSequence: false);
 
-    async Task Concurrent(string key, Func<int, IEventSequenceStorage> storageFor)
+    async Task Concurrent(string key, Func<int, IEventSequenceStorage> storageFor, bool sharedSequence)
     {
         var before = Host.Counter.Snapshot();
-        var writers = Enumerable.Range(0, WriterCount).Select(async index =>
+        var waveStarted = Stopwatch.GetTimestamp();
+        var writers = Enumerable.Range(0, WriterCount).Select<int, Task<(long Started, TimeSpan Elapsed, Exception? Error)>>(async index =>
         {
             var started = Stopwatch.GetTimestamp();
             try
             {
                 await Append(storageFor(index), (ulong)Interlocked.Increment(ref _next) - 1);
-                return (Elapsed: (TimeSpan?)Stopwatch.GetElapsedTime(started), Error: (Exception?)null);
+                return (Started: started, Elapsed: Stopwatch.GetElapsedTime(started), Error: null);
             }
             catch (Exception ex)
             {
-                return (Elapsed: null, Error: ex);
+                return (Started: started, Elapsed: Stopwatch.GetElapsedTime(started), Error: ex);
             }
         }).ToArray();
         var outcomes = await Task.WhenAll(writers);
-        var latencies = outcomes.Where(_ => _.Elapsed is not null).Select(_ => _.Elapsed!.Value).ToArray();
+        var latencies = outcomes.Where(_ => _.Error is null).Select(_ => _.Elapsed).ToArray();
         var failures = outcomes.Where(_ => _.Error is not null).Select(_ => _.Error!).ToArray();
-        Measurements.Record(key, new InvocationRecord(latencies.Length, latencies.Length, Host.Counter.Snapshot().Since(before), latencies, failures.Length));
+        Measurements.Record(key, new InvocationRecord(latencies.Length, latencies.Length, Host.Counter.Snapshot().Since(before), latencies, failures.Length)
+        {
+            Samples = Measurements.IsCounting
+                ? [.. outcomes.Select((outcome, index) => new WriterSample(index, sharedSequence ? 0 : index + 1, Stopwatch.GetElapsedTime(waveStarted, outcome.Started).TotalMilliseconds, outcome.Elapsed.TotalMilliseconds, outcome.Error is null))]
+                : []
+        });
         if (failures.Length > 0) throw new AggregateException(failures);
     }
 }
