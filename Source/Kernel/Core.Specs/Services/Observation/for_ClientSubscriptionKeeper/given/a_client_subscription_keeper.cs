@@ -1,49 +1,55 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Supervision;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.given;
 
 /// <summary>
-/// Keeps a subscription on a <see cref="Observation.given.ManualClock"/>: nothing waits on real time, every wait the keeper
-/// starts is reported, and the specification moves the clock past it.
+/// Keeps a subscription on a supervisor that only records what the keeper registers: the specification runs the checks
+/// itself and reads from each what the keeper asks to wait before the next.
 /// </summary>
 public class a_client_subscription_keeper : Specification
 {
     protected const double Draw = 0.5;
     protected static readonly TimeSpan Revise = TimeSpan.FromSeconds(2);
     protected static readonly TimeSpan SafetyNet = TimeSpan.FromSeconds(60);
-    protected static readonly TimeSpan Settle = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// The safety-net wait with the draw the schedule is given: between three quarters of the interval and all of it.
     /// </summary>
     protected static readonly TimeSpan SafetyNetWait = SafetyNet * (SubscriptionCheckSchedule.SafetyNetFloor + ((1 - SubscriptionCheckSchedule.SafetyNetFloor) * Draw));
 
-    /// <summary>
-    /// The spread before the first check after a departure, with the draw the schedule is given.
-    /// </summary>
-    protected static readonly TimeSpan Spread = Revise * Draw;
-
-    protected Observation.given.ManualClock _clock;
     protected int _checks;
-    protected TaskCompletionSource _siloLeft = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    protected ISiloDepartures _siloDepartures;
+    protected ISiloSupervisor _supervisor;
+    protected string _key;
+    protected TimeSpan? _registeredInterval;
+    protected Func<Task<TimeSpan?>> _periodicCheck;
+    protected Func<Task> _checkAfterDeparture;
     protected readonly CancellationTokenSource _streamClosed = new();
     protected Task _keeping = Task.CompletedTask;
+    protected int _unregistered;
 
     void Establish()
     {
-        _clock = new();
-        _siloDepartures = Substitute.For<ISiloDepartures>();
-        _siloDepartures.Next.Returns(_ => _siloLeft.Task);
+        _supervisor = Substitute.For<ISiloSupervisor>();
+        _supervisor
+            .When(supervisor => supervisor.Register(Arg.Any<string>(), Arg.Any<TimeSpan?>(), Arg.Any<Func<Task<TimeSpan?>>>(), Arg.Any<Func<Task>>()))
+            .Do(call =>
+            {
+                _key = call.ArgAt<string>(0);
+                _registeredInterval = call.ArgAt<TimeSpan?>(1);
+                _periodicCheck = call.ArgAt<Func<Task<TimeSpan?>>>(2);
+                _checkAfterDeparture = call.ArgAt<Func<Task>>(3);
+            });
+        _supervisor.When(supervisor => supervisor.Unregister(Arg.Any<string>())).Do(_ => Interlocked.Increment(ref _unregistered));
     }
 
     async Task Destroy()
     {
         await _streamClosed.CancelAsync();
-        await Observation.given.ManualClock.Within(_keeping);
+        await _keeping.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _streamClosed.Dispose();
     }
 
@@ -54,42 +60,23 @@ public class a_client_subscription_keeper : Specification
     /// <returns>Whether the subscription was found intact.</returns>
     protected virtual Task<bool> Check(int check) => Task.FromResult(false);
 
-    protected void StartKeeping() => _keeping = ClientSubscriptionKeeper.KeepWhileConnected(
-        () => Check(Interlocked.Increment(ref _checks)),
-        new SubscriptionCheckSchedule(Revise, SafetyNet, Settle, () => Draw),
-        _siloDepartures,
-        _clock,
-        "the-client",
-        NullLogger.Instance,
-        _streamClosed.Token);
-
     /// <summary>
-    /// Signals that a silo left, the way <see cref="SiloDepartures"/> does: the task handed out completes and a new one
-    /// takes its place.
+    /// Starts keeping the subscription and waits until the keeper has registered with the supervisor.
     /// </summary>
-    protected void SiloLeaves()
+    /// <returns>Awaitable task.</returns>
+    protected async Task StartKeeping()
     {
-        var left = _siloLeft;
-        _siloLeft = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        left.SetResult();
-    }
-
-    /// <summary>
-    /// Lets waits elapse until the clock has moved at least as far as asked.
-    /// </summary>
-    /// <param name="duration">How far.</param>
-    /// <returns>The waits that elapsed.</returns>
-    protected async Task<List<TimeSpan>> ElapseAtLeast(TimeSpan duration)
-    {
-        var waits = new List<TimeSpan>();
-        var elapsed = TimeSpan.Zero;
-        while (elapsed < duration)
+        _keeping = ClientSubscriptionKeeper.KeepWhileConnected(
+            () => Check(Interlocked.Increment(ref _checks)),
+            new SubscriptionCheckSchedule(Revise, SafetyNet, () => Draw),
+            _supervisor,
+            "the-client",
+            NullLogger.Instance,
+            _streamClosed.Token);
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (_periodicCheck is null && DateTimeOffset.UtcNow < deadline)
         {
-            var wait = await _clock.Elapse();
-            waits.Add(wait);
-            elapsed += wait;
+            await Task.Delay(5);
         }
-
-        return waits;
     }
 }

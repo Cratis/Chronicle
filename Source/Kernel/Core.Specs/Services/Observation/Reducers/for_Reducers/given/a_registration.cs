@@ -13,6 +13,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -78,7 +79,7 @@ public class a_registration : Specification
             NullLogger<Reducers>.Instance,
             _gate,
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloSupervisor.Instance);
         _grainFactory.ClearReceivedCalls();
         _readModel.ClearReceivedCalls();
         _client.ClearReceivedCalls();

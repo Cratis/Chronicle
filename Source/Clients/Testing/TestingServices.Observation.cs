@@ -51,7 +51,7 @@ internal sealed partial class TestingServices
             NullLogger<KernelReactorsService>.Instance,
             context.RegistrationGate,
             context.NamespaceCasing,
-            KernelCore::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
+            KernelCore::Cratis.Chronicle.Supervision.NoSiloSupervisor.Instance);
 
     static KernelReducersService CreateReducers(TestingServiceContext context) =>
         new(
@@ -66,7 +66,7 @@ internal sealed partial class TestingServices
             NullLogger<KernelReducersService>.Instance,
             context.RegistrationGate,
             context.NamespaceCasing,
-            KernelCore::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
+            KernelCore::Cratis.Chronicle.Supervision.NoSiloSupervisor.Instance);
 
     static KernelProjectionsService CreateProjections(TestingServiceContext context) =>
         new(

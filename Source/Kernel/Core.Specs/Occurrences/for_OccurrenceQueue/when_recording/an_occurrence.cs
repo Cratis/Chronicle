@@ -14,5 +14,5 @@ public class an_occurrence : given.a_queue_grain
         registry => registry.RegisterOrUpdateReminder(It.IsAny<GrainId>(), "occurrence-wake", TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1)),
         Times.Once);
 
-    [Fact] void should_keep_a_one_second_timer_alongside_the_reminder() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(1);
+    [Fact] void should_not_tick_a_timer_beside_the_reminder() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

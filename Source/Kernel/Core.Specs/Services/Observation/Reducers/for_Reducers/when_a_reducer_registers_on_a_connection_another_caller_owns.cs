@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -44,7 +45,7 @@ public class when_a_reducer_registers_on_a_connection_another_caller_owns : Spec
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloSupervisor.Instance);
         using var messages = new Subject<ReducerMessage>();
         var observed = reducers.Observe(messages).ToTask();
 

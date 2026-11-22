@@ -8,19 +8,18 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 /// </summary>
 public class and_the_subscription_is_intact : given.a_client_subscription_keeper
 {
-    TimeSpan _firstWait;
-    TimeSpan _waitAfterTheCheck;
+    TimeSpan? _waitAfterTheCheck;
 
     protected override Task<bool> Check(int check) => Task.FromResult(true);
 
     async Task Because()
     {
-        StartKeeping();
-        _firstWait = await _clock.Elapse();
-        _waitAfterTheCheck = await _clock.NextWait();
+        await StartKeeping();
+        _waitAfterTheCheck = await _periodicCheck();
     }
 
-    [Fact] void should_check_after_one_revise_interval() => _firstWait.ShouldEqual(Revise);
+    [Fact] void should_first_check_after_one_revise_interval() => _registeredInterval.ShouldEqual(Revise);
     [Fact] void should_check_once() => _checks.ShouldEqual(1);
     [Fact] void should_wait_for_the_safety_net() => _waitAfterTheCheck.ShouldEqual(SafetyNetWait);
+    [Fact] void should_wait_no_longer_than_the_safety_net_interval() => (_waitAfterTheCheck <= SafetyNet).ShouldBeTrue();
 }

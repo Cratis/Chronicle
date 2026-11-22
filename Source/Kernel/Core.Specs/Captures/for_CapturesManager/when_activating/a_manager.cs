@@ -5,5 +5,11 @@ namespace Cratis.Chronicle.Captures.for_CapturesManager.when_activating;
 
 public class a_manager : given.a_captures_manager
 {
-    [Fact] void should_reconcile_started_captures_on_a_timer_of_its_own() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(1);
+    [Fact] void should_register_the_reconciliation_with_the_supervisor() => _supervisor.Received(1).Register(
+        $"captures:{_eventStore}",
+        CapturesManager.ReconcileInterval,
+        Arg.Any<Func<Task<TimeSpan?>>>(),
+        Arg.Any<Func<Task>>());
+
+    [Fact] void should_not_arm_a_timer_of_its_own() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

@@ -11,6 +11,7 @@ using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Services.Observation;
+using Cratis.Chronicle.Supervision;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -59,7 +60,7 @@ public static class KeeperCalls
         var grainFactory = host.Services.GetRequiredService<IGrainFactory>();
         var siloAddress = host.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
         var options = host.Services.GetRequiredService<IOptions<ChronicleOptions>>().Value;
-        var siloDepartures = host.Services.GetRequiredService<ISiloDepartures>();
+        var supervisor = host.Services.GetRequiredService<ISiloSupervisor>();
         var subscriptions = host.Services.GetRequiredService<IClientReactorSubscriptions>();
 
         await ObserverFootprint.Activate(grainFactory, siloAddress, "kept", count);
@@ -72,7 +73,7 @@ public static class KeeperCalls
         using var process = Process.GetCurrentProcess();
         var processorTime = process.TotalProcessorTime;
         var stopwatch = Stopwatch.StartNew();
-        var keepers = Enumerable.Range(0, args.Contains("--without-keeper") ? 0 : count).Select(index => Keep(subscriptions, options, siloDepartures, index, streams.Token)).ToArray();
+        var keepers = Enumerable.Range(0, args.Contains("--without-keeper") ? 0 : count).Select(index => Keep(subscriptions, options, supervisor, index, streams.Token)).ToArray();
         await Task.Delay(TimeSpan.FromSeconds(seconds));
         await streams.CancelAsync();
         await Task.WhenAll(keepers);
@@ -107,7 +108,7 @@ public static class KeeperCalls
         return 0;
     }
 
-    static Task Keep(IClientReactorSubscriptions subscriptions, ChronicleOptions options, ISiloDepartures siloDepartures, int index, CancellationToken streamClosed)
+    static Task Keep(IClientReactorSubscriptions subscriptions, ChronicleOptions options, ISiloSupervisor supervisor, int index, CancellationToken streamClosed)
     {
         var reactorId = new ReactorId($"kept-{index}");
         var reactor = subscriptions.Create(new ConnectedObserverKey(reactorId.Value, ObserverFootprint.EventStore, ObserverFootprint.Namespace, EventSequenceId.Log, ObserverFootprint.Connection));
@@ -120,8 +121,7 @@ public static class KeeperCalls
         return ClientSubscriptionKeeper.KeepWhileConnected(
             () => ClientSubscriptionKeeper.KeepSubscription(reactor.IsSubscriptionIntact, () => reactor.KeepSubscription(definition)),
             SubscriptionCheckSchedule.From(options),
-            siloDepartures,
-            TimeProvider.System,
+            supervisor,
             ObserverFootprint.Connection,
             NullLogger.Instance,
             streamClosed);

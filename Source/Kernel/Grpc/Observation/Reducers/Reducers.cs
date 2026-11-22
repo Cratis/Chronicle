@@ -23,6 +23,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +51,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
-/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
+/// <param name="siloSupervisor">The <see cref="ISiloSupervisor"/> that runs the checks of client subscriptions.</param>
 /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
@@ -64,7 +65,7 @@ internal sealed class Reducers(
     ILogger<Reducers> logger,
     IObserverRegistrationGate registrationGate,
     INamespaceCasing namespaceCasing,
-    ISiloDepartures siloDepartures,
+    ISiloSupervisor siloSupervisor,
     IDormantObservers? dormantObservers = null) : IReducers
 {
     /// <summary>
@@ -319,8 +320,7 @@ internal sealed class Reducers(
                                 () => clientObserver.KeepSubscription(reducerDefinition))
                             : KeepInactive(clientObserver!, reducerDefinition),
                         SubscriptionCheckSchedule.From(options.Value),
-                        siloDepartures,
-                        TimeProvider.System,
+                        siloSupervisor,
                         registration.ConnectionId,
                         logger,
                         cancellation.Token);

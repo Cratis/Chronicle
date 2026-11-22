@@ -10,6 +10,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -59,7 +60,7 @@ public class a_registration : Specification
             NullLogger<Reactors>.Instance,
             _gate,
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloSupervisor.Instance);
         _grainFactory.ClearReceivedCalls();
         _client.ClearReceivedCalls();
         _gate.ClearReceivedCalls();
