@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 /// </summary>
 static class V2ClaimMigration
 {
+    const int ScopeLength = 32;
+    const int ValueLength = 64;
+
     /// <summary>
     /// Creates a claim table and publishes its binding atomically.
     /// </summary>
@@ -28,9 +31,9 @@ static class V2ClaimMigration
             binding.Table,
             columns => new
             {
-                Scope = columns.StringColumn(migration, maxLength: 32, nullable: false),
+                Scope = columns.StringColumn(migration, maxLength: ScopeLength, nullable: false),
                 EventSourceId = columns.StringColumn(migration, maxLength: V2Identity.OwnerLimit, nullable: false),
-                Value = columns.StringColumn(migration, maxLength: 64, nullable: false),
+                Value = columns.StringColumn(migration, maxLength: ValueLength, nullable: false),
                 SequenceNumber = columns.NumberColumn<decimal>(migration, nullable: false),
                 Subject = columns.StringColumn(migration, nullable: true)
             },
@@ -50,9 +53,13 @@ static class V2ClaimMigration
     static void ConfigureTypes(V2DbContext context, MigrationBuilder migration)
     {
         var columns = migration.Operations.OfType<CreateTableOperation>().Single().Columns;
-        foreach (var column in columns.Where(column => string.Equals(column.Name, "Scope", StringComparison.Ordinal) || string.Equals(column.Name, "Value", StringComparison.Ordinal)))
+
+        // The column helpers carry the length only in the provider store type and leave MaxLength unset, so the fixed lengths are explicit here.
+        foreach (var (name, length) in new[] { ("Scope", ScopeLength), ("Value", ValueLength) })
         {
-            column.ColumnType = context.Database.IsSqlite() ? "TEXT" : $"char({column.MaxLength})";
+            var column = columns.Single(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal));
+            column.MaxLength = length;
+            column.ColumnType = context.Database.IsSqlite() ? "TEXT" : $"char({length})";
             column.IsUnicode = false;
             column.IsFixedLength = true;
         }
