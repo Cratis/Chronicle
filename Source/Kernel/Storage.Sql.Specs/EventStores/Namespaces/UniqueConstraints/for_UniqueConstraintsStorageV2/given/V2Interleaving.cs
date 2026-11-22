@@ -20,6 +20,11 @@ public class V2Interleaving : DbTransactionInterceptor
 
     public V2FenceCommands Commands => new(this);
 
+    /// <summary>
+    /// Gets whether the competing transition has reached its provider-specific waiting boundary.
+    /// </summary>
+    internal bool TransitionWasAttempted => _transitionAttempted.Task.IsCompleted;
+
     public override async ValueTask<InterceptionResult<DbTransaction>> TransactionStartingAsync(DbConnection connection, TransactionStartingEventData eventData, InterceptionResult<DbTransaction> result, CancellationToken cancellationToken = default)
     {
         if (!_enabled) return result;
