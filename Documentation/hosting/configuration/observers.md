@@ -172,6 +172,23 @@ During a rolling upgrade nothing is released until every silo runs the release t
 
 A client reactor or reducer is served by the open stream of its connection. The stream subscribes the observer, keeps the subscription in place, and unsubscribes it when the stream ends, so a connected client holds no grain activation of its own: with thousands of connected observers the kernel has the observers and nothing per connection beside them. Events are delivered to the client through the observer's subscriber, in the order the observer delivers them, as before.
 
+### One stream for every observer of a connection
+
+A client that supports it observes with every reactor and reducer of a connection over **one** HTTP/2 stream instead of one stream each. The kernel advertises this as the `multiplexed-observation` capability when a client connects, and a client uses it only when it sees that capability. A client that does not (an older client, or one with multiplexing turned off) keeps one stream per reactor and reducer, and the kernel serves both kinds side by side: nothing in the kernel needs configuring, and a rolling deploy is safe in both directions.
+
+On a shared stream:
+
+- Each reactor or reducer is a *sub-stream* with an identifier chosen by the client. The kernel serves it with the same code that serves a per-observer stream, so registration, the registration gate, the subscription checks and the disconnect handling are the ones described above and below.
+- Registrations travel together. A client that has many observers to register, at start-up or after a reconnect, sends them in one write, and the kernel starts them as it would have started the separate calls. The [registration concurrency](#registration-concurrency) limit still applies per silo.
+- A sub-stream that fails or ends reports its own gRPC status and leaves the others alone. When the connection itself ends, every sub-stream on it ends, exactly as every per-observer stream of a lost connection does, and the client re-registers.
+- Ordering and flow control are per observer. Messages of one sub-stream arrive in the order the observer produced them (each carries a sequence number), and the delivery acknowledgment bounds what a client can owe: the kernel does not hand an observer the next delivery for a partition before the client answered the last. A client that is slow to take one observer's events holds up that observer only.
+
+Open HTTP/2 streams drop from one per observer to one per connection. Measured on loopback (`--client-streams`, 11 000 observers), the transport state of the open streams was about 200 MB (about 19 KB per stream, client and server together) with one stream per observer and about 0.3 MB with one shared stream. The kernel still keeps its per-observer state (the observer and the sub-stream's registration), which this does not change.
+
+### HTTP/2 stream limits
+
+The kernel listener allows 100 concurrent HTTP/2 streams per connection. A client with many observers opens further connections as needed, and measuring on loopback showed that this limit does not make a reconnect of thousands of observers slow or fail: 11 000 per-observer streams over a real Kestrel listener were established in about 0.5 s with the default limit (and in about 0.6 s with the limit raised above the stream count, over one connection). Raising the limit therefore buys nothing and the default stays. A client that may not open a second connection stalls at the limit instead, which is one more reason to use the multiplexed stream. If a reconnect still fails with `ENHANCE_YOUR_CALM` or `ResourceExhausted`, look at what sits between the client and the kernel (a proxy or ingress with its own stream or rate limits) and at the [registration concurrency](#registration-concurrency) of the silo; the numbers above are reproducible with `--client-streams` in the kernel benchmarks.
+
 ## Removing observers no client has used
 
 When you rename or delete a reactor or reducer in application code, the observer it registered stays in Chronicle: its definition, its state in every namespace, its failed partitions, jobs and reminders. Chronicle can remove such an observer once no client has been subscribed to it for `unseenRemovalAfter`. **This is off by default.** Nothing is ever removed unless you set `unseenRemovalEnabled` to `true`; the period is seven days, which is the recommended one, and you only change `unseenRemovalAfter` to pick another.

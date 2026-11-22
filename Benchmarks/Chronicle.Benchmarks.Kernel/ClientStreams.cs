@@ -72,12 +72,14 @@ public static class ClientStreams
         using var cancellation = new CancellationTokenSource();
         var failures = new ConcurrentDictionary<string, int>();
         var established = new ConcurrentBag<double>();
+        var memoryBefore = GC.GetTotalMemory(true);
         var clock = Stopwatch.StartNew();
         var attempts = Enumerable.Range(0, streams).Select(_ => Open(probe, clock, established, failures, cancellation.Token)).ToArray();
 
         var settled = Task.WhenAll(attempts.Select(_ => _.Established));
         await settled.WaitAsync(TimeSpan.FromSeconds(timeoutSeconds)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         var elapsed = clock.Elapsed;
+        var memoryAfter = GC.GetTotalMemory(true);
         var timedOut = !settled.IsCompleted;
         var opened = established.Count;
         var times = established.Order().ToArray();
@@ -91,6 +93,7 @@ public static class ClientStreams
             Console.WriteLine($"establishment time per stream: p50 {Percentile(times, 0.5):F0} ms, p95 {Percentile(times, 0.95):F0} ms, max {times[^1]:F0} ms");
         }
 
+        Console.WriteLine($"managed memory held by the open streams (client and server in this process): {(memoryAfter - memoryBefore) / 1024.0 / 1024.0:F1} MB, {(streams == 0 ? 0 : (memoryAfter - memoryBefore) / 1024.0 / Math.Max(1, opened)):F1} KB per established stream");
         foreach (var (reason, number) in failures.OrderByDescending(_ => _.Value))
         {
             Console.WriteLine($"failure: {number} x {reason}");
