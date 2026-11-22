@@ -99,6 +99,11 @@ These instruments were added after the convention. They have no legacy name and 
 | `observer.resident` | `{observer}` |
 | `observer.dormant` | `{observer}` |
 | `job.running` | `{job}` |
+| `grain.calls.running` | `{call}` |
+| `grain.calls.pending` | `{call}` |
+| `grain.calls.oldest_pending_age` | `s` |
+| `kernel.load_status` | `1` |
+| `grpc.streams.open` | `{stream}` |
 | `observer.job.handled_steps` | `{step}` |
 | `observer.job.total_steps` | `{step}` |
 | `event_sequence.append.duration` | `s` |
@@ -138,8 +143,9 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `query` | `cratis.chronicle.sql.live_query.name` |
 | `kind` | `cratis.chronicle.sql.live_query.failure_kind` |
 | `operation` | `cratis.chronicle.sql.upsert.operation` |
+| `grain_type` | `cratis.chronicle.grain.type` |
 
-The keys `cratis.replay`, `cratis.observer.type`, `cratis.chronicle.observer.state` and `cratis.chronicle.job.type` have no legacy key. Instruments with a legacy name never carry them on their legacy series.
+The keys `cratis.replay`, `cratis.observer.type`, `cratis.chronicle.observer.state`, `cratis.chronicle.job.type` and `cratis.chronicle.grain.type` have no legacy key. Instruments with a legacy name never carry them on their legacy series.
 
 ## Span names and attributes
 

@@ -100,6 +100,7 @@ The kernel tracks which clients are connected. These settings live under `connec
 | connectedClients.staleThresholdSeconds | number | 5 | Seconds a client can go unseen before it is considered disconnected. Raise it only if healthy clients are dropped on a slow network |
 | connectedClients.observeIntervalSeconds | number | 1 | Seconds between observations of the connected clients for observers |
 | connectedClients.keepAliveIntervalSeconds | number | 1 | Seconds between keep-alive messages the kernel sends to a connected client |
+| connectedClients.graceSeconds | number | 2 | Seconds a connect or a keep-alive waits for the kernel's own bookkeeping, which is done by grains, before it answers anyway. The bookkeeping and the cluster-wide check that no other caller holds the connection carry on in the background; a refusal that arrives after the connection was served ends the stream. A client is never left waiting for a saturated grain |
 | connectedClients.keeperMode | string | `SiloLocal` | How the open stream of a client confirms that its reactor and reducer subscriptions are intact. `SiloLocal` confirms the subscription of a dormant observer whose record names this client on this silo without asking it, so the observer is not woken and the client's grains are not kept in memory for it; every other observer is asked.  `Legacy` calls the client's grains on every check. See [Keeping client subscriptions](#keeping-client-subscriptions) |
 | servers.observeIntervalSeconds | number | 5 | Seconds between observations of server instances for the live Workbench view |
 
@@ -126,6 +127,10 @@ These bounds cover the observer's subscription only. Delivery to a subscribed ob
 The settle window relies on how the kernel runs Orleans: the classic grain directory, no activation repartitioning or rebalancing, and no memory-based activation shedding. With any of those enabled, a silo joining or activations moving would lose subscriptions that only the safety net restores.
 
 Environment variables use the `Cratis__Chronicle__ConnectedClients__` and `Cratis__Chronicle__Servers__` prefixes. See [Azure container hosting](../azure-container-hosting.md) for why keep-alive and stale threshold matter for scale-to-zero platforms.
+
+## Overload
+
+The `overload` section sets when a silo reports itself as [overloaded](health-endpoint.md#kernel-overload): `enabled` (true), `maxOldestPendingCallAgeSeconds` (15), `maxPendingCalls` (2000), `maxRunningCalls` (2000) and `recoverySeconds` (30). Environment variables use the `Cratis__Chronicle__Overload__` prefix.
 
 ## Message sizes
 
