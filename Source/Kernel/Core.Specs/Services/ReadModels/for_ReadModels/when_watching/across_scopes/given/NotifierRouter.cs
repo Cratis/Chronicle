@@ -107,6 +107,7 @@ public class NotifierRouter
         }
 
         var subscription = activation.Notifier.Subscribe(subscriber);
+
         // TestKit records grain timers without running them; publish before awaiting the opening acknowledgement.
         await activation.Silo.TimerRegistry.FireAllAsync();
         await subscription;
