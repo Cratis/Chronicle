@@ -118,25 +118,26 @@ internal static class PublicEventContentRedactor
 
     static string? RedactRevision(JsonElement envelope, JsonSerializerOptions options)
     {
-        var id = RequiredProperty(RequiredProperty(envelope, "eventType"), "id");
-        if (id.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(id.GetString()))
-        {
-            throw new JsonException(InvalidContent);
-        }
-
-        var eventType = new EventType(id.GetString()!, EventTypeGeneration.First);
+        var type = RequiredProperty(envelope, "eventType");
+        var id = RequiredString(RequiredProperty(type, "id"));
+        var eventType = new EventType(id, EventTypeGeneration.First);
         if (!RequiresRedaction(eventType))
         {
             return null;
         }
 
-        var content = RequiredProperty(envelope, "content");
-        if (content.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(content.GetString()))
+        var content = RequiredString(RequiredProperty(envelope, "content"));
+        return Redact(eventType, content, options);
+    }
+
+    static string RequiredString(JsonElement value)
+    {
+        if (value.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(value.GetString()))
         {
             throw new JsonException(InvalidContent);
         }
 
-        return Redact(eventType, content.GetString()!, options);
+        return value.GetString()!;
     }
 
     static JsonElement RequiredProperty(JsonElement content, string name)
@@ -181,6 +182,11 @@ internal static class PublicEventContentRedactor
     {
         JsonElement { ValueKind: JsonValueKind.Object } json => json.EnumerateObject().Select(property => property.Name),
         JsonObject json => json.Select(property => property.Key),
+        _ => DictionaryHeaderNames(headers)
+    };
+
+    static IEnumerable<string> DictionaryHeaderNames(object? headers) => headers switch
+    {
         IDictionary<string, object?> dictionary => dictionary.Keys,
         IReadOnlyDictionary<string, object?> dictionary => dictionary.Keys,
         IReadOnlyDictionary<string, string> dictionary => dictionary.Keys,
