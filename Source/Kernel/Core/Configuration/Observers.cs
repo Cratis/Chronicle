@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections.Generations;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Configuration;
 
@@ -14,6 +15,15 @@ public class Observers
     /// The recommended period, and the one used when <see cref="UnseenRemovalAfter"/> is not a positive value.
     /// </summary>
     public static readonly TimeSpan DefaultUnseenRemovalAfter = TimeSpan.FromDays(7);
+
+    static readonly ObserverSubscriptionKind[] _defaultDormantKinds =
+    [
+        ObserverSubscriptionKind.ClientReactor,
+        ObserverSubscriptionKind.ClientReducer,
+        ObserverSubscriptionKind.Projection,
+        ObserverSubscriptionKind.CollapsingProjection,
+        ObserverSubscriptionKind.EventStoreSubscription
+    ];
 
     /// <summary>
     /// Gets the upper bound on how many job steps run in parallel.
@@ -243,6 +253,22 @@ public class Observers
     /// cursor when it wakes (decision 0034). A server-level setting.
     /// </remarks>
     public int DormantAfter { get; init; } = 900;
+
+    /// <summary>
+    /// Gets the kinds of subscription whose observer is released when dormant and woken from its durable record.
+    /// </summary>
+    /// <remarks>
+    /// Empty by default, which selects client reactors, client reducers, projections, collapsing projections and event
+    /// store subscriptions (see <see cref="EffectiveDormantKinds"/>). When set, only the listed kinds are released and the
+    /// others stay resident. Kinds that cannot be woken from a record (kernel reactors, webhooks) are never released,
+    /// whatever is listed. Only takes effect while <see cref="DormantAfter"/> is above zero. A server-level setting.
+    /// </remarks>
+    public IReadOnlyList<ObserverSubscriptionKind> DormantKinds { get; init; } = [];
+
+    /// <summary>
+    /// Gets the kinds released when dormant: <see cref="DormantKinds"/> when set, otherwise every kind that can be.
+    /// </summary>
+    public IReadOnlyList<ObserverSubscriptionKind> EffectiveDormantKinds => DormantKinds.Count > 0 ? DormantKinds : _defaultDormantKinds;
 
     /// <summary>
     /// Gets how many seconds pass at most before a dormant observer is woken, whether or not an event arrived.

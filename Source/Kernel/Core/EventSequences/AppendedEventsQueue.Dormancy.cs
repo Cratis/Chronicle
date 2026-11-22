@@ -183,7 +183,7 @@ public partial class AppendedEventsQueue
             foreach (var (observerId, record) in stored)
             {
                 var key = new ObserverKey(observerId, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceKey.EventSequenceId);
-                if (!record.Kind.CanBeReleasedWhenDormant() || router.GetQueueIndexFor(key) != _queueId || !await eventStore.Observers.Has(observerId))
+                if (!record.Kind.IsReleasedWhenDormant(_observers.EffectiveDormantKinds) || router.GetQueueIndexFor(key) != _queueId || !await eventStore.Observers.Has(observerId))
                 {
                     continue;
                 }
