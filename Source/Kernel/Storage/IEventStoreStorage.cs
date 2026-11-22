@@ -58,6 +58,12 @@ public interface IEventStoreStorage
     Occurrences.IScheduleStorage Schedules => throw new Occurrences.OccurrencesStorageNotSupported();
 
     /// <summary>
+    /// Gets the <see cref="Registrations.IRegistrationIntentStorage"/> for the event store.
+    /// </summary>
+    /// <exception cref="Registrations.RegistrationIntentsStorageNotSupported">The provider has not implemented registration intents.</exception>
+    Registrations.IRegistrationIntentStorage RegistrationIntents => throw new Registrations.RegistrationIntentsStorageNotSupported();
+
+    /// <summary>
     /// Gets the event store the storage represents.
     /// </summary>
     EventStoreName EventStore { get; }

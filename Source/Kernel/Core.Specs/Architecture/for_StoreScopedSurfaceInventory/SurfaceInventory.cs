@@ -138,6 +138,7 @@ public static class SurfaceInventory
         ["gRPC:ProjectionEditor.IProjectionEditor.GenerateDeclarativeCode"] = new(StoreRead, "Resolves store schemas while generating code."),
         ["gRPC:ProjectionEditor.IProjectionEditor.GenerateModelBoundCode"] = new(StoreRead),
         ["gRPC:Projections.IProjections.Register"] = new(StoreManage),
+        ["gRPC:Projections.IProjections.GetRegistrationStatus"] = new(StoreRead),
         ["gRPC:Projections.IProjections.GetAllDefinitions"] = new(StoreRead),
         ["gRPC:Projections.IProjections.GetAllDeclarations"] = new(StoreRead),
         ["gRPC:Projections.IProjections.Preview"] = new(StoreRead, "Replays store events without saving a definition."),

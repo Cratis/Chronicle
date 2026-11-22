@@ -22,6 +22,15 @@ public interface IProjections
     Task Register(RegisterRequest request, CallContext context = default);
 
     /// <summary>
+    /// Get the state of the projections a registrant has registered. The kernel accepts a registration before it has
+    /// applied it; this tells whether it has.
+    /// </summary>
+    /// <param name="request">The <see cref="GetRegistrationStatusRequest"/> with all the details about the request.</param>
+    /// <param name="context">gRPC call context.</param>
+    /// <returns>The <see cref="RegistrationStatus"/>.</returns>
+    Task<RegistrationStatus> GetRegistrationStatus(GetRegistrationStatusRequest request, CallContext context = default);
+
+    /// <summary>
     /// Get all projection definitions.
     /// </summary>
     /// <param name="request"><see cref="GetAllDefinitionsRequest"/> with all the details about the request.</param>

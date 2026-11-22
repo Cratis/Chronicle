@@ -677,6 +677,13 @@ class [GrainType("recommendation`1")] Cratis.Chronicle.Recommendations.Recommend
 
 class [GrainType("recommendationsmanager")] Cratis.Chronicle.Recommendations.RecommendationsManager
 
+interface [GrainInterfaceType("Cratis.Chronicle.Registrations.IRegistrationInbox")] Cratis.Chronicle.Registrations.IRegistrationInbox [Version(0)]
+  BFAB4334: AcceptProjections(string, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task<Cratis.Chronicle.Registrations.RegistrationAcceptance?>
+  A4DBB932: Ensure() -> Task
+  0FE2A9D6: GetStatus(Cratis.Chronicle.Storage.Registrations.RegistrationKind, string) -> Task<Cratis.Chronicle.Registrations.RegistrationStatus>
+
+class [GrainType("registrationinbox")] Cratis.Chronicle.Registrations.RegistrationInbox
+
 class [GrainType("administratorroster")] Cratis.Chronicle.Security.AdministratorRoster
 
 class [GrainType("dataprotectionkeys")] Cratis.Chronicle.Security.DataProtectionKeys

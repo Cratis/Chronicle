@@ -9,6 +9,13 @@ namespace Cratis.Chronicle.Configuration;
 public class Registration
 {
     /// <summary>
+    /// Gets a value indicating whether the kernel accepts registrations durably and applies them in the background
+    /// instead of applying them before it answers. The default is true; it only takes effect when the storage provider
+    /// keeps registration intents.
+    /// </summary>
+    public bool AcceptAsynchronously { get; init; } = true;
+
+    /// <summary>
     /// Gets how many distinct registrations one registering grain applies at the same time. Registrations beyond the
     /// limit wait in an ordered queue instead of starting. The default is 4.
     /// </summary>

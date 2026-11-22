@@ -20,6 +20,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
@@ -120,6 +121,13 @@ internal sealed class Projections(
                 return;
             }
 
+            // The kernel takes the registration in and answers; applying it happens in the background, so what the
+            // kernel is busy with does not reach the client. Without durable storage for the intent it is applied first.
+            if (options.Value.Registration.AcceptAsynchronously && await TryAccept(request.EventStore, signature, projections, fullSetOwner, registrant, version))
+            {
+                return;
+            }
+
             // A caller that gives up cancels the registration it was waiting for, so that it does not keep running for nobody.
             using var cancellation = new GrainCancellationTokenSource();
             await using var abandonment = context.CancellationToken.Register(() => _ = cancellation.Cancel());
@@ -134,6 +142,20 @@ internal sealed class Projections(
         {
             throw ProjectionRegistrationFailed.For(request.EventStore, projections.Select(_ => _.Identifier), exception);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Contracts.Projections.RegistrationStatus> GetRegistrationStatus(GetRegistrationStatusRequest request, CallContext context = default)
+    {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore), StoreAccess.Read);
+        var status = await grainFactory.GetGrain<IRegistrationInbox>(request.EventStore).GetStatus(Storage.Registrations.RegistrationKind.Projections, request.Registrant);
+        return new Contracts.Projections.RegistrationStatus
+        {
+            State = (Contracts.Projections.RegistrationState)(int)status.State,
+            Revision = status.Revision,
+            AppliedRevision = status.AppliedRevision,
+            Failure = status.Failure
+        };
     }
 
     /// <inheritdoc/>
@@ -734,6 +756,20 @@ internal sealed class Projections(
         }
 
         return released;
+    }
+
+    async Task<bool> TryAccept(string eventStore, string signature, IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition> projections, Concepts.Projections.ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    {
+        try
+        {
+            var acceptance = await grainFactory.GetGrain<IRegistrationInbox>(eventStore).AcceptProjections(signature, projections, fullSetOwner, registrant, version);
+            return acceptance is not null;
+        }
+        catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
+        {
+            // A silo of the previous release has no inbox; the registration is applied before it is answered.
+            return false;
+        }
     }
 
     bool TryComputeSignature(IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition> projections, Concepts.Projections.ProjectionOwner? fullSetOwner, string? registrant, string? version, out string signature)
