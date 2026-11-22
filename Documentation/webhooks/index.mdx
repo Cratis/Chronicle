@@ -23,11 +23,13 @@ A retried or replayed batch can arrive more than once. Make the receiver idempot
 
 ## Custom header visibility
 
-Custom header values are write-only: configure them when registering a webhook. List and observable queries return `HeaderValuesSet`, a map of header names to whether a non-empty value is configured. Whitespace counts as a value; an empty string does not. The compatibility `Headers` map retains the names but contains only empty strings. Workbench shows names and value-set indicators without revealing values.
+Configure custom header values when registering a webhook. List and observable queries return `HeaderValuesSet`, a map of header names to whether a non-empty value is configured. Whitespace counts as a value; an empty string does not. The compatibility `Headers` map retains the names but contains only empty strings. Workbench shows names and value-set indicators without revealing values.
 
 Filtering happens when definitions are read, including definitions stored before the upgrade; no migration or replay is needed. Delivery still sends the configured values. The .NET `GetAll()` result exposes metadata on `Target.HeaderValuesSet` and only empty values on `Target.Headers`. It is not a registration snapshot: do not re-register a query result, since registration replaces configuration and the original values cannot be recovered from the result. Workbench header editing is not available in this version.
 
-An older Kernel still returns legacy values until upgraded; upgrade every Kernel serving queries. The updated .NET client discards any legacy response values after deriving presence metadata, but it cannot repair an old server's wire response.
+Public event reads, exports, and event streams omit target header values from `WebhookAdded` and `TargetHeadersSetForWebhook`, including their original, revised, and generational content. Header names remain with empty values. Preview and snapshot reconstruction use the same public content. This applies in every event store, including its system sequence, and to events stored before the upgrade without a migration or replay. These public copies do not change stored event history or internal webhook replay and delivery configuration; this is read-time redaction, not encryption at rest.
+
+An older Kernel still returns legacy values until upgraded; upgrade every Kernel serving queries or streams. The updated .NET client discards any legacy response values after deriving presence metadata, but it cannot repair an old server's wire response.
 
 ## Signing
 
