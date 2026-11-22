@@ -95,10 +95,9 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
 
-        // Drain KeepAlive delivery and deactivate ordinary grains before touching storage or projection pipelines.
-        // The previous fixture's work must release its SQL locks, and OnDeactivateAsync must flush dirty state
-        // while the old database is still intact, rather than competing with the first wipe.
-        await DeactivateAllGrains();
+        // Stop KeepAlive delivery before the first wipe: activation collection does not reach these grains, and
+        // their background queues must settle before either storage or projection pipelines can be reset.
+        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
 
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
         //    service whose cache persists across test classes. Without this, a test that registers
@@ -107,11 +106,15 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    happens to resolve to the same pipeline key.
         Services.GetRequiredService<KernelCore::Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>().Clear();
 
-        // 3. Wipe storage only after the previous fixture's grains have deactivated. This also
-        //    truncates OrleansReminders, preventing reminders from re-activating grains during
-        //    the final deactivation sweep below. Keep that sweep: a reminder can re-activate
-        //    a grain between the initial drain and this wipe (notably EventStoreSubscriptionsManager,
-        //    which schedules a 1-minute reminder), retaining state from the previous test class.
+        // 3. Wipe storage BEFORE deactivating grains. The order matters: wiping first truncates
+        //    the OrleansReminders table so reminders cannot re-activate grains while we are
+        //    deactivating, and it also truncates every Chronicle table so any in-flight grain
+        //    that writes via OnDeactivateAsync (step 4) writes into a known-empty database. If
+        //    we deactivated first, reminders would race the wipe by re-activating grains
+        //    (notably EventStoreSubscriptionsManager, which schedules a 1-minute reminder),
+        //    leaving their in-memory State populated from the previous test class — and that
+        //    state would then be re-persisted on next WriteStateAsync, recreating rows the
+        //    wipe was supposed to remove.
         //
         //    For out-of-process mode this resets the OOP container's backing store via gRPC
         //    (the OOP-container-side ICanPerformKernelStateReset wipes the kernel's files /
