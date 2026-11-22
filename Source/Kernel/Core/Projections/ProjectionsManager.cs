@@ -9,13 +9,16 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
 
@@ -35,6 +38,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> the registration subscribe budget is measured against. Defaults to the system clock.</param>
 /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that tells whether a projection's observer is dormant, and so subscribed, without waking it.</param>
+/// <param name="options">The <see cref="ChronicleOptions"/> that say how many registrations are applied at once and how long one may wait.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ProjectionsManager)]
 public partial class ProjectionsManager(
@@ -48,7 +52,8 @@ public partial class ProjectionsManager(
     ISubscriptionAdmission subscriptionThrottle,
     ILogger<ProjectionsManager> logger,
     TimeProvider? timeProvider = null,
-    IDormantObservers? dormantObservers = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
+    IDormantObservers? dormantObservers = null,
+    IOptions<ChronicleOptions>? options = null) : Grain<ProjectionsManagerState>, IProjectionsManager, IOnBroadcastChannelSubscribed, IDisposable
 {
     /// <summary>
     /// How long a registration waits for its subscribe fan-out before handing what is left to the background repair.
@@ -121,7 +126,8 @@ public partial class ProjectionsManager(
     readonly HashSet<EventStoreNamespaceName> _failedNamespaceSetups = new();
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
-    readonly Dictionary<string, Task> _sharedRegistrations = [];
+    readonly RegistrationQueue _registrationQueue = CreateRegistrationQueue(options?.Value?.Registration ?? new(), timeProvider ?? TimeProvider.System);
+    readonly ConcurrentDictionary<string, byte> _abandonedRegistrations = new();
     readonly HashSet<IgnoredRegistration> _recordedIgnoredRegistrations = [];
     bool _resubscribeRunning;
     DateTimeOffset? _registrationSubscribeDeadline;
@@ -178,9 +184,10 @@ public partial class ProjectionsManager(
     /// this non-reentrant grain only to find there is nothing to do, and the caller's retry of the timeout it caused
     /// would lengthen the queue further (#5688).
     /// </remarks>
-    public async Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
+    public async Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null, GrainCancellationToken? cancellation = null)
     {
-        if (_sharedRegistrations.TryGetValue(signature, out var inFlight))
+        var caller = cancellation?.CancellationToken ?? CancellationToken.None;
+        if (_registrationQueue.TryJoin(signature, caller, out var inFlight))
         {
             logger.JoiningRegistrationInFlight(_eventStoreName, registrant ?? string.Empty);
             await inFlight;
@@ -194,18 +201,10 @@ public partial class ProjectionsManager(
             return;
         }
 
-        // This method interleaves, so another identical registration may have started while the check above awaited.
-        if (_sharedRegistrations.TryGetValue(signature, out inFlight))
-        {
-            logger.JoiningRegistrationInFlight(_eventStoreName, registrant ?? string.Empty);
-            await inFlight;
-            return;
-        }
-
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _sharedRegistrations[signature] = completion.Task;
-        _ = LeadSharedRegistration(signature, completion, submitted, fullSetOwner, registrant, version);
-        await completion.Task;
+        // This method interleaves, so another identical registration may have started while the check above awaited;
+        // running through the queue joins it when it has.
+        _abandonedRegistrations.TryRemove(signature, out _);
+        await _registrationQueue.Run(signature, flight => LeadSharedRegistration(signature, submitted, fullSetOwner, registrant, version, flight), caller);
     }
 
     /// <inheritdoc/>
@@ -213,6 +212,12 @@ public partial class ProjectionsManager(
     {
         var submitted = definitions as IReadOnlyList<ProjectionDefinition> ?? [.. definitions];
         var signature = TryComputeRegistrationSignature(submitted, fullSetOwner, registrant, version);
+        if (signature is not null && _abandonedRegistrations.TryRemove(signature, out _))
+        {
+            logger.SkippingAbandonedRegistration(_eventStoreName, registrant ?? string.Empty, submitted.Count);
+            return;
+        }
+
         if (signature is not null && await IsRepeatOfRecentRegistration(signature, submitted))
         {
             logger.SkippingRepeatedRegistration(_eventStoreName, registrant ?? string.Empty, submitted.Count);
@@ -268,6 +273,19 @@ public partial class ProjectionsManager(
         streamSubscription.Attach<NamespaceAdded>(OnNamespaceAdded, OnError);
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Creates the queue that bounds how many registrations are applied at once.
+    /// </summary>
+    /// <param name="options">The registration options.</param>
+    /// <param name="clock">The clock the queue age is measured against.</param>
+    /// <returns>The <see cref="RegistrationQueue"/>.</returns>
+    internal static RegistrationQueue CreateRegistrationQueue(Registration options, TimeProvider clock) =>
+        new(
+            Math.Max(1, options.MaxConcurrentRegistrations),
+            TimeSpan.FromSeconds(Math.Max(1, options.MaxQueueAgeSeconds)),
+            TimeSpan.FromSeconds(Math.Max(1, options.BusyRetryAfterSeconds)),
+            clock);
 
     List<ProjectionDefinition> FilterUnsupportedKernelDefinitions(List<ProjectionDefinition> definitions)
     {
@@ -428,27 +446,18 @@ public partial class ProjectionsManager(
         logger.ChangedDefinitions(_eventStoreName, string.Join(", ", changed.Select(definition => $"{definition.Identifier} ({_changeReasons.GetValueOrDefault(definition.Identifier, "changed")})")));
     }
 
-    async Task LeadSharedRegistration(string signature, TaskCompletionSource completion, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    async Task LeadSharedRegistration(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version, CancellationToken abandoned)
     {
-        Exception? failure = null;
         try
         {
+            // The apply is queued on the grain's ordinary turn. When the callers leave while it waits there, the
+            // registration is marked so that its turn is skipped instead of applying work nobody is waiting for.
+            await using var abandonment = abandoned.Register(() => _abandonedRegistrations[signature] = 0);
             await GrainFactory.GetGrain<IProjectionsManager>(_eventStoreName).Register(definitions, fullSetOwner, registrant, version);
         }
-        catch (Exception exception)
+        finally
         {
-            failure = exception;
-        }
-
-        // Leave the table before answering, so a registration arriving after this one finished leads its own.
-        _sharedRegistrations.Remove(signature);
-        if (failure is null)
-        {
-            completion.SetResult();
-        }
-        else
-        {
-            completion.SetException(failure);
+            _abandonedRegistrations.TryRemove(signature, out _);
         }
     }
 

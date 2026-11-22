@@ -17,12 +17,14 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
 using Cratis.Chronicle.Storage;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -118,7 +120,15 @@ internal sealed class Projections(
                 return;
             }
 
-            await SharedProjectionRegistration.Register(projectionsManager, signature, projections, fullSetOwner, registrant, version);
+            // A caller that gives up cancels the registration it was waiting for, so that it does not keep running for nobody.
+            using var cancellation = new GrainCancellationTokenSource();
+            await using var abandonment = context.CancellationToken.Register(() => _ = cancellation.Cancel());
+            await SharedProjectionRegistration.Register(projectionsManager, signature, projections, fullSetOwner, registrant, version, cancellation.Token);
+        }
+        catch (RegistrationBusyException busy)
+        {
+            // A retryable answer in place of a call timeout; the caller retries after the interval.
+            throw new RpcException(new Status(StatusCode.Unavailable, busy.Message), new Metadata { { "retry-after", ((int)Math.Ceiling(busy.RetryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture) } });
         }
         catch (Exception exception)
         {

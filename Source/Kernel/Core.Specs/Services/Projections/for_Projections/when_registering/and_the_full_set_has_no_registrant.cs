@@ -58,5 +58,5 @@ public class and_the_full_set_has_no_registrant : Specification
         _projectionsManager.Received(1).RegisterShared(Arg.Any<string>(),
             Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(),
             null,
-            null);
+            null, Arg.Any<string?>(), Arg.Any<GrainCancellationToken?>());
 }

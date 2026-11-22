@@ -18,7 +18,7 @@ public class while_connection_ownership_cannot_be_verified : given.a_registratio
     async Task Because() => _error = await Catch.Exception(() => _service.Register(_request, AuthenticatedCalls.As("alice")));
 
     [Fact] void should_still_register() => _error.ShouldBeNull();
-    [Fact] async Task should_register_definitions() => await _manager.Received(1).RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), null, null, RegisteredVersion);
+    [Fact] async Task should_register_definitions() => await _manager.Received(1).RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), null, null, RegisteredVersion, Arg.Any<GrainCancellationToken?>());
     [Fact] void should_not_record_declarations() => _localClients.ReceivedCalls().ShouldBeEmpty();
     [Fact] void should_not_record_remote_declarations() => _remoteClients.ReceivedCalls().ShouldBeEmpty();
 }

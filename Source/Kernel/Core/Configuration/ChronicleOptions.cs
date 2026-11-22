@@ -181,6 +181,11 @@ public class ChronicleOptions : IValidatableObject
     public Clients ConnectedClients { get; init; } = new Clients();
 
     /// <summary>
+    /// Gets the configuration for how the kernel takes in registrations from clients.
+    /// </summary>
+    public Registration Registration { get; init; } = new();
+
+    /// <summary>
     /// Gets the server instance diagnostics configuration.
     /// </summary>
     public Servers Servers { get; init; } = new Servers();

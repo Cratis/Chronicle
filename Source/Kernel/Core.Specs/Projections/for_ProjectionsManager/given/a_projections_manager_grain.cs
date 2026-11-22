@@ -142,8 +142,19 @@ public class a_projections_manager_grain : Specification
             _silo.AddService(dormant);
         }
 
+        if (CreateOptions() is { } options)
+        {
+            _silo.AddService(Microsoft.Extensions.Options.Options.Create(options));
+        }
+
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
+
+    /// <summary>
+    /// Creates the options the manager runs with, or none when it should run with the defaults.
+    /// </summary>
+    /// <returns>The <see cref="Configuration.ChronicleOptions"/>, or null.</returns>
+    protected virtual Configuration.ChronicleOptions? CreateOptions() => null;
 
     /// <summary>
     /// Creates the dormant observers the manager asks, or none when it should ask its observers as before.
