@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Orleans.CodeGeneration;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -30,6 +31,7 @@ public interface IProjectionChangesetNotifier : IGrainWithStringKey
     /// </summary>
     /// <param name="subscriber">The <see cref="IReadModelChangesetSubscriber"/> to subscribe.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [AlwaysInterleave]
     Task Subscribe(IReadModelChangesetSubscriber subscriber);
 
     /// <summary>

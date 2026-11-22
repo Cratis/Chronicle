@@ -15,6 +15,8 @@ public class ReducerFilteredByTag(TaskCompletionSource tcs) : IReducerFor<SomeRe
     public async Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
     {
         Interlocked.Increment(ref HandledEvents);
+
+        // Task.Delay: time-behavior; simulate asynchronous handler latency before signaling completion.
         await Task.Delay(TimeSpan.FromMilliseconds(10));
         tcs.TrySetResult();
 

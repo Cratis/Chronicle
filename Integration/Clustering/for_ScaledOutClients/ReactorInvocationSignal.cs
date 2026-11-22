@@ -60,18 +60,9 @@ public class ReactorInvocationSignal
     /// <param name="expected">The number of invocations to wait for.</param>
     /// <param name="timeout">The maximum time to wait.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the expected count is not reached within the timeout.</exception>
+    /// <exception cref="TimeoutException">Thrown when the expected count is not reached within the timeout.</exception>
     public async Task WaitForHandledCount(int expected, TimeSpan timeout)
     {
-        using var cancellationTokenSource = new CancellationTokenSource(timeout);
-        while (Handled.Count < expected)
-        {
-            if (cancellationTokenSource.IsCancellationRequested)
-            {
-                throw new InvalidOperationException($"Expected {expected} handled events within the timeout, but only got {Handled.Count}.");
-            }
-
-            await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-        }
+        await ReadinessWait.Until(() => Task.FromResult(Handled.Count), count => count >= expected, timeout);
     }
 }

@@ -6,10 +6,12 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Reflection;
@@ -315,8 +317,26 @@ public static class ProjectionEventContextExtensions
         // A retained own schema can predate classification. EventCompliance resolves
         // current effective protection for the stored generation; never gate on this hint.
 #pragma warning disable CA2007
-        return Task.Run(() => eventCompliance.Release(lastEvent, joinEventSchema)).GetAwaiter().GetResult();
+        return Task.Run(() => ReleaseJoinEventWithHistory(lastEvent, eventCompliance, joinEventSchema)).GetAwaiter().GetResult();
 #pragma warning restore CA2007
+    }
+
+    static async Task<AppendedEvent> ReleaseJoinEventWithHistory(AppendedEvent @event, IEventCompliance eventCompliance, JsonSchema schema)
+    {
+        using var releaseScope = ReleaseKeys.BeginScope();
+        var released = await eventCompliance.Release(@event, schema);
+        if (@event.GenerationalContent.Count == 0 && @event.OriginalContent.Length == 0 && !@event.Revisions.Any())
+        {
+            return released;
+        }
+
+        // A join without a pinned release callback only knows the stored generation's schema.
+        var schemas = new Dictionary<EventType, EventTypeSchema>
+        {
+            [@event.Context.EventType] = new(@event.Context.EventType, EventTypeOwner.Client, EventTypeSource.Code, schema)
+        };
+        released = await eventCompliance.ReleaseHistory(released, schemas);
+        return await ReleaseKeys.Complete(() => released);
     }
 
     static bool HasChild(ICollection<object> items, PropertyPath identifiedByProperty, object identifier) =>

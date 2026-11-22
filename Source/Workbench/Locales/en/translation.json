@@ -1054,6 +1054,7 @@
             "title": "Dashboard",
             "loading": "Loading…",
             "unavailable": "Unavailable right now",
+            "stale": "Stale — latest update failed",
             "serverHealth": "Server health",
             "connected": "Connected",
             "disconnected": "Disconnected",

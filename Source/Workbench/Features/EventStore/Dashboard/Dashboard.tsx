@@ -54,7 +54,7 @@ export const Dashboard = () => {
                     basePath={basePath}
                     updatedAt={perNamespace.updatedAt} />
 
-                <HealthTiles health={health} />
+                <HealthTiles health={health} failed={perNamespace.failed} />
 
                 {namespaces.length > 0
                     ? <ThroughputWidget className='dashboard__wide' eventStore={eventStore} namespaces={namespaces} />
@@ -71,6 +71,8 @@ export const Dashboard = () => {
                     namespaces={namespaces}
                     health={perNamespace.value}
                     eventCounts={eventCounts.value}
+                    healthFailed={perNamespace.failed}
+                    eventCountsFailed={eventCounts.failed}
                     basePath={basePath} />
             </div>
         </Page>

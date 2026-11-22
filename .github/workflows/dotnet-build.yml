@@ -137,6 +137,9 @@ jobs:
           node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
           node .github/scripts/spec-shards.mjs --dry-run
 
+      - name: Spec legacy contracts artifact inputs without network
+        run: node --test .github/scripts/legacy-contract-artifacts.test.mjs
+
       - name: Spec coverage statistics honesty (missing input never advances the measurement date)
         run: node --test .github/scripts/test-coverage-statistics.mjs
 
@@ -1103,8 +1106,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Assert no spec or integration file gained a sleep
-        run: python3 .github/scripts/assert-timing-coupling-ratchet.py
+      - name: Assert sleep counts and Integration delay explanations
+        run: |
+          node .github/scripts/assert-timing-coupling-ratchet.mjs --self-test
+          node .github/scripts/assert-timing-coupling-ratchet.mjs
 
   # No requested PR matrix starts on red cheap deterministic checks (C6/C8, #6026).
   # Deliberately does not wait for ordinary specs: lanes still run beside them (#5865).

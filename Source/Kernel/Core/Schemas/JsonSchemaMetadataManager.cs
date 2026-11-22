@@ -197,7 +197,7 @@ public class JsonSchemaMetadataManager(
         catch (Exception exception)
         {
             // A failed release is an explicit unavailable result, never a partially released document.
-            logger.FailedToReleaseProperty(string.Empty, identifier, exception);
+            logger.FailedToReleaseProperty(exception.GetType().Name);
             return null;
         }
     }
@@ -789,14 +789,14 @@ public class JsonSchemaMetadataManager(
         // Applying has to fail loudly — storing a value that was never protected is never
         // acceptable. Releasing must not: a single unreadable property is no reason to fail an
         // entire query, so surface it as empty — the shape an erased subject already produces
-        // — and keep the diagnostic, which names the property, the identifier and the likely
-        // cause, in the log.
+        // — and keep only the exception type in the log. Paths may contain personal dictionary
+        // keys, and exceptions may contain identifiers or protected values.
         if (walk.ActionName != SchemaMetadataActionFailed.ReleaseAction || walk.StrictRelease)
         {
             throw failure;
         }
 
-        if (unrecoverable is null) logger.FailedToReleaseProperty(path, walk.Identifier, failure);
+        if (unrecoverable is null) logger.FailedToReleaseProperty(exception.GetType().Name);
         return RestoreReleasedContainerShape(JsonValue.Create(string.Empty), schema);
     }
 

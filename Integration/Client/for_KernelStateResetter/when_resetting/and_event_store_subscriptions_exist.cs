@@ -47,7 +47,9 @@ public class and_event_store_subscriptions_exist(context context) : Given<contex
             SubscriptionsAfterReset = await GetStoredSubscriptions(TargetEventStoreName);
 
             await AppendToOutbox("after-reset");
-            InboxAfterReset = await WaitForInboxTailSequenceNumber(SourceEventStoreName, TargetEventStoreName, DefaultNamespace, 0, TimeSpan.FromSeconds(2));
+            InboxAfterReset = await ReadinessWait.ObserveFor(
+                () => GetInboxTailSequenceNumber(SourceEventStoreName, TargetEventStoreName, DefaultNamespace),
+                TimeSpan.FromSeconds(2));
         }
 
         async Task AppendToOutbox(string value)

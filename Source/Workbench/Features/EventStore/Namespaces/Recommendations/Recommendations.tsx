@@ -7,13 +7,13 @@ import { type EventStoreAndNamespaceParams } from 'Shared';
 import { useParams } from 'react-router-dom';
 import { RecommendationsViewModel } from './RecommendationViewModel';
 import * as faIcons from 'react-icons/fa6';
-import { withViewModel } from '@cratis/arc.react.mvvm';
+import { observer, withViewModel } from '@cratis/arc.react.mvvm';
 import { Column, DataPage, MenuItem } from '@cratis/components/DataPage';
 import { Page } from 'Components/Common/Page';
 import { useConfirmationDialog, DialogResult, DialogButtons } from '@cratis/arc.react/dialogs';
 import { toast } from '@cratis/components/Notifications';
 import { useEffect } from 'react';
-import { type Constructor } from '@cratis/fundamentals';
+import { type Constructor, type Guid } from '@cratis/fundamentals';
 import { type IObservableQueryFor, type QueryResult } from '@cratis/arc/queries';
 
 const occurred = (recommendation: RecommendationDetails) => recommendation.occurred.toLocaleString();
@@ -47,14 +47,21 @@ export const RecommendationsContent = ({ viewModel, recommendations, query }: Re
         return await showConfirmation(dialog.title, message, DialogButtons.YesNo) === DialogResult.Yes;
     };
 
+    const failureTitle = (ignore: boolean, unignore: boolean) =>
+        unignore ? notifications.unignoreFailed : ignore ? notifications.ignoreFailed : notifications.performFailed;
+
+    const applyToSelection = (recommendationIds: Guid[], ignore: boolean, unignore: boolean) =>
+        unignore ? viewModel.unignoreRecommendations(recommendationIds)
+            : ignore ? viewModel.ignoreRecommendations(recommendationIds)
+                : viewModel.performRecommendations(recommendationIds);
+
     const notifyOutcome = (outcome: Awaited<ReturnType<RecommendationsViewModel['performRecommendations']>>, ignore: boolean, unignore: boolean) => {
         const description = notifications.outcome.replace('{failed}', outcome.failed.toString())
             .replace('{total}', outcome.total.toString()).replace('{succeeded}', (outcome.total - outcome.failed).toString());
         if (outcome.failed === 0) {
             toast.success({ title: unignore ? notifications.unignored : ignore ? notifications.ignored : notifications.performed, description });
         } else {
-            toast.error({ title: unignore ? notifications.unignoreFailed : ignore ? notifications.ignoreFailed : notifications.performFailed,
-                description: `${description}\n${outcome.failures.join('\n')}` });
+            toast.error({ title: failureTitle(ignore, unignore), description: `${description}\n${outcome.failures.join('\n')}` });
         }
     };
 
@@ -65,14 +72,10 @@ export const RecommendationsContent = ({ viewModel, recommendations, query }: Re
         viewModel.isBusy = true;
         try {
             if ((ignore || unignore) && !await confirmIgnore(selected, unignore)) return;
-            const outcome = await (unignore
-                ? viewModel.unignoreRecommendations(recommendationIds)
-                : ignore ? viewModel.ignoreRecommendations(recommendationIds)
-                    : viewModel.performRecommendations(recommendationIds));
+            const outcome = await applyToSelection(recommendationIds, ignore, unignore);
             notifyOutcome(outcome, ignore, unignore);
         } catch (error) {
-            toast.error({ title: unignore ? notifications.unignoreFailed : ignore ? notifications.ignoreFailed : notifications.performFailed,
-                description: error instanceof Error ? error.message : notifications.unknownError });
+            toast.error({ title: failureTitle(ignore, unignore), description: error instanceof Error ? error.message : notifications.unknownError });
         } finally {
             viewModel.isBusy = false;
         }
@@ -118,15 +121,20 @@ export const RecommendationsContent = ({ viewModel, recommendations, query }: Re
         </Page>);
 };
 
-const RecommendationsPage = ({ viewModel }: { viewModel: RecommendationsViewModel }) => {
+const ActiveView = observer(({ viewModel }: { viewModel: RecommendationsViewModel }) => {
     const params = useParams<EventStoreAndNamespaceParams>();
-    const queryArgs = { eventStore: params.eventStore!, namespace: params.namespace! };
-    const [activeRecommendations] = AllRecommendations.use(queryArgs);
-    const [ignoredRecommendations] = IgnoredRecommendations.use(queryArgs);
-    const recommendations = viewModel.showIgnored ? ignoredRecommendations : activeRecommendations;
-    const query = viewModel.showIgnored ? IgnoredRecommendations : AllRecommendations;
-    // Keep observable reads inside withViewModel's tracked render, including the shared content.
-    return RecommendationsContent({ viewModel, recommendations, query });
-};
+    const [recommendations] = AllRecommendations.use({ eventStore: params.eventStore!, namespace: params.namespace! });
+    // Keep shared content's observable reads inside this child's tracked render.
+    return RecommendationsContent({ viewModel, recommendations, query: AllRecommendations });
+});
+
+const IgnoredView = observer(({ viewModel }: { viewModel: RecommendationsViewModel }) => {
+    const params = useParams<EventStoreAndNamespaceParams>();
+    const [recommendations] = IgnoredRecommendations.use({ eventStore: params.eventStore!, namespace: params.namespace! });
+    return RecommendationsContent({ viewModel, recommendations, query: IgnoredRecommendations });
+});
+
+const RecommendationsPage = ({ viewModel }: { viewModel: RecommendationsViewModel }) =>
+    viewModel.showIgnored ? <IgnoredView viewModel={viewModel} /> : <ActiveView viewModel={viewModel} />;
 
 export const Recommendations = withViewModel(RecommendationsViewModel, RecommendationsPage);

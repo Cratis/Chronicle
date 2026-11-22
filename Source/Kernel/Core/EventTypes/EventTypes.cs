@@ -33,6 +33,7 @@ public class EventTypes : IEventTypes
     readonly IStorage _storage;
     readonly ILogger<EventTypes> _logger;
     readonly TypeFormats _typeFormats = new();
+    readonly Func<Type, JsonSchema> _generateSchema;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EventTypes"/> class.
@@ -44,7 +45,24 @@ public class EventTypes : IEventTypes
         ITypes types,
         IStorage storage,
         ILogger<EventTypes> logger)
+        : this(types, storage, logger, null)
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EventTypes"/> class with a schema preparation factory.
+    /// </summary>
+    /// <param name="types">The <see cref="ITypes"/> for discovering types.</param>
+    /// <param name="storage">The <see cref="IStorage"/> for storing event types.</param>
+    /// <param name="logger">Logger for logging.</param>
+    /// <param name="generateSchema">The schema factory, or null to use the production exporter.</param>
+    internal EventTypes(
+        ITypes types,
+        IStorage storage,
+        ILogger<EventTypes> logger,
+        Func<Type, JsonSchema>? generateSchema)
+    {
+        _generateSchema = generateSchema ?? GenerateSchema;
         _serializerOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -68,7 +86,7 @@ public class EventTypes : IEventTypes
     }
 
     /// <inheritdoc/>
-    public JsonSchema GetJsonSchema(Type eventType) => _schemaByType.GetOrAdd(eventType, GenerateSchema);
+    public JsonSchema GetJsonSchema(Type eventType) => _schemaByType.GetOrAdd(eventType, _generateSchema);
 
     /// <inheritdoc/>
     public Type GetClrTypeFor(EventTypeId eventTypeId) => _typeByEventTypeId.GetOrAdd(eventTypeId, ResolveKernelEventType);
@@ -99,10 +117,11 @@ public class EventTypes : IEventTypes
                 continue;
             }
 
-            var schema = GenerateSchema(eventType);
-            _schemaByType[eventType] = schema;
+            var schema = GetJsonSchema(eventType);
             _typeByEventTypeId[eventType.GetEventType().Id] = eventType;
-            await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), schema, EventTypeOwner.Server, EventTypeSource.Code);
+
+            // Keep the cached schema canonical; storage registration may mutate its own copy.
+            await _storage.GetEventStore(eventStore).EventTypes.Register(eventType.GetEventType(), new JsonSchema(schema.Node.DeepClone().AsObject()), EventTypeOwner.Server, EventTypeSource.Code);
         }
     }
 

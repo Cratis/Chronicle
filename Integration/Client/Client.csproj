@@ -32,6 +32,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="../Shared/ReadinessWait.cs" Link="ReadinessWait.cs" />
         <Compile Include="../Clustering/for_Occurrences/OccurrenceRecoveryAssertions.cs" Link="for_OccurrenceProcessRecovery/OccurrenceRecoveryAssertions.cs" />
         <!-- The Neo4j container is shared with Integration/Neo4j, which exercises the Neo4j storage without a kernel. -->
         <Compile Include="../Shared/Neo4jGraphServer.cs" Link="GraphProjections/Neo4jGraphServer.cs" />
