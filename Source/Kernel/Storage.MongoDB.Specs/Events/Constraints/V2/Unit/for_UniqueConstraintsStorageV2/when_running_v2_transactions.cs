@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2.Unit.for_UniqueConstraintsStorageV2;
@@ -42,11 +41,13 @@ public class when_running_v2_transactions : given.a_serverless_v2_storage
     public async Task should_abort_cancellation_before_commit_starts()
     {
         using var cancellation = new CancellationTokenSource();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _transactions.Run(_ =>
-        {
-            cancellation.Cancel();
-            return Task.FromResult((42, true));
-        }, cancellation.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _transactions.Run(
+            _ =>
+            {
+                cancellation.Cancel();
+                return Task.FromResult((42, true));
+            },
+            cancellation.Token));
         await _session.Received(1).AbortTransactionAsync(CancellationToken.None);
         await _session.DidNotReceive().CommitTransactionAsync(Arg.Any<CancellationToken>());
     }
@@ -78,12 +79,14 @@ public class when_running_v2_transactions : given.a_serverless_v2_storage
         var transient = new MongoException("aborted");
         transient.AddErrorLabel("TransientTransactionError");
         var attempts = 0;
-        (await _transactions.Run(async _ =>
-        {
-            await Task.CompletedTask;
-            if (++attempts == 1) throw transient;
-            return (attempts, true);
-        }, CancellationToken.None)).ShouldEqual(2);
+        (await _transactions.Run(
+            async _ =>
+            {
+                await Task.CompletedTask;
+                if (++attempts == 1) throw transient;
+                return (attempts, true);
+            },
+            CancellationToken.None)).ShouldEqual(2);
         await _client.Received(2).StartSessionAsync(cancellationToken: Arg.Any<CancellationToken>());
         await _session.Received(1).AbortTransactionAsync(CancellationToken.None);
     }

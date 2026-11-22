@@ -62,5 +62,4 @@ internal sealed partial class V2Schema
             new CreateIndexOptions { Name = index["name"].AsString, Unique = index["unique"].AsBoolean, Collation = Simple }));
         if (indexes.Length > 1) await database.GetCollection<BsonDocument>(name).Indexes.CreateManyAsync(session, models, cancellationToken);
     }
-
 }

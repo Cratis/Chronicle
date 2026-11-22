@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
-using Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2;
 using MongoDB.Bson;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2.Unit.for_UniqueConstraintsStorageV2;

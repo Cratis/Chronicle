@@ -125,14 +125,6 @@ public sealed class V2Interleaving
         _competing = false;
     }
 
-    async Task PausePrechecked(object target, MethodInfo method)
-    {
-        if (target is not IMongoClient) return;
-        if (method.Name != nameof(IMongoClient.StartSessionAsync)) return;
-        _prechecked.TrySetResult();
-        await _release.Task.WaitAsync(TimeSpan.FromSeconds(20));
-    }
-
     static bool IsTransition(object target, MethodInfo method, object?[] args) => IsAuthorityUpdate(target, method) && args[0] is not IClientSessionHandle;
 
     static bool IsFencedUpdate(object target, MethodInfo method, object?[] args) => IsAuthorityUpdate(target, method) && args[0] is IClientSessionHandle;
@@ -140,4 +132,12 @@ public sealed class V2Interleaving
     static bool IsAuthorityUpdate(object target, MethodInfo method) => target is IMongoCollection<BsonDocument> collection && collection.CollectionNamespace.CollectionName == V2Schema.Authorities && method.Name == nameof(IMongoCollection<BsonDocument>.UpdateOneAsync);
 
     static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    async Task PausePrechecked(object target, MethodInfo method)
+    {
+        if (target is not IMongoClient) return;
+        if (method.Name != nameof(IMongoClient.StartSessionAsync)) return;
+        _prechecked.TrySetResult();
+        await _release.Task.WaitAsync(TimeSpan.FromSeconds(20));
+    }
 }

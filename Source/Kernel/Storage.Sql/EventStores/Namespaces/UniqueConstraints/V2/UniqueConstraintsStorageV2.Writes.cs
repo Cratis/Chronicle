@@ -78,6 +78,7 @@ public sealed partial class UniqueConstraintsStorageV2
     static Task<UniqueConstraintWriteFailure?> DeleteOwner(V2DbContext context, (EventSourceId Owner, UniqueConstraintStorageScope Scope, UniqueConstraintValue? Value) removal, CancellationToken cancellationToken)
     {
         var (owner, scope, value) = removal;
+
         // An overlength owner cannot have been saved. Its removal is a fenced no-op, never a truncated lookup.
         if (owner.Value.Length > V2Identity.OwnerLimit) return Task.FromResult<UniqueConstraintWriteFailure?>(null);
         var claims = context.Claims.Where(row => row.Scope == scope.Value).WhereExact(context, row => row.EventSourceId, owner.Value);

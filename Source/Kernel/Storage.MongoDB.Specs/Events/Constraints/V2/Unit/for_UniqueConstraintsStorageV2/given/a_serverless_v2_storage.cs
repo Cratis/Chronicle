@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
-using Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2.Unit.for_UniqueConstraintsStorageV2.given;
