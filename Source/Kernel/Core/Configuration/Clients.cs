@@ -74,8 +74,8 @@ public class Clients
     /// </summary>
     /// <remarks>
     /// <see cref="ClientKeeperMode.SiloLocal"/> (the default) confirms a subscription from its durable subscription, a storage
-    /// read shared by every stream of a namespace, instead of calling the client's grains, so an observer released while
-    /// dormant is not woken by it and the client grains are not kept warm for it. It applies only while dormant release
+    /// read shared by every stream of a namespace, instead of asking the observer, so an observer released while
+    /// dormant is not woken by it. It applies only while dormant release
     /// applies (see <c language="json">observers.durableSubscriptions</c>); <see cref="ClientKeeperMode.Legacy"/> restores the call per check.
     /// </remarks>
     public ClientKeeperMode KeeperMode { get; init; } = ClientKeeperMode.SiloLocal;

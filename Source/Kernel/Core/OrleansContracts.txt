@@ -446,17 +446,9 @@ class [GrainType("observerservice")] Cratis.Chronicle.Observation.ObserverServic
 
 class [GrainType("observerserviceclient")] Cratis.Chronicle.Observation.ObserverServiceClient
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactor")] Cratis.Chronicle.Observation.Reactors.Clients.IReactor [Version(1)]
-  18C3FFB9: IsSubscriptionIntact() -> Task<bool>
-  06514374: KeepSubscription(Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition) -> Task
-  A72C3022: SetDefinitionAndSubscribe(Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition) -> Task
-  E42078DB: Unsubscribe() -> Task
-
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactorObserverSubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.IReactorObserverSubscriber [Version(0)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Clients.IReactorPageObserverSubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.IReactorPageObserverSubscriber [Version(0)]
-
-class [GrainType("reactor")] Cratis.Chronicle.Observation.Reactors.Clients.Reactor
 
 class [GrainType("reactorobserversubscriber")] Cratis.Chronicle.Observation.Reactors.Clients.ReactorObserverSubscriber
 
@@ -464,25 +456,11 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reactors.Kernel.IRea
 
 class [GrainType("reactorobserversubscriber`1")] Cratis.Chronicle.Observation.Reactors.Kernel.ReactorObserverSubscriber<TReactor>
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducer")] Cratis.Chronicle.Observation.Reducers.Clients.IReducer [Version(2)]
-  D0B46860: IsRegistrationDeferred() -> Task<bool>
-  0055D247: IsSubscriptionIntact() -> Task<bool>
-  232FCECE: KeepSubscription(Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition) -> Task
-  F2880EF8: SetDefinitionAndSubscribe(Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition) -> Task
-  762ECBBD: Unsubscribe() -> Task
-
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerObserverSubscriber [Version(0)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber [Version(0)]
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager")] Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager [Version(0)]
-  0E9E79CB: Register(Cratis.Chronicle.Concepts.Clients.ConnectionId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition>) -> Task
-
-class [GrainType("reducer")] Cratis.Chronicle.Observation.Reducers.Clients.Reducer
-
 class [GrainType("reducerobserversubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.ReducerObserverSubscriber
-
-class [GrainType("reducersmanager")] Cratis.Chronicle.Observation.Reducers.Clients.ReducersManager
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.States.IReplayCandidateRecommendation")] Cratis.Chronicle.Observation.States.IReplayCandidateRecommendation [Version(0)]
 

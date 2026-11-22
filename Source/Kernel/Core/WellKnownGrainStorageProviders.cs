@@ -54,11 +54,6 @@ public static class WellKnownGrainStorageProviders
     public const string ProjectionFutures = "projection-futures";
 
     /// <summary>
-    /// The name of the storage provider used for reactors.
-    /// </summary>
-    public const string Reactors = "reactors";
-
-    /// <summary>
     /// The name of the storage provider used for webhooks.
     /// </summary>
     public const string Webhooks = "webhooks";
@@ -82,11 +77,6 @@ public static class WellKnownGrainStorageProviders
     /// The name of the storage provider used for reducers.
     /// </summary>
     public const string Reducers = "reducers";
-
-    /// <summary>
-    /// The name of the storage provider used for reducers manager.
-    /// </summary>
-    public const string ReducersManager = "reducers-manager";
 
     /// <summary>
     /// The name of the storage provider used for constraints.

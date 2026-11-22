@@ -41,6 +41,7 @@ public class an_observation_stream : Specification
             });
         var reactors = new Reactors(
             Substitute.For<IGrainFactory>(),
+            Substitute.For<IClientReactorSubscriptions>(),
             mediator,
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),

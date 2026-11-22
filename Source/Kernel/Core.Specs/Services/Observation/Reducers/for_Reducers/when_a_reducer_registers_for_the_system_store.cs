@@ -30,6 +30,7 @@ public class when_a_reducer_registers_for_the_system_store : Specification
         var mediator = Substitute.For<IReducerMediator>();
         var reducers = new Reducers(
             grainFactory,
+            Substitute.For<IClientReducerSubscriptions>(),
             mediator,
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),

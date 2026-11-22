@@ -5,6 +5,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
@@ -23,8 +24,9 @@ namespace Cratis.Chronicle.Services.Observation.Reducers.for_Reducers.given;
 public class a_registration : Specification
 {
     protected IGrainFactory _grainFactory;
+    protected IClientReducerSubscriptions _subscriptions;
     protected IReadModel _readModel;
-    protected IReducer _client;
+    protected IClientReducerSubscription _client;
     protected IObserverRegistrationGate _gate;
     protected IDisposable _lease;
     protected readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -40,8 +42,9 @@ public class a_registration : Specification
     void Establish()
     {
         _grainFactory = Substitute.For<IGrainFactory>();
-        _client = Substitute.For<IReducer>();
-        _grainFactory.GetGrain<IReducer>(Arg.Any<string>()).Returns(_client);
+        _client = Substitute.For<IClientReducerSubscription>();
+        _subscriptions = Substitute.For<IClientReducerSubscriptions>();
+        _subscriptions.Create(Arg.Any<ConnectedObserverKey>()).Returns(_client);
         _readModel = Substitute.For<IReadModel>();
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
         var schema = new JsonSchema();
@@ -65,6 +68,7 @@ public class a_registration : Specification
 #pragma warning restore CA2012
         _reducers = new(
             _grainFactory,
+            _subscriptions,
             CreateMediator(),
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),

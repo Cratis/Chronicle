@@ -29,6 +29,8 @@ public class and_chronicle_meters_are_registered : Specification
         services.AddSingleton(Substitute.For<IGrainFactory>());
         services.AddSingleton(Substitute.For<IReactorMediator>());
         services.AddSingleton(Substitute.For<IReducerMediator>());
+        services.AddSingleton(Substitute.For<IClientReactorSubscriptions>());
+        services.AddSingleton(Substitute.For<IClientReducerSubscriptions>());
         services.AddSingleton(Substitute.For<IStorage>());
         services.AddSingleton(Substitute.For<Cratis.Chronicle.Clients.IConnectionOwnership>());
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());

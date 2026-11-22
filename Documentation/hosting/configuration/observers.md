@@ -132,7 +132,7 @@ Some of what a woken observer does cannot be seen from its cursor: noticing that
 
 **Clients that leave.** A client that disconnects while its observers are dormant is still unsubscribed: the kernel reads the recorded subscriptions for the observers that named the connection, and tells each. When a silo leaves the cluster, every remaining silo reads the recorded subscriptions for the observers that recorded a client served from it and wakes each, so it validates the record and drops what is gone. A record that names a client that is gone is repaired when the observer wakes. When the client that held the subscription is the one that is gone, the observer promotes the most recent standby whose client is still connected, under the definition that standby registered, and skips the standbys that have left; with none left it is disconnected until a client registers it again. None of this keeps anything in memory for a dormant observer. A client that is gone starts the clock of [removing unseen observers](#removing-observers-no-client-has-used) at the moment it left, and a dormant observer is never removed while a record names a client, because that is a client holding it.
 
-**The keeper of a client stream.** The open stream of a client confirms that its subscriptions are intact. With `connectedClients.keeperMode` set to `SiloLocal` (the default) a dormant observer whose recorded subscription names this client on this silo is confirmed without being asked, so the check does not wake it and the client's reactor and reducer grains are not kept in memory for it. The queue that holds the observer as dormant is what says the record is its subscription: an observer that is resident, has no record, or has a record naming another connection or silo is asked, which restores whatever was lost, including the live subscription of an observer whose silo was lost. Projections that are dormant are not asked when the kernel starts or a silo leaves either. Set `connectedClients.keeperMode` to `Legacy` to call the client's grains on every check, as earlier releases did.
+**The keeper of a client stream.** The open stream of a client confirms that its subscriptions are intact. With `connectedClients.keeperMode` set to `SiloLocal` (the default) a dormant observer whose recorded subscription names this client on this silo is confirmed without being asked, so the check does not wake it. The queue that holds the observer as dormant is what says the record is its subscription: an observer that is resident, has no record, or has a record naming another connection or silo is asked, which restores whatever was lost, including the live subscription of an observer whose silo was lost. Projections that are dormant are not asked when the kernel starts or a silo leaves either. Set `connectedClients.keeperMode` to `Legacy` to ask the observer on every check, as earlier releases did.
 
 **What is not released.** Observers that are replaying, catching up or quarantined, have failed partitions or unfinished jobs, or serve a webhook or an event store subscription, stay resident. So does an observer in a cluster where any silo runs a release before 19.173.0, or that has not yet published its release: dormant release applies only while every silo of the cluster supports it, and is evaluated again at every decision, so a rolling upgrade is safe in both directions.
 
@@ -145,7 +145,7 @@ Some of what a woken observer does cannot be seen from its cursor: noticing that
 | Keep every subscribed observer in memory, as before | `observers.dormantAfter` to `0` |
 | Stop recording subscriptions and clear the stored records | `observers.durableSubscriptions` to `Off` |
 | Record and compare, without releasing | `observers.durableSubscriptions` to `Shadow` |
-| Call the client's grains on every check of a stream | `connectedClients.keeperMode` to `Legacy` |
+| Ask the observer on every check of a stream | `connectedClients.keeperMode` to `Legacy` |
 | Make wakes less bursty | lower `observers.maxConcurrentWakes` |
 
 ### Metrics to watch
@@ -164,9 +164,13 @@ A dormant observer is not a stuck observer: it reports as subscribed and its run
 
 ### Upgrading
 
-Upgrading changes behavior without any configuration: observers are released after fifteen minutes of having nothing to do, and the keeper of a client stream stops calling the client's grains for dormant observers. The memory of the kernel falls by what idle observers held, and the first event for a released observer pays one activation, usually a millisecond or two. A kernel that must keep every observer in memory sets `observers.dormantAfter` to `0`.
+Upgrading changes behavior without any configuration: observers are released after fifteen minutes of having nothing to do, and the keeper of a client stream stops asking dormant observers. The memory of the kernel falls by what idle observers held, and the first event for a released observer pays one activation, usually a millisecond or two. A kernel that must keep every observer in memory sets `observers.dormantAfter` to `0`.
 
-During a rolling upgrade nothing is released until every silo runs the release that supports it, and an older silo neither writes nor clears the record, so the observers it hosts are never released. The grain interfaces only grow, so silos of both releases call each other throughout.
+During a rolling upgrade nothing is released until every silo runs the release that supports it, and an older silo neither writes nor clears the record, so the observers it hosts are never released. The grain interfaces of the release that removed the per-connection client reactor and reducer grains no longer match those of earlier releases, so that release is a stop-start deploy: stop every silo, then start the new release. The clients keep the same stream and reconnect on their own, and the stored subscriptions and definitions are unchanged.
+
+## What serves a connected client
+
+A client reactor or reducer is served by the open stream of its connection. The stream subscribes the observer, keeps the subscription in place, and unsubscribes it when the stream ends, so a connected client holds no grain activation of its own: with thousands of connected observers the kernel has the observers and nothing per connection beside them. Events are delivered to the client through the observer's subscriber, in the order the observer delivers them, as before.
 
 ## Removing observers no client has used
 

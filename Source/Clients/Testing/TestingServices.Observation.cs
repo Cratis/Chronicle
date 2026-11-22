@@ -41,6 +41,7 @@ internal sealed partial class TestingServices
     static KernelReactorsService CreateReactors(TestingServiceContext context) =>
         new(
             context.GrainFactory,
+            new TestingClientSubscriptions(),
             new KernelReactorMediator(),
             context.Storage,
             context.JsonSerializerOptions,
@@ -55,6 +56,7 @@ internal sealed partial class TestingServices
     static KernelReducersService CreateReducers(TestingServiceContext context) =>
         new(
             context.GrainFactory,
+            new TestingClientSubscriptions(),
             new KernelReducerMediator(),
             new ExpandoObjectConverter(new TypeFormats()),
             context.JsonSerializerOptions,

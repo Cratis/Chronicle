@@ -33,6 +33,7 @@ public class and_get_definition_fails : Specification
 
         _reducers = new Reducers(
             grainFactory,
+            Substitute.For<IClientReducerSubscriptions>(),
             Substitute.For<IReducerMediator>(),
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),

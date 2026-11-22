@@ -230,6 +230,7 @@ public static class ChronicleServerSiloBuilderExtensions
                 new FailedPartitions(storage),
                 new Cratis.Chronicle.Services.Observation.Reactors.Reactors(
                     grainFactory,
+                    sp.GetRequiredService<IClientReactorSubscriptions>(),
                     sp.GetRequiredService<IReactorMediator>(),
                     sp.GetRequiredService<IStorage>(),
                     jsonSerializerOptions,
@@ -241,7 +242,7 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(),
                     sp.GetRequiredService<ISiloDepartures>(),
                     sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(), sp.GetRequiredService<ISiloDepartures>(), sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IClientReducerSubscriptions>(), sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(), sp.GetRequiredService<ISiloDepartures>(), sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
                 projections,
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),

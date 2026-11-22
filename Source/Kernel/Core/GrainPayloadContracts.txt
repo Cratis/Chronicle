@@ -322,9 +322,6 @@ orleans [Alias("Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.Ev
   [Id(1,Level=0,Constructor=true)] SourceEventStore: Cratis.Chronicle.Concepts.EventStoreName
   [Id(2,Level=0,Constructor=true)] EventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
 concept Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId : string
-orleans [Alias("Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression")] Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression
-  [Id(0,Level=0,Constructor=true)] EventType: Cratis.Chronicle.Concepts.Events.EventType
-  [Id(1,Level=0,Constructor=true)] Key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 orleans [Alias("Cratis.Chronicle.Concepts.Observation.FailedPartition")] Cratis.Chronicle.Concepts.Observation.FailedPartition
   [Id(0)] WebhookDisposition: Cratis.Chronicle.Concepts.Observation.WebhookFailureDisposition?
   [Id(1)] WebhookRecoveryId: System.Guid?
@@ -429,10 +426,6 @@ enum Cratis.Chronicle.Concepts.Observation.ObserverType : int
   Reactor = 1
   Reducer = 3
   Unknown = 0
-orleans [Alias("Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition")] Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
-  [Id(0,Level=0,Constructor=true)] MaxEventsPerPage: int
-  [Id(1,Level=0,Constructor=true)] MaxDelay: System.TimeSpan
-  [Id(2,Level=0,Constructor=true)] MaxBytesPerPage: int
 orleans [Alias("Cratis.Chronicle.Concepts.Observation.PartitionDeferral")] Cratis.Chronicle.Concepts.Observation.PartitionDeferral
   [Id(0,Level=0,Constructor=true)] Id: System.Guid
   [Id(1,Level=0,Constructor=true)] Reason: Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason
@@ -450,34 +443,6 @@ enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
   PartitionNotFound = 1
   PartitionQuarantined = 3
   Started = 0
-orleans [Alias("Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition")] Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition
-  [Id(7)] GenerationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
-  [Id(8)] StartAtTail: bool
-  [Id(9)] PageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
-  [Id(0,Level=0,Constructor=true)] Identifier: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId
-  [Id(1,Level=0,Constructor=true)] Owner: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner
-  [Id(2,Level=0,Constructor=true)] EventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
-  [Id(3,Level=0,Constructor=true)] EventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression>
-  [Id(4,Level=0,Constructor=true)] IsReplayable: bool
-  [Id(5,Level=0,Constructor=true)] Tags: System.Collections.Generic.IEnumerable<string>
-  [Id(6,Level=0,Constructor=true)] Filters: Cratis.Chronicle.Concepts.Observation.ObserverFilters
-concept Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId : string
-enum Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner : int
-  Client = 1
-  Kernel = 2
-  Unspecified = 0
-orleans [Alias("Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition")] Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition
-  [Id(8)] GenerationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
-  [Id(9)] PageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
-  [Id(0,Level=0,Constructor=true)] Identifier: Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId
-  [Id(1,Level=0,Constructor=true)] EventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
-  [Id(2,Level=0,Constructor=true)] EventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression>
-  [Id(3,Level=0,Constructor=true)] ReadModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
-  [Id(4,Level=0,Constructor=true)] IsActive: bool
-  [Id(5,Level=0,Constructor=true)] Tags: System.Collections.Generic.IEnumerable<string>
-  [Id(6,Level=0,Constructor=true)] Filters: Cratis.Chronicle.Concepts.Observation.ObserverFilters
-  [Id(7,Level=0,Constructor=true)] Hash: string
-concept Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId : string
 concept Cratis.Chronicle.Concepts.Observation.ReplayEpoch : System.Guid
 orleans [Alias("Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason")] Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason
   [Id(0,Level=0,Constructor=true)] Type: Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType

@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using System.Text.Json;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
@@ -29,9 +30,11 @@ public class when_a_reducer_registers_on_a_connection_another_caller_owns : Spec
         var definitionGrain = Substitute.For<IReadModel>();
         grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(definitionGrain);
         grainFactory.ClearReceivedCalls();
+        var subscriptions = Substitute.For<IClientReducerSubscriptions>();
         var mediator = Substitute.For<IReducerMediator>();
         var reducers = new Reducers(
             grainFactory,
+            subscriptions,
             mediator,
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
@@ -55,7 +58,7 @@ public class when_a_reducer_registers_on_a_connection_another_caller_owns : Spec
         var error = await Catch.Exception(() => observed.WaitAsync(TimeSpan.FromSeconds(5)));
 
         (error is RpcException rpc && rpc.StatusCode == status).ShouldBeTrue();
-        grainFactory.DidNotReceive().GetGrain<Chronicle.Observation.Reducers.Clients.IReducer>(Arg.Any<string>());
+        subscriptions.DidNotReceive().Create(Arg.Any<ConnectedObserverKey>());
         definitionGrain.ReceivedCalls().ShouldBeEmpty();
         mediator.ReceivedCalls().ShouldBeEmpty();
     }

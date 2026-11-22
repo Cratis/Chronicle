@@ -29,7 +29,7 @@ namespace Cratis.Chronicle.Benchmarks.Kernel;
 /// </remarks>
 public static class KeeperCalls
 {
-    static readonly string[] _keeperMethods = ["IsSubscriptionIntact", "KeepSubscription", "IsClientTarget", "KnowsClient"];
+    static readonly string[] _keeperMethods = ["IsClientTarget", "KnowsClient"];
     static readonly ConcurrentDictionary<string, long> _calls = new();
     static readonly ConcurrentDictionary<long, long> _callsPerSecond = new();
     static readonly Stopwatch _clock = new();
@@ -60,6 +60,7 @@ public static class KeeperCalls
         var siloAddress = host.Services.GetRequiredService<ILocalSiloDetails>().SiloAddress;
         var options = host.Services.GetRequiredService<IOptions<ChronicleOptions>>().Value;
         var siloDepartures = host.Services.GetRequiredService<ISiloDepartures>();
+        var subscriptions = host.Services.GetRequiredService<IClientReactorSubscriptions>();
 
         await ObserverFootprint.Activate(grainFactory, siloAddress, "kept", count);
         Console.WriteLine($"Client subscription keeper: {count} subscribed reactor observers, idle for {seconds} s, connectedClients.reviseIntervalSeconds {options.ConnectedClients.ReviseIntervalSeconds}, subscriptionCheckIntervalSeconds {options.ConnectedClients.SubscriptionCheckIntervalSeconds}");
@@ -71,7 +72,7 @@ public static class KeeperCalls
         using var process = Process.GetCurrentProcess();
         var processorTime = process.TotalProcessorTime;
         var stopwatch = Stopwatch.StartNew();
-        var keepers = Enumerable.Range(0, args.Contains("--without-keeper") ? 0 : count).Select(index => Keep(grainFactory, options, siloDepartures, index, streams.Token)).ToArray();
+        var keepers = Enumerable.Range(0, args.Contains("--without-keeper") ? 0 : count).Select(index => Keep(subscriptions, options, siloDepartures, index, streams.Token)).ToArray();
         await Task.Delay(TimeSpan.FromSeconds(seconds));
         await streams.CancelAsync();
         await Task.WhenAll(keepers);
@@ -106,10 +107,10 @@ public static class KeeperCalls
         return 0;
     }
 
-    static Task Keep(IGrainFactory grainFactory, ChronicleOptions options, ISiloDepartures siloDepartures, int index, CancellationToken streamClosed)
+    static Task Keep(IClientReactorSubscriptions subscriptions, ChronicleOptions options, ISiloDepartures siloDepartures, int index, CancellationToken streamClosed)
     {
         var reactorId = new ReactorId($"kept-{index}");
-        var reactor = grainFactory.GetGrain<IReactor>(new ConnectedObserverKey(reactorId.Value, ObserverFootprint.EventStore, ObserverFootprint.Namespace, EventSequenceId.Log, ObserverFootprint.Connection));
+        var reactor = subscriptions.Create(new ConnectedObserverKey(reactorId.Value, ObserverFootprint.EventStore, ObserverFootprint.Namespace, EventSequenceId.Log, ObserverFootprint.Connection));
         var definition = new ReactorDefinition(
             reactorId,
             ReactorOwner.Client,

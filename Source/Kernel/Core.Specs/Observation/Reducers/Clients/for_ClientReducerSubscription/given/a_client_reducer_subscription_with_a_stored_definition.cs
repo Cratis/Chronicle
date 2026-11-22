@@ -1,0 +1,88 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Observation.ClientSubscriptions;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Orleans.Core;
+
+namespace Cratis.Chronicle.Observation.Reducers.Clients.for_ClientReducerSubscription.given;
+
+public class a_client_reducer_subscription_with_a_stored_definition : Specification
+{
+    protected ClientReducerSubscription _subscription;
+    protected IObserver _observer;
+    protected IReducerDefinitionComparer _definitionComparer;
+    protected IConnectedClients _connectedClients;
+    protected ConnectedClient _client;
+    protected EventType _connectionEventType;
+    protected ReducerDefinition _connectionDefinition;
+    protected ReducerDefinition _storedDefinition;
+    protected IStorage<ReducerDefinition> _stateStorage;
+
+    void Establish()
+    {
+        _definitionComparer = Substitute.For<IReducerDefinitionComparer>();
+        _definitionComparer
+            .Compare(Arg.Any<ReducerKey>(), Arg.Any<ReducerDefinition>(), Arg.Any<ReducerDefinition>())
+            .Returns(ReducerDefinitionCompareResult.Same);
+
+        var localSiloDetails = Substitute.For<ILocalSiloDetails>();
+        localSiloDetails.SiloAddress.Returns(SiloAddress.FromParsableString("127.0.0.1:11111@1"));
+
+        _client = new ConnectedClient { ConnectionId = "the-connection", Version = "1.0.0" };
+        _connectedClients = Substitute.For<IConnectedClients>();
+        _connectedClients.GetConnectedClient(Arg.Any<ConnectionId>()).Returns(_client);
+        _connectedClients.IsConnected(Arg.Any<ConnectionId>()).Returns(true);
+
+        _observer = Substitute.For<IObserver>();
+        _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
+        _observer.KnowsClient(_client.ConnectionId).Returns(false);
+
+        // The stored definition is shared by every connection registering the reducer; here another connection - another
+        // client version, as during a rolling deployment - registered last, with different event types.
+        var storedEventType = new EventType("stored-event-type", EventTypeGeneration.First);
+        _connectionEventType = new EventType("connection-event-type", EventTypeGeneration.First);
+        _storedDefinition = new ReducerDefinition("the-reducer", EventSequenceId.Log, [new(storedEventType, WellKnownExpressions.EventSourceId)], "the-read-model", true, []);
+        _connectionDefinition = new ReducerDefinition("the-reducer", EventSequenceId.Log, [new(_connectionEventType, WellKnownExpressions.EventSourceId)], "the-read-model", true, []);
+        _stateStorage = Substitute.For<IStorage<ReducerDefinition>>();
+        _stateStorage.State = _storedDefinition;
+
+        var key = new ConnectedObserverKey("the-reducer", "the-event-store", "the-namespace", EventSequenceId.Log, _client.ConnectionId);
+
+        // A fresh subscription, as after losing the one the client registered with.
+        _subscription = new ClientReducerSubscription(
+            key,
+            ClientSubscriptionFakes.GrainFactory(_observer, _connectedClients, Substitute.For<INamespaces>()),
+            _definitionComparer,
+            localSiloDetails,
+            Options.Create(new ChronicleOptions()),
+            ClientSubscriptionFakes.StorageFor(_stateStorage),
+            NullLogger<ClientReducerSubscription>.Instance);
+    }
+
+    protected Task WasSubscribed(ReducerDefinition definition) => _observer.Received(1).Subscribe<IReducerObserverSubscriber>(
+        ObserverType.Reducer,
+        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
+        Arg.Any<SiloAddress>(),
+        _client,
+        filters: definition.Filters);
+
+    protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReducerObserverSubscriber>(
+        ObserverType.Reducer,
+        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),
+        Arg.Any<SiloAddress>(),
+        Arg.Is<ConnectedClient>(client => client.ConnectionId == _client.ConnectionId),
+        Arg.Any<bool>(),
+        Arg.Any<ObserverFilters?>(),
+        Arg.Any<EventGenerationDelivery>());
+}
