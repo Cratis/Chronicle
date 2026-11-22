@@ -28,6 +28,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "dormantAfter": 900,
     "dormantSafetyNet": 900,
     "maxConcurrentWakes": 0,
+    "maxConcurrentCatchUpJobs": 16,
     "durableSubscriptionCheckInterval": "00:15:00",
     "unseenRemovalEnabled": false,
     "unseenRemovalAfter": "7.00:00:00",
@@ -74,6 +75,7 @@ The example shows the defaults of a production build. The `-development` image s
 | dormantSafetyNet | number | 900 | Most seconds that pass before the safety net looks at a released, dormant observer and wakes it if an event is waiting for it, which bounds how long a lost wake-up can delay delivery. Each observer's interval is jittered between 60% and 90% of this value. Values below `1` use the default |
 | dormantSafetyNetFullWake | number | 3600 | Most seconds that pass before a released, dormant observer is woken whether or not an event is waiting, so that what only a running observer can see (a client that left unnoticed, a definition that moved) is still found. Values below `1` use the default; a value below `dormantSafetyNet` is raised to it, which wakes every dormant observer at every interval as before |
 | maxConcurrentWakes | number | 0 (automatic) | How many dormant observers one silo wakes at the same time. `0` or less selects two per processor, at least 4 and at most 16. The others wait for a place |
+| maxConcurrentCatchUpJobs | number | 16 | How many catch-up jobs run at the same time in one event store namespace. Past it, an observer that needs a catch-up job stays behind and tries again after a few seconds. `0` or less lifts the limit. See [Catch-up when clients return](#catch-up-when-clients-return) |
 | dormantResumeMaxEvents | number | 1000 | Most events a woken observer reads and delivers from its cursor itself. A larger gap falls back to a catch-up job. Values below `1` use the default |
 | unseenRemovalEnabled | boolean | `false` | Turns on the removal of client reactors and reducers that no client has used for `unseenRemovalAfter`. Off by default: nothing is removed unless you turn it on. **A removed observer replays from the start if its client returns.** See [Removing observers no client has used](#removing-observers-no-client-has-used) |
 | unseenRemovalAfter | timespan | `7.00:00:00` | How long a client reactor or reducer can go without any client subscribed to it, in every namespace, before Chronicle removes it and its records, when `unseenRemovalEnabled` is on. Seven days is the recommended period; a zero or negative value uses it. Has no effect while the removal is off |
@@ -163,6 +165,15 @@ Some of what a woken observer does cannot be seen from its cursor: noticing that
 | Ask the observer on every check of a stream | `connectedClients.keeperMode` to `Legacy` |
 | Make wakes less bursty | lower `observers.maxConcurrentWakes` |
 
+### Catch-up when clients return
+
+When a client application drops and returns, every observer it owns needs a catch-up job. Two rules keep that from becoming a burst of kernel work:
+
+- An observer owned by a client with no connected instance starts no catch-up, partition catch-up or retry job. Such a job can only fail. The observer stays behind and catches up when its client subscribes again.
+- At most `maxConcurrentCatchUpJobs` catch-up jobs run at once in a namespace. An observer past the limit settles, tries again after five to fifteen seconds and starts its job when a place is free. An observer that already has a catch-up job is never held back.
+
+Both are counted in `cratis.chronicle.observer.catch_up_deferrals`, by `cratis.chronicle.observer.catch_up_deferral_reason`: `no_client` or `capacity`. A persistently high `capacity` count means the limit is lower than your reconnect bursts need; `no_client` is expected while a client application is down.
+
 ### Metrics to watch
 
 | Metric | Reports |
@@ -173,6 +184,7 @@ Some of what a woken observer does cannot be seen from its cursor: noticing that
 | `cratis.chronicle.observer.dormant_wakes` | Dormant observers woken, by `cratis.chronicle.observer.wake_cause`: `event` or `safety_net` |
 | `cratis.chronicle.observer.dormant_safety_net_checks` | Dormant observers the safety net looked at, by `cratis.chronicle.observer.safety_net_outcome`: `up_to_date` (nothing waiting, not activated), `behind` (an event is waiting, woken), `unverified` (the cursor or tail could not be read, woken) or `full_wake` (due for the unconditional wake, woken). Most checks should be `up_to_date` |
 | `cratis.chronicle.observer.dormant_wakes_delayed` | Wakes that had to wait for a place under `maxConcurrentWakes`. Persistently high means the limit is too low for your bursts |
+| `cratis.chronicle.observer.catch_up_deferrals` | Catch-ups that did not start a job, by `cratis.chronicle.observer.catch_up_deferral_reason`: `no_client` (the client is not connected) or `capacity` (`maxConcurrentCatchUpJobs` jobs are already running) |
 | `cratis.chronicle.observer.dormant_resumes` | Woken observers by `cratis.chronicle.observer.resume_outcome`: `cursor` (read and delivered by the observer), `catch_up` (the gap was larger than `dormantResumeMaxEvents`) or `stale_record` (the record named a client that is gone) |
 
 A dormant observer is not a stuck observer: it reports as subscribed and its running state stays `Active`. If delivery to an observer stalls, look at its failed partitions and its last handled event sequence number as before. Many `behind` checks, rather than `event` wakes, mean wake-ups are being lost.

@@ -433,11 +433,19 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.IHandleEventsFo
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.IHandleEventsForPartition")] Cratis.Chronicle.Observation.Jobs.IHandleEventsForPartition [Version(0)]
   817C0A0F: ReportNewSuccessfullyHandledEvent(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.IObserverOperatorCommandJob")] Cratis.Chronicle.Observation.Jobs.IObserverOperatorCommandJob [Version(0)]
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.IObserverOperatorCommandStep")] Cratis.Chronicle.Observation.Jobs.IObserverOperatorCommandStep [Version(0)]
+
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.IReplayObserver")] Cratis.Chronicle.Observation.Jobs.IReplayObserver [Version(0)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.IReplayObserverPartition")] Cratis.Chronicle.Observation.Jobs.IReplayObserverPartition [Version(0)]
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Jobs.IRetryFailedPartition")] Cratis.Chronicle.Observation.Jobs.IRetryFailedPartition [Version(0)]
+
+class [GrainType("observeroperatorcommandjob")] Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandJob
+
+class [GrainType("observeroperatorcommandstep")] Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandStep
 
 class [GrainType("replayobserver")] Cratis.Chronicle.Observation.Jobs.ReplayObserver
 

@@ -7,6 +7,7 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
@@ -30,16 +31,21 @@ public record ReplayObserver(string EventStore, string Namespace, string Observe
     internal const string ReplayNotStartedMessage = "Replay could not be started for this observer.";
 
     /// <summary>
-    /// Handles the command by invoking <see cref="IObserver.Replay"/> on the target observer grain.
+    /// Handles the command by accepting it as a job that gives the replay to the target observer grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
     /// <param name="storage">The storage containing observer definitions.</param>
-    /// <returns>A validation error if no replay job was started; otherwise no validation error.</returns>
+    /// <returns>A validation error if the replay was not accepted; otherwise no validation error.</returns>
+    /// <remarks>
+    /// The observer grain also serves the subscriptions of its client, so a call to it can queue behind them for longer than
+    /// the call may take. The command is accepted by the jobs manager instead and returns at once; the job gives the replay
+    /// to the observer when it can, and a replay already accepted is joined (see <see cref="ObserverOperatorCommandJobs"/>).
+    /// </remarks>
     public async Task<ValidationResult?> Handle(IGrainFactory grainFactory, IStorage storage)
     {
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
-        var jobId = await grainFactory.GetGrain<IObserver>(key).Replay();
+        var jobId = await ObserverOperatorCommandJobs.AcceptReplay(grainFactory, storage, key);
         return jobId == JobId.NotSet
             ? ValidationResult.Error(ReplayNotStartedMessage, [nameof(ObserverId)])
             : null;

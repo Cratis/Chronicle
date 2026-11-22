@@ -309,6 +309,17 @@ public class Observers
     public int MaxConcurrentWakes { get; init; }
 
     /// <summary>
+    /// Gets how many catch-up jobs run at the same time in one event store namespace.
+    /// </summary>
+    /// <remarks>
+    /// When a client application returns, every observer it owns would start a catch-up job at once. Past this number an
+    /// observer that needs a catch-up job waits: it stays behind, tries again after a short, randomized delay and counts the
+    /// wait as a deferral in <c language="text">cratis.chronicle.observer.catch_up_deferrals</c>. An observer that already has a catch-up job
+    /// is never held back. Defaults to 16. Values of 0 or less lift the limit.
+    /// </remarks>
+    public int MaxConcurrentCatchUpJobs { get; init; } = 16;
+
+    /// <summary>
     /// Gets how many events a woken observer may read and deliver from its cursor before the wake falls back to a catch-up job.
     /// </summary>
     /// <remarks>
