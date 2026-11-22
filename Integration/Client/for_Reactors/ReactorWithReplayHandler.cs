@@ -31,21 +31,11 @@ public class ReactorWithReplayHandler : IReactor
 
     public async Task WaitTillReplayHandledReaches(int count, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
-        while (ReplayHandled < count)
-        {
-            await Task.Delay(50, cts.Token);
-        }
+        await ReadinessWait.Until(() => Task.FromResult(ReplayHandled), handled => handled >= count, timeout);
     }
 
     public async Task WaitTillLiveHandledReaches(int count, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
-        while (LiveHandled < count)
-        {
-            await Task.Delay(50, cts.Token);
-        }
+        await ReadinessWait.Until(() => Task.FromResult(LiveHandled), handled => handled >= count, timeout);
     }
 }
