@@ -16,6 +16,21 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 /// <param name="connectionString">The fixture database connection string.</param>
 internal sealed partial class SqlPlanQueries(StorageProvider provider, string connectionString)
 {
+    const string PostgreSqlIndexQuery = "SELECT indexname, indexdef FROM pg_indexes WHERE tablename=@table";
+
+    static readonly Dictionary<StorageProvider, string> _indexQueries = new()
+    {
+        [StorageProvider.Sqlite] = "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name=@table",
+        [StorageProvider.SqlServer] = "SELECT SCHEMA_NAME(t.schema_id), t.name, i.name, i.type_desc, i.is_unique,\n" +
+            "       c.name, ic.key_ordinal, ic.is_descending_key, ic.is_included_column, i.filter_definition\n" +
+            "FROM sys.indexes i\n" +
+            "JOIN sys.tables t ON t.object_id=i.object_id\n" +
+            "JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id\n" +
+            "JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id\n" +
+            "WHERE t.name=@table\n" +
+            "ORDER BY i.index_id, ic.index_column_id",
+    };
+
     [GeneratedRegex("FROM\\s+(?:(?:\"[^\"]+\"|\\[[^\\]]+\\]|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\.\\s*)?(?:\"(?<table>[^\"]+)\"|\\[(?<table>[^\\]]+)\\]|(?<table>[A-Za-z_][A-Za-z0-9_$]*))", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex TableName { get; }
 
@@ -38,21 +53,7 @@ internal sealed partial class SqlPlanQueries(StorageProvider provider, string co
     {
         var table = TableOf(query.Sql);
         if (table.Length == 0) return Task.FromResult("not captured: table name not found");
-        var sql = provider switch
-        {
-            StorageProvider.Sqlite => "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name=@table",
-            StorageProvider.SqlServer => """
-                SELECT SCHEMA_NAME(t.schema_id), t.name, i.name, i.type_desc, i.is_unique,
-                       c.name, ic.key_ordinal, ic.is_descending_key, ic.is_included_column, i.filter_definition
-                FROM sys.indexes i
-                JOIN sys.tables t ON t.object_id=i.object_id
-                JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id
-                JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id
-                WHERE t.name=@table
-                ORDER BY i.index_id, ic.index_column_id
-                """,
-            _ => "SELECT indexname, indexdef FROM pg_indexes WHERE tablename=@table"
-        };
+        var sql = _indexQueries.GetValueOrDefault(provider, PostgreSqlIndexQuery);
         return Execute(sql, [new("@table", table, System.Data.DbType.String, null)], -1);
     }
 
@@ -72,12 +73,18 @@ internal sealed partial class SqlPlanQueries(StorageProvider provider, string co
         {
             NpgsqlParameter postgres => postgres.Clone(),
             SqlParameter sqlServer => (DbParameter)((ICloneable)sqlServer).Clone(),
-            _ => command.CreateParameter()
+            _ => CreateParameter(command, source.DbType)
         };
         parameter.ParameterName = source.Name;
-        if (source.ProviderParameter is null) parameter.DbType = source.DbType;
         parameter.Value = source.Value ?? DBNull.Value;
         command.Parameters.Add(parameter);
+    }
+
+    static DbParameter CreateParameter(DbCommand command, System.Data.DbType dbType)
+    {
+        var parameter = command.CreateParameter();
+        parameter.DbType = dbType;
+        return parameter;
     }
 
     DbConnection CreateConnection() => provider switch

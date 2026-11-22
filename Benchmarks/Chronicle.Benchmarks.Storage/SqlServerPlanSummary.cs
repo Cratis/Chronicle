@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 /// </summary>
 internal static class SqlServerPlanSummary
 {
-    static readonly XNamespace Showplan = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";
+    static readonly XNamespace _showplan = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";
 
     /// <summary>
     /// Summarizes all operators, summing runtime counters across parallel threads.
@@ -21,8 +21,8 @@ internal static class SqlServerPlanSummary
     public static string Format(string xml)
     {
         var document = XDocument.Parse(xml);
-        var operators = document.Descendants(Showplan + "RelOp").Select(Operator);
-        var times = document.Descendants(Showplan + "QueryTimeStats").Select(time =>
+        var operators = document.Descendants(_showplan + "RelOp").Select(Operator);
+        var times = document.Descendants(_showplan + "QueryTimeStats").Select(time =>
             $"Query CPU={Value(time, "CpuTime")} ms; elapsed={Value(time, "ElapsedTime")} ms");
         return string.Join('\n', operators.Concat(times));
     }
@@ -30,11 +30,13 @@ internal static class SqlServerPlanSummary
     static string Operator(XElement operation)
     {
         // Only this operator's counters and object, not those belonging to nested RelOps.
-        var children = operation.Descendants().Where(element => element.Ancestors(Showplan + "RelOp").First() == operation).ToArray();
-        var counters = children.Where(element => element.Name == Showplan + "RunTimeCountersPerThread").ToArray();
-        var objects = children.Where(element => element.Name == Showplan + "Object").Select(element =>
+        var children = operation.Descendants().Where(element => element.Ancestors(_showplan + "RelOp").First() == operation).ToArray();
+        var counters = children.Where(element => element.Name == _showplan + "RunTimeCountersPerThread").ToArray();
+        var objects = children.Where(element => element.Name == _showplan + "Object").Select(element =>
             $"{Value(element, "Table")}.{Value(element, "Index")}");
-        var lookup = children.Any(element => (string?)element.Attribute("Lookup") is "1" or "true") ? " (Key Lookup)" : string.Empty;
+        var lookup = children.Any(element =>
+            string.Equals((string?)element.Attribute("Lookup"), "1", StringComparison.Ordinal) ||
+            string.Equals((string?)element.Attribute("Lookup"), "true", StringComparison.Ordinal)) ? " (Key Lookup)" : string.Empty;
         return $"Node {Value(operation, "NodeId")}: {Value(operation, "PhysicalOp")}{lookup}; estimated rows={Value(operation, "EstimateRows")}; actual rows={Total(counters, "ActualRows")}; executions={Total(counters, "ActualExecutions")}; {string.Join(", ", objects)}";
     }
 

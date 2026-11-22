@@ -22,6 +22,11 @@ internal static class DrainCapture
     public static async Task<bool> Run(IStorageProviderHost host, int size, string directory)
     {
         var path = Path.Combine(directory, "drain-pages.md");
+        if (!File.Exists(path))
+        {
+            await File.WriteAllTextAsync(path, "# Drain page attribution\n\nMoveNext includes storage reads, materialization and conversion. DB-read-only time is not isolated: command execution interceptors exclude reader consumption. Zero-event rows are terminal probes and excluded from page/quarter statistics.\n\n");
+        }
+
         try
         {
             RunBudget.Current.ThrowIfExpired();
@@ -31,7 +36,7 @@ internal static class DrainCapture
             using var cursor = await storage.GetFromSequenceNumber(0, cancellationToken: RunBudget.Current.Token);
             var pages = await Read(cursor);
             var total = Stopwatch.GetElapsedTime(started);
-            await File.AppendAllTextAsync(path, "# Drain page attribution\n\nMoveNext includes storage reads, materialization and conversion. DB-read-only time is not isolated: command execution interceptors exclude reader consumption. Zero-event rows are terminal probes and excluded from page/quarter statistics.\n\n" + DrainReport.Format(size, pages, total));
+            await File.AppendAllTextAsync(path, DrainReport.Format(size, pages, total));
         }
         catch (Exception error)
         {

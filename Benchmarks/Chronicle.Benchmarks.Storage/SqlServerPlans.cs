@@ -55,7 +55,7 @@ internal static class SqlServerPlans
         }
     }
 
-    static string Combine(IReadOnlyList<string> plans) => plans.Count switch
+    static string Combine(List<string> plans) => plans.Count switch
     {
         0 => throw new InvalidOperationException("SQL Server returned no actual showplan XML."),
         1 => plans[0],
