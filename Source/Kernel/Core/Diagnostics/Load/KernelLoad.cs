@@ -56,12 +56,12 @@ public sealed class KernelLoad : IKernelLoad
     /// </summary>
     /// <param name="options">The <see cref="IOptions{TOptions}"/> of <see cref="ChronicleOptions"/> holding the limits.</param>
     /// <param name="logger">The <see cref="ILogger{TCategoryName}"/> for logging.</param>
-    /// <param name="meter">The <see cref="IMeter{T}"/> owning the instruments.</param>
+    /// <param name="meter">The <see cref="IMeter{T}"/> owning the instruments, if the host has one.</param>
     public KernelLoad(
         IOptions<ChronicleOptions> options,
         ILogger<KernelLoad> logger,
-        [FromKeyedServices(WellKnown.MeterName)] IMeter<KernelLoad> meter)
-        : this(options, logger, meter.ActualMeter, TimeProvider.System)
+        [FromKeyedServices(WellKnown.MeterName)] IMeter<KernelLoad>? meter = null)
+        : this(options, logger, meter?.ActualMeter, TimeProvider.System)
     {
     }
 

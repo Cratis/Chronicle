@@ -5,6 +5,7 @@ using Cratis.Chronicle.Diagnostics.Load;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Setup;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cratis.Chronicle.Server;
 
@@ -41,6 +42,7 @@ internal static class KernelHostComposition
                 warmups);
         });
         services.AddSingleton<KernelStartupState>();
+        services.TryAddSingleton<IKernelLoad, KernelLoad>();
         services.AddHealthChecks()
             .AddCheck<KernelReadinessHealthCheck>("kernel-ready", tags: ["ready"])
             .AddCheck<KernelProjectionsRegistrationHealthCheck>("kernel-projections-registration", tags: ["ready"])
