@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const baselinePath = '.github/timing-coupling-baseline.txt';
@@ -36,21 +36,97 @@ function sourceFiles(root, directory) {
     return files;
 }
 
+function hide(active, start, end) {
+    for (let index = start; index < end; index++) {
+        if (!['\r', '\n'].includes(active[index])) active[index] = ' ';
+    }
+}
+
+function interpolationEnd(text, token, closing, depth) {
+    if (!closing) return 0;
+    if (depth !== 0) return 0;
+    if (text.startsWith(closing, token.index)) return token.index + closing.length;
+    if (token[0] !== ':') return 0;
+    const close = text.indexOf(closing, token.index + 1);
+    return close < 0 ? text.length : close + closing.length;
+}
+
+function scanCode(text, active, start = 0, closing = '') {
+    const tokens = /\/\/[^\r\n]*|\/\*[\s\S]*?(?:\*\/|$)|(?:\$+@?|@\$?)?("{3,}|"|')|::|[{}()[\]:]/g;
+    tokens.lastIndex = start;
+    let depth = 0;
+    for (let token; (token = tokens.exec(text));) {
+        const [value] = token;
+        const end = interpolationEnd(text, token, closing, depth);
+        if (end) {
+            hide(active, token.index, end);
+            return end;
+        }
+        if (['{', '(', '['].includes(value)) depth++;
+        else if (['}', ')', ']'].includes(value)) depth--;
+        else if (token[1]) tokens.lastIndex = scanString(text, active, token);
+        else hide(active, token.index, tokens.lastIndex);
+    }
+    return text.length;
+}
+
+function quoteWidth(text, index, quote, verbatim) {
+    if (quote.length >= 3) return text.startsWith(quote, index) ? quote.length : 0;
+    if (text[index] === '\\' && !verbatim) return -2;
+    if (text[index] !== quote) return 0;
+    if (verbatim && text[index + 1] === '"') return -2;
+    return 1;
+}
+
+function interpolationWidth(text, index, braces, raw) {
+    if (!braces || text[index] !== '{') return 0;
+    if (!raw) return text.startsWith('{{', index) ? -2 : 1;
+    const run = /^\{+/.exec(text.slice(index))[0].length;
+    return run >= braces ? run : -run;
+}
+
+function scanString(text, active, token) {
+    const [opening, quote] = token;
+    const raw = quote.length >= 3;
+    const verbatim = opening.includes('@');
+    const braces = opening.match(/\$/g)?.length ?? 0;
+    let segment = token.index;
+    let index = segment + opening.length;
+    while (index < text.length) {
+        const width = quoteWidth(text, index, quote, verbatim);
+        if (width > 0) {
+            hide(active, segment, index + width);
+            return index + width;
+        }
+        if (width < 0) {
+            index -= width;
+            continue;
+        }
+        const interpolation = interpolationWidth(text, index, braces, raw);
+        if (interpolation > 0) {
+            hide(active, segment, index + interpolation);
+            index = scanCode(text, active, index + interpolation, '}'.repeat(braces));
+            segment = index;
+        } else index += Math.abs(interpolation) || 1;
+    }
+    hide(active, segment, text.length);
+    return text.length;
+}
+
+function codeOnly(text) {
+    // Blank comments and literal text without shifting line numbers; interpolation expressions stay code.
+    const active = text.split('');
+    scanCode(text, active);
+    return active.join('');
+}
+
 function sitesIn(text) {
     const lines = text.split(/\r?\n/);
     const found = [];
     const undocumented = [];
     let delayOccurrences = 0;
-    let inComment = false;
-    for (const [index, line] of lines.entries()) {
-        // Preserve the original ratchet's line-based scope while ignoring block comments too.
-        const code = line.replace(/\/\*[\s\S]*?\*\//g, '').split('//')[0];
-        if (inComment) {
-            inComment = !line.includes('*/');
-            continue;
-        }
-        inComment = code.includes('/*');
-        const active = code.split('/*')[0];
+    for (const [index, active] of codeOnly(text).split(/\r?\n/).entries()) {
+        const line = lines[index];
         found.push(...Array.from(active.matchAll(sleeps), () => index + 1));
         const delayCount = Array.from(active.matchAll(delays)).length;
         delayOccurrences += delayCount;
@@ -149,6 +225,71 @@ function checkComments(onDisk) {
     return failed;
 }
 
+function testLexing(plant, cli) {
+    const cases = [
+        ['closed multiline comment', '/*\ncomment\n*/ await Task.Delay(123);', [3]],
+        ['multiple comments', '/* first */ /*\nsecond */ await Task.Delay(123); /* third */ await Task.Yield();', [2, 2]],
+        ['regular string', String.raw`var value = "https://example.test/* Task.Delay(1) */ \"quoted\""; await Task.Delay(123);`, [1]],
+        ['verbatim string', 'var value = @"https://example.test/""quoted""\n/* Task.Delay(1) */"; await Task.Delay(123);', [2]],
+        ['interpolated string', 'var value = $"https://example.test/{"/*"}"; await Task.Delay(123);', [1]],
+        ['interpolated verbatim strings', 'var a = $@"https://example.test/{"//"}"; var b = @$"/* {"//"}"; await Task.Delay(123);', [1]],
+        ['raw string', 'var value = """\nhttps://example.test/\n/* Task.Delay(1) */\n"""; await Task.Delay(123);', [4]],
+        ['long raw delimiter', 'var value = """"https://example.test/ """ /* Task.Delay(1) */""""; await Task.Delay(123);', [1]],
+        ['interpolated raw string', 'var value = $$"""https://example.test/{ {{"/*"}} Task.Delay(1)"""; await Task.Delay(123);', [1]],
+        ['interpolation expression', 'var value = $"https://example.test/{await Task.Delay(123)}";', [1]],
+        ['interpolation format', 'var value = $"{value:https://example.test/}"; await Task.Delay(123);', [1]],
+        ['raw interpolation format', 'var value = $$"""{{value:https://example.test/}}"""; await Task.Delay(123);', [1]],
+        ['nested interpolation', 'var value = $"https://example.test/{$"nested {"//"}"}"; await Task.Delay(123);', [1]],
+        ['character literals', String.raw`var slash = '/'; var quote = '\"'; await Task.Delay(123);`, [1]],
+        ['following lines', 'var value = "https://example.test/";\r\nawait Task.Delay(123);\r\nawait Task.Yield();', [2, 3]],
+    ];
+    for (const [name, text, lines] of cases) {
+        assert.deepEqual(sitesIn(text).found, lines, name);
+        plant('Source/Example.Specs/spec.cs', `${text}\nawait Task.Yield();`);
+        const result = cli();
+        assert.equal(result.status, 1, `${name}: ${result.stdout}${result.stderr}`);
+        assert.match(result.stderr, /waits on the clock .*allows 1/, name);
+    }
+    assert.deepEqual(sitesIn('// Task.Delay(1);\n/* Task.Delay(2); */').found, []);
+    assert.deepEqual(sitesIn('var value = "Task.Delay(1) // /*"; /* Task.Yield() */').found, []);
+}
+
+function testLauncher(plant, fixture) {
+    const python = (process.env.PATH ?? '').split(delimiter).map(path => join(path, 'python3')).find(existsSync);
+    if (!python) {
+        console.log('Launcher self-test skipped: python3 is unavailable.');
+        return;
+    }
+    const script = '.github/scripts/assert-timing-coupling-ratchet.mjs';
+    const launcher = script.replace(/\.mjs$/, '.py');
+    plant(launcher, readFileSync(fileURLToPath(new URL('./assert-timing-coupling-ratchet.py', import.meta.url)), 'utf8'));
+    const launch = (args = [], env = process.env) => spawnSync(python, [join(fixture, launcher), fixture, ...args], { encoding: 'utf8', env });
+    assert.equal(launch().status, 2, 'A launcher without its Node script cannot run.');
+    plant(script, readFileSync(fileURLToPath(import.meta.url), 'utf8'));
+    assert.equal(launch([], { ...process.env, PATH: fixture }).status, 2, 'A launcher without Node cannot run.');
+    assert.equal(launch(['--report']).status, 0, 'The launcher must preserve success.');
+    assert.equal(launch().status, 1, 'The launcher must preserve violations.');
+    assert.equal(launch(['--unknown']).status, 2, 'The launcher must preserve cannot-run errors.');
+}
+
+function testCannotRun(plant, cli, fixture) {
+    assert.equal(cli('--unknown').status, 2, 'Unknown options cannot run.');
+    assert.equal(cli(join(fixture, 'nonexistent')).status, 2, 'Missing roots cannot run.');
+    rmSync(join(fixture, baselinePath));
+    assert.equal(cli().status, 2, 'Missing baselines cannot run.');
+    mkdirSync(join(fixture, baselinePath));
+    assert.equal(cli().status, 2, 'Unreadable baselines cannot run.');
+    rmSync(join(fixture, baselinePath), { recursive: true });
+    plant(baselinePath, 'malformed baseline');
+    assert.equal(cli().status, 2, 'Malformed baselines cannot run.');
+    plant(baselinePath, '');
+    assert.equal(cli().status, 2, 'Empty baselines cannot run.');
+    plant(baselinePath, '1 Source/Example.Specs/spec.cs\n');
+    rmSync(join(fixture, 'Source'), { recursive: true });
+    plant('Source', 'not a directory');
+    assert.equal(cli().status, 2, 'Scan I/O failures cannot run.');
+}
+
 function selfTest(root) {
     const work = join(root, '.ai-work');
     mkdirSync(work, { recursive: true });
@@ -157,7 +298,7 @@ function selfTest(root) {
         mkdirSync(dirname(join(fixture, path)), { recursive: true });
         writeFileSync(join(fixture, path), text);
     };
-    const cli = () => spawnSync(process.execPath, [fileURLToPath(import.meta.url), fixture], { encoding: 'utf8' });
+    const cli = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...(args.length ? args : [fixture])], { encoding: 'utf8' });
     try {
         plant(baselinePath, '1 Integration/planted.cs\n1 Source/Example.Specs/spec.cs\n');
         plant('Source/Example.Specs/spec.cs', 'await Task.Yield();');
@@ -179,8 +320,11 @@ function selfTest(root) {
         const increased = cli();
         assert.equal(increased.status, 1, 'The existing per-file count ratchet must still reject increases.');
         assert.match(increased.stderr, /waits on the clock 2 time\(s\).*allows 1/);
-        assert.deepEqual(sitesIn('// Task.Delay(1);\n/* Task.Delay(2); */').found, []);
+        testLexing(plant, cli);
+        testLauncher(plant, fixture);
+        testCannotRun(plant, cli, fixture);
         console.log('Self-test passed: planted violation rejected, adjacent explanations accepted, count ratchet retained.');
+        console.log('Lexer regressions rejected; cannot-run errors returned exit 2.');
         return 0;
     } finally {
         rmSync(fixture, { recursive: true });
@@ -197,5 +341,5 @@ try {
     process.exitCode = args.includes('--self-test') ? selfTest(root) : run(root, args.includes('--report'));
 } catch (error) {
     console.error(error.message);
-    process.exitCode = 1;
+    process.exitCode = 2;
 }
