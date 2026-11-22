@@ -57,7 +57,8 @@ public class Webhooks(IEventTypes eventTypes, IEventStore eventStore, ILogger<We
                 OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None>.FromT3(default),
                 w.Headers.ToDictionary(_ => _.Key, _ => string.Empty))
             {
-                HeaderValuesSet = w.Headers.ToDictionary(header => header.Key,
+                HeaderValuesSet = w.Headers.ToDictionary(
+                    header => header.Key,
                     header => w.HeaderValuesSet.TryGetValue(header.Key, out var isSet) ? isSet : !string.IsNullOrEmpty(header.Value))
             },
             new EventSequences.EventSequenceId(w.EventSequenceId),
