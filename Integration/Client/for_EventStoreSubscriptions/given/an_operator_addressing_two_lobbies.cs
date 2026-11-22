@@ -60,11 +60,10 @@ public class an_operator_addressing_two_lobbies(ChronicleFixture fixture) : Spec
     {
         var key = new Concepts.Observation.ObserverKey($"operator->{lobby.Name}", Operator.Name.Value, _namespace, Concepts.EventSequences.EventSequenceId.Outbox);
         var forwarder = Services.GetRequiredService<IGrainFactory>().GetGrain<IObserver>(key.ToString());
-        using var cancellation = new CancellationTokenSource(Timeout);
-        while ((await forwarder.GetState()).LastHandledEventSequenceNumber.Value != lastOutboxSequenceNumber)
-        {
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellation.Token);
-        }
+        await ReadinessWait.Until(
+            async () => (await forwarder.GetState()).LastHandledEventSequenceNumber.Value,
+            sequence => sequence == lastOutboxSequenceNumber,
+            Timeout);
 
         var events = await lobby.GetEventSequence($"{EventSequenceId.InboxPrefix}{Operator.Name}").GetFromSequenceNumber(0);
         return events.Select(_ => ((SubscriptionHistoryPublished)_.Content).Value).ToArray();

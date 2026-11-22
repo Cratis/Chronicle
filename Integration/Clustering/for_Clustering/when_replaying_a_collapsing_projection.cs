@@ -73,20 +73,7 @@ public class when_replaying_a_collapsing_projection(context _context)
 
         async Task<int> WaitForCount(IEventStore eventStore, int expected)
         {
-            using var cancellationTokenSource = new CancellationTokenSource(_timeout);
-            var count = 0;
-            while (!cancellationTokenSource.IsCancellationRequested)
-            {
-                count = await GetCount(eventStore);
-                if (count >= expected)
-                {
-                    return count;
-                }
-
-                await Task.Delay(250, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            }
-
-            return count;
+            return await ReadinessWait.Until(() => GetCount(eventStore), count => count >= expected, _timeout);
         }
 
         async Task<DetailedGrainStatistic[]> GetSubscriberActivations(ProjectionId projectionId)
