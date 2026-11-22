@@ -78,6 +78,7 @@ internal sealed class ExternalServices(
             Port = source.Port,
             Database = source.Database,
             Username = source.Username,
-            Options = source.Options
+            Options = source.Options,
+            HeaderValuesSet = source.HeaderValuesSet
         };
 }
