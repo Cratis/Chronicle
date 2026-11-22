@@ -22,7 +22,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
 {
     readonly Lock _gate = new();
     readonly Dictionary<ConstraintName, UniqueConstraintWriteAuthority> _authorities = [];
-    readonly Dictionary<ConstraintName, UniqueConstraintV2Claims> _claims = [];
+    readonly Dictionary<(ConstraintName Name, UniqueConstraintMode Mode), UniqueConstraintV2Claims> _claims = [];
 
     /// <inheritdoc/>
     public Task<(bool IsAllowed, EventSequenceNumber SequenceNumber)> IsAllowed(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintValue value, UniqueConstraintStorageScope scope, CancellationToken cancellationToken = default)
@@ -31,7 +31,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         lock (_gate)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(_claims.TryGetValue(definition.Name, out var claims)
+            return Task.FromResult(_claims.TryGetValue((definition.Name, definition.Mode), out var claims)
                 ? claims.IsAllowed(eventSourceId, value, scope)
                 : (true, EventSequenceNumber.Unavailable));
         }
@@ -64,7 +64,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         lock (_gate)
         {
             return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
-                ?? _claims[definition.Name].Save(definition.Mode, value, scope, new(eventSourceId, sequenceNumber, subject)));
+                ?? ClaimsFor(definition).Save(definition.Mode, value, scope, new(eventSourceId, sequenceNumber, subject)));
         }
     }
 
@@ -74,7 +74,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         lock (_gate)
         {
             return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
-                ?? _claims[definition.Name].Remove(eventSourceId, scope));
+                ?? ClaimsFor(definition).Remove(eventSourceId, scope));
         }
     }
 
@@ -85,7 +85,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         lock (_gate)
         {
             return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
-                ?? _claims[definition.Name].RemoveValue(eventSourceId, definition.Mode, value, scope));
+                ?? ClaimsFor(definition).RemoveValue(eventSourceId, definition.Mode, value, scope));
         }
     }
 
@@ -95,7 +95,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         lock (_gate)
         {
             return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
-                ?? _claims[definition.Name].Clear(scope));
+                ?? ClaimsFor(definition).Clear(scope));
         }
     }
 
@@ -105,7 +105,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         lock (_gate)
         {
             return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
-                ?? _claims[definition.Name].Clear());
+                ?? ClaimsFor(definition).Clear());
         }
     }
 
@@ -115,7 +115,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         lock (_gate)
         {
             return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
-                ?? _claims[definition.Name].RemoveForSubject(subject));
+                ?? ClaimsFor(definition).RemoveForSubject(subject));
         }
     }
 
@@ -131,6 +131,18 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         }
     }
 
+    UniqueConstraintV2Claims ClaimsFor(UniqueConstraintDefinition definition)
+    {
+        var key = (definition.Name, definition.Mode);
+        if (!_claims.TryGetValue(key, out var claims))
+        {
+            claims = new();
+            _claims.Add(key, claims);
+        }
+
+        return claims;
+    }
+
     UniqueConstraintValue[] Snapshot(EventSourceId owner, UniqueConstraintDefinition definition, UniqueConstraintStorageScope scope) =>
-        _claims.TryGetValue(definition.Name, out var claims) ? claims.GetFor(owner, scope) : [];
+        _claims.TryGetValue((definition.Name, definition.Mode), out var claims) ? claims.GetFor(owner, scope) : [];
 }

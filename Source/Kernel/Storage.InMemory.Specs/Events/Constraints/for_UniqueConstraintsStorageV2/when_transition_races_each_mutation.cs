@@ -16,6 +16,7 @@ public class when_transition_races_each_mutation : given.a_v2_store
         for (var operation = 0; operation < 6; operation++)
         {
             _storage = new();
+            _definition = _definition with { Mode = operation == 2 ? UniqueConstraintMode.PerValue : UniqueConstraintMode.PerEventSource };
             await Seed();
             using var barrier = new Barrier(3);
             var mutation = Task.Run(async () =>

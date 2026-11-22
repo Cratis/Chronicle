@@ -27,12 +27,12 @@ public partial class UniqueConstraintsStorageV2
         lock (_gate)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            ValidateAuthority(authority);
             if (!_authorities.TryAdd(constraint, authority))
             {
                 return Task.FromResult(Result<UniqueConstraintWriteAuthority, UniqueConstraintWriteFailure>.Failed(UniqueConstraintWriteFailure.AuthorityMismatch));
             }
 
-            _claims.Add(constraint, new());
             return Task.FromResult(Result<UniqueConstraintWriteAuthority, UniqueConstraintWriteFailure>.Success(authority));
         }
     }
@@ -43,6 +43,11 @@ public partial class UniqueConstraintsStorageV2
         lock (_gate)
         {
             var failure = CheckAuthority(constraint, expected, cancellationToken);
+            if (phase is null)
+            {
+                throw new InvalidUniqueConstraintV2Input(nameof(UniqueConstraintWritePhase));
+            }
+
             if (failure is not null)
             {
                 return Task.FromResult(Result<UniqueConstraintWriteAuthority, UniqueConstraintWriteFailure>.Failed(failure.Value));
@@ -60,9 +65,18 @@ public partial class UniqueConstraintsStorageV2
         }
     }
 
+    static void ValidateAuthority(UniqueConstraintWriteAuthority authority)
+    {
+        if (authority is null || authority.Phase is null)
+        {
+            throw new InvalidUniqueConstraintV2Input(nameof(UniqueConstraintWriteAuthority));
+        }
+    }
+
     UniqueConstraintWriteFailure? CheckAuthority(ConstraintName constraint, UniqueConstraintWriteAuthority expected, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        ValidateAuthority(expected);
         if (!_authorities.TryGetValue(constraint, out var actual))
         {
             return UniqueConstraintWriteFailure.MissingAuthority;

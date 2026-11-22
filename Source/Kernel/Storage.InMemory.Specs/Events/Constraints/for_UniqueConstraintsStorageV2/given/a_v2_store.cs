@@ -50,7 +50,7 @@ public class a_v2_store : Specification
     {
         0 => _storage.Save(_source, _definition, 20, _otherValue, _scope, proof, cancellationToken: cancellationToken),
         1 => _storage.Remove(_source, _definition, _scope, proof, cancellationToken),
-        2 => _storage.RemoveValue(_source, _perValue, _value, _scope, proof, cancellationToken),
+        2 => _storage.RemoveValue(_source, _definition, _value, _scope, proof, cancellationToken),
         3 => _storage.ClearValues(_definition, _scope, proof, cancellationToken),
         4 => _storage.RemoveAllFor(_definition, proof, cancellationToken),
         5 => _storage.RemoveForSubject(_definition, _subject, proof, cancellationToken),
