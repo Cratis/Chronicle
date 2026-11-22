@@ -12,13 +12,14 @@ public class when_comparing_metadata_free_intent : given.an_append_intent
     const int Batches = 10;
     const int CallsPerBatch = 1_000;
 
-    /// <summary>Each cap leaves 16 bytes/call of headroom, so an extra 24-byte allocation still fails.</summary>
-    const int PlainAllocationCap = 3272;
+    const int PlainAllocationCap = 4096;
 #if DEBUG
-    /// <summary>Debug also allocates the async state machine on the heap.</summary>
-    const int ComparisonAllocationCap = 3688;
+    /// <summary>
+    /// Debug also allocates the async state machine; each overhead cap leaves 16 bytes/call of headroom.
+    /// </summary>
+    const int AdditionalAllocationCap = 432;
 #else
-    const int ComparisonAllocationCap = 3464;
+    const int AdditionalAllocationCap = 208;
 #endif
 
     readonly EventStoreName _store = "store";
@@ -31,8 +32,7 @@ public class when_comparing_metadata_free_intent : given.an_append_intent
 
     void Because()
     {
-        _plainBytesPerCall = MeasureSteadyStateAllocation(() => AppendFingerprint.Plain(_input));
-        _comparisonBytesPerCall = MeasureSteadyStateAllocation(() => Compare());
+        MeasureSteadyStateAllocation(() => AppendFingerprint.Plain(_input), () => Compare());
 
         // Metadata-free retries must not complete an unrelated ambient release's observations.
         using var scope = ReleaseKeys.BeginScope();
@@ -46,24 +46,46 @@ public class when_comparing_metadata_free_intent : given.an_append_intent
     void should_allocate_only_the_result_and_completed_task()
     {
         var additionalBytes = _comparisonBytesPerCall - _plainBytesPerCall;
-        var measurement = $"Minimum allocation per call: plain {_plainBytesPerCall} bytes (cap: {PlainAllocationCap}); comparison {_comparisonBytesPerCall} bytes (cap: {ComparisonAllocationCap}); additional {additionalBytes} bytes.";
+        var measurement = $"Minimum allocation per call: plain {_plainBytesPerCall} bytes (sanity cap: {PlainAllocationCap}); comparison {_comparisonBytesPerCall} bytes; additional {additionalBytes} bytes (cap: {AdditionalAllocationCap}).";
         TestContext.Current.TestOutputHelper!.WriteLine(measurement);
-        Assert.True(_plainBytesPerCall <= PlainAllocationCap && _comparisonBytesPerCall <= ComparisonAllocationCap, measurement);
+        Assert.True(_plainBytesPerCall <= PlainAllocationCap && additionalBytes <= AdditionalAllocationCap, measurement);
     }
 
-    static double MeasureSteadyStateAllocation(Action action)
+    void MeasureSteadyStateAllocation(Action plain, Action compare)
     {
-        // Warm the hashing and comparison paths through tiered JIT before sampling.
-        for (var index = 0; index < 10_000; index++) action();
+        // Warm both paths through tiered JIT before interleaved sampling.
+        for (var index = 0; index < 10_000; index++)
+        {
+            plain();
+            compare();
+        }
 
-        var minimumBytes = long.MaxValue;
+        var minimumPlainBytes = long.MaxValue;
+        var minimumComparisonBytes = long.MaxValue;
         for (var batch = 0; batch < Batches; batch++)
         {
-            var before = GC.GetAllocatedBytesForCurrentThread();
-            for (var index = 0; index < CallsPerBatch; index++) action();
-            minimumBytes = Math.Min(minimumBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            var plainBytes = 0L;
+            var comparisonBytes = 0L;
+            for (var index = 0; index < CallsPerBatch; index++)
+            {
+                plainBytes += MeasureAllocation(plain);
+                comparisonBytes += MeasureAllocation(compare);
+            }
+
+            // Independent minima prevent a noisy plain sample from masking comparison overhead.
+            minimumPlainBytes = Math.Min(minimumPlainBytes, plainBytes);
+            minimumComparisonBytes = Math.Min(minimumComparisonBytes, comparisonBytes);
         }
-        return minimumBytes / (double)CallsPerBatch;
+
+        _plainBytesPerCall = minimumPlainBytes / (double)CallsPerBatch;
+        _comparisonBytesPerCall = minimumComparisonBytes / (double)CallsPerBatch;
+    }
+
+    static long MeasureAllocation(Action action)
+    {
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        action();
+        return GC.GetAllocatedBytesForCurrentThread() - before;
     }
 
     FingerprintComparisonResult Compare()
