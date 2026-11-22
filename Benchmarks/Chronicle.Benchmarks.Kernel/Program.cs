@@ -9,6 +9,16 @@ if (args.Contains("--observer-footprint"))
     return await ObserverFootprint.Run(args);
 }
 
+if (args.Contains("--gc-experiment"))
+{
+    return await GcExperiment.Run(args);
+}
+
+if (args.Contains("--gc-workload"))
+{
+    return await GcWorkload.Run(args);
+}
+
 if (args.Contains("--keeper-calls"))
 {
     return await KeeperCalls.Run(args);

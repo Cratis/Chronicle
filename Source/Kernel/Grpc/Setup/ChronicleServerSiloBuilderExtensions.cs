@@ -148,7 +148,6 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddStoreEntitlementsCache()
             .AddProjectionsService()
             .AddReminders()
-            .AddMemoryGrainStorage("PubSubStore") // TODO: Store Grain state in Database
             .AddStorageProviders()
             .AddWebhookObserverHttpClient()
             .AddExternalServiceHttpClient()

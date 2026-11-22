@@ -163,3 +163,29 @@ What the harness does not cover: it is a single silo with in-memory storage, so 
 2. Build the kernel objects in `[GlobalSetup]` with the same real collaborators the specs use: the in-memory storage, `JsonSchemaMetadataManager` and the compliance value handlers. Don't use mocks: they allocate and distort the measurement.
 3. Return the result from each benchmark method so the JIT can't eliminate the work.
 4. Include the common case (for example a single-generation event type or an event without classified properties) next to the case your change targets. Regressions on the common path matter most.
+
+## GC settings experiment
+
+`--gc-experiment` runs the multi-namespace GC workload once per GC configuration and prints a comparison table of committed memory after settling, live memory, allocation rate, GC pause total, throughput and the number of `System.Text.Json` options instances the runtime still tracks. Each configuration is a separate child process started with `DOTNET_GC*` environment variables, one setting changed at a time from the kernel's production settings (Server GC, `GCConserveMemory` 5, DATAS on). `--gc-workload` runs a single configuration in the current process, using whatever `DOTNET_GC*` variables are set, and prints one `GCRESULT` JSON line.
+
+```sh
+dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --gc-experiment --repeats 5 --namespaces 50 --count 2000 --window 60 --settle 60 --hard-limit-mb 6100
+```
+
+The workload spreads reactor observers over the namespaces of one event store, then subscribes and unsubscribes all of them repeatedly for the window. It then waits for the settle time without forcing a collection and reads the committed memory, and only afterwards forces full compacting collections to measure the live heap. Use a quiet machine: throughput on a loaded one varies by several times between repeats, and the committed figures depend on how many collections happened.
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--repeats` | 3 | Runs of each configuration; the table shows the median. |
+| `--namespaces` | 20 | Namespaces the observers are spread over. |
+| `--count` | 2000 | Observers per cycle. |
+| `--window` | 30 | Seconds of subscribe and unsubscribe cycles. |
+| `--settle` | 20 | Seconds to wait before reading the committed memory. |
+| `--hard-limit-mb` | 0 | Heap hard limit for every configuration. Production runs under about 6.1 GB (`6100`), and Server GC behaves very differently with and without a limit. |
+| `--committed-gain` | 20 | Percent lower committed memory a configuration needs to be a candidate. |
+| `--regression` | 5 | Percent lower throughput a candidate may have. |
+| `--only` | all | Comma-separated configuration names: `baseline`, `heap-count-4`, `conserve-7`, `conserve-9`, `retain-vm-off`, `concurrent-off`, `datas-off`, `workstation`, `hard-limit-75-percent` (without `--hard-limit-mb`). |
+| `--affinitize-mask` | none | Adds an `affinitize-mask` configuration with this hexadecimal `GCHeapAffinitizeMask`. |
+
+The `JsonSerializerOptions` column counts the tracked instances after the load window and after the forced collections. A count that grows with the load would point at a path that creates options per call; in the run documented in [Size the kernel for a container](../../Documentation/hosting/container-resources.md) it stayed at 5 across 84,000 subscribe and unsubscribe calls.

@@ -15,7 +15,6 @@
     <PackageReference Include="Microsoft.Orleans.Serialization" />
     <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
     <PackageReference Include="Microsoft.Orleans.Server" />
-    <PackageReference Include="Microsoft.Orleans.Streaming" />
     <PackageReference Include="Microsoft.Orleans.Reminders" />
     <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
     <ProjectReference Include="../../Source/Clients/Testing/Testing.csproj" />
