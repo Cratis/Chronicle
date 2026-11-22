@@ -65,7 +65,7 @@ public class and_a_legacy_projection_has_materialized_data : given.a_manager_wit
 
     [Fact] void should_remove_the_projection() => _removal.Outcome.ShouldEqual(ObserverRemovalOutcome.Removed);
     [Fact] void should_remove_the_producer_from_the_manager_list() => _projectionsAfterRemoval.ShouldBeEmpty();
-    [Fact] void should_refuse_policy_page_and_stream_reads_with_the_retained_read_model() => _errors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_refuse_policy_page_and_stream_reads_with_the_retained_read_model() => _errors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_use_the_neutral_refusal() => _errors.Cast<RpcException>().All(_ => _.Status.Detail == SystemStoreAccess.Refused).ShouldBeTrue();
     [Fact] void should_not_resolve_a_read_binding() => _bindings.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_not_access_the_remaining_materialization() => _sink.ReceivedCalls().Any().ShouldBeFalse();

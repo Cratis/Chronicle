@@ -83,16 +83,14 @@ public class when_a_persisted_projection_uses_an_unsupported_sequence : given.al
         errors.Add(await Catch.Exception(() => _materializedService.ObserveInstances(new() { EventStore = "store", Namespace = "namespace", ReadModel = "test-read-model" }).FirstAsync().ToTask()));
     }
 
-    [Fact] void should_refuse_every_variant_and_read_path() => _errors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_refuse_every_variant_and_read_path() => _errors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_check_every_non_kernel_owner() => _errors.Count.ShouldEqual(Enum.GetValues<ProjectionOwner>().Count(_ => _ != ProjectionOwner.Kernel) * 32);
-    [Fact] void should_refuse_when_the_projection_definition_is_absent() => _missingProjectionErrors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_refuse_when_the_projection_definition_is_absent() => _missingProjectionErrors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_use_the_neutral_refusal_for_missing_and_unsupported_producers() => _errors.Concat(_missingProjectionErrors).Cast<RpcException>().All(_ => _.Status.Detail == SystemStoreAccess.Refused).ShouldBeTrue();
     [Fact] void should_refuse_before_resolving_a_read_binding() => _bindingsBeforeSupportedReads.ShouldEqual(0);
-    [Fact] void should_allow_kernel_ordinary_and_reducer_definitions_to_reach_the_read_binding() => _supportedErrors.All(_ => _ is BindingReached).ShouldBeTrue();
+    [Fact] void should_allow_kernel_ordinary_and_reducer_definitions_to_reach_the_read_binding() => _supportedErrors.TrueForAll(_ => _ is BindingReached).ShouldBeTrue();
     [Fact] void should_not_read_the_sink() => _sink.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_not_delete_a_persisted_definition() => _eventStoreStorage.Projections.ReceivedCalls().Any(_ => _.GetMethodInfo().Name == "Delete").ShouldBeFalse();
 
-    sealed class BindingReached : Exception
-    {
-    }
+    sealed class BindingReached : Exception;
 }

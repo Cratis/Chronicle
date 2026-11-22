@@ -47,10 +47,10 @@ public class when_the_producer_is_missing : Specification
     async Task ReadWithoutProjection(ReadModelDefinition definition, ReadModelObserverType type) =>
         _nonProjectionErrors.Add(await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", definition with { ObserverType = type })));
 
-    [Fact] void should_refuse_projection_reads_for_every_owner_and_source() => _projectionErrors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_refuse_projection_reads_for_every_owner_and_source() => _projectionErrors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_check_every_owner_and_source() => _projectionErrors.Count.ShouldEqual(Enum.GetValues<ReadModelOwner>().Length * Enum.GetValues<ReadModelSource>().Length);
     [Fact] void should_use_the_neutral_refusal() => _projectionErrors.Cast<RpcException>().All(_ => _.Status.Detail == SystemStoreAccess.Refused).ShouldBeTrue();
-    [Fact] void should_allow_reducer_and_unset_reads() => _nonProjectionErrors.All(_ => _ is null).ShouldBeTrue();
+    [Fact] void should_allow_reducer_and_unset_reads() => _nonProjectionErrors.TrueForAll(_ => _ is null).ShouldBeTrue();
     [Fact] void should_check_both_non_projection_types_for_every_owner_and_source() => _nonProjectionErrors.Count.ShouldEqual(_definitions.Length * 2);
     [Fact] void should_not_resolve_a_manager_for_non_projection_reads() => _grains.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_not_query_definitions_for_non_projection_reads() => _manager.ReceivedCalls().Any().ShouldBeFalse();

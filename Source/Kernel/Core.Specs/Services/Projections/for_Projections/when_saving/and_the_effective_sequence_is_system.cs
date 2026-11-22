@@ -9,6 +9,8 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Monads;
 using Grpc.Core;
 
+using Catch = Cratis.Specifications.Catch;
+
 namespace Cratis.Chronicle.Services.Projections.for_Projections.when_saving;
 
 public class and_the_effective_sequence_is_system : given.all_dependencies
@@ -42,7 +44,7 @@ public class and_the_effective_sequence_is_system : given.all_dependencies
     }
 
     [Fact] void should_refuse_every_variant_for_both_declaration_forms() => _errors.Count.ShouldEqual(8);
-    [Fact] void should_use_the_existing_refusal() => _errors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_use_the_existing_refusal() => _errors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_leave_the_compiled_event_log_definition_unchanged() => _projectionDefinition.EventSequenceId.IsEventLog.ShouldBeTrue();
     [Fact] void should_not_register_a_projection() => _grainFactory.DidNotReceive().GetGrain<IProjectionsManager>(Arg.Any<string>());
     [Fact] void should_not_register_a_read_model() => _grainFactory.DidNotReceive().GetGrain<IReadModelsManager>(Arg.Any<string>());

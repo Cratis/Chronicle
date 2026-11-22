@@ -3,11 +3,13 @@
 
 using System.Text;
 using Cratis.Arc.Commands;
-using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.Contracts.ExternalServices;
+using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Storage.ExternalServices;
 using Microsoft.Extensions.Logging.Abstractions;
+
 using ContractEndpointType = Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceEndpointType;
+using ExternalServiceDefinitionContract = Cratis.Chronicle.Contracts.ExternalServices.ExternalServiceDefinition;
 
 namespace Cratis.Chronicle.ExternalServices.for_ExternalService;
 
@@ -29,7 +31,7 @@ public class when_using_database_options : given.stored_headers
     };
     readonly List<ExternalServiceResponse> _responses = [];
     readonly List<string> _wirePayloads = [];
-    readonly List<ExternalServiceDefinition> _saved = [];
+    readonly List<Concepts.ExternalServices.ExternalServiceDefinition> _saved = [];
     IExternalServiceDefinitionsStorage _definitions;
     ExternalServiceDefinitionContract _contract;
 
@@ -41,9 +43,9 @@ public class when_using_database_options : given.stored_headers
         _definitions.GetAll().Returns([_definition]);
         _definitions.Has("service").Returns(true);
         _definitions.Get("service").Returns(_definition);
-        _definitions.Save(Arg.Any<ExternalServiceDefinition>()).Returns(call =>
+        _definitions.Save(Arg.Any<Concepts.ExternalServices.ExternalServiceDefinition>()).Returns(call =>
         {
-            _saved.Add(call.Arg<ExternalServiceDefinition>());
+            _saved.Add(call.Arg<Concepts.ExternalServices.ExternalServiceDefinition>());
             return Task.CompletedTask;
         });
     }
@@ -78,9 +80,25 @@ public class when_using_database_options : given.stored_headers
     }
 
     Task UpdateSingle() => new AddExternalService(
-        "store", "service", "service", ContractEndpointType.MsSql, string.Empty,
-        AuthorizationType.None, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty,
-        new Dictionary<string, string>(), "host", 1433, "database", "user", "synthetic-password", _submitted).Handle(_storage);
+        "store",
+        "service",
+        "service",
+        ContractEndpointType.MsSql,
+        string.Empty,
+        AuthorizationType.None,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        new Dictionary<string, string>(),
+        "host",
+        1433,
+        "database",
+        "user",
+        "synthetic-password",
+        _submitted).Handle(_storage);
 
     Task UpdateBatch(string id) => new AddExternalServices("store",
     [
@@ -97,16 +115,16 @@ public class when_using_database_options : given.stored_headers
     ]).Handle(_storage);
 
     [Fact] void should_return_a_list_and_two_observations() => _responses.Count.ShouldEqual(3);
-    [Fact] void should_keep_option_keys_in_every_response() => _responses.All(_ => _.Options.Keys.Order().SequenceEqual(_options.Keys.Order())).ShouldBeTrue();
+    [Fact] void should_keep_option_keys_in_every_response() => _responses.TrueForAll(_ => _.Options.Keys.Order().SequenceEqual(_options.Keys.Order())).ShouldBeTrue();
     [Fact] void should_blank_every_option_value() => _responses.SelectMany(_ => _.Options.Values).All(_ => _.Length == 0).ShouldBeTrue();
-    [Fact] void should_not_serialize_option_values() => _wirePayloads.All(_ => !_.Contains("synthetic-", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_not_serialize_option_values() => _wirePayloads.TrueForAll(_ => !_.Contains("synthetic-", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_blank_contract_option_values() => _contract.Endpoint.Database.Options.Values.All(_ => _.Length == 0).ShouldBeTrue();
     [Fact] void should_keep_contract_option_keys() => _contract.Endpoint.Database.Options.Keys.Order().SequenceEqual(_options.Keys.Order()).ShouldBeTrue();
     [Fact] void should_preserve_blank_values_in_both_update_paths() => _saved.Take(2).All(_ => _.Endpoint.Database!.Options["retained"] == "synthetic-retained").ShouldBeTrue();
     [Fact] void should_replace_non_blank_values_in_both_update_paths() => _saved.Take(2).All(_ => _.Endpoint.Database!.Options["changed"] == "synthetic-after").ShouldBeTrue();
     [Fact] void should_keep_whitespace_as_a_submitted_value() => _saved.Take(2).All(_ => _.Endpoint.Database!.Options["whitespace"] == " ").ShouldBeTrue();
     [Fact] void should_drop_omitted_keys_in_both_update_paths() => _saved.Take(2).All(_ => !_.Endpoint.Database!.Options.ContainsKey("omitted")).ShouldBeTrue();
-    [Fact] void should_keep_new_blank_keys_blank() => _saved.All(_ => _.Endpoint.Database!.Options["new"] == string.Empty).ShouldBeTrue();
+    [Fact] void should_keep_new_blank_keys_blank() => _saved.TrueForAll(_ => _.Endpoint.Database!.Options["new"].Length == 0).ShouldBeTrue();
     [Fact] void should_not_restore_a_value_for_a_new_service() => _saved[2].Endpoint.Database!.Options["retained"].ShouldEqual(string.Empty);
     [Fact] void should_not_mutate_stored_option_values() => _definition.Endpoint.Database!.Options["retained"].ShouldEqual("synthetic-retained");
     [Fact] void should_not_mutate_submitted_option_values() => _submitted["retained"].ShouldEqual(string.Empty);

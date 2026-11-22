@@ -31,9 +31,9 @@ public class and_the_projection_is_not_readable : given.a_composite_key_read
         await Read();
     }
 
-    [Fact] void should_refuse_every_unsupported_or_missing_producer() => _errors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_refuse_every_unsupported_or_missing_producer() => _errors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_use_the_neutral_refusal() => _errors.Cast<RpcException>().All(_ => _.Status.Detail == SystemStoreAccess.Refused).ShouldBeTrue();
-    [Fact] void should_check_every_variant() => _errors.Count.ShouldEqual(Enum.GetValues<ProjectionOwner>().Count(_ => _ != ProjectionOwner.Kernel) * 4 + 1);
+    [Fact] void should_check_every_variant() => _errors.Count.ShouldEqual((Enum.GetValues<ProjectionOwner>().Count(_ => _ != ProjectionOwner.Kernel) * 4) + 1);
     [Fact] void should_refuse_before_using_the_materialized_store() => _storeCallsBeforeSupportedRead.ShouldEqual(0);
     [Fact] void should_allow_the_kernel_producer() => _result.Outcome.ShouldEqual(ReadModelLookupOutcome.Found);
 }

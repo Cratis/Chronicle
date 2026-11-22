@@ -22,6 +22,6 @@ public class and_a_kernel_definition_uses_system : given.a_manager_with_shared_d
         }
     }
 
-    [Fact] void should_load_every_kernel_definition() => _results.All(_ => _ is not null).ShouldBeTrue();
+    [Fact] void should_load_every_kernel_definition() => _results.TrueForAll(_ => _ is not null).ShouldBeTrue();
     [Fact] void should_compile_every_variant() => _projectionFactory.Received(4).Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<ProjectionDefinition>(_ => _.Owner == ProjectionOwner.Kernel), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>());
 }

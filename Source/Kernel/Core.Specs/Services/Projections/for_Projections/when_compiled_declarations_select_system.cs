@@ -12,7 +12,8 @@ using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.Schemas;
 using Cratis.Monads;
 using Grpc.Core;
-using NSubstitute.Core;
+
+using Catch = Cratis.Specifications.Catch;
 using CompilerModels = Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.given;
 
 namespace Cratis.Chronicle.Services.Projections.for_Projections;
@@ -70,18 +71,18 @@ public class when_compiled_declarations_select_system : given.all_dependencies
     {
         _languageService.IsGraphDeclaration(Arg.Any<string>()).Returns(true);
         _languageService.CompileGraph(Arg.Any<string>(), Arg.Any<ProjectionOwner>(), Arg.Any<IEnumerable<EventTypeSchema>>(), Arg.Any<EventGenerationDelivery>())
-            .Returns(Result.Success<CompiledGraph, CompilerErrors>(new(_compiled.Last(), _readModelDefinition)));
+            .Returns(Result.Success<CompiledGraph, CompilerErrors>(new(_compiled[^1], _readModelDefinition)));
         _errors.Add(await Catch.Exception(() => _service.Save(new() { EventStore = EventStore, Namespace = EventStoreNamespace, EventSequenceId = "log", Declaration = "graph SequenceSelection" })));
         _errors.Add(await Catch.Exception(() => _service.Register(new()
         {
             EventStore = EventStore,
-            Projections = [new() { Identifier = "SequenceSelection", ReadModel = "UserGroupReadModel", EventSequenceId = _compiled.Last().EventSequenceId.Value }]
+            Projections = [new() { Identifier = "SequenceSelection", ReadModel = "UserGroupReadModel", EventSequenceId = _compiled[^1].EventSequenceId.Value }]
         })));
     }
 
     [Fact] void should_compile_the_real_declarations() => _compiled.Count.ShouldEqual(8);
-    [Fact] void should_include_the_join_in_every_compiled_definition() => _compiled.All(_ => _.Join.Count == 1).ShouldBeTrue();
-    [Fact] void should_select_system_in_every_compiled_definition() => _compiled.All(_ => _.EventSequenceId.IsSystemSequence()).ShouldBeTrue();
+    [Fact] void should_include_the_join_in_every_compiled_definition() => _compiled.TrueForAll(_ => _.Join.Count == 1).ShouldBeTrue();
+    [Fact] void should_select_system_in_every_compiled_definition() => _compiled.TrueForAll(_ => _.EventSequenceId.IsSystemSequence()).ShouldBeTrue();
     [Fact] void should_check_preview_save_graph_save_and_registration() => _errors.Count.ShouldEqual(10);
-    [Fact] void should_refuse_the_compiled_sequence_despite_the_event_log_request() => _errors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_refuse_the_compiled_sequence_despite_the_event_log_request() => _errors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
 }

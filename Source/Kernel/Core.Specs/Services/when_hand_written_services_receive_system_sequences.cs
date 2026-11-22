@@ -21,11 +21,13 @@ public class when_hand_written_services_receive_system_sequences : for_QueryExec
         var readModels = (Contracts.ReadModels.IReadModels)Create(typeof(ReadModels.ReadModels));
         _requests = new()
         {
-            ["Register"] = (sequence, context) => projections.Register(new()
-            {
-                EventStore = "store",
-                Projections = [new() { Identifier = "projection", ReadModel = "read-model", EventSequenceId = sequence }]
-            }, context),
+            ["Register"] = (sequence, context) => projections.Register(
+                new()
+                {
+                    EventStore = "store",
+                    Projections = [new() { Identifier = "projection", ReadModel = "read-model", EventSequenceId = sequence }]
+                },
+                context),
             ["Preview"] = async (sequence, context) => await projections.Preview(new() { EventStore = "store", Namespace = "namespace", EventSequenceId = sequence }, context),
             ["GetInstanceByKey"] = async (sequence, context) => await readModels.GetInstanceByKey(new() { EventStore = "store", Namespace = "namespace", ReadModelIdentifier = "read-model", EventSequenceId = sequence }, context),
             ["GetAllInstances"] = async (sequence, context) => await readModels.GetAllInstances(new() { EventStore = "store", Namespace = "namespace", ReadModelIdentifier = "read-model", EventSequenceId = sequence }, context),
@@ -59,9 +61,9 @@ public class when_hand_written_services_receive_system_sequences : for_QueryExec
     }
 
     bool RefusedEveryRequest(string method) =>
-        _errors[method].Count == 24 && _errors[method].All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied });
+        _errors[method].Count == 24 && _errors[method].TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied });
 
-    [Fact] void should_refuse_every_administrator_request() => (_administratorErrors.Count == 24 && _administratorErrors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied })).ShouldBeTrue();
+    [Fact] void should_refuse_every_administrator_request() => (_administratorErrors.Count == 24 && _administratorErrors.TrueForAll(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied })).ShouldBeTrue();
     [Fact] void should_refuse_registration_for_every_caller_and_variant() => RefusedEveryRequest("Register").ShouldBeTrue();
     [Fact] void should_refuse_preview_for_every_caller_and_variant() => RefusedEveryRequest("Preview").ShouldBeTrue();
     [Fact] void should_refuse_instance_queries_for_every_caller_and_variant() => RefusedEveryRequest("GetInstanceByKey").ShouldBeTrue();

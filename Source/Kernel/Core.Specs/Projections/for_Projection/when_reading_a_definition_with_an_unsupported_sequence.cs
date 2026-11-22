@@ -17,12 +17,12 @@ public class when_reading_a_definition_with_an_unsupported_sequence : given.a_pi
             foreach (var sequence in new[] { "system", "SYSTEM", " SyStEm ", "\tSyStEm\r\n" })
             {
                 await _grain.SetDefinition(_definition with { Owner = owner, EventSequenceId = sequence });
-                _errors.Add(await Catch.Exception(() => _grain.GetEventTypes()));
+                _errors.Add(await Catch.Exception(_grain.GetEventTypes));
                 _errors.Add(await Catch.Exception(() => _grain.GetEventTypesForPreview(model)));
             }
         }
     }
 
-    [Fact] void should_refuse_both_read_paths() => _errors.All(_ => _ is InvalidOperationException).ShouldBeTrue();
+    [Fact] void should_refuse_both_read_paths() => _errors.TrueForAll(_ => _ is InvalidOperationException).ShouldBeTrue();
     [Fact] void should_not_compile_a_definition() => _engineDefinition.ShouldBeNull();
 }

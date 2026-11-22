@@ -26,7 +26,7 @@ public class and_a_non_kernel_definition_uses_system : given.a_projections_manag
         }
     }
 
-    [Fact] void should_report_every_unsupported_definition() => _errors.All(_ => _ is not null && _.Failures.ContainsKey(_firstDefinition.Identifier)).ShouldBeTrue();
+    [Fact] void should_report_every_unsupported_definition() => _errors.TrueForAll(_ => _?.Failures.ContainsKey(_firstDefinition.Identifier) == true).ShouldBeTrue();
     [Fact] void should_not_register_the_projection() => _manager.TryGet(_eventStore, _namespace, _firstDefinition.Identifier, out _).ShouldBeFalse();
     [Fact] void should_not_compile_the_projection() => _projectionFactory.DidNotReceive().Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>());
 }
