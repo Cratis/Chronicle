@@ -46,14 +46,6 @@ internal static class CanonicalJson
     /// <param name="buffer">The destination.</param>
     internal static void Write(object? content, IBufferWriter<byte> buffer)
     {
-        if (CanonicalJsonValues.CanWrite(content))
-        {
-            using var directWriter = new Utf8JsonWriter(buffer, _jsonWriterOptions);
-            CanonicalJsonValues.Write(directWriter, content, _jsonSerializerOptions);
-            directWriter.Flush();
-            return;
-        }
-
         var utf8 = JsonSerializer.SerializeToUtf8Bytes(content, _jsonSerializerOptions);
         using var document = JsonDocument.Parse(utf8);
         using var writer = new Utf8JsonWriter(buffer, _jsonWriterOptions);
