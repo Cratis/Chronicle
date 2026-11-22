@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.EventTypes;
 
 public sealed partial class EventTypeRegistrar
 {
-    static async Task<(List<EventTypeToRegister> Remaining, HashSet<EventTypeId> Mutated, List<NewGenerations> Added)> RegisterNewGenerations(
+    static async Task<(List<EventTypeToRegister> Remaining, HashSet<EventTypeId> Mutated, List<NewGenerations> Added, List<EventTypeSchemaChanged> Conflicts)> RegisterNewGenerations(
         IEventTypesStorage storage,
         List<EventTypeToRegister> registrations,
         List<NewGenerations> newGenerations)
@@ -16,6 +16,7 @@ public sealed partial class EventTypeRegistrar
         var remaining = new List<EventTypeToRegister>();
         var mutated = new HashSet<EventTypeId>();
         var added = new List<NewGenerations>();
+        var conflicts = new List<EventTypeSchemaChanged>();
         foreach (var (registration, pending) in registrations.Zip(newGenerations))
         {
             var generations = pending.Generations.Select(_ => _.Generation).ToHashSet();
@@ -31,7 +32,8 @@ public sealed partial class EventTypeRegistrar
                 var result = await storage.RegisterIfAbsent(incoming);
                 if (result.Conflict is { } conflict)
                 {
-                    throw new EventTypeSchemaChanged(registration.Definition.Id, conflict);
+                    conflicts.Add(new EventTypeSchemaChanged(registration.Definition.Id, conflict));
+                    continue;
                 }
 
                 if (result.Changed)
@@ -55,6 +57,19 @@ public sealed partial class EventTypeRegistrar
             });
         }
 
-        return (remaining, mutated, added);
+        return (remaining, mutated, added, conflicts);
+    }
+
+    static void ThrowConflicts(List<EventTypeSchemaChanged> conflicts)
+    {
+        if (conflicts.Count == 1)
+        {
+            throw conflicts[0];
+        }
+
+        if (conflicts.Count > 1)
+        {
+            throw new AggregateException(conflicts);
+        }
     }
 }

@@ -57,6 +57,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
     /// <exception cref="MissingFirstGenerationForEventType">Thrown when the migration chain has no first generation.</exception>
     /// <exception cref="MissingMigrationForEventTypeGeneration">Thrown when a generation in the chain has no migration.</exception>
     /// <exception cref="EventTypeSchemaChanged">Thrown when a stored generation's schema changed under it.</exception>
+    /// <exception cref="AggregateException">Thrown after finalization when multiple conditional registrations conflict.</exception>
     public async Task Register(
         EventStoreName eventStore,
         IEnumerable<EventTypeRegistration> types,
@@ -117,6 +118,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
 
         await AppendSystemEventsForNewGenerations(eventStore, conditional.Added);
         await CapturePatternsForNewEventTypes(patternCapture, eventStore, mutated);
+        ThrowConflicts(conditional.Conflicts);
     }
 
     /// <summary>
