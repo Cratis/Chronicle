@@ -16,7 +16,7 @@ public class when_an_unrecoverable_dictionary_value_contains_personal_data : giv
     [Fact] void should_count_the_unrecoverable_value() => _count.ShouldEqual(1);
     [Fact] void should_surface_the_dictionary_value_as_empty() => _result["contacts"]![DictionaryKey]!.GetValue<string>().ShouldEqual(string.Empty);
     [Fact] void should_keep_the_store_and_namespace_context() => _capturedLogger.Entries.Single().Message.ShouldContain("store/namespace");
-    [Fact] void should_keep_the_action_context() => _capturedLogger.Entries.Single().Message.ShouldContain("during Release");
+    [Fact] void should_keep_the_action_context() => _capturedLogger.Entries.Single().Message.ShouldContain("during release");
     [Fact] void should_keep_the_exception_type() => _capturedLogger.Entries.Single().State.Single(_ => _.Key == "ExceptionType").Value.ShouldEqual(nameof(InvalidOperationException));
     [Fact] void should_keep_the_attempted_revisions() => _capturedLogger.Entries.Single().State.Single(_ => _.Key == "AttemptedRevisions").Value.ShouldEqual(3);
     [Fact] void should_not_log_the_identifier() => _capturedLogger.Entries.Single().Message.ShouldNotContain(Identifier);
