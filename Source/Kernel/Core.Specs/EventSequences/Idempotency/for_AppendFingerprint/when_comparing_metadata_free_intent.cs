@@ -12,10 +12,10 @@ public class when_comparing_metadata_free_intent : given.an_append_intent
     const int Batches = 10;
     const int CallsPerBatch = 1_000;
 
-    // Each cap leaves 16 bytes/call of headroom, so an extra 24-byte allocation still fails.
+    /// <summary>Each cap leaves 16 bytes/call of headroom, so an extra 24-byte allocation still fails.</summary>
     const int PlainAllocationCap = 3272;
 #if DEBUG
-    // Debug also allocates the async state machine on the heap.
+    /// <summary>Debug also allocates the async state machine on the heap.</summary>
     const int ComparisonAllocationCap = 3688;
 #else
     const int ComparisonAllocationCap = 3464;
