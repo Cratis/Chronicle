@@ -43,8 +43,15 @@ public class a_dormant_client_observer : when_going_dormant.given.a_subscribed_c
             }
         };
 
+    /// <summary>
+    /// Gets a chance to register more clients before the observer goes dormant.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected virtual Task BeforeGoingDormant() => Task.CompletedTask;
+
     async Task Establish()
     {
+        await BeforeGoingDormant();
         await RunWatchdogAfter(TimeSpan.Zero);
         await RunWatchdogAfter(_dormantPeriod);
         await Deactivate();

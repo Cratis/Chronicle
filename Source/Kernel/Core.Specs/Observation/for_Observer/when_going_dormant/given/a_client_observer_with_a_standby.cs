@@ -22,5 +22,6 @@ public class a_client_observer_with_a_standby : a_subscribed_client_observer
         _activeClient = new ConnectedClient { ConnectionId = "b-connection", Version = "2.0.0" };
         await _observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, [active_event_type], SiloAddress.Zero, _activeClient);
         await _silo.TimerRegistry.FireAllAsync();
+        await _observer.ReceiveReminder(Observer.AlertReminderName, default);
     }
 }

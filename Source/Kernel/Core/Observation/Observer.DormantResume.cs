@@ -31,6 +31,7 @@ public partial class Observer
     int _dormantResumeMaxEvents = 1000;
     bool _resumingFromDormancy;
     bool _repairDurableSubscriptionPending;
+    bool _promoteStandbyAfterWake;
 
     /// <summary>
     /// Gets whether the observer was activated from a durable subscription and is still resuming from its cursor.
@@ -139,6 +140,10 @@ public partial class Observer
             restored = true;
         }
 
+        // The clients the subscription replaced wait for the one that holds it to leave. When none of the targets is left
+        // the observer promotes one of them as soon as it has woken, which the state machine needs to have entered its state for.
+        RestoreSupersededRegistrations(record);
+        _promoteStandbyAfterWake = !restored && _supersededRegistrations.Count > 0;
         return restored;
     }
 
@@ -166,6 +171,12 @@ public partial class Observer
         {
             _repairDurableSubscriptionPending = false;
             await RepairStaleDurableSubscription();
+        }
+
+        if (_promoteStandbyAfterWake)
+        {
+            _promoteStandbyAfterWake = false;
+            await PromoteSupersededRegistrationOrUnsubscribe();
         }
 
         if (!_resumingFromDormancy)

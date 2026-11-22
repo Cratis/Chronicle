@@ -1539,11 +1539,20 @@ json Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription
   deliversPages: bool
   filters: Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionFilters
   kind: Cratis.Chronicle.Storage.Observation.ObserverSubscriptionKind
+  standbys: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionStandby>
   targets: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionTarget>
 json Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionFilters
   eventSourceType: string
   eventStreamType: string
   tags: System.Collections.Generic.IReadOnlyList<string>
+json Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionStandby
+  connectionId: string
+  deliversPages: bool
+  eventTypes: System.Collections.Generic.IReadOnlyList<string>
+  filters: Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionFilters
+  isReplayable: bool
+  pinsGenerations: bool
+  silo: string
 json Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionTarget
   connectionId: string
   silo: string
