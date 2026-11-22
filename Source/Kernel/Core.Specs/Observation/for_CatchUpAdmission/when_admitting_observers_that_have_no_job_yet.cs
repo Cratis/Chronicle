@@ -15,11 +15,11 @@ public class when_admitting_observers_that_have_no_job_yet : given.a_catch_up_ad
 
     async Task Because()
     {
-        _first = await _admission.TryAdmit(KeyOf("first"), 2);
-        _second = await _admission.TryAdmit(KeyOf("second"), 2);
-        _third = await _admission.TryAdmit(KeyOf("third"), 2);
+        _first = await _admission.TryAdmit(KeyOf("first"), 2, 0);
+        _second = await _admission.TryAdmit(KeyOf("second"), 2, 0);
+        _third = await _admission.TryAdmit(KeyOf("third"), 2, 0);
         _first?.Dispose();
-        _thirdAfterTheFirstStarted = await _admission.TryAdmit(KeyOf("third"), 2);
+        _thirdAfterTheFirstStarted = await _admission.TryAdmit(KeyOf("third"), 2, 0);
     }
 
     [Fact] void should_admit_the_first_up_to_the_limit() => _first.ShouldNotBeNull();

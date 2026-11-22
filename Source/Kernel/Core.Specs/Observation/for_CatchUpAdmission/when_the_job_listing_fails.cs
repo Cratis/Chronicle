@@ -14,7 +14,7 @@ public class when_the_job_listing_fails : given.a_catch_up_admission
     async Task Because()
     {
         _jobStorage.GetJobs(Arg.Any<JobQuery>()).Returns(_ => Task.FromResult(Catch<IImmutableList<JobState>>.Failed(new InvalidOperationException("storage is down"))));
-        _lease = await _admission.TryAdmit(KeyOf("one"), 1);
+        _lease = await _admission.TryAdmit(KeyOf("one"), 1, 0);
     }
 
     [Fact] void should_admit_the_observer() => _lease.ShouldNotBeNull();

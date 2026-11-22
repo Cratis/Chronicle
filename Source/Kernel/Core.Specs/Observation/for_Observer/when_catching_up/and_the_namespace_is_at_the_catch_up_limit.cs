@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Choreography.Storage.Jobs;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 
@@ -21,13 +22,18 @@ public class and_the_namespace_is_at_the_catch_up_limit : given.an_observer_with
     protected override ICatchUpAdmission CreateCatchUpAdmission()
     {
         _admission = Substitute.For<ICatchUpAdmission>();
-        _admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>()).Returns(Task.FromResult<IDisposable?>(null));
+        _admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>(), Arg.Any<ulong>()).Returns(Task.FromResult<IDisposable?>(null));
         return _admission;
     }
 
-    void Establish() => _jobsManager
-        .GetJobs(Arg.Any<JobQuery>())
-        .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
+    void Establish()
+    {
+        _jobsManager
+            .GetJobs(Arg.Any<JobQuery>())
+            .Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
+        _eventSequence.GetTailSequenceNumber().Returns((EventSequenceNumber)100UL);
+        _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 10UL };
+    }
 
     async Task Because()
     {
@@ -36,7 +42,7 @@ public class and_the_namespace_is_at_the_catch_up_limit : given.an_observer_with
         _isBackedOffAfter = await _observer.IsCatchUpBackedOff();
     }
 
-    [Fact] void should_ask_with_the_configured_limit() => _admission.Received(1).TryAdmit(_observerKey, _observersConfig.MaxConcurrentCatchUpJobs);
+    [Fact] void should_ask_with_the_configured_limit_and_how_far_behind_it_is() => _admission.Received(1).TryAdmit(_observerKey, _observersConfig.MaxConcurrentCatchUpJobs, 91UL);
 
     [Fact] void should_not_start_a_catch_up_job() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());

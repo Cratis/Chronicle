@@ -19,9 +19,11 @@ public interface ICatchUpAdmission
     /// </summary>
     /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer that needs a catch-up job.</param>
     /// <param name="limit">The most catch-up jobs that may run at once in the namespace; zero or less lifts the limit.</param>
+    /// <param name="eventsBehind">How many events the observer is behind the tail of its event sequence; the observer furthest behind is admitted first.</param>
     /// <returns>
-    /// A lease to dispose once the job has been started (or not), or null when the namespace is at its limit and the
-    /// observer should try again later. An observer that already has an outstanding catch-up job is always admitted.
+    /// A lease to dispose once the job has been started (or not), or null when the namespace is at its limit, or the free
+    /// places are for observers further behind, and the observer should try again later. An observer that already has an
+    /// outstanding catch-up job is always admitted.
     /// </returns>
-    Task<IDisposable?> TryAdmit(ObserverKey observerKey, int limit);
+    Task<IDisposable?> TryAdmit(ObserverKey observerKey, int limit, ulong eventsBehind);
 }

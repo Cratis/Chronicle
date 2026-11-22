@@ -18,6 +18,7 @@ public class a_catch_up_admission : Specification
 {
     protected CatchUpAdmission _admission;
     protected IJobStorage _jobStorage;
+    protected ManualTimeProvider _time;
 
     protected static ObserverKey KeyOf(string observerId) => new(observerId, "some-event-store", "some-namespace", EventSequenceId.Log);
 
@@ -38,7 +39,8 @@ public class a_catch_up_admission : Specification
         eventStore.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(namespaceStorage);
         namespaceStorage.Jobs.Returns(_jobStorage);
         RunningJobs();
-        _admission = new CatchUpAdmission(storage);
+        _time = new ManualTimeProvider();
+        _admission = new CatchUpAdmission(storage, _time);
     }
 
     protected void RunningJobs(params JobState[] jobs) =>

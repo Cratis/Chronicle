@@ -17,7 +17,7 @@ public class and_the_namespace_is_below_the_catch_up_limit : given.an_observer_w
     {
         _lease = Substitute.For<IDisposable>();
         _admission = Substitute.For<ICatchUpAdmission>();
-        _admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>()).Returns(Task.FromResult<IDisposable?>(_lease));
+        _admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>(), Arg.Any<ulong>()).Returns(Task.FromResult<IDisposable?>(_lease));
         return _admission;
     }
 
