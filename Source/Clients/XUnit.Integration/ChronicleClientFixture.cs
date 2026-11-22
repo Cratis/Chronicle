@@ -228,6 +228,16 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// </summary>
     protected static ContentRoot? ContentRoot { get; private set; }
 
+    /// <summary>
+    /// Gets a value indicating whether to run context-owned bootstrap, reset, scenario initialization and cleanup.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to true. Override with a stable tier predicate to skip the context lifecycle when the tier is disabled.
+    /// This does not prevent construction of the supplied backing fixture: <see cref="ChronicleFixture"/> starts its
+    /// container eagerly. To avoid containers in a disabled tier, do not register or construct that backing fixture.
+    /// </remarks>
+    protected virtual bool ShouldBootstrap => true;
+
     static bool IsBackupEnabled => string.Equals(
         Environment.GetEnvironmentVariable("CHRONICLE_BACKUP_ENABLED"),
         "true",
@@ -298,6 +308,11 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <inheritdoc/>
     public virtual void Dispose()
     {
+        if (!ShouldBootstrap)
+        {
+            return;
+        }
+
         DisposeServicesScope();
     }
 
@@ -307,6 +322,11 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <returns>Awaitable task.</returns>
     public async Task InitializeAsync()
     {
+        if (!ShouldBootstrap)
+        {
+            return;
+        }
+
         try
         {
             await Timings.Run("initialize", async () =>
@@ -328,6 +348,11 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <returns>Awaitable task.</returns>
     public virtual async Task DisposeAsync()
     {
+        if (!ShouldBootstrap)
+        {
+            return;
+        }
+
         try
         {
             await Timings.Run("cleanup", DisposeFixture);
