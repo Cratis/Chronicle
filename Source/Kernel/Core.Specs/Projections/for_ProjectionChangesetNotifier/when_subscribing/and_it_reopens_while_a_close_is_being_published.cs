@@ -37,17 +37,17 @@ public class and_it_reopens_while_a_close_is_being_published : given.a_subscribe
         await _notifier.Unsubscribe(_subscribers[0]);
         await _notifier.Unsubscribe(_subscribers[1]);
         var closing = _silo.TimerRegistry.FireAllAsync();
-        await _closeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _closeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
 
         // Still inside the republish window, and the close has not completed yet.
         var reopening = _notifier.Subscribe(Substitute.For<IReadModelChangesetSubscriber>());
         _acknowledgedDuringClose = reopening.IsCompleted;
         _closeCompleted.SetResult();
-        await _reopenEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _reopenEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _acknowledgedBeforeWatched = reopening.IsCompleted;
         _reopenCompleted.SetResult();
-        await closing.WaitAsync(TimeSpan.FromSeconds(5));
-        await reopening.WaitAsync(TimeSpan.FromSeconds(5));
+        await closing.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await reopening.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _acknowledgedAfterWatched = reopening.IsCompletedSuccessfully;
     }
 

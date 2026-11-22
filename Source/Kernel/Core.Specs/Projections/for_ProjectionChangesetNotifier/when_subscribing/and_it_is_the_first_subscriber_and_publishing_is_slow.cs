@@ -45,14 +45,14 @@ public class and_it_is_the_first_subscriber_and_publishing_is_slow : Specificati
     {
         var subscription = _notifier.Subscribe(_subscriber);
         var publishing = _silo.TimerRegistry.FireAllAsync();
-        await _publicationEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _publicationEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _completedBeforePublished = subscription.IsCompleted;
-        await _notifier.Notify(_namespace, _notification.ReadModelKey, _notification.ReadModel, _notification.Change).WaitAsync(TimeSpan.FromSeconds(5));
-        await _notifier.NotifyMany(_namespace, [_notification]).WaitAsync(TimeSpan.FromSeconds(5));
+        await _notifier.Notify(_namespace, _notification.ReadModelKey, _notification.ReadModel, _notification.Change).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _notifier.NotifyMany(_namespace, [_notification]).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _notificationsCompletedBeforePublished = !_publication.Task.IsCompleted;
         _publication.SetResult();
-        await publishing.WaitAsync(TimeSpan.FromSeconds(5));
-        await subscription.WaitAsync(TimeSpan.FromSeconds(5));
+        await publishing.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await subscription.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _completedAfterPublished = subscription.IsCompletedSuccessfully;
     }
 

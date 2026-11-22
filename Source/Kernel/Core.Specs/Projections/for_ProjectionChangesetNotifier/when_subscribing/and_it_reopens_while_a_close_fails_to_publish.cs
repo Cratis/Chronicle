@@ -37,16 +37,16 @@ public class and_it_reopens_while_a_close_fails_to_publish : given.a_subscribed_
         await _notifier.Unsubscribe(_subscribers[0]);
         await _notifier.Unsubscribe(_subscribers[1]);
         var closing = _silo.TimerRegistry.FireAllAsync();
-        await _closeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _closeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
 
         var reopening = _notifier.Subscribe(Substitute.For<IReadModelChangesetSubscriber>());
         _acknowledgedDuringClose = reopening.IsCompleted;
         _closeCompleted.SetException(new InvalidOperationException("the silo could not be reached"));
-        await _reopenEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await _reopenEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _acknowledgedBeforeWatched = reopening.IsCompleted;
         _reopenCompleted.SetResult();
-        await closing.WaitAsync(TimeSpan.FromSeconds(5));
-        await reopening.WaitAsync(TimeSpan.FromSeconds(5));
+        await closing.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await reopening.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _acknowledgedAfterWatched = reopening.IsCompletedSuccessfully;
     }
 
