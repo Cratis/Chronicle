@@ -64,7 +64,7 @@ public static class ExternalServiceConverters
             definition.Endpoint.Database?.Options.ToDictionary(_ => _.Key, _ => _.Value) ?? new Dictionary<string, string>(),
             HeaderValuesSetOf(definition.Endpoint.Http));
 
-    static IDictionary<string, bool> HeaderValuesSetOf(HttpEndpointConfiguration? configuration) =>
+    static Dictionary<string, bool> HeaderValuesSetOf(HttpEndpointConfiguration? configuration) =>
         configuration?.Headers.ToDictionary(_ => _.Key, _ => !string.IsNullOrEmpty(_.Value)) ?? new Dictionary<string, bool>();
 
     static AuthorizationType AuthorizationTypeOf(HttpEndpointConfiguration? configuration) =>
