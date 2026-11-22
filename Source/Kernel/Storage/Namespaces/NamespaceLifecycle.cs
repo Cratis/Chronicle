@@ -19,6 +19,12 @@ public record NamespaceLifecycle(EventStoreNamespaceName Namespace, NamespaceInc
     /// <summary>Gets the compare-and-swap revision.</summary>
     public long Revision { get; init; } = 1;
 
+    /// <summary>Gets the retired marker identity that a prepared replacement may supersede.</summary>
+    public NamespaceIncarnationId? PreviousIncarnation { get; init; }
+
+    /// <summary>Gets whether creation notification and listing acknowledgement are still required before opening.</summary>
+    public bool NotifyOnOpen { get; init; }
+
     /// <summary>Gets the lifecycle status.</summary>
     public NamespaceLifecycleStatus Status { get; init; } = NamespaceLifecycleStatus.Preparing;
 
