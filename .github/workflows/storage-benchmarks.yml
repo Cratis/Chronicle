@@ -21,11 +21,6 @@ on:
         description: 'Comma-separated providers (sqlite, postgres, sqlserver, mongo)'
         required: false
         default: sqlite,postgres,sqlserver,mongo
-      filter:
-        description: 'Benchmark filter (for example *ConcurrentAppendBenchmark.Concurrent*)'
-        required: false
-        type: string
-        default: '*'
   pull_request:
     paths:
       - 'Benchmarks/Chronicle.Benchmarks.Storage/**'
@@ -48,7 +43,6 @@ jobs:
     env:
       PROFILE: ${{ github.event.inputs.profile || 'smoke' }}
       PROVIDERS: ${{ github.event.inputs.providers || 'sqlite,postgres,mongo' }}
-      FILTER: ${{ github.event.inputs.filter || '*' }}
       PROJECT: Benchmarks/Chronicle.Benchmarks.Storage/Chronicle.Benchmarks.Storage.csproj
 
     steps:
@@ -95,7 +89,7 @@ jobs:
       - name: Run storage benchmarks
         run: >
           dotnet run --project "$PROJECT" -c Release --no-build --
-          --profile "$PROFILE" --providers "$PROVIDERS" --repetition 1 --filter "$FILTER"
+          --profile "$PROFILE" --providers "$PROVIDERS" --repetition 1
           --output "$GITHUB_WORKSPACE/storage-benchmark-results"
 
       - name: Summarize results

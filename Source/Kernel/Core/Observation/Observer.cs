@@ -221,7 +221,7 @@ public partial class Observer(
         _observerKeyText = _observerKey.ToString();
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
-        if (!await SeedRunningStateHistory()) return;
+        await SeedRunningStateHistory();
         SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
@@ -803,6 +803,78 @@ public partial class Observer(
             {
                 await RecoverAfterQuarantine();
             }
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override async Task WriteStateAsync()
+    {
+        if (CannotWriteState()) return;
+        await _stateWriteLock.WaitAsync();
+        try
+        {
+            if (_removed || CannotWriteState()) return;
+
+            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
+            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
+            if (IsQuarantined)
+            {
+                State = State with { RunningState = ObserverRunningState.Quarantined };
+                _runningStateChangedAt = _quarantineRunningStateChangedAt;
+            }
+
+            // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
+            // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+            var shadowClaims = ShadowClaimsSnapshot();
+            State = State with
+            {
+                AlertLifecycleId = _alertLifecycleId,
+                AlertRevision = _alertRevision,
+                AlertDisposition = _alertDisposition,
+                QuarantineEpisodeId = _quarantineEpisodeId,
+                WebhookProbe = _webhookProbe,
+                DeliveryFences = DeliveryFenceSnapshot(),
+                DurableSubscription = DurableSubscriptionToWrite(),
+                PartitionClaims = shadowClaims.Claims,
+                ObserverWideClaim = shadowClaims.Wide,
+                OwnershipRevision = shadowClaims.Revision
+            };
+            var revision = _alertRevision;
+            try
+            {
+                await base.WriteStateAsync();
+                if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
+            }
+            catch (ObserverKeyDoesNotMatchDefinition)
+            {
+                if (await RelinquishOwnershipIfMoved()) return;
+                await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
+                    .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
+                try
+                {
+                    await base.WriteStateAsync();
+                    if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
+                }
+                catch (ObserverKeyDoesNotMatchDefinition)
+                {
+                    if (await RelinquishOwnershipIfMoved()) return;
+                    throw;
+                }
+            }
+
+            _persistedStateWrites++;
+            _forgottenDurableSubscriptionIsPending = false;
+            PublishRunningStateGauge();
+            if (revision == _alertRevision)
+            {
+                _alertStateNeedsPersistence = false;
+            }
+
+            _debouncedProgressWrites = 0;
+        }
+        finally
+        {
+            _stateWriteLock.Release();
         }
     }
 

@@ -66,7 +66,13 @@ public class a_held_silo : Specification
         var systemStorage = new Storage.InMemory.SystemStorage();
         var storage = Substitute.For<IStorage>();
         storage.System.Returns(systemStorage);
-        builder.Host.UseOrleans(silo => ConfigureSilo(silo, storage));
+        builder.Host.UseOrleans(silo =>
+        {
+            silo
+                .UseLocalhostClustering(FreePort(), FreePort(), serviceId: Guid.NewGuid().ToString(), clusterId: Guid.NewGuid().ToString())
+                .Services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.DataProtectionKeys, (_, _) => new DataProtectionKeysStorageProvider(storage));
+            if (Standby) silo.AddSingleWriterLease();
+        });
         if (Standby) RegisterContendedLease(builder.Services);
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(_hold);
 
@@ -115,10 +121,8 @@ public class a_held_silo : Specification
 
     protected async Task StartHeld()
     {
-        _hold.Diagnostics.Record("host StartAsync invoked");
         _start = _app.StartAsync(_startup.Token);
-        _hold.Diagnostics.ObserveStartup(_start);
-        await _hold.Diagnostics.WaitForActive(_start, _hold, _startup.Token);
+        await _hold.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     async Task Destroy()
@@ -141,16 +145,6 @@ public class a_held_silo : Specification
             _client.Dispose();
             _startup.Dispose();
         }
-    }
-
-    void ConfigureSilo(ISiloBuilder silo, IStorage storage)
-    {
-        silo
-            .UseLocalhostClustering(FreePort(), FreePort(), serviceId: Guid.NewGuid().ToString(), clusterId: Guid.NewGuid().ToString())
-            .Services.AddKeyedSingleton<IGrainStorage>(WellKnownGrainStorageProviders.DataProtectionKeys, (_, _) => new DataProtectionKeysStorageProvider(storage));
-        silo.Services.AddSingleton(_hold.Diagnostics);
-        silo.Services.AddSingleton<SiloLifecycleSubject, diagnostic_silo_lifecycle>();
-        if (Standby) silo.AddSingleWriterLease();
     }
 
     void RegisterContendedLease(IServiceCollection services)

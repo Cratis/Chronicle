@@ -137,74 +137,6 @@ public partial class EventStore : IEventStore
         bool enableEventTypeGenerationValidation,
         IOptions<ChronicleOptions> options,
         ILoggerFactory loggerFactory)
-        : this(
-            eventStoreName,
-            @namespace,
-            connection,
-            clientArtifactsProvider,
-            eventTypeMigrators,
-            correlationIdAccessor,
-            concurrencyScopeStrategies,
-            causationManager,
-            identityProvider,
-            schemaGenerator,
-            namingPolicy,
-            serviceProvider,
-            reactorSideEffectHandlers,
-            artifactActivator,
-            autoDiscoverAndRegister,
-            jsonSerializerOptions,
-            enableEventTypeGenerationValidation,
-            options,
-            loggerFactory,
-            options.Value.RegistrationMode)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventStore"/> class with a store-scoped registration mode.
-    /// </summary>
-    /// <param name="eventStoreName">Name of the event store.</param>
-    /// <param name="namespace">Namespace for the event store.</param>
-    /// <param name="connection"><see cref="IChronicleConnection"/> for working with the connection to Chronicle.</param>
-    /// <param name="clientArtifactsProvider"><see cref="IClientArtifactsProvider"/> for getting client artifacts.</param>
-    /// <param name="eventTypeMigrators"><see cref="IEventTypeMigrators"/> for getting event type migrators.</param>
-    /// <param name="correlationIdAccessor"><see cref="ICorrelationIdAccessor"/> for getting correlation.</param>
-    /// <param name="concurrencyScopeStrategies"><see cref="IConcurrencyScopeStrategies"/> for managing concurrency scopes.</param>
-    /// <param name="causationManager"><see cref="ICausationManager"/> for getting causation.</param>
-    /// <param name="identityProvider"><see cref="IIdentityProvider"/> for resolving identity for operations.</param>
-    /// <param name="schemaGenerator"><see cref="IJsonSchemaGenerator"/> for generating JSON schemas.</param>
-    /// <param name="namingPolicy"><see cref="INamingPolicy"/> to use for converting names during serialization.</param>
-    /// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting instances of services.</param>
-    /// <param name="reactorSideEffectHandlers"><see cref="IReactorSideEffectHandlers"/> for handling reactor side-effect return values.</param>
-    /// <param name="artifactActivator"><see cref="IClientArtifactsActivator"/> for creating artifact instances.</param>
-    /// <param name="autoDiscoverAndRegister">Whether to automatically discover and register artifacts.</param>
-    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
-    /// <param name="enableEventTypeGenerationValidation">Whether to enable event type generation chain validation.</param>
-    /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for Chronicle configuration.</param>
-    /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
-    /// <param name="registrationMode">Registration mode captured for the lifetime of this handle.</param>
-    internal EventStore(
-        EventStoreName eventStoreName,
-        EventStoreNamespaceName @namespace,
-        IChronicleConnection connection,
-        IClientArtifactsProvider clientArtifactsProvider,
-        IEventTypeMigrators eventTypeMigrators,
-        ICorrelationIdAccessor correlationIdAccessor,
-        IConcurrencyScopeStrategies concurrencyScopeStrategies,
-        ICausationManager causationManager,
-        IIdentityProvider identityProvider,
-        IJsonSchemaGenerator schemaGenerator,
-        INamingPolicy namingPolicy,
-        IServiceProvider serviceProvider,
-        IReactorSideEffectHandlers reactorSideEffectHandlers,
-        IClientArtifactsActivator artifactActivator,
-        bool autoDiscoverAndRegister,
-        JsonSerializerOptions jsonSerializerOptions,
-        bool enableEventTypeGenerationValidation,
-        IOptions<ChronicleOptions> options,
-        ILoggerFactory loggerFactory,
-        RegistrationMode registrationMode)
     {
         _telemetry = options.Value.Telemetry;
         _logger = loggerFactory.CreateLogger<EventStore>();
@@ -218,7 +150,7 @@ public partial class EventStore : IEventStore
         DecisionReadJsonOptions = jsonSerializerOptions;
         _autoDiscoverAndRegister = autoDiscoverAndRegister;
         _preparation = new(PublishLocalPreparationFailure);
-        _registrationMode = registrationMode;
+        _registrationMode = options.Value.RegistrationMode;
         _chronicleOptions = options.Value;
         _serverless = ServerlessActivation.IsOn(options.Value);
         Deliveries = new ObserverDeliveries(options.Value);
@@ -631,7 +563,26 @@ public partial class EventStore : IEventStore
             {
                 await Preparation.Register(_autoDiscoverAndRegister ? DiscoverAllLocal : ValidateManualPreparation, async () =>
                 {
-                    var (registerEventTypes, registerReadModels) = await PrepareArtifactRegistration();
+                    Func<Task> registerEventTypes = EventTypes.Register;
+                    Func<Task> registerReadModels = ReadModels.Register;
+                    try
+                    {
+                        if (EventTypes is EventTypes nativeEventTypes)
+                        {
+                            var payload = await nativeEventTypes.PrepareRegistration();
+                            registerEventTypes = () => nativeEventTypes.RegisterPrepared(payload);
+                        }
+                        if (ReadModels is ReadModels.ReadModels nativeReadModels)
+                        {
+                            var payload = nativeReadModels.PrepareRegistration();
+                            registerReadModels = () => nativeReadModels.RegisterPrepared(payload);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        Preparation.RecordPayloadFailure(exception);
+                        throw;
+                    }
                     if (!isBackgroundRetry)
                     {
                         drift = await DetectIdentityDrift();
@@ -667,32 +618,6 @@ public partial class EventStore : IEventStore
 
             return;
         }
-    }
-
-    async Task<(Func<Task> EventTypes, Func<Task> ReadModels)> PrepareArtifactRegistration()
-    {
-        Func<Task> registerEventTypes = EventTypes.Register;
-        Func<Task> registerReadModels = ReadModels.Register;
-        try
-        {
-            if (EventTypes is EventTypes nativeEventTypes)
-            {
-                var payload = await nativeEventTypes.PrepareRegistration();
-                registerEventTypes = () => nativeEventTypes.RegisterPrepared(payload);
-            }
-            if (_registrationMode == RegistrationMode.Inline && ReadModels is ReadModels.ReadModels nativeReadModels)
-            {
-                var payload = nativeReadModels.PrepareRegistration();
-                registerReadModels = () => nativeReadModels.RegisterPrepared(payload);
-            }
-        }
-        catch (Exception exception)
-        {
-            Preparation.RecordPayloadFailure(exception);
-            throw;
-        }
-
-        return (registerEventTypes, registerReadModels);
     }
 
     async Task<IImmutableList<ArtifactIdentityDrift>> DetectIdentityDrift()

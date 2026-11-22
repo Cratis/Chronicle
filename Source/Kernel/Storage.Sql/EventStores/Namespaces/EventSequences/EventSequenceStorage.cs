@@ -1007,7 +1007,8 @@ public partial class EventSequenceStorage(
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.AsQueryable();
+        var fromSeqNumValue = sequenceNumber.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= fromSeqNumValue);
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -1038,14 +1039,15 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return CreateCursor(query, scope, includeHistory, cancellationToken, sequenceNumber);
+        return CreateCursor(query, scope, includeHistory, cancellationToken);
     }
 
     async Task<IEventCursor> ReadRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, bool includeHistory, CancellationToken cancellationToken)
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var query = scope.DbContext.Events.AsQueryable();
+        var startValue = start.Value;
+        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= startValue);
 
         // EventSequenceNumber.Max (ulong.MaxValue - 1) means "no upper bound". The SQL column
         // is BIGINT (signed int64) so the ulong value wraps to -2 when EF binds the parameter,
@@ -1081,13 +1083,13 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return CreateCursor(query, scope, includeHistory, cancellationToken, start);
+        return CreateCursor(query, scope, includeHistory, cancellationToken);
     }
 
-    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, bool includeHistory, CancellationToken cancellationToken, EventSequenceNumber? start = null)
+    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, bool includeHistory, CancellationToken cancellationToken)
     {
         var schemas = new EventSchemaResolver(eventTypesStorage);
-        return new(query, scope, eventStore, @namespace, identityStorage, start, 100, cancellationToken)
+        return new(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken)
         {
             IncludeHistory = includeHistory,
             ConvertEntry = (entry, tags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, tags, schemas.GetFor, converter)

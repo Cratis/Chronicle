@@ -44,24 +44,6 @@ public interface IChronicleClient
     Task<IEventStore> GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace = default);
 
     /// <summary>
-    /// Gets an event store with a registration mode captured for this handle, without changing the client's default.
-    /// </summary>
-    /// <param name="name">Name of the event store.</param>
-    /// <param name="namespace">Namespace for the event store. Omit with <see langword="null"/> to resolve it as for the default overload.</param>
-    /// <param name="registrationMode">Registration mode for the lifetime of this handle, including reconnection and manual registration.</param>
-    /// <returns>The event store, cached by name, resolved namespace, and registration mode.</returns>
-    /// <remarks>
-    /// <see cref="RegistrationMode.EventTypesOnly"/> ensures the store and registers the local event catalog, but no other artifacts.
-    /// <see cref="RegistrationMode.AtDeployment"/> performs no automatic kernel registration or provisioning; the owner must provide these.
-    /// Both modes retain local discovery and serialization. Neither enables <see cref="ChronicleOptions.AutoDiscoverAndRegister"/> when disabled,
-    /// nor restricts explicit artifact API calls made by the caller. Different modes produce separate handles sharing the same connection.
-    /// Implementations that do not support per-store registration modes throw rather than ignore the requested mode.
-    /// </remarks>
-    /// <exception cref="NotSupportedException">The client implementation does not support per-store registration modes.</exception>
-    Task<IEventStore> GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace, RegistrationMode registrationMode) =>
-        throw new NotSupportedException("Per-store registration modes are not supported by this client.");
-
-    /// <summary>
     /// List all the event stores.
     /// </summary>
     /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>

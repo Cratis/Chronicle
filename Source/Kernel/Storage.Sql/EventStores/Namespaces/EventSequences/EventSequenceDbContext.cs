@@ -95,10 +95,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
         {
             entity.ToTable(tableName);
             entity.HasKey(e => e.SequenceNumber);
-            if (!Database.IsNpgsql())
-            {
-                entity.HasIndex(e => e.SequenceNumber);
-            }
+            entity.HasIndex(e => e.SequenceNumber);
             entity.HasIndex(e => e.EventSourceId);
             entity.HasIndex(e => e.Type);
             entity.HasIndex(e => new { e.EventSourceId, e.Type, e.SequenceNumber }).HasDatabaseName(EventSequenceMigrator.ParentHistoryIndexName(tableName));

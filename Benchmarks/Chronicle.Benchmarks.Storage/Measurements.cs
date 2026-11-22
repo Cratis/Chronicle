@@ -15,7 +15,6 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 public static class Measurements
 {
     static readonly ConcurrentDictionary<string, OperationStats> _stats = new(StringComparer.Ordinal);
-    static readonly ConcurrentDictionary<string, ConcurrentQueue<IReadOnlyList<WriterSample>>> _samples = new(StringComparer.Ordinal);
     static volatile bool _counting;
 
     /// <summary>Gets a value indicating whether invocations are currently counted.</summary>
@@ -39,9 +38,7 @@ public static class Measurements
     /// <param name="record">What the invocation did.</param>
     public static void Record(string key, InvocationRecord record)
     {
-        if (!_counting) return;
-        For(key).Apply(record);
-        if (record.Samples.Count > 0) _samples.GetOrAdd(key, static _ => new()).Enqueue(record.Samples);
+        if (_counting) For(key).Apply(record);
     }
 
     /// <summary>Gets the number of failed operations counted so far.</summary>
@@ -49,35 +46,13 @@ public static class Measurements
     public static long TotalErrors() => _stats.Values.Sum(_ => _.Errors);
 
     /// <summary>Clears everything collected.</summary>
-    public static void Clear()
-    {
-        _stats.Clear();
-        _samples.Clear();
-    }
+    public static void Clear() => _stats.Clear();
 
     /// <summary>Writes everything collected as JSON.</summary>
     /// <param name="path">The file to write.</param>
     public static void Write(string path)
     {
         var report = _stats.OrderBy(_ => _.Key, StringComparer.Ordinal).ToDictionary(_ => _.Key, _ => _.Value.ToReport());
-        File.WriteAllText(path, JsonSerializer.Serialize(report, SettingsLedger.JsonOptions));
-    }
-
-    /// <summary>Writes counted concurrent writer samples in case, wave and launch order.</summary>
-    /// <param name="path">The file to write.</param>
-    public static void WriteSamples(string path)
-    {
-        var report = _samples.OrderBy(_ => _.Key, StringComparer.Ordinal).SelectMany(entry =>
-            entry.Value.SelectMany((wave, waveIndex) => wave.Select(sample => new
-            {
-                CaseKey = entry.Key,
-                WaveIndex = waveIndex,
-                sample.WriterIndex,
-                sample.SequenceIndex,
-                sample.LaunchOffsetMs,
-                sample.DurationMs,
-                sample.Succeeded
-            })));
         File.WriteAllText(path, JsonSerializer.Serialize(report, SettingsLedger.JsonOptions));
     }
 

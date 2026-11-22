@@ -107,7 +107,6 @@ try
         finally
         {
             Measurements.Write(Path.Combine(providerDirectory, "counts.json"));
-            Measurements.WriteSamples(Path.Combine(providerDirectory, "samples.json"));
             var scaling = ScalingReport.FromMeasurements();
             if (scaling.Length > 0) await File.WriteAllTextAsync(Path.Combine(providerDirectory, "scaling.md"), scaling);
             await File.WriteAllTextAsync(Path.Combine(providerDirectory, "summary-part.md"), RunSummary.ForProvider(StorageProviderNames.NameOf(provider), KnownGaps.For(provider)));

@@ -5,7 +5,6 @@ using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Arc.EntityFrameworkCore.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -156,13 +155,10 @@ public partial class EventSequenceMigrator(
             },
             constraints: table => table.PrimaryKey($"PK_{tableName}", x => x.SequenceNumber));
 
-        if (!context.Database.IsNpgsql())
-        {
-            migrationBuilder.CreateIndex(
-                name: $"IX_{tableName}_SequenceNumber",
-                table: tableName,
-                column: "SequenceNumber");
-        }
+        migrationBuilder.CreateIndex(
+            name: $"IX_{tableName}_SequenceNumber",
+            table: tableName,
+            column: "SequenceNumber");
 
         migrationBuilder.CreateIndex(
             name: $"IX_{tableName}_EventSourceId",
@@ -265,6 +261,5 @@ public partial class EventSequenceMigrator(
 
         await EnsureParentHistoryIndex(context, tableName);
         await ClearRevisionsOfRedactedEvents(context, tableName);
-        await RemoveRedundantSequenceIndex(context, tableName);
     }
 }

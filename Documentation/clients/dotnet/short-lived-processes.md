@@ -43,8 +43,6 @@ keeps keep-alive enabled; they cannot receive events through this short-lived cl
 
 ## Choosing how to register
 
-If one client needs different policies for its own and another application's store, use a [per-store registration mode](./foreign-event-stores.md) instead of changing the client-wide default.
-
 `RegistrationMode` decides what the process registers when it connects.
 
 | Mode | What happens |

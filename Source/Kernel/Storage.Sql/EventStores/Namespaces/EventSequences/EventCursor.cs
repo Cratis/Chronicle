@@ -35,34 +35,8 @@ public class EventCursor(
     readonly IIdentityStorage _identityStorage = identityStorage;
     readonly CancellationToken _cancellationToken = cancellationToken;
     readonly int _batchSize = batchSize;
-    readonly ulong? _startSequenceNumber;
     ulong? _lastSequenceNumber;
     bool _hasMore = true;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EventCursor"/> class with an optional initial lower bound.
-    /// </summary>
-    /// <param name="query">The queryable source of events.</param>
-    /// <param name="scope">The scope that owns the query context.</param>
-    /// <param name="eventStore">The event store name.</param>
-    /// <param name="namespace">The namespace name.</param>
-    /// <param name="identityStorage">Identity storage for resolving identities.</param>
-    /// <param name="startSequenceNumber">Optional inclusive lower bound applied only to the first page.</param>
-    /// <param name="batchSize">Number of events to fetch per batch.</param>
-    /// <param name="cancellationToken">Optional <see cref="CancellationToken"/>.</param>
-    internal EventCursor(
-        IQueryable<EventEntry> query,
-        DbContextScope<EventSequenceDbContext> scope,
-        EventStoreName eventStore,
-        EventStoreNamespaceName @namespace,
-        IIdentityStorage identityStorage,
-        EventSequenceNumber? startSequenceNumber,
-        int batchSize = 100,
-        CancellationToken cancellationToken = default)
-        : this(query, scope, eventStore, @namespace, identityStorage, batchSize, cancellationToken)
-    {
-        _startSequenceNumber = startSequenceNumber?.Value;
-    }
 
     /// <inheritdoc/>
     public IEnumerable<AppendedEvent> Current { get; private set; } = [];
@@ -120,16 +94,11 @@ public class EventCursor(
 
     IQueryable<EventEntry> ContinueAfterLastRead()
     {
-        if (_lastSequenceNumber is { } lastSequenceNumber)
+        if (_lastSequenceNumber is not { } lastSequenceNumber)
         {
-            return _query.Where(entry => entry.SequenceNumber > lastSequenceNumber);
+            return _query;
         }
 
-        if (_startSequenceNumber is { } startSequenceNumber)
-        {
-            return _query.Where(entry => entry.SequenceNumber >= startSequenceNumber);
-        }
-
-        return _query;
+        return _query.Where(entry => entry.SequenceNumber > lastSequenceNumber);
     }
 }
