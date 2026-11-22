@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -192,11 +193,10 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         // scan and no rejection guard on every subsequent event of the stream. The parent key must confirm
         // the located root: the same child key can exist under multiple roots, so the child key alone never
         // decides the placement. On any miss or mismatch — including when the current event IS the child's
-        // creation event — fall through to the event-sequence strategies.
+        // creation event — fall through to the event-sequence strategies. A root-only sink hit cannot
+        // identify a child's recursive depth, so recursive parents must use the event-sequence strategies.
         var childKeyValue = key.Value;
-        if (!parentProjection.HasParent &&
-            childKeyValue is not null and not ExpandoObject &&
-            childKeyValue.ToString() != @event.Context.EventSourceId.Value)
+        if (CanResolveExistingChildBySink(parentProjection, childKeyValue, @event))
         {
             var childLocationPath = BuildFullParentChildPropertyPath(projection, identifiedByProperty);
             var existingChildRoot = await sink.TryFindRootKeyByChildValue(childLocationPath, childKeyValue);
@@ -268,6 +268,12 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         return null;
     }
+
+    static bool CanResolveExistingChildBySink(IProjection parentProjection, [NotNullWhen(true)] object? childKeyValue, AppendedEvent @event) =>
+        !parentProjection.HasParent &&
+        !RecursiveChildProjections.Of(parentProjection).Any() &&
+        childKeyValue is not null and not ExpandoObject &&
+        childKeyValue.ToString() != @event.Context.EventSourceId.Value;
 
     static List<ArrayIndexer> BuildArrayIndexers(Key resolvedParentKey, PropertyPath childrenPropertyPath, PropertyPath identifiedByProperty, object? keyValue)
     {
@@ -485,12 +491,14 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         if (childCreationResult?.KeyResolverResult is ResolvedKey resolvedCreationKey)
         {
             var resolvedKey = resolvedCreationKey.Key;
-            if (resolvedKey.ArrayIndexers.HasFor(projection.ChildrenPropertyPath))
+            var childrenPath = ResolvedCollectionPath.ForChild(
+                ResolvedCollectionPath.ForParent(projection, resolvedKey), resolvedKey.ArrayIndexers);
+            if (resolvedKey.ArrayIndexers.HasFor(childrenPath))
             {
                 return childCreationResult;
             }
 
-            var childArrayIndexers = new ArrayIndexers(BuildArrayIndexers(resolvedKey, projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value));
+            var childArrayIndexers = new ArrayIndexers(BuildArrayIndexers(resolvedKey, childrenPath, identifiedByProperty, childKey.Value));
 
             return new ParentEventResult(null, KeyResolverResult.Resolved(resolvedKey with { ArrayIndexers = childArrayIndexers }));
         }
@@ -530,7 +538,9 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return null;
         }
 
-        var arrayIndexers = BuildArrayIndexers(resolvedProjectionKey.Key, projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value);
+        var resolvedChildrenPath = ResolvedCollectionPath.ForChild(
+            ResolvedCollectionPath.ForParent(projection, resolvedProjectionKey.Key), resolvedProjectionKey.Key.ArrayIndexers);
+        var arrayIndexers = BuildArrayIndexers(resolvedProjectionKey.Key, resolvedChildrenPath, identifiedByProperty, childKey.Value);
         return new ParentEventResult(
             null,
             KeyResolverResult.Resolved(resolvedProjectionKey.Key with { ArrayIndexers = new ArrayIndexers(arrayIndexers) }));
