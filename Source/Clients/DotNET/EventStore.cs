@@ -656,17 +656,19 @@ public partial class EventStore : IEventStore
                 continue;
             }
 
-            if (runFailure is not null)
-            {
-                if (effectsStarted && runFailure is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
-                {
-                    StartBackgroundRegistrationRetry();
-                }
-                ExceptionDispatchInfo.Capture(runFailure).Throw();
-            }
-
+            HandleRegistrationFailure(runFailure, effectsStarted);
             return;
         }
+    }
+
+    void HandleRegistrationFailure(Exception? failure, bool effectsStarted)
+    {
+        if (failure is null) return;
+        if (effectsStarted && RegistrationBackoff.IsRetryable(failure))
+        {
+            StartBackgroundRegistrationRetry();
+        }
+        ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     async Task<(Func<Task> EventTypes, Func<Task> ReadModels)> PrepareArtifactRegistration()
@@ -806,10 +808,10 @@ public partial class EventStore : IEventStore
                     _logger.BackgroundRegistrationRetrySucceeded(attempt);
                     return;
                 }
-                catch (Exception exception) when (exception is ArtifactIdentityDriftDetected or ArtifactPreparationReentered || Preparation.LatestVerdict.IsFaulted)
+                catch (Exception exception) when (!RegistrationBackoff.IsRetryable(exception) || Preparation.LatestVerdict.IsFaulted)
                 {
-                    // A failed local revision or payload is retained until explicit successful rediscovery.
-                    // The local revision published its own exact failure; retrying the same verdict cannot recover it.
+                    // Local preparation failures and namespace recovery-required failures need explicit intervention.
+                    // Registration already published the failure; an automatic retry cannot recover this state.
                     return;
                 }
                 catch (Exception exception)
@@ -878,7 +880,7 @@ public partial class EventStore : IEventStore
                 await RegisterAllArtifacts(registerEventTypes, registerReadModels);
                 return;
             }
-            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts && exception is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
+            catch (Exception exception) when (attempt < _registrationRetry.MaxAttempts && RegistrationBackoff.IsRetryable(exception))
             {
                 var delay = _registrationBackoff.NextDelay(attempt);
                 _logger.RetryingRegisterAllArtifacts(exception, attempt, _registrationRetry.MaxAttempts, delay);
