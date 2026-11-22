@@ -13,7 +13,6 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.TestKit;
 
@@ -85,5 +84,5 @@ public class a_projection_adding_historical_event_mappings : a_projection_grain_
     }
 
     protected void SetObserverEventTypes(IEnumerable<EventType> eventTypes) =>
-        _observer.GetDefinition().Returns(ObserverDefinition.Empty with { EventTypes = eventTypes });
+        _observer.GetEventTypes().Returns(EventTypeSet.From(eventTypes));
 }

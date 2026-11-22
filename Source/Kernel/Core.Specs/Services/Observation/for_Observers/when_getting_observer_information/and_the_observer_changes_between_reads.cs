@@ -28,7 +28,6 @@ public class and_the_observer_changes_between_reads : given.all_dependencies
     });
 
     [Fact] void should_read_the_snapshot_once() => _observer.Received(1).GetInformation();
-    [Fact] void should_not_read_the_definition_separately() => _observer.DidNotReceive().GetDefinition();
     [Fact] void should_not_read_the_state_separately() => _observer.DidNotReceive().GetState();
     [Fact] void should_not_read_the_subscription_separately() => _observer.DidNotReceive().IsSubscribed();
     [Fact] void should_return_the_snapshot_subscription_flag() => _response.IsSubscribed.ShouldBeTrue();

@@ -31,7 +31,7 @@ public class when_two_target_casings_map_to_one_source_namespace : Specification
             _keys.Add(identity.ToString());
             return _observer;
         });
-        _manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
+        _manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
     }
 
     async Task Because()

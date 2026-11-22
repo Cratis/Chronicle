@@ -300,9 +300,6 @@ public partial class Observer(
 
 #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
-    public Task<ObserverDefinition> GetDefinition() => Task.FromResult(observerDefinition.State);
-
-    /// <inheritdoc/>
     public Task<ObserverState> GetState()
     {
         return Task.FromResult(State);

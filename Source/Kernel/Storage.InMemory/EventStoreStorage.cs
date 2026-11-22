@@ -112,7 +112,7 @@ public sealed class EventStoreStorage(
     public IUniqueConstraintEncodingStorage UniqueConstraintEncoding { get; } = new UniqueConstraintEncodingStorage();
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionsStorage();
+    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionRegistry(new ObserverDefinitionsStorage());
 
     /// <inheritdoc/>
     public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage();

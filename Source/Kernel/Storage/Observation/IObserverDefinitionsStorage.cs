@@ -13,6 +13,15 @@ namespace Cratis.Chronicle.Storage.Observation;
 public interface IObserverDefinitionsStorage
 {
     /// <summary>
+    /// Tell the storage that the definition of an observer was changed or deleted, by this silo or another, so anything
+    /// it holds for the observer is read again. Does nothing for storage that holds nothing.
+    /// </summary>
+    /// <param name="id">The <see cref="ObserverId"/> that changed.</param>
+    void Invalidate(ObserverId id)
+    {
+    }
+
+    /// <summary>
     /// Observe all definitions; emits the current set on subscription and again whenever a definition is saved or deleted.
     /// </summary>
     /// <returns>A read-only subject emitting collections of observer definitions; dispose the subscription to stop observing.</returns>

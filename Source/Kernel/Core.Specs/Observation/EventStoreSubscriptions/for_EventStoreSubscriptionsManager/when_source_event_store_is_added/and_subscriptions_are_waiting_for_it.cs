@@ -35,7 +35,7 @@ public class and_subscriptions_are_waiting_for_it : Specification
         _observer.IsSubscribed().Returns(false);
         _silo.AddProbe(_ => _observer);
 
-        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
+        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
 
         await _manager.Add(
             new EventStoreSubscriptionDefinition(

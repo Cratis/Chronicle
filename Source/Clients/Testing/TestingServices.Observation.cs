@@ -30,7 +30,7 @@ internal sealed partial class TestingServices
         new(new KernelObserversService(
             context.GrainFactory,
             context.Storage,
-            new KernelObserverRemover(context.GrainFactory, context.Storage, NullLogger<KernelObserverRemover>.Instance),
+            new KernelObserverRemover(context.GrainFactory, context.Storage, NullLogger<KernelObserverRemover>.Instance, new NoOpObserverDefinitionsCacheClient()),
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsVisibility(context.KernelOptions, context.ConnectionOwnership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
             context.KernelOptions,
             context.NamespaceCasing));

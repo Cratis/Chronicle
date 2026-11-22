@@ -143,6 +143,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddBroadcastChannel(WellKnownBroadcastChannelNames.ConstraintsChanged, _ => _.FireAndForgetDelivery = true)
             .AddReplayStateManagement()
             .AddEventTypesCacheInvalidation()
+            .AddObserverDefinitionsCacheInvalidation()
             .AddEncryptionKeyCacheInvalidation()
             .AddStoreEntitlementsCache()
             .AddProjectionsService()

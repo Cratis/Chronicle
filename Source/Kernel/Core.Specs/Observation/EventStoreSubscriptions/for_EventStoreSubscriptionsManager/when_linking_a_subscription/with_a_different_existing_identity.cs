@@ -38,7 +38,7 @@ public class with_a_different_existing_identity : Specification
             _requestedKeys.Add(key);
             return key == _existingKey.ToString() ? _existingObserver : _currentObserver;
         });
-        _manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>("consumer");
+        _manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("consumer");
         await _manager.Add(new EventStoreSubscriptionDefinition("explicit", "producer", [new EventType("published", 1)]));
     }
 
