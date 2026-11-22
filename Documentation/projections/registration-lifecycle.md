@@ -11,6 +11,32 @@ A client registers the definitions its code declares on every connect. Unchanged
 trigger replay. Before a deployment, check the mapping change, the client's software version, and
 whether its full set still declares every projection you intend to keep.
 
+## When a read-model container changes
+
+Ordinary read-model registration refuses a different container name for an already registered
+read-model identifier, including a case-only difference or a new schema generation. The whole
+read-model batch is rejected before any of its definitions are changed. The error names the read
+model, its stored container, and the requested container; gRPC callers receive `FailedPrecondition`.
+This protects existing data from writes being silently redirected when clients use different naming policies.
+
+After upgrading, keep each existing identifier's container mapping consistent across clients.
+If registration fails unexpectedly, restore the naming policy or explicit container mapping that
+produced the stored name. A newly registered identifier can still use a different default container.
+
+For an intentional container change:
+
+1. Coordinate all clients and direct readers and writers so they agree on the destination.
+2. Use the existing `UpdateDefinition` operation to change the definition explicitly. Saving an
+   existing read model in the Workbench also uses this explicit update path.
+3. Deploy matching client definitions and plan any required rebuild or replay separately before
+   relying on the new destination's contents.
+
+An explicit update changes metadata and routing; it does not rename a table or collection, move
+existing rows, or automatically rebuild data for a container-only change. A schema-generation bump
+is not independent container publication. Clients that still register the old container are refused
+rather than silently reversing the update. This guard does not repair rows stranded by an earlier
+implicit change.
+
 ## When a definition changes
 
 A changed definition — including one that *removes* a child collection — is stored and pushed to the
