@@ -8,10 +8,14 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.DependencyInjection;
-using Orleans.Runtime;
-using Concepts = KernelConcepts::Cratis.Chronicle.Concepts;
-using KernelSequence = KernelCore::Cratis.Chronicle.EventSequences.IEventSequence;
+using KernelEventSequenceKey = KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey;
+using KernelNamespaceName = KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName;
 using KernelObserver = KernelCore::Cratis.Chronicle.Observation.IObserver;
+using KernelObserverKey = KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverKey;
+using KernelObserverOwner = KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverOwner;
+using KernelObserverRunningState = KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverRunningState;
+using KernelObserverType = KernelConcepts::Cratis.Chronicle.Concepts.Observation.ObserverType;
+using KernelSequence = KernelCore::Cratis.Chronicle.EventSequences.IEventSequence;
 using SequenceNumber = KernelConcepts::Cratis.Chronicle.Concepts.Events.EventSequenceNumber;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
@@ -44,11 +48,14 @@ public sealed class GrainActivationFixture(GrainActivationMode mode, bool sequen
         if (!Path.IsPathFullyQualified(artifactDirectory)) throw new ArgumentException("ACTIVATION_ARTIFACTS must be an absolute path.");
         _evidence.Begin(mode, default, Guid.Empty);
         await _mongo.Start();
-        _cluster = new(ClusterTopology.SingleSilo, services =>
-        {
-            _evidence.ResetContexts();
-            services.AddSingleton<IConfigureGrainContextProvider>(_evidence);
-        }, externalMongoUrl: _mongo.ConnectionString);
+        _cluster = new(
+            ClusterTopology.SingleSilo,
+            services =>
+            {
+                _evidence.ResetContexts();
+                services.AddSingleton<IConfigureGrainContextProvider>(_evidence);
+            },
+            externalMongoUrl: _mongo.ConnectionString);
         await _cluster.Start().WaitAsync(TimeSpan.FromSeconds(90));
         Refresh();
         await Seed();
@@ -92,13 +99,18 @@ public sealed class GrainActivationFixture(GrainActivationMode mode, bool sequen
         }
     }
 
+    static void Require(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+    }
+
     void Refresh()
     {
         _storage = _cluster!.Services.GetRequiredService<IStorage>();
-        _sequence = _cluster.GrainFactory.GetGrain<KernelSequence>(new Concepts.EventSequences.EventSequenceKey(
-            _sequenceId, ClusterBenchmarkFixture.EventStore, Concepts.EventStoreNamespaceName.Default));
-        _observer = _cluster.GrainFactory.GetGrain<KernelObserver>(new Concepts.Observation.ObserverKey(
-            _observerId, ClusterBenchmarkFixture.EventStore, Concepts.EventStoreNamespaceName.Default, _sequenceId));
+        var sequenceKey = new KernelEventSequenceKey(_sequenceId, ClusterBenchmarkFixture.EventStore, KernelNamespaceName.Default);
+        _sequence = _cluster.GrainFactory.GetGrain<KernelSequence>(sequenceKey);
+        var observerKey = new KernelObserverKey(_observerId, ClusterBenchmarkFixture.EventStore, KernelNamespaceName.Default, _sequenceId);
+        _observer = _cluster.GrainFactory.GetGrain<KernelObserver>(observerKey);
     }
 
     async Task Seed()
@@ -111,14 +123,18 @@ public sealed class GrainActivationFixture(GrainActivationMode mode, bool sequen
             Require(result.SequenceNumber.Value == index, "Seed corpus has the wrong sequence position.");
         }
 
-        await _storage.GetEventStore(ClusterBenchmarkFixture.EventStore).Observers.Save(new ObserverDefinition(
-            _observerId, [], _sequenceId, Concepts.Observation.ObserverType.Unknown, Concepts.Observation.ObserverOwner.None, false)).WaitAsync(_callTimeout);
-        var saved = await NamespaceStorage().Observers.Save(new ObserverState
+        var definition = new ObserverDefinition(_observerId, [], _sequenceId, KernelObserverType.Unknown, KernelObserverOwner.None, false);
+        await _storage.GetEventStore(ClusterBenchmarkFixture.EventStore).Observers.Save(definition).WaitAsync(_callTimeout);
+        var state = new ObserverState
         {
-            Identifier = _observerId, Owner = _sequenceId, HandledEventCount = SeededEvents,
-            LastHandledEventSequenceNumber = SeededEvents - 1, NextEventSequenceNumber = SeededEvents,
-            RunningState = Concepts.Observation.ObserverRunningState.Disconnected
-        }, _sequenceId).WaitAsync(_callTimeout);
+            Identifier = _observerId,
+            Owner = _sequenceId,
+            HandledEventCount = SeededEvents,
+            LastHandledEventSequenceNumber = SeededEvents - 1,
+            NextEventSequenceNumber = SeededEvents,
+            RunningState = KernelObserverRunningState.Disconnected
+        };
+        var saved = await NamespaceStorage().Observers.Save(state, _sequenceId).WaitAsync(_callTimeout);
         Require(saved, "Observer seed was not persisted.");
         await ReadSequence();
         await ReadObserver();
@@ -177,10 +193,10 @@ public sealed class GrainActivationFixture(GrainActivationMode mode, bool sequen
 
     object ResultDescription() => sequence
         ? new { SeededEvents, NextSequenceNumber = _lastSequence.Value }
-        : (object)new { SeededEvents, Observer = _lastState.Identifier.Value, HandledEvents = _lastState.HandledEventCount.Value,
+        : new { SeededEvents, Observer = _lastState.Identifier.Value, HandledEvents = _lastState.HandledEventCount.Value,
             Checkpoint = _lastState.LastHandledEventSequenceNumber.Value, NextSequenceNumber = _lastState.NextEventSequenceNumber.Value };
 
-    IEventStoreNamespaceStorage NamespaceStorage() => _storage.GetEventStore(ClusterBenchmarkFixture.EventStore).GetNamespace(Concepts.EventStoreNamespaceName.Default);
+    IEventStoreNamespaceStorage NamespaceStorage() => _storage.GetEventStore(ClusterBenchmarkFixture.EventStore).GetNamespace(KernelNamespaceName.Default);
 
     async Task RunPhase(string phase, Func<Task> action)
     {
@@ -190,10 +206,5 @@ public sealed class GrainActivationFixture(GrainActivationMode mode, bool sequen
             _evidence.Failure(phase, error);
             throw;
         }
-    }
-
-    static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 }

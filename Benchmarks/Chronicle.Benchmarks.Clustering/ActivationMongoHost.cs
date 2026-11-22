@@ -23,6 +23,7 @@ public sealed class ActivationMongoHost : IAsyncDisposable
 
     /// <summary>Starts the replica set and waits for a writable primary.</summary>
     /// <returns>The readiness task.</returns>
+    /// <exception cref="InvalidOperationException">MongoDB replica-set initiation failed.</exception>
     public async Task Start()
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(90));
@@ -30,7 +31,8 @@ public sealed class ActivationMongoHost : IAsyncDisposable
         var result = await _container.ExecAsync(
             ["mongosh", "--quiet", "--eval", "const r = rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}); if(r.ok !== 1) quit(1);"], deadline.Token);
         if (result.ExitCode != 0) throw new InvalidOperationException("MongoDB replica-set initiation failed.");
-        var database = new MongoClient(ConnectionString).GetDatabase("admin");
+        using var client = new MongoClient(ConnectionString);
+        var database = client.GetDatabase("admin");
         while (true)
         {
             var hello = await database.RunCommandAsync<BsonDocument>(new BsonDocument("hello", 1), cancellationToken: deadline.Token);
@@ -40,6 +42,7 @@ public sealed class ActivationMongoHost : IAsyncDisposable
                 Console.WriteLine($"ACTIVATION_MONGODB_VERSION {build["version"].AsString}");
                 return;
             }
+
             // Infrastructure readiness backoff, never part of a measured operation.
             await Task.Delay(100, deadline.Token);
         }

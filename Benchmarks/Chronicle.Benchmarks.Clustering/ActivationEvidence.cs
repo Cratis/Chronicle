@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Orleans.Metadata;
-using Orleans.Runtime;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
@@ -76,12 +75,14 @@ public sealed class ActivationEvidence(string artifactDirectory, string operatio
 
     /// <summary>Checks lifecycle transitions after successful state/durability validation.</summary>
     /// <param name="state">The validated result and seed markers.</param>
+    /// <exception cref="InvalidOperationException">The target has no live activation after the operation.</exception>
     public void Verify(object state)
     {
         var activation = LiveActivation() ?? throw new InvalidOperationException("Operation did not leave its target active.");
         var afterCount = _counts.GetValueOrDefault(_target);
         var warm = _mode == GrainActivationMode.Warm;
-        Require((activation == _previousActivation) == warm, "Operation observed the wrong activation identity.");
+        var sameActivation = activation == _previousActivation;
+        Require(sameActivation == warm, "Operation observed the wrong activation identity.");
         var expectedCount = warm ? _beforeCount : _beforeCount + 1;
         Require(afterCount == expectedCount, "Operation observed the wrong activation count.");
         Write(new
@@ -102,6 +103,11 @@ public sealed class ActivationEvidence(string artifactDirectory, string operatio
         Error = error.ToString()
     });
 
+    static void Require(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
+    }
+
     ActivationId? LiveActivation() =>
         _contexts.TryGetValue(_target, out var context) && !context.Deactivated.IsCompleted ? context.ActivationId : null;
 
@@ -112,10 +118,5 @@ public sealed class ActivationEvidence(string artifactDirectory, string operatio
         var json = JsonSerializer.Serialize(entry);
         File.AppendAllText(Path.Combine(directory, $"{operation}-{_mode}-{_caseId:N}.jsonl"), json + Environment.NewLine);
         Console.WriteLine($"ACTIVATION {json}");
-    }
-
-    static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 }

@@ -138,16 +138,6 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<ISe
         await WarmUp();
     }
 
-    /// <summary>Replaces a single silo without disposing the caller-owned database or warming target grains.</summary>
-    /// <returns>The bounded host replacement task.</returns>
-    internal async Task Restart()
-    {
-        if (topology != ClusterTopology.SingleSilo) throw new InvalidOperationException("Host replacement requires a single silo.");
-        if (externalMongoUrl is null) throw new InvalidOperationException("Host replacement requires caller-owned MongoDB.");
-        await StopCluster();
-        await BringUpCluster(externalMongoUrl).WaitAsync(_bringUpTimeout);
-    }
-
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
@@ -177,6 +167,17 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<ISe
         _mongoRunner = null;
     }
 
+    /// <summary>Replaces a single silo without disposing the caller-owned database or warming target grains.</summary>
+    /// <returns>The bounded host replacement task.</returns>
+    /// <exception cref="InvalidOperationException">Host replacement requires a single silo and caller-owned MongoDB.</exception>
+    internal async Task Restart()
+    {
+        if (topology != ClusterTopology.SingleSilo) throw new InvalidOperationException("Host replacement requires a single silo.");
+        if (externalMongoUrl is null) throw new InvalidOperationException("Host replacement requires caller-owned MongoDB.");
+        await StopCluster();
+        await BringUpCluster(externalMongoUrl).WaitAsync(_bringUpTimeout);
+    }
+
     /// <summary>
     /// Captures per-silo activation totals and the fifteen most numerous grain types.
     /// </summary>
@@ -199,7 +200,7 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<ISe
     {
         if (_cluster is null) return;
         await _cluster.StopAllSilosAsync().WaitAsync(_bringUpTimeout);
-        await ((IAsyncDisposable)_cluster).DisposeAsync().AsTask().WaitAsync(_bringUpTimeout);
+        await _cluster.DisposeAsync().AsTask().WaitAsync(_bringUpTimeout);
         _cluster = null;
     }
 
