@@ -26,6 +26,23 @@ public static class extended_event_corpus
         yield return Content(("object", new payload("last", 42)), ("characters", new[] { '<', '"', '\n', 'é' }));
     }
 
+    /// <summary>
+    /// Keeps Shapes and its literal pins intact, but exercises each property without fallback siblings.
+    /// </summary>
+    /// <returns>Independent events with explicitly expected direct/fallback selection.</returns>
+    public static IEnumerable<(string Name, ExpandoObject Content, bool Direct)> SplitShapes()
+    {
+        string[] directProperties = ["integers", "numbers", "utc", "unspecified", "offset", "guid", "span", "date", "time", "dictionary", "bytes", "\uFFFD"];
+        foreach (var shape in Shapes())
+        {
+            foreach (var property in (IDictionary<string, object?>)shape)
+            {
+                var direct = directProperties.Contains(property.Key, StringComparer.Ordinal);
+                yield return (property.Key, Content((property.Key, property.Value)), direct);
+            }
+        }
+    }
+
     public static ExpandoObject Content(params (string Name, object? Value)[] properties)
     {
         var content = new ExpandoObject();
