@@ -49,9 +49,10 @@ public class ConcurrentAppendBenchmark : AppendBenchmark
     async Task Concurrent(string key, Func<int, IEventSequenceStorage> storageFor, bool sharedSequence)
     {
         var before = Host.Counter.Snapshot();
-        var waveStarted = Stopwatch.GetTimestamp();
+        var start = new WriterStartGate();
         var writers = Enumerable.Range(0, WriterCount).Select<int, Task<(long Started, TimeSpan Elapsed, Exception? Error)>>(async index =>
         {
+            await start.Wait();
             var started = Stopwatch.GetTimestamp();
             try
             {
@@ -63,13 +64,14 @@ public class ConcurrentAppendBenchmark : AppendBenchmark
                 return (Started: started, Elapsed: Stopwatch.GetElapsedTime(started), Error: ex);
             }
         }).ToArray();
+        start.Release();
         var outcomes = await Task.WhenAll(writers);
         var latencies = outcomes.Where(_ => _.Error is null).Select(_ => _.Elapsed).ToArray();
         var failures = outcomes.Where(_ => _.Error is not null).Select(_ => _.Error!).ToArray();
         Measurements.Record(key, new InvocationRecord(latencies.Length, latencies.Length, Host.Counter.Snapshot().Since(before), latencies, failures.Length)
         {
             Samples = Measurements.IsCounting
-                ? [.. outcomes.Select((outcome, index) => new WriterSample(index, sharedSequence ? 0 : index + 1, Stopwatch.GetElapsedTime(waveStarted, outcome.Started).TotalMilliseconds, outcome.Elapsed.TotalMilliseconds, outcome.Error is null))]
+                ? [.. outcomes.Select((outcome, index) => new WriterSample(index, sharedSequence ? 0 : index + 1, Stopwatch.GetElapsedTime(start.ReleasedAt, outcome.Started).TotalMilliseconds, outcome.Elapsed.TotalMilliseconds, outcome.Error is null))]
                 : []
         });
         if (failures.Length > 0) throw new AggregateException(failures);
