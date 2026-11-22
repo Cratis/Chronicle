@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Patterns;
+using Cratis.Chronicle.Supervision;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Placement;
@@ -24,9 +25,12 @@ namespace Cratis.Chronicle.Patterns;
 /// <para>
 /// Mining is in memory and cheap; persisting a scope rewrites everything that currently survives for it. Doing
 /// that per mined batch couples the write cost to the event rate times the size of each scope's behavior, so
-/// persistence is deferred: mining marks the scope dirty, and a timer rewrites what the interval touched on the
-/// <see cref="PatternDetection.PersistenceInterval"/> cadence. A failed flush keeps the scopes dirty and answers
-/// nothing but the log - the next tick simply tries again, and rewriting a scope is idempotent.
+/// persistence is deferred: mining marks the scope dirty, and the silo's <see cref="ISiloSupervisor"/> rewrites what the
+/// interval touched on the <see cref="PatternDetection.PersistenceInterval"/> cadence. A failed flush keeps the scopes
+/// dirty and answers nothing but the log - the next pass simply tries again, and rewriting a scope is idempotent.
+/// The activation is registered with the supervisor only while it has something to persist, so no grain timer runs
+/// per namespace, and a pass that finds nothing mined for a whole interval releases the activation. Everything it
+/// held was persisted, and the next batch restores it.
 /// </para>
 /// <para>
 /// The activation dies with its silo while what survived it is persisted, so a scope acting for the first time in
@@ -46,19 +50,26 @@ namespace Cratis.Chronicle.Patterns;
 /// <param name="storage">The <see cref="IStorage"/> to restore from and persist surviving patterns to.</param>
 /// <param name="options">The <see cref="IOptions{TOptions}"/> holding the <see cref="ChronicleOptions"/>.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+/// <param name="supervisor">The optional <see cref="ISiloSupervisor"/> that persists what mining has touched on a schedule.</param>
+/// <param name="timeProvider">The optional <see cref="TimeProvider"/> that tells when mining last happened.</param>
 [PreferLocalPlacement]
 public class PatternMiner(
     IFacetVocabulary vocabulary,
     IFacetSetGenerator generator,
     IStorage storage,
     IOptions<ChronicleOptions> options,
-    ILogger<PatternMiner> logger) : Grain, IPatternMiner
+    ILogger<PatternMiner> logger,
+    ISiloSupervisor? supervisor = null,
+    TimeProvider? timeProvider = null) : Grain, IPatternMiner
 {
     readonly Dictionary<PatternGroupingKey, LossyCountingSketch> _sketches = [];
     readonly HashSet<PatternGroupingKey> _touchedScopes = [];
     readonly HashSet<PatternGroupingKey> _restoredScopes = [];
     readonly PatternDetection _configuration = options.Value.PatternDetection;
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     PatternMinerKey _key = PatternMinerKey.NotSet;
+    DateTimeOffset _lastMined;
+    bool _supervised;
 
     IBehaviorPatternStorage Patterns => storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).Patterns;
 
@@ -66,14 +77,13 @@ public class PatternMiner(
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _key = PatternMinerKey.Parse(this.GetPrimaryKeyString());
-        var interval = TimeSpan.FromSeconds(Math.Max(1, _configuration.PersistenceInterval));
-        this.RegisterGrainTimer(Persist, new GrainTimerCreationOptions { DueTime = interval, Period = interval });
         return base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        Unsupervise();
         await Persist();
         await base.OnDeactivateAsync(reason, cancellationToken);
     }
@@ -99,6 +109,12 @@ public class PatternMiner(
             GetSketch(feature.GroupingKey).Observe(itemsets, feature.Occurred);
             _touchedScopes.Add(feature.GroupingKey);
         }
+
+        if (_touchedScopes.Count > 0)
+        {
+            _lastMined = _clock.GetUtcNow();
+            Supervise();
+        }
     }
 
     /// <inheritdoc/>
@@ -113,6 +129,7 @@ public class PatternMiner(
     {
         if (_touchedScopes.Count == 0)
         {
+            ReleaseWhenIdle();
             return;
         }
 
@@ -137,6 +154,55 @@ public class PatternMiner(
             _touchedScopes.UnionWith(scopes);
             logger.FailedPersistingPatterns(_key.EventStore, _key.Namespace, scopes.Length, ex);
         }
+    }
+
+    TimeSpan PersistenceInterval => TimeSpan.FromSeconds(Math.Max(1, _configuration.PersistenceInterval));
+
+    string SupervisionKey => $"pattern-miner:{_key.EventStore}:{_key.Namespace}";
+
+    void Supervise()
+    {
+        if (_supervised || supervisor is null)
+        {
+            return;
+        }
+
+        var self = GrainFactory.GetGrain<IPatternMiner>(this.GetPrimaryKeyString());
+        supervisor.Register(
+            SupervisionKey,
+            PersistenceInterval,
+            async () =>
+            {
+                await self.Persist();
+                return null;
+            },
+            null);
+        _supervised = true;
+    }
+
+    void Unsupervise()
+    {
+        if (!_supervised)
+        {
+            return;
+        }
+
+        supervisor?.Unregister(SupervisionKey);
+        _supervised = false;
+    }
+
+    void ReleaseWhenIdle()
+    {
+        // Nothing is waiting to be persisted. A flush asked for right after mining finds the activation busy, not idle:
+        // it is released only when a whole interval has passed since the last batch, because everything it holds is in
+        // storage by then and the next batch restores the scopes it needs.
+        if (!_supervised || _clock.GetUtcNow() - _lastMined < PersistenceInterval)
+        {
+            return;
+        }
+
+        Unsupervise();
+        DeactivateOnIdle();
     }
 
     /// <summary>
