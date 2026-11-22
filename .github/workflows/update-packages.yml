@@ -8,5 +8,12 @@ on:
 jobs:
   update:
     uses: Cratis/Workflows/.github/workflows/update-packages.yml@main
+    with:
+      # StyleCop.Analyzers stays held, as in the reusable workflow's default. Castle.Core stays on 5.1.1:
+      # 5.2.1 breaks NSubstitute class proxies (https://github.com/Cratis/Chronicle/issues/5414).
+      # Setting this input replaces the default, so both packages are listed.
+      nuget-package-exclusions: StyleCop.Analyzers,Castle.Core
+      publication-mode: pull-request
+      pull-request-label: patch
     secrets:
       PAT_WORKFLOWS: ${{ secrets.PAT_WORKFLOWS }}
