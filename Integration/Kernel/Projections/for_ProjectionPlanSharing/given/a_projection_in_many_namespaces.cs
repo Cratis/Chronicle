@@ -39,6 +39,12 @@ public class a_projection_in_many_namespaces(ProjectionPlanSharingFixture fixtur
     protected override Action<KernelChronicleBuilder> GetStorageConfigurator(string mongoServer) => builder =>
         builder.WithMongoDB($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", Constants.EventStore);
 
+    /// <summary>
+    /// Gets the number of compiled plans the kernel holds for the projection, however many namespaces run it.
+    /// </summary>
+    protected int PlansHeld => ((Cratis.Chronicle.Projections.Engine.ProjectionFactory)Services.GetRequiredService<Cratis.Chronicle.Projections.Engine.IProjectionFactory>())
+        .CachedPlanCountFor(_storeName, _projectionId);
+
     protected static string CustomerNameIn(string @namespace) => $"customer-in-{@namespace}";
 
     protected static string LabelIn(string @namespace) => $"label-in-{@namespace}";

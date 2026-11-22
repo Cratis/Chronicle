@@ -95,6 +95,14 @@ public class ProjectionFactory(
     /// </summary>
     internal int CachedPlanCount => _plans.Count;
 
+    /// <summary>
+    /// Gets the number of plans held for one projection.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the projection belongs to.</param>
+    /// <param name="id">The <see cref="ProjectionId"/> of the projection.</param>
+    /// <returns>The number of plans.</returns>
+    internal int CachedPlanCountFor(EventStoreName eventStore, ProjectionId id) => _plans.CountFor(eventStore, id);
+
     /// <inheritdoc/>
     public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
         await Create(eventStore, @namespace, await GetPlan(eventStore, definition, readModelDefinition));

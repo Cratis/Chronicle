@@ -17,6 +17,7 @@ public class when_the_projection_is_removed(context context) : Given<context>(co
     public class context(given.ProjectionPlanSharingFixture fixture) : given.a_projection_in_many_namespaces(fixture)
     {
         public bool StillDefined { get; private set; }
+        public int Plans { get; private set; }
         public Dictionary<string, given.SharedOrder> After { get; } = [];
 
         async Task Because()
@@ -25,6 +26,7 @@ public class when_the_projection_is_removed(context context) : Given<context>(co
 
             // The application deploys a full set of projections that no longer contains it.
             await manager.Register([], ProjectionOwner.Client);
+            Plans = PlansHeld;
             StillDefined = (await manager.GetProjectionDefinitions()).Any(definition => definition.Identifier.Value == _projectionId);
 
             foreach (var @namespace in Namespaces)
@@ -46,5 +48,6 @@ public class when_the_projection_is_removed(context context) : Given<context>(co
     }
 
     [Fact] void should_no_longer_define_the_projection() => Context.StillDefined.ShouldBeFalse();
+    [Fact] void should_evict_the_compiled_plan() => Context.Plans.ShouldEqual(0);
     [Fact] void should_stop_projecting_in_every_namespace() => Context.NoNamespaceProjectedTheLaterEvent.ShouldBeTrue();
 }

@@ -42,6 +42,17 @@ internal sealed class ProjectionPlanCache
     }
 
     /// <summary>
+    /// Gets the number of plans held for one projection.
+    /// </summary>
+    /// <param name="store">The <see cref="EventStoreName"/>.</param>
+    /// <param name="id">The <see cref="ProjectionId"/>.</param>
+    /// <returns>The number of plans.</returns>
+    internal int CountFor(EventStoreName store, ProjectionId id)
+    {
+        lock (_lock) return _entries.Keys.Count(key => key.Store == store && key.Id == id);
+    }
+
+    /// <summary>
     /// Gets a plan for a definition, compiling it when no valid one is held.
     /// </summary>
     /// <param name="store">The <see cref="EventStoreName"/>.</param>

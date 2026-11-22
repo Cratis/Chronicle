@@ -22,7 +22,11 @@ public class when_active_in_many_namespaces(context context) : Given<context>(co
             {
                 Orders[@namespace] = await WaitForOrder(@namespace, order => IsComplete(order, @namespace));
             }
+
+            Plans = PlansHeld;
         }
+
+        public int Plans { get; private set; }
 
         public bool Isolated => Namespaces.All(@namespace =>
             Orders[@namespace].Label == LabelIn(@namespace) &&
@@ -31,5 +35,6 @@ public class when_active_in_many_namespaces(context context) : Given<context>(co
     }
 
     [Fact] void should_project_a_read_model_in_every_namespace() => Context.Orders.Count.ShouldEqual(given.a_projection_in_many_namespaces.Namespaces.Length);
+    [Fact] void should_compile_the_projection_once_for_all_namespaces() => Context.Plans.ShouldEqual(1);
     [Fact] void should_keep_label_customer_name_and_children_of_each_namespace_apart() => Context.Isolated.ShouldBeTrue();
 }

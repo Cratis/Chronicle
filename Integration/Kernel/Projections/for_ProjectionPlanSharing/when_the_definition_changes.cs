@@ -43,8 +43,11 @@ public class when_the_definition_changes(context context) : Given<context>(conte
                 (await _stores[@namespace].EventLog.Append(OrderId, new given.SharedLineAdded(OrderId, sku, 99))).IsSuccess.ShouldBeTrue();
                 Live[@namespace] = await WaitForOrder(@namespace, order => order.Lines.Any(line => line.Sku == sku));
             }
+
+            Plans = PlansHeld;
         }
 
+        public int Plans { get; private set; }
         public bool AppliedInEveryNamespace => Namespaces.All(@namespace => Changed[@namespace].Summary == LabelIn(@namespace));
         public bool ReplayedEveryNamespace => Namespaces.All(@namespace => Replayed[@namespace].Summary == LabelIn(@namespace));
         public bool UpdatedEveryNamespaceLive => Namespaces.All(@namespace =>
@@ -54,5 +57,6 @@ public class when_the_definition_changes(context context) : Given<context>(conte
 
     [Fact] void should_apply_the_changed_definition_to_new_events_in_every_namespace() => Context.AppliedInEveryNamespace.ShouldBeTrue();
     [Fact] void should_apply_the_changed_definition_to_existing_events_in_every_namespace_when_replayed() => Context.ReplayedEveryNamespace.ShouldBeTrue();
+    [Fact] void should_hold_only_the_current_and_the_previous_plan_for_all_namespaces() => Context.Plans.ShouldEqual(2);
     [Fact] void should_keep_projecting_new_events_in_every_namespace_without_mixing_them() => Context.UpdatedEveryNamespaceLive.ShouldBeTrue();
 }
