@@ -72,6 +72,7 @@ public class ObserverRetryOverride
         IdleDeactivationAfter = observers.IdleDeactivationAfter,
         DurableSubscriptions = observers.DurableSubscriptions,
         DormantAfter = observers.DormantAfter,
+        DormantKinds = observers.DormantKinds,
         DormantSafetyNet = observers.DormantSafetyNet,
         DormantSafetyNetFullWake = observers.DormantSafetyNetFullWake,
         MaxConcurrentWakes = observers.MaxConcurrentWakes,

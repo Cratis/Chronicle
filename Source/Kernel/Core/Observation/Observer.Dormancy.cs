@@ -5,12 +5,14 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Releases;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
     TimeSpan _dormantAfter;
+    IReadOnlyList<ObserverSubscriptionKind> _dormantKinds = [];
     DateTimeOffset? _dormantSince;
     bool _releasedWhenDormant;
     bool _safetyNetWake;
@@ -90,7 +92,7 @@ public partial class Observer
     /// </summary>
     bool InScopeForDormancy =>
         _subscription.SubscriberType.GetSubscriptionKind() is { } kind &&
-        kind.CanBeReleasedWhenDormant() &&
+        kind.IsReleasedWhenDormant(_dormantKinds) &&
         _subscription.GenerationDelivery == EventGenerationDelivery.Compatibility &&
         (!kind.IsServedByClient() || _subscription.Targets.Count > 0);
 
@@ -117,8 +119,11 @@ public partial class Observer
         }
     }
 
-    void ConfigureDormancy(Observers config) =>
+    void ConfigureDormancy(Observers config)
+    {
         _dormantAfter = TimeSpan.FromSeconds(Math.Max(config.DormantAfter, 0));
+        _dormantKinds = config.EffectiveDormantKinds;
+    }
 
     /// <summary>
     /// Releases the observer when it has been dormant for the dormancy period.

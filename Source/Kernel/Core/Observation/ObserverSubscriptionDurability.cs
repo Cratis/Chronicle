@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -36,12 +37,25 @@ public static class ObserverSubscriptionDurability
     /// Gets whether an observer of this kind can be released while it is dormant (decision 0034).
     /// </summary>
     /// <param name="kind">The <see cref="ObserverSubscriptionKind"/> of the observer.</param>
-    /// <returns>True for client reactors, client reducers and projections; false for every other kind, which stay resident.</returns>
+    /// <returns>True for client reactors, client reducers, projections and event store subscriptions; false for every other kind, which stay resident.</returns>
+    /// <remarks>
+    /// What the kind can do, not what is configured: see <see cref="IsReleasedWhenDormant"/>.
+    /// </remarks>
     public static bool CanBeReleasedWhenDormant(this ObserverSubscriptionKind kind) => kind is
         ObserverSubscriptionKind.ClientReactor or
         ObserverSubscriptionKind.ClientReducer or
         ObserverSubscriptionKind.Projection or
-        ObserverSubscriptionKind.CollapsingProjection;
+        ObserverSubscriptionKind.CollapsingProjection or
+        ObserverSubscriptionKind.EventStoreSubscription;
+
+    /// <summary>
+    /// Gets whether an observer of this kind is released while dormant under the configuration.
+    /// </summary>
+    /// <param name="kind">The <see cref="ObserverSubscriptionKind"/> of the observer.</param>
+    /// <param name="kinds">The configured <see cref="Observers.EffectiveDormantKinds"/>.</param>
+    /// <returns>True when the kind can be released and is listed.</returns>
+    public static bool IsReleasedWhenDormant(this ObserverSubscriptionKind kind, IReadOnlyList<ObserverSubscriptionKind> kinds) =>
+        kind.CanBeReleasedWhenDormant() && kinds.Contains(kind);
 
     /// <summary>
     /// Gets whether an observer of this kind is served by connected clients.

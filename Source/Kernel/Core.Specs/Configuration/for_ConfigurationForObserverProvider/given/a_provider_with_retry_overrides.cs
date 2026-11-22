@@ -45,6 +45,7 @@ public class a_provider_with_retry_overrides : Specification
             IdleDeactivationAfter = 1801,
             DurableSubscriptions = DurableSubscriptionMode.Off,
             DormantAfter = 601,
+            DormantKinds = [Cratis.Chronicle.Storage.Observation.ObserverSubscriptionKind.Projection],
             DormantSafetyNet = 1203,
             DormantSafetyNetFullWake = 7203,
             MaxConcurrentWakes = 6,

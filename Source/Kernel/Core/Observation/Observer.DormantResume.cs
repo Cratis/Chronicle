@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Observation.States;
@@ -70,7 +71,7 @@ public partial class Observer
         if (State.DurableSubscription is not { } record ||
             !_observerExists ||
             _subscription.IsSubscribed ||
-            !record.Kind.CanBeReleasedWhenDormant() ||
+            !record.Kind.IsReleasedWhenDormant(_dormantKinds) ||
             !DormantReleaseAllowed ||
             CannotReconcileSubscription())
         {
@@ -110,6 +111,7 @@ public partial class Observer
             ObserverSubscriptionKind.ClientReducer => await RestoreClientTargets<IReducerObserverSubscriber>(record, eventTypes, filters),
             ObserverSubscriptionKind.CollapsingProjection => RestoreKernelSubscription<ICollapsingProjectionObserverSubscriber>(eventTypes, filters),
             ObserverSubscriptionKind.Projection => RestoreKernelSubscription<IProjectionObserverSubscriber>(eventTypes, filters),
+            ObserverSubscriptionKind.EventStoreSubscription => RestoreEventStoreSubscription(eventTypes, filters),
             _ => false
         };
 
@@ -145,6 +147,28 @@ public partial class Observer
         RestoreSupersededRegistrations(record);
         _promoteStandbyAfterWake = !restored && _supersededRegistrations.Count > 0;
         return restored;
+    }
+
+    /// <summary>
+    /// Restores the subscription of an event store subscription, whose subscriber needs the event store it forwards to.
+    /// </summary>
+    /// <remarks>
+    /// The target is part of the observer id (see <see cref="EventStoreSubscriptionObserverIds"/>), so the record names nothing more.
+    /// An id that names no target is not restorable, which drops the record and leaves the subscription manager to resubscribe.
+    /// </remarks>
+    /// <param name="eventTypes">The event types the observer observes.</param>
+    /// <param name="filters">The filters of the subscription, if any.</param>
+    /// <returns>True when the subscription was restored; false when the id names no target.</returns>
+    bool RestoreEventStoreSubscription(EventType[] eventTypes, ObserverFilters? filters)
+    {
+        if (!EventStoreSubscriptionObserverIds.TryGetTargetEventStore(_observerId, out var target))
+        {
+            return false;
+        }
+
+        var silo = ServiceProvider.GetService<ILocalSiloDetails>()?.SiloAddress ?? SiloAddress.Zero;
+        ApplySubscription<IEventStoreSubscriptionObserverSubscriber>(eventTypes, silo, target.Value, Definition.IsReplayable, filters, Definition.GenerationDelivery);
+        return true;
     }
 
     bool RestoreKernelSubscription<TSubscriber>(EventType[] eventTypes, ObserverFilters? filters)
