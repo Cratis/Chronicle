@@ -37,9 +37,10 @@ public class a_manager_with_a_quarantined_subscription : Specification
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(false);
         _observer.IsObserverQuarantined().Returns(true);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),
@@ -48,7 +49,7 @@ public class a_manager_with_a_quarantined_subscription : Specification
             automatic: true).Returns(call =>
             {
                 _observer.IsSubscribed().Returns(true);
-                _observer.GetEventTypes().Returns(call.Arg<IEnumerable<EventType>>());
+                _observer.GetEventTypes().Returns(call.Arg<EventTypeSet>());
                 return Task.CompletedTask;
             });
         _silo.AddProbe<IObserver>(identity => GetObserver(identity.ToString()));
@@ -61,12 +62,12 @@ public class a_manager_with_a_quarantined_subscription : Specification
     protected virtual IObserver GetObserver(string identity) => _observer;
 
     protected void ShouldNotSubscribe(IObserver observer) => observer.DidNotReceive()
-        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>());
+        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>());
 
     protected void ShouldScheduleReminder(int count) => _silo.ReminderRegistry.Mock.Verify(_ =>
         _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), ReminderName, TimeSpan.FromMilliseconds(100), TimeSpan.FromMinutes(1)),
         Times.Exactly(count));
 
     protected void ShouldSubscribe(IObserver observer) => observer.Received(1)
-        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), TargetEventStore, Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
+        .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), TargetEventStore, Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
 }

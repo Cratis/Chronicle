@@ -72,14 +72,14 @@ public class a_client_reducer_subscription_with_a_stored_definition : Specificat
 
     protected Task WasSubscribed(ReducerDefinition definition) => _observer.Received(1).Subscribe<IReducerObserverSubscriber>(
         ObserverType.Reducer,
-        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
+        Arg.Is<EventTypeSet>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
         Arg.Any<SiloAddress>(),
         _client,
         filters: definition.Filters);
 
     protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReducerObserverSubscriber>(
         ObserverType.Reducer,
-        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),
+        Arg.Is<EventTypeSet>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),
         Arg.Any<SiloAddress>(),
         Arg.Is<ConnectedClient>(client => client.ConnectionId == _client.ConnectionId),
         Arg.Any<bool>(),

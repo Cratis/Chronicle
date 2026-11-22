@@ -60,7 +60,7 @@ public class and_subscription_is_already_subscribed : Specification
     void should_not_subscribe_again() =>
         _observer.DidNotReceive().Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             Arg.Any<ObserverType>(),
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),

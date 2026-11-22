@@ -48,7 +48,7 @@ public class a_manager_with_blocked_source_resolution : for_CaptureEventsSubscri
         {
             _operations.Add("subscribe");
             _subscribed = true;
-            return Task.FromResult<IEnumerable<Concepts.Events.EventType>>([]);
+            return Task.FromResult(Concepts.Events.EventTypeSet.Empty);
         });
         observer.Unsubscribe().Returns(_ =>
         {

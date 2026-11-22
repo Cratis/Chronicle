@@ -46,7 +46,8 @@ public class SubscriptionMatchingBenchmark
         _mayMatch = typeof(AppendedEventsQueue).GetMethod("MayMatch", flags)!.CreateDelegate<Func<AppendedEventsQueueObserverSubscription, HashSet<EventTypeId>, bool, bool>>();
         _filter = typeof(AppendedEventsQueue).GetMethod("GetFilteredEvents", flags)!.CreateDelegate<Func<IReadOnlyList<AppendedEvent>, AppendedEventsQueueObserverSubscription, IReadOnlyList<AppendedEvent>>>();
         var ids = Enumerable.Range(0, SubscribedTypes).Select(index => new EventTypeId($"event-{index}")).ToArray();
-        _subscription = new(new ObserverKey("observer", "store", "namespace", "sequence"), ids, AllEventTypes: Scenario == "All");
+        var subscribed = EventTypeSet.From(ids.Select(id => new EventType(id, EventTypeGeneration.First)));
+        _subscription = new(new ObserverKey("observer", "store", "namespace", "sequence"), subscribed, AllEventTypes: Scenario == "All");
         var eventType = new EventType(Scenario == "Match" ? ids[^1] : new EventTypeId("unsubscribed"), EventTypeGeneration.First);
         _events = Enumerable.Range(0, BatchSize).Select(_ => AppendedEvent.EmptyWithEventType(eventType)).ToArray();
         _batchTypes = [eventType.Id];

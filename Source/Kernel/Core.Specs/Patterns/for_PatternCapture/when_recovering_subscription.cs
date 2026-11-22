@@ -11,11 +11,11 @@ public class when_recovering_subscription : given.a_pattern_capture
     void Establish()
     {
         EventTypesAre("CustomerNamed");
-        _observer.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>()).Returns(true);
+        _observer.NeedsSubscriptionRecovery(Arg.Any<EventTypeSet>()).Returns(true);
     }
 
     Task Because() => _capture.RecoverSubscription(_eventStore, _namespace);
 
-    [Fact] async Task should_delegate_the_decision_to_the_observer() => await _observer.Received(1).RecoverStalledSubscription<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Is<IEnumerable<EventType>>(types => types.Single().Id == "CustomerNamed"), SiloAddress.Zero, isReplayable: false);
-    [Fact] async Task should_not_use_the_quarantine_releasing_subscribe() => await _observer.DidNotReceive().Subscribe<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object>(), Arg.Any<bool>(), Arg.Any<ObserverFilters>());
+    [Fact] async Task should_delegate_the_decision_to_the_observer() => await _observer.Received(1).RecoverStalledSubscription<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Is<EventTypeSet>(types => types.Single().Id == "CustomerNamed"), SiloAddress.Zero, isReplayable: false);
+    [Fact] async Task should_not_use_the_quarantine_releasing_subscribe() => await _observer.DidNotReceive().Subscribe<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object>(), Arg.Any<bool>(), Arg.Any<ObserverFilters>());
 }

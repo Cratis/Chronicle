@@ -100,7 +100,7 @@ public sealed class EventStoreStorage(
     public INamespaceStorage Namespaces { get; } = new NamespaceStorage();
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypesStorage();
+    public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypesStorage());
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSourcesStorage();

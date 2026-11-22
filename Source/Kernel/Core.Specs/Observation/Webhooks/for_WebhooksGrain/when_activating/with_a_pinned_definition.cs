@@ -25,5 +25,5 @@ public class with_a_pinned_definition : given.a_webhooks_manager_grain
 
     Task Because() => _grain.OnActivateAsync(CancellationToken.None);
 
-    [Fact] async Task should_subscribe_without_reviving_quarantined_or_retired_observers() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned, reactivateRetired: false, automatic: true);
+    [Fact] async Task should_subscribe_without_reviving_quarantined_or_retired_observers() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned, reactivateRetired: false, automatic: true);
 }

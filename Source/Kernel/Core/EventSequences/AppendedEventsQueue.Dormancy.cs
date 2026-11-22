@@ -191,7 +191,7 @@ public partial class AppendedEventsQueue
                 var definition = await eventStore.Observers.Get(observerId);
                 var subscription = new AppendedEventsQueueObserverSubscription(
                     key,
-                    [.. definition.EventTypes.Select(eventType => eventType.Id)],
+                    EventTypeSet.From(definition.EventTypes),
                     record.Filters?.ToObserverFilters(),
                     !definition.EventTypes.Any());
                 lock (_subscriptionsLock)

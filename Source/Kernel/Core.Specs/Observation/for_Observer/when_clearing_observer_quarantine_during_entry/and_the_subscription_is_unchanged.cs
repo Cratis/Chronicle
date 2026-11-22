@@ -32,7 +32,7 @@ public class and_the_subscription_is_unchanged : given.an_observer_entering_quar
     [Fact] void should_persist_the_active_state() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] async Task should_keep_the_subscription() => (await _observer.IsSubscribed()).ShouldBeTrue();
     [Fact] async Task should_leave_quarantine() => (await _observer.IsObserverQuarantined()).ShouldBeFalse();
-    [Fact] void should_subscribe_to_the_queue() => _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_subscribe_to_the_queue() => _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
     [Fact] void should_resume_the_stopped_catchup_job() => _jobsManager.Received(1).Resume(_catchupJobId);
     [Fact] void should_resume_the_stopped_retry_job() => _jobsManager.Received(1).Resume(_retryJobId);
     [Fact] void should_not_start_a_duplicate_retry_job() => _jobsManager.DidNotReceive().Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _retryablePartition));

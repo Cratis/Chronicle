@@ -146,7 +146,7 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <returns>Collection of <see cref="EventType"/>.</returns>
     [AlwaysInterleave]
-    Task<IEnumerable<EventType>> GetEventTypes();
+    Task<EventTypeSet> GetEventTypes();
 
     /// <summary>
     /// Subscribe to observer.
@@ -163,7 +163,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
@@ -188,7 +188,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         EventGenerationDelivery generationDelivery,
         object? subscriberArgs = default,
@@ -212,9 +212,9 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="isReplayable">Whether the observer supports replay.</param>
     /// <param name="filters">Optional event filters.</param>
     /// <returns>The effective merged event types from this non-interleaved grain request. Retired or sealed observers are left unchanged.</returns>
-    Task<IEnumerable<EventType>> SubscribeAdditively<TObserverSubscriber>(
+    Task<EventTypeSet> SubscribeAdditively<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
@@ -231,7 +231,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="eventTypes">The expected event types.</param>
     /// <returns>Whether subscription recovery may be needed.</returns>
     [AlwaysInterleave]
-    Task<bool> NeedsSubscriptionRecovery(IEnumerable<EventType> eventTypes);
+    Task<bool> NeedsSubscriptionRecovery(EventTypeSet eventTypes);
 
     /// <summary>
     /// Recover a missing, failed, or outdated explicitly typed kernel subscription without releasing quarantine or resetting progress.
@@ -250,9 +250,9 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="isReplayable">Whether the observer supports replay.</param>
     /// <param name="filters">Optional event filters.</param>
     /// <returns>The effective event types, including registrations merged in this grain request.</returns>
-    Task<IEnumerable<EventType>> RecoverStalledSubscription<TObserverSubscriber>(
+    Task<EventTypeSet> RecoverStalledSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
@@ -306,7 +306,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task RestoreClientSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         ConnectedClient connectedClient,
         bool isReplayable = true,
@@ -335,7 +335,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task ReconcileSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         bool subscribesToAllEvents,
         EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility,
@@ -403,7 +403,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="partition">The partition to replay.</param>
     /// <param name="eventTypes">The affected event types to apply.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReplayPartition(Key partition, IEnumerable<EventType> eventTypes);
+    Task ReplayPartition(Key partition, EventTypeSet eventTypes);
 
     /// <summary>
     /// Rewind the observer for a specific partition to a specific sequence number.

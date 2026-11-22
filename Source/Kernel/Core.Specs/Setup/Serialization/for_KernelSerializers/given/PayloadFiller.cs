@@ -8,6 +8,7 @@ using System.Dynamic;
 using System.Net;
 using System.Reflection;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Setup.Serialization.for_KernelSerializers.given;
@@ -129,6 +130,12 @@ public class PayloadFiller(bool lazySequences = false)
                     ["count"] = new JsonSchemaProperty { Type = JsonObjectType.Integer }
                 }
             };
+        }
+
+        if (type == typeof(EventTypeSet))
+        {
+            // A shared set has no public constructor; it is created from the event types it holds.
+            return EventTypeSet.From((IEnumerable<EventType>)Create(typeof(List<EventType>), depth + 1)!);
         }
 
         if (type == typeof(ExpandoObject))

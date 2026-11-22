@@ -9,8 +9,8 @@ public abstract class two_subscribed_subscribers : two_subscribers
 {
     async Task Establish()
     {
-        await _queue.Subscribe(_firstObserverKey, EventTypes);
-        await _queue.Subscribe(_secondObserverKey, EventTypes);
+        await _queue.Subscribe(_firstObserverKey, EventTypeSet.From(EventTypes));
+        await _queue.Subscribe(_secondObserverKey, EventTypeSet.From(EventTypes));
     }
 
     protected abstract IEnumerable<EventType> EventTypes { get; }

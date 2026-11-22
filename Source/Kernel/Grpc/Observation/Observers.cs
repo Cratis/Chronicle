@@ -546,7 +546,7 @@ internal sealed class Observers(
             return null;
         }
 
-        var eventTypes = subscription.EventTypes.Any() ? subscription.EventTypes.ToArray() : null;
+        var eventTypes = subscription.EventTypes.Count > 0 ? subscription.EventTypes.ToArray() : null;
         var tags = filters.Tags.Any() ? filters.Tags.Select(_ => (Tag)_).ToArray() : null;
         var eventSequence = storage.GetEventStore(request.EventStore)
             .GetNamespace(request.Namespace)

@@ -14,7 +14,7 @@ public class and_the_registration_is_retried_while_the_first_attempt_is_running 
     int _subscribesWhileTheFirstRuns;
 
     void Establish() => _observer
-        .Subscribe<IReactorObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+        .Subscribe<IReactorObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
         .Returns(_ => _firstSubscribeCanFinish.Task);
 
     async Task Because()

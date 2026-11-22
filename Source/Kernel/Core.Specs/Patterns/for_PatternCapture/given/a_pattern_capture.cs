@@ -37,10 +37,10 @@ public class a_pattern_capture : Specification
         _reactors = Substitute.For<IReactorDefinitionsStorage>();
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
-        _observer.SubscribeAdditively<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
-            .Returns(call => call.Arg<IEnumerable<EventType>>());
-        _observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
-            .Returns(call => call.Arg<IEnumerable<EventType>>());
+        _observer.SubscribeAdditively<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<EventTypeSet>());
+        _observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<EventTypeSet>());
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _namespaceStorage.HasData().Returns(Task.FromResult(true));
 

@@ -58,7 +58,7 @@ public class and_the_observer_holds_stale_event_types : Specification
     void should_subscribe_with_the_current_event_types() =>
         _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
-            Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _eventType })),
+            Arg.Is<EventTypeSet>(eventTypes => eventTypes.SequenceEqual(new[] { _eventType })),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),

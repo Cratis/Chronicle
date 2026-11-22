@@ -78,7 +78,7 @@ public class EventStoreStorage(
     public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database, loggerFactory?.CreateLogger<EventTypes.EventTypesStorage>() ?? NullLogger<EventTypes.EventTypesStorage>.Instance);
+    public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypes.EventTypesStorage(eventStore, database, loggerFactory?.CreateLogger<EventTypes.EventTypesStorage>() ?? NullLogger<EventTypes.EventTypesStorage>.Instance));
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSources.EventSourcesStorage(eventStore, database);

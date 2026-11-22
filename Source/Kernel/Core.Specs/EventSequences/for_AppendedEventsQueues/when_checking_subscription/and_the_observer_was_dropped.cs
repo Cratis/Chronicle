@@ -19,7 +19,7 @@ public class and_the_observer_was_dropped : given.two_seeded_queues
         _observerKey = ObserverKeyFor("a-spilled-observer");
         _queueGrains[QueueIndexFor(_observerKey)].GetSubscriptions().Returns(
         [
-            new AppendedEventsQueueObserverSubscription(ObserverKeyFor("another-observer"), [subscribed_event_type.Id])
+            new AppendedEventsQueueObserverSubscription(ObserverKeyFor("another-observer"), [subscribed_event_type])
         ]);
     }
 

@@ -11,7 +11,7 @@ public class and_a_webhook_wins_the_subscription_race : given.a_client_reducer_s
 {
     Exception _exception;
 
-    void Establish() => _observer.Subscribe<IReducerObserverSubscriber>(ObserverType.Reducer, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
+    void Establish() => _observer.Subscribe<IReducerObserverSubscriber>(ObserverType.Reducer, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
         .Returns(_ => throw new ObserverServedByAnotherTransport(new ObserverKey("the-reducer", "the-event-store", "the-namespace", EventSequenceId.Log)));
 
     async Task Because() => _exception = await Catch.Exception(() => _subscription.SetDefinitionAndSubscribe(_connectionDefinition));

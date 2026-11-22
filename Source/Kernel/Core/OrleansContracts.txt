@@ -104,7 +104,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQu
   BA26AC21: ResetForDevelopment() -> Task
   D8D0078E: SpillMatchingToCatchup(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   001631A1: SpillToCatchup() -> Task
-  EE476BF4: Subscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task
+  DCCC5AF4: Subscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey, Cratis.Chronicle.Concepts.Events.EventTypeSet, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task
   A5B87E35: SubscribeToAllEventTypes(Cratis.Chronicle.Concepts.Observation.ObserverKey, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task
   A698E2BA: TryMarkDormant(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task<bool>
   CC8BAF71: Unsubscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task
@@ -117,7 +117,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.EventSequences.IAppendedEventsQu
   BB5FDFB6: ResetForDevelopment() -> Task
   64C75630: SpillMatchingToCatchup(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>) -> Task
   FDF94063: SpillToCatchup() -> Task
-  3CC5C800: Subscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task<Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription>
+  EEF5B0A9: Subscribe(Cratis.Chronicle.Concepts.Observation.ObserverKey, Cratis.Chronicle.Concepts.Events.EventTypeSet, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task<Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription>
   018752D9: SubscribeToAllEventTypes(Cratis.Chronicle.Concepts.Observation.ObserverKey, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task<Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription>
   8B4B767D: TryMarkDormant(Cratis.Chronicle.Concepts.Observation.ObserverKey) -> Task<bool>
   3774DB6B: Unsubscribe(Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription) -> Task
@@ -316,7 +316,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   0B146F40: FastForward() -> Task<FastForwardResult>
   985D50C9: GetDefinition() -> Task<Cratis.Chronicle.Storage.Observation.ObserverDefinition>
   5A1F1523: GetDeliveryFences() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Observation.DeliveryFence>>
-  8F9CF48F: GetEventTypes() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>
+  8F9CF48F: GetEventTypes() -> Task<Cratis.Chronicle.Concepts.Events.EventTypeSet>
   BB66DB3A: GetFailedPartitionKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>>
   DFAF25E6: GetInformation() -> Task<Cratis.Chronicle.Observation.ObserverInformationSnapshot>
   98A3B662: GetState() -> Task<Cratis.Chronicle.Storage.Observation.ObserverState>
@@ -331,7 +331,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   4ADEF14F: IsSubscribed() -> Task<bool>
   01607419: IsSubscriptionEstablished() -> Task<bool>
   6D61E057: KnowsClient(Cratis.Chronicle.Concepts.Clients.ConnectionId) -> Task<bool>
-  65040492: NeedsSubscriptionRecovery(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>) -> Task<bool>
+  EF301D21: NeedsSubscriptionRecovery(Cratis.Chronicle.Concepts.Events.EventTypeSet) -> Task<bool>
   5689E9A6: PartitionCaughtUp(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   FBC5310A: PartitionCaughtUp(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   24239E7A: PartitionCaughtUp(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, ulong?) -> Task
@@ -346,8 +346,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   4693EF6D: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventType[], ulong?) -> Task
   0A60681D: PartitionReplayed(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventType[]) -> Task
   5ECFAFDB: PartitionsFailed(System.Collections.Generic.IReadOnlyCollection<Cratis.Chronicle.Storage.Sinks.FailedPartition>) -> Task
-  A1B6D3B8: ReconcileSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, bool, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task
-  D7E5FB10: RecoverStalledSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>
+  693867FD: ReconcileSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, Cratis.Chronicle.Concepts.Events.EventTypeSet, Orleans.Runtime.SiloAddress, bool, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task
+  0B36895F: RecoverStalledSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, Cratis.Chronicle.Concepts.Events.EventTypeSet, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task<Cratis.Chronicle.Concepts.Events.EventTypeSet>
   A652D659: RegisterCatchingUpPartitions(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>) -> Task
   4D12BA79: ReleaseDeliveryFence(Cratis.Chronicle.Concepts.Keys.Key, System.DateTimeOffset) -> Task
   B1F1D3A7: ReleaseRefusedPartitionReplay(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
@@ -357,7 +357,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   BF525C50: Remove() -> Task
   59316F29: Replay() -> Task<Cratis.Choreography.Jobs.JobId>
   8793636E: ReplayPartition(Cratis.Chronicle.Concepts.Keys.Key) -> Task
-  4F386154: ReplayPartition(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>) -> Task
+  8572EE53: ReplayPartition(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventTypeSet) -> Task
   AA80A13C: ReplayPartitionTo(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   B7ADE783: ReplayStepsCouldNotBePrepared() -> Task
   574A7313: ReplayStepsCouldNotBePrepared(ulong?) -> Task
@@ -367,15 +367,15 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   D354D6AF: ReplayedSuccessfullySince(Cratis.Chronicle.Concepts.Events.EventSequenceNumber, System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber>, Cratis.Chronicle.Concepts.Events.EventType[], System.DateTimeOffset, ulong?) -> Task
   186811CF: ReportHandledEvents(Cratis.Chronicle.Concepts.Keys.Key, System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId, Cratis.Chronicle.Concepts.Events.EventCount>, Cratis.Choreography.Jobs.JobStepId, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   E6654AB1: ReportHandledEventsBatch(Cratis.Choreography.Jobs.JobStepId, System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Observation.Jobs.HandledEventsReport>) -> Task
-  318C290F: RestoreClientSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, Cratis.Chronicle.Concepts.Clients.ConnectedClient, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery) -> Task
+  94999948: RestoreClientSubscription`1(Cratis.Chronicle.Concepts.Observation.ObserverType, Cratis.Chronicle.Concepts.Events.EventTypeSet, Orleans.Runtime.SiloAddress, Cratis.Chronicle.Concepts.Clients.ConnectedClient, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery) -> Task
   2CE6A3A4: Retire() -> Task
   E6AA548F: RunWatchdogOnce() -> Task
   A635A9CE: SetHandledStats(Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   1502B9F9: StartAtTailWhenNew() -> Task<bool>
-  3797F0E1: SubscribeAdditively`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>
+  D2F0EDAC: SubscribeAdditively`1(Cratis.Chronicle.Concepts.Observation.ObserverType, Cratis.Chronicle.Concepts.Events.EventTypeSet, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters) -> Task<Cratis.Chronicle.Concepts.Events.EventTypeSet>
   040EEC75: SubscribeToAllEvents`1(Cratis.Chronicle.Concepts.Observation.ObserverType, Orleans.Runtime.SiloAddress, object?, bool, bool) -> Task
-  F52743C3: SubscribeWithGenerationDelivery`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters, bool, bool) -> Task
-  D05AC864: Subscribe`1(Cratis.Chronicle.Concepts.Observation.ObserverType, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters, bool, bool) -> Task
+  3BB5E34C: SubscribeWithGenerationDelivery`1(Cratis.Chronicle.Concepts.Observation.ObserverType, Cratis.Chronicle.Concepts.Events.EventTypeSet, Orleans.Runtime.SiloAddress, Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters, bool, bool) -> Task
+  6B5114A9: Subscribe`1(Cratis.Chronicle.Concepts.Observation.ObserverType, Cratis.Chronicle.Concepts.Events.EventTypeSet, Orleans.Runtime.SiloAddress, object?, bool, Cratis.Chronicle.Concepts.Observation.ObserverFilters, bool, bool) -> Task
   C96DF7CD: TryRecoverAllFailedPartitions() -> Task
   7798939C: TryStartRecoverJobForFailedPartition(Cratis.Chronicle.Concepts.Keys.Key) -> Task<Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome>
   BC98490E: Unsubscribe() -> Task
