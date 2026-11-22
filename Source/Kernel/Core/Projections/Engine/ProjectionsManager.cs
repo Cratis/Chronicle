@@ -170,6 +170,9 @@ public partial class ProjectionsManager(
         }
     }
 
+    [LoggerMessage(LogLevel.Warning, "Projection {ProjectionId} does not accept the system event sequence")]
+    private static partial void UnsupportedEventSequence(ILogger logger, ProjectionId projectionId);
+
     static Channel<bool> CreateCompilationBoundary()
     {
         // A single reusable token serializes async compilation without introducing disposal requirements
@@ -258,9 +261,6 @@ public partial class ProjectionsManager(
         Evict(eventStore, definition.Identifier);
         return true;
     }
-
-    [LoggerMessage(LogLevel.Warning, "Projection {ProjectionId} does not accept the system event sequence")]
-    private static partial void UnsupportedEventSequence(ILogger logger, ProjectionId projectionId);
 
     sealed record RegisteredProjection(ProjectionDefinition Definition, string Fingerprint, string ReadModelFingerprint);
 }

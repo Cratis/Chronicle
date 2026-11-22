@@ -65,6 +65,12 @@ public static class ExternalServiceConverters
             definition.Endpoint.Database?.Options.ToDictionary(_ => _.Key, _ => string.Empty) ?? new Dictionary<string, string>(),
             HeaderValuesSetOf(definition.Endpoint.Http));
 
+    /// <summary>
+    /// Saves an external service definition while preserving existing database option values that were left blank.
+    /// </summary>
+    /// <param name="storage">The external service definitions storage.</param>
+    /// <param name="definition">The definition to save.</param>
+    /// <returns>The task representing the save operation.</returns>
     internal static async Task SavePreservingOptions(this IExternalServiceDefinitionsStorage storage, ExternalServiceDefinition definition)
     {
         var previous = await OptionsToPreserve(storage, definition);

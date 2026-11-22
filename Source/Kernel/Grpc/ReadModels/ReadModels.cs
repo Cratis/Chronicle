@@ -13,7 +13,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
@@ -153,9 +152,9 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModel);
+        var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
-        var binding = await readBindings.ResolveOrReject(request.EventStore, request.Namespace, definition, occurrence);
+        var binding = await readBindings.ResolveOrReject(grainFactory, request.EventStore, request.Namespace, definition, occurrence);
         var skip = Math.Max(0, request.Page * request.PageSize);
 
         var (instances, totalCount) = await binding.GetInstances(skip, request.PageSize);
@@ -498,7 +497,7 @@ internal sealed class ReadModels(
         {
             request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
-            await EnsureSupportedProjection(request.EventStore, definition);
+            await ReadModelReadPolicy.EnsureReadable(grainFactory, request.EventStore, definition);
 
             var schema = definition.GetSchemaForLatestGeneration();
             var subscriptionId = Guid.NewGuid();
@@ -600,18 +599,8 @@ internal sealed class ReadModels(
     async Task<Concepts.ReadModels.ReadModelDefinition> GetSupportedDefinition(EventStoreName eventStore, IReadModel readModel, ReadModelIdentifier identifier)
     {
         var definition = await readModel.GetKnownDefinition(identifier);
-        await EnsureSupportedProjection(eventStore, definition);
+        await ReadModelReadPolicy.EnsureReadable(grainFactory, eventStore, definition);
         return definition;
-    }
-
-    async Task EnsureSupportedProjection(EventStoreName eventStore, Concepts.ReadModels.ReadModelDefinition definition)
-    {
-        if (definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection) return;
-        var projections = storage.GetEventStore(eventStore).Projections;
-        var identifier = (ProjectionId)definition.ObserverIdentifier.Value;
-        if (!await projections.Has(identifier)) return;
-        var projection = await projections.Get(identifier);
-        if (projection.UsesUnsupportedEventSequence()) throw SystemStoreGuard.RefusedException();
     }
 
     async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)

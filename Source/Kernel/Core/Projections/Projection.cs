@@ -604,6 +604,7 @@ public class Projection(
     async Task<EngineProjection> GetOrCreateProjectionForNamespaceWithReadModel(EventStoreNamespaceName eventStoreNamespace, ReadModelDefinition readModelDefinition)
     {
         EnsureSupportedDefinition();
+
         // For preview with provided read model, always create a fresh projection (don't cache)
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventStoreStorage = storage.GetEventStore(key.EventStore);
