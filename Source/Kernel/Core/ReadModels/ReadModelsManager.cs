@@ -36,6 +36,40 @@ public class ReadModelsManager(
     /// <inheritdoc/>
     public async Task Register(IEnumerable<ReadModelDefinition> definitions)
     {
+        var incoming = PrepareDefinitions(definitions);
+        EnsureUnchangedContainers(incoming);
+        await ApplyDefinitions(incoming);
+    }
+
+    /// <inheritdoc/>
+    public Task RegisterSingle(ReadModelDefinition definition) => Register([definition]);
+
+    /// <inheritdoc/>
+    public async Task UpdateDefinition(ReadModelDefinition definition)
+    {
+        definition.Sink.EnsureReadModelSupported();
+        definition = WithResolvedSink(definition);
+        EnsureSinglePublisher([definition]);
+        if (!State.ReadModels.Any(_ => _.Identifier == definition.Identifier)) throw new ReadModelNotFound(definition.Identifier);
+        definition.ContainerName.EnsureValid(definition.Identifier);
+        await ApplyDefinitions([definition]);
+    }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
+
+    /// <summary>
+    /// Compares the sinks two definitions store to. A definition stored before sinks had names stores to the default sink.
+    /// </summary>
+    /// <param name="first">The stored <see cref="SinkDefinition"/>.</param>
+    /// <param name="second">The incoming <see cref="SinkDefinition"/>.</param>
+    /// <returns>True when both store to the same sink.</returns>
+    static bool SameSink(SinkDefinition first, SinkDefinition second) =>
+        string.Equals(first.Type.Value, second.Type.Value, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(first.Name.Value.Trim(), second.Name.Value.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    ReadModelDefinition[] PrepareDefinitions(IEnumerable<ReadModelDefinition> definitions)
+    {
         definitions = definitions.ToArray();
         foreach (var definition in definitions)
         {
@@ -48,7 +82,26 @@ public class ReadModelsManager(
         definitions = definitions.Select(WithResolvedSink).ToArray();
 
         EnsureSinglePublisher(definitions);
+        return definitions.ToArray();
+    }
 
+    void EnsureUnchangedContainers(IEnumerable<ReadModelDefinition> definitions)
+    {
+        var containers = State.ReadModels.ToDictionary(_ => _.Identifier, _ => _.ContainerName);
+        foreach (var definition in definitions)
+        {
+            if (containers.TryGetValue(definition.Identifier, out var container) &&
+                !string.Equals(container.Value, definition.ContainerName.Value, StringComparison.Ordinal))
+            {
+                throw new ReadModelContainerChangeRequiresExplicitUpdate(definition.Identifier, container, definition.ContainerName);
+            }
+
+            containers[definition.Identifier] = definition.ContainerName;
+        }
+    }
+
+    async Task ApplyDefinitions(IEnumerable<ReadModelDefinition> definitions)
+    {
         // Only successfully reconciled definitions qualify for the fast path. Persisted manager state alone
         // cannot prove that SetDefinition and pipeline eviction completed during a previous attempt.
         definitions = definitions.Where(definition => !_completed.TryGetValue(definition.Identifier, out var completed) ||
@@ -122,32 +175,6 @@ public class ReadModelsManager(
             _completed[definition.Identifier] = definition;
         }
     }
-
-    /// <inheritdoc/>
-    public Task RegisterSingle(ReadModelDefinition definition) => Register([definition]);
-
-    /// <inheritdoc/>
-    public async Task UpdateDefinition(ReadModelDefinition definition)
-    {
-        definition.Sink.EnsureReadModelSupported();
-        definition = WithResolvedSink(definition);
-        EnsureSinglePublisher([definition]);
-        if (!State.ReadModels.Any(_ => _.Identifier == definition.Identifier)) throw new ReadModelNotFound(definition.Identifier);
-        await Register([definition]);
-    }
-
-    /// <inheritdoc/>
-    public Task<IEnumerable<ReadModelDefinition>> GetDefinitions() => Task.FromResult(State.ReadModels);
-
-    /// <summary>
-    /// Compares the sinks two definitions store to. A definition stored before sinks had names stores to the default sink.
-    /// </summary>
-    /// <param name="first">The stored <see cref="SinkDefinition"/>.</param>
-    /// <param name="second">The incoming <see cref="SinkDefinition"/>.</param>
-    /// <returns>True when both store to the same sink.</returns>
-    static bool SameSink(SinkDefinition first, SinkDefinition second) =>
-        string.Equals(first.Type.Value, second.Type.Value, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(first.Name.Value.Trim(), second.Name.Value.Trim(), StringComparison.OrdinalIgnoreCase);
 
     async Task Persist(List<ReadModelDefinition> readModels, IEnumerable<ReadModelDefinition> modified)
     {
