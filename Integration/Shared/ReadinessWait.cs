@@ -35,14 +35,43 @@ internal static class ReadinessWait
                     return value;
                 }
 
-                // Task.Delay: bounded backoff between observations of eventually consistent state.
-                await Task.Delay(pollInterval ?? TimeSpan.FromMilliseconds(50), deadline.Token);
+                await Backoff(pollInterval, deadline.Token);
             }
         }
         catch (OperationCanceledException exception) when (deadline.IsCancellationRequested)
         {
             throw new TimeoutException($"Timed out after {elapsed.Elapsed} waiting for {condition} to satisfy {expectation}. Last observed: {lastObserved()}.", exception);
         }
+    }
+
+    public static async Task<T> ObserveFor<T>(Func<Task<T>> observe, TimeSpan duration)
+    {
+        using var deadline = new CancellationTokenSource(duration);
+        T lastObserved = default!;
+        var observed = false;
+        try
+        {
+            while (true)
+            {
+                lastObserved = await observe().WaitAsync(deadline.Token);
+                observed = true;
+                await Backoff(null, deadline.Token);
+            }
+        }
+        catch (OperationCanceledException exception) when (deadline.IsCancellationRequested)
+        {
+            if (!observed)
+            {
+                throw new TimeoutException($"No state was observed within {duration}.", exception);
+            }
+            return lastObserved;
+        }
+    }
+
+    static Task Backoff(TimeSpan? pollInterval, CancellationToken cancellationToken)
+    {
+        // Task.Delay: bounded backoff between observations of eventually consistent state.
+        return Task.Delay(pollInterval ?? TimeSpan.FromMilliseconds(50), cancellationToken);
     }
 
     static string Describe<T>(T value)
