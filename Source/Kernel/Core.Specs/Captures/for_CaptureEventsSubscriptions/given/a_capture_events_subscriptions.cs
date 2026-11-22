@@ -83,14 +83,14 @@ public class a_capture_events_subscriptions : Specification
 
     protected Dictionary<string, ObserverKey> _keys = [];
 
-    protected static Task<IEnumerable<EventType>> AnySubscribe(IObserver observer) =>
-        observer.SubscribeAdditively<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
+    protected static Task<EventTypeSet> AnySubscribe(IObserver observer) =>
+        observer.SubscribeAdditively<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
 
-    protected static Task<IEnumerable<EventType>> AnyRecover(IObserver observer) =>
-        observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
+    protected static Task<EventTypeSet> AnyRecover(IObserver observer) =>
+        observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
 
     protected static Task<bool> AnyNeedsRecovery(IObserver observer) =>
-        observer.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>());
+        observer.NeedsSubscriptionRecovery(Arg.Any<EventTypeSet>());
 
     readonly Dictionary<string, EventTypeSchema> _schemas = [];
 

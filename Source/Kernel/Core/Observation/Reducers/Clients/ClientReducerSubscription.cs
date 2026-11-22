@@ -443,7 +443,7 @@ public sealed class ClientReducerSubscription(
         var observer = grainFactory.GetGrain<IObserver>(new ObserverKey(key.ReducerId, key.EventStore, @namespace, key.EventSequenceId));
         foreach (var eventSourceId in affectedEventSources)
         {
-            await observer.ReplayPartition(eventSourceId, eventTypes);
+            await observer.ReplayPartition(eventSourceId, EventTypeSet.From(eventTypes));
         }
     }
 

@@ -17,7 +17,7 @@ public class when_a_single_release_observer_fails : given.registrations
     void Establish()
     {
         _releases.Summarize().Returns(new ClusterReleaseSummary([(new(19, 112, 0), 2)], 0, 0));
-        _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), null, false)
+        _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), null, false)
             .Returns(_ =>
             {
                 _calls++;

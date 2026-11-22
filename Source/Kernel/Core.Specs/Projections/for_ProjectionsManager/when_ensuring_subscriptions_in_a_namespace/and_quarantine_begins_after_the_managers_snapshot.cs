@@ -33,14 +33,14 @@ public class and_quarantine_begins_after_the_managers_snapshot : given.a_manager
 
             return snapshot;
         });
-        _managedObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), false)
-            .Returns(call => _observer.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, call.Arg<IEnumerable<EventType>>(), SiloAddress.Zero, false));
+        _managedObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), false)
+            .Returns(call => _observer.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, call.Arg<EventTypeSet>(), SiloAddress.Zero, false));
         _managedObserver.ClearReceivedCalls();
     }
 
     Task Because() => _manager.EnsureSubscribedIn(_observerKey.Namespace);
 
-    [Fact] async Task should_dispatch_through_the_serialized_helper() => await _managedObserver.Received(1).ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), false);
+    [Fact] async Task should_dispatch_through_the_serialized_helper() => await _managedObserver.Received(1).ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), false);
     [Fact] async Task should_preserve_the_real_observers_quarantine() => (await _observer.GetCurrentState()).ShouldBeOfExactType<QuarantinedObserver>();
     [Fact] async Task should_not_install_a_subscription() => (await _observer.IsSubscribed()).ShouldBeFalse();
 }

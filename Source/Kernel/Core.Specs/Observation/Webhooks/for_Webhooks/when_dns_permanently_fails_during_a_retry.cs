@@ -18,5 +18,5 @@ public class when_dns_permanently_fails_during_a_retry : given.a_webhook_manager
 
     [Fact] void should_quarantine_after_the_permanent_rejection() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] async Task should_remove_the_subscription_retry_reminder() => (await _manager.GetReminder(_reminderName)).ShouldBeNull();
-    [Fact] void should_not_establish_live_delivery() => _appendedEventsQueues.DidNotReceive().Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_not_establish_live_delivery() => _appendedEventsQueues.DidNotReceive().Subscribe(_observerKey, Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

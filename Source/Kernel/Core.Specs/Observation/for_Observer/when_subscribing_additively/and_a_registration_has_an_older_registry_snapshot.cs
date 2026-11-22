@@ -29,5 +29,5 @@ public class and_a_registration_has_an_older_registry_snapshot : given.an_observ
     [Fact] void should_return_the_effective_merged_types() => _effectiveTypes.ShouldContainOnly(_mergedTypes);
     [Fact] async Task should_not_narrow_the_subscription() => (await _observer.GetSubscription()).EventTypes.ShouldContainOnly(_mergedTypes);
     [Fact] void should_not_narrow_the_observer_definition() => _definitionStorage.State.EventTypes.ShouldContainOnly(_mergedTypes);
-    [Fact] async Task should_subscribe_the_queue_to_the_merged_types() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<IEnumerable<EventType>>(types => types.ToHashSet().SetEquals(_mergedTypes)), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_subscribe_the_queue_to_the_merged_types() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<EventTypeSet>(types => types.ToHashSet().SetEquals(_mergedTypes)), Arg.Any<ObserverFilters?>());
 }

@@ -11,7 +11,6 @@ public class after_registering_through_the_registry : given.a_registry
     bool _changed;
     bool _unchanged;
     EventTypeSchema _schema;
-    EventTypeSchema _newSchema;
     int _readsBeforeUnchanged;
     int _readsAfterUnchanged;
 
@@ -25,7 +24,6 @@ public class after_registering_through_the_registry : given.a_registry
         _unchanged = await _registry.Register(new(_eventTypeId, 3), new JsonSchema { Description = "third" });
         await _registry.GetFor(_eventTypeId, 3);
         _readsAfterUnchanged = _storage.Reads;
-        _newSchema = _schema;
     }
 
     [Fact] void should_report_the_change() => _changed.ShouldBeTrue();

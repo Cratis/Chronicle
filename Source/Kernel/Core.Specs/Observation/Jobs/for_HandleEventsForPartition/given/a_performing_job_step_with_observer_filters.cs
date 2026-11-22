@@ -40,6 +40,7 @@ public class a_performing_job_step_with_observer_filters : a_performing_job_step
 
     void Establish()
     {
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(new ObserverSubscription(
             "observer-id",
             new ObserverKey("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log),

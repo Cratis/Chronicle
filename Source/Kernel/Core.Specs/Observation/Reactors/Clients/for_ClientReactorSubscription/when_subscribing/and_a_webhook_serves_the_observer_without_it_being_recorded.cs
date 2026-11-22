@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients.for_ClientReactorSubscri
 
 public class and_a_webhook_serves_the_observer_without_it_being_recorded : given.a_client_reactor_subscription_with_a_stored_definition
 {
-    void Establish() => _observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
+    void Establish() => _observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
         .Returns(_ => throw new ObserverServedByAnotherTransport(new ObserverKey("the-reactor", "the-event-store", "the-namespace", EventSequenceId.Log)));
 
     Task Because() => _subscription.SetDefinitionAndSubscribe(_connectionDefinition);

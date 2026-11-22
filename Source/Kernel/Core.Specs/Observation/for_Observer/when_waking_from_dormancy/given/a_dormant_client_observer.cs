@@ -103,7 +103,7 @@ public class a_dormant_client_observer : when_going_dormant.given.a_subscribed_c
             : new Releases.ClusterReleaseSummary([(new Concepts.System.SemanticVersion(19, 172, 0), 1), (new Concepts.System.SemanticVersion(19, 173, 0), 1)], 0, 0));
         _appendedEventsQueues.ClearReceivedCalls();
         _appendedEventsQueues
-            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>())
             .Returns(callInfo => new EventSequences.AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
         await Crash();
     }

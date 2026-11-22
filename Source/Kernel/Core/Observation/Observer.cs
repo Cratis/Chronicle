@@ -428,7 +428,7 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventType>> GetEventTypes()
+    public async Task<EventTypeSet> GetEventTypes()
     {
         // An observer subscribed to all events has no fixed event type list to return - the whole
         // point is that it also covers types that did not exist when it subscribed. Resolve the full,
@@ -436,16 +436,16 @@ public partial class Observer(
         if (State.SubscribesToAllEvents)
         {
             var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetLatestForAllEventTypes();
-            return schemas.Select(_ => _.Type);
+            return EventTypeSet.From(schemas.Select(_ => _.Type));
         }
 
-        return Definition.EventTypes;
+        return EventTypeSet.From(Definition.EventTypes);
     }
 
     /// <inheritdoc/>
     public Task Subscribe<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
@@ -458,7 +458,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         EventGenerationDelivery generationDelivery,
         object? subscriberArgs = null,
@@ -983,7 +983,7 @@ public partial class Observer(
         if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
         await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
-        if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
+        if (recovering && !await NeedsSubscriptionRecovery(EventTypeSet.From(eventTypes))) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
         var leavesQuarantine = !automatic && !recovering;
@@ -1201,7 +1201,7 @@ public partial class Observer(
             _subscription = new(
                 _observerId,
                 _observerKey,
-                eventTypes,
+                EventTypeSet.From(eventTypes),
                 typeof(TObserverSubscriber),
                 siloAddress,
                 subscriberArgs,
@@ -1244,7 +1244,7 @@ public partial class Observer(
         _subscription = new(
             _observerId,
             _observerKey,
-            eventTypes,
+            EventTypeSet.From(eventTypes),
             typeof(TObserverSubscriber),
             siloAddress,
             subscriberArgs,

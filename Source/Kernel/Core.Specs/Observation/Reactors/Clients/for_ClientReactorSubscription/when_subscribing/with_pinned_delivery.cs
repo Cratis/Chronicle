@@ -15,5 +15,5 @@ public class with_pinned_delivery : given.a_client_reactor_subscription_with_rep
         _definition = _definition with { GenerationDelivery = EventGenerationDelivery.Pinned };
     }
     async Task Because() => await _subscription.SetDefinitionAndSubscribe(_definition);
-    [Fact] async Task should_pass_the_delivery_policy() => await _observer.Received(1).SubscribeWithGenerationDelivery<IReactorObserverSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_pass_the_delivery_policy() => await _observer.Received(1).SubscribeWithGenerationDelivery<IReactorObserverSubscriber>(ObserverType.Reactor, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
 }

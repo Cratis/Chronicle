@@ -49,7 +49,7 @@ public class with_a_different_existing_identity : Specification
     [Fact]
     void should_subscribe_the_current_identity() => _currentObserver.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
         ObserverType.External,
-        Arg.Any<IEnumerable<EventType>>(),
+        Arg.Any<EventTypeSet>(),
         Arg.Any<SiloAddress>(),
         "consumer",
         Arg.Any<bool>(),

@@ -21,7 +21,5 @@ public class multiple_events_of_the_same_type : given.a_serializer_for_appended_
         _last = _schemaCache.GetSchemaJsonFor(_eventStore, _eventTypeId, EventTypeGeneration.First);
     }
 
-    // Looking the schema up is the registry's business and it answers without storage once warm; what the serializer
-    // owes is to render the schema text once per schema instance rather than once per event.
-    [Fact] void should_render_the_schema_text_once() => ReferenceEquals(_first, _last).ShouldBeTrue();
+    [Fact] void should_render_the_schema_text_once_per_schema_instance() => ReferenceEquals(_first, _last).ShouldBeTrue();
 }

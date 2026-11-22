@@ -38,5 +38,5 @@ public class a_manager_with_pinned_generations : Specification
     }
 
     protected void ShouldSubscribePinned() => _observer.Received(1).SubscribeWithGenerationDelivery<IEventStoreSubscriptionObserverSubscriber>(
-        ObserverType.External, Arg.Is<IEnumerable<EventType>>(pins => pins.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, "Lobby", true, Arg.Any<ObserverFilters?>(), true, automatic: true);
+        ObserverType.External, Arg.Is<EventTypeSet>(pins => pins.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, "Lobby", true, Arg.Any<ObserverFilters?>(), true, automatic: true);
 }

@@ -62,7 +62,7 @@ public class with_explicit_scope : Specification
                 var key = new ObserverKey($"{SubscriptionId}->{consumer}", Source, ns, EventSequenceId.Outbox);
                 _observers[key].Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
                     ObserverType.External,
-                    Arg.Any<IEnumerable<EventType>>(),
+                    Arg.Any<EventTypeSet>(),
                     Arg.Any<SiloAddress>(),
                     consumer,
                     Arg.Any<bool>(),

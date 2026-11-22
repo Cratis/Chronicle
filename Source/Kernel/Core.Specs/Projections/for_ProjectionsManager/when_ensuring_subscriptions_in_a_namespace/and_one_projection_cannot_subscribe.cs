@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Captures;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -36,7 +37,7 @@ public class and_one_projection_cannot_subscribe : given.a_projections_manager_g
         _observersByKey[new ObserverKey(_failing.Identifier, EventStore, EventStoreNamespaceName.Default, _failing.EventSequenceId).ToString()] = _failingObserver;
         _observersByKey[new ObserverKey(_healthy.Identifier, EventStore, EventStoreNamespaceName.Default, _healthy.EventSequenceId).ToString()] = _healthyObserver;
         _healthyObserver.IsSubscriptionEstablished().Returns(_ => _subscribed);
-        _healthyObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
+        _healthyObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {
                 _subscribed = true;
@@ -61,13 +62,13 @@ public class and_one_projection_cannot_subscribe : given.a_projections_manager_g
     [Fact] async Task should_still_subscribe_the_healthy_projection() =>
         await _healthyObserver.Received(1).ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             true);
     [Fact] async Task should_not_subscribe_the_failing_projection() =>
         await _failingObserver.DidNotReceive().ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             true);
 }

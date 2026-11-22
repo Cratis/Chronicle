@@ -26,7 +26,7 @@ namespace Cratis.Chronicle.Observation;
 public record ObserverSubscription(
     [Id(0)] ObserverId ObserverId,
     [Id(1)] ObserverKey ObserverKey,
-    [Id(2)] IEnumerable<EventType> EventTypes,
+    [Id(2)] EventTypeSet EventTypes,
     [Id(3)] Type SubscriberType,
     [Id(4)] SiloAddress SiloAddress,
     [Id(5)] object? Arguments = null,

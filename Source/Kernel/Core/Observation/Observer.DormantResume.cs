@@ -292,7 +292,7 @@ public partial class Observer
 
         var subscription = new AppendedEventsQueueObserverSubscription(
             _observerKey,
-            [.. _subscription.EventTypes.Select(eventType => eventType.Id)],
+            _subscription.EventTypes,
             _subscription.Filters,
             State.SubscribesToAllEvents);
         return [.. AppendedEventsQueue.SelectForSubscription(events, subscription)];

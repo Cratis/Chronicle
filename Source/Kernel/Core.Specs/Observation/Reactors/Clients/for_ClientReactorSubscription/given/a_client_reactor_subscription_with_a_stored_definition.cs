@@ -73,7 +73,7 @@ public class a_client_reactor_subscription_with_a_stored_definition : Specificat
 
     protected Task WasSubscribed(ReactorDefinition definition) => _observer.Received(1).Subscribe<IReactorObserverSubscriber>(
         ObserverType.Reactor,
-        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
+        Arg.Is<EventTypeSet>(eventTypes => eventTypes.SequenceEqual(definition.EventTypes.Select(_ => _.EventType))),
         Arg.Any<SiloAddress>(),
         _client,
         definition.IsReplayable,
@@ -81,7 +81,7 @@ public class a_client_reactor_subscription_with_a_stored_definition : Specificat
 
     protected Task WasRestored(int times) => _observer.Received(times).RestoreClientSubscription<IReactorObserverSubscriber>(
         ObserverType.Reactor,
-        Arg.Is<IEnumerable<EventType>>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),
+        Arg.Is<EventTypeSet>(eventTypes => eventTypes.SequenceEqual(new[] { _connectionEventType })),
         Arg.Any<SiloAddress>(),
         Arg.Is<ConnectedClient>(client => client.ConnectionId == _client.ConnectionId),
         Arg.Any<bool>(),

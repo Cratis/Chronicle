@@ -12,6 +12,6 @@ public class and_the_lost_subscription_of_a_client_that_takes_pages_is_restored 
 
     Task Because() => _subscription.KeepSubscription(_connectionDefinition with { PageDelivery = new PageDeliveryDefinition() });
 
-    [Fact] Task should_restore_it_with_the_page_subscriber() => _observer.Received(1).RestoreClientSubscription<IReducerPageObserverSubscriber>(ObserverType.Reducer, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<Concepts.Clients.ConnectedClient>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<EventGenerationDelivery>());
+    [Fact] Task should_restore_it_with_the_page_subscriber() => _observer.Received(1).RestoreClientSubscription<IReducerPageObserverSubscriber>(ObserverType.Reducer, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<Concepts.Clients.ConnectedClient>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<EventGenerationDelivery>());
     [Fact] void should_restore_it_only_with_the_page_subscriber() => _observer.ReceivedCalls().Where(_ => _.GetMethodInfo().Name == nameof(IObserver.RestoreClientSubscription)).Select(_ => _.GetMethodInfo().GetGenericArguments()[0]).ShouldContainOnly(typeof(IReducerPageObserverSubscriber));
 }

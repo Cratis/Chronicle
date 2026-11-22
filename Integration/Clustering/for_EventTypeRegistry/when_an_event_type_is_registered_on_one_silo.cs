@@ -44,11 +44,11 @@ public class when_an_event_type_is_registered_on_one_silo(context _context) : IC
             // than the registration.
             await observing.GetLatestForAllEventTypes();
 
-            await registering.Register(eventType, ConceptsJsonSchema.FromJson("""{"type":"object","properties":{"first":{"type":"string"}}}"""));
+            await registering.Register(eventType, await ConceptsJsonSchema.FromJsonAsync("""{"type":"object","properties":{"first":{"type":"string"}}}"""));
             await announcer.Invalidate(eventStore, eventTypeId);
             ObserverSiloAfterFirstRegistration = await observing.GetFor(eventTypeId, 1);
 
-            await registering.Register(eventType, ConceptsJsonSchema.FromJson("""{"type":"object","properties":{"first":{"type":"string"},"second":{"type":"string"}}}"""));
+            await registering.Register(eventType, await ConceptsJsonSchema.FromJsonAsync("""{"type":"object","properties":{"first":{"type":"string"},"second":{"type":"string"}}}"""));
             await announcer.Invalidate(eventStore, eventTypeId);
             ObserverSiloAfterChange = await observing.GetFor(eventTypeId, 1);
         }

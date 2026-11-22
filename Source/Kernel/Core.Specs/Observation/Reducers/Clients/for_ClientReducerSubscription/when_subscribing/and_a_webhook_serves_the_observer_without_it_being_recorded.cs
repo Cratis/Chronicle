@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients.for_ClientReducerSubscri
 
 public class and_a_webhook_serves_the_observer_without_it_being_recorded : given.a_client_reducer_subscription_with_a_stored_definition
 {
-    void Establish() => _observer.Subscribe<IReducerObserverSubscriber>(ObserverType.Reducer, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
+    void Establish() => _observer.Subscribe<IReducerObserverSubscriber>(ObserverType.Reducer, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
         .Returns(_ => throw new ObserverServedByAnotherTransport(new ObserverKey("the-reducer", "the-event-store", "the-namespace", EventSequenceId.Log)));
 
     Task Because() => _subscription.SetDefinitionAndSubscribe(_connectionDefinition);

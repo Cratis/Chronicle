@@ -72,6 +72,7 @@ public class a_performing_job_step : Specification
             SiloAddress.Zero);
         _observer = Substitute.For<IObserver>();
         _observer.CanResumeFailedPartition(Arg.Any<Concepts.Keys.Key>(), Arg.Any<FailedPartitionId?>(), Arg.Any<Guid?>()).Returns(true);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(subscription);
         _observerSubscriber = Substitute.For<ISomeObserverType>();
 

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Orleans.TestKit;
+using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.given;
 
@@ -13,6 +14,7 @@ public class a_partition_page_job_step : a_performing_job_step
     void Establish()
     {
         var subscription = new ObserverSubscription("observer-id", _performState.ObserverKey, [], typeof(IPartitionPageObserverType), SiloAddress.Zero);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(subscription);
         _pageSubscriber = Substitute.For<IPartitionPageObserverType>();
         _silo.AddProbe<IPartitionPageObserverType>(_ => _pageSubscriber);

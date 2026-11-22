@@ -27,7 +27,8 @@ public class a_buffered_reducer_job_step : a_performing_job_step
         reducer.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(Task.FromResult(ObserverSubscriberResult.Ok(1UL)));
         var subscription = new ObserverSubscription(
-            "observer-id", _performState.ObserverKey, _performState.EventTypes, typeof(IReducerObserverSubscriber), SiloAddress.Zero);
+            "observer-id", _performState.ObserverKey, EventTypeSet.From(_performState.EventTypes), typeof(IReducerObserverSubscriber), SiloAddress.Zero);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(subscription);
         _jobStep.SetupForTesting(_observer, reducer, "some-partition", subscription);
         _observerServiceClient.FlushAllFor(Arg.Any<ObserverDetails>(), Arg.Any<bool>())

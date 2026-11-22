@@ -45,7 +45,7 @@ public class when_a_store_lists_both_casings_of_a_namespace : a_subscriber_with_
         _observer.GetEventTypes().Returns([eventType]);
         _observer.Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),
@@ -78,7 +78,7 @@ public class when_a_store_lists_both_casings_of_a_namespace : a_subscriber_with_
     [Fact] void should_never_activate_the_lowercase_observer() => _observerKeys.Exists(_ => _.Contains("#cratis#", StringComparison.Ordinal)).ShouldBeFalse();
     [Fact]
     void should_subscribe_the_live_observer_once() => _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
-        ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
+        ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
     [Fact] void should_forward_the_single_source_event_once() => AppendCalls().ShouldEqual(1);
     [Fact] void should_use_the_canonical_target_inbox() => _inboxKey.ShouldEqual(new EventSequenceKey("inbox-Studio", "Lobby", "Cratis").ToString());
 }

@@ -183,7 +183,7 @@ public class an_observer : Specification
         // to catch-up under back-pressure, which the specs that care about set up explicitly.
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
         _appendedEventsQueues
-            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>())
             .Returns(callInfo => new AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
         _appendedEventsQueues.IsSubscribed(Arg.Any<ObserverKey>()).Returns(true);
 

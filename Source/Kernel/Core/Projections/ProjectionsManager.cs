@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
@@ -662,7 +663,7 @@ public partial class ProjectionsManager(
         {
             if (reconcile)
             {
-                return observer.ReconcileSubscription<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, definition.SubscribesToAllEvents, definition.GenerationDelivery);
+                return observer.ReconcileSubscription<TSubscriber>(ObserverType.Projection, EventTypeSet.From(projection.EventTypes), localSiloDetails.SiloAddress, definition.SubscribesToAllEvents, definition.GenerationDelivery);
             }
 
             if (definition.SubscribesToAllEvents)
@@ -672,10 +673,10 @@ public partial class ProjectionsManager(
 
             if (definition.GenerationDelivery == EventGenerationDelivery.Pinned)
             {
-                return observer.SubscribeWithGenerationDelivery<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, definition.GenerationDelivery, reactivateRetired: reactivateRetired);
+                return observer.SubscribeWithGenerationDelivery<TSubscriber>(ObserverType.Projection, EventTypeSet.From(projection.EventTypes), localSiloDetails.SiloAddress, definition.GenerationDelivery, reactivateRetired: reactivateRetired);
             }
 
-            return observer.Subscribe<TSubscriber>(ObserverType.Projection, projection.EventTypes, localSiloDetails.SiloAddress, reactivateRetired: reactivateRetired);
+            return observer.Subscribe<TSubscriber>(ObserverType.Projection, EventTypeSet.From(projection.EventTypes), localSiloDetails.SiloAddress, reactivateRetired: reactivateRetired);
         }
 
         // The throttle is taken before the projection is built: building one per definition x namespace pair ahead of

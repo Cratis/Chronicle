@@ -29,5 +29,5 @@ public class and_replayability_changes_for_a_pinned_definition : given.a_webhook
 
     Task Because() => _grain.Update(_definition with { IsReplayable = false });
 
-    [Fact] async Task should_resubscribe_without_replayability() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned, isReplayable: false, reactivateRetired: true, automatic: false);
+    [Fact] async Task should_resubscribe_without_replayability() => await _observer.Received(1).SubscribeWithGenerationDelivery<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, EventGenerationDelivery.Pinned, isReplayable: false, reactivateRetired: true, automatic: false);
 }

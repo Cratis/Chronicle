@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -21,7 +22,7 @@ public class and_one_read_model_definition_is_missing : given.a_projections_mana
         _state.Projections = [CreateDefinition("broken-projection", "missing-read-model"), _healthy];
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
         _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscribed);
-        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
+        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {
                 _subscribed = true;

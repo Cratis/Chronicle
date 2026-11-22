@@ -22,7 +22,7 @@ public class and_automatic_reconciliation_updates_event_types_while_quarantined 
     [Fact] async Task should_keep_the_quarantined_state() => (await _observer.GetCurrentState()).ShouldBeOfExactType<QuarantinedObserver>();
     [Fact] void should_keep_the_persisted_quarantine() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] async Task should_record_the_subscription() => (await _observer.IsSubscribed()).ShouldBeTrue();
-    [Fact] async Task should_update_subscription_event_types() => (await _observer.GetSubscription()).EventTypes.ShouldEqual(_eventTypes);
+    [Fact] async Task should_update_subscription_event_types() => (await _observer.GetSubscription()).EventTypes.ShouldEqual(EventTypeSet.From(_eventTypes));
     [Fact] void should_update_definition_event_types() => _definitionStorage.State.EventTypes.ShouldEqual(_eventTypes);
     [Fact] void should_not_start_catchup() => ShouldNotHaveStartedCatchup();
     [Fact] void should_not_start_replay() => ShouldNotHaveStartedReplay();
