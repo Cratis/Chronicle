@@ -31,7 +31,6 @@ internal static class UniqueConstraintValueIndexMigration
         await using var transaction = await BeginOwnedTransaction(context.Database);
         var sql = context.GetService<ISqlGenerationHelper>();
         var table = sql.DelimitIdentifier(tableName);
-        var index = sql.DelimitIdentifier($"IX_{tableName}_Value");
         await LockTable(context, table);
 
         var indexState = await ReadIndexState(context, tableName);
@@ -44,15 +43,7 @@ internal static class UniqueConstraintValueIndexMigration
         var canIndex = !context.Database.IsSqlServer() || await EnsureSqlServerValueLength(context, tableName, logger);
         indexState = await ReadIndexState(context, tableName);
         var duplicates = await Scalar(context, $"SELECT COUNT(*) FROM (SELECT {sql.DelimitIdentifier("Value")} FROM {table} GROUP BY {sql.DelimitIdentifier("Value")} HAVING COUNT(*) > 1) AS duplicate_values");
-        if (canIndex && (duplicates == 0 || indexState < 0))
-        {
-            if (indexState == 0)
-            {
-                await DropIndex(context, table, index);
-            }
-
-            await context.Database.ExecuteSqlRawAsync($"CREATE {(duplicates == 0 ? "UNIQUE " : string.Empty)}INDEX {index} ON {table} ({sql.DelimitIdentifier("Value")})");
-        }
+        if (canIndex) await EnsureIndex(context, tableName, duplicates, indexState);
 
         await CommitOwned(transaction);
 
@@ -92,12 +83,23 @@ internal static class UniqueConstraintValueIndexMigration
 
     static Task CommitOwned(IDbContextTransaction? transaction) => transaction?.CommitAsync() ?? Task.CompletedTask;
 
+    static async Task EnsureIndex(DbContext context, string tableName, long duplicates, long indexState)
+    {
+        if (duplicates > 0 && indexState >= 0) return;
+
+        var sql = context.GetService<ISqlGenerationHelper>();
+        var table = sql.DelimitIdentifier(tableName);
+        var index = sql.DelimitIdentifier($"IX_{tableName}_Value");
+        if (indexState == 0) await DropIndex(context, table, index);
+        await context.Database.ExecuteSqlRawAsync($"CREATE {(duplicates == 0 ? "UNIQUE " : string.Empty)}INDEX {index} ON {table} ({sql.DelimitIdentifier("Value")})");
+    }
+
     static async Task<bool> EnsureSqlServerValueLength(DbContext context, string tableName, ILogger<UniqueConstraintMigrator> logger)
     {
         var sql = context.GetService<ISqlGenerationHelper>();
         var table = sql.DelimitIdentifier(tableName);
         var index = sql.DelimitIdentifier($"IX_{tableName}_Value");
-        var length = await Scalar(context, "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = SCHEMA_NAME() AND TABLE_NAME = @table AND COLUMN_NAME = 'Value'", tableName);
+        var length = await Scalar(context, "SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA COLLATE DATABASE_DEFAULT = SCHEMA_NAME() COLLATE DATABASE_DEFAULT AND TABLE_NAME COLLATE DATABASE_DEFAULT = @table COLLATE DATABASE_DEFAULT AND COLUMN_NAME COLLATE DATABASE_DEFAULT = N'Value' COLLATE DATABASE_DEFAULT", tableName);
         if (length == 200)
         {
             return true;
@@ -114,7 +116,7 @@ internal static class UniqueConstraintValueIndexMigration
 
         // The pre-check and ALTER share the same transaction and exclusive table lock.
         await DropIndex(context, table, index);
-        await context.Database.ExecuteSqlRawAsync($"ALTER TABLE {table} ALTER COLUMN [Value] NVARCHAR(200) NOT NULL");
+        await context.Database.ExecuteSqlRawAsync($"ALTER TABLE {table} ALTER COLUMN [Value] NVARCHAR(200) COLLATE {UniqueConstraintOrdinalColumns.SqlServerCollation} NOT NULL");
         return true;
     }
 
@@ -123,7 +125,7 @@ internal static class UniqueConstraintValueIndexMigration
         var query = "SELECT \"unique\" FROM pragma_index_list(@table) WHERE name = @index";
         if (context.Database.IsSqlServer())
         {
-            query = "SELECT CAST(is_unique AS INT) FROM sys.indexes WHERE object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + N'.' + QUOTENAME(@table)) AND name = @index";
+            query = $"SELECT CAST(is_unique AS INT) FROM sys.indexes WHERE object_id = {UniqueConstraintOrdinalColumns.SqlServerTableObjectId} AND name COLLATE DATABASE_DEFAULT = @index COLLATE DATABASE_DEFAULT";
         }
         else if (context.Database.IsNpgsql())
         {

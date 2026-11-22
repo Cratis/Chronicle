@@ -165,12 +165,14 @@ public sealed class EventStoreNamespaceStorage(
         _closedStreamsConstraints.GetOrAdd(eventSequenceId, _ => new ClosedStreamsConstraintStorage());
 
     /// <inheritdoc/>
+    public Task<bool> HasData() => Task.FromResult(_eventSequences.Values.Any(_ => _.HasEvents));
+
+    /// <inheritdoc/>
     /// <remarks>
-    /// There is no physical database to materialize in memory, so this mirrors the real backends by treating the
-    /// namespace as having data the moment anything has actually been recorded for it - an event sequence that
-    /// holds state, or a persisted observer.
+    /// There is no physical database to materialize in memory, so this conservatively checks sequence handles,
+    /// occurrence state, and persisted observers independently of event presence.
     /// </remarks>
-    public async Task<bool> HasData()
+    public async Task<bool> HasPersistedState()
     {
         if (!_eventSequences.IsEmpty || _occurrences.HasData)
         {

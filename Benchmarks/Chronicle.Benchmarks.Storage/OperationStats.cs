@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Globalization;
 
 namespace Cratis.Chronicle.Benchmarks.Storage;
 
@@ -10,6 +11,7 @@ public sealed class OperationStats
 {
     readonly ConcurrentDictionary<string, long> _byType = new(StringComparer.Ordinal);
     readonly List<double> _latenciesMs = [];
+    readonly List<IReadOnlyList<WriterSample>> _waves = [];
     long _operations;
     long _events;
     long _commands;
@@ -49,6 +51,11 @@ public sealed class OperationStats
     /// <param name="record">The invocation record.</param>
     public void Apply(InvocationRecord record)
     {
+        if (record.Samples.Count > 0)
+        {
+            lock (_waves) _waves.Add(record.Samples);
+        }
+
         if (record.Errors > 0) Interlocked.Add(ref _errors, record.Errors);
         if (record.Operations == 0) return;
         RecordBatch(record.Operations, record.Events, record.Commands);
@@ -94,17 +101,49 @@ public sealed class OperationStats
     {
         double[] samples;
         lock (_latenciesMs) samples = [.. _latenciesMs];
-        return new
+        var report = new Dictionary<string, object>
         {
-            operations = Operations,
-            events = Events,
-            commands = Commands,
-            errors = Errors,
-            commandsPerOperation = Math.Round(CommandsPerOperation, 3),
-            commandsPer1000Events = Math.Round(CommandsPer1000Events, 3),
-            commandsByType = new SortedDictionary<string, long>(_byType),
-            latencyMs = new { samples = samples.Length, p50 = Percentile(samples, 50), p99 = Percentile(samples, 99), max = samples.Length == 0 ? 0 : samples.Max() }
+            ["operations"] = Operations,
+            ["events"] = Events,
+            ["commands"] = Commands,
+            ["errors"] = Errors,
+            ["commandsPerOperation"] = Math.Round(CommandsPerOperation, 3),
+            ["commandsPer1000Events"] = Math.Round(CommandsPer1000Events, 3),
+            ["commandsByType"] = new SortedDictionary<string, long>(_byType),
+            ["latencyMs"] = LatencyReport(samples)
         };
+        var waves = WaveSnapshot();
+        if (waves.Length > 0)
+        {
+            report["coldLatencyMs"] = LatencyReport(SuccessfulLatencies(waves.Take(1)));
+            report["warmLatencyMs"] = LatencyReport(SuccessfulLatencies(waves.Skip(1)));
+            report["launchSpreadMs"] = waves.Select((wave, waveIndex) => new { waveIndex, maxOffsetMs = wave.Max(_ => _.LaunchOffsetMs) }).ToArray();
+        }
+
+        return report;
+    }
+
+    /// <summary>Describes overall, cold and warm latency and each wave's launch spread, if samples exist.</summary>
+    /// <returns>The additive markdown for a sampled case, otherwise an empty string.</returns>
+    public string WaveSummary()
+    {
+        var waves = WaveSnapshot();
+        if (waves.Length == 0) return string.Empty;
+        double[] overall;
+        lock (_latenciesMs) overall = [.. _latenciesMs];
+        var spreads = waves.Select((wave, index) => string.Create(CultureInfo.InvariantCulture, $"wave {index}={wave.Max(_ => _.LaunchOffsetMs):0.###}"));
+        return $"<br>Latency ms — overall: {DescribeLatency(overall)}; cold (wave 0): {DescribeLatency(SuccessfulLatencies(waves.Take(1)))}; warm (waves ≥1): {DescribeLatency(SuccessfulLatencies(waves.Skip(1)))}; launch spread ms (max offset): {string.Join(", ", spreads)}";
+    }
+
+    static double[] SuccessfulLatencies(IEnumerable<IReadOnlyList<WriterSample>> waves) => [.. waves.SelectMany(_ => _).Where(_ => _.Succeeded).Select(_ => _.DurationMs)];
+
+    static object LatencyReport(double[] samples) => new { samples = samples.Length, p50 = Percentile(samples, 50), p99 = Percentile(samples, 99), max = samples.Length == 0 ? 0 : samples.Max() };
+
+    static string DescribeLatency(double[] samples) => string.Create(CultureInfo.InvariantCulture, $"samples={samples.Length}, p50={Percentile(samples, 50):0.###}, p99={Percentile(samples, 99):0.###}, max={(samples.Length == 0 ? 0 : samples.Max()):0.###}");
+
+    IReadOnlyList<WriterSample>[] WaveSnapshot()
+    {
+        lock (_waves) return [.. _waves];
     }
 
     void AddCommands(CommandSnapshot commands)

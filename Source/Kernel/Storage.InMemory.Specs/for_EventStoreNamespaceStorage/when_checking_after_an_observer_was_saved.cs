@@ -16,5 +16,6 @@ public class when_checking_after_an_observer_was_saved : given.a_namespace_stora
         _hasData = await _storage.HasData();
     }
 
-    [Fact] void should_report_having_data() => _hasData.ShouldBeTrue();
+    [Fact] void should_report_no_event_data() => _hasData.ShouldBeFalse();
+    [Fact] async Task should_still_report_persisted_state() => (await _storage.HasPersistedState()).ShouldBeTrue();
 }

@@ -87,8 +87,12 @@ try
                 exitCode = 1;
             }
 
-            await WithinBudget(PlanCapture.Run(host, Math.Min(options.Profile.CatchUpCounts.Max(), 20_000), providerDirectory));
-            budget.ThrowIfExpired();
+            foreach (var size in new[] { options.Profile.CatchUpCounts.Min(), options.Profile.CatchUpCounts.Max() }.Distinct())
+            {
+                await WithinBudget(PlanCapture.Run(host, size, providerDirectory));
+                await WithinBudget(DrainCapture.Run(host, size, providerDirectory));
+                budget.ThrowIfExpired();
+            }
         }
         catch (Exception error) when (budget.Expired || error.GetBaseException() is BudgetExceededException)
         {
@@ -103,6 +107,7 @@ try
         finally
         {
             Measurements.Write(Path.Combine(providerDirectory, "counts.json"));
+            Measurements.WriteSamples(Path.Combine(providerDirectory, "samples.json"));
             var scaling = ScalingReport.FromMeasurements();
             if (scaling.Length > 0) await File.WriteAllTextAsync(Path.Combine(providerDirectory, "scaling.md"), scaling);
             await File.WriteAllTextAsync(Path.Combine(providerDirectory, "summary-part.md"), RunSummary.ForProvider(StorageProviderNames.NameOf(provider), KnownGaps.For(provider)));

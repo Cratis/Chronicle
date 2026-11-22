@@ -31,6 +31,9 @@ public class when_explaining_a_sqlite_cursor : Specification
         _plan = await _host.Explain(query);
         _indexes = await _host.IndexDefinitions(query);
         await PlanCapture.Run(_host, 10, _directory);
+        await PlanCapture.Run(_host, 20, _directory);
+        await DrainCapture.Run(_host, 10, _directory);
+        await DrainCapture.Run(_host, 20, _directory);
         _report = await File.ReadAllTextAsync(Path.Combine(_directory, "plans.md"));
     }
     async Task Destroy()
@@ -52,4 +55,9 @@ public class when_explaining_a_sqlite_cursor : Specification
     [Fact] void should_explain_a_real_indexed_query() => _plan.ShouldContain("USING INTEGER PRIMARY KEY");
     [Fact] void should_dump_index_definitions() => _indexes.ShouldContain("CREATE");
     [Fact] void should_not_report_a_capture_failure() => _plan.ShouldNotContain("not captured");
+    [Fact] void should_keep_the_first_fixture_size() => _report.ShouldContain("10 events");
+    [Fact] void should_keep_the_other_fixture_size() => _report.ShouldContain("20 events");
+    [Fact] void should_write_page_attribution() => File.ReadAllText(Path.Combine(_directory, "drain-pages.md")).ShouldContain("events read: 10");
+    [Fact] void should_write_the_other_drain_size() => File.ReadAllText(Path.Combine(_directory, "drain-pages.md")).ShouldContain("events read: 20");
+    [Fact] void should_write_one_drain_heading() => File.ReadLines(Path.Combine(_directory, "drain-pages.md")).Count(line => string.Equals(line, "# Drain page attribution", StringComparison.Ordinal)).ShouldEqual(1);
 }

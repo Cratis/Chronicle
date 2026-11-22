@@ -18,7 +18,7 @@ public static class RunSummary
         foreach (var key in Measurements.Keys().Order(StringComparer.Ordinal))
         {
             var stats = Measurements.For(key);
-            builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {provider} | {key[(provider.Length + 1)..]} | {stats.Operations} | {stats.CommandsPerOperation:0.##} | {stats.CommandsPer1000Events:0.##} | {stats.Errors} |");
+            builder.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {provider} | {key[(provider.Length + 1)..]}{stats.WaveSummary()} | {stats.Operations} | {stats.CommandsPerOperation:0.##} | {stats.CommandsPer1000Events:0.##} | {stats.Errors} |");
         }
 
         foreach (var (gapCase, reason) in notMeasured ?? [])

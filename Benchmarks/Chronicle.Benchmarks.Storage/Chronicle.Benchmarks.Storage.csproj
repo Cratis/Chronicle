@@ -19,16 +19,13 @@
     <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="SSH.NET" />
-    <PackageReference Include="NSubstitute" />
     <PackageReference Include="Cratis.Arc" />
     <PackageReference Include="Cratis.Arc.MongoDB" />
-    <Using Include="NSubstitute" />
     <InternalsVisibleTo Include="Chronicle.Benchmarks.Storage.Specs" />
     <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
     <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
     <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj" />
     <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
-    <Compile Include="../../Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventSequenceStorage/given/EventSequenceStorageHost.cs" Link="Hosts/EventSequenceStorageHost.cs" />
     <Compile Include="../../Integration/Client/SqlServerContainerImage.cs" Link="Hosts/SqlServerContainerImage.cs" />
   </ItemGroup>
 </Project>
