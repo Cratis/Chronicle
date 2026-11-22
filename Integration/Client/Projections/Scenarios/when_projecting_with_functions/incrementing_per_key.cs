@@ -39,12 +39,7 @@ public class incrementing_per_key(context context) : Given<context>(context)
                 return;
             }
 
-            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
-            while (Result is null && DateTime.UtcNow < timeout)
-            {
-                await Task.Delay(100);
-                Result = await GetReadModel(EventSourceId);
-            }
+            Result = await ReadinessWait.Until(() => GetReadModel(EventSourceId), model => model is not null);
         }
     }
 

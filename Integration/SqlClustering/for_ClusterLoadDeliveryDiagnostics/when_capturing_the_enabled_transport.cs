@@ -55,6 +55,7 @@ public class when_capturing_the_enabled_transport : Specification
         EmitEvent(0); // Warm the actual source-generated logger/provider/callback path outside measurement.
         for (ulong sequence = 1; sequence <= 20; sequence++)
         {
+            // Task.Delay: time-behavior; pace the allocation/rate benchmark at twenty events per second.
             await Task.Delay(TimeSpan.FromMilliseconds(50));
             var baselineAllocated = GC.GetAllocatedBytesForCurrentThread();
             var baselineStarted = Stopwatch.GetTimestamp();
@@ -119,6 +120,8 @@ public class when_capturing_the_enabled_transport : Specification
         {
             // Absolute scheduling avoids accumulating callback duration into the 20/s cadence.
             var delay = TimeSpan.FromMilliseconds(sequence * 50) - window.Elapsed;
+
+            // Task.Delay: time-behavior; preserve the benchmark's absolute twenty-per-second emission cadence.
             if (delay > TimeSpan.Zero) await Task.Delay(delay);
             var allocated = GC.GetAllocatedBytesForCurrentThread();
             var started = Stopwatch.GetTimestamp();

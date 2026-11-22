@@ -42,9 +42,10 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
         return (@event, target, arrayIndexers) =>
         {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+            if (resolveProperty(@event) is not { } resolvedProperty)
             {
                 return NoChange(targetProperty, arrayIndexers);
             }
@@ -70,9 +71,10 @@ public static class PropertyMappers
     /// </remarks>
     public static PropertyMapper<AppendedEvent, ExpandoObject> SetOnceFromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
         return (@event, target, arrayIndexers) =>
         {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+            if (resolveProperty(@event) is not { } resolvedProperty)
             {
                 return NoChange(targetProperty, arrayIndexers);
             }
@@ -101,7 +103,8 @@ public static class PropertyMappers
     /// </remarks>
     public static PropertyMapper<AppendedEvent, ExpandoObject> Remove(PropertyPath targetProperty)
     {
-        return (@event, target, arrayIndexers) => RemoveDynamicKey(targetProperty, @event, target, arrayIndexers);
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
+        return (@event, target, arrayIndexers) => RemoveDynamicKey(targetProperty, resolveProperty(@event), target, arrayIndexers);
     }
 
     /// <summary>
@@ -178,9 +181,10 @@ public static class PropertyMappers
 
     static PropertyMapper<AppendedEvent, ExpandoObject> Accumulate(PropertyPath targetProperty, Type targetType, Func<object, AppendedEvent, object> accumulate)
     {
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
         return (@event, target, arrayIndexers) =>
         {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+            if (resolveProperty(@event) is not { } resolvedProperty)
             {
                 return NoChange(targetProperty, arrayIndexers);
             }
@@ -201,9 +205,9 @@ public static class PropertyMappers
 
     static PropertyDifference NoChange(PropertyPath propertyPath, ArrayIndexers arrayIndexers) => new(propertyPath, null, null, arrayIndexers);
 
-    static PropertyDifference RemoveDynamicKey(PropertyPath targetProperty, AppendedEvent @event, ExpandoObject target, ArrayIndexers arrayIndexers)
+    static PropertyDifference RemoveDynamicKey(PropertyPath targetProperty, PropertyPath? resolvedProperty, ExpandoObject target, ArrayIndexers arrayIndexers)
     {
-        if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+        if (resolvedProperty is null)
         {
             return NoChange(targetProperty, arrayIndexers);
         }
@@ -245,23 +249,17 @@ public static class PropertyMappers
         : (decimal)Convert.ChangeType(value, typeof(decimal));
 
     /// <summary>
-    /// Resolve a property path that may contain a dynamic, expression-based segment (e.g. eventCountByType.$eventContext.eventType.id)
-    /// into a concrete <see cref="PropertyPath"/> for the current <see cref="AppendedEvent"/>.
+    /// Prepare the immutable path parsing and provider lookup once, leaving event-specific resolution for invocation.
     /// </summary>
-    /// <param name="propertyPath">The property path that may contain a .$eventContext.&lt;path&gt;, .$eventContent.&lt;path&gt; or .$causedBy.&lt;property&gt; segment.</param>
-    /// <param name="event">The event to evaluate the dynamic segment against.</param>
-    /// <returns>
-    /// The resolved property path, with the dynamic segment replaced by its runtime value. Returns <paramref name="propertyPath"/> unchanged when it has no dynamic segment.
-    /// Returns null when a key read from the event content is missing or null - the operation is then skipped rather than written under an empty key.
-    /// </returns>
-    /// <exception cref="UnsupportedDynamicPropertyPathExpression">Thrown when the dynamic segment does not reference a well-known expression this method knows how to resolve.</exception>
-    static PropertyPath? ResolveDynamicPropertyPath(PropertyPath propertyPath, AppendedEvent @event)
+    /// <param name="propertyPath">The target path, optionally holding an event-content, event-context or causing-identity expression.</param>
+    /// <returns>A resolver that retains static paths, resolves dynamic keys per event and defers unsupported-path failures until invocation.</returns>
+    static Func<AppendedEvent, PropertyPath?> PreparePropertyPathResolver(PropertyPath propertyPath)
     {
         var pathString = propertyPath.Path;
         var markerIndex = pathString.IndexOf(".$", StringComparison.Ordinal);
         if (markerIndex < 0)
         {
-            return propertyPath;
+            return _ => propertyPath;
         }
 
         var staticPrefix = pathString[..markerIndex];
@@ -269,29 +267,67 @@ public static class PropertyMappers
         var propertyStart = pathString.IndexOf('.', expressionStart);
         if (propertyStart < 0 || propertyStart == pathString.Length - 1)
         {
-            throw new UnsupportedDynamicPropertyPathExpression(propertyPath);
+            return UnsupportedPathResolver(propertyPath);
         }
 
         var expression = pathString[expressionStart..propertyStart];
         var property = pathString[(propertyStart + 1)..];
         if (expression == WellKnownExpressions.EventContent)
         {
-            var key = ReadExistingEventContentValue(@event.Content, new PropertyPath(property));
-            return key is null ? null : new PropertyPath($"{staticPrefix}.{EventContentDictionaryKeyFor(propertyPath, key)}");
+            return PrepareEventContentResolver(propertyPath, staticPrefix, property);
         }
 
-        var contextPath = expression switch
-        {
-            WellKnownExpressions.EventContext => property,
-            WellKnownExpressions.CausedBy when property.Equals("subject", StringComparison.Ordinal) || property.Equals("name", StringComparison.Ordinal) || property.Equals("userName", StringComparison.Ordinal) => $"causedBy.{property}",
-            _ => throw new UnsupportedDynamicPropertyPathExpression(propertyPath)
-        };
-        var resolvedValue = EventValueProviders.EventContext(new PropertyPath(contextPath))(@event);
-
-        // Keys from the event context and the causing identity predate key validation: keep forming them the way they
-        // always have, so existing read models keep their keys and a name holding a '.' does not start failing events.
-        return resolvedValue is null ? null : new PropertyPath($"{staticPrefix}.{FormatEventContextKeyValue(resolvedValue)}");
+        var contextPath = EventContextPathFor(expression, property);
+        return contextPath is null
+            ? UnsupportedPathResolver(propertyPath)
+            : PrepareEventContextResolver(staticPrefix, contextPath);
     }
+
+    /// <summary>Prepare an event-content subpath without snapshotting its event-specific value.</summary>
+    /// <param name="propertyPath">The original target path, used to report invalid dictionary keys.</param>
+    /// <param name="staticPrefix">The target prefix before the dynamic key.</param>
+    /// <param name="property">The event-content subpath.</param>
+    /// <returns>A resolver that reads and validates the key for each event without mutating its content.</returns>
+    static Func<AppendedEvent, PropertyPath?> PrepareEventContentResolver(PropertyPath propertyPath, string staticPrefix, string property)
+    {
+        var contentPath = new PropertyPath(property);
+        return @event =>
+        {
+            var key = ReadExistingEventContentValue(@event.Content, contentPath);
+            return key is null ? null : new PropertyPath($"{staticPrefix}.{EventContentDictionaryKeyFor(propertyPath, key)}");
+        };
+    }
+
+    /// <summary>Prepare the event-context provider without snapshotting an event's key.</summary>
+    /// <param name="staticPrefix">The target prefix before the dynamic key.</param>
+    /// <param name="contextPath">The path within the event context.</param>
+    /// <returns>A resolver preserving historical context-key formatting, including keys containing dots.</returns>
+    static Func<AppendedEvent, PropertyPath?> PrepareEventContextResolver(string staticPrefix, string contextPath)
+    {
+        var valueProvider = EventValueProviders.EventContext(new PropertyPath(contextPath));
+        return @event =>
+        {
+            var resolvedValue = valueProvider(@event);
+            return resolvedValue is null ? null : new PropertyPath($"{staticPrefix}.{FormatEventContextKeyValue(resolvedValue)}");
+        };
+    }
+
+    static string? EventContextPathFor(string expression, string property) => expression switch
+    {
+        WellKnownExpressions.EventContext => property,
+        WellKnownExpressions.CausedBy when IsCausingIdentityProperty(property) => $"causedBy.{property}",
+        _ => null
+    };
+
+    static bool IsCausingIdentityProperty(string property) => property.Equals("subject", StringComparison.Ordinal) ||
+        property.Equals("name", StringComparison.Ordinal) || property.Equals("userName", StringComparison.Ordinal);
+
+    /// <summary>Defer the failure for an unsupported expression until its mapper is invoked.</summary>
+    /// <param name="propertyPath">The unsupported target path.</param>
+    /// <returns>A resolver that creates the original failure only when invoked.</returns>
+    /// <exception cref="UnsupportedDynamicPropertyPathExpression">Thrown when the returned resolver is invoked.</exception>
+    static Func<AppendedEvent, PropertyPath?> UnsupportedPathResolver(PropertyPath propertyPath) =>
+        _ => throw new UnsupportedDynamicPropertyPathExpression(propertyPath);
 
     /// <summary>
     /// Format a resolved event-context value as a dictionary key the way it has always been formatted.

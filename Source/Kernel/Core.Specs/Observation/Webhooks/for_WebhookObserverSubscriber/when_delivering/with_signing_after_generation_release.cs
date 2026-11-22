@@ -16,7 +16,7 @@ public class with_signing_after_generation_release : given.a_subscriber_with_sig
     {
         var incoming = AppendedEvent.EmptyWithEventSequenceNumber(42);
         _events = [incoming with { Context = incoming.Context with { EventType = new("customer", 2) } }];
-        _released = incoming with { Context = incoming.Context with { EventType = new("customer", 1), SequenceNumber = 43 } };
+        _released = incoming with { Context = incoming.Context with { EventType = new("customer", 1) } };
         _definitions.Get("webhook").Returns(_definition with { GenerationDelivery = EventGenerationDelivery.Pinned, EventTypes = [new("customer", 1)] });
         _release.Release(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns([_released]);
     }

@@ -40,13 +40,9 @@ public class and_reading_the_instance(context context) : Given<context>(context)
         {
             await EventStore.EventLog.Append(PersonId, Event);
 
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            while (Instance?.Aliases is not { Count: 2 })
-            {
-                Instance = await EventStore.ReadModels.GetInstanceById<PersonAliases>(PersonId.Value);
-                if (Instance?.Aliases is { Count: 2 }) break;
-                await Task.Delay(200, cts.Token);
-            }
+            Instance = await ReadinessWait.Until(
+                () => EventStore.ReadModels.GetInstanceById<PersonAliases>(PersonId.Value),
+                instance => instance?.Aliases is { Count: 2 });
 
             StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, "PersonAliases");
         }

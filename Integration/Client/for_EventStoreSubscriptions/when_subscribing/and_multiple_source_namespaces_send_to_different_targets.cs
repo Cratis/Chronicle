@@ -26,7 +26,7 @@ public class and_multiple_source_namespaces_send_to_different_targets(context co
             var testEvent = new TestEvent("Multi-namespace test");
             await AppendEvent(SourceEventStoreName, "multi-ns-source", testEvent);
 
-            // Wait for forwarding
+            // Task.Delay: unresolved forwarding condition (#6023); fixture appends to EventLog, not Outbox.
             await Task.Delay(500);
 
             // Verify inbox received event in both namespaces

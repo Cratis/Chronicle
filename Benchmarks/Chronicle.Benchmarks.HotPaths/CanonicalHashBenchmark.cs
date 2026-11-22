@@ -9,7 +9,7 @@ using Cratis.Chronicle.EventSequences;
 namespace Cratis.Chronicle.Benchmarks.HotPaths;
 
 /// <summary>
-/// Compares the persisted hash pipeline against its pre-Stage-A implementation, including serialization and parsing.
+/// Compares Stage B against faithful pre-Stage-A and Stage-A hash pipelines.
 /// </summary>
 [MemoryDiagnoser]
 public class CanonicalHashBenchmark
@@ -41,9 +41,14 @@ public class CanonicalHashBenchmark
         _contents = Enumerable.Range(1, Generations).Select(CreateContent).ToArray();
         foreach (var content in _contents)
         {
-            if (LegacyCanonicalHash.Calculate(_eventType, _eventSource, content) != _calculator.Calculate(_eventType, _eventSource, content))
+            var current = _calculator.Calculate(_eventType, _eventSource, content);
+            if (LegacyCanonicalHash.Calculate(_eventType, _eventSource, content) != current)
             {
                 throw new InvalidOperationException("Canonical hash differs from the legacy baseline.");
+            }
+            if (StageACanonicalHash.Calculate(_eventType, _eventSource, content) != current)
+            {
+                throw new InvalidOperationException("Canonical hash differs from the Stage-A baseline.");
             }
         }
     }
@@ -52,7 +57,7 @@ public class CanonicalHashBenchmark
     /// Hashes all content generations with the unchanged legacy pipeline.
     /// </summary>
     /// <returns>The last hash, to consume the result.</returns>
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public EventHash Legacy()
     {
         var hash = EventHash.NotSet;
@@ -64,8 +69,20 @@ public class CanonicalHashBenchmark
     /// Hashes the same content generations with the Stage-A pipeline.
     /// </summary>
     /// <returns>The last hash, to consume the result.</returns>
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public EventHash StageA()
+    {
+        var hash = EventHash.NotSet;
+        foreach (var content in _contents) hash = StageACanonicalHash.Calculate(_eventType, _eventSource, content);
+        return hash;
+    }
+
+    /// <summary>
+    /// Hashes the same content generations with the direct Stage-B writer.
+    /// </summary>
+    /// <returns>The last hash, to consume the result.</returns>
+    [Benchmark]
+    public EventHash StageB()
     {
         var hash = EventHash.NotSet;
         foreach (var content in _contents) hash = _calculator.Calculate(_eventType, _eventSource, content);

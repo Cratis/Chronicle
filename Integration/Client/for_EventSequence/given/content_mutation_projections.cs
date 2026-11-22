@@ -78,17 +78,14 @@ public class content_mutation_projections(ChronicleFixture fixture) : Specificat
         await children.WaitTillReachesEventSequenceNumber(reached, _timeout);
         await isolated.WaitTillReachesEventSequenceNumber(reached, _timeout);
 
-        using var cancellation = new CancellationTokenSource(_timeout);
-        while (true)
-        {
-            await ReadDocuments();
-            if (completed())
+        await ReadinessWait.Until(
+            async () =>
             {
-                return;
-            }
-
-            await Task.Delay(50, cancellation.Token);
-        }
+                await ReadDocuments();
+                return new { CoupledDocuments, ChildrenDocuments, IsolatedDocuments };
+            },
+            _ => completed(),
+            _timeout);
     }
 
     async Task<EventSequenceNumber> AppendAndWait(EventSourceId source, string document, int amount)

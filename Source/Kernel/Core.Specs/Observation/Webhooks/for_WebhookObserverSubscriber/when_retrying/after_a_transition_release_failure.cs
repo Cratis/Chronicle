@@ -14,10 +14,10 @@ public class after_a_transition_release_failure : given.a_compatibility_subscrip
     {
         var registeredDefinition = _definition;
         _definition = _definition with { Generations = _definition.Generations.Where(_ => _.Generation != _pin.Generation).ToArray() };
-        _failedResult = await _subscriber.OnNext(_partition, _events, new(null));
+        _failedResult = await _subscriber.OnNext(_partition, _events, _context);
         _httpCallsAfterFailure = _receiver.Payloads.Count;
         _definition = registeredDefinition;
-        _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+        _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
     }
 
     [Fact] void should_fail_the_first_attempt() => _failedResult.State.ShouldEqual(ObserverSubscriberState.Failed);

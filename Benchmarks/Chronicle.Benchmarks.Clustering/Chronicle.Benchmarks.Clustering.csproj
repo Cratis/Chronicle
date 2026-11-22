@@ -17,6 +17,8 @@
     <PackageReference Include="Cratis.Arc" />
     <PackageReference Include="Cratis.Arc.MongoDB" />
     <PackageReference Include="EphemeralMongo" />
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="SSH.NET" />
     <PackageReference Include="Microsoft.Orleans.Sdk" />
     <PackageReference Include="Microsoft.Orleans.TestingHost" />
     <!-- Not used by the benchmarks. XUnit.Integration keeps xunit private, but Cratis type discovery

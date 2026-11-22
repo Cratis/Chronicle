@@ -12,7 +12,7 @@ public class with_an_open_circuit_and_sensitive_target : given.a_webhook_deliver
 {
     void Establish() => _receiver.Failure = new BrokenCircuitException(SensitiveTarget.Reason);
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
 
     [Fact] void should_defer_the_partition() => _deliveryResult.State.ShouldEqual(ObserverSubscriberState.Deferred);
     [Fact] void should_keep_circuit_reason() => _deliveryResult.Deferral.Reason.ShouldEqual(PartitionDeferralReason.CircuitOpen);
