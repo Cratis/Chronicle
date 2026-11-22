@@ -107,6 +107,28 @@ public abstract partial class UniqueConstraintsStorageV2Contract
     }
 
     [Fact]
+    public async Task should_refresh_a_per_value_subject_without_replacing_the_first_sequence()
+    {
+        await Seed(PerValue);
+        (await _storage.Save(_owner, PerValue, 99, _value, _scope, _authority, "updated-subject")).IsSuccess.ShouldBeTrue();
+        (await _storage.Save(_owner, PerValue, 11, _otherValue, _scope, _authority)).IsSuccess.ShouldBeTrue();
+        (await _storage.RemoveForSubject(PerValue, _subject, _authority)).IsSuccess.ShouldBeTrue();
+        (await _storage.IsAllowed(_owner, PerValue, _value, _scope)).SequenceNumber.ShouldEqual((EventSequenceNumber)10);
+        (await _storage.RemoveForSubject(PerValue, "updated-subject", _authority)).IsSuccess.ShouldBeTrue();
+        (await _storage.GetFor(_owner, PerValue, _scope)).ShouldContainOnly(_otherValue);
+    }
+
+    [Fact]
+    public async Task should_remove_every_retained_value_for_the_selected_owner()
+    {
+        await Seed(PerValue);
+        (await _storage.Save(_owner, PerValue, 11, _otherValue, _scope, _authority)).IsSuccess.ShouldBeTrue();
+        (await _storage.Remove(_owner, PerValue, _scope, _authority)).IsSuccess.ShouldBeTrue();
+        (await _storage.GetFor(_owner, PerValue, _scope)).ShouldBeEmpty();
+        await ShouldRetainAuthority();
+    }
+
+    [Fact]
     public async Task should_round_trip_unsigned_sequence_numbers_above_int64_max_value()
     {
         await Initialize();

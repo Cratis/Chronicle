@@ -39,6 +39,32 @@ public abstract partial class UniqueConstraintsStorageV2Contract : Specification
     /// <returns>The cleanup operation.</returns>
     protected virtual Task DestroyStorage() => Task.CompletedTask;
 
+    /// <summary>
+    /// Reopens an independent provider handle. Volatile providers retain their in-memory backing store.
+    /// </summary>
+    /// <returns>A handle to the same namespace and sequence.</returns>
+    protected virtual Task<IUniqueConstraintsStorageV2> ReopenStorage() => Task.FromResult(_storage);
+
+    /// <summary>
+    /// Arranges a transition around a mutation. SQL adapters pause at transaction boundaries on separate connections.
+    /// </summary>
+    /// <param name="transition">The authority change.</param>
+    /// <param name="mutation">The claim change.</param>
+    /// <param name="transitionFirst">Whether the transition must commit before the mutation acquires its fence.</param>
+    /// <returns>The mutation result.</returns>
+    protected virtual async Task<Result<bool, UniqueConstraintWriteFailure>> Interleave(Func<Task> transition, Func<Task<Result<bool, UniqueConstraintWriteFailure>>> mutation, bool transitionFirst)
+    {
+        if (transitionFirst)
+        {
+            await transition();
+            return await mutation();
+        }
+
+        var result = await mutation();
+        await transition();
+        return result;
+    }
+
     async Task Establish() => _storage = await CreateStorage();
 
     async Task Destroy() => await DestroyStorage();
