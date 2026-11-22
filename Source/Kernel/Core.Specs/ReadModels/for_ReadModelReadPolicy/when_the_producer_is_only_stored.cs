@@ -17,11 +17,11 @@ public class when_the_producer_is_only_stored : Specification
     IProjectionsManager _manager;
     ReadModelDefinition _definition;
     ProjectionDefinition _stored;
-    Exception _ordinaryError;
-    Exception _kernelError;
-    Exception _systemError;
-    Exception _kernelSystemError;
-    Exception _missingError;
+    Exception? _ordinaryError;
+    Exception? _kernelError;
+    Exception? _systemError;
+    Exception? _kernelSystemError;
+    Exception? _missingError;
 
     void Establish()
     {
@@ -42,16 +42,16 @@ public class when_the_producer_is_only_stored : Specification
         _missingError = await ReadWith(null);
     }
 
-    async Task<Exception> ReadWith(ProjectionDefinition stored)
+    async Task<Exception?> ReadWith(ProjectionDefinition? stored)
     {
-        _manager.GetStoredProjectionDefinition(Arg.Any<ProjectionId>()).Returns(Task.FromResult(stored));
+        _manager.GetStoredProjectionDefinition(Arg.Any<ProjectionId>()).Returns(Task.FromResult<ProjectionDefinition?>(stored));
         return await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", _definition));
     }
 
     [Fact] void should_allow_a_stored_ordinary_definition() => _ordinaryError.ShouldBeNull();
     [Fact] void should_allow_a_stored_kernel_definition() => _kernelError.ShouldBeNull();
     [Fact] void should_allow_a_stored_kernel_definition_over_system() => _kernelSystemError.ShouldBeNull();
-    [Fact] void should_refuse_a_stored_non_kernel_system_definition() => ((RpcException)_systemError).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
-    [Fact] void should_use_the_neutral_refusal_for_a_stored_system_definition() => ((RpcException)_systemError).Status.Detail.ShouldEqual(SystemStoreAccess.Refused);
-    [Fact] void should_refuse_when_missing_everywhere() => ((RpcException)_missingError).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
+    [Fact] void should_refuse_a_stored_non_kernel_system_definition() => ((RpcException)_systemError!).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
+    [Fact] void should_use_the_neutral_refusal_for_a_stored_system_definition() => ((RpcException)_systemError!).Status.Detail.ShouldEqual(SystemStoreAccess.Refused);
+    [Fact] void should_refuse_when_missing_everywhere() => ((RpcException)_missingError!).StatusCode.ShouldEqual(StatusCode.PermissionDenied);
 }
