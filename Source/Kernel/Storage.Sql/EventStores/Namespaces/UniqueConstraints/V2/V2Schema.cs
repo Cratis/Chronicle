@@ -16,18 +16,54 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 sealed class V2Schema(Func<DbContextOptions> createOptions)
 {
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _gates = new(StringComparer.Ordinal);
-    readonly ITableMigrator<V2DbContext> _migrator = new TableMigrator<V2DbContext>(NullLogger<TableMigrator<V2DbContext>>.Instance);
+    readonly TableMigrator<V2DbContext> _migrator = new(NullLogger<TableMigrator<V2DbContext>>.Instance);
 
-    internal V2DbContext Context(string? table = null, UniqueConstraintMode mode = UniqueConstraintMode.PerEventSource) => new(createOptions(), table, mode);
-
+    /// <summary>
+    /// Probes for a table without creating it.
+    /// </summary>
+    /// <param name="context">The schema context.</param>
+    /// <param name="table">The table name.</param>
+    /// <returns>Whether the table exists.</returns>
     internal static Task<bool> Exists(V2DbContext context, string table) => TableMigrator<V2DbContext>.TableExists(context, table);
 
-    internal Task EnsureMetadata(CancellationToken cancellationToken) => Locked(async context =>
+    /// <summary>
+    /// Verifies the complete persisted binding against the requested identity.
+    /// </summary>
+    /// <param name="actual">The persisted binding.</param>
+    /// <param name="expected">The requested binding.</param>
+    internal static void Verify(V2Binding actual, V2Binding expected)
     {
-        await _migrator.EnsureTableMigrated(V2Identity.Authorities, context, (schema, table) => V2MetadataMigration.CreateAuthority(_migrator, schema, table));
-        await _migrator.EnsureTableMigrated(V2Identity.Bindings, context, (schema, table) => V2MetadataMigration.CreateBindings(_migrator, schema, table));
-    }, cancellationToken);
+        if (actual != expected) throw new UniqueConstraintV2SchemaMismatch();
+    }
 
+    /// <summary>
+    /// Creates an independent operation or schema context.
+    /// </summary>
+    /// <param name="table">The claim table, or null for metadata only.</param>
+    /// <param name="mode">The retention mode.</param>
+    /// <returns>A fresh context.</returns>
+    internal V2DbContext Context(string? table = null, UniqueConstraintMode mode = UniqueConstraintMode.PerEventSource) => new(createOptions(), table, mode);
+
+    /// <summary>
+    /// Ensures both metadata tables exist under the schema lock.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The schema operation.</returns>
+    internal Task EnsureMetadata(CancellationToken cancellationToken) => Locked(
+        async context =>
+        {
+            await _migrator.EnsureTableMigrated(V2Identity.Authorities, context, (schema, table) => V2MetadataMigration.CreateAuthority(_migrator, schema, table));
+            await _migrator.EnsureTableMigrated(V2Identity.Bindings, context, (schema, table) => V2MetadataMigration.CreateBindings(_migrator, schema, table));
+        },
+        cancellationToken);
+
+    /// <summary>
+    /// Resolves a verified physical table, optionally provisioning its binding.
+    /// </summary>
+    /// <param name="expected">The requested binding.</param>
+    /// <param name="create">Whether missing claim storage may be created.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The bound table name, or null when read-only storage is absent.</returns>
     internal async Task<string?> Resolve(V2Binding expected, bool create, CancellationToken cancellationToken)
     {
         if (create)
@@ -43,11 +79,6 @@ sealed class V2Schema(Func<DbContextOptions> createOptions)
         Verify(stored, expected);
         if (!await Exists(context, stored.Table)) throw new UniqueConstraintV2SchemaMismatch();
         return stored.Table;
-    }
-
-    internal static void Verify(V2Binding actual, V2Binding expected)
-    {
-        if (actual != expected) throw new UniqueConstraintV2SchemaMismatch();
     }
 
     async Task EnsureClaim(V2DbContext context, V2Binding expected, CancellationToken cancellationToken)

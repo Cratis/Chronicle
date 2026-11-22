@@ -14,21 +14,31 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 /// </summary>
 static class V2ClaimMigration
 {
+    /// <summary>
+    /// Creates a claim table and publishes its binding atomically.
+    /// </summary>
+    /// <param name="migrator">The table migrator.</param>
+    /// <param name="context">The schema context.</param>
+    /// <param name="binding">The logical and physical binding.</param>
+    /// <returns>The migration operation.</returns>
     internal static Task Create(ITableMigrator<V2DbContext> migrator, V2DbContext context, V2Binding binding)
     {
         var migration = new MigrationBuilder(context.Database.ProviderName);
-        migration.CreateTable(binding.Table, columns => new
-        {
-            Scope = columns.StringColumn(migration, maxLength: 32, nullable: false),
-            EventSourceId = columns.StringColumn(migration, maxLength: V2Identity.OwnerLimit, nullable: false),
-            Value = columns.StringColumn(migration, maxLength: 64, nullable: false),
-            SequenceNumber = columns.NumberColumn<decimal>(migration, nullable: false),
-            Subject = columns.StringColumn(migration, nullable: true)
-        }, constraints: constraints =>
-        {
-            if (binding.Mode == UniqueConstraintMode.PerValue) constraints.PrimaryKey($"PK_{binding.Table}", row => new { row.Scope, row.Value }).Annotation("SqlServer:Clustered", false);
-            else constraints.PrimaryKey($"PK_{binding.Table}", row => new { row.Scope, row.EventSourceId }).Annotation("SqlServer:Clustered", false);
-        });
+        migration.CreateTable(
+            binding.Table,
+            columns => new
+            {
+                Scope = columns.StringColumn(migration, maxLength: 32, nullable: false),
+                EventSourceId = columns.StringColumn(migration, maxLength: V2Identity.OwnerLimit, nullable: false),
+                Value = columns.StringColumn(migration, maxLength: 64, nullable: false),
+                SequenceNumber = columns.NumberColumn<decimal>(migration, nullable: false),
+                Subject = columns.StringColumn(migration, nullable: true)
+            },
+            constraints: constraints =>
+            {
+                if (binding.Mode == UniqueConstraintMode.PerValue) constraints.PrimaryKey($"PK_{binding.Table}", row => new { row.Scope, row.Value }).Annotation("SqlServer:Clustered", false);
+                else constraints.PrimaryKey($"PK_{binding.Table}", row => new { row.Scope, row.EventSourceId }).Annotation("SqlServer:Clustered", false);
+            });
         ConfigureTypes(context, migration);
         V2MetadataMigration.ApplyCollation(context, migration, "Scope", "Value", "EventSourceId");
         migration.CreateIndex($"IX_{binding.Table}_V", binding.Table, ["Scope", "Value"], unique: true);
@@ -40,7 +50,7 @@ static class V2ClaimMigration
     static void ConfigureTypes(V2DbContext context, MigrationBuilder migration)
     {
         var columns = migration.Operations.OfType<CreateTableOperation>().Single().Columns;
-        foreach (var column in columns.Where(column => column.Name is "Scope" or "Value"))
+        foreach (var column in columns.Where(column => string.Equals(column.Name, "Scope", StringComparison.Ordinal) || string.Equals(column.Name, "Value", StringComparison.Ordinal)))
         {
             column.ColumnType = context.Database.IsSqlite() ? "TEXT" : $"char({column.MaxLength})";
             column.IsUnicode = false;

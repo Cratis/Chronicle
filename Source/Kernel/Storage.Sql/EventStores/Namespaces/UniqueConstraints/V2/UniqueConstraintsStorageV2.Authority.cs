@@ -39,9 +39,9 @@ public sealed partial class UniqueConstraintsStorageV2
         }
     }
 
-    string AuthorityId(ConstraintName constraint) => V2Identity.Authority(eventSequenceId.Value, constraint.Value);
-
     static UniqueConstraintWriteAuthority Proof(V2Authority row) => new(new(row.Epoch), row.IsLive ? UniqueConstraintWritePhase.Live : UniqueConstraintWritePhase.Run(new(row.RunId!.Value)), new(row.Revision));
+
+    string AuthorityId(ConstraintName constraint) => V2Identity.Authority(eventSequenceId.Value, constraint.Value);
 
     async Task<V2Authority?> ReadAuthority(ConstraintName constraint, CancellationToken cancellationToken)
     {

@@ -26,10 +26,12 @@ public sealed partial class UniqueConstraintsStorageV2
         if (!next.IsSuccess) return Result<UniqueConstraintWriteAuthority, UniqueConstraintWriteFailure>.Failed(next.AsT1);
         var live = phase.RunId is null;
         var run = phase.RunId?.Value;
-        await Matching(context, constraint, expected).ExecuteUpdateAsync(setters => setters
-            .SetProperty(row => row.IsLive, live)
-            .SetProperty(row => row.RunId, run)
-            .SetProperty(row => row.Revision, next.AsT0.Value), cancellationToken);
+        await Matching(context, constraint, expected).ExecuteUpdateAsync(
+            setters => setters
+                .SetProperty(row => row.IsLive, live)
+                .SetProperty(row => row.RunId, run)
+                .SetProperty(row => row.Revision, next.AsT0.Value),
+            cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return Result<UniqueConstraintWriteAuthority, UniqueConstraintWriteFailure>.Success(expected with { Phase = phase, Revision = next.AsT0 });
     }

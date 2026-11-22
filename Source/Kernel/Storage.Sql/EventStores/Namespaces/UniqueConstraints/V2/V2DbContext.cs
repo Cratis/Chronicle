@@ -18,10 +18,29 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 [IgnoreConvention]
 sealed class V2DbContext(DbContextOptions options, string? table = null, UniqueConstraintMode mode = UniqueConstraintMode.PerEventSource) : BaseDbContext(options)
 {
+    /// <summary>
+    /// Gets the claim table name, or null for a metadata-only model.
+    /// </summary>
     internal string? Table => table;
+
+    /// <summary>
+    /// Gets the retention mode of the claim model.
+    /// </summary>
     internal UniqueConstraintMode Mode => mode;
+
+    /// <summary>
+    /// Gets the persisted authorities.
+    /// </summary>
     internal DbSet<V2Authority> Authorities => Set<V2Authority>();
+
+    /// <summary>
+    /// Gets the persisted logical bindings.
+    /// </summary>
     internal DbSet<V2Binding> Bindings => Set<V2Binding>();
+
+    /// <summary>
+    /// Gets the claims in the bound physical table.
+    /// </summary>
     internal DbSet<V2Claim> Claims => Set<V2Claim>();
 
     /// <inheritdoc/>
@@ -78,7 +97,7 @@ sealed class V2DbContext(DbContextOptions options, string? table = null, UniqueC
     void ConfigureClaims(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<V2Claim>();
-        entity.ToTable(table!);
+        entity.ToTable(table);
         if (mode == UniqueConstraintMode.PerValue) entity.HasKey(row => new { row.Scope, row.Value });
         else entity.HasKey(row => new { row.Scope, row.EventSourceId });
         entity.Property(row => row.Scope).HasMaxLength(32).IsUnicode(false).IsFixedLength();

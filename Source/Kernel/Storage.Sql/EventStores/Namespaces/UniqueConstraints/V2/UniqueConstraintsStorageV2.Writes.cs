@@ -38,9 +38,13 @@ public sealed partial class UniqueConstraintsStorageV2
         ValidateOwner(eventSourceId);
         ValidateScope(scope);
         ValidateValue(value);
-        return Mutate(definition, expected, context => definition.Mode == UniqueConstraintMode.PerValue
-            ? Delete(context.Claims.Where(row => row.Scope == scope.Value && row.Value == value.Value && row.EventSourceId == eventSourceId.Value), cancellationToken)
-            : Task.FromResult<UniqueConstraintWriteFailure?>(null), cancellationToken);
+        return Mutate(
+            definition,
+            expected,
+            context => definition.Mode == UniqueConstraintMode.PerValue
+                ? Delete(context.Claims.Where(row => row.Scope == scope.Value && row.Value == value.Value && row.EventSourceId == eventSourceId.Value), cancellationToken)
+                : Task.FromResult<UniqueConstraintWriteFailure?>(null),
+            cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -59,23 +63,6 @@ public sealed partial class UniqueConstraintsStorageV2
     public Task<Result<bool, UniqueConstraintWriteFailure>> RemoveForSubject(UniqueConstraintDefinition definition, Subject subject, UniqueConstraintWriteAuthority expected, CancellationToken cancellationToken = default) =>
         Mutate(definition, expected, context => DeleteSubject(context, subject, cancellationToken), cancellationToken);
 
-    async Task<Result<bool, UniqueConstraintWriteFailure>> Mutate(UniqueConstraintDefinition definition, UniqueConstraintWriteAuthority expected, Func<V2DbContext, Task<UniqueConstraintWriteFailure?>> write, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        ValidateAuthority(expected);
-        var failure = await CheckAuthority(definition.Name, expected, cancellationToken);
-        if (failure is not null) return Outcome(failure);
-        var table = await _schema.Resolve(Binding(definition), create: true, cancellationToken);
-        await using var context = _schema.Context(table, definition.Mode);
-        await using var transaction = await V2Transactions.Begin(context, cancellationToken);
-        failure = await Fence(context, definition.Name, expected, cancellationToken);
-        if (failure is not null) return Outcome(failure);
-        failure = await write(context);
-        if (failure is not null) return Outcome(failure);
-        await transaction.CommitAsync(cancellationToken);
-        return Outcome(null);
-    }
-
     static async Task<UniqueConstraintWriteFailure?> Delete(IQueryable<V2Claim> claims, CancellationToken cancellationToken)
     {
         await claims.ExecuteDeleteAsync(cancellationToken);
@@ -92,5 +79,22 @@ public sealed partial class UniqueConstraintsStorageV2
         }
 
         return null;
+    }
+
+    async Task<Result<bool, UniqueConstraintWriteFailure>> Mutate(UniqueConstraintDefinition definition, UniqueConstraintWriteAuthority expected, Func<V2DbContext, Task<UniqueConstraintWriteFailure?>> write, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateAuthority(expected);
+        var failure = await CheckAuthority(definition.Name, expected, cancellationToken);
+        if (failure is not null) return Outcome(failure);
+        var table = await _schema.Resolve(Binding(definition), create: true, cancellationToken);
+        await using var context = _schema.Context(table, definition.Mode);
+        await using var transaction = await V2Transactions.Begin(context, cancellationToken);
+        failure = await Fence(context, definition.Name, expected, cancellationToken);
+        if (failure is not null) return Outcome(failure);
+        failure = await write(context);
+        if (failure is not null) return Outcome(failure);
+        await transaction.CommitAsync(cancellationToken);
+        return Outcome(null);
     }
 }

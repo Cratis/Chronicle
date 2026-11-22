@@ -15,6 +15,7 @@ public sealed partial class UniqueConstraintsStorageV2
         if (await claimedValue.AnyAsync(cancellationToken))
         {
             if (!await claimedValue.AnyAsync(row => row.EventSourceId == claim.EventSourceId, cancellationToken)) return UniqueConstraintWriteFailure.ConflictingClaim;
+
             // A repeat changes only subject metadata; the original sequence belongs to the claim.
             await claimedValue.ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Subject, claim.Subject), cancellationToken);
             return null;

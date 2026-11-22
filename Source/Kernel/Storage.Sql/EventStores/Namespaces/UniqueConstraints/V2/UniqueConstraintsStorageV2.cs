@@ -27,12 +27,6 @@ public sealed partial class UniqueConstraintsStorageV2(EventSequenceId eventSequ
 {
     readonly V2Schema _schema = new(createOptions);
 
-    V2Binding Binding(UniqueConstraintDefinition definition)
-    {
-        var id = V2Identity.Binding(eventSequenceId.Value, definition.Name.Value, definition.Mode);
-        return new(id, eventSequenceId.Value, definition.Name.Value, definition.Mode, V2Identity.Table(id, definition.Mode));
-    }
-
     static void ValidateAuthority(UniqueConstraintWriteAuthority authority)
     {
         if (authority is null || authority.Phase is null) throw new InvalidUniqueConstraintV2Input(nameof(UniqueConstraintWriteAuthority));
@@ -59,4 +53,10 @@ public sealed partial class UniqueConstraintsStorageV2(EventSequenceId eventSequ
     static Result<bool, UniqueConstraintWriteFailure> Outcome(UniqueConstraintWriteFailure? failure) => failure is null
         ? Result<bool, UniqueConstraintWriteFailure>.Success(true)
         : Result<bool, UniqueConstraintWriteFailure>.Failed(failure.Value);
+
+    V2Binding Binding(UniqueConstraintDefinition definition)
+    {
+        var id = V2Identity.Binding(eventSequenceId.Value, definition.Name.Value, definition.Mode);
+        return new(id, eventSequenceId.Value, definition.Name.Value, definition.Mode, V2Identity.Table(id, definition.Mode));
+    }
 }
