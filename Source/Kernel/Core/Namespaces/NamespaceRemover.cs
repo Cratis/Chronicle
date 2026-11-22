@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Namespaces;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Namespaces;
@@ -22,7 +23,7 @@ public class NamespaceRemover(
     IStorage storage,
     IReminderTable reminderTable,
     ILogger<NamespaceRemover> logger,
-    INamespaceCasing namespaceCasing) : INamespaceRemover
+    INamespaceCasing namespaceCasing) : INamespaceRemover, INamespaceRemovalSteps
 {
     const string ObserverGrainType = "observer";
     const int MaxRemovalAttempts = 5;
@@ -31,46 +32,27 @@ public class NamespaceRemover(
     /// <inheritdoc/>
     public async Task Remove(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
-        // Storage may match names to an existing database regardless of case, so a case variant of the default
-        // namespace stands for it as well.
-        if (string.Equals(@namespace.Value, EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new NamespaceCannotBeRemoved(eventStore, @namespace);
-        }
-
+        GuardDefaultNamespace(eventStore, @namespace);
         logger.RemovingNamespace(eventStore, @namespace);
-        var eventStoreStorage = storage.GetEventStore(eventStore);
-        var namespaceStorage = eventStoreStorage.GetNamespace(@namespace);
-
-        // A name with a comma can no longer be added, so once it stops being listed none of its grains can activate
-        // again - not even to be removed. Its observers are therefore removed while it is still listed.
-        var activatesOnlyWhileListed = NamespaceNameRules.ContainsComma(@namespace.Value);
-        if (activatesOnlyWhileListed)
-        {
-            await RemoveObservers(eventStore, @namespace, eventStoreStorage, namespaceStorage);
-        }
-
-        // Any other namespace stops being listed first. The subscriptions between event stores re-subscribe the
-        // forwarding observers of every listed namespace once a minute, which would otherwise subscribe an observer
-        // again between it being unsubscribed and removed.
-        await grainFactory.GetGrain<INamespaces>(eventStore).Forget(@namespace);
-
-        if (activatesOnlyWhileListed)
-        {
-            // An observer subscribed again before the namespace stopped being listed cannot activate to be removed
-            // now. Its reminders would only wake it to fail, so they are removed from the reminder table directly.
-            await RemoveRemindersOf(eventStore, @namespace);
-        }
-        else
-        {
-            await RemoveObservers(eventStore, @namespace, eventStoreStorage, namespaceStorage);
-        }
-
-        await eventStoreStorage.DropNamespace(@namespace);
-        await eventStoreStorage.Namespaces.Delete(@namespace);
-        namespaceCasing.Forget(eventStore, @namespace);
-
+        await Execute(eventStore, @namespace, NamespaceRemovalStage.Forget);
+        await Execute(eventStore, @namespace, NamespaceRemovalStage.Cleanup);
+        await Execute(eventStore, @namespace, NamespaceRemovalStage.Drop);
+        await Execute(eventStore, @namespace, NamespaceRemovalStage.DeleteListing);
         logger.RemovedNamespace(eventStore, @namespace);
+    }
+
+    /// <inheritdoc/>
+    public Task Execute(EventStoreName eventStore, EventStoreNamespaceName @namespace, NamespaceRemovalStage stage)
+    {
+        GuardDefaultNamespace(eventStore, @namespace);
+        return stage switch
+        {
+            NamespaceRemovalStage.Forget => Forget(eventStore, @namespace),
+            NamespaceRemovalStage.Cleanup => Cleanup(eventStore, @namespace),
+            NamespaceRemovalStage.Drop => storage.GetEventStore(eventStore).DropNamespace(@namespace),
+            NamespaceRemovalStage.DeleteListing => DeleteListing(eventStore, @namespace),
+            _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, "The lifecycle owner must handle this checkpoint.")
+        };
     }
 
     /// <summary>
@@ -93,6 +75,16 @@ public class NamespaceRemover(
         }
     }
 
+    static void GuardDefaultNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        // Storage may match names to an existing database regardless of case, so a case variant of the default
+        // namespace stands for it as well.
+        if (string.Equals(@namespace.Value, EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NamespaceCannotBeRemoved(eventStore, @namespace);
+        }
+    }
+
     static async Task UnsubscribeAndRemove(IObserver observer)
     {
         for (var attempt = 1; ; attempt++)
@@ -111,8 +103,37 @@ public class NamespaceRemover(
         }
     }
 
-    async Task RemoveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace, IEventStoreStorage eventStoreStorage, IEventStoreNamespaceStorage namespaceStorage)
+    async Task Forget(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
+        // A comma-containing legacy name cannot activate once unlisted, even to remove its observers.
+        if (NamespaceNameRules.ContainsComma(@namespace.Value))
+        {
+            await RemoveObservers(eventStore, @namespace);
+        }
+
+        // Ordinary names stop being listed before cleanup, preventing forwarding subscriptions from reappearing.
+        await grainFactory.GetGrain<INamespaces>(eventStore).Forget(@namespace);
+    }
+
+    Task Cleanup(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        // Legacy observers cannot activate now, so remove any remaining reminders directly.
+        return NamespaceNameRules.ContainsComma(@namespace.Value)
+            ? RemoveRemindersOf(eventStore, @namespace)
+            : RemoveObservers(eventStore, @namespace);
+    }
+
+    async Task DeleteListing(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        await storage.GetEventStore(eventStore).Namespaces.Delete(@namespace);
+        namespaceCasing.Forget(eventStore, @namespace);
+    }
+
+    async Task RemoveObservers(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var namespaceStorage = eventStoreStorage.GetNamespace(@namespace);
+
         // Every observer of the namespace is unsubscribed and removed. Removing an observer is what also removes its
         // reminders - left behind, they wake the observer at the next start and bring the namespace back.
         var definitions = (await eventStoreStorage.Observers.GetAll()).ToDictionary(_ => _.Identifier, _ => _.EventSequenceId);
