@@ -330,6 +330,7 @@ public static class ProjectionEventContextExtensions
         ExpandoObject? childInitialState,
         ChildrenOrdering? ordering)
     {
+        childrenProperty = ResolvedCollectionPath.ForChild(childrenProperty, context.Key.ArrayIndexers);
         if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
         {
             return;

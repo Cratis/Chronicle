@@ -246,7 +246,8 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         var resolvedParentKey = (resolvedParentKeyResult as ResolvedKey)!.Key;
         parentKey = resolvedParentKey;
 
-        var arrayIndexers = BuildArrayIndexers(resolvedParentKey, projection.ChildrenPropertyPath, identifiedByProperty, key.Value);
+        var childrenPath = ResolvedCollectionPath.ForParent(projection, resolvedParentKey);
+        var arrayIndexers = BuildArrayIndexers(resolvedParentKey, childrenPath, identifiedByProperty, key.Value);
 
         logger.FromParentHierarchyResult(parentKey.Value, arrayIndexers.Count);
 
@@ -745,11 +746,12 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     }
 
     async Task<KeyResolverResult> ResolveParentKeyFromEvent(
-        IProjection parentProjection,
+        IProjection projection,
         AppendedEvent parentEvent,
         Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
         Storage.Sinks.ISink sink)
     {
+        var parentProjection = RecursiveChildProjections.OwnerOf(projection, parentEvent.Context.EventType.Id);
         var eventType = parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
         var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
         if (parentProjection.GenerationDelivery == EventGenerationDelivery.Pinned)
