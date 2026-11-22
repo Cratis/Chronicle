@@ -73,13 +73,6 @@ internal sealed class UnpartitionedGates
         }
     }
 
-    sealed class Entry
-    {
-        public SemaphoreSlim Gate { get; } = new(1, 1);
-
-        public int Leases { get; set; }
-    }
-
     /// <summary>
     /// A claim on a gate; the gate is kept for as long as any lease on it is undisposed.
     /// </summary>
@@ -95,12 +88,12 @@ internal sealed class UnpartitionedGates
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> for cancelling the wait.</param>
         /// <returns>A <see cref="Task"/> that completes when the caller is inside.</returns>
-        internal Task Enter(CancellationToken cancellationToken) => ((Entry)entry).Gate.WaitAsync(cancellationToken);
+        public Task Enter(CancellationToken cancellationToken) => ((Entry)entry).Gate.WaitAsync(cancellationToken);
 
         /// <summary>
         /// Leaves the gate so the next caller can enter.
         /// </summary>
-        internal void Exit() => ((Entry)entry).Gate.Release();
+        public void Exit() => ((Entry)entry).Gate.Release();
 
         /// <inheritdoc/>
         public void Dispose()
@@ -110,5 +103,12 @@ internal sealed class UnpartitionedGates
                 owner.Release(key, (Entry)entry);
             }
         }
+    }
+
+    sealed class Entry
+    {
+        public SemaphoreSlim Gate { get; } = new(1, 1);
+
+        public int Leases { get; set; }
     }
 }
