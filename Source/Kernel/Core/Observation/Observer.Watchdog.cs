@@ -264,7 +264,7 @@ public partial class Observer
         // Routing defers an explicitly typed replay with no event types, so a deferred replay owns no job yet.
         // An observer already in Replay can still own one, so a missing job is recovered through Routing.
         if (State.IsReplaying &&
-            (_subscription.EventTypes.Any() || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
+            (_subscription.EventTypes.Count > 0 || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
         {
             // Removing jobs still drain and own their work (#5378).
             var replayJobs = await _jobsManager.GetOutstandingJobsOf<IReplayObserver>();

@@ -76,6 +76,12 @@ public sealed class EventTypeSet : IReadOnlyList<EventType>, IEquatable<EventTyp
     public EventType this[int index] => _types[index];
 
     /// <summary>
+    /// Implicitly converts an array of event types to a set.
+    /// </summary>
+    /// <param name="eventTypes">The event types.</param>
+    public static implicit operator EventTypeSet(EventType[] eventTypes) => From(eventTypes);
+
+    /// <summary>
     /// Gets the shared set for an ordered list of event types.
     /// </summary>
     /// <param name="eventTypes">The event types.</param>
@@ -97,12 +103,6 @@ public sealed class EventTypeSet : IReadOnlyList<EventType>, IEquatable<EventTyp
     /// <param name="eventTypes">The event types.</param>
     /// <returns>The <see cref="EventTypeSet"/>.</returns>
     public static EventTypeSet Create(ReadOnlySpan<EventType> eventTypes) => From(eventTypes.ToArray());
-
-    /// <summary>
-    /// Implicitly converts an array of event types to a set.
-    /// </summary>
-    /// <param name="eventTypes">The event types.</param>
-    public static implicit operator EventTypeSet(EventType[] eventTypes) => From(eventTypes);
 
     /// <summary>
     /// Gets whether the set holds an event type with the identifier.

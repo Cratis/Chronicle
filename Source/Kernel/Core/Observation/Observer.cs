@@ -844,7 +844,7 @@ public partial class Observer(
         state is Disconnected &&
         !_recoverSubscriptionAfterQuarantine &&
         _subscription.IsSubscribed &&
-        !_subscription.EventTypes.Any() &&
+        _subscription.EventTypes.Count == 0 &&
         !State.SubscribesToAllEvents;
 
     async Task Deactivate(DeactivationReason reason, CancellationToken cancellationToken)
