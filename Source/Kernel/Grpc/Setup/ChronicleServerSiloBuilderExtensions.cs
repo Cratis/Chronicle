@@ -166,6 +166,7 @@ public static class ChronicleServerSiloBuilderExtensions
         });
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Federation.FederationConsumerKeeper>();
+
         // One supervisor per silo, shared by every grain and by the silo lifecycle. It is registered explicitly, and replaces
         // what convention binding may have registered for the interface, so the lifecycle starts the instance the grains use.
         builder.Services.Replace(ServiceDescriptor.Singleton<Cratis.Chronicle.Supervision.SiloSupervisor, Cratis.Chronicle.Supervision.SiloSupervisor>());
