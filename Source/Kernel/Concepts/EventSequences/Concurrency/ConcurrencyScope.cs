@@ -14,13 +14,15 @@ namespace Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 /// <param name="EventStreamId">Optional <see cref="EventStreamId"/> to scope to. If not set, it will not be used.</param>
 /// <param name="EventSourceType">Optional <see cref="EventSourceType"/> to scope to. If not set, it will not be used.</param>
 /// <param name="EventTypes">Optional collection of <see cref="EventType"/> to scope to. If not set, it will not be used.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.EventSequences.Concurrency.ConcurrencyScope")]
 public record ConcurrencyScope(
-    EventSequenceNumber SequenceNumber,
-    bool EventSourceId,
-    EventStreamType? EventStreamType,
-    EventStreamId? EventStreamId,
-    EventSourceType? EventSourceType,
-    IEnumerable<EventType>? EventTypes)
+    [Id(0)] EventSequenceNumber SequenceNumber,
+    [Id(1)] bool EventSourceId,
+    [Id(2)] EventStreamType? EventStreamType,
+    [Id(3)] EventStreamId? EventStreamId,
+    [Id(4)] EventSourceType? EventSourceType,
+    [Id(5)] IEnumerable<EventType>? EventTypes)
 {
     /// <summary>
     /// Represents a concurrency scope that has not been specified yet.
@@ -48,6 +50,7 @@ public record ConcurrencyScope(
     /// Gets the mutation epoch of the event sequence observed when a decision read was taken. When set, the append
     /// is refused if a revision or redaction has changed the history since.
     /// </summary>
+    [Id(6)]
     public EventSequenceMutationEpoch? MutationEpoch { get; init; }
 
     /// <summary>

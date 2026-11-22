@@ -9,27 +9,33 @@ namespace Cratis.Chronicle.Observation;
 /// Represents the context for an observer subscriber.
 /// </summary>
 /// <param name="Metadata">Optional metadata associated.</param>
-public record ObserverSubscriberContext(object? Metadata)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverSubscriberContext")]
+public record ObserverSubscriberContext([Id(0)] object? Metadata)
 {
     /// <summary>
     /// Gets the deadline after which the caller no longer accepts a result.
     /// </summary>
+    [Id(1)]
     public DateTimeOffset? DeliverBy { get; init; }
 
     /// <summary>
     /// Gets the deadline after which the subscriber stops holding the abandoned call open.
     /// </summary>
+    [Id(2)]
     public DateTimeOffset? AbandonAt { get; init; }
 
     /// <summary>
     /// Gets the path the events being delivered came from.
     /// </summary>
+    [Id(3)]
     public ObservationOrigin Origin { get; init; }
 
     /// <summary>
     /// Gets the replay operation that scheduled the delivery, or null for live and catch-up deliveries.
     /// It is an input of the deterministic webhook message id (see <c language="csharp">WebhookMessageIds</c>).
     /// </summary>
+    [Id(4)]
     public ReplayEpoch? ReplayEpoch { get; init; }
 
     /// <summary>

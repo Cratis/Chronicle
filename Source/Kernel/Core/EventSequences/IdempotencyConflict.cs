@@ -14,4 +14,6 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="StoredEventType">The original type and generation, retained after redaction.</param>
 /// <param name="RequestedGeneration">The retry's requested generation.</param>
 /// <param name="Reason">The comparison refusal.</param>
-public record IdempotencyConflict(IdempotencyKey Key, EventSequenceNumber ExistingSequenceNumber, EventType StoredEventType, EventTypeGeneration RequestedGeneration, IdempotencyConflictReason Reason);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.IdempotencyConflict")]
+public record IdempotencyConflict([Id(0)] IdempotencyKey Key, [Id(1)] EventSequenceNumber ExistingSequenceNumber, [Id(2)] EventType StoredEventType, [Id(3)] EventTypeGeneration RequestedGeneration, [Id(4)] IdempotencyConflictReason Reason);

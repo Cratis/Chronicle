@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// <param name="Properties">Property name to expression, including counter expressions such as "$increment".</param>
 /// <param name="UpdateOnly">Whether the event only sets properties on a node that already exists, instead of creating it.</param>
 /// <param name="ForEach">Optional collection property of the event; the mapping runs once per item and expressions address the item as <c language="csharp">collection.property</c>.</param>
-public record GraphNodeFromDefinition(PropertyExpression Key, IDictionary<string, string> Properties, bool UpdateOnly = false, PropertyExpression? ForEach = null);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition")]
+public record GraphNodeFromDefinition([Id(0)] PropertyExpression Key, [Id(1)] IDictionary<string, string> Properties, [Id(2)] bool UpdateOnly = false, [Id(3)] PropertyExpression? ForEach = null);

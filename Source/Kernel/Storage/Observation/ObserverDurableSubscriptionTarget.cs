@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// </summary>
 /// <param name="ConnectionId">The identifier of the client connection.</param>
 /// <param name="Silo">The parsable address of the silo that terminates the connection.</param>
-public record ObserverDurableSubscriptionTarget(string ConnectionId, string Silo);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionTarget")]
+public record ObserverDurableSubscriptionTarget([Id(0)] string ConnectionId, [Id(1)] string Silo);

@@ -8,6 +8,8 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// </summary>
 /// <param name="From">Mappings that create or update nodes, keyed by event type.</param>
 /// <param name="RemovedWith">Mappings that delete nodes, keyed by event type.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition")]
 public record GraphNodeProjectionDefinition(
-    IDictionary<string, GraphNodeFromDefinition> From,
-    IDictionary<string, GraphNodeRemovedWithDefinition> RemovedWith);
+    [Id(0)] IDictionary<string, GraphNodeFromDefinition> From,
+    [Id(1)] IDictionary<string, GraphNodeRemovedWithDefinition> RemovedWith);

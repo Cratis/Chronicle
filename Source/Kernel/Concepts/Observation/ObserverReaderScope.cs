@@ -24,7 +24,10 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// </remarks>
 /// <param name="IsWildcard">Whether the scope reads every event type.</param>
 /// <param name="EventTypes">The event types an explicit scope reads. Always empty for a wildcard scope.</param>
-public record ObserverReaderScope(bool IsWildcard, IReadOnlyList<EventType> EventTypes)
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.ObserverReaderScope")]
+public record ObserverReaderScope([Id(0)] bool IsWildcard, [Id(1)] IReadOnlyList<EventType> EventTypes)
 {
     /// <summary>
     /// Gets the scope that reads every event type.

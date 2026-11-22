@@ -15,11 +15,13 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="EventSourceType">The optional event source type.</param>
 /// <param name="EventStreamType">The optional event stream type.</param>
 /// <param name="EventStreamId">The optional event stream identifier.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Seeding.SeedingEntry")]
 public record SeedingEntry(
-    EventSourceId EventSourceId,
-    EventTypeId EventTypeId,
-    string Content,
-    IEnumerable<Tag>? Tags,
-    EventSourceType? EventSourceType = default,
-    EventStreamType? EventStreamType = default,
-    EventStreamId? EventStreamId = default);
+    [Id(0)] EventSourceId EventSourceId,
+    [Id(1)] EventTypeId EventTypeId,
+    [Id(2)] string Content,
+    [Id(3)] IEnumerable<Tag>? Tags,
+    [Id(4)] EventSourceType? EventSourceType = default,
+    [Id(5)] EventStreamType? EventStreamType = default,
+    [Id(6)] EventStreamId? EventStreamId = default);

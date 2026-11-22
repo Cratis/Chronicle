@@ -9,38 +9,47 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <summary>
 /// Holds the state for the job to recover a failed partition.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.FailedPartition")]
 public class FailedPartition
 {
+    [Id(13)]
     List<FailedPartitionAttempt> _attempts = [];
 
     /// <summary>
     /// Gets or sets the explicit webhook receiver policy, absent on legacy failures.
     /// </summary>
+    [Id(0)]
     public WebhookFailureDisposition? WebhookDisposition { get; set; }
 
     /// <summary>
     /// Gets or sets the last automatic recovery that reset this episode's budget.
     /// </summary>
+    [Id(1)]
     public Guid? WebhookRecoveryId { get; set; }
 
     /// <summary>
     /// Gets or sets the replay operation that produced the failure, absent for live and catch-up failures.
     /// </summary>
+    [Id(2)]
     public ReplayEpoch? ReplayEpoch { get; set; }
 
     /// <summary>
     /// Unique identifier of the failed partition.
     /// </summary>
+    [Id(3)]
     public FailedPartitionId Id { get; set; } = FailedPartitionId.New();
 
     /// <summary>
     /// Gets or sets the partition that is failed.
     /// </summary>
+    [Id(4)]
     public Key Partition { get; set; } = Key.Undefined;
 
     /// <summary>
     /// Gets or sets the <see cref="ObserverId"/> for which this is a failed partition.
     /// </summary>
+    [Id(5)]
     public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
 
     /// <summary>
@@ -55,42 +64,49 @@ public class FailedPartition
     /// <summary>
     /// Gets or sets whether the failure is resolved.
     /// </summary>
+    [Id(6)]
     public bool IsResolved { get; set; }
 
     /// <summary>
     /// Gets or sets whether the partition has been quarantined after exceeding the maximum retry attempts.
     /// A quarantined partition will not be retried automatically until explicitly cleared.
     /// </summary>
+    [Id(7)]
     public bool IsQuarantined { get; set; }
 
     /// <summary>
     /// Gets or sets how many of <see cref="Attempts"/> were made before the retry budget was last reset.
     /// Clearing the quarantine of a partition starts a new retry budget without discarding the attempt history.
     /// </summary>
+    [Id(8)]
     public int AttemptsBeforeBudgetReset { get; set; }
 
     /// <summary>
     /// Gets or sets the exact recovery cursor, or null for an entry written before initialization.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Id(9)]
     public FailedPartitionRecoveryCursor? RecoveryCursor { get; set; }
 
     /// <summary>
     /// Gets or sets the recovery owner, assigned only when initialized recovery work starts.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Id(10)]
     public FailedPartitionRecoveryOwner? RecoveryOwner { get; set; }
 
     /// <summary>
     /// Gets or sets the handler hold, independently of the attempt history and quarantine budget.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Id(11)]
     public FailedPartitionHold? Hold { get; set; }
 
     /// <summary>
     /// Gets or sets the durable deadline for the next delivery, independently of attempts.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Id(12)]
     public PartitionDeferral? Deferral { get; set; }
 
     /// <summary>

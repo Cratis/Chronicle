@@ -15,9 +15,11 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="IdempotencyKey">The idempotency key from the source, if any.</param>
 /// <param name="CorrelationId">The correlation identifier from the source, if any.</param>
 /// <param name="CausedBy">The identity that caused the event in the source, if any.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportEventToAppend")]
 public record ImportEventToAppend(
-    long Index,
-    EventToAppend Event,
-    IdempotencyKey? IdempotencyKey,
-    CorrelationId? CorrelationId,
-    Identity? CausedBy);
+    [Id(0)] long Index,
+    [Id(1)] EventToAppend Event,
+    [Id(2)] IdempotencyKey? IdempotencyKey,
+    [Id(3)] CorrelationId? CorrelationId,
+    [Id(4)] Identity? CausedBy);

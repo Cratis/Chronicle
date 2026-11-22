@@ -7,10 +7,11 @@ namespace Cratis.Chronicle.Setup.Serialization.for_KernelSerializers;
 
 public class when_round_tripping_every_grain_payload : given.the_kernel_serializers
 {
-    // What the JSON codec does not carry today: AppendedEvent.ErasedProperties (the AppendedEvent serializer leaves it out) and
-    // Key.ArrayIndexers (the Key converter writes the value only). A serializer that keeps them is better, never worse.
-    static readonly string[] _membersTheJsonCodecDropsToday = ["ErasedProperties", "ArrayIndexers"];
-    given.PayloadComparer comparer;
+    /// <summary>
+    /// AppendedEvent.ErasedProperties is derived data that has never been part of what travels between grains.
+    /// </summary>
+    static readonly string[] _membersThatDoNotTravel = ["ErasedProperties"];
+    given.PayloadComparer _comparer;
     IReadOnlyList<Type> _payloads;
     IReadOnlyList<string> _unresolved;
     List<string> _lostBetweenSilos;
@@ -19,7 +20,7 @@ public class when_round_tripping_every_grain_payload : given.the_kernel_serializ
 
     void Because()
     {
-        comparer = new given.PayloadComparer(_membersTheJsonCodecDropsToday);
+        _comparer = new given.PayloadComparer(_membersThatDoNotTravel);
         (_payloads, _unresolved) = given.PayloadManifest.Read();
         _lostBetweenSilos = [];
         _lostWithinSilo = [];
@@ -60,7 +61,7 @@ public class when_round_tripping_every_grain_payload : given.the_kernel_serializ
         try
         {
             var result = transport(type, original);
-            var differences = comparer.Differences(original, result);
+            var differences = _comparer.Differences(original, result);
             if (differences.Count > 0)
             {
                 failures.Add($"{type.FullName}: {string.Join("; ", differences.Take(3))}");

@@ -36,33 +36,36 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="SubscribesToAllEvents">Whether the projection subscribes to all event types in the system.</param>
 /// <param name="NoAutoMapProperties">Read model properties excluded from auto-mapping even when <paramref name="AutoMap"/> is enabled.</param>
 /// <param name="Scope">The <see cref="ProjectionScope"/> the projection materializes its read model in.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition")]
 public record ProjectionDefinition(
-    ProjectionOwner Owner,
-    EventSequenceId EventSequenceId,
-    ProjectionId Identifier,
-    ReadModelIdentifier ReadModel,
-    bool IsActive,
-    bool IsRewindable,
-    JsonObject InitialModelState,
-    IDictionary<EventType, FromDefinition> From,
-    IDictionary<EventType, JoinDefinition> Join,
-    IDictionary<PropertyPath, ChildrenDefinition> Children,
-    IEnumerable<FromDerivatives> FromDerivatives,
-    FromEveryDefinition FromEvery,
-    IDictionary<EventType, RemovedWithDefinition> RemovedWith,
-    IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
-    FromEventPropertyDefinition? FromEventProperty = default,
-    DateTimeOffset? LastUpdated = default,
-    IEnumerable<string>? Tags = default,
-    AutoMap AutoMap = AutoMap.Enabled,
-    IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
-    bool SubscribesToAllEvents = false,
-    IEnumerable<PropertyPath>? NoAutoMapProperties = default,
-    ProjectionScope Scope = ProjectionScope.Namespaced)
+    [Id(0)] ProjectionOwner Owner,
+    [Id(1)] EventSequenceId EventSequenceId,
+    [Id(2)] ProjectionId Identifier,
+    [Id(3)] ReadModelIdentifier ReadModel,
+    [Id(4)] bool IsActive,
+    [Id(5)] bool IsRewindable,
+    [Id(6)] JsonObject InitialModelState,
+    [Id(7)] IDictionary<EventType, FromDefinition> From,
+    [Id(8)] IDictionary<EventType, JoinDefinition> Join,
+    [Id(9)] IDictionary<PropertyPath, ChildrenDefinition> Children,
+    [Id(10)] IEnumerable<FromDerivatives> FromDerivatives,
+    [Id(11)] FromEveryDefinition FromEvery,
+    [Id(12)] IDictionary<EventType, RemovedWithDefinition> RemovedWith,
+    [Id(13)] IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
+    [Id(14)] FromEventPropertyDefinition? FromEventProperty = default,
+    [Id(15)] DateTimeOffset? LastUpdated = default,
+    [Id(16)] IEnumerable<string>? Tags = default,
+    [Id(17)] AutoMap AutoMap = AutoMap.Enabled,
+    [Id(18)] IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
+    [Id(19)] bool SubscribesToAllEvents = false,
+    [Id(20)] IEnumerable<PropertyPath>? NoAutoMapProperties = default,
+    [Id(21)] ProjectionScope Scope = ProjectionScope.Namespaced)
 {
     /// <summary>
     /// Gets the event generation delivery policy. Compatibility preserves identifier-only dispatch.
     /// </summary>
+    [Id(22)]
     public EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
@@ -72,6 +75,7 @@ public record ProjectionDefinition(
     /// Additive: a definition without graph mappings behaves exactly as before.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Id(23)]
     public Graphs.GraphProjectionDefinition? Graph { get; init; }
 
     /// <summary>
@@ -81,6 +85,7 @@ public record ProjectionDefinition(
     /// Metadata, not structure: it is ignored when comparing definitions, so a version change alone never evolves
     /// the projection. It exists so a registration from an older version can be told apart from a newer one.
     /// </remarks>
+    [Id(24)]
     public string? Version { get; init; }
 
     /// <summary>
@@ -91,6 +96,7 @@ public record ProjectionDefinition(
     /// including every-event settings in children and nested projections. A fresh registration supplies them
     /// without evolution; the next lossless save removes this uncertainty.
     /// </remarks>
+    [Id(25)]
     public bool HasLegacyStorageFields { get; init; }
 
     /// <summary>

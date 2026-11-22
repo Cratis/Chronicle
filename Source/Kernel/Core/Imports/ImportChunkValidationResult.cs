@@ -11,7 +11,9 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="Rejections">The events of the chunk that would break a constraint.</param>
 /// <param name="MustRestart">True when the import's claims are gone or an index is unavailable, and validation must start over.</param>
 /// <param name="MustWait">True when the event sequence already validates as many imports as it keeps claims for; the import validates nothing yet and starts again later.</param>
-public record ImportChunkValidationResult(IEnumerable<ImportRejection> Rejections, bool MustRestart = false, bool MustWait = false)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportChunkValidationResult")]
+public record ImportChunkValidationResult([Id(0)] IEnumerable<ImportRejection> Rejections, [Id(1)] bool MustRestart = false, [Id(2)] bool MustWait = false)
 {
     /// <summary>
     /// Gets the result telling the validation to start over from the first chunk.

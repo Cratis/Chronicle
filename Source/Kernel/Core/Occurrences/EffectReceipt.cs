@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="EffectKey">The nonempty effect name chosen by the handler.</param>
 /// <param name="Epoch">The lease epoch that executed the effect.</param>
 /// <param name="Response">The verbatim JSON response, at most 64 KiB UTF-8; never personal data.</param>
-public record EffectReceipt(string OccurrenceId, string EffectKey, long Epoch, string? Response = null);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Occurrences.EffectReceipt")]
+public record EffectReceipt([Id(0)] string OccurrenceId, [Id(1)] string EffectKey, [Id(2)] long Epoch, [Id(3)] string? Response = null);

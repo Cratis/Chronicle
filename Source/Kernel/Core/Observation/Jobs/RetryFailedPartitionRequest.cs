@@ -15,25 +15,30 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="Key"><see cref="Key">Partition</see> to retry.</param>
 /// <param name="FromSequenceNumber">From <see cref="EventSequenceNumber"/> to retry.</param>
 /// <param name="EventTypes">The event types to replay.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.Jobs.RetryFailedPartitionRequest")]
 public record RetryFailedPartitionRequest(
-    ObserverKey ObserverKey,
-    ObserverType ObserverType,
-    Key Key,
-    EventSequenceNumber FromSequenceNumber,
-    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key)
+    [Id(0)] ObserverKey ObserverKey,
+    [Id(1)] ObserverType ObserverType,
+    [Id(2)] Key Key,
+    [Id(3)] EventSequenceNumber FromSequenceNumber,
+    [Id(4)] IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key)
 {
     /// <summary>
     /// Gets the failure episode that owns the recovery, or null for a legacy job.
     /// </summary>
+    [Id(5)]
     public FailedPartitionId? EpisodeId { get; init; }
 
     /// <summary>
     /// Gets the deferral that owns the recovery, or null when not deferred.
     /// </summary>
+    [Id(6)]
     public Guid? DeferralId { get; init; }
 
     /// <summary>
     /// Gets the replay operation that produced the failure being recovered, or null.
     /// </summary>
+    [Id(7)]
     public ReplayEpoch? ReplayEpoch { get; init; }
 }

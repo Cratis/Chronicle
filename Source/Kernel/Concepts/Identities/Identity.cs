@@ -13,7 +13,9 @@ namespace Cratis.Chronicle.Concepts.Identities;
 /// <remarks>
 /// An identity can be a user, a system, a service or anything else that can be identified.
 /// </remarks>
-public record Identity(string Subject, string Name, string UserName = "", Identity? OnBehalfOf = default)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Identities.Identity")]
+public record Identity([Id(0)] string Subject, [Id(1)] string Name, [Id(2)] string UserName = "", [Id(3)] Identity? OnBehalfOf = default)
 {
     /// <summary>
     /// The identity used when not set.

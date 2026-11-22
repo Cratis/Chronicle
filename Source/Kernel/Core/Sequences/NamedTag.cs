@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Sequences;
 /// </summary>
 /// <param name="Name">The name of the tag.</param>
 /// <param name="Value">The exact value of the tag.</param>
-public record NamedTag(string Name, string Value);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Sequences.NamedTag")]
+public record NamedTag([Id(0)] string Name, [Id(1)] string Value);

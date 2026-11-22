@@ -8,11 +8,11 @@ using Cratis.Chronicle.Storage.Observation;
 namespace Cratis.Chronicle.Setup.Serialization.for_KernelSerializers.given;
 
 /// <summary>
-/// Reads the kernel types that travel between grains from <c>GrainPayloadContracts.txt</c>.
+/// Reads the kernel types that travel between grains from the committed payload manifest.
 /// </summary>
 public static class PayloadManifest
 {
-    static readonly string[] _structuredKinds = ["json", "orleans"];
+    static readonly string[] _structuredKinds = ["json", "orleans", "custom"];
 
     /// <summary>
     /// Gets the kernel types in the manifest that are written as structures, which is what a serializer for a payload type has to carry.

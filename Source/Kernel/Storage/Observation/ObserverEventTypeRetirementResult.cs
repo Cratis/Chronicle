@@ -14,9 +14,11 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Outcome">The final result.</param>
 /// <param name="Incarnation">The removed incarnation, only for a successful retirement.</param>
 /// <param name="DeclaringConnections">The connected declarations that refused retirement.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverEventTypeRetirementResult")]
 public record ObserverEventTypeRetirementResult(
-    Guid OperationId,
-    EventTypeId EventTypeId,
-    ObserverEventTypeRetirementOutcome Outcome,
-    ObserverTypeSetRevision? Incarnation,
-    IReadOnlyList<ConnectionId> DeclaringConnections);
+    [Id(0)] Guid OperationId,
+    [Id(1)] EventTypeId EventTypeId,
+    [Id(2)] ObserverEventTypeRetirementOutcome Outcome,
+    [Id(3)] ObserverTypeSetRevision? Incarnation,
+    [Id(4)] IReadOnlyList<ConnectionId> DeclaringConnections);

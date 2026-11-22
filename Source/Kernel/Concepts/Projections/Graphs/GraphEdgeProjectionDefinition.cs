@@ -8,6 +8,8 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// </summary>
 /// <param name="From">Mappings that create or update edges, keyed by event type.</param>
 /// <param name="RemovedWith">Mappings that delete edges, keyed by event type.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition")]
 public record GraphEdgeProjectionDefinition(
-    IDictionary<string, GraphEdgeFromDefinition> From,
-    IDictionary<string, GraphEdgeRemovedWithDefinition> RemovedWith);
+    [Id(0)] IDictionary<string, GraphEdgeFromDefinition> From,
+    [Id(1)] IDictionary<string, GraphEdgeRemovedWithDefinition> RemovedWith);

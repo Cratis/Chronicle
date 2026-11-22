@@ -24,19 +24,21 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="Nested">All the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.</param>
 /// <param name="NoAutoMapProperties">The properties on the child excluded from auto-mapping.</param>
 /// <param name="Ordering">Optional <see cref="ChildrenOrdering"/> for where new children are inserted. Appended when null.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition")]
 public record ChildrenDefinition(
-    PropertyPath IdentifiedBy,
+    [Id(0)] PropertyPath IdentifiedBy,
     IDictionary<EventType, FromDefinition> From,
     IDictionary<EventType, JoinDefinition> Join,
     IDictionary<PropertyPath, ChildrenDefinition> Children,
-    FromEveryDefinition All,
+    [Id(1)] FromEveryDefinition All,
     IDictionary<EventType, RemovedWithDefinition> RemovedWith,
     IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default,
     AutoMap AutoMap = AutoMap.Inherit,
     IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
     IEnumerable<PropertyPath>? NoAutoMapProperties = default,
-    ChildrenOrdering? Ordering = default) :
+    [Id(2)] ChildrenOrdering? Ordering = default) :
     ProjectionDefinition(
         ProjectionOwner.Parent,
         EventSequences.EventSequenceId.Unspecified,

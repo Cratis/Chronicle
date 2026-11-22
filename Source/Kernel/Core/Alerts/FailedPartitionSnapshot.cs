@@ -23,13 +23,15 @@ namespace Cratis.Chronicle.Alerts;
 /// <param name="IsQuarantined">Whether the partition has run out of retries and will not be retried automatically.</param>
 /// <param name="FailureKind">What kind of thing went wrong on the latest failure.</param>
 /// <param name="Message">The first message of the latest failure.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Alerts.FailedPartitionSnapshot")]
 public record FailedPartitionSnapshot(
-    FailedPartitionId Id,
-    AlertPartition Partition,
-    DateTimeOffset FirstAttempt,
-    DateTimeOffset LastAttempt,
-    int AttemptCount,
-    int AttemptsInCurrentBudget,
-    bool IsQuarantined,
-    FailureKind FailureKind,
-    string Message);
+    [Id(0)] FailedPartitionId Id,
+    [Id(1)] AlertPartition Partition,
+    [Id(2)] DateTimeOffset FirstAttempt,
+    [Id(3)] DateTimeOffset LastAttempt,
+    [Id(4)] int AttemptCount,
+    [Id(5)] int AttemptsInCurrentBudget,
+    [Id(6)] bool IsQuarantined,
+    [Id(7)] FailureKind FailureKind,
+    [Id(8)] string Message);

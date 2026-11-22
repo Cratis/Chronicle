@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Setup.Serialization.for_KernelSerializers.given;
 /// <summary>
 /// Compares two payload instances member by member and reports where they differ.
 /// </summary>
+/// <param name="ignoredMembers">Names of members that are left out of the comparison.</param>
 public class PayloadComparer(IEnumerable<string> ignoredMembers)
 {
     const int MaxDepth = 12;
@@ -114,7 +115,7 @@ public class PayloadComparer(IEnumerable<string> ignoredMembers)
             return;
         }
 
-        if (expected is IEnumerable expectedItems && actual is IEnumerable actualItems && type.GetInterfaces().Any(_ => _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IDictionary<,>) || _.IsGenericType && _.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)))
+        if (expected is IEnumerable expectedItems && actual is IEnumerable actualItems && type.GetInterfaces().Any(_ => _.IsGenericType && (_.GetGenericTypeDefinition() == typeof(IDictionary<,>) || _.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>))))
         {
             CompareDictionaries(path, ToDictionary(expectedItems), ToDictionary(actualItems), differences, depth);
             return;
@@ -136,7 +137,7 @@ public class PayloadComparer(IEnumerable<string> ignoredMembers)
             {
                 if (unordered)
                 {
-                    var matches = right.Any(_ => Differences(left[i], _).Count == 0);
+                    var matches = right.Exists(_ => Differences(left[i], _).Count == 0);
                     if (!matches)
                     {
                         differences.Add($"{path}[{i}]: no matching item");
@@ -214,6 +215,8 @@ public class PayloadComparer(IEnumerable<string> ignoredMembers)
         type == typeof(DateOnly) ||
         type == typeof(TimeOnly) ||
         type == typeof(Uri) ||
+        typeof(Type).IsAssignableFrom(type) ||
+        type.Namespace == "Orleans.Runtime" ||
         IsConcept(type);
 
     static bool IsConcept(Type type)

@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Dynamic;
+using System.Net;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Schemas;
@@ -14,7 +15,8 @@ namespace Cratis.Chronicle.Setup.Serialization.for_KernelSerializers.given;
 /// <summary>
 /// Builds a fully populated instance of a payload type, so a serializer that forgets a member shows up as a difference.
 /// </summary>
-public class PayloadFiller
+/// <param name="lazySequences">Whether sequences are lazy iterators, the way a query result is, instead of lists.</param>
+public class PayloadFiller(bool lazySequences = false)
 {
     const int MaxDepth = 5;
     int _counter;
@@ -93,6 +95,8 @@ public class PayloadFiller
         return false;
     }
 
+    static IEnumerable<T> AsLazySequence<T>(List<T> items) => items.Select(_ => _);
+
     object? Create(Type type, int depth)
     {
         var next = ++_counter;
@@ -141,6 +145,16 @@ public class PayloadFiller
             return $"value-{next}";
         }
 
+        if (type == typeof(Type))
+        {
+            return typeof(PayloadFiller);
+        }
+
+        if (type == typeof(SiloAddress))
+        {
+            return SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11111 + next), next);
+        }
+
         if (type.IsArray)
         {
             var element = type.GetElementType()!;
@@ -160,7 +174,6 @@ public class PayloadFiller
                 return collection;
             }
         }
-
 
         if (depth > MaxDepth + 1 && !type.IsValueType)
         {
@@ -216,6 +229,11 @@ public class PayloadFiller
             for (var i = 0; i < count; i++)
             {
                 list.Add(Create(item, depth + 1));
+            }
+
+            if (lazySequences && definition == typeof(IEnumerable<>))
+            {
+                return typeof(PayloadFiller).GetMethod(nameof(AsLazySequence), BindingFlags.Static | BindingFlags.NonPublic)!.MakeGenericMethod(item).Invoke(null, [list]);
             }
 
             if (type.IsAssignableFrom(list.GetType()))

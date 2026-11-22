@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Occurrences;
 /// </summary>
 /// <param name="Status">Whether this call recorded the receipt.</param>
 /// <param name="Receipt">The winning receipt, including its stored response.</param>
-public record RecordEffectReceiptResult(EffectReceiptStatus Status, EffectReceiptDetails Receipt);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Occurrences.RecordEffectReceiptResult")]
+public record RecordEffectReceiptResult([Id(0)] EffectReceiptStatus Status, [Id(1)] EffectReceiptDetails Receipt);

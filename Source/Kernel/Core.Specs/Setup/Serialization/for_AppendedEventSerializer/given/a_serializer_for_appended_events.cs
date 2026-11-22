@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using Cratis.Choreography.Serialization;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -44,7 +45,11 @@ public class a_serializer_for_appended_events : Specification
         services.AddSingleton(new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(storage);
-        services.AddSerializer(builder => builder.Services.AddCustomSerializers());
+        services.AddSerializer(builder =>
+        {
+            builder.Services.AddConceptSerializer();
+            builder.Services.AddCustomSerializers();
+        });
         var provider = services.BuildServiceProvider();
         _schemaCache = provider.GetRequiredService<IEventTypeSchemaCache>();
         _serializer = provider.GetRequiredService<Serializer>();

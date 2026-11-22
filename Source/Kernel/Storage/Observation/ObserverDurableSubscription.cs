@@ -15,8 +15,10 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="DeliversPages">Whether the subscription delivers pages of events.</param>
 /// <param name="Filters">The event filters of the subscription, or null when it has none.</param>
 /// <param name="Targets">The client connections the subscription delivers to. Empty for kernel-owned kinds.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription")]
 public record ObserverDurableSubscription(
-    ObserverSubscriptionKind Kind,
-    bool DeliversPages,
-    ObserverDurableSubscriptionFilters? Filters,
-    IReadOnlyList<ObserverDurableSubscriptionTarget> Targets);
+    [Id(0)] ObserverSubscriptionKind Kind,
+    [Id(1)] bool DeliversPages,
+    [Id(2)] ObserverDurableSubscriptionFilters? Filters,
+    [Id(3)] IReadOnlyList<ObserverDurableSubscriptionTarget> Targets);

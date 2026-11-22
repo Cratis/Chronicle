@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using System.Text.Json.Serialization;
 using Cratis.Chronicle.Setup.Serialization;
 using Cratis.Chronicle.Tools.GrainCompatibility.Payloads;
 
@@ -20,10 +19,18 @@ public class the_kernel_inventory : Specification
         _grainContracts = ContractManifest.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "OrleansContracts.txt")));
         var assembly = typeof(SerializationConfigurationExtensions).Assembly;
         _interfaces = _grainContracts.ActiveInterfaces.Select(_ => assembly.GetType(_.InterfaceType, throwOnError: true)!).ToArray();
-        var field = typeof(SerializationConfigurationExtensions).GetField("_converters", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("SerializationConfigurationExtensions._converters could not be reflected.");
-        var converters = (IEnumerable<JsonConverter>)field.GetValue(null)!;
-        _hasCustomConverter = type => converters.Any(_ => _.CanConvert(type));
+        var surrogated = assembly.GetTypes()
+            .Where(_ => _.GetCustomAttributes().Any(attribute => attribute.GetType().Name == "RegisterConverterAttribute"))
+            .SelectMany(_ => _.GetInterfaces())
+            .Where(_ => _.IsGenericType && _.GetGenericTypeDefinition().Name == "IConverter`2")
+            .Select(_ => _.GetGenericArguments()[0]);
+
+        // Types the kernel writes with a surrogate or a serializer of its own, which the inventory records as opaque.
+        var concepts = Assembly.Load("Cratis.Chronicle.Concepts");
+        var serialized = new[] { "Events.AppendedEvent", "EventSequences.Concurrency.ConcurrencyScopes", "EventSequences.Concurrency.ConcurrencyScopeConjunctions" }
+            .Select(_ => concepts.GetType($"Cratis.Chronicle.Concepts.{_}", throwOnError: true)!);
+        var custom = surrogated.Concat(serialized).ToHashSet();
+        _hasCustomConverter = custom.Contains;
         _manifest = PayloadInventory.From(_interfaces, _hasCustomConverter);
     }
 
