@@ -54,7 +54,8 @@ public partial class Observer
     /// reducer or projection, with at least one client when a client serves it. On top of that the observer must be observing
     /// with nothing delivered, held, claimed, fenced, failing, replaying or catching up, and no lane of the queue holding events
     /// for it, which the queue checks when the observer asks it to keep the subscription (see <see cref="IsReleasedAsDormant"/>).
-    /// Every one of these keeps the observer resident while it holds.
+    /// Every one of these keeps the observer resident while it holds. The standbys of the subscription do not: the record names
+    /// them with the targets (see <see cref="IsDurableSubscriptionPersisted"/>), and the observer has them again when it wakes.
     /// </remarks>
     bool IsDormantApartFromTheRecord =>
         !_removed &&
@@ -77,7 +78,6 @@ public partial class Observer
         !_retryRecoveryAfterQuarantine &&
         _pageFloor is null &&
         _prefetchedPartitions.Count == 0 &&
-        _supersededRegistrations.Count == 0 &&
         !_deliveryFences.Active(_clock.GetUtcNow()).Any() &&
         HasNoClaims;
 

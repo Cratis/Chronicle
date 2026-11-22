@@ -1239,16 +1239,7 @@ public partial class Observer(
         // when the client that now owns the subscription leaves.
         SupersedeTargetsOtherThan(connectedClient.ConnectionId);
         var observerType = observerDefinition.State.Type;
-        _resubscribeTarget = existing => SubscribeToEventTypes<TObserverSubscriber>(
-            observerType,
-            eventTypes,
-            existing.SiloAddress,
-            existing.ConnectedClient,
-            isReplayable,
-            filters,
-            reactivateRetired: false,
-            automatic: true,
-            generationDelivery: generationDelivery);
+        _resubscribe = CreateResubscribeDefinition<TObserverSubscriber>(observerType, eventTypes, isReplayable, filters, generationDelivery);
 
         _subscription = new(
             _observerId,
