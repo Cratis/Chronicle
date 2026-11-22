@@ -6,6 +6,10 @@ An event type in Cratis Chronicle gives a stored [event](./event.md) a stable id
 
 Before appending to an [event sequence](./event-sequence.md), the client must register the event type with the [event store](./event-store.md). The client uses that registration to associate the event's code type with its stored identity and schema.
 
+## Concurrent registration
+
+The first registration of an event type generation is atomic across clients. If two clients register equivalent schemas concurrently, both registrations succeed. If their schemas differ, one registration succeeds and the other reports a schema conflict; the conflicting registration does not replace the stored schema.
+
 ## Identity survives a code rename only if you preserve it
 
 In the .NET client, the default event type ID is the class name, without its namespace. Renaming the class changes that ID unless you explicitly retain the previous value. Stored history stays under the old ID; handlers for the new ID do not see those events. Moving the class to another namespace without changing its name leaves its default ID unchanged.

@@ -910,11 +910,9 @@ public partial class EventStore : IEventStore
         var hostsClientObservers = ClientObserverHosting.IsAvailable(Connection);
         LogSkippedClientObservers(hostsClientObservers);
 
-        // We need to register event types and read models first, as they are used by the other artifacts
-        await Task.WhenAll(
-            registerEventTypes(),
-            EventSources.Register(),
-            registerReadModels());
+        // Read-model registration must not start until the event types it depends on are accepted.
+        await Task.WhenAll(registerEventTypes(), EventSources.Register());
+        await registerReadModels();
 
         // Register all observers before seeding to prevent race conditions where
         // seeded events arrive at the kernel before observers are registered

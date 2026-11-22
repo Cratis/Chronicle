@@ -27,21 +27,29 @@ public record RegisterSingleEventType(EventStoreName EventStore, Contracts.Event
     /// <param name="eventTypesCacheClient">Client for evicting the event type cache on every silo.</param>
     /// <param name="patternCapture">The <see cref="IPatternCapture"/> to keep observing every registered event type.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventTypeSchemaChanged">Thrown when a registered generation has a different schema.</exception>
     public async Task Handle(IStorage storage, IEventTypesCacheClient eventTypesCacheClient, IPatternCapture patternCapture)
     {
         var chronicleType = Type.Type.ToChronicle();
         var schema = await JsonSchema.FromJsonAsync(Type.Schema);
-        var mutated = await storage
-            .GetEventStore(EventStore).EventTypes
-            .Register(
-                chronicleType,
-                schema,
+        schema.EnsureComplianceMetadata();
+        var result = await storage.GetEventStore(EventStore).EventTypes.RegisterIfAbsent(new EventTypeToRegister(
+            new EventTypeDefinition(
+                chronicleType.Id,
                 (Concepts.Events.EventTypeOwner)(int)Type.Owner,
-                (Concepts.Events.EventTypeSource)(int)Type.Source,
-                (Concepts.Events.EventTypeVisibility)(int)Type.Visibility,
-                Type.EventStore ?? string.Empty);
+                chronicleType.Tombstone,
+                [new EventTypeGenerationDefinition(chronicleType.Generation, schema)],
+                []),
+            (Concepts.Events.EventTypeSource)(int)Type.Source,
+            (Concepts.Events.EventTypeVisibility)(int)Type.Visibility,
+            Type.EventStore ?? string.Empty));
 
-        if (mutated)
+        if (result.Conflict is { } conflict)
+        {
+            throw new EventTypeSchemaChanged(chronicleType.Id, conflict);
+        }
+
+        if (result.Changed)
         {
             await eventTypesCacheClient.Invalidate(EventStore, chronicleType.Id);
             await patternCapture.SubscribeAcrossNamespaces(EventStore);
