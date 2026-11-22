@@ -13,7 +13,7 @@ public class a_postgresql_index_catalog(PostgreSqlFixture fixture) : Specificati
     /// <summary>
     /// Fits the table limit, but forces byte truncation of the legacy index name and includes quoting.
     /// </summary>
-    protected const string Table = "events_quoted\"_éééééééééééééééééééé";
+    protected const string Table = "events_quoted\"_éééééééééééééééééé";
     protected string _connectionString;
     protected TableMigrator<EventSequenceDbContext> _tables;
     protected EventSequenceMigrator _migrator;
