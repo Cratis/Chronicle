@@ -34,6 +34,9 @@ internal sealed class BenchmarkEventTypes : IEventTypesStorage
     }
 
     /// <inheritdoc/>
+    public Task<EventTypeRegistrationResult> RegisterIfAbsent(EventTypeToRegister eventType) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema) => throw new NotSupportedException();
 
     /// <inheritdoc/>
