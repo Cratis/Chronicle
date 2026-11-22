@@ -100,16 +100,8 @@ public class two_stored_subjects(ChronicleFixture fixture) : Specification(fixtu
 
     async Task WaitUntilStored(EventSourceId person)
     {
-        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-        while (true)
-        {
-            var instance = await EventStore.ReadModels.GetInstanceById<RetentionSubject>(person.Value);
-            if (instance?.Comment is not null && instance.Note?.Text is not null)
-            {
-                return;
-            }
-
-            await Task.Delay(200, cts.Token);
-        }
+        await ReadinessWait.Until(
+            () => EventStore.ReadModels.GetInstanceById<RetentionSubject>(person.Value),
+            instance => instance?.Comment is not null && instance.Note?.Text is not null);
     }
 }

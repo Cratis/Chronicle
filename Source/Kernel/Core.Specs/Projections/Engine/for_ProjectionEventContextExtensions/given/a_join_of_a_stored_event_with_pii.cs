@@ -35,6 +35,7 @@ public class a_join_of_a_stored_event_with_pii : Specification
     protected JsonSchema _projectionSchema;
     protected JsonSchema _storedSchema;
     protected List<ProjectionEventContext> _results = [];
+    protected Dictionary<int, string> _history = [];
 
     Subject<ProjectionEventContext> _subject;
     IChangeset<AppendedEvent, ExpandoObject> _changeset;
@@ -64,13 +65,14 @@ public class a_join_of_a_stored_event_with_pii : Specification
                 SequenceNumber = EventSequenceNumber.First,
                 Subject = (Cratis.Chronicle.Concepts.Events.Subject)AdvisorId
             },
-            new ExpandoObject());
+            new ExpandoObject()) { GenerationalContent = _history };
         _releasedEvent = _storedEvent with { Content = new { name = "released" }.AsExpandoObject() };
 
         _eventSequenceStorage
             .TryGetLastEventBefore(Arg.Any<EventTypeId>(), AdvisorId, Arg.Any<EventSequenceNumber>())
             .Returns(Task.FromResult(Catch<Option<AppendedEvent>>.Success(new Option<AppendedEvent>(_storedEvent))));
         _eventCompliance.Release(Arg.Any<AppendedEvent>(), Arg.Any<JsonSchema>()).Returns(_releasedEvent);
+        _eventCompliance.ReleaseHistory(Arg.Any<AppendedEvent>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>()).Returns(_releasedEvent);
         _eventTypes.GetFor(Arg.Any<IEnumerable<EventType>>())
             .Returns(Task.FromResult<IEnumerable<EventTypeSchema>>(
                 storedSchemaKnown ? [new EventTypeSchema(storedAt, EventTypeOwner.Client, EventTypeSource.Code, _storedSchema)] : []));

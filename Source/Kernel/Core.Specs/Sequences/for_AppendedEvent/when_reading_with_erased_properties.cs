@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Events;
@@ -39,6 +40,7 @@ public class when_reading_with_erased_properties : Specification
         store.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(tenant);
         tenant.GetEventSequence(Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(_sequence);
         store.EventTypes.GetFor(Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns([]);
+        store.EventTypes.GetDefinition(Arg.Any<Concepts.Events.EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<Concepts.Events.EventTypeId>(), EventTypeOwner.None, false, [], []));
         _stored = new(Concepts.Events.EventContext.Empty with { SequenceNumber = 42 }, new ExpandoObject());
         _sequence.GetFromSequenceNumberWithHistory(Arg.Any<Concepts.Events.EventSequenceNumber>(), Arg.Any<Concepts.Events.EventSourceId?>(), Arg.Any<Concepts.Events.EventSourceType?>(), Arg.Any<Concepts.Events.EventStreamType?>(), Arg.Any<Concepts.Events.EventStreamId?>(), Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns(cursor);
         cursor.MoveNext().Returns(true, false, true, false);

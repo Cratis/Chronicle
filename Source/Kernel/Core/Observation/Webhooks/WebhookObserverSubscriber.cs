@@ -149,7 +149,10 @@ public class WebhookObserverSubscriber(
                     schemas[pin] = await storage.GetEventStore(_key.EventStore).EventTypes.GetFor(pin.Id, pin.Generation);
                 }
 
-                released.AddRange(await generationRelease.Release(_key.EventStore, [pin], schemas, [@event]));
+                // Incoming history is plaintext. Release only protected storage, then restore this dispatch's context.
+                var stored = await storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).GetEventSequence(_key.EventSequenceId).GetEventAt(@event.Context.SequenceNumber);
+                var selected = (await generationRelease.Release(_key.EventStore, [pin], schemas, [stored])).Single();
+                released.Add(selected with { Context = @event.Context with { EventType = selected.Context.EventType, Hash = selected.Context.Hash } });
             }
             else
             {

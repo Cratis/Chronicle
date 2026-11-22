@@ -12,7 +12,10 @@ import { a_view_model } from '../for_RecommendationsViewModel/when_managing_sele
 const mocks = vi.hoisted(() => ({ confirm: vi.fn(), success: vi.fn(), error: vi.fn(), effect: vi.fn() }));
 vi.mock('react', async importOriginal => ({ ...await importOriginal<typeof import('react')>(), useEffect: mocks.effect }));
 vi.mock('react-router-dom', () => ({ useParams: () => ({ eventStore: 'some-event-store', namespace: 'some-namespace' }) }));
-vi.mock('@cratis/arc.react.mvvm', () => ({ withViewModel: (_model: unknown, component: unknown) => component }));
+vi.mock('@cratis/arc.react.mvvm', () => ({
+    withViewModel: (_model: unknown, component: unknown) => component,
+    observer: (component: unknown) => component
+}));
 vi.mock('@cratis/arc.react/dialogs', () => ({ useConfirmationDialog: () => [mocks.confirm], DialogResult: { Yes: 0, No: 1 }, DialogButtons: { YesNo: 0 } }));
 vi.mock('@cratis/components/Notifications', () => ({ toast: { success: mocks.success, error: mocks.error } }));
 vi.mock('@cratis/components/DataPage', () => ({ DataPage: Object.assign(() => undefined, { MenuItems: () => undefined, Columns: () => undefined }), MenuItem: () => undefined, Column: () => undefined }));

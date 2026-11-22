@@ -41,7 +41,10 @@ public class with_a_stale_generation : Specification
             .Returns(call => [((IEnumerable<AppendedEvent>)call[3]).Single() with { Context = _event.Context with { EventType = new("customer", 1) } }]);
         silo.AddService(generationRelease);
         var definitionStorage = Substitute.For<Cratis.Chronicle.Storage.IStorage>();
+        definitionStorage.GetEventStore("store").EventTypes.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
         definitionStorage.GetEventStore("store").Webhooks.Get("webhook").Returns(_definition);
+        definitionStorage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log")
+            .GetEventAt(42).Returns(_ => _event);
         silo.AddService(definitionStorage);
         var storage = Substitute.For<IStorage<WebhookDefinition>>();
         storage.State = _definition;

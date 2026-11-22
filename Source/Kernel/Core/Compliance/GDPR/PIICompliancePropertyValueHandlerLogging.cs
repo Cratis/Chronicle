@@ -7,6 +7,6 @@ namespace Cratis.Chronicle.Compliance.GDPR;
 
 internal static partial class PIICompliancePropertyValueHandlerLogging
 {
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Treating an unrecoverable protected value for subject '{Subject}' as erased because it cannot be unwrapped with the current key and erasure is recorded.")]
-    internal static partial void UnrecoverableValueAfterErasure(this ILogger<PIICompliancePropertyValueHandler> logger, string subject);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Treating an unrecoverable protected value as erased because it cannot be unwrapped with the current key and erasure is recorded: {ExceptionType}.")]
+    internal static partial void UnrecoverableValueAfterErasure(this ILogger<PIICompliancePropertyValueHandler> logger, string exceptionType);
 }

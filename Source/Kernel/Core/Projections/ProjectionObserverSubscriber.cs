@@ -313,7 +313,10 @@ public class ProjectionObserverSubscriber(
         var model = expandoObjectConverter.ToJsonObject(state, schema);
         if (ReadModelChangeBookkeeping.DeclaresProperty(schema, WellKnownProperties.LastHandledEventSequenceNumber))
         {
-            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(change.EventSequenceNumber.Value);
+            // State read later than the event may already carry a higher number; the bookkeeping value never goes backwards.
+            var stored = state.GetLastHandledEventSequenceNumber();
+            var sequenceNumber = stored.IsUnavailable ? change.EventSequenceNumber.Value : Math.Max(change.EventSequenceNumber.Value, stored.Value);
+            model[WellKnownProperties.LastHandledEventSequenceNumber] = JsonValue.Create(sequenceNumber);
         }
 
         ReadModelChangeBookkeeping.CopyLegacySubjectLineage(state, model);

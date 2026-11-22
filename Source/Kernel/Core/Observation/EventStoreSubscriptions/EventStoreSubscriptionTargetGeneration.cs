@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -17,7 +18,8 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="release">The generation release service.</param>
 /// <param name="sourceStore">The source event store.</param>
 /// <param name="targetStore">The target event store.</param>
-public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, IEventTypesStorage target, IEventGenerationRelease release, EventStoreName sourceStore, EventStoreName targetStore)
+/// <param name="sourceSequence">The source sequence containing protected event history.</param>
+public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, IEventTypesStorage target, IEventGenerationRelease release, EventStoreName sourceStore, EventStoreName targetStore, IEventSequenceStorage sourceSequence)
 {
     readonly Dictionary<EventTypeId, EventTypeGeneration[]> _generations = [];
     readonly Dictionary<EventType, EventTypeSchema> _schemas = [];
@@ -29,6 +31,7 @@ public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, I
     /// <param name="pins">The subscription's explicit generation pins.</param>
     /// <returns>The event ready for the target.</returns>
     /// <exception cref="EventStoreSubscriptionGenerationUnavailable">No registered generation can be delivered.</exception>
+    /// <exception cref="PinnedEventTypeGenerationUnavailable">The stored event is unavailable for the selected generation.</exception>
     public async Task<AppendedEvent> Release(AppendedEvent incoming, IReadOnlyDictionary<EventTypeId, EventType> pins)
     {
         var eventType = incoming.Context.EventType;
@@ -46,8 +49,11 @@ public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, I
             {
                 _schemas[selected] = await EventStoreSubscriptionGenerationValidation.GetExactSchema(source, selected);
             }
-            var released = await release.Release(sourceStore, [selected], _schemas, [incoming]);
-            return released.Single();
+
+            // Incoming history is plaintext. Release only protected storage, then restore this dispatch's context.
+            var stored = await sourceSequence.GetEventAt(incoming.Context.SequenceNumber);
+            var released = (await release.Release(sourceStore, [selected], _schemas, [stored])).Single();
+            return released with { Context = incoming.Context with { EventType = released.Context.EventType, Hash = released.Context.Hash } };
         }
         catch (Exception exception) when (exception is EventTypeGenerationNotRegisteredForObserver or PinnedEventTypeGenerationUnavailable)
         {
