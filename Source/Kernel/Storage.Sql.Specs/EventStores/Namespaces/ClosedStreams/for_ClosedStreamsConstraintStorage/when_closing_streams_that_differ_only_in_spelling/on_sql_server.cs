@@ -26,4 +26,7 @@ public class on_sql_server(SqlServerFixture fixture) : conformance(new("sql_serv
     [Fact] void should_store_a_trailing_space_with_a_terminator() => _stored.ShouldContain(Hex("Order-1 \u007F"));
     [Fact] void should_store_the_terminator_with_another_terminator() => _stored.ShouldContain(Hex("Order-1\u007F\u007F"));
     [Fact] void should_list_closures_in_code_point_order() => _ordered.Select(_ => _.Scope.EventSourceId!.Value).ShouldEqual(_ordered.Select(_ => _.Scope.EventSourceId!.Value).Order(StringComparer.Ordinal));
+    [Fact] void should_page_in_the_same_order_as_the_full_list() => _page.ShouldEqual(_ordered.Skip(1).Take(3));
+    [Fact] void should_skip_without_limiting_the_remaining_rows() => _withoutTake.ShouldEqual(_ordered.Skip(1));
+    [Fact] void should_filter_by_the_exact_spelling_before_paging() => _filtered.Select(_ => _.Scope.EventStreamId!.Value).ShouldEqual(["Order-1 "]);
 }
