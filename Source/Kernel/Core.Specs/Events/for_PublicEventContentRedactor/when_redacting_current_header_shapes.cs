@@ -36,7 +36,7 @@ public class when_redacting_current_header_shapes : Specification
     }
 
     [Fact] void should_redact_every_shape_and_casing() => _once.All(@event => !given.header_events.ContainsSentinel(JsonSerializer.Serialize(@event))).ShouldBeTrue();
-    [Fact] void should_preserve_unrelated_fields() => _once.All(@event => ((IDictionary<string, object?>)@event.Content)["name"]!.Equals("unchanged")).ShouldBeTrue();
+    [Fact] void should_preserve_unrelated_fields() => _once[..^1].All(@event => ((IDictionary<string, object?>)@event.Content)["name"]!.Equals("unchanged")).ShouldBeTrue();
     [Fact] void should_not_add_absent_headers() => ((IDictionary<string, object?>)_once[^1].Content).ShouldBeEmpty();
     [Fact] void should_be_idempotent() => JsonSerializer.Serialize(_twice).ShouldEqual(JsonSerializer.Serialize(_once));
     [Fact] void should_not_change_original_histories() => _stored.All(@event => given.header_events.ContainsSentinel(@event.OriginalContent)).ShouldBeTrue();
