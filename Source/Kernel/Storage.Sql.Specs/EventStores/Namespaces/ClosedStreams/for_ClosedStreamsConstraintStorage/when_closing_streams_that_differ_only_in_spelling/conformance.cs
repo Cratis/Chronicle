@@ -12,7 +12,10 @@ public abstract class conformance(given.ClosedStreamsHarness harness) : given.a_
 
     readonly List<ClosedStream[]> _covering = [];
     readonly List<ClosedStream?> _found = [];
-    ClosedStream[] _all;
+    protected ClosedStream[] _all;
+    protected ClosedStream[] _page;
+    protected ClosedStream[] _withoutTake;
+    protected ClosedStream[] _filtered;
     bool _reopened;
     ClosedStream[] _remaining;
     ClosedStream[] _coveringReopened;
@@ -27,6 +30,9 @@ public abstract class conformance(given.ClosedStreamsHarness harness) : given.a_
         }
 
         _all = [.. await Storage.GetAll()];
+        _page = [.. await Storage.GetAll(skip: 1, take: 3)];
+        _withoutTake = [.. await Storage.GetAll(skip: 1)];
+        _filtered = [.. await Storage.GetAll(new(EventStreamId: "Order-1 "), take: 1)];
         var dimensions = (await Storage.GetDimensionsInUse()).ToArray();
         foreach (var spelling in _spellings)
         {
