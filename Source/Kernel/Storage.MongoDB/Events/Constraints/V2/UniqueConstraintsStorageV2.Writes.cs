@@ -47,9 +47,13 @@ public sealed partial class UniqueConstraintsStorageV2
         ValidateValue(value);
         var binding = Binding(definition);
         var filter = new BsonDocument { { "Scope", scope.Value }, { "EventSourceId", eventSourceId.Value }, { "Value", value.Value } };
-        return Mutate((binding, false), expected, attempt => definition.Mode == UniqueConstraintMode.PerValue
-            ? DeleteClaims(attempt.Session, attempt.Claims, filter, cancellationToken)
-            : Task.FromResult<UniqueConstraintWriteFailure?>(null), cancellationToken);
+        return Mutate(
+            (binding, false),
+            expected,
+            attempt => definition.Mode == UniqueConstraintMode.PerValue
+                ? DeleteClaims(attempt.Session, attempt.Claims, filter, cancellationToken)
+                : Task.FromResult<UniqueConstraintWriteFailure?>(null),
+            cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -94,12 +98,15 @@ public sealed partial class UniqueConstraintsStorageV2
         if (failure is not null) return Outcome(failure);
         await V2Topology.Require(_database, cancellationToken);
         var physical = await _schema.Resolve(mutation.Binding, mutation.Create, cancellationToken);
-        return await _transactions.Run(async session =>
-        {
-            var refusal = await Fence(session, mutation.Binding, expected, cancellationToken);
-            if (refusal is not null) return (Outcome(refusal), false);
-            if (physical is not null) refusal = await write((session, _database.GetCollection<BsonDocument>(physical)));
-            return (Outcome(refusal), refusal is null);
-        }, cancellationToken, retryDuplicate: true);
+        return await _transactions.Run(
+            async session =>
+            {
+                var refusal = await Fence(session, mutation.Binding, expected, cancellationToken);
+                if (refusal is not null) return (Outcome(refusal), false);
+                if (physical is not null) refusal = await write((session, _database.GetCollection<BsonDocument>(physical)));
+                return (Outcome(refusal), refusal is null);
+            },
+            cancellationToken,
+            retryDuplicate: true);
     }
 }

@@ -38,6 +38,13 @@ internal sealed partial class V2Schema(IMongoDatabase database)
     {
         var authorities = await Describe(Authorities, cancellationToken);
         var bindings = await Describe(Bindings, cancellationToken);
+        if ((authorities is null) != (bindings is null))
+        {
+            // Bootstrap publishes both atomically, but it may commit between these catalog reads.
+            authorities = await Describe(Authorities, cancellationToken);
+            bindings = await Describe(Bindings, cancellationToken);
+        }
+
         if (authorities is null && bindings is null)
         {
             if (!create) return false;
@@ -65,10 +72,30 @@ internal sealed partial class V2Schema(IMongoDatabase database)
         var metadata = database.GetCollection<BsonDocument>(Bindings);
         var stored = await metadata.Find(new BsonDocument("_id", binding.Id), new FindOptions { Collation = Simple }).SingleOrDefaultAsync(cancellationToken);
         if (stored is not null) return await VerifyBinding(binding, stored, cancellationToken);
-        await RequireUnowned(binding, cancellationToken);
+        var published = await RequireUnowned(binding, cancellationToken);
+        if (published is not null) return published;
         if (!create) return null;
         await Provision(binding, cancellationToken);
         return await Resolve(binding, false, cancellationToken) ?? throw new UniqueConstraintV2SchemaMismatch();
+    }
+
+    static BsonDocument Index(string name, BsonDocument key, bool unique = false) => new() { { "name", name }, { "key", key }, { "unique", unique } };
+
+    static bool IsSimple(BsonDocument options) => !options.TryGetValue("collation", out var collation) || (collation is BsonDocument document && document.Equals(new BsonDocument("locale", "simple")));
+
+    static void VerifyOptions(BsonDocument description)
+    {
+        var options = description.GetValue("options", new BsonDocument()).AsBsonDocument;
+        if (description.GetValue("type", string.Empty) != "collection") throw new UniqueConstraintV2SchemaMismatch();
+        if (!IsSimple(options)) throw new UniqueConstraintV2SchemaMismatch();
+        if (options.Names.Any(field => field != "collation")) throw new UniqueConstraintV2SchemaMismatch();
+    }
+
+    static bool CompatibleIndex(BsonDocument actual, BsonDocument expected)
+    {
+        if (!actual["key"].Equals(expected["key"]) || !IsSimple(actual)) return false;
+        if (actual.Names.Any(field => field is not ("v" or "key" or "name" or "ns" or "unique" or "collation"))) return false;
+        return expected["name"] == "_id_" || actual.GetValue("unique", false) == expected["unique"];
     }
 
     async Task<string> VerifyBinding(V2Binding binding, BsonDocument stored, CancellationToken cancellationToken)
@@ -79,17 +106,19 @@ internal sealed partial class V2Schema(IMongoDatabase database)
         return binding.Physical;
     }
 
-    async Task RequireUnowned(V2Binding binding, CancellationToken cancellationToken)
+    async Task<string?> RequireUnowned(V2Binding binding, CancellationToken cancellationToken)
     {
-        if (await Describe(binding.Physical, cancellationToken) is not null) throw new UniqueConstraintV2SchemaMismatch();
+        var description = await Describe(binding.Physical, cancellationToken);
         var metadata = database.GetCollection<BsonDocument>(Bindings);
         var physicalOwner = await metadata.Find(new BsonDocument("Physical", binding.Physical), new FindOptions { Collation = Simple }).AnyAsync(cancellationToken);
-        if (physicalOwner) throw new UniqueConstraintV2SchemaMismatch();
+        if (description is null && !physicalOwner) return null;
+
+        // A publisher may have committed since Resolve's absent binding read. Re-read once before
+        // diagnosing damage; a racing winner must still prove its complete binding and physical shape.
+        var published = await metadata.Find(new BsonDocument("_id", binding.Id), new FindOptions { Collation = Simple }).SingleOrDefaultAsync(cancellationToken);
+        if (published is null) throw new UniqueConstraintV2SchemaMismatch();
+        return await VerifyBinding(binding, published, cancellationToken);
     }
-
-    static BsonDocument Index(string name, BsonDocument key, bool unique = false) => new() { { "name", name }, { "key", key }, { "unique", unique } };
-
-    static bool IsSimple(BsonDocument options) => !options.TryGetValue("collation", out var collation) || collation is BsonDocument document && document.Equals(new BsonDocument("locale", "simple"));
 
     async Task<BsonDocument?> Describe(string name, CancellationToken cancellationToken)
     {
@@ -100,7 +129,7 @@ internal sealed partial class V2Schema(IMongoDatabase database)
     async Task VerifyMarker(string name, CancellationToken cancellationToken)
     {
         var marker = await database.GetCollection<BsonDocument>(name).Find(new BsonDocument("_id", "schema")).SingleOrDefaultAsync(cancellationToken);
-        if (marker is null || !marker.Equals(V2Documents.Metadata(name))) throw new UniqueConstraintV2SchemaMismatch();
+        if (marker?.Equals(V2Documents.Metadata(name)) != true) throw new UniqueConstraintV2SchemaMismatch();
     }
 
     async Task Verify(string name, BsonDocument description, BsonDocument[] required, CancellationToken cancellationToken)
@@ -111,23 +140,8 @@ internal sealed partial class V2Schema(IMongoDatabase database)
         if (indexes.Count != required.Length) throw new UniqueConstraintV2SchemaMismatch();
         foreach (var expected in required)
         {
-            var actual = indexes.SingleOrDefault(index => index.GetValue("name", "") == expected["name"]);
+            var actual = indexes.SingleOrDefault(index => index.GetValue("name", string.Empty) == expected["name"]);
             if (actual is null || !CompatibleIndex(actual, expected)) throw new UniqueConstraintV2SchemaMismatch();
         }
-    }
-
-    static void VerifyOptions(BsonDocument description)
-    {
-        var options = description.GetValue("options", new BsonDocument()).AsBsonDocument;
-        if (description.GetValue("type", "") != "collection") throw new UniqueConstraintV2SchemaMismatch();
-        if (!IsSimple(options)) throw new UniqueConstraintV2SchemaMismatch();
-        if (options.Names.Any(field => field != "collation")) throw new UniqueConstraintV2SchemaMismatch();
-    }
-
-    static bool CompatibleIndex(BsonDocument actual, BsonDocument expected)
-    {
-        if (!actual["key"].Equals(expected["key"]) || !IsSimple(actual)) return false;
-        if (actual.Names.Any(field => field is not ("v" or "key" or "name" or "ns" or "unique" or "collation"))) return false;
-        return expected["name"] == "_id_" || actual.GetValue("unique", false) == expected["unique"];
     }
 }

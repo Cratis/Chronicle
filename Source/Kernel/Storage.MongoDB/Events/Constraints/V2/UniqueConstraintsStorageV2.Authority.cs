@@ -52,7 +52,7 @@ public sealed partial class UniqueConstraintsStorageV2
     {
         var authority = await GetAuthority(constraint, cancellationToken);
         if (!authority.HasValue) return UniqueConstraintWriteFailure.MissingAuthority;
-        return authority.Value == expected ? null : UniqueConstraintWriteFailure.AuthorityMismatch;
+        return (UniqueConstraintWriteAuthority)authority.Value == expected ? null : UniqueConstraintWriteFailure.AuthorityMismatch;
     }
 
     async Task<UniqueConstraintWriteFailure?> Fence(IClientSessionHandle session, V2Binding binding, UniqueConstraintWriteAuthority expected, CancellationToken cancellationToken)
@@ -62,9 +62,12 @@ public sealed partial class UniqueConstraintsStorageV2
         var document = await collection.Find(session, new BsonDocument("_id", identity["_id"]), new FindOptions { Collation = V2Schema.Simple }).SingleOrDefaultAsync(cancellationToken);
         if (document is null) return UniqueConstraintWriteFailure.MissingAuthority;
         if (V2Documents.Authority(document, identity) != expected) return UniqueConstraintWriteFailure.AuthorityMismatch;
-        var updated = await collection.UpdateOneAsync(session, V2Documents.Proof(identity, expected),
+        var updated = await collection.UpdateOneAsync(
+            session,
+            V2Documents.Proof(identity, expected),
             new BsonDocument("$set", new BsonDocument("Fence", Guid.NewGuid().ToString("N"))),
-            new UpdateOptions { Collation = V2Schema.Simple }, cancellationToken);
+            new UpdateOptions { Collation = V2Schema.Simple },
+            cancellationToken);
         return updated.MatchedCount == 1 ? null : UniqueConstraintWriteFailure.AuthorityMismatch;
     }
 }

@@ -8,19 +8,23 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2;
 
 internal sealed partial class V2Schema
 {
+    static bool IsSchemaRace(MongoException error) => V2Transactions.IsDuplicate(error) || error is MongoCommandException { Code: 48 };
+
     async Task Bootstrap(CancellationToken cancellationToken)
     {
         var transactions = new V2Transactions(database, ReadConcern.Local);
         try
         {
-            await transactions.Run(async session =>
-            {
-                await Create(session, Authorities, _metadataIndexes, cancellationToken);
-                await Create(session, Bindings, _bindingIndexes, cancellationToken);
-                await database.GetCollection<BsonDocument>(Authorities).InsertOneAsync(session, V2Documents.Metadata(Authorities), cancellationToken: cancellationToken);
-                await database.GetCollection<BsonDocument>(Bindings).InsertOneAsync(session, V2Documents.Metadata(Bindings), cancellationToken: cancellationToken);
-                return (true, true);
-            }, cancellationToken);
+            await transactions.Run(
+                async session =>
+                {
+                    await Create(session, Authorities, _metadataIndexes, cancellationToken);
+                    await Create(session, Bindings, _bindingIndexes, cancellationToken);
+                    await database.GetCollection<BsonDocument>(Authorities).InsertOneAsync(session, V2Documents.Metadata(Authorities), cancellationToken: cancellationToken);
+                    await database.GetCollection<BsonDocument>(Bindings).InsertOneAsync(session, V2Documents.Metadata(Bindings), cancellationToken: cancellationToken);
+                    return (true, true);
+                },
+                cancellationToken);
         }
         catch (MongoException error) when (IsSchemaRace(error))
         {
@@ -34,12 +38,14 @@ internal sealed partial class V2Schema
         var transactions = new V2Transactions(database, ReadConcern.Local);
         try
         {
-            await transactions.Run(async session =>
-            {
-                await Create(session, binding.Physical, _claimIndexes, cancellationToken);
-                await database.GetCollection<BsonDocument>(Bindings).InsertOneAsync(session, binding.Document, cancellationToken: cancellationToken);
-                return (true, true);
-            }, cancellationToken);
+            await transactions.Run(
+                async session =>
+                {
+                    await Create(session, binding.Physical, _claimIndexes, cancellationToken);
+                    await database.GetCollection<BsonDocument>(Bindings).InsertOneAsync(session, binding.Document, cancellationToken: cancellationToken);
+                    return (true, true);
+                },
+                cancellationToken);
         }
         catch (MongoException error) when (IsSchemaRace(error))
         {
@@ -57,5 +63,4 @@ internal sealed partial class V2Schema
         if (indexes.Length > 1) await database.GetCollection<BsonDocument>(name).Indexes.CreateManyAsync(session, models, cancellationToken);
     }
 
-    static bool IsSchemaRace(MongoException error) => V2Transactions.IsDuplicate(error) || error is MongoCommandException { Code: 48 };
 }

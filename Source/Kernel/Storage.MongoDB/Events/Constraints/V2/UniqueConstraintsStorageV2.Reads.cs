@@ -24,7 +24,8 @@ public sealed partial class UniqueConstraintsStorageV2
         if (physical is null) return (true, EventSequenceNumber.Unavailable);
         var filter = new BsonDocument { { "Scope", scope.Value }, { "Value", value.Value } };
         var existing = await _database.GetCollection<BsonDocument>(physical).Find(filter, new FindOptions { Collation = V2Schema.Simple }).SingleOrDefaultAsync(cancellationToken);
-        return existing is null ? (true, EventSequenceNumber.Unavailable) : (existing["EventSourceId"] == eventSourceId.Value, V2Documents.Sequence(existing["SequenceNumber"]));
+        if (existing is null) return (true, EventSequenceNumber.Unavailable);
+        return (ClaimText(existing, "EventSourceId") == eventSourceId.Value, V2Documents.Sequence(ClaimField(existing, "SequenceNumber")));
     }
 
     /// <inheritdoc/>
@@ -38,12 +39,38 @@ public sealed partial class UniqueConstraintsStorageV2
         if (physical is null) return [];
         var filter = new BsonDocument { { "Scope", scope.Value }, { "EventSourceId", eventSourceId.Value } };
         var rows = await _database.GetCollection<BsonDocument>(physical).Find(filter, new FindOptions { Collation = V2Schema.Simple }).ToListAsync(cancellationToken);
-        return rows.Select(row => new UniqueConstraintValue(row["Value"].AsString)).ToArray();
+        return rows.Select(ClaimValue).ToArray();
     }
 
     /// <inheritdoc/>
     public async Task<IAsyncEnumerable<UniqueConstraintValue>> GetForStream(EventSourceId eventSourceId, UniqueConstraintDefinition definition, UniqueConstraintStorageScope scope, CancellationToken cancellationToken = default) =>
         Stream((await GetFor(eventSourceId, definition, scope, cancellationToken)).ToArray(), cancellationToken);
+
+    static BsonValue ClaimField(BsonDocument document, string field)
+    {
+        if (!document.TryGetValue(field, out var value)) throw new UniqueConstraintV2SchemaMismatch();
+        return value;
+    }
+
+    static string ClaimText(BsonDocument document, string field)
+    {
+        if (ClaimField(document, field) is not BsonString text) throw new UniqueConstraintV2SchemaMismatch();
+        return text.Value;
+    }
+
+    static UniqueConstraintValue ClaimValue(BsonDocument document)
+    {
+        var value = new UniqueConstraintValue(ClaimText(document, "Value"));
+        try
+        {
+            ValidateValue(value);
+            return value;
+        }
+        catch (InvalidUniqueConstraintV2Input)
+        {
+            throw new UniqueConstraintV2SchemaMismatch();
+        }
+    }
 
     static async IAsyncEnumerable<UniqueConstraintValue> Stream(UniqueConstraintValue[] values, CancellationToken methodToken, [EnumeratorCancellation] CancellationToken enumeratorToken = default)
     {

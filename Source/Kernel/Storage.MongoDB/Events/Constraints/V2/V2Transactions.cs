@@ -11,8 +11,33 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2;
 /// <param name="readConcern">Local for new-collection schema transactions, snapshot for claim mutations.</param>
 internal sealed class V2Transactions(IMongoDatabase database, ReadConcern readConcern)
 {
+    // MongoDB reserves 244 as NOT_YET_AVAILABLE_TransactionAborted (LockBusy is 46).
+    const int ReservedTransactionAborted = 244;
+
+    // 12586 is BackgroundOperationInProgressForDatabase; the namespace variant is 12587.
+    const int BackgroundOperationInProgressForDatabase = 12586;
+
+    /// <summary>Recognizes duplicate-key failures without classifying unrelated server failures as claims.</summary>
+    /// <param name="error">The driver failure.</param>
+    /// <returns>Whether the server reports a duplicate key.</returns>
+    public static bool IsDuplicate(MongoException error) => error is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey } or MongoCommandException { Code: 11000 };
+
+    /// <summary>Recognizes only errors with a definite aborted-transaction outcome.</summary>
+    /// <param name="error">The driver failure.</param>
+    /// <param name="retryDuplicate">Whether this operation resolves duplicate races by rereading.</param>
+    /// <returns>Whether a fresh complete attempt is safe.</returns>
+    public static bool CanRetry(MongoException error, bool retryDuplicate = false)
+    {
+        if (error.HasErrorLabel("UnknownTransactionCommitResult")) return false;
+        if (error is MongoCommandException { Code: 48 }) return false;
+        if (IsDuplicate(error)) return retryDuplicate;
+        if (error.HasErrorLabel("TransientTransactionError")) return true;
+        if (error is MongoCommandException { Code: 112 or ReservedTransactionAborted or 246 or 251 or BackgroundOperationInProgressForDatabase }) return true;
+        return false;
+    }
+
     /// <summary>Runs one atomic attempt, aborting refusals and failures before retry classification.</summary>
-    /// <typeparam name="T">The operation result.</typeparam>
+    /// <typeparam name="T">The type returned by the attempt.</typeparam>
     /// <param name="operation">An attempt and its decision whether to commit.</param>
     /// <param name="cancellationToken">Cancellation before commit begins.</param>
     /// <param name="retryDuplicate">Whether an aborted duplicate must be resolved on a fresh snapshot.</param>
@@ -44,25 +69,6 @@ internal sealed class V2Transactions(IMongoDatabase database, ReadConcern readCo
                 throw;
             }
         }
-    }
-
-    /// <summary>Recognizes duplicate-key failures without classifying unrelated server failures as claims.</summary>
-    /// <param name="error">The driver failure.</param>
-    /// <returns>Whether the server reports a duplicate key.</returns>
-    public static bool IsDuplicate(MongoException error) => error is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey } || error is MongoCommandException { Code: 11000 };
-
-    /// <summary>Recognizes only errors with a definite aborted-transaction outcome.</summary>
-    /// <param name="error">The driver failure.</param>
-    /// <param name="retryDuplicate">Whether this operation resolves duplicate races by rereading.</param>
-    /// <returns>Whether a fresh complete attempt is safe.</returns>
-    public static bool CanRetry(MongoException error, bool retryDuplicate = false)
-    {
-        if (error.HasErrorLabel("UnknownTransactionCommitResult")) return false;
-        if (error is MongoCommandException { Code: 48 }) return false;
-        if (IsDuplicate(error)) return retryDuplicate;
-        if (error.HasErrorLabel("TransientTransactionError")) return true;
-        if (error is MongoCommandException { Code: 112 or 244 or 246 or 251 or 12586 }) return true;
-        return false;
     }
 
     static async Task Commit(IClientSessionHandle session)

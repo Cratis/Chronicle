@@ -15,6 +15,7 @@ public sealed partial class UniqueConstraintsStorageV2
         var document = claim.Document;
         var value = new BsonDocument { { "Scope", document["Scope"] }, { "Value", document["Value"] } };
         var existing = await collection.Find(session, value, new FindOptions { Collation = V2Schema.Simple }).SingleOrDefaultAsync(cancellationToken);
+
         // This read is authoritative under the shared authority fence. A concurrent external drop could
         // let insert auto-create storage without its index; the index is never the only duplicate defense.
         if (existing is not null)

@@ -28,5 +28,5 @@ internal static class V2Topology
         hello.GetValue("isWritablePrimary", false) == BsonBoolean.True &&
         hello.GetValue("logicalSessionTimeoutMinutes", BsonNull.Value) is BsonInt32 { Value: > 0 } &&
         hello.GetValue("maxWireVersion", BsonNull.Value) is BsonInt32 { Value: >= 9 } &&
-        hello.GetValue("msg", "") != "isdbgrid";
+        hello.GetValue("msg", string.Empty) != "isdbgrid";
 }

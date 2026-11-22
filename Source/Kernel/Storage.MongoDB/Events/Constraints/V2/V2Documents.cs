@@ -34,9 +34,9 @@ internal static class V2Documents
     public static BsonDocument Proof(BsonDocument identity, UniqueConstraintWriteAuthority authority)
     {
         var proof = identity.DeepClone().AsBsonDocument;
-        proof.Add("Epoch", authority.Epoch.Value.ToString("N"));
-        proof.Add("Run", Run(authority.Phase));
-        proof.Add("Revision", authority.Revision.Value);
+        proof.Add("Epoch", authority.Epoch.Value.ToString("N"))
+            .Add("Run", Run(authority.Phase))
+            .Add("Revision", authority.Revision.Value);
         return proof;
     }
 
