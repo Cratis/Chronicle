@@ -588,8 +588,58 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
 #pragma warning disable CA2100 // Preserved-table names are compile-time constants from WellKnownTableNames.
         await using var cmd = new SqlCommand(sql, conn);
 #pragma warning restore CA2100
-        await cmd.ExecuteNonQueryAsync();
+        var sessionId = conn.ServerProcessId;
+        try
+        {
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (SqlException error) when (error.Number == -2)
+        {
+            var diagnostics = await MsSqlWipeBlockerDiagnostics(connectionString, sessionId);
+            throw new SqlServerStorageWipeTimedOut(conn.Database, sessionId, diagnostics, error);
+        }
         timing?.Success();
+    }
+
+    static async Task<string> MsSqlWipeBlockerDiagnostics(string connectionString, int sessionId)
+    {
+        try
+        {
+            // Use an independent session: the timed-out wipe connection may no longer be usable.
+            // Diagnostics must be bounded and must never replace the original wipe failure.
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync(deadline.Token);
+            const string query =
+                "SELECT s.session_id, s.status AS session_status, s.open_transaction_count, " +
+                "       s.host_name, s.program_name, DB_NAME(r.database_id) AS database_name, " +
+                "       r.blocking_session_id, r.status AS request_status, r.command, " +
+                "       r.wait_type, r.wait_time, r.wait_resource, sql.text AS sql_text " +
+                "FROM sys.dm_exec_sessions s " +
+                "LEFT JOIN sys.dm_exec_requests r ON r.session_id = s.session_id " +
+                "LEFT JOIN sys.dm_exec_connections c ON c.session_id = s.session_id " +
+                "OUTER APPLY sys.dm_exec_sql_text(COALESCE(r.sql_handle, c.most_recent_sql_handle)) sql " +
+                "WHERE s.session_id = @wipeSessionId " +
+                "   OR r.database_id = DB_ID(@databaseName) " +
+                "   OR (s.database_id = DB_ID(@databaseName) AND s.open_transaction_count > 0) " +
+                "   OR s.session_id IN " +
+                "      (SELECT blocking_session_id FROM sys.dm_exec_requests WHERE database_id = DB_ID(@databaseName)) " +
+                "FOR JSON PATH, INCLUDE_NULL_VALUES;";
+            await using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@wipeSessionId", sessionId);
+            command.Parameters.AddWithValue("@databaseName", connection.Database);
+            await using var reader = await command.ExecuteReaderAsync(deadline.Token);
+            var fragments = new List<string>();
+            while (await reader.ReadAsync(deadline.Token))
+            {
+                fragments.Add(reader.GetString(0));
+            }
+            return $"Requests, sessions and blockers: {string.Concat(fragments)}";
+        }
+        catch (Exception diagnosticError)
+        {
+            return $"Blocker diagnostics unavailable: {diagnosticError.Message}";
+        }
     }
 #endif
 
