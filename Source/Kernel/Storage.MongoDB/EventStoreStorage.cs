@@ -106,7 +106,7 @@ public class EventStoreStorage(
     public IEventSourcesStorage EventSources { get; } = new EventSourcesStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionsStorage(eventStoreDatabase);
+    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionRegistry(new ObserverDefinitionsStorage(eventStoreDatabase));
 
     /// <inheritdoc/>
     public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage(eventStoreDatabase);
