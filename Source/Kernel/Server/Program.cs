@@ -331,7 +331,7 @@ builder.WebHost.UseKestrel(options =>
         });
     }
 
-    options.Limits.Http2.MaxStreamsPerConnection = 100;
+    Cratis.Chronicle.Services.Host.KestrelHttp2Limits.Apply(options.Limits.Http2);
 });
 
 var hostBuilder = builder.Host

@@ -212,7 +212,7 @@ public static class ChronicleServerSiloBuilderExtensions
             // so it is built the same way rather than as a manual `new` that has to be kept in sync by hand.
             var projections = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Projections.Projections>(sp);
 
-            return new Cratis.Chronicle.Contracts.Services(
+            var services = new Cratis.Chronicle.Contracts.Services(
                 new Cratis.Chronicle.Services.Compliance.ComplianceService(
                     grainFactory,
                     sp.GetRequiredService<IJsonSchemaMetadataManager>(),
@@ -269,6 +269,15 @@ public static class ChronicleServerSiloBuilderExtensions
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp))
             {
                 Imports = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Imports.Imports>(sp)
+            };
+
+            // Served by the very reactors and reducers above, so a multiplexed stream and a per-observer call behave the same.
+            return services with
+            {
+                MultiplexedObservation = new Cratis.Chronicle.Services.Observation.Multiplexed.MultiplexedObservation(
+                    services.Reactors,
+                    services.Reducers,
+                    sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Multiplexed.MultiplexedObservation>>())
             };
         });
 
