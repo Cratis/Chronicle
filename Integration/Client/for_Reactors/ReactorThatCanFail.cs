@@ -16,6 +16,8 @@ public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
     public async Task OnSomeEvent(SomeEvent evt, EventContext ctx)
     {
         tcs.SetResult();
+
+        // Task.Delay: time-behavior; configurable slow handler exercises failure and recovery while processing.
         await Task.Delay(HandleTime);
         if (ShouldFail)
         {
@@ -28,11 +30,6 @@ public class ReactorThatCanFail(TaskCompletionSource tcs) : IReactor
 
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
-        while (HandledEvents != count)
-        {
-            await Task.Delay(20, cts.Token);
-        }
+        await ReadinessWait.Until(() => Task.FromResult(HandledEvents), handled => handled == count, timeout);
     }
 }

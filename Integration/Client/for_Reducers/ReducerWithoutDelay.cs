@@ -20,11 +20,6 @@ public class ReducerWithoutDelay : IReducerFor<SomeReadModel>
 
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
-        while (HandledEvents < count)
-        {
-            await Task.Delay(50, cts.Token);
-        }
+        await ReadinessWait.Until(() => Task.FromResult(HandledEvents), handled => handled >= count, timeout);
     }
 }

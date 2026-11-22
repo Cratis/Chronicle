@@ -42,6 +42,8 @@ public class and_the_observer_has_been_released(context context) : Given<context
             await _store.EventLog.Append("source", new given.DormantObserverEvent("second"));
             await _store.EventLog.Append("other", new given.DormantObserverEvent("third"));
             await WaitForHandled(3);
+
+            // Task.Delay: time-behavior; observe a quiet window to detect duplicate deliveries after waking.
             await Task.Delay(TimeSpan.FromSeconds(2));
             HandledAfterTheWake = [.. Reactor.Handled];
 
@@ -50,6 +52,8 @@ public class and_the_observer_has_been_released(context context) : Given<context
             ResidentWhileDormantAgain = await ObserverIsResident();
             await _store.EventLog.Append("source", new given.DormantObserverEvent("fourth"));
             await WaitForHandled(4);
+
+            // Task.Delay: time-behavior; observe a quiet window to detect duplicates after the second wake.
             await Task.Delay(TimeSpan.FromSeconds(2));
             HandledAfterTheSecondWake = [.. Reactor.Handled];
 
@@ -77,6 +81,8 @@ public class and_the_observer_has_been_released(context context) : Given<context
             var betaSequence = await _store.EventLog.Append("source", new given.DormantBetaEvent("beta"));
             await WaitForHandled(ChronicleFixture.Beta.Handled, 1);
             ResidentRightAfterTheBetaEvent = [.. (await Task.WhenAll(family.Select(async handler => (await ResidentObserverGrains(handler)).Any() ? handler.Id.Value : string.Empty))).Where(id => id.Length > 0)];
+
+            // Task.Delay: time-behavior; allow unwanted deliveries to show up before asserting other observers stayed idle.
             await Task.Delay(TimeSpan.FromSeconds(2));
             BetaHandled = ChronicleFixture.Beta.Handled.Count;
             HandledByTheOthersWhileOneIsWoken = [ChronicleFixture.Alpha.Handled.Count, ChronicleFixture.Gamma.Handled.Count, Reactor.Handled.Count];
@@ -92,17 +98,11 @@ public class and_the_observer_has_been_released(context context) : Given<context
                 var target = record.Targets[0];
                 var grains = Services.GetRequiredService<IGrainFactory>();
                 await grains.GetGrain<Clients.IConnectedClients>(target.Silo).OnClientDisconnected(new Concepts.Clients.ConnectionId(target.ConnectionId), "the client went away while the observer was dormant");
-                var deadline = DateTimeOffset.UtcNow.AddSeconds(60);
-                while (DateTimeOffset.UtcNow < deadline)
-                {
-                    if (!(await states.GetDurableSubscriptions(EventSequenceId.Log)).ContainsKey(alpha.Id.Value))
-                    {
-                        AlphaRecordClearedAfterTheDisconnect = true;
-                        break;
-                    }
-
-                    await Task.Delay(500);
-                }
+                await ReadinessWait.Until(
+                    async () => (await states.GetDurableSubscriptions(EventSequenceId.Log)).ContainsKey(alpha.Id.Value),
+                    recorded => !recorded,
+                    TimeSpan.FromSeconds(60));
+                AlphaRecordClearedAfterTheDisconnect = true;
             }
         }
     }

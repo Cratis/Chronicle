@@ -69,17 +69,9 @@ public class and_the_source_subject_is_erased(context context) : Given<context>(
         async Task<TReadModel> PollUntil<TReadModel>(string key, Func<TReadModel, bool> ready)
             where TReadModel : class
         {
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            while (true)
-            {
-                var instance = await EventStore.ReadModels.GetInstanceById<TReadModel>(key);
-                if (instance is not null && ready(instance))
-                {
-                    return instance;
-                }
-
-                await Task.Delay(200, cts.Token);
-            }
+            return await ReadinessWait.Until(
+                () => EventStore.ReadModels.GetInstanceById<TReadModel>(key),
+                instance => instance is not null && ready(instance));
         }
     }
 

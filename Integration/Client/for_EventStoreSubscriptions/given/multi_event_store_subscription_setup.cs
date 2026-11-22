@@ -100,22 +100,10 @@ public class multi_event_store_subscription_setup(ChronicleFixture chronicleInPr
         Concepts.Events.EventSequenceNumber expected,
         TimeSpan? timeout = null)
     {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(10));
-        var current = Concepts.Events.EventSequenceNumber.Unavailable;
-
-        while (DateTime.UtcNow < deadline)
-        {
-            current = await GetInboxTailSequenceNumber(sourceEventStoreName, targetEventStoreName, targetNamespace);
-
-            if (current.Equals(expected))
-            {
-                return current;
-            }
-
-            await Task.Delay(100);
-        }
-
-        return current;
+        return await ReadinessWait.Until(
+            () => GetInboxTailSequenceNumber(sourceEventStoreName, targetEventStoreName, targetNamespace),
+            current => current.Equals(expected),
+            timeout ?? TimeSpan.FromSeconds(10));
     }
 
     protected async Task<int> GetEventLogCount(string eventStoreName)
