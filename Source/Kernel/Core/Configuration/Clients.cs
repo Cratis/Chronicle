@@ -70,6 +70,13 @@ public class Clients
     public int KeepAliveIntervalSeconds { get; init; } = 1;
 
     /// <summary>
+    /// Gets how long in seconds a connect or a keep-alive waits for the kernel's own bookkeeping, which is done by grains,
+    /// before it answers anyway. The bookkeeping carries on in the background and is retried; it is never a reason to
+    /// leave a client without an answer. Defaults to 2.
+    /// </summary>
+    public int GraceSeconds { get; init; } = 2;
+
+    /// <summary>
     /// Gets how the open stream of a client keeps its subscriptions in place.
     /// </summary>
     /// <remarks>

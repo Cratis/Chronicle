@@ -37,12 +37,18 @@ message ConnectedClient {
 }
 message ConnectionKeepAlive {
    string ConnectionId = 1;
+   KernelStatus Status = 2;
 }
 message DescriptorSetResponse {
    string SchemaDefinition = 1;
 }
 message IEnumerable_ConnectedClient {
    repeated ConnectedClient items = 1;
+}
+enum KernelStatus {
+   Accepting = 0;
+   Degraded = 1;
+   Recovering = 2;
 }
 // Represents a DateTimeOffset value as an ISO 8601 string (e.g., "2024-01-15T12:30:00.0000000+02:00").
 message SerializableDateTimeOffset {

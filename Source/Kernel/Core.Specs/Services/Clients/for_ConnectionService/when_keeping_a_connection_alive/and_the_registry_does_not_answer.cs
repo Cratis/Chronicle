@@ -6,34 +6,37 @@ using Cratis.Chronicle.Concepts.Clients;
 namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_keeping_a_connection_alive;
 
 /// <summary>
-/// Characterizes today's behavior: a keep-alive the client answers waits for the registry grain, so a saturated
-/// registry holds the answer back while the kernel's own keep-alive stream carries on.
+/// A keep-alive the client answers is answered within the grace whatever the registry grain is doing; the registry's
+/// bookkeeping carries on in the background. The kernel's own keep-alive stream carries on meanwhile too.
 /// </summary>
 public class and_the_registry_does_not_answer : given.a_connected_client
 {
+    readonly TaskCompletionSource<bool> _ping = new();
     Task _response;
     bool _responseCompleted;
 
     async Task Because()
     {
         await ConnectAndWaitForRegistration();
-        _connectedClients.OnClientPing(new ConnectionId(TheConnection)).Returns(new TaskCompletionSource<bool>().Task);
+        _connectedClients.OnClientPing(new ConnectionId(TheConnection)).Returns(_ping.Task);
         var sentBefore = KeepAlivesSent;
         _response = Respond();
         try
         {
-            await _response.WaitAsync(TimeSpan.FromMilliseconds(500));
+            await _response.WaitAsync(TimeSpan.FromSeconds(10));
         }
         catch (TimeoutException)
         {
-            // Expected: the registry never answers.
+            // Reported by the assertion below.
         }
 
-        _responseCompleted = _response.IsCompleted;
+        _responseCompleted = _response.IsCompletedSuccessfully;
         await WaitUntil(() => KeepAlivesSent > sentBefore);
     }
 
-    [Fact] void should_wait_for_the_registry_before_answering() => _responseCompleted.ShouldBeFalse();
+    void Destroy() => _ping.TrySetResult(true);
+
+    [Fact] void should_answer_without_waiting_for_the_registry() => _responseCompleted.ShouldBeTrue();
     [Fact] void should_keep_sending_keep_alives_on_the_stream() => KeepAlivesSent.ShouldBeGreaterThanOrEqual(2);
     [Fact] void should_not_complete_the_stream() => Completed.ShouldBeFalse();
 }
