@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.V2;
@@ -14,16 +15,18 @@ public sealed partial class UniqueConstraintsStorageV2
         var claimedValue = context.Claims.Where(row => row.Scope == claim.Scope && row.Value == claim.Value);
         if (await claimedValue.AnyAsync(cancellationToken))
         {
-            if (!await claimedValue.AnyAsync(row => row.EventSourceId == claim.EventSourceId, cancellationToken)) return UniqueConstraintWriteFailure.ConflictingClaim;
+            var ownedValue = claimedValue.WhereExact(context, row => row.EventSourceId, claim.EventSourceId);
+            if (!await ownedValue.AnyAsync(cancellationToken)) return UniqueConstraintWriteFailure.ConflictingClaim;
 
-            // A repeat changes only subject metadata; the original sequence belongs to the claim.
-            await claimedValue.ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Subject, claim.Subject), cancellationToken);
+            // Only an exact-byte owner repeat changes subject metadata; the first sequence belongs to the claim.
+            await ownedValue.ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Subject, claim.Subject), cancellationToken);
             return null;
         }
 
         if (mode == UniqueConstraintMode.PerEventSource)
         {
-            await context.Claims.Where(row => row.Scope == claim.Scope && row.EventSourceId == claim.EventSourceId).ExecuteDeleteAsync(cancellationToken);
+            await context.Claims.Where(row => row.Scope == claim.Scope)
+                .WhereExact(context, row => row.EventSourceId, claim.EventSourceId).ExecuteDeleteAsync(cancellationToken);
         }
 
         context.Claims.Add(claim);

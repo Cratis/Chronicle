@@ -8,6 +8,16 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 
 public class V2FenceCommands(V2Interleaving interleaving) : DbCommandInterceptor
 {
+    public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+    {
+        if (command.CommandText.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) && command.CommandText.Contains("UniqueConstraintAuthoritiesV2", StringComparison.Ordinal))
+        {
+            interleaving.TransitionReading();
+        }
+
+        return ValueTask.FromResult(result);
+    }
+
     public override async ValueTask<int> NonQueryExecutedAsync(DbCommand command, CommandExecutedEventData eventData, int result, CancellationToken cancellationToken = default)
     {
         if (command.CommandText.TrimStart().StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) && command.CommandText.Contains("UniqueConstraintAuthoritiesV2", StringComparison.Ordinal))

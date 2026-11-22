@@ -31,6 +31,12 @@ public class V2Interleaving : DbTransactionInterceptor
 
     public Task FencePassed() => _enabled && !_transitionFirst && Interlocked.Exchange(ref _pauseOnce, 1) == 0 ? Pause() : Task.CompletedTask;
 
+    public void TransitionReading()
+    {
+        // A SQL Server transition can block on the fenced row during its precheck, before transaction start.
+        if (_enabled && !_transitionFirst && Volatile.Read(ref _pauseOnce) == 1) _transitionAttempted.TrySetResult();
+    }
+
     public async Task<Result<bool, UniqueConstraintWriteFailure>> Run(Func<Task> transition, Func<Task<Result<bool, UniqueConstraintWriteFailure>>> mutation, bool transitionFirst)
     {
         _transitionFirst = transitionFirst;

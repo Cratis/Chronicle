@@ -9,8 +9,6 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 
 public abstract partial class UniqueConstraintsStorageV2SqlContract
 {
-    protected virtual bool OwnerSpacesEqual => false;
-
     [Fact]
     public async Task should_round_trip_an_owner_at_the_450_utf16_unit_boundary()
     {
@@ -60,15 +58,66 @@ public abstract partial class UniqueConstraintsStorageV2SqlContract
     }
 
     [Fact]
-    public async Task should_expose_the_documented_provider_owner_padding_semantics()
+    public async Task should_refuse_same_value_claims_from_padding_distinct_owners()
+    {
+        await Initialize();
+        foreach (var definition in new[] { _definition, PerValue })
+        {
+            (await _storage.Save(_owner, definition, 10, _value, _scope, _authority, _subject)).IsSuccess.ShouldBeTrue();
+            (await _storage.IsAllowed("owner ", definition, _value, _scope)).IsAllowed.ShouldBeFalse();
+            ShouldRefuse(await _storage.Save("owner ", definition, 99, _value, _scope, _authority, "wrong-subject"), UniqueConstraintWriteFailure.ConflictingClaim);
+            (await _storage.GetFor("owner ", definition, _scope)).ShouldBeEmpty();
+            (await _storage.RemoveForSubject(definition, "wrong-subject", _authority)).IsSuccess.ShouldBeTrue();
+            await ShouldRetainClaim(definition);
+        }
+    }
+
+    [Fact]
+    public async Task should_remove_only_exact_owner_bytes_in_both_modes()
+    {
+        await Initialize();
+        foreach (var definition in new[] { _definition, PerValue })
+        {
+            (await _storage.Save(_owner, definition, 10, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
+            (await _storage.Remove("owner ", definition, _scope, _authority)).IsSuccess.ShouldBeTrue();
+            (await _storage.RemoveValue("owner ", definition, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
+            await ShouldRetainClaim(definition);
+            ShouldRefuse(await _storage.Save(_otherOwner, definition, 99, _value, _scope, _authority), UniqueConstraintWriteFailure.ConflictingClaim);
+        }
+    }
+
+    [Fact]
+    public async Task should_refuse_an_unpadded_alias_of_an_owner_with_trailing_spaces()
+    {
+        await Initialize();
+        foreach (var definition in new[] { _definition, PerValue })
+        {
+            (await _storage.Save("owner ", definition, 10, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
+            (await _storage.IsAllowed(_owner, definition, _value, _scope)).IsAllowed.ShouldBeFalse();
+            (await _storage.GetFor(_owner, definition, _scope)).ShouldBeEmpty();
+            ShouldRefuse(await _storage.Save(_owner, definition, 99, _value, _scope, _authority), UniqueConstraintWriteFailure.ConflictingClaim);
+            (await _storage.Remove(_owner, definition, _scope, _authority)).IsSuccess.ShouldBeTrue();
+            (await _storage.RemoveValue(_owner, definition, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
+            (await _storage.GetFor("owner ", definition, _scope)).ShouldContainOnly(_value);
+        }
+    }
+
+    [Fact]
+    public async Task should_preserve_an_owner_when_a_padding_distinct_replacement_is_refused_or_safe()
     {
         await Seed();
-        (await _storage.IsAllowed("owner ", _definition, _value, _scope)).IsAllowed.ShouldEqual(OwnerSpacesEqual);
-        var result = await _storage.Save("owner ", _definition, 99, _value, _scope, _authority);
-        result.IsSuccess.ShouldEqual(OwnerSpacesEqual);
-        if (!OwnerSpacesEqual) ShouldRefuse(result, UniqueConstraintWriteFailure.ConflictingClaim);
+        var result = await _storage.Save("owner ", _definition, 99, _otherValue, _scope, _authority);
         await ShouldRetainClaim();
-        (await _storage.Remove("owner ", _definition, _scope, _authority)).IsSuccess.ShouldBeTrue();
-        (await _storage.GetFor(_owner, _definition, _scope)).Any().ShouldEqual(!OwnerSpacesEqual);
+        (await _storage.IsAllowed("owner ", _definition, _value, _scope)).IsAllowed.ShouldBeFalse();
+        var values = await _storage.GetFor("owner ", _definition, _scope);
+        if (result.IsSuccess)
+        {
+            values.ShouldContainOnly(_otherValue);
+        }
+        else
+        {
+            ShouldRefuse(result, UniqueConstraintWriteFailure.ConflictingClaim);
+            values.ShouldBeEmpty();
+        }
     }
 }

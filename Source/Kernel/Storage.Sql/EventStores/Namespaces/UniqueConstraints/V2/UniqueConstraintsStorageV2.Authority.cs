@@ -71,9 +71,18 @@ public sealed partial class UniqueConstraintsStorageV2
 
     async Task<UniqueConstraintWriteFailure?> Fence(V2DbContext context, ConstraintName constraint, UniqueConstraintWriteAuthority expected, CancellationToken cancellationToken)
     {
-        // A real UPDATE, not a SELECT or a no-op in process: its database row lock lasts through claim commit.
-        var matched = await Matching(context, constraint, expected).ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Revision, row => row.Revision), cancellationToken);
-        if (matched == 1) return null;
+        // Change a stored value to acquire the writer lock, then restore the reusable proof inside this transaction.
+        // At the revision ceiling, move down temporarily instead of overflowing. No intermediate proof is committed.
+        var fencedRevision = expected.Revision.Value == long.MaxValue ? expected.Revision.Value - 1 : expected.Revision.Value + 1;
+        var matched = await Matching(context, constraint, expected).ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Revision, fencedRevision), cancellationToken);
+        if (matched == 1)
+        {
+            var fencedProof = expected with { Revision = new(fencedRevision) };
+            var restored = await Matching(context, constraint, fencedProof).ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Revision, expected.Revision.Value), cancellationToken);
+            if (restored == 1) return null;
+            return UniqueConstraintWriteFailure.AuthorityMismatch;
+        }
+
         var id = AuthorityId(constraint);
         return await context.Authorities.AnyAsync(row => row.Id == id, cancellationToken)
             ? UniqueConstraintWriteFailure.AuthorityMismatch

@@ -101,7 +101,8 @@ sealed class V2Schema(Func<DbContextOptions> createOptions)
         // DDL and binding publication are atomic. Never adopt an unbound pre-existing table.
         await using var claims = Context(expected.Table, expected.Mode);
         await _migrator.EnsureTableMigrated(expected.Table, claims, (schema, _) => V2ClaimMigration.Create(_migrator, schema, expected));
-        var published = await context.Bindings.AsNoTracking().SingleAsync(row => row.Id == expected.Id, cancellationToken);
+        var published = await context.Bindings.AsNoTracking().SingleOrDefaultAsync(row => row.Id == expected.Id, cancellationToken)
+            ?? throw new UniqueConstraintV2SchemaMismatch();
         Verify(published, expected);
     }
 

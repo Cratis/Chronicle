@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Monads;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,7 +29,11 @@ public sealed partial class UniqueConstraintsStorageV2
         cancellationToken.ThrowIfCancellationRequested();
         ValidateOwner(eventSourceId);
         ValidateScope(scope);
-        return Mutate(definition, expected, context => Delete(context.Claims.Where(row => row.Scope == scope.Value && row.EventSourceId == eventSourceId.Value), cancellationToken), cancellationToken);
+        return Mutate(
+            definition,
+            expected,
+            context => Delete(context.Claims.Where(row => row.Scope == scope.Value).WhereExact(context, row => row.EventSourceId, eventSourceId.Value), cancellationToken),
+            cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -42,7 +47,7 @@ public sealed partial class UniqueConstraintsStorageV2
             definition,
             expected,
             context => definition.Mode == UniqueConstraintMode.PerValue
-                ? Delete(context.Claims.Where(row => row.Scope == scope.Value && row.Value == value.Value && row.EventSourceId == eventSourceId.Value), cancellationToken)
+                ? Delete(context.Claims.Where(row => row.Scope == scope.Value && row.Value == value.Value).WhereExact(context, row => row.EventSourceId, eventSourceId.Value), cancellationToken)
                 : Task.FromResult<UniqueConstraintWriteFailure?>(null),
             cancellationToken);
     }

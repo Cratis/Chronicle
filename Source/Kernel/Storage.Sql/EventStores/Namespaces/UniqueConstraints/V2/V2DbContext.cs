@@ -3,9 +3,11 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.V2;
 
@@ -66,6 +68,21 @@ sealed class V2DbContext(DbContextOptions options, string? table = null, UniqueC
         }
     }
 
+    static void ConfigureByteLength(ModelBuilder modelBuilder)
+    {
+        // V2 persists primitive strings, so only the string overload needs a provider mapping.
+        modelBuilder
+            .HasDbFunction(typeof(ExactIdentifiers).GetMethod(nameof(ExactIdentifiers.ByteLength), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic, [typeof(string)])!)
+            .HasParameter("value", parameter => parameter.HasStoreType("nvarchar(450)"))
+            .HasTranslation(args => new SqlFunctionExpression(
+                "DATALENGTH",
+                args,
+                nullable: true,
+                argumentsPropagateNullability: [true],
+                typeof(int),
+                null));
+    }
+
     void ConfigureAuthority(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<V2Authority>();
@@ -110,6 +127,7 @@ sealed class V2DbContext(DbContextOptions options, string? table = null, UniqueC
         entity.HasIndex(row => new { row.Scope, row.EventSourceId }).HasDatabaseName($"IX_{table}_O");
         if (Database.IsSqlServer())
         {
+            ConfigureByteLength(modelBuilder);
             entity.HasKey(mode == UniqueConstraintMode.PerValue ? [nameof(V2Claim.Scope), nameof(V2Claim.Value)] : [nameof(V2Claim.Scope), nameof(V2Claim.EventSourceId)]).IsClustered(false);
             entity.Property(row => row.Scope).UseCollation(V2Identity.BinaryCollation);
             entity.Property(row => row.Value).UseCollation(V2Identity.BinaryCollation);

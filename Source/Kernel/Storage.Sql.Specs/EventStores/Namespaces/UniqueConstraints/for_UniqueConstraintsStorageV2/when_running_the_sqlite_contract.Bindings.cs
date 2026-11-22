@@ -59,6 +59,17 @@ public partial class when_running_the_sqlite_contract
     }
 
     [Fact]
+    public async Task should_report_a_specific_mismatch_when_binding_publication_disappears()
+    {
+        await Initialize();
+        await Execute(command => command.CommandText = "CREATE TRIGGER lose_binding AFTER INSERT ON UniqueConstraintBindingsV2 BEGIN DELETE FROM UniqueConstraintBindingsV2 WHERE Id = NEW.Id; END");
+        await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.Save(_owner, _definition, 10, _value, _scope, _authority));
+        await Execute(command => command.CommandText = "DROP TRIGGER lose_binding");
+        _storage = await ReopenStorage();
+        await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.Save(_owner, _definition, 10, _value, _scope, _authority));
+    }
+
+    [Fact]
     public async Task should_roll_back_table_creation_when_binding_publication_fails_and_allow_retry()
     {
         await Initialize();

@@ -15,9 +15,9 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.
 /// Dormant authority-fenced SQL v2 storage, constructed explicitly for one namespace database and sequence.
 /// </summary>
 /// <remarks>
-/// Owners are at most 450 UTF-16 code units. SQL Server uses binary collation but its ordinary indexed
-/// equality still pads trailing spaces: owner and owner-space identify the same owner there. No digest
-/// or truncation changes owner identity. Subjects are unbounded, nullable and matched exactly in memory.
+/// Owners are at most 450 UTF-16 code units and are matched by their exact bytes. An indexed key collision
+/// with a different owner's bytes is refused, never treated as a repeat or used to overwrite that owner.
+/// No digest or truncation changes owner identity. Subjects are unbounded, nullable and matched exactly in memory.
 /// A factory must return options for a fresh operation-owned connection, not a shared open connection.
 /// </remarks>
 /// <param name="eventSequenceId">The logical sequence, retained in every binding.</param>

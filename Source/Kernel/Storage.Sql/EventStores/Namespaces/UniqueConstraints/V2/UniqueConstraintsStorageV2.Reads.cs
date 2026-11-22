@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.V2;
@@ -21,8 +22,13 @@ public sealed partial class UniqueConstraintsStorageV2
         var table = await _schema.Resolve(Binding(definition), create: false, cancellationToken);
         if (table is null) return (true, EventSequenceNumber.Unavailable);
         await using var context = _schema.Context(table, definition.Mode);
-        var claim = await context.Claims.AsNoTracking().Where(row => row.Scope == scope.Value && row.Value == value.Value)
-            .Select(row => new { Allowed = row.EventSourceId == eventSourceId.Value, row.SequenceNumber }).SingleOrDefaultAsync(cancellationToken);
+        var claimedValue = context.Claims.AsNoTracking().Where(row => row.Scope == scope.Value && row.Value == value.Value);
+        var ownedValue = claimedValue.WhereExact(context, row => row.EventSourceId, eventSourceId.Value);
+        var claim = await claimedValue.Select(row => new
+        {
+            Allowed = ownedValue.Any(owned => owned.Scope == row.Scope && owned.Value == row.Value),
+            row.SequenceNumber
+        }).SingleOrDefaultAsync(cancellationToken);
         return claim is null ? (true, EventSequenceNumber.Unavailable) : (claim.Allowed, new((ulong)claim.SequenceNumber));
     }
 
@@ -35,7 +41,8 @@ public sealed partial class UniqueConstraintsStorageV2
         var table = await _schema.Resolve(Binding(definition), create: false, cancellationToken);
         if (table is null) return [];
         await using var context = _schema.Context(table, definition.Mode);
-        var values = await context.Claims.AsNoTracking().Where(row => row.Scope == scope.Value && row.EventSourceId == eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
+        var values = await context.Claims.AsNoTracking().Where(row => row.Scope == scope.Value)
+            .WhereExact(context, row => row.EventSourceId, eventSourceId.Value).Select(row => row.Value).ToArrayAsync(cancellationToken);
         return values.Select(value => new UniqueConstraintValue(value)).ToArray();
     }
 
