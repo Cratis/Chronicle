@@ -7,6 +7,5 @@ public class and_the_batch_has_been_delivered : given.an_unpartitioned_subscribe
 {
     async Task Because() => await _subscriber.OnNextWithin(TimeSpan.FromMinutes(1), "some-partition", _events, new ObserverSubscriberContext(null));
 
-    // Characterizes today's behavior: the entry for the subscriber is never removed.
-    [Fact] void should_retain_a_gate_for_the_subscriber() => ObserverSubscriberExtensions.HasUnpartitionedGateFor(_subscriber).ShouldBeTrue();
+    [Fact] void should_not_retain_a_gate_for_the_subscriber() => ObserverSubscriberExtensions.HasUnpartitionedGateFor(_subscriber).ShouldBeFalse();
 }

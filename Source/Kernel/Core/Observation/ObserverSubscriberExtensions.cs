@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -28,14 +27,14 @@ public static class ObserverSubscriberExtensions
     /// </remarks>
     internal const int MaximumEventsPerUnpartitionedCall = 20;
 
-    static readonly ConcurrentDictionary<string, SemaphoreSlim> _unpartitionedGates = new();
+    static readonly UnpartitionedGates _unpartitionedGates = new();
 
     /// <summary>
     /// Gets whether a delivery gate is currently held in memory for the subscriber.
     /// </summary>
     /// <param name="subscriber">The <see cref="IObserverSubscriber"/> to look for.</param>
     /// <returns>True when a gate is retained for it.</returns>
-    internal static bool HasUnpartitionedGateFor(IObserverSubscriber subscriber) => _unpartitionedGates.ContainsKey(GateKeyFor(subscriber));
+    internal static bool HasUnpartitionedGateFor(IObserverSubscriber subscriber) => _unpartitionedGates.Has(GateKeyFor(subscriber));
 
     /// <summary>
     /// Hand a partition's events to the subscriber, giving up on the answer once the timeout elapses.
@@ -257,21 +256,21 @@ public static class ObserverSubscriberExtensions
         CancellationToken cancellationToken)
     {
         var all = events as IReadOnlyList<AppendedEvent> ?? events.ToArray();
-        var gate = _unpartitionedGates.GetOrAdd(GateKeyFor(subscriber), static _ => new SemaphoreSlim(1, 1));
+        using var gate = _unpartitionedGates.Acquire(GateKeyFor(subscriber));
         var lastSuccessful = EventSequenceNumber.Unavailable;
 
         for (var offset = 0; offset < all.Count || offset == 0; offset += MaximumEventsPerUnpartitionedCall)
         {
             var chunk = all.Skip(offset).Take(MaximumEventsPerUnpartitionedCall).ToArray();
             ObserverSubscriberResult result;
-            await gate.WaitAsync(cancellationToken);
+            await gate.Enter(cancellationToken);
             try
             {
                 result = await OnNextWithinOneCall(subscriber, timeout, partition, chunk, context, cancellationToken);
             }
             finally
             {
-                gate.Release();
+                gate.Exit();
             }
 
             if (result.State != ObserverSubscriberState.Ok)
