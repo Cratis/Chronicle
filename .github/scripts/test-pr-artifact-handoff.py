@@ -77,7 +77,7 @@ class ArtifactHandoff(unittest.TestCase):
         consumer.mkdir()
         # Stop before setup/build/publish actions; execute the same validation/preparation
         # snippets CI runs after downloads. No Docker, package registry or remote effects.
-        stop = "Set up Docker Buildx" if job == "publish-docker" else "Setup .Net"
+        stop = "Set up Docker Buildx" if job == "build-docker" else "Setup .Net"
         for step in JOBS[job]["steps"]:
             if step.get("name") == stop:
                 break
@@ -100,7 +100,7 @@ class ArtifactHandoff(unittest.TestCase):
         return None
 
     def test_consumers_depend_on_the_exact_artifact_producers(self):
-        for job in ("publish-docker", "publish-nuget-packages"):
+        for job in ("build-docker", "build-nuget-packages"):
             downloads = action_steps(job, "actions/download-artifact")
             self.assertTrue(downloads)
             for download in downloads:
@@ -137,7 +137,7 @@ class ArtifactHandoff(unittest.TestCase):
         self.assertEqual(1, len(workbench_cache))
 
     def test_docker_receives_complete_development_and_workbench_outputs_without_caches(self):
-        consumer, failure = self.prepare("publish-docker")
+        consumer, failure = self.prepare("build-docker")
         self.assertIsNone(failure)
         for architecture in ("x64", "arm64"):
             for filename in SERVER_FILES:
@@ -146,14 +146,14 @@ class ArtifactHandoff(unittest.TestCase):
         self.assertIn("-p:DefineConstants=DEVELOPMENT", str(JOBS["kernel-development"]["steps"]))
 
     def test_nuget_receives_workbench_without_caches(self):
-        consumer, failure = self.prepare("publish-nuget-packages")
+        consumer, failure = self.prepare("build-nuget-packages")
         self.assertIsNone(failure)
         self.assertTrue((consumer / "Source/Workbench/wwwroot/index.html").is_file())
         self.assertTrue((consumer / "Source/Workbench/wwwroot/assets/app.js").is_file())
 
-    def test_both_publishers_reject_a_workbench_without_its_entry_point(self):
+    def test_both_builders_reject_a_workbench_without_its_entry_point(self):
         (self.artifacts["workbench-out"] / "index.html").unlink()
-        for job in ("publish-docker", "publish-nuget-packages"):
+        for job in ("build-docker", "build-nuget-packages"):
             with self.subTest(job=job):
                 _, failure = self.prepare(job)
                 self.assertIsNotNone(failure)
@@ -161,13 +161,13 @@ class ArtifactHandoff(unittest.TestCase):
 
     def test_docker_rejects_a_missing_development_binary(self):
         (self.artifacts["kernel-development-out"] / "x64/Cratis.Chronicle.Server.dll").unlink()
-        _, failure = self.prepare("publish-docker")
+        _, failure = self.prepare("build-docker")
         self.assertIsNotNone(failure)
         self.assertIn("Required prerelease output is missing or empty", failure.stdout)
 
     def test_docker_rejects_an_empty_runtime_configuration(self):
         (self.artifacts["kernel-development-out"] / "x64/Cratis.Chronicle.Server.runtimeconfig.json").write_text("")
-        _, failure = self.prepare("publish-docker")
+        _, failure = self.prepare("build-docker")
         self.assertIsNotNone(failure)
         self.assertIn("runtimeconfig.json", failure.stdout)
 
