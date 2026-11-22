@@ -12,13 +12,13 @@ import { pathToFileURL } from 'node:url';
 // never print matched text, docker output, or exception messages from untrusted logs.
 const rules = [
     ['private-key', /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----/i],
-    ['credential-assignment', /\b(?:[\w-]{0,64}(?:(?:password|passwd|pwd|secret)[\w-]{0,32}|token)|api[_-]?key|access[_-]?key|accountkey)\b["']?\s*[:=]\s*["']?[^\s"';,<}\]]+/i],
+    ['credential-assignment', /\b(?:[\w-]{0,64}(?:password|passwd|pwd|secret|token)|api[_-]?key|access[_-]?key|accountkey)[\w-]{0,32}\b["']?\s*[:=]\s*["']?[^\s"';,<}\]]+/i],
     ['authorization', /\b(?:bearer|basic)\s+[a-z0-9+/_.=-]+/i],
     ['uri-credentials', /[a-z][a-z0-9+.-]{0,31}:\/\/[^\s/@]+:[^\s/@]+@/i],
     ['provider-token', /\b(?:gh[pousr]_[a-z0-9_]+|github_pat_[a-z0-9_]+|AKIA[A-Z0-9]{16}|xox[baprs]-[a-z0-9-]+)\b/i],
     ['jwt', /\beyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+/i],
     ['signed-url', /[?&](?:sig|signature|x-amz-signature)=[^\s&"'<>]+/i],
-    ['xml-credential', /<(?:[\w-]{0,64}(?:(?:password|passwd|pwd|secret)[\w-]{0,32}|token)|api[_-]?key)\b[^>]*>\s*[^\s<]+/i]
+    ['xml-credential', /<(?:[\w-]{0,64}(?:password|passwd|pwd|secret|token)|api[_-]?key|access[_-]?key|accountkey)[\w-]{0,32}\b[^>]*>\s*[^\s<]+/i]
 ];
 const maxBytes = 32 * 1024 * 1024;
 const maxTotalBytes = 500 * 1024 * 1024;
@@ -43,6 +43,12 @@ export function selfTest() {
         ['credential-assignment', 'password1=example-value'],
         ['credential-assignment', 'PasswordHash: example-value'],
         ['xml-credential', '<SecretKey>example-value</SecretKey>'],
+        ['credential-assignment', 'token1=example-value'],
+        ['credential-assignment', 'api_key1: example-value'],
+        ['credential-assignment', 'AccessKeyId=example-value'],
+        ['xml-credential', '<Token1>example-value</Token1>'],
+        ['xml-credential', '<ApiKey2>example-value</ApiKey2>'],
+        ['xml-credential', '<AccountKey>example-value</AccountKey>'],
         ['authorization', 'Authorization: Bearer example-value'],
         ['uri-credentials', 'mongodb://example:example@localhost/'],
         ['provider-token', 'ghp_examplevalue'],
