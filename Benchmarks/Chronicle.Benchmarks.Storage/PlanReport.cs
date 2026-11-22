@@ -29,7 +29,9 @@ internal static partial class PlanReport
         {
             var indexes = IndexNames.Matches(query.Plan).Select(match => match.Groups["index"].Value).Distinct(StringComparer.Ordinal);
             var scans = FullScans.Matches(query.Plan).Where(match => !match.Value.Contains("USING", StringComparison.OrdinalIgnoreCase)).Select(match => $"full scan: {match.Groups["table"].Value}");
-            var used = string.Join(", ", indexes.Concat(scans));
+            var used = provider == "sqlserver"
+                ? "see physical operators above (table.index), including scans and lookups"
+                : string.Join(", ", indexes.Concat(scans));
             builder.AppendLine(CultureInfo.InvariantCulture, $"## {query.Label}").AppendLine()
                 .AppendLine("```sql").AppendLine(query.Sql).AppendLine("```").AppendLine()
                 .AppendLine("```text").AppendLine(query.Plan).AppendLine("```").AppendLine()

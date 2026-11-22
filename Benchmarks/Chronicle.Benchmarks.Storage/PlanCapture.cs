@@ -17,9 +17,9 @@ internal static class PlanCapture
     public static async Task<bool> Run(IStorageProviderHost host, int size, string directory)
     {
         var path = Path.Combine(directory, "plans.md");
-        if (host is not IQueryPlanHost plans || host.Provider == StorageProvider.SqlServer)
+        if (host is not IQueryPlanHost plans)
         {
-            await File.WriteAllTextAsync(path, $"# Query plans\n\n{StorageProviderNames.NameOf(host.Provider)}: not captured.\n");
+            await File.AppendAllTextAsync(path, $"# Query plans ({size} events)\n\n{StorageProviderNames.NameOf(host.Provider)}: not captured.\n");
             return true;
         }
 
@@ -28,25 +28,29 @@ internal static class PlanCapture
             RunBudget.Current.ThrowIfExpired();
             var storage = host.CreateSequence();
             await StorageBenchmark.Seed(storage, size);
-            await Capture(plans.Capture, "cursor-page", async () => await FirstPage(await storage.GetFromSequenceNumber(0)));
-            await Capture(plans.Capture, "cursor-deep", async () => await FirstPage(await storage.GetFromSequenceNumber((ulong)(size / 2))));
-            await Capture(plans.Capture, "type-filtered", async () => await FirstPage(await storage.GetRange(0, (ulong)(size - 1), eventTypes: [BenchmarkEvents.Selected])));
-            await Capture(plans.Capture, "tail", async () => await storage.GetTailSequenceNumber());
-            await Capture(plans.Capture, "tail-per-type", async () => await storage.GetTailSequenceNumbersForEventTypes([BenchmarkEvents.Selected, BenchmarkEvents.Other]));
+            var prefix = $"{size}/";
+            await Capture(plans.Capture, prefix + "cursor-page", async () => await FirstPage(await storage.GetFromSequenceNumber(0)));
+            await Capture(plans.Capture, prefix + "cursor-deep", async () => await FirstPage(await storage.GetFromSequenceNumber((ulong)(size / 2))));
+            await Capture(plans.Capture, prefix + "type-filtered", async () => await FirstPage(await storage.GetRange(0, (ulong)(size - 1), eventTypes: [BenchmarkEvents.Selected])));
+            await Capture(plans.Capture, prefix + "tail", async () => await storage.GetTailSequenceNumber());
+            await Capture(plans.Capture, prefix + "tail-per-type", async () => await storage.GetTailSequenceNumbersForEventTypes([BenchmarkEvents.Selected, BenchmarkEvents.Other]));
             var results = new List<(string Label, string Sql, string Plan)>();
-            foreach (var (label, query) in plans.Capture.Queries.OrderBy(_ => _.Key, StringComparer.Ordinal))
+            var queries = plans.Capture.Queries.Where(_ => _.Key.StartsWith(prefix, StringComparison.Ordinal)).OrderBy(_ => _.Key, StringComparer.Ordinal).ToArray();
+            foreach (var (key, query) in queries)
             {
                 RunBudget.Current.ThrowIfExpired();
-                results.Add((label, query.Sql, await plans.Explain(query)));
+                var label = key[prefix.Length..];
+                var rawPlanPath = Path.Combine(directory, $"plans-sqlserver-{size}-{label}.xml");
+                results.Add((label, query.Sql, await plans.Explain(query, rawPlanPath)));
             }
 
-            var first = plans.Capture.Queries.Values.FirstOrDefault();
+            var first = queries.Select(_ => _.Value).FirstOrDefault();
             var indexes = first is null ? "not captured: no SELECT found" : await plans.IndexDefinitions(first);
-            await File.WriteAllTextAsync(path, PlanReport.Format(StorageProviderNames.NameOf(host.Provider), size, results) + "\n## Index definitions\n\n```text\n" + indexes + "\n```\n");
+            await File.AppendAllTextAsync(path, PlanReport.Format(StorageProviderNames.NameOf(host.Provider), size, results) + "\n## Index definitions\n\n```text\n" + indexes + "\n```\n");
         }
         catch (Exception error)
         {
-            await File.WriteAllTextAsync(path, $"# Query plans\n\nnot captured: {error.Message}\n");
+            await File.AppendAllTextAsync(path, $"# Query plans ({size} events)\n\nnot captured: {error.Message}\n");
         }
 
         return true;

@@ -37,7 +37,12 @@ internal sealed class QueryCapture
             parameter.ParameterName,
             parameter.Value is Array values ? values.Clone() : parameter.Value,
             parameter.DbType,
-            parameter is Npgsql.NpgsqlParameter postgres ? postgres.Clone() : null)).ToArray();
+            parameter switch
+            {
+                Npgsql.NpgsqlParameter postgres => postgres.Clone(),
+                Microsoft.Data.SqlClient.SqlParameter sqlServer => (DbParameter)((ICloneable)sqlServer).Clone(),
+                _ => null
+            })).ToArray();
         _queries.TryAdd(label, new(command.CommandText, parameters));
     }
 
