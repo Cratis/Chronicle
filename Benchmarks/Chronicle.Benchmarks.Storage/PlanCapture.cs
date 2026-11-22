@@ -33,6 +33,7 @@ internal static class PlanCapture
             await Capture(plans.Capture, "type-filtered", async () => await FirstPage(await storage.GetRange(0, (ulong)(size - 1), eventTypes: [BenchmarkEvents.Selected])));
             await Capture(plans.Capture, "tail", async () => await storage.GetTailSequenceNumber());
             await Capture(plans.Capture, "tail-per-type", async () => await storage.GetTailSequenceNumbersForEventTypes([BenchmarkEvents.Selected, BenchmarkEvents.Other]));
+            await CaptureSequenceReads(plans.Capture, storage, size);
             var results = new List<(string Label, string Sql, string Plan)>();
             foreach (var (label, query) in plans.Capture.Queries.OrderBy(_ => _.Key, StringComparer.Ordinal))
             {
@@ -50,6 +51,19 @@ internal static class PlanCapture
         }
 
         return true;
+    }
+
+    static async Task CaptureSequenceReads(QueryCapture capture, IEventSequenceStorage storage, int size)
+    {
+        var middle = (ulong)(size / 2);
+        var last = (ulong)(size - 1);
+        await Capture(capture, "source-filtered", async () => await FirstPage(await storage.GetRange(0, last, eventSourceId: BenchmarkEvents.SourceAt(0))));
+        await Capture(capture, "source-type-filtered", async () => await FirstPage(await storage.GetRange(0, last, eventSourceId: BenchmarkEvents.SourceAt(0), eventTypes: [BenchmarkEvents.Selected])));
+        await Capture(capture, "head", async () => await storage.GetHeadSequenceNumber());
+        await Capture(capture, "next", async () => await storage.GetNextSequenceNumberGreaterOrEqualThan(middle));
+        await Capture(capture, "metadata", async () => await storage.GetMetadataAt([0, middle, last]));
+        await Capture(capture, "count", async () => await storage.GetCount());
+        await Capture(capture, "parent-predecessor", async () => await storage.GetInstancesOfAnyInRange([BenchmarkEvents.SourceAt(0)], [BenchmarkEvents.Selected.Id], middle, last));
     }
 
     static async Task Capture(QueryCapture capture, string label, Func<Task> work)
