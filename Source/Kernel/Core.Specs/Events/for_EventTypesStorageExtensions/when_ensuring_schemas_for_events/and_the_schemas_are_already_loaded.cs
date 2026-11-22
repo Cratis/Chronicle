@@ -18,5 +18,5 @@ public class and_the_schemas_are_already_loaded : given.an_event_type_stored_at_
 
     async Task Because() => await _eventTypes.EnsureSchemasFor(_schemas, [EventStoredAt(first_generation), EventStoredAt(second_generation)]);
 
-    [Fact] void should_not_ask_storage_for_any_schema() => _eventTypes.DidNotReceive().GetFor(Arg.Any<IEnumerable<EventType>>());
+    [Fact] void should_not_ask_storage_for_any_schema() => _eventTypes.DidNotReceive().GetAllGenerationsForEventType(Arg.Any<EventType>());
 }

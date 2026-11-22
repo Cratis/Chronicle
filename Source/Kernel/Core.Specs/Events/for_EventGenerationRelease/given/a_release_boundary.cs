@@ -54,7 +54,11 @@ public class a_release_boundary : Specification
                 migrated.fullName = content[0]!.GetValue<string>();
                 return new Dictionary<EventTypeGeneration, ExpandoObject> { [2] = migrated };
             });
-        _schemas = new Dictionary<EventType, EventTypeSchema> { [_pin] = new(_pin, EventTypeOwner.Client, EventTypeSource.Code, _schema) };
+        _schemas = new Dictionary<EventType, EventTypeSchema>
+        {
+            [new(_pin.Id, 1)] = new(new(_pin.Id, 1), EventTypeOwner.Client, EventTypeSource.Code, _firstSchema),
+            [_pin] = new(_pin, EventTypeOwner.Client, EventTypeSource.Code, _schema)
+        };
         _event = new(EventContext.Empty with { EventType = new(_pin.Id, 1), Subject = "person", AppendedGeneration = 1, Hash = "first-hash" }, _converter.ToExpandoObject(new JsonObject { ["name"] = "ciphertext" }, _firstSchema))
         {
             GenerationalContent = new Dictionary<int, string> { [1] = "{\"name\":\"ciphertext\"}", [2] = "{\"fullName\":\"ciphertext\"}" },
@@ -78,7 +82,8 @@ public class a_release_boundary : Specification
         var released = (JsonObject)content.DeepClone();
         foreach (var property in released.ToArray())
         {
-            if (property.Value?.GetValue<string>() == "ciphertext")
+            var value = property.Value?.GetValue<string>();
+            if (value == "ciphertext" || value == "original-ciphertext")
             {
                 released[property.Key] = "Ada Lovelace";
             }

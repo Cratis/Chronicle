@@ -61,6 +61,8 @@ The built-in key stores apply these checks when they see a fence:
 
 Reads have a different boundary. Individual stores' `TryGetFor`, `HasFor` and `GetFor` still answer about material they hold; they do not validate it against the fence. A composed store checks readable members' fences before serving a key, but that does not cover every read path. When the key is absent, encrypted `[PII]` releases as the type's empty value, such as an empty string, `0`, `false` or `null`; see [Erasing a subject](erasing-a-subject). If a stale replica or recovered secret returns the key, old ciphertext may still decrypt.
 
+Sequence reads and observer deliveries release protected values in `GenerationalContent`, `OriginalContent` and revision content using each payload's generation schema and the event's subject. Erased values become empty values in history as well as current content. If a generation's schema is unavailable, its stored history content is returned unchanged.
+
 ### What it does *not* refuse
 
 Erasure applies to the current key lifecycle, not to every future use of the subject identifier. If your application establishes a lawful basis to process new PII, it can explicitly authorize a fresh key. Chronicle provides the operation; deciding whether to use it remains your responsibility.

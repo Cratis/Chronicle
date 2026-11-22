@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Observation.Webhooks.for_WebhookObserverSubscriber.wh
 
 public class with_a_successful_delivery_to_a_sensitive_target : given.a_webhook_delivery_to_a_sensitive_target
 {
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
 
     [Fact] void should_succeed() => _deliveryResult.State.ShouldEqual(ObserverSubscriberState.Ok);
     [Fact] void should_advance_to_last_event() => _deliveryResult.LastSuccessfulObservation.ShouldEqual((EventSequenceNumber)44);

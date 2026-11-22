@@ -23,5 +23,6 @@ public class and_a_missing_pin_migrates_from_an_inherited_protected_generation :
     async Task Because() => _result = await Release();
 
     [Fact] void should_release_before_migrating() => ReleasedToken.ShouldEqual(Token);
-    [Fact] void should_not_persist_delivery_time_content() => _result[0].GenerationalContent.ShouldBeSame(_event.GenerationalContent);
+    [Fact] void should_release_returned_source_history() => _result[0].GenerationalContent[1].Contains(Token, StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_not_persist_delivery_time_content() => _event.GenerationalContent[1].ShouldEqual(StoredGeneration(1));
 }
