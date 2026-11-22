@@ -17,6 +17,7 @@ public sealed class ActivationIteration(Func<Task> prime, Func<Task> deactivate,
     /// <summary>Prepares one operation; failures disallow validation as a measurement.</summary>
     /// <param name="mode">The lifecycle to exercise.</param>
     /// <returns>The preparation task.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The lifecycle mode is unknown.</exception>
     public async Task Prepare(GrainActivationMode mode)
     {
         _prepared = false;

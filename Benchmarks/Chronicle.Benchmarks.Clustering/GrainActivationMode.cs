@@ -9,11 +9,11 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 public enum GrainActivationMode
 {
     /// <summary>An already active grain.</summary>
-    Warm,
+    Warm = 0,
 
     /// <summary>A target explicitly deactivated before the call.</summary>
-    Cold,
+    Cold = 1,
 
     /// <summary>A replacement silo, retaining the same MongoDB data.</summary>
-    PostRestart
+    PostRestart = 2
 }

@@ -14,8 +14,16 @@ public class when_preparing_cold : Specification
     string[] _beforeCompletion = [];
 
     void Establish() => _iteration = new(
-        () => { _calls.Add("prime"); return Task.CompletedTask; },
-        () => { _calls.Add("deactivate"); return _deactivation.Task; },
+        () =>
+        {
+            _calls.Add("prime");
+            return Task.CompletedTask;
+        },
+        () =>
+        {
+            _calls.Add("deactivate");
+            return _deactivation.Task;
+        },
         () => throw new InvalidOperationException("Must not restart"),
         () => _calls.Add("capture"));
 
