@@ -9,12 +9,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Events.EventSequences;
 using Cratis.Chronicle.Observation.Webhooks;
 
 namespace Cratis.Chronicle.Events;
 
 /// <summary>
-/// Produces public copies of event content with webhook target header values omitted.
+/// Produces public copies of event content and revision requests with webhook target header values omitted.
 /// Internal event processing retains the original content.
 /// </summary>
 internal static class PublicEventContentRedactor
@@ -22,6 +23,7 @@ internal static class PublicEventContentRedactor
     const string InvalidContent = "Invalid public event content.";
     static readonly EventTypeId WebhookAddedType = typeof(WebhookAdded).GetEventType().Id;
     static readonly EventTypeId TargetHeadersSetType = typeof(TargetHeadersSetForWebhook).GetEventType().Id;
+    static readonly EventTypeId EventRevisedType = typeof(EventRevised).GetEventType().Id;
 
     /// <summary>
     /// Creates a detached public copy of a header-bearing event, including its content history.
@@ -31,14 +33,14 @@ internal static class PublicEventContentRedactor
     /// <returns>The public copy, or the original event when no redaction is required.</returns>
     public static AppendedEvent Redact(AppendedEvent appendedEvent, JsonSerializerOptions options)
     {
-        if (!HasTargetHeaders(appendedEvent.Context.EventType))
+        if (!RequiresRedaction(appendedEvent.Context.EventType))
         {
             return appendedEvent;
         }
 
         return appendedEvent with
         {
-            Content = RedactContent(appendedEvent.Content),
+            Content = RedactContent(appendedEvent.Context.EventType, appendedEvent.Content, options),
             OriginalContent = Redact(appendedEvent.Context.EventType, appendedEvent.OriginalContent, options),
             Revisions = appendedEvent.Revisions.Select(revision => revision with { Content = Redact(appendedEvent.Context.EventType, revision.Content, options) }).ToArray(),
             GenerationalContent = appendedEvent.GenerationalContent.ToDictionary(pair => pair.Key, pair => Redact(appendedEvent.Context.EventType, pair.Value, options))
@@ -54,7 +56,7 @@ internal static class PublicEventContentRedactor
     /// <returns>The public content.</returns>
     public static string Redact(EventType eventType, string content, JsonSerializerOptions options)
     {
-        if (!HasTargetHeaders(eventType) || string.IsNullOrEmpty(content))
+        if (!RequiresRedaction(eventType) || string.IsNullOrEmpty(content))
         {
             return content;
         }
@@ -67,9 +69,15 @@ internal static class PublicEventContentRedactor
                 throw new JsonException(InvalidContent);
             }
 
+            var revisionContent = eventType.Id == EventRevisedType ? RedactRevision(document.RootElement, options) : null;
+            if (eventType.Id == EventRevisedType && revisionContent is null)
+            {
+                return content;
+            }
+
             var buffer = new ArrayBufferWriter<byte>();
             using var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { Encoder = options.Encoder, Indented = options.WriteIndented });
-            WriteContent(writer, document.RootElement);
+            WriteContent(writer, document.RootElement, revisionContent);
             writer.Flush();
             return Encoding.UTF8.GetString(buffer.WrittenSpan);
         }
@@ -77,6 +85,74 @@ internal static class PublicEventContentRedactor
         {
             throw new JsonException(InvalidContent);
         }
+    }
+
+    static ExpandoObject RedactContent(EventType eventType, ExpandoObject content, JsonSerializerOptions options)
+    {
+        if (eventType.Id != EventRevisedType)
+        {
+            return RedactContent(content);
+        }
+
+        try
+        {
+            var revisionContent = RedactRevision(JsonSerializer.SerializeToElement(content, options), options);
+            if (revisionContent is null)
+            {
+                return content;
+            }
+
+            IDictionary<string, object?> copy = new ExpandoObject();
+            foreach (var property in (IDictionary<string, object?>)content)
+            {
+                copy[property.Key] = IsContent(property.Key) ? revisionContent : property.Value;
+            }
+
+            return ((ExpandoObject)copy).Clone();
+        }
+        catch (JsonException)
+        {
+            throw new JsonException(InvalidContent);
+        }
+    }
+
+    static string? RedactRevision(JsonElement envelope, JsonSerializerOptions options)
+    {
+        var id = RequiredProperty(RequiredProperty(envelope, "eventType"), "id");
+        if (id.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(id.GetString()))
+        {
+            throw new JsonException(InvalidContent);
+        }
+
+        var eventType = new EventType(id.GetString()!, EventTypeGeneration.First);
+        if (!RequiresRedaction(eventType))
+        {
+            return null;
+        }
+
+        var content = RequiredProperty(envelope, "content");
+        if (content.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(content.GetString()))
+        {
+            throw new JsonException(InvalidContent);
+        }
+
+        return Redact(eventType, content.GetString()!, options);
+    }
+
+    static JsonElement RequiredProperty(JsonElement content, string name)
+    {
+        if (content.ValueKind != JsonValueKind.Object)
+        {
+            throw new JsonException(InvalidContent);
+        }
+
+        var properties = content.EnumerateObject().Where(property => property.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (properties.Length != 1)
+        {
+            throw new JsonException(InvalidContent);
+        }
+
+        return properties[0].Value;
     }
 
     static ExpandoObject RedactContent(ExpandoObject content)
@@ -112,18 +188,24 @@ internal static class PublicEventContentRedactor
         _ => []
     };
 
-    static bool HasTargetHeaders(EventType eventType) =>
-        eventType.Id == WebhookAddedType || eventType.Id == TargetHeadersSetType;
+    static bool RequiresRedaction(EventType eventType) =>
+        eventType.Id == WebhookAddedType || eventType.Id == TargetHeadersSetType || eventType.Id == EventRevisedType;
 
     static bool IsTargetHeaders(string name) => name.Equals("targetHeaders", StringComparison.OrdinalIgnoreCase);
 
-    static void WriteContent(Utf8JsonWriter writer, JsonElement content)
+    static bool IsContent(string name) => name.Equals("content", StringComparison.OrdinalIgnoreCase);
+
+    static void WriteContent(Utf8JsonWriter writer, JsonElement content, string? revisionContent)
     {
         writer.WriteStartObject();
         foreach (var property in content.EnumerateObject())
         {
             writer.WritePropertyName(property.Name);
-            if (IsTargetHeaders(property.Name))
+            if (revisionContent is not null && IsContent(property.Name))
+            {
+                writer.WriteStringValue(revisionContent);
+            }
+            else if (revisionContent is null && IsTargetHeaders(property.Name))
             {
                 WriteHeaders(writer, property.Value);
             }

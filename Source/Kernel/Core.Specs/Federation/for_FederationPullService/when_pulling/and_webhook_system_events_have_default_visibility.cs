@@ -16,6 +16,7 @@ public class and_webhook_system_events_have_default_visibility : given.a_pull_se
         _grants.Add(GrantForCaller());
         RegisterEventType("WebhookAdded", EventTypeVisibility.Unspecified);
         RegisterEventType("TargetHeadersSetForWebhook", EventTypeVisibility.Unspecified);
+        RegisterEventType("EventRevised", EventTypeVisibility.Unspecified);
         _events.AddRange(header_events.All());
     }
 

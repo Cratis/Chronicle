@@ -14,7 +14,7 @@ public class when_redacting_header_events : Specification
 
     void Establish()
     {
-        _stored = given.header_events.All();
+        _stored = given.header_events.Direct();
         _before = _stored.Select(@event => JsonSerializer.Serialize(@event, given.header_events.Options)).ToArray();
     }
 
