@@ -9,14 +9,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace Cratis.Chronicle.Server.Authentication.Controllers.for_AuthorizationController;
 
 /// <summary>
-/// Characterizes today's behavior: the token is issued only once the authentication audit event has been appended, so
-/// a saturated event log holds every client's authentication back.
+/// The authentication audit event is appended through the event log grain, so a saturated event log must not hold every
+/// client's authentication back: the token is issued once the audit grace has passed, and the append carries on.
 /// </summary>
 public class when_exchanging_client_credentials_while_the_event_log_does_not_answer : a_client_credentials_token_endpoint
 {
     readonly TaskCompletionSource<AppendResult> _append = new();
     Task<IActionResult> _exchange;
     bool _completed;
+    IActionResult _result;
 
     void Establish()
     {
@@ -34,17 +35,19 @@ public class when_exchanging_client_credentials_while_the_event_log_does_not_ans
         _exchange = _controller.Exchange();
         try
         {
-            await _exchange.WaitAsync(TimeSpan.FromMilliseconds(500));
+            await _exchange.WaitAsync(TimeSpan.FromSeconds(10));
         }
         catch (TimeoutException)
         {
-            // Expected: the event log never answers.
+            // Reported by the assertion below.
         }
 
-        _completed = _exchange.IsCompleted;
+        _completed = _exchange.IsCompletedSuccessfully;
+        _result = _completed ? await _exchange : null;
     }
 
     void Destroy() => _append.TrySetResult(default!);
 
-    [Fact] void should_not_issue_the_token_until_the_event_log_answers() => _completed.ShouldBeFalse();
+    [Fact] void should_answer_without_waiting_for_the_event_log() => _completed.ShouldBeTrue();
+    [Fact] void should_issue_the_token() => _result.ShouldBeOfExactType<SignInResult>();
 }
