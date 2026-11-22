@@ -29,7 +29,7 @@ Filtering happens when definitions are read, including definitions stored before
 
 Public event reads, exports, and event streams omit target header values from `WebhookAdded` and `TargetHeadersSetForWebhook`, including their original, revised, and generational content. Header names remain with empty values. Preview and snapshot reconstruction use the same public content. This applies in every event store, including its system sequence, and to events stored before the upgrade without a migration or replay. These public copies do not change stored event history or internal webhook replay and delivery configuration; this is read-time redaction, not encryption at rest.
 
-An older Kernel still returns legacy values until upgraded; upgrade every Kernel serving queries or streams. The updated .NET client discards any legacy response values after deriving presence metadata, but it cannot repair an old server's wire response.
+An older Kernel still returns legacy values until upgraded; upgrade every Kernel serving queries or streams. The updated .NET client discards any legacy response values after deriving presence metadata,; an old Kernel's wire response still carries those values until the Kernel is upgraded.
 
 ## Signing
 
