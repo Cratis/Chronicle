@@ -45,6 +45,14 @@ public interface IProjectionsManager : IGrainWithStringKey
     Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions();
 
     /// <summary>
+    /// Get a persisted <see cref="ProjectionDefinition"/>, including one that is not (yet) part of the registered state.
+    /// </summary>
+    /// <param name="identifier">The <see cref="ProjectionId"/> of the projection.</param>
+    /// <returns>The stored <see cref="ProjectionDefinition"/>, or null when none is stored.</returns>
+    [AlwaysInterleave]
+    Task<ProjectionDefinition?> GetStoredProjectionDefinition(ProjectionId identifier);
+
+    /// <summary>
     /// Get all the projections with their declaration representation.
     /// </summary>
     /// <returns>A collection of <see cref="ProjectionWithDeclaration"/>.</returns>
