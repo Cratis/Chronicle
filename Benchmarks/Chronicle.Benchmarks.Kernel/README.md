@@ -102,6 +102,25 @@ One run of each with 2 000 observers over 125 s, default options otherwise:
 
 The keeper calls drop about thirtyfold. The busiest second in both runs is the first check of every subscription, one revise interval after it is kept; later safety-net checks are spread over the interval. The CPU difference between the two keeper runs is within run-to-run noise.
 
+## Client streams
+
+The `--client-streams` mode measures what it takes to open many server-streaming calls from one client connection, which is what a client that registers many reactors and reducers does after a restart. It starts a real Kestrel listener on loopback with the kernel's HTTP/2 limits (`KestrelHttp2Limits`) and a probe service whose stream sends one message and then stays open, like an idle observer stream. A client with the channel settings of the Chronicle .NET client opens `--count` of them at once. The output reports how many were established, how long establishment took (the run, and p50, p95 and max per stream), the managed memory the open streams hold in the process (client and server together) and every failure with the gRPC status it carried.
+
+```sh
+dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --client-streams --count 11000
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--count` | 11000 | Observers the client has. |
+| `--max-streams` | 100 | The server's concurrent HTTP/2 streams per connection. |
+| `--single-connection` | off | The client may not open a second HTTP/2 connection, so streams beyond the server limit queue. |
+| `--multiplexed` | off | The observers share one stream, as with the multiplexed observation. |
+| `--timeout-seconds` | 120 | How long to wait for every stream to be established. |
+
+The mode isolates the transport. It does not run the kernel's registration, which has its own bound (`observers.maxConcurrentRegistrations`).
+
 ## Idle observer calls
 
 The `--idle-calls` mode measures what subscribed observers cost an idle kernel. It starts the same in-process silo as `--observer-footprint`, subscribes a number of reactor observers to one client connection and leaves them alone, with nothing appended. After a settle period it counts every grain call, by interface and method, with an incoming grain call filter, and reports them per observer per minute together with the bytes the process allocated, the gen0 collections and the CPU used in the same window.

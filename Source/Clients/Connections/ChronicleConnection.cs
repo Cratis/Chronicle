@@ -273,6 +273,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     }
 
     /// <summary>
+    /// Gets a value indicating whether observation is carried over one stream for every reactor and reducer when the kernel
+    /// advertises <see cref="Contracts.Clients.KernelCapabilities.MultiplexedObservation"/>. Against a kernel that does not,
+    /// every reactor and reducer keeps its own stream whatever this is.
+    /// </summary>
+    public bool MultiplexObservation { get; init; } = true;
+
+    /// <summary>
     /// Gets the longest a connect attempt waits for one server to complete its handshake while another server is
     /// still untried. The last untried server gets whatever remains of the connect timeout.
     /// </summary>
@@ -324,6 +331,38 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     /// <inheritdoc/>
     public void RequestReconnect() => _watchDog.RequestReconnect();
+
+    /// <summary>
+    /// Decides how reactors and reducers observe: over one multiplexed stream when it is enabled and the kernel advertises it,
+    /// otherwise over one stream each, which is all an older kernel serves.
+    /// </summary>
+    /// <param name="perObserver">The services with one stream per reactor and reducer.</param>
+    /// <param name="enabled">Whether multiplexed observation is enabled.</param>
+    /// <param name="capabilities">The capabilities the kernel advertised.</param>
+    /// <param name="multiplexedObservation">Creates the proxy of the kernel's multiplexed observation. Only called when it is used.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> for the shared channel.</param>
+    /// <returns>The services to use.</returns>
+    internal static Services ChooseObservation(
+        Services perObserver,
+        bool enabled,
+        IReadOnlyCollection<string> capabilities,
+        Func<Contracts.Observation.Multiplexed.IMultiplexedObservation> multiplexedObservation,
+        ILoggerFactory loggerFactory)
+    {
+        if (!enabled || !capabilities.Contains(Contracts.Clients.KernelCapabilities.MultiplexedObservation))
+        {
+            return perObserver;
+        }
+
+        var channel = new Multiplexed.MultiplexedObservationChannel(
+            multiplexedObservation(),
+            loggerFactory.CreateLogger<Multiplexed.MultiplexedObservationChannel>());
+        return perObserver with
+        {
+            Reactors = new Multiplexed.MultiplexedReactors(perObserver.Reactors, channel),
+            Reducers = new Multiplexed.MultiplexedReducers(channel)
+        };
+    }
 
     /// <summary>
     /// Reconnect on behalf of the watchdog, which must always get to attempt.
@@ -714,7 +753,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     IConnectionService CreateConnectionService(ChronicleServerAddress address, CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory) =>
         ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
 
-    Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
+    Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory) =>
+        ChooseObservation(
+            CreatePerObserverServices(callInvoker, clientFactory),
+            MultiplexObservation,
+            Capabilities,
+            () => callInvoker.CreateGrpcService<Contracts.Observation.Multiplexed.IMultiplexedObservation>(clientFactory),
+            _loggerFactory);
+
+    Services CreatePerObserverServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
     {
         return new Services(
             callInvoker.CreateGrpcService<ICompliance>(clientFactory),

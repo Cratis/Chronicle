@@ -5,7 +5,9 @@ extern alias KernelCore;
 
 using Cratis.Chronicle.AspNetCore.Identities;
 using Cratis.Chronicle.Connections;
+using Cratis.Chronicle.Connections.Multiplexed;
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Observation.Multiplexed;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Identities;
 using Cratis.Serialization;
@@ -37,11 +39,17 @@ public static class InProcessChronicleClientExtensions
     /// <param name="services">The <see cref="IServiceCollection"/> to add the client to.</param>
     /// <param name="artifactsProvider">The <see cref="IClientArtifactsProvider"/> used to discover event types, reactors, reducers and projections.</param>
     /// <param name="eventStore">The <see cref="EventStoreName"/> the client connects to.</param>
+    /// <param name="multiplexedObservation">
+    /// When given, the client's reactors and reducers observe over one multiplexed stream instead of one stream each, through
+    /// the kernel's multiplexed observation passed through this function (which lets a spec watch what travels). When
+    /// <see langword="null"/> every reactor and reducer has its own stream.
+    /// </param>
     /// <returns>The <see cref="IServiceCollection"/> for continuation.</returns>
     public static IServiceCollection AddInProcessChronicleClient(
         this IServiceCollection services,
         IClientArtifactsProvider artifactsProvider,
-        EventStoreName eventStore)
+        EventStoreName eventStore,
+        Func<IMultiplexedObservation, IMultiplexedObservation>? multiplexedObservation = null)
     {
         services.AddSingleton<IReactorMediator, ReactorMediator>();
         services.AddSingleton<IReducerMediator, ReducerMediator>();
@@ -95,6 +103,17 @@ public static class InProcessChronicleClientExtensions
             var grainFactory = sp.GetRequiredService<IGrainFactory>();
             var chronicleServices = sp.GetRequiredService<IServices>();
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            if (multiplexedObservation is not null && chronicleServices is Services kernelServices)
+            {
+                var channel = new MultiplexedObservationChannel(
+                    multiplexedObservation(kernelServices.MultiplexedObservation),
+                    loggerFactory.CreateLogger<MultiplexedObservationChannel>());
+                chronicleServices = kernelServices with
+                {
+                    Reactors = new MultiplexedReactors(kernelServices.Reactors, channel),
+                    Reducers = new MultiplexedReducers(channel)
+                };
+            }
 
             var connectionLifecycle = new ConnectionLifecycle(loggerFactory.CreateLogger<ConnectionLifecycle>());
             var connection = new ChronicleConnection(connectionLifecycle, grainFactory, sp.GetRequiredService<ILocalSiloDetails>(), sp.GetRequiredService<KernelCore::Cratis.Chronicle.Clients.IConnectionOwnership>(), loggerFactory);
