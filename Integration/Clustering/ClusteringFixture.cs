@@ -326,6 +326,9 @@ public class ClusteringFixture : IAsyncLifetime
         await kernelReactors.DiscoverAndRegister(
             (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+        // Resumes the registrations the kernel accepted before it stopped, as the server's startup task does.
+        await grainFactory.GetGrain<KernelCore::Cratis.Chronicle.Registrations.IRegistrationInbox>(userEventStore).Ensure();
     }
 
     /// <summary>
