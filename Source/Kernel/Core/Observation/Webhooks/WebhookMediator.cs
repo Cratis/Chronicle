@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Webhooks.Signing;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.DependencyInjection;
@@ -55,7 +56,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
             using var request = new HttpRequestMessage(HttpMethod.Post, string.Empty)
             {
-                Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch), options: jsonSerializerOptions)
+                Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch.Select(@event => PublicEventContentRedactor.Redact(@event, jsonSerializerOptions)).ToArray()), options: jsonSerializerOptions)
             };
             if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
             if (signingIdentity is not null) await SignRequest(request, eventStore, signingIdentity, deadline.Token);

@@ -23,6 +23,7 @@ public class and_registration_fails : Specification
         _service = new Projections(
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
+            new System.Text.Json.JsonSerializerOptions(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
