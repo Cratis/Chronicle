@@ -238,6 +238,10 @@
             "weight": 0.0006317356200622306
         },
         {
+            "prefix": "Cratis.Chronicle.Observation.for_ObserverContinuationLifetime.",
+            "weight": 0.0000001
+        },
+        {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider.",
             "weight": 0.0008432324252328064
         },
