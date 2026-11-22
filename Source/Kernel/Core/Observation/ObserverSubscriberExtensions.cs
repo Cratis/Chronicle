@@ -31,6 +31,13 @@ public static class ObserverSubscriberExtensions
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _unpartitionedGates = new();
 
     /// <summary>
+    /// Gets whether a delivery gate is currently held in memory for the subscriber.
+    /// </summary>
+    /// <param name="subscriber">The <see cref="IObserverSubscriber"/> to look for.</param>
+    /// <returns>True when a gate is retained for it.</returns>
+    internal static bool HasUnpartitionedGateFor(IObserverSubscriber subscriber) => _unpartitionedGates.ContainsKey(GateKeyFor(subscriber));
+
+    /// <summary>
     /// Hand a partition's events to the subscriber, giving up on the answer once the timeout elapses.
     /// </summary>
     /// <param name="subscriber">The <see cref="IObserverSubscriber"/> to hand the events to.</param>
