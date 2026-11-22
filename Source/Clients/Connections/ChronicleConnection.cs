@@ -273,6 +273,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     }
 
     /// <summary>
+    /// Gets a value indicating whether observation is carried over one stream for every reactor and reducer when the kernel
+    /// advertises <see cref="Contracts.Clients.KernelCapabilities.MultiplexedObservation"/>. Against a kernel that does not,
+    /// every reactor and reducer keeps its own stream whatever this is.
+    /// </summary>
+    public bool MultiplexObservation { get; init; } = true;
+
+    /// <summary>
     /// Gets the longest a connect attempt waits for one server to complete its handshake while another server is
     /// still untried. The last untried server gets whatever remains of the connect timeout.
     /// </summary>
@@ -715,6 +722,24 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
 
     Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
+    {
+        var services = CreatePerObserverServices(callInvoker, clientFactory);
+        if (!MultiplexObservation || !Capabilities.Contains(Contracts.Clients.KernelCapabilities.MultiplexedObservation))
+        {
+            return services;
+        }
+
+        var channel = new Multiplexed.MultiplexedObservationChannel(
+            callInvoker.CreateGrpcService<Contracts.Observation.Multiplexed.IMultiplexedObservation>(clientFactory),
+            _loggerFactory.CreateLogger<Multiplexed.MultiplexedObservationChannel>());
+        return services with
+        {
+            Reactors = new Multiplexed.MultiplexedReactors(services.Reactors, channel),
+            Reducers = new Multiplexed.MultiplexedReducers(channel)
+        };
+    }
+
+    Services CreatePerObserverServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
     {
         return new Services(
             callInvoker.CreateGrpcService<ICompliance>(clientFactory),
