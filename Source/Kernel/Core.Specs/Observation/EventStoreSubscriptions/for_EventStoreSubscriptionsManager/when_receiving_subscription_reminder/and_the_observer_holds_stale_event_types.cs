@@ -20,12 +20,14 @@ public class and_the_observer_holds_stale_event_types : Specification
     TestKitSilo _silo;
     EventStoreSubscriptionsManager _manager;
     IObserver _observer;
+    IObserverDefinitionsStorage _definitions;
     EventType _eventType;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
         _silo.AddNamespaceCasing();
+        _definitions = _silo.AddObserverDefinitions();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
@@ -39,7 +41,7 @@ public class and_the_observer_holds_stale_event_types : Specification
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(true);
         var staleEventType = new EventType("0b3a0b0e-3a1f-4c7d-9d4a-5f1a7e9c2b11", EventTypeGeneration.First);
-        _observer.GetDefinition().Returns(ObserverDefinition.Empty with { EventTypes = [staleEventType] });
+        _definitions.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty with { EventTypes = [staleEventType] });
         _observer.GetEventTypes().Returns([staleEventType]);
         _silo.AddProbe(_ => _observer);
 

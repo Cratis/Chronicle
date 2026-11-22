@@ -28,7 +28,7 @@ public class and_a_later_namespace_rejects_removal : for_Observer.given.an_obser
         grains.GetGrain<IObserver>(_observerKey).Returns(_observer);
         grains.GetGrain<IObserver>(secondKey).Returns(secondObserver);
         _eventStoreStorage.Observers.Has(_observerId).Returns(true);
-        _remover = new(grains, _storage, NullLogger<ObserverRemover>.Instance);
+        _remover = new(grains, _storage, NullLogger<ObserverRemover>.Instance, Substitute.For<IObserverDefinitionsCacheClient>());
     }
 
     async Task Because() => _removalError = await Catch.Exception(() => _remover.Remove(_observerKey.EventStore, _observerId, _observerKey.EventSequenceId));

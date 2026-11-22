@@ -314,7 +314,6 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   EA64C5E5: FailedPartitionRecovered(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber) -> Task
   E1FBBBE9: FailedPartitionRecovered(Cratis.Chronicle.Concepts.Keys.Key, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Events.EventSequenceNumber, Cratis.Chronicle.Concepts.Observation.FailedPartitionId?, System.Guid?) -> Task
   0B146F40: FastForward() -> Task<FastForwardResult>
-  985D50C9: GetDefinition() -> Task<Cratis.Chronicle.Storage.Observation.ObserverDefinition>
   5A1F1523: GetDeliveryFences() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Observation.DeliveryFence>>
   8F9CF48F: GetEventTypes() -> Task<Cratis.Chronicle.Concepts.Events.EventTypeSet>
   BB66DB3A: GetFailedPartitionKeys() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Keys.Key>>
@@ -381,6 +380,9 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserver")] Cratis.
   BC98490E: Unsubscribe() -> Task
   9EC111E3: UnsubscribeIfMatchesClient(Cratis.Chronicle.Concepts.Clients.ConnectionId) -> Task
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverDefinitionsCacheGrainService")] Cratis.Chronicle.Observation.IObserverDefinitionsCacheGrainService [Version(0)]
+  1153A788: Invalidate(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Observation.ObserverId) -> Task
+
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.IObserverPageSubscriber")] Cratis.Chronicle.Observation.IObserverPageSubscriber [Version(1)]
   50EF116D: OnNextPage(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.AppendedEvent>, Cratis.Chronicle.Observation.ObserverSubscriberContext) -> Task<Cratis.Chronicle.Observation.ObserverSubscriberResult>
 
@@ -441,6 +443,8 @@ class [GrainType("retryfailedpartition")] Cratis.Chronicle.Observation.Jobs.Retr
 class [GrainType("nullobserversubscriber")] Cratis.Chronicle.Observation.NullObserverSubscriber
 
 class [GrainType("observer")] Cratis.Chronicle.Observation.Observer
+
+class [GrainType("observerdefinitionscachegrainservice")] Cratis.Chronicle.Observation.ObserverDefinitionsCacheGrainService
 
 class [GrainType("observerservice")] Cratis.Chronicle.Observation.ObserverService
 

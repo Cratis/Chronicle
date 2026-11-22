@@ -87,7 +87,7 @@ public class an_observer_with_durable_alert_history : an_observer
         grains.GetGrain<INamespaces>(_observerKey.EventStore).Returns(namespaces);
         grains.GetGrain<IObserver>(_observerKey).Returns(_ => _observer);
         _eventStoreStorage.Observers.Has(_observerId).Returns(true);
-        _remover = new(grains, _storage, NullLogger<ObserverRemover>.Instance);
+        _remover = new(grains, _storage, NullLogger<ObserverRemover>.Instance, Substitute.For<IObserverDefinitionsCacheClient>());
     }
 
     protected async Task CrashTracker()

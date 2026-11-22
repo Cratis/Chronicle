@@ -38,7 +38,7 @@ public class and_a_subscription_is_already_active_with_the_current_event_types :
         _observer.GetEventTypes().Returns([eventType]);
         _silo.AddProbe(_ => _observer);
 
-        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
+        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
 
         await _manager.Add(
             new EventStoreSubscriptionDefinition(

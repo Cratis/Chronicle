@@ -87,7 +87,7 @@ public class EventStoreStorage(
     public IConstraintsStorage Constraints { get; } = new Constraints.ConstraintsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(eventStore, database);
+    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionRegistry(new Observers.ObserverDefinitionsStorage(eventStore, database));
 
     /// <inheritdoc/>
     public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(eventStore, database);

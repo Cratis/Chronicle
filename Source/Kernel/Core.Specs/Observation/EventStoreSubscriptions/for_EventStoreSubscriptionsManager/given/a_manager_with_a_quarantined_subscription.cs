@@ -54,7 +54,7 @@ public class a_manager_with_a_quarantined_subscription : Specification
             });
         _silo.AddProbe<IObserver>(identity => GetObserver(identity.ToString()));
 
-        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
+        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
         await _manager.Add(new(new EventStoreSubscriptionId(SourceEventStore), new EventStoreName(SourceEventStore), [EventType.Unknown]));
         _observer.ClearReceivedCalls();
     }

@@ -38,13 +38,6 @@ public interface IObserver : IGrainWithStringKey
     Task Ensure();
 
     /// <summary>
-    /// Get the definition from the observer.
-    /// </summary>
-    /// <returns>The <see cref="ObserverDefinition"/>.</returns>
-    [AlwaysInterleave]
-    Task<ObserverDefinition> GetDefinition();
-
-    /// <summary>
     /// Get the state from the observer.
     /// </summary>
     /// <returns>The <see cref="ObserverState"/>.</returns>
@@ -57,7 +50,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>The <see cref="ObserverInformationSnapshot"/>.</returns>
     /// <remarks>
     /// All values are read in a single grain turn, so they are mutually consistent, unlike separate calls to
-    /// <see cref="GetDefinition"/>, <see cref="GetState"/> and <see cref="IsSubscribed"/>.
+    /// <see cref="GetState"/> and <see cref="IsSubscribed"/>.
     /// </remarks>
     [AlwaysInterleave]
     Task<ObserverInformationSnapshot> GetInformation();

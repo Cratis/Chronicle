@@ -23,6 +23,7 @@ public class a_capture_events_subscriptions : Specification
     protected static readonly EventStoreName _eventStore = "some-store";
 
     protected CaptureEventsSubscriptions _subscriptions;
+    protected IObserverDefinitionsCacheClient _definitionsCacheClient;
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventTypesStorage _eventTypes;
@@ -78,7 +79,8 @@ public class a_capture_events_subscriptions : Specification
             return observer;
         });
 
-        _subscriptions = new(_storage, Substitute.For<ILocalSiloDetails>(), _grainFactory, NullLogger<CaptureEventsSubscriptions>.Instance);
+        _definitionsCacheClient = Substitute.For<IObserverDefinitionsCacheClient>();
+        _subscriptions = new(_storage, Substitute.For<ILocalSiloDetails>(), _grainFactory, NullLogger<CaptureEventsSubscriptions>.Instance, _definitionsCacheClient);
     }
 
     protected Dictionary<string, ObserverKey> _keys = [];

@@ -47,7 +47,7 @@ public class and_the_projection_observer_is_observing : given.an_observer_with_s
         grainFactory.GetGrain<INamespaces>(_observerKey.EventStore).Returns(namespaces);
         _eventStoreStorage.Observers.Has(_observerId).Returns(true);
         grainFactory.GetGrain<IJobsManager>(0, new JobsManagerKey(_observerKey.EventStore, _observerKey.Namespace)).Returns(_jobsManager);
-        var remover = new ObserverRemover(grainFactory, _storage, NullLogger<ObserverRemover>.Instance);
+        var remover = new ObserverRemover(grainFactory, _storage, NullLogger<ObserverRemover>.Instance, Substitute.For<IObserverDefinitionsCacheClient>());
 
         (await remover.Remove(_observerKey.EventStore, _observerId, _observerKey.EventSequenceId)).Outcome.ShouldEqual(ObserverRemovalOutcome.Removed);
     }

@@ -20,11 +20,13 @@ public class and_subscription_is_already_subscribed : Specification
     TestKitSilo _silo;
     EventStoreSubscriptionsManager _manager;
     IObserver _observer;
+    IObserverDefinitionsStorage _definitions;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
         _silo.AddNamespaceCasing();
+        _definitions = _silo.AddObserverDefinitions();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
@@ -37,7 +39,7 @@ public class and_subscription_is_already_subscribed : Specification
 
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(true);
-        _observer.GetDefinition().Returns(ObserverDefinition.Empty with { EventTypes = [eventType] });
+        _definitions.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty with { EventTypes = [eventType] });
         _observer.GetEventTypes().Returns([eventType]);
         _silo.AddProbe(_ => _observer);
 
@@ -53,7 +55,7 @@ public class and_subscription_is_already_subscribed : Specification
     async Task Because() => await _manager.ReceiveReminder(ReminderName, default);
 
     [Fact] void should_not_unsubscribe() => _observer.DidNotReceive().Unsubscribe();
-    [Fact] void should_read_the_event_types_from_the_definition() => _observer.Received(1).GetDefinition();
+    [Fact] void should_read_the_event_types_from_the_definition_registry() => _definitions.Received(1).Get(new ObserverId($"{SourceEventStore}->{TargetEventStore}"));
     [Fact] void should_not_ask_for_the_event_types_separately() => _observer.DidNotReceive().GetEventTypes();
 
     [Fact]
