@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Observation;
+
 namespace Cratis.Chronicle.Observation.for_Observer.when_deactivating_during_a_state_write;
 
 public class and_the_runtime_disposes_the_observer_before_the_write_finishes : given.an_observer_whose_state_write_can_be_held
@@ -15,6 +18,7 @@ public class and_the_runtime_disposes_the_observer_before_the_write_finishes : g
             CancellationToken.None);
 
         // The runtime stops waiting once the deactivation timeout cancels the token, then disposes the grain.
+        _eventStoreNamespaceStorage.Observers.ClearReceivedCalls();
         _observer.Dispose();
         _stateWrite.Release.SetResult();
         _error = await Catch.Exception(async () => await deactivation);
@@ -24,4 +28,6 @@ public class and_the_runtime_disposes_the_observer_before_the_write_finishes : g
     [Fact] void should_not_fail_the_deactivation() => _error.ShouldBeNull();
     [Fact] void should_let_the_write_in_flight_finish() => (_writesFinishedBeforeTeardown >= 1).ShouldBeTrue();
     [Fact] void should_not_write_again_once_disposed() => _stateWrite.Completed.ShouldEqual(_writesFinishedBeforeTeardown);
+    [Fact] void should_not_save_a_timestamp_after_disposal() => _eventStoreNamespaceStorage.Observers.DidNotReceive().SaveRunningStateChangedAt(Arg.Any<ObserverId>(), Arg.Any<DateTimeOffset?>(), Arg.Any<EventSequenceId>());
+    [Fact] void should_not_claim_ownership_after_disposal() => _eventStoreNamespaceStorage.Observers.DidNotReceive().ClaimOwnership(Arg.Any<ObserverId>(), Arg.Any<EventSequenceId>());
 }
