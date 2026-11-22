@@ -137,6 +137,9 @@ jobs:
           node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
           node .github/scripts/spec-shards.mjs --dry-run
 
+      - name: Spec legacy contracts artifact inputs without network
+        run: node --test .github/scripts/legacy-contract-artifacts.test.mjs
+
       - name: Spec coverage statistics honesty (missing input never advances the measurement date)
         run: node --test .github/scripts/test-coverage-statistics.mjs
 
