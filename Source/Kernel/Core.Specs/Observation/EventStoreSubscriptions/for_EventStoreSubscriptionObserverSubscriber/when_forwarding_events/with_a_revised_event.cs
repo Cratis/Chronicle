@@ -7,7 +7,12 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSub
 
 public class with_a_revised_event : given.a_pinned_subscriber
 {
-    void Establish() => _events = [_events[0] with { RevisedGeneration = 2 }];
+    void Establish()
+    {
+        _events = [_events[0] with { RevisedGeneration = 2 }];
+        StoreEvents();
+    }
+
     async Task Because() => _result = await Forward();
     [Fact] void should_migrate_the_revision_instead_of_selecting_old_materialization() => ForwardedContent()["message"]!.GetValue<string>().ShouldEqual("private-content-marker");
     [Fact] void should_forward_the_pin() => ForwardedType().ShouldEqual(new EventType("event-type-1", 1));

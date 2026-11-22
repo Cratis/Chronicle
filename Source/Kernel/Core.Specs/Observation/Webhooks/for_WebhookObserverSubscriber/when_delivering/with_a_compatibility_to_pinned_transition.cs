@@ -12,7 +12,7 @@ public class with_a_compatibility_to_pinned_transition : given.a_compatibility_s
 
     async Task Because()
     {
-        var delivery = _subscriber.OnNext(_partition, _events, new(null));
+        var delivery = _subscriber.OnNext(_partition, _events, _context);
         await _receiver.RequestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _acknowledgedBeforeHttpSuccess = delivery.IsCompleted;
         _response.SetResult();

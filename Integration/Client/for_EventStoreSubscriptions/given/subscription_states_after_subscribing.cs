@@ -23,17 +23,9 @@ public class subscription_states_after_subscribing(ChronicleFixture chronicleInP
         // Poll until every subscription this specification made appears in storage. Waiting on the
         // reactor's sequence number is unreliable on SQL backends because the internal subscriptions
         // reactor may process events slower than the polling period.
-        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-        while (true)
-        {
-            StoredSubscriptions = await GetOwnStoredSubscriptions();
-            if (_subscribedIds.All(id => StoredSubscriptions.Any(_ => _.Id.Value == id)))
-            {
-                break;
-            }
-
-            await Task.Delay(100, cts.Token);
-        }
+        StoredSubscriptions = await ReadinessWait.Until(
+            GetOwnStoredSubscriptions,
+            stored => _subscribedIds.All(id => stored.Any(_ => _.Id.Value == id)));
     }
 
     protected async Task<IEnumerable<EventStoreSubscriptionDefinition>> GetOwnStoredSubscriptions()
