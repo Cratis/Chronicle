@@ -13,13 +13,13 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_going_dormant;
 /// </summary>
 public class and_there_are_two_standbys : given.a_client_observer_with_a_standby
 {
-    static readonly EventType newest_event_type = new("0d6c3f0c-3c70-4d3a-9c12-2f2f9f0c9d11", EventTypeGeneration.First);
+    static readonly EventType _newestEventType = new("0d6c3f0c-3c70-4d3a-9c12-2f2f9f0c9d11", EventTypeGeneration.First);
     ConnectedClient _newestClient;
 
     async Task Establish()
     {
         _newestClient = new ConnectedClient { ConnectionId = "c-connection", Version = "3.0.0" };
-        await _observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, [newest_event_type], SiloAddress.Zero, _newestClient);
+        await _observer.Subscribe<IReactorObserverSubscriber>(ObserverType.Reactor, [_newestEventType], SiloAddress.Zero, _newestClient);
         await _silo.TimerRegistry.FireAllAsync();
         await _observer.ReceiveReminder(Observer.AlertReminderName, default);
     }

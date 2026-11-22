@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Observation;
-
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_running_the_safety_net;
 
 /// <summary>
