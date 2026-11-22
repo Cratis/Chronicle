@@ -55,6 +55,12 @@ public static class WellKnownCollectionNames
     /// </summary>
     public const string Namespaces = "namespaces";
 
+    /// <summary>The event-store-level lifecycle tombstones; namespace deletion must never remove or expire them.</summary>
+    public const string NamespaceLifecycles = "namespace-lifecycles";
+
+    /// <summary>The singleton conflict marker in each physical namespace database.</summary>
+    public const string NamespaceMarker = "namespace-incarnation";
+
     /// <summary>
     /// The collection that holds <see cref="Event"/> for the system.
     /// </summary>
