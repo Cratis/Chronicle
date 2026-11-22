@@ -45,7 +45,7 @@ jobs:
       - name: Release
         id: release
         # This version's PR decision does not create a release in its post step.
-        uses: cratis/release-action@26976c4c37ac8c0454077c0f41abb31650e36405 # v1
+        uses: cratis/release-action@26976c4c37ac8c0454077c0f41abb31650e36405 # v1.5.1
 
   workbench:
     if: needs.release.outputs.publish == 'true'
@@ -222,14 +222,52 @@ jobs:
       - name: Verify NuGet packages
         env:
           PACKAGE_DIRECTORY: ${{ runner.temp }}/pr-nuget-packages
+          EXPECTED_VERSION: ${{ needs.release.outputs.version }}
+        # Read ZIP/XML as data using the hosted runner's Python standard library.
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          packages=("$PACKAGE_DIRECTORY"/*.nupkg)
-          [ "${#packages[@]}" -gt 0 ]
-          for package in "${packages[@]}"; do
-            test -s "$package"
-          done
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          import xml.etree.ElementTree as ET
+          import zipfile
+
+          def fail():
+              print("::error::Invalid prerelease NuGet package identity or artifact contents.")
+              raise SystemExit(1)
+
+          try:
+              expected_version = os.environ["EXPECTED_VERSION"]
+              if "-" not in expected_version:
+                  fail()
+              packages = list(Path(os.environ["PACKAGE_DIRECTORY"]).iterdir())
+              if not packages:
+                  fail()
+              suffix = f".{expected_version}.nupkg"
+              for package in packages:
+                  if package.is_symlink() or not package.is_file() or package.stat().st_size == 0:
+                      fail()
+                  if not package.name.endswith(suffix):
+                      fail()
+                  package_id = package.name[:-len(suffix)]
+                  if re.fullmatch(r"Cratis\.[A-Za-z0-9.]+", package_id) is None:
+                      fail()
+                  with zipfile.ZipFile(package) as archive:
+                      specs = [entry for entry in archive.infolist() if entry.filename.lower().endswith(".nuspec")]
+                      if len(specs) != 1 or "/" in specs[0].filename:
+                          fail()
+                      document = ET.fromstring(archive.read(specs[0]))
+                  if document.tag.split("}")[-1] != "package":
+                      fail()
+                  metadata, = document.findall("{*}metadata")
+                  identity, = metadata.findall("{*}id")
+                  version, = metadata.findall("{*}version")
+                  if len(identity) or len(version) or identity.text != package_id or version.text != expected_version:
+                      fail()
+          except (OSError, ValueError, RuntimeError, LookupError, zipfile.BadZipFile, ET.ParseError):
+              fail()
+          PY
 
       # No checkout: start with a new config rather than discovering repository NuGet settings.
       - name: Add GitHub Package Registry to NuGet
