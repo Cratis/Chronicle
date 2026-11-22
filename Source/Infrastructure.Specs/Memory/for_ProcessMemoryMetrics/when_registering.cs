@@ -78,6 +78,18 @@ public class when_registering : Specification
     [InlineData("cratis.chronicle.memory.gen2_collections")]
     void should_register_the_instrument(string name) => _instruments.ShouldContain(name);
 
+    [Theory]
+    [InlineData("cratis.chronicle.memory.generation_size")]
+    [InlineData("cratis.chronicle.memory.generation_fragmentation")]
+    void should_register_the_per_generation_instrument(string name) => _instruments.ShouldContain(name);
+
+    [Fact] void should_register_the_pause_total() => _instruments.ShouldContain("cratis.chronicle.memory.pause_duration");
+    [Fact] void should_register_the_collection_counts() => _instruments.ShouldContain("cratis.chronicle.memory.collections");
+    [Fact] void should_report_every_generation_size() => _longs["cratis.chronicle.memory.generation_size"].Select(_ => _.Generation).ShouldContainOnly("gen0", "gen1", "gen2", "loh", "poh");
+    [Fact] void should_report_every_generation_fragmentation() => _longs["cratis.chronicle.memory.generation_fragmentation"].Select(_ => _.Generation).ShouldContainOnly("gen0", "gen1", "gen2", "loh", "poh");
+    [Fact] void should_report_collections_for_three_generations() => _longs["cratis.chronicle.memory.collections"].Select(_ => _.Generation).ShouldContainOnly("gen0", "gen1", "gen2");
+    [Fact] void should_report_the_pause_total() => _doubles["cratis.chronicle.memory.pause_duration"].Single().ShouldBeGreaterThanOrEqual(0.0);
+
     [Fact] void should_report_committed_memory() => _longs["cratis.chronicle.memory.committed"].Single().Value.ShouldBeGreaterThan(0L);
     [Fact] void should_report_allocated_bytes() => _longs["cratis.chronicle.memory.allocated"].Single().Value.ShouldBeGreaterThan(0L);
 }
