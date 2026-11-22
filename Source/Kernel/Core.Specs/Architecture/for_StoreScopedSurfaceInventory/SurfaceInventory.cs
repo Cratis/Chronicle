@@ -107,6 +107,7 @@ public static class SurfaceInventory
         ["gRPC:Observation.IObservers.WaitForCompletion"] = new(StoreRead),
         ["gRPC:Observation.IObservers.GetReplayableObserversForEventTypes"] = new(StoreRead),
         ["gRPC:Observation.Reactors.IReactors.Observe"] = new(StoreRead, "Registration and event delivery share this stream.", "IObservable<ReactorMessage>.Content contains RegisterReactor.EventStore (the other union case is a result)."),
+        ["gRPC:Observation.Multiplexed.IMultiplexedObservation.Observe"] = new(StoreRead, "Registration and event delivery of many reactors and reducers share this stream.", "IObservable<MultiplexedClientMessage>.Streams[].Reactor.Content contains RegisterReactor.EventStore and .Reducer.Content contains RegisterReducer.EventStore (the same registrations the per-observer streams carry)."),
         ["gRPC:Observation.Reactors.IReactors.HasReactor"] = new(StoreRead),
         ["gRPC:Observation.Reducers.IReducers.Observe"] = new(StoreRead, "Registration and event delivery share this stream.", "IObservable<ReducerMessage>.Content contains RegisterReducer.EventStore (the other union case is a result)."),
         ["gRPC:Observation.Webhooks.IWebhooks.AddWebhook"] = new(StoreManage, "Installs a durable event-delivery definition."),

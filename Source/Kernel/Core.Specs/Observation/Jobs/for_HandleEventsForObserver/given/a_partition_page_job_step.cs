@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Orleans.TestKit;
 using Cratis.Chronicle.Concepts.Events;
+using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.given;
 
