@@ -87,8 +87,12 @@ try
                 exitCode = 1;
             }
 
-            await WithinBudget(PlanCapture.Run(host, Math.Min(options.Profile.CatchUpCounts.Max(), 20_000), providerDirectory));
-            budget.ThrowIfExpired();
+            foreach (var size in new[] { options.Profile.CatchUpCounts.Min(), options.Profile.CatchUpCounts.Max() }.Distinct())
+            {
+                await WithinBudget(PlanCapture.Run(host, size, providerDirectory));
+                await WithinBudget(DrainCapture.Run(host, size, providerDirectory));
+                budget.ThrowIfExpired();
+            }
         }
         catch (Exception error) when (budget.Expired || error.GetBaseException() is BudgetExceededException)
         {
