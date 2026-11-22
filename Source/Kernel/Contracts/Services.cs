@@ -91,6 +91,7 @@ public sealed record Services(
     Security.IAdministrators? _administrators;
     Occurrences.IOccurrences? _occurrences;
     Imports.IImports? _imports;
+    Observation.Multiplexed.IMultiplexedObservation? _multiplexedObservation;
     global::Cratis.Chronicle.Contracts.Federation.IFederation? _federation;
 
     /// <inheritdoc/>
@@ -98,6 +99,13 @@ public sealed record Services(
     {
         get => _administrators ?? throw new NotSupportedException("Administrators are not supported by this service container.");
         init => _administrators = value;
+    }
+
+    /// <inheritdoc/>
+    public Observation.Multiplexed.IMultiplexedObservation MultiplexedObservation
+    {
+        get => _multiplexedObservation ?? throw new NotSupportedException("Multiplexed observation is not supported by this service container.");
+        init => _multiplexedObservation = value;
     }
 
     /// <inheritdoc/>
