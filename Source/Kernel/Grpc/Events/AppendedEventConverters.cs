@@ -4,6 +4,7 @@
 using System.Dynamic;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Identities;
 
 namespace Cratis.Chronicle.Services.Events;
@@ -19,14 +20,18 @@ internal static class AppendedEventConverters
     /// <param name="event"><see cref="AppendedEvent"/> to convert.</param>
     /// <param name="jsonSerializerOptions">Options for JSON serialization.</param>
     /// <returns>Converted contract version.</returns>
-    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions) => new()
+    public static Contracts.Events.AppendedEvent ToContract(this AppendedEvent @event, JsonSerializerOptions jsonSerializerOptions)
     {
-        Context = @event.Context.ToContract(),
-        Content = JsonSerializer.Serialize(@event.Content, jsonSerializerOptions),
-        OriginalContent = @event.OriginalContent,
-        Revisions = @event.Revisions.Select(c => c.ToContract()).ToList(),
-        GenerationalContent = @event.GenerationalContent.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-    };
+        var publicEvent = PublicEventContentRedactor.Redact(@event, jsonSerializerOptions);
+        return new()
+        {
+            Context = publicEvent.Context.ToContract(),
+            Content = JsonSerializer.Serialize(publicEvent.Content, jsonSerializerOptions),
+            OriginalContent = publicEvent.OriginalContent,
+            Revisions = publicEvent.Revisions.Select(c => c.ToContract()).ToList(),
+            GenerationalContent = publicEvent.GenerationalContent.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+        };
+    }
 
     /// <summary>
     /// Convert a collection of <see cref="AppendedEvent"/> to a collection of <see cref="Contracts.Events.AppendedEvent"/>.

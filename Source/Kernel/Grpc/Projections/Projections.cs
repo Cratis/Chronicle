@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
@@ -254,7 +255,7 @@ internal sealed class Projections(
 
                 while (await cursor.MoveNext())
                 {
-                    events.AddRange(cursor.Current);
+                    events.AddRange(cursor.Current.Select(@event => PublicEventContentRedactor.Redact(@event, jsonSerializerOptions)));
                 }
 
                 IEnumerable<System.Dynamic.ExpandoObject> result;
