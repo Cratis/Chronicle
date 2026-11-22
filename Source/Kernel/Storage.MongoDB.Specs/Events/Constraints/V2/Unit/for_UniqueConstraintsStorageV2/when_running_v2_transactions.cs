@@ -28,11 +28,7 @@ public class when_running_v2_transactions : given.a_serverless_v2_storage
     public async Task should_finish_commit_without_caller_cancellation()
     {
         using var cancellation = new CancellationTokenSource();
-        _session.CommitTransactionAsync(Arg.Any<CancellationToken>()).Returns(_ =>
-        {
-            cancellation.Cancel();
-            return Task.CompletedTask;
-        });
+        _session.CommitTransactionAsync(Arg.Any<CancellationToken>()).Returns(_ => cancellation.CancelAsync());
         (await _transactions.Run(_ => Task.FromResult((42, true)), cancellation.Token)).ShouldEqual(42);
         await _session.Received(1).CommitTransactionAsync(CancellationToken.None);
     }
@@ -42,10 +38,10 @@ public class when_running_v2_transactions : given.a_serverless_v2_storage
     {
         using var cancellation = new CancellationTokenSource();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _transactions.Run(
-            _ =>
+            async _ =>
             {
-                cancellation.Cancel();
-                return Task.FromResult((42, true));
+                await cancellation.CancelAsync();
+                return (42, true);
             },
             cancellation.Token));
         await _session.Received(1).AbortTransactionAsync(CancellationToken.None);

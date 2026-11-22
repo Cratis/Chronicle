@@ -55,15 +55,13 @@ public partial class when_running_the_mongodb_contract
         await Seed();
         var authority = await Documents(V2Schema.Authorities);
         using var cancellation = new CancellationTokenSource();
-        _gates.BeforeCall = (target, method, _) =>
+        _gates.BeforeCall = async (target, method, _) =>
         {
             if (IsCollectionCall(target, method, (Binding().Physical, nameof(IMongoCollection<BsonDocument>.InsertOneAsync))))
             {
-                cancellation.Cancel();
+                await cancellation.CancelAsync();
                 cancellation.Token.ThrowIfCancellationRequested();
             }
-
-            return Task.CompletedTask;
         };
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _storage.Save(_owner, _definition, 20, _otherValue, _scope, _authority, cancellationToken: cancellation.Token));
         _gates.BeforeCall = null;

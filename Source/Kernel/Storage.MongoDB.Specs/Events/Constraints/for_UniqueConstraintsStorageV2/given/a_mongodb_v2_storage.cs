@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
-using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2;
+using Cratis.Chronicle.Storage.MongoDB.EventSequences;
 using Cratis.Monads;
 using MongoDB.Bson;
 using MongoDB.Driver;

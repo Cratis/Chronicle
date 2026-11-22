@@ -23,7 +23,8 @@ public sealed class V2Interleaving
     public Func<object, MethodInfo, object?[], Task>? BeforeCall { get; set; }
     public Func<object, MethodInfo, object?[], Task>? AfterCall { get; set; }
 
-    public T Forward<T>(T target) where T : class
+    public T Forward<T>(T target)
+        where T : class
     {
         var proxy = DispatchProxy.Create<T, V2ForwardingProxy<T>>();
         var forwarding = (V2ForwardingProxy<T>)(object)proxy;

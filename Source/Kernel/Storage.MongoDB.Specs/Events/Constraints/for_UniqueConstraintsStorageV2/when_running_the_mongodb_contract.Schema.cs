@@ -86,7 +86,7 @@ public partial class when_running_the_mongodb_contract
         await indexes.DropOneAsync("value");
         await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.Save(_otherOwner, _definition, 20, _value, _scope, _authority));
         using var remaining = await indexes.ListAsync();
-        (await remaining.ToListAsync()).Any(index => index["name"] == "value").ShouldBeFalse();
+        (await remaining.ToListAsync()).Exists(index => index["name"] == "value").ShouldBeFalse();
     }
 
     [Fact]

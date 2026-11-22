@@ -9,7 +9,7 @@ public class when_v2_mutations_are_cancelled : given.a_serverless_v2_storage
     public async Task should_cancel_every_mutation_before_io()
     {
         using var source = new CancellationTokenSource();
-        source.Cancel();
+        await source.CancelAsync();
         var token = source.Token;
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _storage.Save("owner", _definition, 10, _value, _scope, _authority, cancellationToken: token));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _storage.Remove("owner", _definition, _scope, _authority, token));
