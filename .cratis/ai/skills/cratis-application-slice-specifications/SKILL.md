@@ -142,12 +142,14 @@ One specification class for **each** of:
 
 1. **The happy path** — a plain call returns the expected event, plus one
    `CommandScenario` happy path for the pipeline, and a negative scenario for
-   each authorization policy and `Provide()` short-circuit.
+   each authorization policy, validator refusal and `Provide()` acquisition-failure short-circuit.
 2. **Each validation failure** — instantiate `CommandValidator` or
    `ConceptValidator` with the required state and validate directly; the
    command's pipeline scenario proves the wiring.
-3. **Each business-rule rejection** — one `and_` class per condition in
-   `Handle()` that inspects a read model.
+3. **Each business-rule rejection** — one `and_` class per validator rule using
+   supplied read-model state; `Provide()` only short-circuits
+   (`ValidationResult`/`AuthorizationResult`) when acquisition yields nothing usable,
+   not for ordinary validation rules.
 4. **Each constraint violation** — one class per constraint, written with
    `EventScenario`, because a constraint is enforced at the append and not by
    the command.
@@ -212,16 +214,17 @@ do not replay a projection merely to feed a pure command decision.
 
 Both builder methods return `void`; there is nothing to await.
 
-Read protection is invisible to application spec authors. Never configure modes,
-call `UseDecisionReads`, simulate competing appends (`AppendConcurrently`), seed
-events solely for infrastructure, or re-prove the platform concurrency/guard
-matrix: give state, assert the outcome. Keep one cheap assembly-level
-`DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)` spec for the
-application's own model/projection shapes: its only decision-read spec obligation.
-If the harness cannot accept required state, report the upstream gap; never weaken
-production guards for test speed. Read
-[query and decision scenarios](references/query-and-decision-scenarios.md) for
-query pipelines.
+Ordinary application specs give state and assert the decision; they do not
+re-prove Arc/Chronicle's platform concurrency/guard matrix or select protection
+modes for test speed. Typed scenarios select decision reads automatically;
+`UseDecisionReads()` is obsolete. Keep one assembly-level
+`DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)` check for discovered
+application shapes. Explicit body reads need their own admission check or focused
+scenario. An unusual application-owned explicit guard policy may need a focused
+regression a plain call cannot prove. Read
+[query and decision scenarios](references/query-and-decision-scenarios.md) for the
+admission example, limitations and advanced hook boundary. Report harness gaps;
+never weaken production guards for test speed.
 
 Validator and `Provide()` dependencies are registered in `_scenario.Services`;
 the concrete validator itself is discovered automatically.

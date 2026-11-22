@@ -419,6 +419,13 @@ Use matching configuration/TFM/RID and restore-affecting properties in each stag
 `--no-restore` requires current assets; `--no-build` requires successfully built
 matching test outputs. Keep restore-inclusive and build-only timings separate.
 
+> **Cratis:** the build that owns a configuration/TFM/RID/property tuple is the one
+> that runs its analyzers; other builds of that tuple reuse its output. Measure local
+> no-op and one-file-edit incremental builds, using `-bl` to see which targets rerun
+> with nothing changed. Gate scripts follow the same one-owner structure. The inner
+> loop may use `-p:RunAnalyzers=false`, but the analyzer-owning gate build is
+> mandatory before push. Report local and CI numbers separately.
+
 ### Skip Unnecessary Targets
 
 For an explicitly agreed development scenario where these outputs/checks are
