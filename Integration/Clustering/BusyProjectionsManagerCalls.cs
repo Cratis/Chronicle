@@ -10,6 +10,8 @@ namespace Cratis.Chronicle.Integration.Clustering;
 public class BusyProjectionsManagerCalls : IIncomingGrainCallFilter
 {
     int _reached;
+    int _applying;
+    int _mostApplying;
 
     /// <summary>
     /// Gets or sets how long each registration call is held before it runs.
@@ -21,19 +23,53 @@ public class BusyProjectionsManagerCalls : IIncomingGrainCallFilter
     /// </summary>
     public int Reached => _reached;
 
+    /// <summary>
+    /// Gets the most calls to the grain's own <c language="csharp">Register</c> that were running at the same time.
+    /// </summary>
+    public int MostApplying => _mostApplying;
+
     /// <inheritdoc/>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
         if (IsRegistration(context))
         {
             Interlocked.Increment(ref _reached);
-            if (Hold > TimeSpan.Zero)
+            var isApply = string.Equals(context.InterfaceMethod.Name, "Register", StringComparison.Ordinal);
+            if (isApply)
             {
-                await Task.Delay(Hold);
+                var running = Interlocked.Increment(ref _applying);
+                InterlockedMax(ref _mostApplying, running);
             }
+
+            try
+            {
+                if (Hold > TimeSpan.Zero)
+                {
+                    await Task.Delay(Hold);
+                }
+
+                await context.Invoke();
+            }
+            finally
+            {
+                if (isApply)
+                {
+                    Interlocked.Decrement(ref _applying);
+                }
+            }
+
+            return;
         }
 
         await context.Invoke();
+    }
+
+    static void InterlockedMax(ref int target, int value)
+    {
+        int current;
+        while ((current = Volatile.Read(ref target)) < value && Interlocked.CompareExchange(ref target, value, current) != current)
+        {
+        }
     }
 
     static bool IsRegistration(IIncomingGrainCallContext context) =>
