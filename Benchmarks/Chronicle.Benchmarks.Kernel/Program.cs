@@ -14,6 +14,11 @@ if (args.Contains("--keeper-calls"))
     return await KeeperCalls.Run(args);
 }
 
+if (args.Contains("--client-streams"))
+{
+    return await ClientStreams.Run(args);
+}
+
 if (args.Contains("--idle-calls"))
 {
     return await IdleCalls.Run(args);
