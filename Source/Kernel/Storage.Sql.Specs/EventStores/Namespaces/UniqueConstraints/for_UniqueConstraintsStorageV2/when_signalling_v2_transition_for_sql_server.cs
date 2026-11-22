@@ -16,17 +16,23 @@ public class when_signalling_v2_transition_for_sql_server : Specification
     {
         var interleaving = new V2Interleaving();
         await interleaving.Run(
-            () => Task.FromResult(true),
             async () =>
             {
-                using var connection = new SqlConnection();
-                using var command = connection.CreateCommand();
+                await using var connection = new SqlConnection();
+                await using var command = connection.CreateCommand();
                 command.CommandText = "SELECT * FROM UniqueConstraintAuthoritiesV2";
-                await interleaving.Commands.ReaderExecutingAsync(command, null!, default);
+                await interleaving.Commands.ReaderExecutingAsync(command, null!, default, default);
                 _signalled = interleaving.TransitionWasAttempted;
-                return Result<UniqueConstraintWriteAuthority, UniqueConstraintWriteFailure>.Success(new(new(Guid.NewGuid()), UniqueConstraintWritePhase.Live, new(0)));
             },
-            writerFirst: false);
+            async () =>
+            {
+                await using var connection = new SqlConnection();
+                await using var command = connection.CreateCommand();
+                command.CommandText = "UPDATE UniqueConstraintAuthoritiesV2 SET Revision = Revision";
+                await interleaving.Commands.NonQueryExecutedAsync(command, null!, 0, default);
+                return Result<bool, UniqueConstraintWriteFailure>.Success(true);
+            },
+            transitionFirst: false);
     }
 
     [Fact] void should_signal_at_the_authority_select() => _signalled.ShouldBeTrue();

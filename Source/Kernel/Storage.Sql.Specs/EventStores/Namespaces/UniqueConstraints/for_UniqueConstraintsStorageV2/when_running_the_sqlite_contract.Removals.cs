@@ -15,9 +15,9 @@ public partial class when_running_the_sqlite_contract
         (await _storage.Remove("owner", PerValue, _scope, _authority)).IsSuccess.ShouldBeTrue();
         (await _storage.RemoveValue("owner", PerValue, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
         (await _storage.RemoveAllFor(PerValue, _authority)).IsSuccess.ShouldBeTrue();
-        using var connection = new SqliteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
-        using var command = connection.CreateCommand();
+        await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM UniqueConstraintBindingsV2";
         Convert.ToInt64(await command.ExecuteScalarAsync()).ShouldEqual(0L);
         ShouldRefuse(await _storage.Remove("owner", PerValue, _scope, _authority with { Revision = new(1) }), UniqueConstraintWriteFailure.AuthorityMismatch);
