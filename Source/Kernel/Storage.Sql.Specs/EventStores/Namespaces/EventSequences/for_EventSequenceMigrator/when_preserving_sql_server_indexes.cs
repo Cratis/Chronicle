@@ -37,8 +37,9 @@ public class when_preserving_sql_server_indexes(SqlServerFixture fixture)
     }
 
     static Task<string[]> Inventory(EventSequenceDbContext context) => context.Database.SqlQueryRaw<string>(
-        "SELECT CONCAT(i.name, ':', i.type_desc, ':', i.is_unique, ':', i.is_primary_key, ':'," +
-        " ic.key_ordinal, ':', ic.is_descending_key, ':', ic.is_included_column, ':', c.name, ':', i.filter_definition) AS Value" +
+        "SELECT CONCAT(i.name COLLATE DATABASE_DEFAULT, ':', i.type_desc COLLATE DATABASE_DEFAULT, ':', i.is_unique, ':', i.is_primary_key, ':'," +
+        " ic.key_ordinal, ':', ic.is_descending_key, ':', ic.is_included_column, ':', c.name COLLATE DATABASE_DEFAULT, ':'," +
+        " i.filter_definition COLLATE DATABASE_DEFAULT) AS Value" +
         " FROM sys.indexes i" +
         " JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id" +
         " JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id" +
