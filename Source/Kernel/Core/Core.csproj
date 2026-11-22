@@ -28,6 +28,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Kernel.Integration" />
         <InternalsVisibleTo Include="Chronicle.Benchmarks.Kernel" />
         <InternalsVisibleTo Include="Chronicle.Benchmarks.HotPaths" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />

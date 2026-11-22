@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.ReadModels;
@@ -44,5 +43,5 @@ public class when_serving_many_namespaces : given.a_manager_with_shared_definiti
 
     [Fact] void should_plateau_at_the_global_capacity() => _retained.ShouldEqual(Enumerable.Repeat(ProjectionsManager.CacheCapacity, 8));
     [Fact] void should_not_compile_for_visibility_reads() => _afterVisibility.ShouldEqual(_beforeVisibility);
-    [Fact] void should_not_recompile_on_reconnect_or_namespace_registration() => _ = _projectionFactory.Received(2049).Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>());
+    [Fact] void should_not_recompile_on_reconnect_or_namespace_registration() => _ = _projectionFactory.Received(2049).Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>());
 }
