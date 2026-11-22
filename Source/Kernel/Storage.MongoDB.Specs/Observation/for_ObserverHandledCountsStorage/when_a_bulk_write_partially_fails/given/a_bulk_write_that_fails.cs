@@ -19,6 +19,9 @@ public class a_bulk_write_that_fails : for_ObserverHandledCountsStorage.given.an
     protected Func<WriteModel<ObserverPartitionCounts>[], Exception> _failure;
     protected Exception _driverError;
     protected Exception _error;
+    protected readonly Dictionary<string, long> _applied = new(StringComparer.Ordinal);
+    protected readonly List<WriteModel<ObserverPartitionCounts>[]> _attempts = [];
+    protected readonly List<BulkWriteOptions> _options = [];
     protected readonly KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>[] _counts =
     [
         new((Key)"leading", new Dictionary<EventTypeId, EventCount>()),
@@ -32,18 +35,42 @@ public class a_bulk_write_that_fails : for_ObserverHandledCountsStorage.given.an
     void Establish() => _collection.BulkWriteAsync(Arg.Any<IEnumerable<WriteModel<ObserverPartitionCounts>>>(), Arg.Any<BulkWriteOptions>(), Arg.Any<CancellationToken>())
         .Returns(call =>
         {
-            _driverError = _failure(call.Arg<IEnumerable<WriteModel<ObserverPartitionCounts>>>().ToArray());
-            return Task.FromException<BulkWriteResult<ObserverPartitionCounts>>(_driverError);
+            var models = call.Arg<IEnumerable<WriteModel<ObserverPartitionCounts>>>().ToArray();
+            _attempts.Add(models);
+            _options.Add(call.Arg<BulkWriteOptions>());
+            if (_attempts.Count == 1)
+            {
+                _driverError = _failure(models);
+                return Task.FromException<BulkWriteResult<ObserverPartitionCounts>>(_driverError);
+            }
+
+            Apply(models);
+            return Task.FromResult<BulkWriteResult<ObserverPartitionCounts>>(Acknowledged(models, models));
         });
 
     protected MongoBulkWriteException<ObserverPartitionCounts> Rejected(WriteModel<ObserverPartitionCounts>[] models, int failedIndex)
     {
-        var processed = models[..(failedIndex + 1)];
-        var result = new BulkWriteResult<ObserverPartitionCounts>.Acknowledged(models.Length, 0, 0, 0, 0, processed, []);
-        return new(_connectionId, result, [WriteError(failedIndex)], null, models[(failedIndex + 1)..]);
+        Apply(models.Take(failedIndex));
+        return new(_connectionId, Acknowledged(models, models[..(failedIndex + 1)]), [WriteError(failedIndex)], null, models[(failedIndex + 1)..]);
     }
 
     protected static BulkWriteError WriteError(int index) => Create<BulkWriteError>(index, ServerErrorCategory.DuplicateKey, 11000, "rejected", new BsonDocument());
+
+    protected static BulkWriteResult<ObserverPartitionCounts> Acknowledged(WriteModel<ObserverPartitionCounts>[] models, IEnumerable<WriteModel<ObserverPartitionCounts>> processed) =>
+        new BulkWriteResult<ObserverPartitionCounts>.Acknowledged(models.Length, 0, 0, 0, 0, processed.ToArray(), []);
+
+    protected static WriteConcernError ConcernError() => Create<WriteConcernError>(64, "WriteConcernFailed", "replication timed out", new BsonDocument(), Array.Empty<string>());
+
+    void Apply(IEnumerable<WriteModel<ObserverPartitionCounts>> models)
+    {
+        var arguments = new RenderArgs<ObserverPartitionCounts>(MongoDB.Bson.Serialization.BsonSerializer.LookupSerializer<ObserverPartitionCounts>(), MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry);
+        foreach (var model in models.Cast<UpdateOneModel<ObserverPartitionCounts>>())
+        {
+            var id = model.Filter.Render(arguments).ToJson();
+            var count = model.Update.Render(arguments).AsBsonDocument["$inc"].AsBsonDocument.Elements.Sum(_ => _.Value.ToInt64());
+            _applied[id] = _applied.GetValueOrDefault(id) + count;
+        }
+    }
 
     static T Create<T>(params object[] arguments) =>
         (T)Activator.CreateInstance(typeof(T), BindingFlags.Instance | BindingFlags.NonPublic, null, arguments, null)!;
