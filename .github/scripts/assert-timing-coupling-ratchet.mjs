@@ -16,7 +16,6 @@ const excluded = new Set(['bin', 'obj', 'node_modules']);
 const sleeps = /\b(?:Thread\.Sleep|Task\.Delay|SpinWait|Task\.Yield)\b/g;
 const delays = /\bTask\.Delay\b/g;
 const explanation = /\/\/ Task\.Delay:\s*\S/;
-const helperPath = 'Integration/Shared/ReadinessWait.cs';
 const normalize = path => path.replaceAll('\\', '/').replace(/^\.\//, '');
 
 function inScope(path) {
@@ -127,10 +126,6 @@ function run(root, report) {
         return 0;
     }
     const allowed = baseline(root);
-    // The sole new clock wait is the shared bounded observation backoff. This is not a spec
-    // settling delay: permit exactly one site here, and fail if that exception becomes stale.
-    assert.equal(onDisk.get(helperPath)?.found.length, 1, 'Shared-backoff exception must be removed if its one sleep disappears.');
-    allowed.set(helperPath, 1);
     console.log(`Ratchet examined ${onDisk.size} C# files and ${Array.from(onDisk.values()).reduce((sum, sites) => sum + sites.found.length, 0)} sleep occurrences.`);
     const countsFailed = checkCounts(onDisk, allowed);
     const commentsFailed = checkComments(onDisk);
@@ -166,7 +161,6 @@ function selfTest(root) {
     try {
         plant(baselinePath, '1 Integration/planted.cs\n1 Source/Example.Specs/spec.cs\n');
         plant('Source/Example.Specs/spec.cs', 'await Task.Yield();');
-        plant(helperPath, '// Task.Delay: bounded shared backoff\nawait Task.Delay(50);');
         plant('Integration/planted.cs', 'await Task.Delay(500);');
         const violation = cli();
         assert.equal(violation.status, 1, violation.stdout + violation.stderr);
