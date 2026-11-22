@@ -15,6 +15,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Events.Constraints;
 /// <remarks>
 /// The single gate linearizes authority transitions with every claim mutation and snapshot read.
 /// The provider does not discover this type by convention and never shares claims with v1.
+/// Mutations short-circuit on an authority failure before invoking the claim helper, under the same gate.
 /// </remarks>
 [IgnoreConvention]
 public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
@@ -62,13 +63,8 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         ValidateValue(value);
         lock (_gate)
         {
-            var failure = CheckAuthority(definition.Name, expected, cancellationToken);
-            if (failure is not null)
-            {
-                return Outcome(failure);
-            }
-
-            return Outcome(_claims[definition.Name].Save(eventSourceId, definition.Mode, sequenceNumber, value, scope, subject));
+            return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
+                ?? _claims[definition.Name].Save(definition.Mode, value, scope, new(eventSourceId, sequenceNumber, subject)));
         }
     }
 
@@ -77,14 +73,8 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
     {
         lock (_gate)
         {
-            var failure = CheckAuthority(definition.Name, expected, cancellationToken);
-            if (failure is not null)
-            {
-                return Outcome(failure);
-            }
-
-            _claims[definition.Name].Remove(eventSourceId, scope);
-            return Outcome(null);
+            return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
+                ?? _claims[definition.Name].Remove(eventSourceId, scope));
         }
     }
 
@@ -94,14 +84,8 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
         ValidateValue(value);
         lock (_gate)
         {
-            var failure = CheckAuthority(definition.Name, expected, cancellationToken);
-            if (failure is not null)
-            {
-                return Outcome(failure);
-            }
-
-            _claims[definition.Name].RemoveValue(eventSourceId, definition.Mode, value, scope);
-            return Outcome(null);
+            return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
+                ?? _claims[definition.Name].RemoveValue(eventSourceId, definition.Mode, value, scope));
         }
     }
 
@@ -110,14 +94,8 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
     {
         lock (_gate)
         {
-            var failure = CheckAuthority(definition.Name, expected, cancellationToken);
-            if (failure is not null)
-            {
-                return Outcome(failure);
-            }
-
-            _claims[definition.Name].Clear(scope);
-            return Outcome(null);
+            return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
+                ?? _claims[definition.Name].Clear(scope));
         }
     }
 
@@ -126,14 +104,8 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
     {
         lock (_gate)
         {
-            var failure = CheckAuthority(definition.Name, expected, cancellationToken);
-            if (failure is not null)
-            {
-                return Outcome(failure);
-            }
-
-            _claims[definition.Name].Clear();
-            return Outcome(null);
+            return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
+                ?? _claims[definition.Name].Clear());
         }
     }
 
@@ -142,14 +114,8 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
     {
         lock (_gate)
         {
-            var failure = CheckAuthority(definition.Name, expected, cancellationToken);
-            if (failure is not null)
-            {
-                return Outcome(failure);
-            }
-
-            _claims[definition.Name].RemoveForSubject(subject);
-            return Outcome(null);
+            return Outcome(CheckAuthority(definition.Name, expected, cancellationToken)
+                ?? _claims[definition.Name].RemoveForSubject(subject));
         }
     }
 
