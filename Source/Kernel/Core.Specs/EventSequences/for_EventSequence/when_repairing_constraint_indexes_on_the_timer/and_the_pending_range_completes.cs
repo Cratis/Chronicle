@@ -18,6 +18,6 @@ public class and_the_pending_range_completes : given.an_event_sequence_with_repa
 
     Task Because() => given.ConstraintRepairTimer.Tick(_silo);
 
-    [Fact] void should_register_repair_separately_from_pattern_capture() => _before.ShouldEqual(2);
-    [Fact] void should_release_the_repair_keep_alive_on_completion() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(1);
+    [Fact] void should_register_repair_separately_from_the_first_reconciliation() => _before.ShouldEqual(2);
+    [Fact] void should_release_the_repair_keep_alive_on_completion() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

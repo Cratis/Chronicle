@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Supervision;
 using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
@@ -20,7 +21,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(11)]
+[Version(12)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -36,6 +37,27 @@ public interface IObserver : IGrainWithStringKey
     /// </remarks>
     [AlwaysInterleave]
     Task Ensure();
+
+    /// <summary>
+    /// Runs the watchdog of the observer: the periodic checks that recover it when it is stuck, release it when idle or
+    /// dormant, and drop clients that are gone.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called by the <see cref="ISiloSupervisor"/> of the silo hosting the observer when the watchdog is due. It is
+    /// not interleaved, the same as the grain timer it replaces, so it never runs in the middle of another turn.
+    /// </remarks>
+    Task CheckHealth();
+
+    /// <summary>
+    /// Verifies that the appended-events queue still holds the live subscription of the observer, and re-routes the
+    /// observer when it does not.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called by the <see cref="ISiloSupervisor"/> in the window after a silo has left the cluster.
+    /// </remarks>
+    Task VerifyLiveSubscriptionAfterDeparture();
 
     /// <summary>
     /// Get the state from the observer.

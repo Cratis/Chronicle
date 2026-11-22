@@ -11,6 +11,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -69,7 +70,7 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
     {
         using var messages = new Subject<ReducerMessage>();
         var reducers = new Reducers(
-            _grainFactory, _subscriptions, _mediator, Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), new ActivitySource<Reducers>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reducers>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloDepartures.Instance);
+            _grainFactory, _subscriptions, _mediator, Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), new ActivitySource<Reducers>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reducers>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloSupervisor.Instance);
         using var cancellation = new CancellationTokenSource();
         var observed = reducers.Observe(messages, context).ToTask(cancellation.Token);
         messages.OnNext(new ReducerMessage(new Contracts.Primitives.OneOf<RegisterReducer, ReducerResult>(new RegisterReducer

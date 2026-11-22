@@ -24,13 +24,13 @@ using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Providers;
-using ISiloDepartures = Cratis.Chronicle.Services.Observation.ISiloDepartures;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -53,7 +53,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="timeProvider">The delivery fence clock.</param>
 /// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
 /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo of the cluster supports dormant observers.</param>
-/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when a silo leaves the cluster, after which the observer re-verifies its live subscription.</param>
+/// <param name="supervisor">The <see cref="ISiloSupervisor"/> running the watchdog and the checks after a silo departure for the observers resident on the silo.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -76,7 +76,7 @@ public partial class Observer(
     TimeProvider? timeProvider = null,
     IObserverGauges? observerGauges = null,
     IClusterReleases? clusterReleases = null,
-    ISiloDepartures? siloDepartures = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    ISiloSupervisor? supervisor = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -239,8 +239,7 @@ public partial class Observer(
         var config = await configurationProvider.GetFor(_observerKey);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
-        RegisterWatchdog(config.WatchdogInterval);
-        WatchSiloDepartures();
+        RegisterWithSupervisor(config.WatchdogInterval);
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         ConfigureDurableSubscriptions(config.DurableSubscriptions);
         ConfigureDormancy(config);
@@ -279,6 +278,12 @@ public partial class Observer(
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task CheckHealth() => Watchdog();
+
+    /// <inheritdoc/>
+    public Task VerifyLiveSubscriptionAfterDeparture() => VerifyLiveSubscription();
 
     /// <inheritdoc/>
     public async Task ResetForDevelopment()
@@ -883,6 +888,7 @@ public partial class Observer(
         }
         finally
         {
+            UnregisterFromSupervisor();
             ReleaseGauge();
             Dispose();
         }

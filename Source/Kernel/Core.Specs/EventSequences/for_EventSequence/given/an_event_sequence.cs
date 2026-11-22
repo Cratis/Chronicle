@@ -24,6 +24,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -53,6 +54,7 @@ public class an_event_sequence : Specification
 
     protected IStorage _storage;
     protected IReservedEventSequenceIds _reservedEventSequenceIds = Substitute.For<IReservedEventSequenceIds>();
+    protected ISiloSupervisor _supervisor = Substitute.For<ISiloSupervisor>();
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -209,6 +211,7 @@ public class an_event_sequence : Specification
         var cache = Substitute.For<IEventTypeSchemaCache>();
         cache.ReturnsForAll<ValueTask<JsonSchema>>(async call => await _schemaCache.GetProtectionSchemaFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventTypeId>(1), call.ArgAt<EventTypeGeneration>(2), call.ArgAt<JsonSchema>(3)));
         _silo.AddService(cache);
+        _silo.AddService(_supervisor);
         _silo.AddService(EventTimeProvider);
         _silo.AddService(_storage);
         _silo.AddService(_reservedEventSequenceIds);

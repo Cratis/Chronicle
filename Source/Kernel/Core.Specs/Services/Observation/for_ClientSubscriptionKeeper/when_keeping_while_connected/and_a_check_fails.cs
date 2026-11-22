@@ -9,19 +9,20 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 /// </summary>
 public class and_a_check_fails : given.a_client_subscription_keeper
 {
-    TimeSpan _waitAfterTheFailure;
+    TimeSpan? _waitAfterTheFailure;
+    TimeSpan? _waitAfterTheRetry;
 
     protected override Task<bool> Check(int check) =>
         check == 1 ? Task.FromException<bool>(new InvalidOperationException("The silo is leaving")) : Task.FromResult(true);
 
     async Task Because()
     {
-        StartKeeping();
-        await _clock.Elapse();
-        _waitAfterTheFailure = await _clock.Elapse();
-        await _clock.NextWait();
+        await StartKeeping();
+        _waitAfterTheFailure = await _periodicCheck();
+        _waitAfterTheRetry = await _periodicCheck();
     }
 
     [Fact] void should_check_again_after_one_revise_interval() => _waitAfterTheFailure.ShouldEqual(Revise);
     [Fact] void should_keep_checking() => _checks.ShouldEqual(2);
+    [Fact] void should_leave_it_to_the_safety_net_once_it_is_intact() => _waitAfterTheRetry.ShouldEqual(SafetyNetWait);
 }

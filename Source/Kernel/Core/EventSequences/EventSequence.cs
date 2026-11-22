@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Text.Json.Nodes;
-using Cratis.Chronicle.Captures;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -25,7 +24,6 @@ using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Patterns;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
@@ -35,6 +33,7 @@ using Cratis.Chronicle.Storage.EventSources;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -69,6 +68,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="constraintIndexReplayLogger">The constraint replay logger.</param>
 /// <param name="encryptionKeyStorage">The read-only key lookup used to compare keyed retries.</param>
 /// <param name="timeProvider">The clock for default occurrence times and effect receipts; defaults to the system clock.</param>
+/// <param name="supervisor">The optional <see cref="ISiloSupervisor"/> that reconciles the subscriptions of the event log after a silo departure.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSequences)]
 [EventSequencePlacement]
 public partial class EventSequence(
@@ -90,7 +90,8 @@ public partial class EventSequence(
     IEventTypeSchemaCache schemaCache,
     ILogger<ConstraintIndexReplay>? constraintIndexReplayLogger = null,
     IEncryptionKeyStorage? encryptionKeyStorage = null,
-    TimeProvider? timeProvider = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
+    TimeProvider? timeProvider = null,
+    ISiloSupervisor? supervisor = null) : Grain<EventSequenceState>, IEventSequence, IOnBroadcastChannelSubscribed
 {
     /// <summary>
     /// Caps the reports of refused names, so a caller cycling through distinct names cannot grow memory or the log.
@@ -186,18 +187,7 @@ public partial class EventSequence(
         await SettleInterruptedMutation();
         await InitializeConstraintIndexes();
 
-        if (_eventSequenceId == EventSequenceId.Log)
-        {
-            this.RegisterGrainTimer(ReconcilePatternCapture, new GrainTimerCreationOptions
-            {
-                DueTime = TimeSpan.Zero,
-                Period = TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval)),
-
-                // Subscribing the observer reads this sequence's tail. Let that call run while the timer
-                // awaits Subscribe; neither activation nor an append may wait on this analytics work.
-                Interleave = true
-            });
-        }
+        BeginReconciliation();
     }
 
     /// <inheritdoc/>
@@ -208,6 +198,7 @@ public partial class EventSequence(
     /// </remarks>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        EndReconciliation();
         if (!_mayWriteSequence) return;
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
@@ -1489,36 +1480,5 @@ public partial class EventSequence(
 
         _lastConstraintsVersionCheck = now;
         return true;
-    }
-
-    async Task ReconcilePatternCapture(CancellationToken cancellationToken)
-    {
-        // Never await manager subscription here: Observer.Subscribe reads this sequence's tail.
-        // Each manager coalesces pending work per namespace; failures are logged and the next tick retries.
-        _ = ReconcileNamespaceSubscriptions(() => GrainFactory.GetGrain<IProjectionsManager>(_eventSequenceKey.EventStore).EnsureSubscribedIn(_eventSequenceKey.Namespace));
-        _ = ReconcileNamespaceSubscriptions(() => GrainFactory.GetGrain<ICapturesManager>(_eventSequenceKey.EventStore).EnsureSubscribedIn(_eventSequenceKey.Namespace));
-        try
-        {
-            // A persisted Active marker can outlive failed setup and be reloaded by an ordinary retry.
-            // Always let the observer decide from its actual state machine and setup outcome, in the same
-            // serialized turn that guards quarantine and performs recovery. This stays off the append path.
-            await patternCapture.RecoverSubscription(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-        }
-        catch (Exception exception)
-        {
-            logger.FailedReconcilingPatternCapture(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-        }
-    }
-
-    async Task ReconcileNamespaceSubscriptions(Func<Task> reconcile)
-    {
-        try
-        {
-            await reconcile();
-        }
-        catch (Exception exception)
-        {
-            logger.FailedReconcilingNamespaceSubscriptions(exception, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace);
-        }
     }
 }

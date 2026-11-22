@@ -11,6 +11,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,7 +35,7 @@ public class when_a_reactor_registers_for_the_system_store : Specification
     {
         using var messages = new Subject<ReactorMessage>();
         var reactors = new global::Cratis.Chronicle.Services.Observation.Reactors.Reactors(
-            _grainFactory, Substitute.For<IClientReactorSubscriptions>(), _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions()), AllowingConnectionOwnership.Create(), NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloDepartures.Instance);
+            _grainFactory, Substitute.For<IClientReactorSubscriptions>(), _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions()), AllowingConnectionOwnership.Create(), NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloSupervisor.Instance);
         var observed = reactors.Observe(messages).ToTask();
         messages.OnNext(new ReactorMessage(new Contracts.Primitives.OneOf<Contracts.Observation.Reactors.RegisterReactor, ReactorResult>(new Contracts.Observation.Reactors.RegisterReactor
         {

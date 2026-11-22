@@ -10,6 +10,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -51,7 +52,7 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
     {
         using var messages = new Subject<ReactorMessage>();
         var reactors = new Reactors(
-            _grainFactory, _subscriptions, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloDepartures.Instance);
+            _grainFactory, _subscriptions, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloSupervisor.Instance);
         using var cancellation = new CancellationTokenSource();
         var observed = reactors.Observe(messages, context).ToTask(cancellation.Token);
         messages.OnNext(new ReactorMessage(new Contracts.Primitives.OneOf<RegisterReactor, ReactorResult>(new RegisterReactor

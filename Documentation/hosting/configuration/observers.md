@@ -65,7 +65,7 @@ The example shows the defaults of a production build. The `-development` image s
 | maximumBackoffDelay | number | 600 | Maximum backoff delay in seconds |
 | definitionEvolution | string | Automatic | Controls whether projection and reducer definition changes apply `Automatic`, `PartialOnly`, or `Manual` evolution. See [Definition evolution](#definition-evolution) |
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
-| watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
+| watchdogInterval | number | 60 | Interval in seconds between watchdog checks, run for every resident observer by the silo's supervisor (see [The supervisor](#the-supervisor)); the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 | idleDeactivationAfter | number | 900 | Seconds an observer with no subscription and no pending work stays in memory before it is released. A subscribed observer always stays in memory. `0` keeps every observer in memory. See [Releasing idle observers](#releasing-idle-observers) |
 | durableSubscriptions | string | `Release` | Whether an observer records its subscription (what serves it, its filters and, for client observers, the connections it delivers to) in its own state, and what is done with the record. `Release` records it and releases a subscribed observer that has nothing to do, then wakes it from the record. `Shadow` records it and has each appended events queue compare the record with its live subscriptions every `durableSubscriptionCheckInterval`, without releasing anything. `Off` records nothing, clears what is stored and keeps every subscribed observer in memory. See [Releasing dormant observers](#releasing-dormant-observers) and [Recording subscriptions](#recording-subscriptions) |
 | durableSubscriptionCheckInterval | timespan | `00:15:00` | How often each appended events queue reads the recorded subscriptions of its event sequence and compares them with its live ones. A zero or negative value uses the default. Applies only while `durableSubscriptions` is `Shadow` |
@@ -91,6 +91,19 @@ The example shows the defaults of a production build. The `-development` image s
 | pendingGenerationAlertAfter | timespan | `1.00:00:00` | How long a generation can stay pending before Chronicle raises an alert. Applies only when `features.projectionGenerations` is enabled |
 
 `BackoffScheduleSeconds` (empty by default) and `RetryBudget` (`00:00:00` by default) belong to the shared retry options type but are used only under `webhooks.retry`, not for ordinary observers. Webhooks supply their own schedule and budget defaults; see [Delivery retry policy](../../configuration/chronicle-options.mdx#delivery-retry-policy).
+
+## The supervisor
+
+Each silo runs one supervisor that carries out the periodic duties of the grains resident on it. A resident observer registers with it when it activates and leaves it when it deactivates, and the supervisor runs the observer's watchdog through the grain every `watchdogInterval` seconds, so the duties still run one at a time in a turn of the observer. The event log of each namespace, the captures manager of each event store and the connected clients registry of each silo register the same way.
+
+This replaces the grain timers those grains used to arm, so the number of timers on a silo no longer grows with the number of observers or namespaces. The supervisor looks at its registry once a second and starts the watchdog of every observer that is due; an observer whose watchdog is still running is skipped, and its next one is due an interval after the last one finished.
+
+An activation that is alive no longer notices by itself that something is wrong. Two events cover for that:
+
+- **A silo leaves the cluster.** For `connectedClients.subscriptionSettleSeconds` after a departure, the supervisor asks every resident observer, once every `connectedClients.reviseIntervalSeconds`, to verify that its appended-events queue still holds its subscription, and to re-route when it does not. It also reconciles the projection, capture and pattern-capture subscriptions of every namespace and re-checks the subscriptions kept for connected clients. The asks are spread over each interval in batches rather than all at once.
+- **A client disconnects.** The connection reports it at once, and the observers it served are told without waiting for a watchdog tick. The connected clients registry only revises on a slow interval, at least `connectedClients.staleThresholdSeconds`, to catch a client that vanished without closing its connection.
+
+A namespace is reconciled when its event log activates and after a silo departure. A pass that fails is retried every `watchdogInterval` seconds until one succeeds; a healthy namespace costs nothing between departures.
 
 ## Releasing idle observers
 

@@ -15,6 +15,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -77,7 +78,7 @@ public class two_observation_streams_for_the_same_connection : Specification
             _logger,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloSupervisor.Instance);
 
         _earlierSubscription = _reducers.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());

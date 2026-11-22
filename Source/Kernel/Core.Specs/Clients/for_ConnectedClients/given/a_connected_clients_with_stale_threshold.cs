@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reflection;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
@@ -28,7 +27,5 @@ public class a_connected_clients_with_stale_threshold : Specification
 
     protected async Task MakeStale() => (await _clients.GetConnectedClient(_connection)).LastSeen = DateTimeOffset.UtcNow.AddDays(-1);
 
-    protected Task Revise() => (Task)typeof(ConnectedClients)
-        .GetMethod("ReviseConnectedClients", BindingFlags.Instance | BindingFlags.NonPublic)!
-        .Invoke(_clients, [CancellationToken.None])!;
+    protected Task Revise() => _clients.Revise();
 }

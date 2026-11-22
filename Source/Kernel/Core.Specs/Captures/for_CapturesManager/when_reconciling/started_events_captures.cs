@@ -14,7 +14,7 @@ public class started_events_captures : given.a_captures_manager
         StartedState(_poll);
     }
 
-    async Task Because() => await _silo.TimerRegistry.FireAllAsync();
+    async Task Because() => await _manager.Reconcile();
 
     [Fact] void should_recover_the_events_capture() => _subscriptions.Received(1).Recover(_eventStore, Arg.Is<CaptureDefinition>(_ => _.Id == _events.Id));
     [Fact] void should_only_recover_events_captures() => _subscriptions.Received(1).Recover(Arg.Any<EventStoreName>(), Arg.Any<CaptureDefinition>());

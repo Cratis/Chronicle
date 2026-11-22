@@ -14,6 +14,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -86,7 +87,7 @@ public class an_observation_stream : Specification
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloSupervisor.Instance);
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReducer
         {
