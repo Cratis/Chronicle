@@ -38,7 +38,7 @@ public partial class when_running_the_mongodb_contract
             if (IsCollectionCall(target, method, (V2Schema.Bindings, nameof(IMongoCollection<BsonDocument>.InsertOneAsync))))
             {
                 var connection = new ConnectionId(new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017)));
-                throw new MongoCommandException(connection, "injected duplicate", new BsonDocument { { "code", 11000 }, { "errmsg", "injected duplicate" } });
+                throw new MongoCommandException(connection, "injected duplicate", new BsonDocument(), new BsonDocument { { "ok", 0 }, { "code", 11000 }, { "errmsg", "injected duplicate" } });
             }
 
             return Task.CompletedTask;
