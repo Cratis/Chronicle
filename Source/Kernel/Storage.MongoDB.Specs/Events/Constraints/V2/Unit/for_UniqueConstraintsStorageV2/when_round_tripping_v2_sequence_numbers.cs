@@ -28,5 +28,7 @@ public class when_round_tripping_v2_sequence_numbers
     {
         Assert.Throws<UniqueConstraintV2SchemaMismatch>(() => V2Documents.Sequence(new BsonDecimal128(1.5m)));
         Assert.Throws<UniqueConstraintV2SchemaMismatch>(() => V2Documents.Sequence(new BsonInt64(1)));
+        var roundedFraction = new BsonDecimal128(Decimal128.Parse("1.000000000000000000000000000000001"));
+        Assert.Throws<UniqueConstraintV2SchemaMismatch>(() => V2Documents.Sequence(roundedFraction));
     }
 }

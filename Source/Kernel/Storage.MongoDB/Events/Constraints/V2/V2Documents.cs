@@ -75,6 +75,7 @@ internal static class V2Documents
         try
         {
             var number = Decimal128.ToDecimal(value.AsDecimal128);
+            if (value.AsDecimal128 != new Decimal128(number)) throw new UniqueConstraintV2SchemaMismatch();
             if (number < 0) throw new UniqueConstraintV2SchemaMismatch();
             if (number > ulong.MaxValue) throw new UniqueConstraintV2SchemaMismatch();
             if (decimal.Truncate(number) != number) throw new UniqueConstraintV2SchemaMismatch();
