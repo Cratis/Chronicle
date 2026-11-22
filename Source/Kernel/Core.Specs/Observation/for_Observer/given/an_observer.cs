@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute.Extensions;
 using Orleans.Core;
-using Orleans.Streams;
 using Orleans.TestKit;
 using Orleans.TestKit.Storage;
 using AppendedEventsQueueSubscription = Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription;
@@ -52,8 +51,6 @@ public class an_observer : Specification
     /// Gets or sets the running-state change time held by the substituted observer state storage.
     /// </summary>
     protected DateTimeOffset? _persistedRunningStateChangedAt;
-    protected IStreamProvider _streamProvider;
-    protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
     protected IJobsManager _jobsManager;
     protected IObserverAlerts _observerAlerts;
