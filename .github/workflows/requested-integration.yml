@@ -52,6 +52,8 @@ jobs:
       # The nested legacy-contracts job reads owner issue states and the run's TRX artifacts.
       issues: read
       actions: read
+    # dotnet-build.yml calls integration.yml: its failure-only, secret-screened kernel/server
+    # log artifacts are uploaded in each executing matrix job, not in this reusable-workflow caller.
     uses: ./.github/workflows/dotnet-build.yml
     secrets: inherit
     with:

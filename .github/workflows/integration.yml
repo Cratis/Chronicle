@@ -263,6 +263,22 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
+      # Collect only on failure; the fixture already writes kernel ILogger output to timestamped .log files.
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: failure() && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
+
   kernel-integration-specs:
     needs: [discover]
     if: needs.discover.outputs.kernel-run == 'true'
@@ -364,6 +380,21 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: failure() && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
+
   clustering-integration-specs:
     needs: [discover]
     if: needs.discover.outputs.clustering-run == 'true'
@@ -435,6 +466,21 @@ jobs:
           name: coverage-results-clustering-${{ matrix.namespace }}
           path: ./coverage-results/
           retention-days: 1
+
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: failure() && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
 
   sql-clustering-integration-specs:
     needs: [discover]
@@ -612,6 +658,21 @@ jobs:
           name: sql-clustering-${{ matrix.provider }}-results
           path: coverage-results/
           retention-days: 7
+
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: failure() && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.provider }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
 
   # A job-level condition (not a successful zero-spec run) makes the excluded lane visibly skipped.
   # Its reason and issue links are in discovery's summary; remove only the declaration to re-enable.
