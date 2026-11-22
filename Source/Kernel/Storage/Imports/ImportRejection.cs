@@ -9,4 +9,6 @@ namespace Cratis.Chronicle.Storage.Imports;
 /// <param name="Index">The index of the event in the import, as the client numbered it.</param>
 /// <param name="EventType">The event type, as its identifier and generation.</param>
 /// <param name="Reasons">Why the event was rejected.</param>
-public record ImportRejection(long Index, string EventType, IEnumerable<string> Reasons);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Imports.ImportRejection")]
+public record ImportRejection([Id(0)] long Index, [Id(1)] string EventType, [Id(2)] IEnumerable<string> Reasons);

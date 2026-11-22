@@ -19,11 +19,13 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Filters">The event filters the connection registered, or null when it has none.</param>
 /// <param name="PinsGenerations">Whether the connection registered the observer to receive pinned event generations.</param>
 /// <param name="DeliversPages">Whether the connection's subscriber takes pages of events.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionStandby")]
 public record ObserverDurableSubscriptionStandby(
-    string ConnectionId,
-    string Silo,
-    IReadOnlyList<string> EventTypes,
-    bool IsReplayable,
-    ObserverDurableSubscriptionFilters? Filters,
-    bool PinsGenerations,
-    bool DeliversPages);
+    [Id(0)] string ConnectionId,
+    [Id(1)] string Silo,
+    [Id(2)] IReadOnlyList<string> EventTypes,
+    [Id(3)] bool IsReplayable,
+    [Id(4)] ObserverDurableSubscriptionFilters? Filters,
+    [Id(5)] bool PinsGenerations,
+    [Id(6)] bool DeliversPages);

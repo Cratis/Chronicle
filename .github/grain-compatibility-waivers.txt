@@ -2,3 +2,4 @@
 # One tag per line, then a reason after a space. A waiver applies only while that tag is the baseline, so it
 # stops mattering as soon as a later release is cut; delete the line then.
 v19.123.0 Job and job step identifiers moved from the Cratis.Orleans to the Cratis.Choreography namespace, which changes the wire identity of IObserver.ReportHandledEvents, ReportHandledEventsBatch and CaughtUp. Settle running jobs before upgrading.
+v19.181.2 Kernel grain payloads moved from the JSON codec to generated Orleans serializers, which changes how they are written between silos. Stop all nodes, then start the new version.

@@ -12,11 +12,14 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="EventStore">The name of the event store.</param>
 /// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.ObserverKey")]
 public record ObserverKey(
-    ObserverId ObserverId,
-    EventStoreName EventStore,
-    EventStoreNamespaceName Namespace,
-    EventSequenceId EventSequenceId)
+    [Id(0)] ObserverId ObserverId,
+    [Id(1)] EventStoreName EventStore,
+    [Id(2)] EventStoreNamespaceName Namespace,
+    [Id(3)] EventSequenceId EventSequenceId)
 {
     /// <summary>
     /// Gets the empty <see cref="ObserverKey"/>.

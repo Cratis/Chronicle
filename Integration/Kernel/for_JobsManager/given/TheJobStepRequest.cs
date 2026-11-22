@@ -3,4 +3,6 @@
 
 namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 
-public record TheJobStepRequest(bool ShouldFail, TimeSpan WaitTime, int WaitCount);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Integration.Specifications.for_JobsManager.given.TheJobStepRequest")]
+public record TheJobStepRequest([Id(0)] bool ShouldFail, [Id(1)] TimeSpan WaitTime, [Id(2)] int WaitCount);

@@ -11,4 +11,6 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="Reason">The reason delivery is held.</param>
 /// <param name="AwaitedEventType">The event-type identifier for which no connected handler is available.</param>
 /// <param name="Since">When the hold began, for reporting its age.</param>
-public record FailedPartitionHold(FailedPartitionHoldReason Reason, EventTypeId AwaitedEventType, DateTimeOffset Since);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.FailedPartitionHold")]
+public record FailedPartitionHold([Id(0)] FailedPartitionHoldReason Reason, [Id(1)] EventTypeId AwaitedEventType, [Id(2)] DateTimeOffset Since);

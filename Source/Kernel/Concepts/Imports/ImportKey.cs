@@ -9,7 +9,9 @@ namespace Cratis.Chronicle.Concepts.Imports;
 /// <param name="EventStore">The <see cref="EventStoreName"/> the import belongs to.</param>
 /// <param name="Namespace">The <see cref="EventStoreNamespaceName"/> the import belongs to.</param>
 /// <param name="ImportId">The <see cref="ImportId"/>.</param>
-public record ImportKey(EventStoreName EventStore, EventStoreNamespaceName Namespace, ImportId ImportId)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Imports.ImportKey")]
+public record ImportKey([Id(0)] EventStoreName EventStore, [Id(1)] EventStoreNamespaceName Namespace, [Id(2)] ImportId ImportId)
 {
     /// <summary>
     /// Implicitly converts from <see cref="ImportKey"/> to string.

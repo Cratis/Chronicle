@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// </summary>
 /// <param name="EventTypeId">The counted event type.</param>
 /// <param name="Count">The absolute partition count after successful delivery.</param>
-public record WebhookProbePartitionCount(EventTypeId EventTypeId, EventCount Count);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.WebhookProbePartitionCount")]
+public record WebhookProbePartitionCount([Id(0)] EventTypeId EventTypeId, [Id(1)] EventCount Count);

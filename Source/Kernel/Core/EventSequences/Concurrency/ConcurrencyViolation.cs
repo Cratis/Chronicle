@@ -11,28 +11,34 @@ namespace Cratis.Chronicle.EventSequences.Concurrency;
 /// <param name="EventSourceId">The <see cref="EventSourceId"/> of the event source.</param>
 /// <param name="ExpectedSequenceNumber">The expected <see cref="EventSequenceNumber"/> .</param>
 /// <param name="ActualSequenceNumber">The actual <see cref="EventSequenceNumber"/>.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.Concurrency.ConcurrencyViolation")]
 public record ConcurrencyViolation(
-    EventSourceId EventSourceId,
-    EventSequenceNumber ExpectedSequenceNumber,
-    EventSequenceNumber ActualSequenceNumber)
+    [Id(0)] EventSourceId EventSourceId,
+    [Id(1)] EventSequenceNumber ExpectedSequenceNumber,
+    [Id(2)] EventSequenceNumber ActualSequenceNumber)
 {
     /// <summary>
     /// Gets the <see cref="EventTypeId"/> of the first event that matched the scope after the expected sequence number, if it could be read.
     /// </summary>
+    [Id(3)]
     public EventTypeId? ConflictingEventTypeId { get; init; }
 
     /// <summary>
     /// Gets the <see cref="EventSequenceNumber"/> of the first event that matched the scope after the expected sequence number, if it could be read.
     /// </summary>
+    [Id(4)]
     public EventSequenceNumber? ConflictingSequenceNumber { get; init; }
 
     /// <summary>
     /// Gets the position of the failed guard in the request, or null for single-scope operations.
     /// </summary>
+    [Id(5)]
     public uint? ScopeIndex { get; init; }
 
     /// <summary>
     /// Gets the predicate and expectation which failed.
     /// </summary>
+    [Id(6)]
     public Sequences.ConcurrencyScope? Scope { get; init; }
 }

@@ -9,10 +9,12 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// <param name="EventSourceType">Optional <see cref="Events.EventSourceType"/> to scope the constraint to.</param>
 /// <param name="EventStreamType">Optional <see cref="Events.EventStreamType"/> to scope the constraint to.</param>
 /// <param name="EventStreamId">Optional <see cref="Events.EventStreamId"/> to scope the constraint to.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.ConstraintScope")]
 public record ConstraintScope(
-    EventSourceType? EventSourceType = default,
-    EventStreamType? EventStreamType = default,
-    EventStreamId? EventStreamId = default)
+    [Id(0)] EventSourceType? EventSourceType = default,
+    [Id(1)] EventStreamType? EventStreamType = default,
+    [Id(2)] EventStreamId? EventStreamId = default)
 {
     /// <summary>
     /// Represents a constraint scope with no scoping applied.

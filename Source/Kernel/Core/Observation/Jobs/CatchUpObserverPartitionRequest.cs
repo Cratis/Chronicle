@@ -14,9 +14,11 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="Key"><see cref="Key">Partition</see> to retry.</param>
 /// <param name="FromSequenceNumber">From <see cref="EventSequenceNumber"/> to catch up from.</param>
 /// <param name="EventTypes">The event types.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.Jobs.CatchUpObserverPartitionRequest")]
 public record CatchUpObserverPartitionRequest(
-    ObserverKey ObserverKey,
-    ObserverType ObserverType,
-    Key Key,
-    EventSequenceNumber FromSequenceNumber,
-    IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key);
+    [Id(0)] ObserverKey ObserverKey,
+    [Id(1)] ObserverType ObserverType,
+    [Id(2)] Key Key,
+    [Id(3)] EventSequenceNumber FromSequenceNumber,
+    [Id(4)] IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key);

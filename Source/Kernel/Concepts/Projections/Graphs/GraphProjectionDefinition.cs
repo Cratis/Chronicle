@@ -12,9 +12,11 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// Event types are written as "id+generation", the form produced by "EventType.ToString()", and property
 /// paths as their string form, so the definition serializes the same way everywhere it is stored.
 /// </remarks>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition")]
 public record GraphProjectionDefinition(
-    IDictionary<string, GraphNodeProjectionDefinition> Nodes,
-    IDictionary<string, GraphEdgeProjectionDefinition> Edges)
+    [Id(0)] IDictionary<string, GraphNodeProjectionDefinition> Nodes,
+    [Id(1)] IDictionary<string, GraphEdgeProjectionDefinition> Edges)
 {
     /// <summary>
     /// Gets a definition without any mappings.

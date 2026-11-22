@@ -11,4 +11,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// <param name="Identity">Optional <see cref="PropertyExpression"/> resolving the value of the identifying property of the edge.</param>
 /// <param name="Properties">Property name to expression, including counter expressions such as "$increment".</param>
 /// <param name="ForEach">Optional collection property of the event; the mapping runs once per item and expressions address the item as <c language="csharp">collection.property</c>.</param>
-public record GraphEdgeFromDefinition(PropertyExpression SourceKey, PropertyExpression TargetKey, PropertyExpression? Identity, IDictionary<string, string> Properties, PropertyExpression? ForEach = null);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition")]
+public record GraphEdgeFromDefinition([Id(0)] PropertyExpression SourceKey, [Id(1)] PropertyExpression TargetKey, [Id(2)] PropertyExpression? Identity, [Id(3)] IDictionary<string, string> Properties, [Id(4)] PropertyExpression? ForEach = null);

@@ -19,9 +19,11 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// The registrations of other client connections the subscription replaced, oldest first, that take over when the targets leave.
 /// Null when there are none, and for a record written before they were recorded.
 /// </param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription")]
 public record ObserverDurableSubscription(
-    ObserverSubscriptionKind Kind,
-    bool DeliversPages,
-    ObserverDurableSubscriptionFilters? Filters,
-    IReadOnlyList<ObserverDurableSubscriptionTarget> Targets,
-    IReadOnlyList<ObserverDurableSubscriptionStandby>? Standbys = null);
+    [Id(0)] ObserverSubscriptionKind Kind,
+    [Id(1)] bool DeliversPages,
+    [Id(2)] ObserverDurableSubscriptionFilters? Filters,
+    [Id(3)] IReadOnlyList<ObserverDurableSubscriptionTarget> Targets,
+    [Id(4)] IReadOnlyList<ObserverDurableSubscriptionStandby>? Standbys = null);

@@ -9,4 +9,6 @@ namespace Cratis.Chronicle.Storage.Imports;
 /// <param name="ChunkIndex">The staged chunk the range was committed from.</param>
 /// <param name="First">The first sequence number.</param>
 /// <param name="Last">The last sequence number.</param>
-public record ImportCommittedRange(int ChunkIndex, ulong First, ulong Last);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Imports.ImportCommittedRange")]
+public record ImportCommittedRange([Id(0)] int ChunkIndex, [Id(1)] ulong First, [Id(2)] ulong Last);

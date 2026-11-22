@@ -11,4 +11,7 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// </summary>
 /// <param name="EventType">Type of event.</param>
 /// <param name="Key">Key definition.</param>
-public record EventTypeWithKeyExpression(EventType EventType, PropertyExpression Key);
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression")]
+public record EventTypeWithKeyExpression([Id(0)] EventType EventType, [Id(1)] PropertyExpression Key);

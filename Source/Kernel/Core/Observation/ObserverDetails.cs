@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="Key">The <see cref="ObserverKey"/> for a specific instance.</param>
 /// <param name="Type">The <see cref="ObserverType"/> for the observer.</param>
-public record ObserverDetails(ObserverKey Key, ObserverType Type);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverDetails")]
+public record ObserverDetails([Id(0)] ObserverKey Key, [Id(1)] ObserverType Type);

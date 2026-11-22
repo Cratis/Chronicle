@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="SubscriberKey">The original subscriber grain key.</param>
 /// <param name="ConnectionId">The original client connection identifier.</param>
 /// <param name="SiloAddress">The original silo address.</param>
-public record DeliveryFenceTarget(string SubscriberType, string SubscriberKey, string ConnectionId, string SiloAddress);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.DeliveryFenceTarget")]
+public record DeliveryFenceTarget([Id(0)] string SubscriberType, [Id(1)] string SubscriberKey, [Id(2)] string ConnectionId, [Id(3)] string SiloAddress);

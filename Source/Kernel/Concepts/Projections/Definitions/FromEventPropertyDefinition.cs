@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// </summary>
 /// <param name="Event"><see cref="EventType"/> the property is on.</param>
 /// <param name="PropertyExpression"><see cref="PropertyExpression"/> within the event.</param>
-public record FromEventPropertyDefinition(EventType Event, PropertyExpression PropertyExpression);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition")]
+public record FromEventPropertyDefinition([Id(0)] EventType Event, [Id(1)] PropertyExpression PropertyExpression);

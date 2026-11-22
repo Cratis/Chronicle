@@ -13,4 +13,6 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <remarks>
 /// This is typically representing event types that are deriving from a common base type.
 /// </remarks>
-public record FromDerivatives(IEnumerable<EventType> EventTypes, FromDefinition From);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromDerivatives")]
+public record FromDerivatives([Id(0)] IEnumerable<EventType> EventTypes, [Id(1)] FromDefinition From);

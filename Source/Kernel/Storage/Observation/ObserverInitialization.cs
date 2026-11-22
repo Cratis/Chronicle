@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// </summary>
 /// <param name="State">The durable initialization state.</param>
 /// <param name="RefusalReasons">The latest attempt's reasons, including job or unsettled-handover details.</param>
-public record ObserverInitialization(ObserverInitializationState State, IReadOnlyList<string> RefusalReasons);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverInitialization")]
+public record ObserverInitialization([Id(0)] ObserverInitializationState State, [Id(1)] IReadOnlyList<string> RefusalReasons);
