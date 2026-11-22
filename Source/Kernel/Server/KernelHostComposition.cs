@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics.Load;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Setup;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -42,7 +43,8 @@ internal static class KernelHostComposition
         services.AddSingleton<KernelStartupState>();
         services.AddHealthChecks()
             .AddCheck<KernelReadinessHealthCheck>("kernel-ready", tags: ["ready"])
-            .AddCheck<KernelProjectionsRegistrationHealthCheck>("kernel-projections-registration", tags: ["ready"]);
+            .AddCheck<KernelProjectionsRegistrationHealthCheck>("kernel-projections-registration", tags: ["ready"])
+            .AddCheck<KernelOverloadHealthCheck>(KernelHealthResponseWriter.OverloadCheckName, tags: ["ready"]);
     }
 
     /// <summary>

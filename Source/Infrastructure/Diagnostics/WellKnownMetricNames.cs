@@ -410,6 +410,36 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="ObserverJobTotalSteps"/>.</summary>
     public const string ObserverJobTotalStepsUnit = "{step}";
 
+    /// <summary>Number of calls to grains running on this silo, interleaved or not.</summary>
+    public const string GrainCallsRunning = "cratis.chronicle.grain.calls.running";
+
+    /// <summary>Unit of <see cref="GrainCallsRunning"/>.</summary>
+    public const string GrainCallsRunningUnit = "{call}";
+
+    /// <summary>Number of calls this silo has made to grains that have not been answered: running or queued at the grain.</summary>
+    public const string GrainCallsPending = "cratis.chronicle.grain.calls.pending";
+
+    /// <summary>Unit of <see cref="GrainCallsPending"/>.</summary>
+    public const string GrainCallsPendingUnit = "{call}";
+
+    /// <summary>How long the oldest unanswered call this silo made to a grain has been waiting.</summary>
+    public const string GrainCallsOldestPendingAge = "cratis.chronicle.grain.calls.oldest_pending_age";
+
+    /// <summary>Unit of <see cref="GrainCallsOldestPendingAge"/>.</summary>
+    public const string GrainCallsOldestPendingAgeUnit = "s";
+
+    /// <summary>The load status of this silo: 0 accepting, 1 degraded, 2 recovering.</summary>
+    public const string KernelLoadStatus = "cratis.chronicle.kernel.load_status";
+
+    /// <summary>Unit of <see cref="KernelLoadStatus"/>.</summary>
+    public const string KernelLoadStatusUnit = "1";
+
+    /// <summary>Number of gRPC streaming calls this silo is serving.</summary>
+    public const string GrpcStreamsOpen = "cratis.chronicle.grpc.streams.open";
+
+    /// <summary>Unit of <see cref="GrpcStreamsOpen"/>.</summary>
+    public const string GrpcStreamsOpenUnit = "{stream}";
+
     /// <summary>Duration of an append to an event sequence.</summary>
     public const string EventSequenceAppendDuration = "cratis.chronicle.event_sequence.append.duration";
 
