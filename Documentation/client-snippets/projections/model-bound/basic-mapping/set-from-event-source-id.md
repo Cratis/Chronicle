@@ -4,9 +4,9 @@ using Cratis.Chronicle.Keys;
 using Cratis.Chronicle.Projections.ModelBound;
 
 [EventType]
-public record OrderPlacedForAudit(string CustomerName);
+public record OrderPlacedWithSourceId(string CustomerName);
 
-public record OrderSource(
+public record OrderEventSourceReference(
     [Key] Guid Id,
-    [SetFromEventSourceId<OrderPlacedForAudit>] EventSourceId Source);
+    [SetFromEventSourceId<OrderPlacedWithSourceId>] EventSourceId Source);
 ```
