@@ -31,6 +31,7 @@ public class when_round_tripping_a_postgresql_service : Specification
     [Fact] void should_preserve_database() => _result.Endpoint.Database!.Database.Value.ShouldEqual("customers");
     [Fact] void should_preserve_username() => _result.Endpoint.Database!.Username.Value.ShouldEqual("postgres");
     [Fact] void should_preserve_password() => _result.Endpoint.Database!.Password.Value.ShouldEqual("secret");
-    [Fact] void should_preserve_options() => _result.Endpoint.Database!.Options["SslMode"].ShouldEqual("Require");
+    [Fact] void should_preserve_option_names() => _result.Endpoint.Database!.Options.ContainsKey("SslMode").ShouldBeTrue();
+    [Fact] void should_not_expose_option_values() => _result.Endpoint.Database!.Options["SslMode"].ShouldEqual(string.Empty);
     [Fact] void should_have_no_http_configuration() => _result.Endpoint.Http.ShouldBeNull();
 }
