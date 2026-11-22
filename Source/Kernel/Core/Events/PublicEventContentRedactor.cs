@@ -21,9 +21,9 @@ namespace Cratis.Chronicle.Events;
 internal static class PublicEventContentRedactor
 {
     const string InvalidContent = "Invalid public event content.";
-    static readonly EventTypeId WebhookAddedType = typeof(WebhookAdded).GetEventType().Id;
-    static readonly EventTypeId TargetHeadersSetType = typeof(TargetHeadersSetForWebhook).GetEventType().Id;
-    static readonly EventTypeId EventRevisedType = typeof(EventRevised).GetEventType().Id;
+    static readonly EventTypeId _webhookAddedType = typeof(WebhookAdded).GetEventType().Id;
+    static readonly EventTypeId _targetHeadersSetType = typeof(TargetHeadersSetForWebhook).GetEventType().Id;
+    static readonly EventTypeId _eventRevisedType = typeof(EventRevised).GetEventType().Id;
 
     /// <summary>
     /// Creates a detached public copy of a header-bearing event, including its content history.
@@ -69,8 +69,8 @@ internal static class PublicEventContentRedactor
                 throw new JsonException(InvalidContent);
             }
 
-            var revisionContent = eventType.Id == EventRevisedType ? RedactRevision(document.RootElement, options) : null;
-            if (eventType.Id == EventRevisedType && revisionContent is null)
+            var revisionContent = eventType.Id == _eventRevisedType ? RedactRevision(document.RootElement, options) : null;
+            if (eventType.Id == _eventRevisedType && revisionContent is null)
             {
                 return content;
             }
@@ -89,7 +89,7 @@ internal static class PublicEventContentRedactor
 
     static ExpandoObject RedactContent(EventType eventType, ExpandoObject content, JsonSerializerOptions options)
     {
-        if (eventType.Id != EventRevisedType)
+        if (eventType.Id != _eventRevisedType)
         {
             return RedactContent(content);
         }
@@ -195,7 +195,7 @@ internal static class PublicEventContentRedactor
     };
 
     static bool RequiresRedaction(EventType eventType) =>
-        eventType.Id == WebhookAddedType || eventType.Id == TargetHeadersSetType || eventType.Id == EventRevisedType;
+        eventType.Id == _webhookAddedType || eventType.Id == _targetHeadersSetType || eventType.Id == _eventRevisedType;
 
     static bool IsTargetHeaders(string name) => name.Equals("targetHeaders", StringComparison.OrdinalIgnoreCase);
 
