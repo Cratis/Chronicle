@@ -46,6 +46,7 @@ public class and_read_model_schema_has_no_key_information : Specification
 
         _reducers = new Reducers(
             grainFactory,
+            Substitute.For<IClientReducerSubscriptions>(),
             Substitute.For<IReducerMediator>(),
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),

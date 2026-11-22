@@ -8,7 +8,7 @@ using context = Cratis.Chronicle.Integration.Clustering.for_ClientObserverServin
 namespace Cratis.Chronicle.Integration.Clustering.for_ClientObserverServing;
 
 /// <summary>
-/// Pins today's design, a grain per connected client observer; removing the grains flips both counts to zero.
+/// A connected client reactor or reducer is served by its connection's stream, so it holds no grain activation.
 /// </summary>
 /// <param name="_context">The context.</param>
 [Collection(ChronicleCollection.Name)]
@@ -19,8 +19,8 @@ public class when_counting_the_grains_that_serve_a_client(context _context)
     {
         readonly TimeSpan _timeout = TimeSpan.FromSeconds(90);
 
-        public int ClientReactorGrains { get; private set; }
-        public int ClientReducerGrains { get; private set; }
+        public int ObserverGrains { get; private set; }
+        public IReadOnlyList<string> ClientGrainsThatAreNotSubscribers { get; private set; } = [];
 
         public async ValueTask InitializeAsync()
         {
@@ -30,13 +30,17 @@ public class when_counting_the_grains_that_serve_a_client(context _context)
 
             var management = fixture.SiloServices.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0);
             var statistics = await management.GetDetailedGrainStatistics();
-            ClientReactorGrains = statistics.Count(_ => _.GrainType.StartsWith("Cratis.Chronicle.Observation.Reactors.Clients.Reactor,", StringComparison.Ordinal));
-            ClientReducerGrains = statistics.Count(_ => _.GrainType.StartsWith("Cratis.Chronicle.Observation.Reducers.Clients.Reducer,", StringComparison.Ordinal));
+            var types = statistics.Select(_ => _.GrainType).ToArray();
+            ObserverGrains = types.Count(_ => _.StartsWith("Cratis.Chronicle.Observation.Observer,", StringComparison.Ordinal));
+            ClientGrainsThatAreNotSubscribers = [.. types
+                .Where(_ => (_.StartsWith("Cratis.Chronicle.Observation.Reactors.Clients.", StringComparison.Ordinal) || _.StartsWith("Cratis.Chronicle.Observation.Reducers.Clients.", StringComparison.Ordinal))
+                    && !_.Contains("ObserverSubscriber", StringComparison.Ordinal))
+                .Distinct()];
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
-    [Fact] void should_serve_client_reactors_with_grains() => _context.ClientReactorGrains.ShouldBeGreaterThan(0);
-    [Fact] void should_serve_client_reducers_with_grains() => _context.ClientReducerGrains.ShouldBeGreaterThan(0);
+    [Fact] void should_have_activated_the_observers() => _context.ObserverGrains.ShouldBeGreaterThan(0);
+    [Fact] void should_not_activate_a_grain_for_a_client_reactor_or_reducer() => _context.ClientGrainsThatAreNotSubscribers.ShouldBeEmpty();
 }

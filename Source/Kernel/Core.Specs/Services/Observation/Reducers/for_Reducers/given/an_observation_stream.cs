@@ -76,6 +76,7 @@ public class an_observation_stream : Specification
             []));
         var reducers = new Reducers(
             grainFactory,
+            Substitute.For<IClientReducerSubscriptions>(),
             mediator,
             CreateExpandoObjectConverter(),
             new JsonSerializerOptions(),

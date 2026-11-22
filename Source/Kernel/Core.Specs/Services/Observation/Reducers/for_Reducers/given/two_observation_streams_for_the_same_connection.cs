@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
@@ -31,7 +32,7 @@ public class two_observation_streams_for_the_same_connection : Specification
     protected readonly Subject<ReducerMessage> _laterMessages = new();
     protected readonly List<ReduceOperationMessage> _earlierDeliveries = [];
     protected readonly List<ReduceOperationMessage> _laterDeliveries = [];
-    protected IReducer _reducer;
+    protected IClientReducerSubscription _reducer;
     protected ReducerMediator _mediator;
     protected SignallingMediator _signals;
     protected RecordingLogger _logger;
@@ -41,9 +42,10 @@ public class two_observation_streams_for_the_same_connection : Specification
 
     async Task Establish()
     {
-        _reducer = Substitute.For<IReducer>();
+        _reducer = Substitute.For<IClientReducerSubscription>();
         var grainFactory = Substitute.For<IGrainFactory>();
-        grainFactory.GetGrain<IReducer>(Arg.Any<string>(), Arg.Any<string>()).Returns(_reducer);
+        var subscriptions = Substitute.For<IClientReducerSubscriptions>();
+        subscriptions.Create(Arg.Any<ConnectedObserverKey>()).Returns(_reducer);
         var readModel = Substitute.For<IReadModel>();
         grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(readModel);
         var schema = new JsonSchema();
@@ -65,6 +67,7 @@ public class two_observation_streams_for_the_same_connection : Specification
         _logger = new RecordingLogger();
         _reducers = new Reducers(
             grainFactory,
+            subscriptions,
             _signals,
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),

@@ -408,9 +408,6 @@ json Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSub
   sourceEventStore: Cratis.Chronicle.Concepts.EventStoreName
   sourceNamespaces: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.EventStoreNamespaceName>
 concept Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionId : string
-json Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression
-  eventType: Cratis.Chronicle.Concepts.Events.EventType
-  key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 json Cratis.Chronicle.Concepts.Observation.FailedPartition
   attempts: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.FailedPartitionAttempt>
   attemptsBeforeBudgetReset: int
@@ -511,10 +508,6 @@ enum Cratis.Chronicle.Concepts.Observation.ObserverType : int
   Reactor = 1
   Reducer = 3
   Unknown = 0
-json Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
-  maxBytesPerPage: int
-  maxDelay: System.TimeSpan
-  maxEventsPerPage: int
 json Cratis.Chronicle.Concepts.Observation.PartitionDeferral
   id: System.Guid
   reason: Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason
@@ -532,34 +525,6 @@ enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
   PartitionNotFound = 1
   PartitionQuarantined = 3
   Started = 0
-json Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition
-  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
-  eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression>
-  filters: Cratis.Chronicle.Concepts.Observation.ObserverFilters
-  generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
-  identifier: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId
-  isReplayable: bool
-  owner: Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner
-  pageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
-  startAtTail: bool
-  tags: System.Collections.Generic.IEnumerable<string>
-concept Cratis.Chronicle.Concepts.Observation.Reactors.ReactorId : string
-enum Cratis.Chronicle.Concepts.Observation.Reactors.ReactorOwner : int
-  Client = 1
-  Kernel = 2
-  Unspecified = 0
-json Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition
-  eventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
-  eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.EventTypeWithKeyExpression>
-  filters: Cratis.Chronicle.Concepts.Observation.ObserverFilters
-  generationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
-  hash: string
-  identifier: Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId
-  isActive: bool
-  pageDelivery: Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition
-  readModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
-  tags: System.Collections.Generic.IEnumerable<string>
-concept Cratis.Chronicle.Concepts.Observation.Reducers.ReducerId : string
 concept Cratis.Chronicle.Concepts.Observation.ReplayEpoch : System.Guid
 json Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason
   type: Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReasonType

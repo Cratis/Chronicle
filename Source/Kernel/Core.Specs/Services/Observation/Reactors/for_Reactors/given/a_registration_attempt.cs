@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using System.Text.Json;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation.Reactors.Clients;
@@ -21,6 +22,7 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
     protected ConnectionOwnership _ownership;
     protected IReactorMediator _mediator;
     protected IGrainFactory _grainFactory;
+    protected IClientReactorSubscriptions _subscriptions;
     protected Exception _error;
     protected IConnectionReservation _reservation;
     readonly TaskCompletionSource _subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -32,8 +34,9 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
         _grainFactory = Substitute.For<IGrainFactory>();
         _reservation = ReservationForCheck();
         _grainFactory.GetGrain<IConnectionReservation>(Arg.Any<string>(), Arg.Any<string>()).Returns(_reservation);
-        var client = Substitute.For<IReactor>();
-        _grainFactory.GetGrain<IReactor>(Arg.Any<string>()).Returns(client);
+        var client = Substitute.For<IClientReactorSubscription>();
+        _subscriptions = Substitute.For<IClientReactorSubscriptions>();
+        _subscriptions.Create(Arg.Any<ConnectedObserverKey>()).Returns(client);
         client.SetDefinitionAndSubscribe(Arg.Any<Concepts.Observation.Reactors.ReactorDefinition>()).Returns(_ =>
         {
             _subscribed.TrySetResult();
@@ -48,7 +51,7 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
     {
         using var messages = new Subject<ReactorMessage>();
         var reactors = new Reactors(
-            _grainFactory, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloDepartures.Instance);
+            _grainFactory, _subscriptions, _mediator, Substitute.For<IStorage>(), new JsonSerializerOptions(), new ActivitySource<Reactors>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reactors>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloDepartures.Instance);
         using var cancellation = new CancellationTokenSource();
         var observed = reactors.Observe(messages, context).ToTask(cancellation.Token);
         messages.OnNext(new ReactorMessage(new Contracts.Primitives.OneOf<RegisterReactor, ReactorResult>(new RegisterReactor
