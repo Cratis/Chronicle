@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Benchmarks.Storage;
 /// <param name="Errors">The operations that failed.</param>
 public sealed record InvocationRecord(long Operations, long Events, CommandSnapshot Commands, IReadOnlyList<TimeSpan> Latencies, long Errors)
 {
+    /// <summary>Gets the concurrent writer samples in launch order, if captured.</summary>
+    public IReadOnlyList<WriterSample> Samples { get; init; } = [];
+
     /// <summary>Gets a record of one failed operation that counts no work.</summary>
     public static InvocationRecord Failure { get; } = new(0, 0, new(0, new Dictionary<string, long>()), [], 1);
 }
