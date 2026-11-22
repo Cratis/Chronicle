@@ -35,8 +35,12 @@ public class and_job_step_fails(context context) : Given<context>(context)
 
             // The job step grain persists its state asynchronously after the job aggregates progress.
             // Poll until the step's persisted status reflects the failure.
-            JobStep = await ReadinessWait.Until(
-                () => CompletedJobState.GetJobSteps(), steps => steps.Any(s => s.Status == JobStepStatus.CompletedWithFailure));
+            using var stepCts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            do
+            {
+                await Task.Delay(100, stepCts.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                JobStep = await CompletedJobState.GetJobSteps();
+            } while (JobStep.All(s => s.Status != JobStepStatus.CompletedWithFailure) && !stepCts.IsCancellationRequested);
         }
     }
 

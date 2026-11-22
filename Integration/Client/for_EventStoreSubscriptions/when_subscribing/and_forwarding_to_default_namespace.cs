@@ -26,7 +26,7 @@ public class and_forwarding_to_default_namespace(context context) : Given<contex
             var testEvent = new TestEvent("Hello from source");
             await AppendEvent(SourceEventStoreName, SourceId, testEvent);
 
-            // Task.Delay: unresolved forwarding condition (#6023); fixture appends to EventLog, not Outbox.
+            // Give the subscription system time to forward the event
             await Task.Delay(500);
 
             // Check the inbox in the target event store

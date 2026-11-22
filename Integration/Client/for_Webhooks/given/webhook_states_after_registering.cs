@@ -28,6 +28,18 @@ public class webhook_states_after_registering(ChronicleFixture chronicleInProces
         await webhookReactor.WaitTillReachesEventSequenceNumber(tailSequenceNumber);
 
         // Poll until the definitions have been persisted server-side.
-        StoredWebhooks = await ReadinessWait.Until(() => Webhooks.GetAll(), stored => stored.Any());
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+
+        while (true)
+        {
+            StoredWebhooks = await Webhooks.GetAll();
+
+            if (StoredWebhooks.Any())
+            {
+                break;
+            }
+
+            await Task.Delay(50, cts.Token);
+        }
     }
 }

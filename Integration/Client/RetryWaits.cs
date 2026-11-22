@@ -40,6 +40,10 @@ public static class RetryWaits
     /// <returns>Awaitable task.</returns>
     public static async Task Until(Func<Task<bool>> condition)
     {
-        await ReadinessWait.Until(condition, ready => ready, Timeout);
+        using var cts = new CancellationTokenSource(Timeout);
+        while (!await condition())
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(50), cts.Token);
+        }
     }
 }

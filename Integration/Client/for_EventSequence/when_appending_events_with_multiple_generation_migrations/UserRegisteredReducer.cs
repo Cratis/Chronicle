@@ -26,6 +26,11 @@ public class UserRegisteredReducer : IReducerFor<UserReadModel>
 
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
     {
-        await ReadinessWait.Until(() => Task.FromResult(HandledEvents), handled => handled >= count, timeout);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (HandledEvents < count)
+        {
+            await Task.Delay(50, cts.Token);
+        }
     }
 }

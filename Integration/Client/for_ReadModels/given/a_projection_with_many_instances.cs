@@ -61,16 +61,25 @@ public class a_projection_with_many_instances(ChronicleFixture chronicleFixture)
 
         // Poll the sink-based paginated endpoint (not in-memory GetAllInstances) to ensure
         // all instances are materialised in the actual storage sink before assertions run.
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
         var readModels = Services.GetRequiredService<IServices>().ReadModels;
-        await ReadinessWait.Until(
-            () => readModels.GetInstances(new GetInstancesRequest
+        while (true)
+        {
+            var response = await readModels.GetInstances(new GetInstancesRequest
             {
                 EventStore = Constants.EventStore,
                 Namespace = "Default",
                 ReadModel = typeof(SomeReadModel).FullName,
                 Page = 0,
                 PageSize = TotalInstances + 1
-            }),
-            response => response.TotalCount >= TotalInstances);
+            });
+
+            if (response.TotalCount >= TotalInstances)
+            {
+                break;
+            }
+
+            await Task.Delay(100, cts.Token);
+        }
     }
 }

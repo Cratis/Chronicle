@@ -86,14 +86,16 @@ public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<D
     {
         // A new observer registers its alert reminder, which is due one to two minutes later (Orleans reminders cannot be
         // shorter than a minute); the observer is not dormant before that tick has settled it.
-        try
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(240);
+        while (await ObserverIsResident())
         {
-            await ReadinessWait.Until(ResidentObserverGrains, grains => !grains.Any(), TimeSpan.FromSeconds(240));
-        }
-        catch (TimeoutException)
-        {
-            var summary = Services.GetRequiredService<Releases.IClusterReleases>().Summarize();
-            throw new TimeoutException($"The observer was not released: {string.Join(", ", await ResidentObserverGrains())}; floor reached {Releases.DormantObserverFloor.IsReached(Services.GetRequiredService<Releases.IClusterReleases>())}; releases {summary?.Releases.Count} unpublished {summary?.Unpublished} omitted {summary?.Omitted}");
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                var summary = Services.GetRequiredService<Releases.IClusterReleases>().Summarize();
+                throw new TimeoutException($"The observer was not released: {string.Join(", ", await ResidentObserverGrains())}; floor reached {Releases.DormantObserverFloor.IsReached(Services.GetRequiredService<Releases.IClusterReleases>())}; releases {summary?.Releases.Count} unpublished {summary?.Unpublished} omitted {summary?.Omitted}");
+            }
+
+            await Task.Delay(500);
         }
     }
 
@@ -121,15 +123,18 @@ public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<D
     /// <exception cref="TimeoutException">Thrown when the observer is not released in time.</exception>
     protected async Task WaitUntilReleased(IReactorHandler handler)
     {
-        try
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(240);
+        while ((await ResidentObserverGrains(handler)).Any())
         {
-            await ReadinessWait.Until(() => ResidentObserverGrains(handler), grains => !grains.Any(), TimeSpan.FromSeconds(240));
-        }
-        catch (TimeoutException)
-        {
-            var observerState = await Services.GetRequiredService<Storage.IStorage>().GetEventStore(_store.Name.Value).GetNamespace(Concepts.EventStoreNamespaceName.Default).Observers.Get(handler.Id.Value);
-            var (recorded, dormantInQueue) = await DurableSubscriptionDetails(handler);
-            throw new TimeoutException($"The observer of {handler.Id} was not released: resident {string.Join(", ", await ResidentObserverGrains(handler))}; running state {observerState.RunningState}, replaying {observerState.IsReplaying}, catching up {observerState.CatchingUpPartitions.Count}, in flight {observerState.InFlightPartitions.Count}, next {observerState.NextEventSequenceNumber}; durable record {recorded}; dormant in queue {dormantInQueue}");
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                var observerState = await Services.GetRequiredService<Storage.IStorage>().GetEventStore(_store.Name.Value).GetNamespace(Concepts.EventStoreNamespaceName.Default).Observers.Get(handler.Id.Value);
+                var recorded = (await Services.GetRequiredService<Storage.IStorage>().GetEventStore(_store.Name.Value).GetNamespace(Concepts.EventStoreNamespaceName.Default).Observers.GetDurableSubscriptions(Concepts.EventSequences.EventSequenceId.Log)).ContainsKey(handler.Id.Value);
+                var dormantInQueue = await Services.GetRequiredService<IGrainFactory>().GetGrain<Cratis.Chronicle.EventSequences.IAppendedEventsQueues>(new Concepts.EventSequences.EventSequenceKey(Concepts.EventSequences.EventSequenceId.Log, _store.Name.Value, Concepts.EventStoreNamespaceName.Default)).IsDormant(new Concepts.Observation.ObserverKey(handler.Id.Value, _store.Name.Value, Concepts.EventStoreNamespaceName.Default, Concepts.EventSequences.EventSequenceId.Log));
+                throw new TimeoutException($"The observer of {handler.Id} was not released: resident {string.Join(", ", await ResidentObserverGrains(handler))}; running state {observerState.RunningState}, replaying {observerState.IsReplaying}, catching up {observerState.CatchingUpPartitions.Count}, in flight {observerState.InFlightPartitions.Count}, next {observerState.NextEventSequenceNumber}; durable record {recorded}; dormant in queue {dormantInQueue}");
+            }
+
+            await Task.Delay(500);
         }
     }
 
@@ -154,7 +159,6 @@ public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<D
                 throw new TimeoutException("There was never a stretch when no observer had an activation");
             }
 
-            // Task.Delay: time-behavior; eight spaced samples require four seconds of continuous dormancy.
             await Task.Delay(500);
         }
     }
@@ -168,29 +172,33 @@ public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<D
     /// <exception cref="TimeoutException">Thrown when the events are not handled in time.</exception>
     protected static async Task WaitForHandled(System.Collections.Concurrent.ConcurrentQueue<EventSequenceNumber> handled, int count)
     {
-        await ReadinessWait.Until(() => Task.FromResult(handled.Count), actual => actual >= count, TimeSpan.FromSeconds(45));
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(45);
+        while (handled.Count < count)
+        {
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                throw new TimeoutException($"Only {handled.Count} of {count} events were handled");
+            }
+
+            await Task.Delay(100);
+        }
     }
 
     protected async Task WaitForHandled(int count)
     {
-        try
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(45);
+        while (Reactor.Handled.Count < count)
         {
-            await ReadinessWait.Until(() => Task.FromResult(Reactor.Handled.Count), actual => actual >= count, TimeSpan.FromSeconds(45));
-        }
-        catch (TimeoutException)
-        {
-            var observers = Services.GetRequiredService<Storage.IStorage>().GetEventStore(_store.Name.Value).GetNamespace(Concepts.EventStoreNamespaceName.Default).Observers;
-            var observerState = await observers.Get(_handler.Id.Value);
-            var (recorded, dormantInQueue) = await DurableSubscriptionDetails(_handler);
-            throw new TimeoutException($"Only {Reactor.Handled.Count} of {count} events were handled ({string.Join(',', Reactor.Handled)}): resident {string.Join(", ", await ResidentObserverGrains())}; running state {observerState.RunningState}, next {observerState.NextEventSequenceNumber}, last handled {observerState.LastHandledEventSequenceNumber}, in flight {observerState.InFlightPartitions.Count}, catching up {observerState.CatchingUpPartitions.Count}; durable record {recorded}; dormant in queue {dormantInQueue}");
-        }
-    }
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                var observers = Services.GetRequiredService<Storage.IStorage>().GetEventStore(_store.Name.Value).GetNamespace(Concepts.EventStoreNamespaceName.Default).Observers;
+                var observerState = await observers.Get(_handler.Id.Value);
+                var recorded = (await observers.GetDurableSubscriptions(Concepts.EventSequences.EventSequenceId.Log)).ContainsKey(_handler.Id.Value);
+                var dormantInQueue = await Services.GetRequiredService<IGrainFactory>().GetGrain<Cratis.Chronicle.EventSequences.IAppendedEventsQueues>(new Concepts.EventSequences.EventSequenceKey(Concepts.EventSequences.EventSequenceId.Log, _store.Name.Value, Concepts.EventStoreNamespaceName.Default)).IsDormant(new Concepts.Observation.ObserverKey(_handler.Id.Value, _store.Name.Value, Concepts.EventStoreNamespaceName.Default, Concepts.EventSequences.EventSequenceId.Log));
+                throw new TimeoutException($"Only {Reactor.Handled.Count} of {count} events were handled ({string.Join(',', Reactor.Handled)}): resident {string.Join(", ", await ResidentObserverGrains())}; running state {observerState.RunningState}, next {observerState.NextEventSequenceNumber}, last handled {observerState.LastHandledEventSequenceNumber}, in flight {observerState.InFlightPartitions.Count}, catching up {observerState.CatchingUpPartitions.Count}; durable record {recorded}; dormant in queue {dormantInQueue}");
+            }
 
-    async Task<(bool Recorded, bool Dormant)> DurableSubscriptionDetails(IReactorHandler handler)
-    {
-        var observers = Services.GetRequiredService<Storage.IStorage>().GetEventStore(_store.Name.Value).GetNamespace(Concepts.EventStoreNamespaceName.Default).Observers;
-        var recorded = (await observers.GetDurableSubscriptions(Concepts.EventSequences.EventSequenceId.Log)).ContainsKey(handler.Id.Value);
-        var dormant = await Services.GetRequiredService<IGrainFactory>().GetGrain<Cratis.Chronicle.EventSequences.IAppendedEventsQueues>(new Concepts.EventSequences.EventSequenceKey(Concepts.EventSequences.EventSequenceId.Log, _store.Name.Value, Concepts.EventStoreNamespaceName.Default)).IsDormant(new Concepts.Observation.ObserverKey(handler.Id.Value, _store.Name.Value, Concepts.EventStoreNamespaceName.Default, Concepts.EventSequences.EventSequenceId.Log));
-        return (recorded, dormant);
+            await Task.Delay(100);
+        }
     }
 }

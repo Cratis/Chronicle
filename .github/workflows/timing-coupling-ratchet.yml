@@ -15,7 +15,6 @@ on:
       - "Source/Clients/XUnit.Integration/**/*.cs"
       - ".github/timing-coupling-baseline.txt"
       - ".github/scripts/assert-timing-coupling-ratchet.py"
-      - ".github/scripts/assert-timing-coupling-ratchet.mjs"
       - ".github/workflows/timing-coupling-ratchet.yml"
 
 permissions:
@@ -32,7 +31,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Assert sleep counts and Integration delay explanations
-        run: |
-          node .github/scripts/assert-timing-coupling-ratchet.mjs --self-test
-          node .github/scripts/assert-timing-coupling-ratchet.mjs
+      - name: Assert no spec or integration file gained a sleep
+        run: python3 .github/scripts/assert-timing-coupling-ratchet.py

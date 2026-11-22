@@ -47,7 +47,6 @@ public class TheJobStep(
             await jobStepProcessor.WaitForStart();
             if (currentState.WaitCount >= currentState.NumTimesPerformCalled)
             {
-                // Task.Delay: time-behavior; simulate a running job step so cancellation and failure can race it.
                 await Task.Delay(currentState.WaitTime, cancellationToken);
             }
             if (cancellationToken.IsCancellationRequested)

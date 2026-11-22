@@ -45,10 +45,19 @@ public class clearing_the_nested_object(context context) : Given<context>(contex
 
             await EventStore.EventLog.Append(SliceId, new CommandClearedFromSlice());
 
-            Result = await ReadinessWait.Until(
-                () => EventStore.ReadModels.GetInstanceById<FeatureReadModel>(FeatureId.ToString()),
-                model => model is not null && model.Slices?.FirstOrDefault()?.Command is null,
-                TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (!cts.IsCancellationRequested)
+            {
+                Result = await EventStore.ReadModels.GetInstanceById<FeatureReadModel>(FeatureId.ToString());
+                if (Result?.Slices?.FirstOrDefault()?.Command is null)
+                {
+                    break;
+                }
+
+                await Task.Delay(50);
+            }
+
+            Result = await EventStore.ReadModels.GetInstanceById<FeatureReadModel>(FeatureId.ToString());
         }
     }
 

@@ -55,9 +55,13 @@ public class and_the_optional_is_an_enum(context context) : Given<context>(conte
             // Only the creating event fires. ContractRejected - the source of the optional Outcome - never does.
             await EventStore.EventLog.Append(ContractId, new ContractSigned("Ada Lovelace"));
 
-            Instance = await ReadinessWait.Until(
-                () => EventStore.ReadModels.GetInstanceById<SignedContract>(ContractId.Value),
-                instance => instance?.Signer is not null);
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            while (Instance?.Signer is null)
+            {
+                Instance = await EventStore.ReadModels.GetInstanceById<SignedContract>(ContractId.Value);
+                if (Instance?.Signer is not null) break;
+                await Task.Delay(200, cts.Token);
+            }
 
             StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, CollectionName);
         }

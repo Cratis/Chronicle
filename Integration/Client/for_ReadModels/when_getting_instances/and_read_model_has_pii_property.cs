@@ -41,8 +41,17 @@ public class and_read_model_has_pii_property(context context) : Given<context>(c
         /// </remarks>
         async Task<IEnumerable<PiiReadModel>> WaitTillInstancesAreVisible()
         {
-            return await ReadinessWait.Until(
-                () => EventStore.ReadModels.GetInstances<PiiReadModel>(), instances => instances.Any());
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            while (true)
+            {
+                var instances = await EventStore.ReadModels.GetInstances<PiiReadModel>();
+                if (instances.Any())
+                {
+                    return instances;
+                }
+
+                await Task.Delay(50, cts.Token);
+            }
         }
     }
 

@@ -68,19 +68,23 @@ public class and_observers_consume_second_generation(context context) : Given<co
 
         async Task WaitForObservedStateBehavioral(TimeSpan? timeout = default)
         {
-            await ReadinessWait.Until(
-                () => Task.FromResult(new
+            timeout ??= TimeSpanFactory.DefaultTimeout();
+            using var cts = new CancellationTokenSource(timeout.Value);
+
+            while (true)
+            {
+                if (Reactor.ReceivedGeneration == 2u &&
+                    Reactor.ReceivedFirstName == "Jane" &&
+                    Reactor.ReceivedLastName == "Doe" &&
+                    Reducer.ReceivedGeneration == 2u &&
+                    Reducer.ReceivedFirstName == "Jane" &&
+                    Reducer.ReceivedLastName == "Doe")
                 {
-                    ReactorGeneration = Reactor.ReceivedGeneration,
-                    ReactorFirstName = Reactor.ReceivedFirstName,
-                    ReactorLastName = Reactor.ReceivedLastName,
-                    ReducerGeneration = Reducer.ReceivedGeneration,
-                    ReducerFirstName = Reducer.ReceivedFirstName,
-                    ReducerLastName = Reducer.ReceivedLastName
-                }),
-                state => state.ReactorGeneration == 2u && state.ReactorFirstName == "Jane" && state.ReactorLastName == "Doe" &&
-                    state.ReducerGeneration == 2u && state.ReducerFirstName == "Jane" && state.ReducerLastName == "Doe",
-                timeout);
+                    return;
+                }
+
+                await Task.Delay(50, cts.Token);
+            }
         }
     }
 

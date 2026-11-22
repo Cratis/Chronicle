@@ -16,8 +16,6 @@ public class ReducerThatCanFail(TaskCompletionSource tcs) : IReducerFor<SomeRead
     public async Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
     {
         tcs.SetResult();
-
-        // Task.Delay: time-behavior; configurable slow handler exercises failure and recovery while processing.
         await Task.Delay(HandleTime);
         if (ShouldFail)
         {
@@ -32,6 +30,11 @@ public class ReducerThatCanFail(TaskCompletionSource tcs) : IReducerFor<SomeRead
 
     public async Task WaitTillHandledEventReaches(int count, TimeSpan? timeout = default)
     {
-        await ReadinessWait.Until(() => Task.FromResult(HandledEvents), handled => handled == count, timeout);
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (HandledEvents != count)
+        {
+            await Task.Delay(20, cts.Token);
+        }
     }
 }

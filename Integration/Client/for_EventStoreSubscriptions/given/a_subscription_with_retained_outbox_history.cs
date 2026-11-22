@@ -73,10 +73,11 @@ public class a_subscription_with_retained_outbox_history(ChronicleFixture fixtur
 
     protected async Task WaitForForwarderCheckpoint(ulong expected)
     {
-        await ReadinessWait.Until(
-            async () => (await Forwarder.GetState()).LastHandledEventSequenceNumber.Value,
-            sequence => sequence == expected,
-            Timeout);
+        using var cancellation = new CancellationTokenSource(Timeout);
+        while ((await Forwarder.GetState()).LastHandledEventSequenceNumber.Value != expected)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellation.Token);
+        }
     }
 
     public IEnumerable<string> StoredValues() => StoredEvents.Select(_ => ((SubscriptionHistoryPublished)_.Content).Value);

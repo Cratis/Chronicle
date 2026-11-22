@@ -348,26 +348,31 @@ public class ClusteringFixture : IAsyncLifetime
     /// </summary>
     /// <param name="expectedSilos">The number of active silos to wait for.</param>
     /// <returns>A <see cref="Task"/> that completes when the cluster has converged.</returns>
-    /// <exception cref="TimeoutException">Thrown when the cluster does not converge within the timeout.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the cluster does not converge within the timeout.</exception>
     async Task WaitForActiveSilos(int expectedSilos)
     {
         var management = EventSequencesSilo.ServiceProvider.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0);
-        await ReadinessWait.Until(
-            async () =>
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
+        while (!cancellationTokenSource.IsCancellationRequested)
+        {
+            try
             {
-                try
+                var hosts = await management.GetHosts(onlyActive: true);
+                if (hosts.Count(_ => _.Value == SiloStatus.Active) >= expectedSilos)
                 {
-                    var hosts = await management.GetHosts(onlyActive: true);
-                    return new { Active = hosts.Count(_ => _.Value == SiloStatus.Active), Failure = string.Empty };
+                    return;
                 }
-                catch (Exception exception) when (exception is OrleansException or TimeoutException)
-                {
-                    return new { Active = 0, Failure = exception.Message };
-                }
-            },
-            membership => membership.Active >= expectedSilos,
-            TimeSpan.FromSeconds(60),
-            pollInterval: TimeSpan.FromMilliseconds(500));
+            }
+            catch (Exception ex) when (ex is OrleansException or TimeoutException)
+            {
+                // Membership not ready yet — keep polling until the timeout.
+            }
+
+            await Task.Delay(500, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+
+        throw new InvalidOperationException($"Cluster did not reach {expectedSilos} active silos within the timeout.");
     }
 
     /// <summary>
@@ -391,10 +396,22 @@ public class ClusteringFixture : IAsyncLifetime
     /// <param name="expected">The number of targets to wait for.</param>
     /// <param name="timeout">The maximum time to wait.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    /// <exception cref="TimeoutException">Thrown when the target count is not reached within the timeout.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the target count is not reached within the timeout.</exception>
     public async Task WaitForFanOutTargets(KernelCore::Cratis.Chronicle.Observation.IObserver observer, int expected, TimeSpan timeout)
     {
-        await ReadinessWait.Until(async () => (await observer.GetSubscription()).Targets.Count, count => count >= expected, timeout);
+        using var cancellationTokenSource = new CancellationTokenSource(timeout);
+        while (!cancellationTokenSource.IsCancellationRequested)
+        {
+            var subscription = await observer.GetSubscription();
+            if (subscription.Targets.Count >= expected)
+            {
+                return;
+            }
+
+            await Task.Delay(200, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+
+        throw new InvalidOperationException($"Observer did not reach {expected} fan out targets within the timeout.");
     }
 
     /// <summary>

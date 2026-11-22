@@ -28,7 +28,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="../Shared/ReadinessWait.cs" Link="ReadinessWait.cs" />
         <PackageReference Include="Cratis.Arc" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="EphemeralMongo" />

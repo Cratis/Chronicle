@@ -22,6 +22,10 @@ public class InvokedWebhooks
 
     public async Task WaitForInvocation(int count)
     {
-        await ReadinessWait.Until(() => Task.FromResult(_invokedWebhooks.Count), invoked => invoked >= count);
+        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+        while (_invokedWebhooks.Count < count)
+        {
+            await Task.Delay(100, cts.Token);
+        }
     }
 }

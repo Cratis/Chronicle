@@ -40,9 +40,13 @@ public class and_the_elements_are_objects(context context) : Given<context>(cont
         {
             await EventStore.EventLog.Append(CaseId, Event);
 
-            Instance = await ReadinessWait.Until(
-                () => EventStore.ReadModels.GetInstanceById<CaseContacts>(CaseId.Value),
-                instance => instance?.Contacts is { Count: 2 });
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            while (Instance?.Contacts is not { Count: 2 })
+            {
+                Instance = await EventStore.ReadModels.GetInstanceById<CaseContacts>(CaseId.Value);
+                if (Instance?.Contacts is { Count: 2 }) break;
+                await Task.Delay(200, cts.Token);
+            }
 
             StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, "CaseContacts");
         }

@@ -18,7 +18,6 @@
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="../Shared/ReadinessWait.cs" Link="ReadinessWait.cs" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />

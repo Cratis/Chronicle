@@ -282,7 +282,16 @@ public abstract class an_unseen_observer_kernel<TFixture>(TFixture fixture) : Sp
     /// <exception cref="TimeoutException">Thrown when the condition does not hold in time.</exception>
     protected static async Task WaitUntil(string what, Func<Task<bool>> condition, int seconds = 60)
     {
-        await ReadinessWait.Until(condition, ready => ready, TimeSpan.FromSeconds(seconds), what);
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(seconds);
+        while (!await condition())
+        {
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                throw new TimeoutException($"Timed out waiting for {what}");
+            }
+
+            await Task.Delay(100);
+        }
     }
 
     protected static async Task WaitForHandled(IUnseenObserver observer, int count) =>

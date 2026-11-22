@@ -33,21 +33,19 @@ public class and_events_are_appended_before_restart(context context) : Given<con
             await ChronicleFixture.RestartStorageAsync();
 
             // Wait until the kernel has reconnected to the storage backend after the restart.
-            await ReadinessWait.Until(
-                async () =>
+            var deadline = DateTime.UtcNow.AddSeconds(60);
+            while (DateTime.UtcNow < deadline)
+            {
+                try
                 {
-                    try
-                    {
-                        await EventStore.EventLog.GetNextSequenceNumber();
-                        return "connected";
-                    }
-                    catch (Exception exception)
-                    {
-                        return exception.Message;
-                    }
-                },
-                status => status == "connected",
-                TimeSpan.FromSeconds(60));
+                    await EventStore.EventLog.GetNextSequenceNumber();
+                    break;
+                }
+                catch
+                {
+                    await Task.Delay(500);
+                }
+            }
 
             AppendResultAfterRestart = await EventStore.EventLog.Append(EventSourceId, new SomeEvent("after-restart"));
             SequenceNumberAfterRestart = await EventStore.EventLog.GetNextSequenceNumber();

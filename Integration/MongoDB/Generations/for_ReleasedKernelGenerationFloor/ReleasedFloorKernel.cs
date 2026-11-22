@@ -88,7 +88,15 @@ public sealed class ReleasedFloorKernel : IAsyncDisposable
             throw new TimeoutException(await Describe(kernel));
         }
         Exited = false;
-        await ReadinessWait.Until(StoreIsPopulated, populated => populated, _populateTimeout, pollInterval: TimeSpan.FromSeconds(2));
+        var deadline = DateTimeOffset.UtcNow + _populateTimeout;
+        while (!await StoreIsPopulated())
+        {
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                throw new TimeoutException("The kernel became healthy but no event store database was populated.");
+            }
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
     }
 
     /// <summary>
@@ -107,14 +115,14 @@ public sealed class ReleasedFloorKernel : IAsyncDisposable
             Exited = true;
             return;
         }
-        try
+        var deadline = DateTimeOffset.UtcNow + _exitTimeout;
+        while (DateTimeOffset.UtcNow < deadline && !Exited)
         {
-            Exited = await ReadinessWait.Until(() => IsExited(kernel), exited => exited, _exitTimeout, pollInterval: TimeSpan.FromSeconds(2));
-        }
-        catch (TimeoutException)
-        {
-            // Keep a refusal failure observable in the compatibility matrix along with its write witness.
-            Exited = false;
+            Exited = await IsExited(kernel);
+            if (!Exited)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
         }
     }
 

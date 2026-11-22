@@ -166,8 +166,20 @@ public class when_erasing_a_subject_whose_key_was_forwarded_to_another_event_sto
         {
             var targetEventStore = await ChronicleClient.GetEventStore(targetEventStoreName);
             var inbox = targetEventStore.GetEventSequence(InboxFrom(sourceEventStoreName));
-            await ReadinessWait.Until(
-                () => inbox.GetTailSequenceNumber(), tail => tail.IsActualValue && tail >= EventSequenceNumber.First);
+            var deadline = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
+
+            while (DateTime.UtcNow < deadline)
+            {
+                var tail = await inbox.GetTailSequenceNumber();
+                if (tail.IsActualValue && tail >= EventSequenceNumber.First)
+                {
+                    return;
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new TimeoutException($"Inbox '{InboxFrom(sourceEventStoreName)}' in '{targetEventStoreName}' never received the forwarded event.");
         }
     }
 

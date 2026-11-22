@@ -67,14 +67,22 @@ public class and_reading_the_child_collection(context context) : Given<context>(
         async Task<TReadModel> PollUntil<TReadModel>(Func<TReadModel, bool> ready)
             where TReadModel : class
         {
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
             TReadModel? last = null;
             try
             {
-                return (await ReadinessWait.Until(
-                    async () => last = await EventStore.ReadModels.GetInstanceById<TReadModel>(ApplicantId.Value),
-                    instance => instance is not null && ready(instance)))!;
+                while (true)
+                {
+                    last = await EventStore.ReadModels.GetInstanceById<TReadModel>(ApplicantId.Value);
+                    if (last is not null && ready(last))
+                    {
+                        return last;
+                    }
+
+                    await Task.Delay(200, cts.Token);
+                }
             }
-            catch (TimeoutException)
+            catch (OperationCanceledException)
             {
                 // Surface kernel-side diagnostics into the CI job log — the container logs (at Debug level
                 // for Cratis) carry the observer subscription / routing traces that explain why the child

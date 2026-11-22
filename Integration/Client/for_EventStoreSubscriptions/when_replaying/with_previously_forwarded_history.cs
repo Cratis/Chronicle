@@ -21,7 +21,11 @@ public class with_previously_forwarded_history(context context) : Given<context>
             await WaitForDeliveries(2);
             var completed = await Source.Jobs.WaitTillJobCompletesOrIsDeleted(new JobId(job.Value), Timeout);
             completed?.Status.ShouldEqual(JobStatus.CompletedSuccessfully);
-            await ReadinessWait.Until(async () => (await Forwarder.GetState()).IsReplaying, replaying => !replaying, Timeout);
+            using var cancellation = new CancellationTokenSource(Timeout);
+            while ((await Forwarder.GetState()).IsReplaying)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50), cancellation.Token);
+            }
             ReplayCompleted = true;
             await ReadInbox();
         }

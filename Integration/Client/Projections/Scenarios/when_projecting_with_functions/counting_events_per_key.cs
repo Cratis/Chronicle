@@ -37,8 +37,19 @@ public class counting_events_per_key(context context) : Given<context>(context)
 
         async Task<ReadModel> WaitForReadModel(EventSourceId eventSourceId)
         {
-            return await ReadinessWait.Until(
-                () => GetReadModel(eventSourceId), model => model is not null, TimeSpanFactory.FromSeconds(60));
+            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.FromSeconds(60));
+            while (DateTime.UtcNow < timeout)
+            {
+                var model = await GetReadModel(eventSourceId);
+                if (model is not null)
+                {
+                    return model;
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new TimeoutException($"Read model for event source '{eventSourceId}' was not materialized within timeout.");
         }
     }
 

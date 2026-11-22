@@ -42,9 +42,13 @@ public class and_reading_the_instance(context context) : Given<context>(context)
         {
             await EventStore.EventLog.Append(VenueId, Event);
 
-            Instance = await ReadinessWait.Until(
-                () => EventStore.ReadModels.GetInstanceById<Gathering>(VenueId.Value),
-                instance => instance?.Venue is not null);
+            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
+            while (Instance?.Venue is null)
+            {
+                Instance = await EventStore.ReadModels.GetInstanceById<Gathering>(VenueId.Value);
+                if (Instance?.Venue is not null) break;
+                await Task.Delay(200, cts.Token);
+            }
 
             StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, "Gatherings");
         }

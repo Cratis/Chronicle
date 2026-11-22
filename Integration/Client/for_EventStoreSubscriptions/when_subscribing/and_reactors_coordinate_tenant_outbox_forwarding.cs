@@ -133,8 +133,20 @@ public class and_reactors_coordinate_tenant_outbox_forwarding(context context) :
 
         async Task WaitForInboxTailSequenceNumber(string targetNamespace, Concepts.Events.EventSequenceNumber expected)
         {
-            await ReadinessWait.Until(
-                () => GetInboxTailSequenceNumber(targetNamespace), tail => tail.Value >= expected.Value);
+            var timeout = DateTime.UtcNow.Add(TimeSpanFactory.DefaultTimeout());
+
+            while (DateTime.UtcNow < timeout)
+            {
+                var tailSequenceNumber = await GetInboxTailSequenceNumber(targetNamespace);
+                if (tailSequenceNumber.Value >= expected.Value)
+                {
+                    return;
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new TimeoutException($"Inbox for namespace '{targetNamespace}' did not reach sequence number {expected.Value}.");
         }
     }
 

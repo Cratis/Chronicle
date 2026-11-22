@@ -92,7 +92,20 @@ public class when_the_kernel_drops_a_client_instance(context _context)
 
         static async Task<int> WaitForTargetCount(KernelCore::Cratis.Chronicle.Observation.IObserver observer, int expected, TimeSpan timeout)
         {
-            return await ReadinessWait.Until(async () => (await observer.GetSubscription()).Targets.Count, count => count == expected, timeout);
+            using var cancellationTokenSource = new CancellationTokenSource(timeout);
+            var count = int.MaxValue;
+            while (!cancellationTokenSource.IsCancellationRequested)
+            {
+                count = (await observer.GetSubscription()).Targets.Count;
+                if (count == expected)
+                {
+                    return count;
+                }
+
+                await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
+
+            return count;
         }
     }
 

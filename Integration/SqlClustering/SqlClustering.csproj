@@ -23,7 +23,6 @@
         <PackageReference Include="Microsoft.Data.SqlClient" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
         <PackageReference Include="NSubstitute" />
-        <Compile Include="../Shared/ReadinessWait.cs" Link="ReadinessWait.cs" />
         <Compile Include="../Client/SqlServerContainerImage.cs" Link="SqlServerContainerImage.cs" />
         <Compile Include="../Client/ContainerStartup.cs" Link="ContainerStartup.cs" />
         <Compile Include="../Client/ContainerStartupAttempt.cs" Link="ContainerStartupAttempt.cs" />

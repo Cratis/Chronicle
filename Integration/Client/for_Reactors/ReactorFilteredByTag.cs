@@ -15,8 +15,6 @@ public class ReactorFilteredByTag(TaskCompletionSource tcs) : IReactor
     public async Task OnSomeEvent(SomeEvent evt, EventContext ctx)
     {
         Interlocked.Increment(ref HandledEvents);
-
-        // Task.Delay: time-behavior; simulate asynchronous handler latency before signaling completion.
         await Task.Delay(TimeSpan.FromMilliseconds(10));
         tcs.TrySetResult();
     }
