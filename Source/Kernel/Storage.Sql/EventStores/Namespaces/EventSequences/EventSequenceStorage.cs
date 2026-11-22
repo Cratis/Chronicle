@@ -485,13 +485,14 @@ public partial class EventSequenceStorage(
             query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
-        var lastEvent = await query
+        var lastSequenceNumber = await query
             .OrderByDescending(e => e.SequenceNumber)
+            .Select(e => (ulong?)e.SequenceNumber)
             .FirstOrDefaultAsync();
 
-        return lastEvent?.SequenceNumber is null
+        return lastSequenceNumber is null
             ? EventSequenceNumber.Unavailable
-            : new EventSequenceNumber(lastEvent.SequenceNumber);
+            : new EventSequenceNumber(lastSequenceNumber.Value);
     }
 
     /// <inheritdoc/>
@@ -529,8 +530,12 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
         var eventTypeList = eventTypes.ToList();
+        var eventTypeIds = new string[eventTypeList.Count];
+        for (var i = 0; i < eventTypeIds.Length; i++)
+        {
+            eventTypeIds[i] = eventTypeList[i].Id;
+        }
 
         // Query to get the max sequence number for each event type
         var tailSequenceNumbers = await scope.DbContext.Events
@@ -539,14 +544,19 @@ public partial class EventSequenceStorage(
             .Select(g => new { EventTypeId = g.Key, MaxSequenceNumber = g.Max(e => e.SequenceNumber) })
             .ToListAsync();
 
-        var result = new Dictionary<EventType, EventSequenceNumber>();
+        var result = new Dictionary<EventType, EventSequenceNumber>(eventTypeList.Count);
 
         foreach (var eventType in eventTypeList)
         {
-            var tailEntry = tailSequenceNumbers.FirstOrDefault(t => t.EventTypeId == eventType.Id);
-            result[eventType] = tailEntry is not null
-                ? new EventSequenceNumber(tailEntry.MaxSequenceNumber)
-                : EventSequenceNumber.Unavailable;
+            result[eventType] = EventSequenceNumber.Unavailable;
+            foreach (var tail in tailSequenceNumbers)
+            {
+                if (tail.EventTypeId == eventType.Id)
+                {
+                    result[eventType] = new EventSequenceNumber(tail.MaxSequenceNumber);
+                    break;
+                }
+            }
         }
 
         return result.ToImmutableDictionary();
