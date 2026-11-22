@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -544,11 +543,6 @@ public partial class ProjectionsManager(
         var readModelDefinitions = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
             .ToDictionary(readModel => readModel.Identifier);
 
-        // The event type schemas are the same for every definition and namespace in this pass; fetching them once
-        // here instead of per subscription keeps a registration from fanning out into definitions × namespaces
-        // storage reads.
-        var eventTypeSchemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
-
         // Failures are isolated per definition: one projection that cannot set its definition or subscribe must not
         // keep the others from landing, and the caller decides whether the collected failures surface as an error
         // (registration) or are only logged (the timer-driven resubscription pass).
@@ -573,7 +567,7 @@ public partial class ProjectionsManager(
                     return;
                 }
 
-                await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition, eventTypeSchemas, reactivateRetired);
+                await SetDefinitionAndSubscribeForProjection(namespaces, definition, readModelDefinition, reactivateRetired);
             }
             catch (Exception exception)
             {
@@ -622,7 +616,7 @@ public partial class ProjectionsManager(
         State.Projections = projections;
     }
 
-    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired)
+    async Task SetDefinitionAndSubscribeForProjection(IEnumerable<EventStoreNamespaceName> namespaces, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, bool reactivateRetired)
     {
         ForgetSubscriptionsFor(definition.Identifier);
         logger.SettingDefinition(definition.Identifier);
@@ -640,10 +634,10 @@ public partial class ProjectionsManager(
             return;
         }
 
-        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, eventTypeSchemas, reactivateRetired, boundedByRegistration: reactivateRetired)));
+        await Task.WhenAll(namespaces.Select(namespaceName => SubscribeIfNotSubscribed(definition, readModelDefinition, namespaceName, reactivateRetired, boundedByRegistration: reactivateRetired)));
     }
 
-    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired, bool reconcile = false, bool boundedByRegistration = false)
+    async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, bool reactivateRetired, bool reconcile = false, bool boundedByRegistration = false)
     {
         if (!definition.IsActive)
         {
@@ -692,7 +686,7 @@ public partial class ProjectionsManager(
             if (MustDeferSubscription(definition, deadline, reactivateRetired)) return;
 
             logger.Subscribing(definition.Identifier, namespaceName);
-            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition, eventTypeSchemas);
+            var projection = await projectionFactory.Create(_eventStoreName, namespaceName, definition, readModelDefinition);
 
             logger.SubscribingWithEventTypes(
                 definition.Identifier,

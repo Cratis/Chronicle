@@ -6,6 +6,7 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -19,6 +20,7 @@ using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
+using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -39,6 +41,8 @@ public class a_factory_for_two_namespaces : Specification
     protected ReadModelDefinition _readModel;
     protected IEventSequenceStorage _firstStorage;
     protected IEventSequenceStorage _secondStorage;
+    protected IEventTypesStorage _eventTypes;
+    protected IStorage _storage;
 
     /// <summary>
     /// Projects a created event through a projection.
@@ -81,9 +85,11 @@ public class a_factory_for_two_namespaces : Specification
 
     async Task Establish()
     {
-        var storage = Substitute.For<IStorage>();
+        var storage = _storage = Substitute.For<IStorage>();
         _firstStorage = StorageFor(storage, _first, "alpha");
         _secondStorage = StorageFor(storage, _second, "beta");
+        _eventTypes = storage.GetEventStore(_eventStore).EventTypes;
+        _eventTypes.GetLatestForAllEventTypes().Returns(Task.FromResult<IEnumerable<EventTypeSchema>>([]));
 
         var formats = new TypeFormats();
         var keys = new KeyResolvers(NullLogger<KeyResolvers>.Instance);
