@@ -1103,8 +1103,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Assert no spec or integration file gained a sleep
-        run: python3 .github/scripts/assert-timing-coupling-ratchet.py
+      - name: Assert sleep counts and Integration delay explanations
+        run: |
+          node .github/scripts/assert-timing-coupling-ratchet.mjs --self-test
+          node .github/scripts/assert-timing-coupling-ratchet.mjs
 
   # No requested PR matrix starts on red cheap deterministic checks (C6/C8, #6026).
   # Deliberately does not wait for ordinary specs: lanes still run beside them (#5865).
