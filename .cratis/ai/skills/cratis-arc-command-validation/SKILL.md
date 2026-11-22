@@ -61,13 +61,13 @@ Which mechanism makes a rule hold under concurrent writers (constraint, protecte
 decision, stream decision, aggregate, scope, reactor repair) is routed in
 [choosing how a rule holds](../cratis-chronicle-decision-reads/references/choosing-how-a-rule-holds.md).
 A validator holds a state rule only when the project is on read protection `On`;
-under `Off` (set explicitly, or the Arc 22 behavior) it is a hint, never the mechanism.
+under `Off` (the default) it is a hint, never the mechanism.
 
 | The rule is… | Put it in |
 | --- | --- |
 | A reusable value invariant — length, format, range | `ConceptValidator<T>` on the concept type |
 | Command input, cross-field, or a pre-handler check | `CommandValidator<TCommand>` with `RuleFor(...)` |
-| A dependency on data the handler must fetch first | `Provide()` — acquire inputs; only short-circuit if acquisition yields nothing usable |
+| A dependency on data the handler must fetch first | `Provide()` — fetch, and short-circuit if unusable |
 | State-dependent and must hold **under concurrency** | Under `On`, a `CommandValidator<T>` with the read model as a constructor parameter (Step 5); or `IStreamReads`/`StreamDecision`; return events through Arc. `[ProtectedDecision]` + `DecisionRead<T>` is the older per-command opt-in |
 | Uniqueness | A Chronicle constraint, never a command-side read |
 | A genuine defect or missing infrastructure | `throw` a domain exception |
@@ -124,8 +124,8 @@ public class TransferFundsValidator : CommandValidator<TransferFunds>
   Step 5. **State rules ("may this proceed") belong here**, with the read model as a
   constructor parameter. Under read protection `On` that read is fresh from the log
   and guards the append: if an event of the model's types for that key arrives
-  after the read, nothing from the command is written. Under `Off` (set explicitly,
-  or the Arc 22 behavior) and `Measure` the same validator reads a plain model: a hint
+  after the read, nothing from the command is written. Under `Off` (the default
+  when nothing is set) and `Measure` the same validator reads a plain model: a hint
   with a friendly message that guards nothing. Under `On` the validator must be
   convention-registered (transient); hand-registered scoped, singleton, factory or
   instance validators are refused. Under `[ProtectedDecision]` without `On`, a
@@ -153,15 +153,17 @@ metadata. Do not conflate metadata coverage with validator certification.
 `Provide()` runs after authorization and validation and before `Handle()`. Its
 parameters resolve from dependency injection; the command instance is `this`.
 
-Validators own refusals, including read-model existence; `Provide()` only
-short-circuits when acquisition itself yields nothing usable. Read
-[read-model-resolution.md](references/read-model-resolution.md) for the validator-owned
-existence check and [provide-example.md](../cratis-arc-command/references/provide-example.md)
-for an external lookup that yields no data.
+```csharp
+public async Task<Result<Customer, ValidationResult>> Provide(IReadModels readModels)
+{
+    var customer = await readModels.GetInstanceById<Customer>((EventSourceId)CustomerId);
+    return customer is null ? ValidationResult.Error("Customer must exist.") : customer;
+}
+```
 
-- When acquisition yields nothing usable, a returned `ValidationResult`, an
-  `IEnumerable<ValidationResult>`, an `AuthorizationResult`, or a `CommandResult`
-  short-circuits: `Handle()` is never invoked.
+- Returning a `ValidationResult`, an `IEnumerable<ValidationResult>`, an
+  `AuthorizationResult`, or a `CommandResult` short-circuits: `Handle()` is
+  never invoked.
 - A `Result<TProvided, ValidationResult>` has its inner value unwrapped, so the
   success arm flows to `Handle()` and the error arm short-circuits.
 - A returned tuple is flattened and its elements bound to `Handle()` parameters
@@ -169,20 +171,16 @@ for an external lookup that yields no data.
   an unused one is `ARC0005`.
 - Keep the fetch in `Provide()` and the decision in `Handle()`. Do not write a
   pass-through `Provide()` that only forwards a read model `Handle()` could take
-  directly. Pick one rejection owner: validators for existence/preconditions;
-  `Result<TEvent, ValidationResult>` in `Handle()` only for a rule depending on the
-  event decision. Do not duplicate the same rejection.
+  directly, and do not duplicate one rejection in both the validator and
+  `Provide()` — pick one owner.
 
 ## Step 5 — Guard a concurrency-sensitive decision
 
-Read protection `On` is the default from Arc 23: leave `<CratisReadProtection>` unset
-and do not add `[ReadProtection(ReadProtectionMode.On)]`. (Legacy, Arc 22.106.0 and later 22.x:
-the default was `Off`; set `<CratisReadProtection>On</CratisReadProtection>`.) Opt out only
-where needed, narrowest first and with a reason: `[Unprotected("why")]` on one read-model
-parameter, `[Unprotected("why")]` or `[ReadProtection(ReadProtectionMode.Off)]` on one command.
-Under `On`, the read-model parameters of `Handle()` and of the validator constructor are
+Set read protection `On` for new code: `<CratisReadProtection>On</CratisReadProtection>`
+in the project (or `[ReadProtection(ReadProtectionMode.On)]` on one command). Under
+`On`, the read-model parameters of `Handle()` and of the validator constructor are
 the guard, so the state rule is a validator and `Handle()` returns the events.
-Requires Arc 22.106.0. Under `Off` (set explicitly, or the Arc 22 behavior) a plain read guards nothing, even
+Requires Arc 22.106.0. Under `Off` (the default) a plain read guards nothing, even
 inside `Handle()` returning `Result<,>`. Choose the first boundary that fits:
 
 1. A unique value or create-once: a Chronicle constraint, not a read.
@@ -273,16 +271,11 @@ Every rule gets a failure specification: instantiate the validator with its
 read-model state and validate directly, asserting the specific rejection. Add
 `CommandScenario<TCommand>` only for pipeline/authorization wiring, constraints.
 Follow the
-[scenario rule](../../rules/specs.scenarios.csharp.md): ordinary application specs
-supply state, not a replay of the platform guard matrix. Typed scenarios select
-decision reads automatically; `UseDecisionReads()` is obsolete. Keep one
-assembly-level application-shape admission check; explicit body reads need their
-own admission check or focused scenario. An unusual application-owned explicit
-guard policy can justify a focused regression a plain call cannot prove; read the
-[decision guidance](../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
-for the example, limits and advanced hook boundary. Validators own refusals;
-`Provide()` only short-circuits (`ValidationResult`/`AuthorizationResult`) when
-acquisition yields nothing usable, not for ordinary validation rules. Report harness gaps upstream; never weaken
+[scenario rule](../../rules/specs.scenarios.csharp.md): application specs never
+configure read-protection modes, call `UseDecisionReads`, simulate competing appends, seed events solely for
+infrastructure, or re-prove platform guards. Keep the single cheap assembly-level
+application-shape admission spec specified by that rule; it is the application's
+only decision-read spec obligation. Report harness gaps upstream; never weaken
 production guards for speed.
 
 For a pipeline validation rejection, assert **both** that the command did not
@@ -311,7 +304,7 @@ the fact. See
 - **The rule never fires.** The read-model type has no backing Chronicle
   projection, reducer, `DbSet<T>`, or MongoDB collection, so nothing registered
   it for command-side resolution.
-- **Two requests both win.** The project is on `Off` (set explicitly, or Arc 22) or `Measure`, so
+- **Two requests both win.** The project is on `Off` (the default) or `Measure`, so
   the validator read is a hint; moving it to `Handle()` or returning `Result<,>`
   does not guard it. Set `On`, or use a stream decision or a constraint.
 - **`ARC0005` on build.** `Provide()` returns a value no `Handle()` parameter

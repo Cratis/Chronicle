@@ -64,7 +64,7 @@ passed to `AddCratisArc` runs after binding and wins over configuration.
   ingress that authenticates callers and replaces the identity headers.
 - **`ReadProtection` keys are root-level.** `Cratis:Arc:ReadProtection:*` has no
   effect. The protection mode itself is the `CratisReadProtection` build
-  property, not configuration; on Arc 23 leave it unset (default `On`).
+  property, not configuration.
 - **Do not put connection strings or credentials in committed appsettings.**
   Use secret configuration or environment variables.
 - Do not change a setting on a shared or deployed environment without stating

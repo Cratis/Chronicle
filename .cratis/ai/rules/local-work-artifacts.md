@@ -38,9 +38,10 @@ dumps, and similar coordination files. These are **work records, not documentati
   replace the prompt.
 - **A worktree is a work record too.** Create it outside the repository tree, for
   example in a sibling `../.worktrees/` directory. A nested worktree inherits the
-  parent's `.globalconfig` (.NET `MultipleGlobalAnalyzerKeys` errors or changed analyzer
-  severities). In a container whose checkout is the workspace root with a read-only
-  parent, use `$HOME/.worktrees/<name>`. **Delivered work is cleaned up by
+  parent's `.globalconfig`, causing .NET `MultipleGlobalAnalyzerKeys` errors or silently
+  changing analyzer severities. In a container worker whose checkout is the workspace root
+  with a read-only parent (such as `/workspace`), use `$HOME/.worktrees/<name>`,
+  never `..` outside the workspace or inside the checkout. **Delivered work is cleaned up by
   `.cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh`, not by memory:** run it from the
   main checkout when a PR merges or you finish a task (hooks and **ship-changes** also run it). It
   removes a worktree and its branch only on evidence the work reached the default branch —
@@ -52,8 +53,7 @@ dumps, and similar coordination files. These are **work records, not documentati
   or `git branch -D` a delivered branch when the script can; `gh pr merge --delete-branch`
   inside a worktree leaves the worktree and branch behind. If the branch must outlive the task
   unmerged, leave the worktree and say so in the handoff. Never `--force` a removal; a
-  refusal means look. Cleanup keeps local-only work (unpushed commits, stashes, dirty
-  worktrees) and records branch refs and SHAs before and after.
+  refusal means look, not push harder.
 - **Scan for secrets before archiving or sharing.** Before anything from `.ai-work/` is archived,
   attached or shared, run `gitleaks detect --no-git --source <dir>` (or the repository's equivalent)
   and redact every finding. See [`secrets.md`](./secrets.md).

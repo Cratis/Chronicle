@@ -78,7 +78,7 @@ Load **cratis-application-slice-conformance** when it is installed; read the ski
 
 - Record decorated with `[Command]` from `Cratis.Arc.Commands.ModelBound`, with a public instance **`Handle()`** — never a separate handler class.
 - Put fetched/computed handler data in **`Provide()`** (runs after validation/authorization); keep `Handle()` focused on event construction.
-- **Business rejection is validation, never a throw.** Use `CommandValidator<T>`, `ConceptValidator<T>`, or `Result<TEvent, ValidationResult>` for a concurrency-sensitive in-`Handle()` rule. A thrown exception is HTTP 500, not a validation error.
+- **Business rejection is validation, never a throw.** Use `CommandValidator<T>`, `ConceptValidator<T>`, `Provide()` short-circuit, or `Result<TEvent, ValidationResult>` for a concurrency-sensitive in-`Handle()` rule. A thrown exception is HTTP 500, not a validation error.
 - Return from `Handle()`: a single event, `IEnumerable<object>` (with `EventForEventSourceId` for cross-stream), tuple `(EventSourceId, event)` / `(response, event)`, `Result<TEvent, ValidationResult>`, or `void`. Never inject `IEventLog` to append the primary event.
 - Event-source id resolution order: `ICanProvideEventSourceId` → an `EventSourceId`/`EventSourceId<T>`-derived property → a `[Key]` property → else generated.
 

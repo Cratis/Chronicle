@@ -376,8 +376,7 @@ being in-process does not prove permission.
 of transport. During HTTP it is the request principal; outside HTTP it can be the
 principal established by a server-side scope. Read claims from it, not from the
 identity cookie, and not through `IHttpContextAccessor` in code that must also run
-on hub emissions. For application actor injection, caller-keyed reads and
-Chronicle attribution, read [command identity](command-identity.md).
+on hub emissions.
 
 Command authorization reads the principal from the current request. A reactor,
 hosted service, or one command orchestrating another has no request, so any
@@ -406,12 +405,12 @@ privileged.
 Under read protection `On`, the read models in a convention-registered
 `CommandValidator<T>` constructor are read fresh and guard the command's append, so
 a state-dependent permission or ownership rule written there is decision-safe. Under
-`Off` (set explicitly, or the Arc 22 behavior) and `Measure` the same validator reads a plain model: a hint. In
+`Off` (the default) and `Measure` the same validator reads a plain model: a hint. In
 an `[Unprotected]` command (or a model or method marked `[Unprotected("why")]`) the
 read is advisory, so the rule is **not decision-safe**. A `[ProtectedDecision]`
 command without `On` runs only certified, parameterless validators and refuses a
 validator whose constructor takes dependencies; put such a rule in `Provide()` or
-`Handle()` (older opt-in exception) using `DecisionRead<T>` or `IDecisionReads`. Hand-registered scoped,
+`Handle()` using `DecisionRead<T>` or `IDecisionReads`. Hand-registered scoped,
 singleton, factory or instance validators are refused under `On`. Keep
 static/service-locator state out of validators: a guard covers reads Arc can see.
 Source: [protected validator boundary](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).

@@ -19,7 +19,7 @@ Extends the base [specs.md](./specs.instructions.md) (folder structure, naming, 
 
 ## Frameworks
 
-- [xUnit v3](https://xunit.net/docs/getting-started/v3/migration) is the house default for new and migrated spec projects **run as the built executable** ([loop](../../../skills/cratis-specifications-csharp/references/running-specs.md#local-loop)); through `dotnet test` it can be slower (reported measurement). Reference `Cratis.Specifications.XUnit.v3` **5.0** with `xunit.v3.mtp-off`, `Microsoft.NET.Test.Sdk` and `xunit.runner.visualstudio`, and set `<OutputType>Exe</OutputType>` in the project. The package supplies the `Specification` base, convention lifecycle and `ShouldXxx` assertions; the namespace remains `Cratis.Specifications`. Its `Cratis.Specifications` dependency supplies `Catch` and `SpecificationMethods`.
+- [xUnit v3](https://xunit.net/docs/getting-started/v3/migration) is the house default for new and migrated spec projects: reference `Cratis.Specifications.XUnit.v3` **5.0** with `xunit.v3.mtp-off`, `Microsoft.NET.Test.Sdk` and `xunit.runner.visualstudio`, and set `<OutputType>Exe</OutputType>` in the project. The package supplies the `Specification` base, convention lifecycle and `ShouldXxx` assertions; the namespace remains `Cratis.Specifications`. Its `Cratis.Specifications` dependency supplies `Catch` and `SpecificationMethods`.
 - 5.0 targets `net10.0` only. A spec project that must stay on net8.0/net9.0 stays on 4.x, and net48 on 3.x. A project that stays on xUnit v2 uses `Cratis.Specifications.XUnit`, with the same base and conventions.
 - `.NUnit`/`.NUnit5`, `.TUnit` and the experimental `.Runner` are alternatives for repositories already built on them.
 - [NSubstitute](https://nsubstitute.github.io/) for mocking collaborators.

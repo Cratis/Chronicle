@@ -847,16 +847,6 @@ Untouched files remain byte-identical.
 
 ## Code attachments
 
-`read-workspace` and `read-proposal` also accept `view: "typed-contexts"`. Inspect this beside
-`implementation-requirements` from the same compilation/revision before building a wrapper.
-Since Screenplay 4.257.0, handler descriptors add optional `resultVersion` and `result`
-(with its own `resultVersion` and `entries`). Each `result.entries` item exposes `eventContract`,
-`eventName`, `eventRevision`, `payload`, `destinationKind`, `destinationProperty` and
-`destinationType`: use declared event identities, payload shapes and scalar/one-of destinations,
-not guessed names or invented wrapper signatures. Older/legacy descriptors omit both additions;
-absence is not permission to infer a result contract. `isWrapperReady`, types and hashes are
-inspection evidence, not execution or target admission.
-
 `read-workspace` and `read-proposal` accept `view: "implementation-requirements"`.
 Each entry names the role, owner, requirement id, required capability,
 attachment resolution and content hash, plus `bodySpan` and `bodyLines`: a source

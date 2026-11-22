@@ -11,8 +11,8 @@ import { parseArgs } from 'node:util';
 const headings = [
     'Goal', 'Repositories and worktrees', 'Verified facts (with evidence)',
     'Plans and hypotheses (not verified)', 'Watch and action', 'Finished, results not yet read',
-    'Open questions carried forward', 'User directives (verbatim)',
-    'Agent decisions (with reasons)', 'Next commands', 'Files to read',
+    'Open questions carried forward', 'User constraints (verbatim)',
+    'User instructions since the last handoff (verbatim)', 'Next commands', 'Files to read',
 ];
 const repositoryHeader = ['Path', 'Repository', 'Branch', 'HEAD (full SHA)', 'State', 'Ahead/behind'];
 const watchHeader = ['Id', 'Target (immutable)', 'Action on completion', 'How to cancel'];
@@ -60,15 +60,11 @@ function newestHandoff(root) {
     return candidates[0];
 }
 
-function handoffPath(options, start) {
-    const discoveryRoot = git(start, ['rev-parse', '--show-toplevel']);
-    const searchRoot = options.repo ? start : discoveryRoot.output || fallbackRoot(start);
-    return options.path ? resolve(options.path) : newestHandoff(searchRoot);
-}
-
 function input(options) {
     const start = resolve(options.repo || process.cwd());
-    const handoff = handoffPath(options, start);
+    const discoveryRoot = git(start, ['rev-parse', '--show-toplevel']);
+    const searchRoot = options.repo ? start : discoveryRoot.output || fallbackRoot(start);
+    const handoff = options.path ? resolve(options.path) : newestHandoff(searchRoot);
     const body = readFileSync(handoff, 'utf8');
     if (!/^# Handoff:.*$/m.test(body)) throw new Error(`Not a handoff: ${handoff} (missing # Handoff: title).`);
     const repository = git(options.repo ? start : dirname(handoff), ['rev-parse', '--show-toplevel']);
@@ -146,11 +142,6 @@ function pathFrom(root, value) {
     return resolve(root, path);
 }
 
-function resolvedPathExists(root, value) {
-    const path = pathFrom(root, value);
-    return path && existsSync(path);
-}
-
 function firstCodeSpan(text) {
     return /`([^`]+)`/.exec(text)?.[1];
 }
@@ -162,28 +153,28 @@ function readPaths(sections, root, context) {
         .map(item => ({ ...item, text: firstCodeSpan(item.text) ?? clean(item.text) }))
         .filter(item => !absent(item.text));
     for (const item of paths) {
-        if (!resolvedPathExists(root, item.text)) context.error('files-to-read-missing', `Cannot resolve Files to read path: ${item.text}.`, item.line);
+        const path = pathFrom(root, item.text);
+        if (!path || !existsSync(path)) context.error('files-to-read-missing', `Cannot resolve Files to read path: ${item.text}.`, item.line);
     }
     return paths;
 }
 
-function checkWatchRow({ cells, line }, context) {
-    const [id, target = '', action = '', cancel = ''] = cells;
-    if (absent(id)) return;
-    if (absent(action)) context.error('watch-action-missing', `Watch ${id} needs an Action on completion.`, line);
-    if (absent(target) || /^(latest|the PR|current)$/i.test(target)) context.error('watch-target-mutable', `Watch ${id} needs an immutable target, not ${target || 'an empty cell'}.`, line);
-    if (absent(cancel)) context.warning('watch-cancel-missing', `Watch ${id} needs How to cancel.`, line);
-}
-
 function watchRows(rows, context) {
-    for (const row of rows) checkWatchRow(row, context);
+    for (const { cells, line } of rows) {
+        const [id, target = '', action = '', cancel = ''] = cells;
+        if (absent(id)) continue;
+        if (absent(action)) context.error('watch-action-missing', `Watch ${id} needs an Action on completion.`, line);
+        if (absent(target) || /^(latest|the PR|current)$/i.test(target)) context.error('watch-target-mutable', `Watch ${id} needs an immutable target, not ${target || 'an empty cell'}.`, line);
+        if (absent(cancel)) context.warning('watch-cancel-missing', `Watch ${id} needs How to cancel.`, line);
+    }
 }
 
 function unreadResults(section, root, context) {
     for (const item of bullets(section)) {
         for (const match of item.text.matchAll(/`([^`]+)`/g)) {
             if (!looksLikePath(match[1])) continue;
-            if (!resolvedPathExists(root, match[1])) context.warning('result-missing', `Unread result path does not exist: ${match[1]}.`, item.line);
+            const path = pathFrom(root, match[1]);
+            if (!path || !existsSync(path)) context.warning('result-missing', `Unread result path does not exist: ${match[1]}.`, item.line);
         }
     }
 }
@@ -208,10 +199,6 @@ function compareHead(repository, recorded, context) {
     }
     const actual = gitValue(directory, ['rev-parse', 'HEAD'], `${label}: HEAD`, context);
     if (actual === undefined || actual === recorded.toLowerCase()) return;
-    compareAncestry(repository, recorded, actual, context);
-}
-
-function compareAncestry({ directory, label, line }, recorded, actual, context) {
     const ancestry = git(directory, ['merge-base', '--is-ancestor', recorded, actual]);
     if (ancestry.ok) context.warning('head-moved', `${label}: HEAD moved from ${recorded} to ${actual}.`, line);
     else if (ancestry.status === 1 || /(?:not a valid|bad object|invalid|unknown revision)/i.test(ancestry.reason)) {

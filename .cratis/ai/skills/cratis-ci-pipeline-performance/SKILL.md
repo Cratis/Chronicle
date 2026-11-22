@@ -77,8 +77,7 @@ named reference before applying one.
 tests run serially or several jobs each rebuild. Default: one job builds in
 `Release`, uploads the output with `actions/upload-artifact`, and a matrix of shard jobs downloads it and runs
 each built spec executable; only VSTest projects use `dotnet test <project> --no-build`. Pitfall: a shard whose filter matches nothing still
-passes, so assert that every shard ran tests. Each build tuple has one analyzer
-owner (section "One analyzer owner per build tuple"). Read
+passes, so assert that every shard ran tests. Read
 `references/build-once-and-shard.md` when applying or reviewing this.
 
 **Fewer, bigger jobs.** Fits queue-bound workflows: every job pays a scheduler
@@ -146,10 +145,7 @@ handle it. Pitfall: without `merge_group` the required check never reports in th
 queue. Read `references/required-checks-and-path-filters.md`.
 
 **Compile once, analyze once.** Fits any workflow where one push compiles the same
-code several times. Exactly one build owns the analyzers per build tuple, never
-zero: by default a parallel required job on the same tuple, while the spec path is
-built by a non-owner; a repository may instead let the shared spec build own them by
-its own decision record. Default: build the spec path without analyzers
+code several times. Default: build the spec path without analyzers
 (`-p:RunAnalyzers=false`) and reuse the output; enforce every analyzer with warnings
 as errors in one parallel **required** job that fails early on compile and analyzer
 errors, while the local fast loop may skip analyzers and the pre-push gate runs them.

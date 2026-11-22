@@ -68,12 +68,6 @@ var mongo = builder.AddCratisChronicleMongoDB();
 var chronicle = builder.AddCratisChronicle("chronicle", c => c.WithMongoDB(mongo));
 var grpc = chronicle.GetEndpoint("grpc");
 
-// The development client id and secret come from the AppHost's own configuration
-// (see `cratis-chronicle-client-dotnet`), never from literals in source.
-const string scheme = "chronicle://";
-var chronicleClient = builder.Configuration["Chronicle:Client"];
-var chronicleSecret = builder.Configuration["Chronicle:Secret"];
-
 AddService<Projects.Ordering>("ordering", "Ordering");
 AddService<Projects.Billing>("billing", "Billing");
 
@@ -83,7 +77,7 @@ void AddService<TProject>(string name, string eventStore)
     where TProject : IProjectMetadata, new() =>
     builder.AddProject<TProject>(name)
         .WithEnvironment("Cratis__Chronicle__ConnectionString",
-            $"{scheme}{chronicleClient}:{chronicleSecret}@{grpc.Property(EndpointProperty.HostAndPort)}")
+            $"chronicle://chronicle-dev-client:chronicle-dev-secret@{grpc.Property(EndpointProperty.HostAndPort)}")
         .WithEnvironment("Cratis__Chronicle__EventStore", eventStore)
         .WithEnvironment("Cratis__MongoDB__Server", mongo.Resource.ConnectionStringExpression)
         .WithEnvironment("Cratis__MongoDB__Database", eventStore)
@@ -121,8 +115,7 @@ gate each step on health. Chronicle publishes 35000 (clients, Workbench, health 
 TLS) to `127.0.0.1` only; its dedicated health port (8080 here, HTTP without TLS)
 stays inside the network for the health check; the Orleans ports 11111 and 30000
 stay unpublished for a single node. Services reach the kernel at
-the `chronicle` service name on port 35000, with the development client id and
-secret in the connection string (`cratis-chronicle-client-dotnet`). Read
+`chronicle://chronicle-dev-client:chronicle-dev-secret@chronicle:35000`. Read
 [references/docker-compose.md](references/docker-compose.md) for the complete file
 and the per-service settings.
 

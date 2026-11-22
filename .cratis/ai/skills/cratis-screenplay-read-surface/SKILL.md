@@ -44,24 +44,6 @@ readmodel AccountBalance
 A read model declares what it **is**, not what builds it. The builder points at it
 with `=>`, and **exactly one thing may** (two builders: `PLAY0191`). See `cratis-screenplay-projections` for the builder side.
 
-Since Screenplay 4.256.0, each member must be a primitive, concept or top-level reusable `type`
-(including optional/collection forms), not another read-model identity or a slice-local type
-(PLAY0273). Extract an embeddable value shape:
-
-```screenplay
-domain DeliveryViews
-
-type DeliveryAddress
-  street String
-
-module Deliveries
-  feature Tracking
-    slice StateView List
-      readmodel DeliverySummary
-        id String key
-        address DeliveryAddress
-```
-
 Use trailing `key` on top-level read-model properties, never `identifier`.
 Explicit marks replace inference; otherwise a single-instance query's `by` supplies
 identity (all such queries must agree). Only with no single-instance identifier
@@ -94,8 +76,6 @@ It is never inferred, and a query or screen that consumes it is error `PLAY0859`
 ## `query`
 
 A query's HTTP shape and a screen's data contract are exported (`screenplay export --format openapi|ui`; [formats](../cratis-screenplay-toolchain/references/model-export-diff-rename.md#openapi-and-ui-contract-formats)).
-
-Public queries and screen visibility do not imply agent access. Read toolchain [agent exposure](../cratis-screenplay-toolchain/references/agent-exposure.md) for the separate default-deny allowlist and manifest; query scope does not replace effective authorization, and global, performed or graph queries cannot be exposed.
 
 A query that ends in `graph <Graph>` reads a graph: see [graph queries](references/graph-queries.md). Such a query may return nested rows with `collect` (a view-shaped query; see [collect nested rows](../cratis-screenplay-projections/references/graphs.md#collect-nested-rows)).
 
@@ -203,8 +183,7 @@ arguments and `then result` - see `cratis-screenplay-specifications`.
 
 #### Performer bodies are rendered
 
-Read [performer bodies](references/performer-bodies.md) for snapshot/live collection contracts,
-lifecycle and context, or rendering versus gap-fill. Screenplay's live contract is not Stage support.
+Read [performer bodies](references/performer-bodies.md) when a query needs a body the declarative form cannot say (for example a filter relative to today), or when deciding rendering versus gap-fill.
 
 
 A query's key goes on its own `by` line in the body. `query X => RM optional by id Type`

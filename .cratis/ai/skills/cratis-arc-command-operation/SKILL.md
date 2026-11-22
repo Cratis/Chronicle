@@ -43,13 +43,12 @@ Arc for TypeScript server API.
 | Perform immediate external work chosen by the command | `ICommandOperation` |
 | Reverse attempted work after an eligible failure | Optional `Compensate()` |
 | Record durable Chronicle facts | Returned events, enrolled for deferred commitment |
-| Reliable work after commit: email, payments, retriable webhooks | A reactor; **not inline operations**. Recipe: **cratis-chronicle-reactor** [references/durable-side-effects.md](../cratis-chronicle-reactor/references/durable-side-effects.md) |
+| Reliable work after commit: email, payments, retriable webhooks | A reactor, outbox, or durable workflow; **not inline operations** |
 | Use an external result to make the decision or response | An explicit service call; operations cannot return receipts |
 | Extend framework interpretation of a specialized return type | Response value handlers, not application operation orchestration |
 
 Do not disguise a write as `Provide()`. Supply identities, clock values, and
 state before `Handle()`; returning operations does not make hidden I/O pure.
-Actors/audit: [identity](../cratis-arc-authentication-authorization-and-identity/references/command-identity.md).
 
 ## Declare the work and its reversal
 
@@ -256,7 +255,7 @@ migration. Provider tests must separately prove ownership and idempotency.
 | Raw `IEnumerable<ICommandOperation>` | Return `CommandOperations` (`ARC0017`) |
 | Capturing services in the record | Inject them into operation methods |
 | Generating an operation's request/ownership key (or clock values it depends on) inside `Handle()` | Have the caller supply it so a retry reuses the same key |
-| Using inline operations for email/payment delivery that must survive a crash | Recipe: **cratis-chronicle-reactor** [references/durable-side-effects.md](../cratis-chronicle-reactor/references/durable-side-effects.md) |
+| Using inline operations for email/payment delivery that must survive a crash | Use reactors/outbox/durable workflows |
 | Assuming `!IsSuccess` means nothing committed | Inspect backend commitment and recovery observations |
 | Marking a committing scope as a nonparticipant | Report its actual boundary; do not evade the single-participant limit |
 

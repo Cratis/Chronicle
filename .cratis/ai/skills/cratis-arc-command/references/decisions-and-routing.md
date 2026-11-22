@@ -17,21 +17,17 @@ Source: Arc. These features require `Cratis.Arc.Chronicle`.
 ## Pick the guarded read
 
 **Idiomatic default:** a state-dependent rule takes the read model as a `Handle()`
-(or validator-constructor) parameter; Arc 23 read protection `On` is the default, so it holds
-under concurrent writers with no attribute. Do not take `IDecisionReads` in `Handle()`: it is not
+(or validator-constructor) parameter, with `[ReadProtection(On)]` where it must hold
+under concurrent writers. Do not take `IDecisionReads` in `Handle()`: it is not
 recommended with Arc and is not an investment target. A computed key stays in
 `Provide()` until a read-model parameter covers it. Direction, not a release claim:
 Arc will pin protected parameters so the idiomatic shape needs no further ceremony.
 
-Under read protection `On`, the default from Arc 23 when nothing is set (leave
-`<CratisReadProtection>` unset (the default comes from `Cratis.Arc.Chronicle`'s build props, `Source/DotNET/Chronicle/build/Cratis.Arc.Chronicle.props`; a project not importing them has no default); do not write `On` or `[ReadProtection(ReadProtectionMode.On)]`), a read model that is a
+Under read protection `On` (`<CratisReadProtection>On</CratisReadProtection>`, or
+`[ReadProtection(ReadProtectionMode.On)]` on a command), a read model that is a
 parameter of `Handle()` or of a `CommandValidator<T>` constructor is read fresh from
-the event log and guards the command's append. Opt out narrowest first, with a reason:
-`[Unprotected("why")]` on the parameter, model type or method (one advisory read; the method form covers only raw reads in the method body, never injected read-model parameters, and combining it with protected read-model parameters raises ARCCHR0034, so put `[Unprotected]` on the specific parameter), then
-`[Unprotected("why")]` or `[ReadProtection(ReadProtectionMode.Off)]` on the command; project-level
-`Off`/`Measure` is a temporary adoption step. Under `Off` and `Measure` those reads are plain, a hint that guards nothing
-(`Off` was the Arc 22 default).
-For a key computed at runtime, `IDecisionReads.Get<T>(key)` in `Provide()` or a validator is a protected read; method-level `[Unprotected]` is only for reads the guard cannot cover (joins, children, other sequences, raw event store, external stores), and its reason names what guards the append. Arc 23 read-model key metadata is strict by default: missing generated metadata fails with `CommandReadModelKeysMissing` (`ReadProtection:RequireGeneratedMetadata`), and `ProtectedReadModelKeyOptions.Strict` requires composite key accessors.
+the event log and guards the command's append. `Off` is the default when nothing is
+set; under `Off` and `Measure` those reads are plain, a hint that guards nothing.
 A `Result<TEvent, ValidationResult>` rejects a request but does not enroll a guard.
 Uniqueness and create-once belong to a Chronicle constraint, not to any read. For the
 routing by rule shape, the matrix and the traps read
@@ -41,14 +37,11 @@ Requires Arc 22.106.0 for read protection. Older Arc has only the per-command
 `[ProtectedDecision]` path below.
 
 - **One entity's state.** Put the rule in a validator with the read model as a
-  constructor parameter; `Handle()` returns the events. Choose one explicit key
-  form: `[LookUpBy(nameof(Cmd.Prop))]` for a command property or
-  `[LookUpBy<CallerSubject>]` for a caller-keyed handler model (`Cratis.Arc.Commands`);
-  read [command identity](../../cratis-arc-authentication-authorization-and-identity/references/command-identity.md)
-  for providers, actor injection and attribution. Without an explicit lookup the
-  key is the single command property matching the model's `Id` type, else the
-  command's event source id. Several matches fail with
-  `AmbiguousReadModelLookup` (500): declare the intended lookup.
+  constructor parameter; `Handle()` returns the events. The key is
+  `[LookUpBy(nameof(Cmd.Prop))]` on the parameter (`Cratis.Arc.Commands`), else the
+  single command property whose type equals the model's `Id` type, else the
+  command's event source id. Several matching properties fail with
+  `AmbiguousReadModelLookup` (500): add `[LookUpBy]`.
 - **Two entities.** Two read-model parameters, the second with `[LookUpBy]`;
   `Handle()` returns `IEnumerable<EventForEventSourceId>`, one event per entity,
   appended atomically. Use a distinct event type per entity.
@@ -191,23 +184,20 @@ source id/type and stream route; reactor tuples/collections cannot mix it with e
 ## Decision specifications
 
 Call `Handle()` and validators directly with read-model state for pure business
-decisions; validators own refusals. `Provide()` acquires data and only short-circuits
-(`ValidationResult`/`AuthorizationResult`) when acquisition yields nothing usable,
-not for ordinary validation rules. Follow
-the [scenario rule](../../../rules/specs.scenarios.csharp.md): ordinary application
-specs do not re-prove Arc/Chronicle's platform concurrency, conflict-refusal or
-isolation matrix. Typed scenarios select decision reads automatically;
-`UseDecisionReads()` is obsolete. Keep one assembly-level shape-admission check;
-explicit body reads need their own admission check or focused scenario. Never
-weaken production guards for speed; report harness state-setup gaps upstream.
+decisions. Follow the [scenario rule](../../../rules/specs.scenarios.csharp.md):
+read-protection plumbing is invisible to application spec authors. They never
+call `UseDecisionReads`, configure modes, simulate competing appends
+(`AppendConcurrently`), seed events solely for infrastructure, or re-prove the platform concurrency, conflict-refusal or isolation matrix;
+Arc/Chronicle specs own it. The application's only decision-read spec obligation
+is one cheap assembly-level shape-admission spec from that rule.
+Never weaken production guards for test speed. Report a harness state-setup gap
+upstream instead of working around it in application specs.
 
-Add scenarios for pipeline/authorization wiring or constraints. Assert the business
-outcome from supplied state (for example, no copies left rejects in the validator).
-An unusual application-owned explicit guard policy may need a focused regression
-a plain call cannot prove, not a generic race matrix. Read
+Add scenarios for pipeline/authorization wiring or constraints. Never simulate
+competing appends: assert the business outcome from supplied state (for example, no
+copies left rejects). Read
 [query and decision scenarios](../../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
-for the admission example, limits and advanced hook boundary. Keep shared
-lifecycle on and measure the added cost.
+for the query and decision setup. Keep shared lifecycle on and measure the added cost.
 
 ## Sources
 

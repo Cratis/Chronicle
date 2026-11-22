@@ -30,11 +30,11 @@ namespace. `ChronicleConnectionString` lives in `Cratis.Chronicle.Connections`
 
 ```
 chronicle://host[:port]/?opts
+chronicle://user:pass@host[:port]/?opts
 chronicle+srv://host/?opts
 ```
 
-Credentials go in the authority part, before the host, as a user name and
-password separated by a colon and followed by an at sign. Default port `35000`. `Default` is `chronicle://localhost:35000`;
+Default port `35000`. `Default` is `chronicle://localhost:35000`;
 `Development` adds the `chronicle-dev-client` / `chronicle-dev-secret`
 credentials. Query options: `apiKey`, `auth`, `skipTlsValidation`, `disableTls`,
 `skipCompatibilityCheck`, `skipKeepAlive`, `serverless`, `loadBalancer`,

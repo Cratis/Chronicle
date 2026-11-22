@@ -9,6 +9,7 @@ This reference holds the connection string grammar, query keys, development cred
 
 ```
 chronicle://<host>[:<port>][,<host>[:<port>]...][?<options>]
+chronicle://<username>:<password>@<host>[:<port>][,...][?<options>]
 chronicle+srv://<host>[:<port>][?<options>]
 ```
 
@@ -16,7 +17,7 @@ Default port is `35000`. Recognized query keys, lowercased at parse time
 (`ChronicleConnectionString` parser): `disabletls`, `skiptlsvalidation`,
 `loadbalancer`, `srvnameserver`. `apiKey` is parsed but rejected at client
 creation with `IllegalArgumentException`: the kernel has no API-key authentication.
-Supply credentials in the authority part, before the host, as user name and password separated by a colon and followed by an at sign. Omitting credentials selects `chronicle-dev-client` /
+Use `user:password@`. Omitting credentials selects `chronicle-dev-client` /
 `chronicle-dev-secret`; these are development credentials, not a production setup. `ChronicleConnectionString.parse(String)` is on the companion, and `ChronicleConnectionString.DEVELOPMENT` points at
 `localhost:35000` with the `chronicle-dev-client` / `chronicle-dev-secret`
 credentials.

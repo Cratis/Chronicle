@@ -91,23 +91,22 @@ before changing runner or package family.
 The plain `Specification` base is the universal foundation and the dominant mode
 in library and framework code. In applications, start pure decisions with a
 plain call, including direct validator calls, and add the scenarios the
-per-artifact decision table in `specs.scenarios.csharp.md` obligates. Keep shared lifecycle on; diagnose runner startup, lifecycle and scenario cost
-before rewriting, using [running-specs.md](references/running-specs.md). Read
+per-artifact decision table in `specs.scenarios.csharp.md` obligates. Keep shared lifecycle on; measure scenario cost using
+[running-specs.md](references/running-specs.md). Read
 [application-scenarios.md](references/application-scenarios.md) before using
 one. Out-of-process integration specifications are an advanced case reserved for
 boundaries the scenario helpers cannot reach — see
 [integration-specs.md](references/integration-specs.md).
 
-⚠️ An unguarded in-process append using the default no-scope strategy is not
-concurrency evidence: its no-conflict assertion can pass vacuously. This is not
-a claim about every guarded scenario or explicit scope. Arc/Chronicle own the
-platform concurrency/isolation matrix. Ordinary applications supply state in
-plain `Handle()`/validator calls and keep one assembly-level admission check;
-see the [scenario rule](../../rules/specs.scenarios.csharp.md). For an unusual
-application-owned explicit guard policy, use only a focused regression that a
-plain call cannot prove; read the
-[decision guidance](../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
-for admission limits and the advanced hook's boundary.
+⚠️ `EventScenario` wires a strategy that always answers `ConcurrencyScope.None`,
+which the validator skips, so an append that lets the strategy choose the scope
+never produces a concurrency violation. `ShouldHaveConcurrencyViolations()`
+cannot pass for such an append and its negation passes vacuously. Arc/Chronicle
+alone prove the platform concurrency, conflict-refusal and isolation matrix,
+with real-kernel integration where required. The application's only decision-read
+spec obligation is one cheap assembly-level shape-admission check from the
+[scenario rule](../../rules/specs.scenarios.csharp.md); business decisions take
+supplied state in direct `Handle()`/validator calls.
 
 For a class-based `ReactorScenario<TReactor>` on a recent Chronicle (Requires Chronicle 19.46.0), seed each
 handler read-model parameter with `Given.ForEventSourceId(id).ReadModel(instance)`

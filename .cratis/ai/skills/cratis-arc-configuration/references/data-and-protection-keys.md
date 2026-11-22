@@ -50,6 +50,4 @@ is `ReadProtection__MaximumMode`. `Cratis:Arc:ReadProtection:*` has no effect.
 | `ReadProtection:MeasureScanLimit` | 500 events | 1 to 500. |
 
 The mode itself is the `CratisReadProtection` MSBuild property, not a
-configuration key. Arc 23 defaults it to `On`: leave it unset. Set `Measure` or
-`Off` only as a temporary adoption step, or `Off` for a justified project-wide opt-out; prefer
-`[Unprotected("why")]` on the read or the command. (Arc 22 defaulted to `Off`.)
+configuration key.

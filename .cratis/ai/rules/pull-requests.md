@@ -5,14 +5,13 @@ applyTo: "**/*"
 
 # How to Do Pull Requests
 
-**Before writing any commit message, committing, pushing, or creating/editing a PR, read the `cratis-commits-and-pull-requests` skill.** It holds the description shape, forbidden list, examples, labels, grouping and release-action windows. Commit rules: [git-commits.md](./git-commits.md).
+**Before writing any commit message, committing, pushing, or creating/editing a PR, read the `cratis-commits-and-pull-requests` skill.** It holds the allowed description shape, the forbidden list, worked examples, label procedure, grouping and release-action windows. This rule keeps the contract that must hold even before the skill is read. Commit rules are in [git-commits.md](./git-commits.md).
 
 ## The description is the release note
 
 **The PR description is published verbatim as the GitHub release. In repositories released by `cratis/release-action`, it also closes every issue written as `(#n)`; elsewhere, follow the repository's own release and issue-closing process.** Write the note the person upgrading should read, not a development write-up.
 
 - Follow the repository's pull request template within this contract: an optional summary first, then only `## Added`, `## Changed`, `## Fixed`, `## Removed`, `## Security`, `## Deprecated`, each with short, user-facing bullets and none empty.
-- No author-first-person narration, even in summaries or bullets; quoted UI text is allowed.
 - Never put review, verification, test or CI results, provenance, merge or deploy instructions, internal state, relative links or placeholders in the description. **Reviewer-facing information goes in a PR comment** posted right after creating the PR (`gh pr comment <n> --body-file .ai-work/pr-notes.md`), even when the PR is labelled `no-release`.
 - A change to a hook script or its wiring (`.cratis/ai/hooks/**`) needs a release-note line that tells consumers to run `cratis ai update`; a hook fix does not reach a repository until they do.
 

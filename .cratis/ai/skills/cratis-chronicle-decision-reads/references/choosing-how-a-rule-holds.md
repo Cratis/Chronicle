@@ -12,7 +12,6 @@
 - Refusals
 - Arc traps
 - Chronicle-only traps
-- Opting out of read protection
 - Roll out with Measure
 - Specify the business decision
 - Costs
@@ -33,13 +32,10 @@ Published guides this agrees with:
 
 ## Defaults
 
-- Read protection is `On` unless the project sets it (the default from Arc 23).
-  Leave `<CratisReadProtection>` unset (the default comes from `Cratis.Arc.Chronicle`'s build props, `Source/DotNET/Chronicle/build/Cratis.Arc.Chronicle.props`; a project not importing them has no default); do not write `On` or add
-  `[ReadProtection(ReadProtectionMode.On)]` per command. Opt out only where
-  needed; see [Opting out](#opting-out-of-read-protection). Legacy: on Arc 22 the
-  default was `Off`, so new code set `<CratisReadProtection>On</CratisReadProtection>`
-  (it emits `[assembly: ReadProtection(ReadProtectionMode.On)]`; an invalid value
-  fails the build). A project that pinned `Off` migrates through `Measure`; see
+- Read protection is `Off` unless the project sets it. New code starts with
+  `On`: `<CratisReadProtection>On</CratisReadProtection>` in the project (it
+  emits `[assembly: ReadProtection(ReadProtectionMode.On)]`; an invalid value
+  fails the build). Existing code moves `Off` to `Measure` to `On`; see
   [Roll out with Measure](#roll-out-with-measure).
 - Under `On`, a read model that is a parameter of `Handle()` or of a
   `CommandValidator<T>` constructor is read fresh from the event log and guards
@@ -112,12 +108,12 @@ append, a reactor, or an `ExpectedRevision` never passed into a scope.
 
 | Mode | Read-model parameter, validator constructor | Results and status codes |
 | --- | --- | --- |
-| `Off` (Arc 22 default; on Arc 23 only an explicit opt-out) | plain read; a hint, guards nothing | as today |
+| `Off` (default) | plain read; a hint, guards nothing | as today |
 | `Measure` | plain read; Arc reports what `On` would do | same as `Off` |
 | `On` | read fresh from the log; guards the command's append | a lost race is HTTP 400 |
 
-A command overrides the project with `[ReadProtection(ReadProtectionMode.Off)]` or
-`Measure` (`Cratis.Arc.Commands`); command-level `[Unprotected]` means `Off`. The runtime
+A command overrides the project with `[ReadProtection(ReadProtectionMode.On)]`
+(`Cratis.Arc.Commands`); command-level `[Unprotected]` means `Off`. The runtime
 cap `ReadProtection:MaximumMode` only lowers (a missing or invalid value is `On`,
 no cap); a lowered command logs a startup Warning. With the cap set, the `On`
 behaviour does not hold.
@@ -132,13 +128,10 @@ Under `On`:
   Take the model as a parameter, or mark the method `[Unprotected("why")]` (it
   covers the body, not injected parameters).
 - Immediate appends (an injected `IEventLog.Append`) are refused. Return the events.
-- Explicit lookup selects either a command property with
-  `[LookUpBy(nameof(Cmd.Prop))]` or a caller-keyed handler model with
-  `[LookUpBy<CallerSubject>]` (`Cratis.Arc.Commands`); see
-  [command identity](../../cratis-arc-authentication-authorization-and-identity/references/command-identity.md).
-  Otherwise use the single command property matching the model's `Id` type;
-  several matches raise `AmbiguousReadModelLookup` (HTTP 500); no match falls
-  back to the command's event source id.
+- The key is, in order: `[LookUpBy(nameof(Cmd.Prop))]` on the parameter
+  (parameter-only attribute, `Cratis.Arc.Commands`); the single command property
+  whose type equals the model's `Id` type; `AmbiguousReadModelLookup` (HTTP 500) if
+  several match; the command's event source id.
 - Admitted: event-source-keyed model-bound or declarative projections with a
   string or Guid `Id`, and unfiltered reducers without constructor dependencies
   (except `ILogger<T>`; self-reducing models are exempt). Refused with
@@ -289,37 +282,11 @@ return `Commit()` last), `ReadOfSourceWithStagedEvents`, `ExplicitScopeDoesNotCo
 - Arc has a static class also named `ConcurrencyScopeBuilder`; in an Arc project
   qualify Chronicle's builder.
 
-## Opting out of read protection
-
-Only where a read must stay advisory, always with a stated reason, narrowest first
-(Arc 23 source: `Source/DotNET/Arc.Core/Commands/CommandAttributePolicy.cs`,
-`Source/DotNET/Shared/AttributePrecedencePolicy.cs`):
-
-1. `[Unprotected("why")]` on a read-model parameter, the model type, or the method
-   (`Cratis.Arc.Chronicle.ReadModels`): that read is advisory.
-   The method form covers only raw reads in the method body, never its injected
-   read-model parameters; combining it with protected read-model parameters raises
-   `ARCCHR0034`, so put `[Unprotected]` on the specific parameter. For a key computed
-   at runtime, `IDecisionReads.Get<T>(key)` in `Provide` or a validator is a protected
-   read; method-level `[Unprotected]` is only for reads the guard cannot cover (joins,
-   children, other sequences, raw event store, external stores) and its reason names
-   what guards the append. Arc 23 key metadata is strict by default:
-   `CommandReadModelKeysMissing` (`ReadProtection:RequireGeneratedMetadata`) and
-   `ProtectedReadModelKeyOptions.Strict`.
-2. `[Unprotected("why")]` or `[ReadProtection(ReadProtectionMode.Off)]` on one command
-   (`Measure` also works there). Command `[Unprotected]` wins over any
-   `[ReadProtection]`; an explicit `On`/`Measure` beside it throws
-   `ConflictingReadProtection`. Otherwise a command declaration beats the assembly one.
-3. Project-level `<CratisReadProtection>Off</CratisReadProtection>` or `Measure`: only a
-   temporary adoption step, never the end state.
-
 ## Roll out with Measure
 
-For a project upgraded from Arc 22 that pinned `Off` (or leaves a lot of reads
-unguarded). Steps: update the packages, set `<CratisReadProtection>Measure</CratisReadProtection>`,
-run the application and its tests, read the report, fix each finding or add a
-justified opt-out, then remove the property and any per-command
-`[ReadProtection(ReadProtectionMode.On)]` so the default applies. Behaviour for callers does not change under `Measure`.
+Steps: update the packages, set `<CratisReadProtection>Measure</CratisReadProtection>`,
+run the application and its tests, read the report, fix or annotate each finding,
+then set `On` per project. Behaviour for callers does not change under `Measure`.
 
 - The report: meter `Cratis.Arc.ReadProtection`, counter
   `cratis.arc.read_protection.events` (tags `command`, `category`, `model`,
@@ -341,23 +308,20 @@ justified opt-out, then remove the property and any per-command
 ## Specify the business decision
 
 Start with a plain `Handle()` or validator call supplied with read-model state.
-Follow the [scenario rule](../../../rules/specs.scenarios.csharp.md): ordinary
-application specs prove the decision, not Arc/Chronicle's platform concurrency,
-conflict-refusal or isolation matrix. Typed scenarios select decision reads
-automatically; `UseDecisionReads()` is obsolete. Keep one assembly-level
-`DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)` check of discoverable
-application models/projections. Explicit body reads need their own admission check
-or focused scenario; see the
-[decision guidance](../../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
-for the example, limits and advanced hook boundary. Production protection stays
-unchanged regardless of spec cost.
+Follow the [scenario rule](../../../rules/specs.scenarios.csharp.md): read-protection
+plumbing is invisible to application spec authors. They never configure modes,
+call `UseDecisionReads`, seed events solely for infrastructure or re-prove platform
+concurrency, conflict-refusal or isolation guards. Arc/Chronicle specs own that
+matrix. The application's only decision-read spec obligation is one cheap
+assembly-level `DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)`
+check of its own models/projections, not per-decision scenarios. Production
+protection stays unchanged regardless of spec cost.
 
-For two borrowers competing for the last copy, give no-copy state to the validator
-and assert rejection; Arc/Chronicle prove the guard. `Provide()` acquires data and
-only short-circuits (`ValidationResult`/`AuthorizationResult`) when acquisition
-yields nothing usable, not for ordinary validation rules. An unusual application-owned explicit guard
-policy may need a focused regression a plain call cannot prove, not a generic
-race matrix. Report harness state gaps upstream rather than inventing guard doubles.
+Do not simulate competing appends in an application spec, even for a rule such as
+two borrowers competing for the last copy. Give the state (no copies left) and assert
+the domain outcome (rejected); the guarantee that only one wins is proven by Arc and
+Chronicle. If the harness cannot accept required state, report the upstream gap
+rather than adding infrastructure setup to application specs.
 
 ## Costs
 
@@ -373,7 +337,7 @@ append. Decision reads exist in the .NET and Elixir clients.
 - Name the mechanism and say why the rule shape needs it. A plain read, a
   validator under `Off`, `Result<,>` or `concurrency: true` is never presented as
   the guard.
-- `On` is the default from Arc 23 (set it on Arc 22). Uniqueness is a constraint. A state rule is a read-model
+- New code sets `On`. Uniqueness is a constraint. A state rule is a read-model
   parameter in a validator, a per-stream model, a stream decision, an aggregate or
   an explicit scope, enrolled **before** the events are staged.
 - The model is admitted (source-keyed projection or admitted reducer, `Id`).

@@ -124,7 +124,6 @@ model's behalf.
   ignored and, if it tries, reported.
 
 ## Comparing with a baseline
-Read toolchain [agent exposure](../cratis-screenplay-toolchain/references/agent-exposure.md) before reviewing agent access. Use [manual exposure review](references/baseline-comparison.md#manual-agent-exposure-review) for newly exposed or possibly widened operations; automatic exposure comparison is not shipped, and unchanged manifest JSON is not a safety verdict.
 For comparison with `main`, use `semantic-diff`; neither it nor `read-proposal view=semantic-diff` proves behavioral equivalence. Read [baseline comparison](references/baseline-comparison.md) for source selection, the baseline worktree check, identity matching and drift refusals.
 Review [enum numeric identity](../cratis-screenplay-model-authoring/references/mcp-tools.md#enum-numeric-identity)
 (Requires Screenplay 4.214.0; `screenplay --version`): inspect `stored: true` items.

@@ -57,7 +57,7 @@ memory.
 - The rule is state-dependent (a count, a capacity, a status) and needs
   concurrency protection: use read protection `On` or stream decision reads with
   `cratis-arc-command-validation` and `cratis-chronicle-decision-reads`. Injected
-  models and validators under `Off` (set explicitly, or the Arc 22 behavior), and `Result<,>` alone, remain advisory.
+  models and validators under `Off` (the default), and `Result<,>` alone, remain advisory.
 - You are creating or changing a read model that the rule reads: use
   `cratis-chronicle-read-model`.
 - You are writing the specification and want the `EventScenario` mechanics in

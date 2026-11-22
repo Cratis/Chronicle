@@ -107,14 +107,6 @@ Use these as investigation hints, not universal budgets or proof of a cause:
 - **Source generators:** do not assume `RunAnalyzers=false` disables or measures
   every generator. Preserve required generated code and inspect generator-specific
   evidence.
-
-  > **Cratis:** in CI, non-owning builds use `RunAnalyzers`/`RunAnalyzersDuringBuild`,
-  > not `EnableNETAnalyzers` (it only disables the .NET SDK's own analyzers, so it is
-  > not an owner switch), and never delete `Analyzer` items, which would also remove
-  > generators. Each configuration/TFM/RID/property tuple has exactly one analyzer-owning
-  > build (see `cratis-ci-pipeline-performance`, `references/build-once-and-shard.md`).
-  > Measure with `-bl` and `ReportAnalyzer=true` before and after.
-
 - **GlobalPackageReference:** examine the project, `Directory.Build.props`,
   `Directory.Packages.props`, and package imports. Active global analyzer
   references can affect production and test projects; a declaration alone does

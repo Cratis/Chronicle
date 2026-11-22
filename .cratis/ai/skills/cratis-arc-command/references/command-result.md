@@ -28,8 +28,6 @@ Sources: `Source/DotNET/Arc.Core/Commands/CommandResult.cs`,
 | `ExceptionMessages` | `IEnumerable<string>` | |
 | `ExceptionStackTrace` | `string` | |
 | `AuthorizationFailureReason` | `string` | |
-| `IsRetryable` | `bool` | Temporary refusal; defaults to `false` |
-| `IsMissingHandler` | `bool` | No handler: execution/validation did not run; defaults to `false` |
 
 `CommandResult<TResult>` adds a `Response` of `TResult`.
 
@@ -97,8 +95,6 @@ readonly isSuccess: boolean;
 readonly isAuthorized: boolean;
 readonly isValid: boolean;
 readonly hasExceptions: boolean;
-readonly isRetryable?: boolean;
-readonly isMissingHandler?: boolean;
 readonly validationResults: ValidationResult[];
 readonly exceptionMessages: string[];
 readonly authorizationFailureReason: string;
@@ -122,51 +118,22 @@ failure to one or more `members`, and `severity` is the numeric
 `ValidationResultSeverity` enum. Code that reads `v.propertyName` or compares
 `v.severity === 'Error'` is reading fields that do not exist.
 
-Validator refusals, explicit `ValidationResult` outcomes from `Provide()`/`Handle()`,
-and `IEnumerable<ValidationResult>` outcomes from `Provide()` share
-`validationResults`, subject to blocking severity. Validators own refusals when
-usable facts exist; `Provide()` short-circuits only when acquisition yields
-nothing usable, and `Handle()` must not duplicate business validation.
+Match a failure to a field through `members`, and branch on `reasonDetail`
+rather than parsing `message` — the message is prose written for a human and is
+free to change, while `reasonDetail` is the identity of the specific thing that
+rejected the command (a constraint name, for instance).
 
-### Result decision table
+```tsx
+const result = await command.execute();
 
-Check `isMissingHandler` and `isRetryable` before the ordinary success path;
-do not recompute success from only authorization, validity and exceptions.
-The server's computed `IsSuccess` formula above does not include those flags.
-Use `response` only after classifying the result as successful. The two interface
-flags are optional: absence is not a positive retry or missing-handler signal.
-
-| Outcome | Application response |
-| --- | --- |
-| `isMissingHandler === true` | safe unavailable-action feedback; log the integration/configuration fault, not field errors |
-| `isRetryable === true` | temporary refusal, not a permanent denial or invalid input; preserve the draft and offer deliberate retry |
-| `isSuccess` after those checks | use the typed response, then close/refresh |
-| `!isAuthorized` | distinguish unavailable from forbidden via `isNotAvailable(result)` from `@cratis/arc/availability`; do not automatically redirect every refusal to login |
-| `!isValid` with a protected-read refusal below | retain the draft, re-read, then let the user deliberately retry |
-| `!isValid` with authored `rule` results | match approved user-facing rule copy to fields through `members` |
-| Other invalid results | choose safe application copy by `reason`/`reasonDetail`, never parse `.message` |
-| `hasExceptions` | generic fault feedback; diagnostics belong in logs |
-
-A retryable flag does not imply that a protected-read result carries that flag:
-classify the known reason pair independently, before generic field-error display.
-
-### Protected-read refusals
-
-`ValidationResultReason` is an open string set. Recognize only these exact pairs:
-
-| `reason` | `reasonDetail` | Meaning |
-| --- | --- | --- |
-| `concurrencyViolation` | `ReadChanged` | the guarded read changed before effects could commit |
-| `concurrencyViolation` | `ReadIncomplete` | a required read did not complete; no effects committed |
-
-For both, keep the draft and dialog open, re-read the relevant state and allow a
-**deliberate retry**. Never mark the user's input invalid or clear fields for
-these refusals. They are not authored business-rule failures. Framework-composed
-messages are developer English, not localized user-facing copy: never show them
-raw. Do not render read state, keys or conflicting-event details in visible UI
-or announcements. Choose application copy by the pair, not by parsing the
-message. Unknown reasons or details are not automatically protected-read refusals or framework
-errors; use a safe fallback unless the application explicitly approves their copy.
+if (!result.isAuthorized) { /* the caller is not allowed to do this */ }
+else if (!result.isValid) {
+    const errorFor = (property: string) =>
+        result.validationResults.find(v => v.members.includes(property))?.message;
+}
+else if (result.hasExceptions) { /* server fault */ }
+else { /* result.response */ }
+```
 
 `members` is **camelCased on purpose**, so a form can match a server failure to
 the field that caused it without transforming anything. A nested member is a
@@ -177,27 +144,8 @@ and names the field the same way.
 
 `reason` also distinguishes a genuine rejection from a validator that threw
 while validating hostile or partial input: the latter arrives as a single result
-with a `ValidatorFailed` (`validatorFailed`) reason and a generic message, replacing every message
+with a `ValidatorFailed` reason and a generic message, replacing every message
 the validator's author wrote. Do not read the message to tell the two apart.
-Other framework reasons include `dependencyUnavailable` (facts unavailable before
-rules), `concurrencyViolation`, `constraintViolation` and `frameworkFailure`.
-Use safe application feedback for these non-rule diagnostics, not blanket
-field-error rendering. `reasonDetail` can identify a constraint; `state` is
-application data, not proof that a message is safe. Never show
-`exceptionMessages`/`exceptionStackTrace` to users.
-
-### Feedback helpers are not sanitizers
-
-`CommandForm` renders raw validation messages; `toastCommandResult` joins them
-into its invalid-result toast. Neither sanitizes non-rule diagnostics. Use
-application-owned feedback. `showErrors={false}` suppresses built-in form error
-display, not every dialog announcement. `CommandDialog`'s default validation
-announcement also includes a raw message; use application-owned safe
-`validationAnnouncement` text when needed. `onValidationFailure` alone does not
-suppress either display. See the React page skill's
-[dialogs.md](../../cratis-arc-react-page/references/dialogs.md) for form composition,
-and [queries-and-commands.md](../../cratis-arc-react-page/references/queries-and-commands.md)
-for `/validate` feedback under read protection.
 
 ## Executing with a severity
 

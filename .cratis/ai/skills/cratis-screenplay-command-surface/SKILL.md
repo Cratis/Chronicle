@@ -75,12 +75,11 @@ Keep to it.
 A file/code `handler` beside unconditional `produces`, with a resolved nonempty body,
 binds as the v23 result contract: `produces` fixes the
 events and the body owns their property values. Without `produces` or a `may produce` block
-(result v2, ESM v35: an ordered subset/multiset, source binding from 5.4.0), with `produces ... when`,
+(ESM v35: the body returns an ordered subset of the declared events), with `produces ... when`,
 or with an unresolved body (even with `may produce`) it fails binding with PLAY0800. A pending
 `handler implementation` beside unconditional `produces` is a described command (ESM v23).
 Prefer plain `produces` for declarative logic. Read [described handlers](references/described-handlers.md)
-for contracts, version gates and refusals. The standalone runner has no provider; a host can
-execute verified policy/handler bodies. Binding or a descriptor is not execution evidence.
+for the result contract, version gates, PLAY0695–0698 and Stage's STAGE-IMPL-002 refusal.
 
 ## `identifier` — the stream boundary decision
 
@@ -193,8 +192,7 @@ A continuation line extends the clause.
 - Several `authorize` lines on one command or query combine with AND, in authored
   order; a `module` or `feature` gate is ANDed too, so an `or` never bypasses another gate.
 - Evaluation short-circuits left to right, module → feature → command. A policy implemented
-  in code is Unsupported without a host provider (always on standalone); a configured host can
-  return Allow/Deny. Read [host body execution](../cratis-screenplay-specifications/references/host-body-execution.md).
+  in code makes the reference runner report the outcome unsupported, never allow or deny.
 
 ## Inline events and destinations
 
@@ -243,8 +241,6 @@ A policy that decides from recorded state declares `reads <Model> [as alias] [by
 A `user` line names a development session identity and the personas it plays; see the same reference, "Users".
 
 `authorize` says who may act; whether the command exists for the caller at all is `available`, with `provide` for `$context` values: `cratis-screenplay-availability`.
-
-Agent exposure is a separate default-deny allowlist, never inferred from a public command or authorization. Read toolchain [agent exposure](../cratis-screenplay-toolchain/references/agent-exposure.md) before exposing a command; commands require write scope and retain effective authorization.
 
 ## Event data subject
 

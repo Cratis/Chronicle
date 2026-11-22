@@ -171,31 +171,59 @@ const result = await command.execute();
 `validate()`, `clear()`, `setInitialValues(values)`, `revertChanges()`, and
 `hasChanges`.
 
-### Command result handling
+### Read the result by the granular flag
 
-Read the owning [CommandResult reference](../../cratis-arc-command/references/command-result.md)
-before choosing success, refusal, retry or fault feedback. It owns the complete
-result shape, protected-read reason pairs and message-safety decision table;
-do not infer success from only authorization/validity/exception flags. Mount a
-`<Toaster />` near the app root when using notifications.
+| Flag | Meaning | Response |
+| --- | --- | --- |
+| `isSuccess` | authorized, valid, and no exception | happy path |
+| `isAuthorized` | roles or policy rejected the call | redirect to login, or "not allowed" |
+| `isValid` | validation failed — `validationResults` carries the messages | render inline field errors |
+| `hasExceptions` | the handler threw — `exceptionMessages` carries diagnostics | generic error, and log it |
 
-### Validation feedback under read protection
+The result also carries `correlationId`, `authorizationFailureReason`,
+`exceptionStackTrace`, and the typed `response`. Fluent callbacks
+`onSuccess`, `onFailed`, `onException`, `onUnauthorized`, and
+`onValidationFailure` each return the result for chaining.
 
-`command.validate()` calls `{url}/validate`; `CommandForm`'s `autoServerValidate`
-is opt-in and defaults to `false`. When enabled, it runs throttled server
-validation as values change (default `autoServerValidateThrottle` is 500 ms).
-These are form feedback, not a reservation or permission to execute.
+```tsx
+const result = await command.execute();
+if (!result.isAuthorized) { redirectToLogin(); return; }
+if (!result.isValid) { /* validationResults -> inline field errors */ return; }
+if (result.hasExceptions) { console.error(result.exceptionMessages); return; }
+```
 
-Under read protection `On`, `/validate` runs filters and validators with fresh
-reads, but does not call `Provide()` or `Handle()`, guard a commit, or write
-anything. Execution reads its own fresh state and guards from that position;
-it cannot reuse the earlier validation fold. A successful preflight does not
-promise execution success. Handle protected-read refusals using the owning
-result table, preserving the draft rather than marking input invalid.
+A validation result is:
+
+```ts
+class ValidationResult {
+    severity: ValidationResultSeverity;   // Unknown 0, Information 1, Warning 2, Error 3
+    message: string;
+    members: string[];                    // the properties the message applies to
+    state: unknown;
+    reason: ValidationResultReason;       // 'rule' by default
+    reasonDetail?: string;
+}
+```
+
+Render per-field errors from `members` and `message`. Never branch on the raw
+message text. `exceptionMessages` and `exceptionStackTrace` are for logging,
+never for users.
+
+`toastCommandResult(result, options)` from `@cratis/components/Notifications`
+collapses the whole branch into one call — mount a `<Toaster />` near the app
+root and it maps every flag to the right toast without showing stack traces. It
+returns `true` when the command succeeded:
+
+```tsx
+if (toastCommandResult(result, { successTitle: 'Account registered' })) refresh();
+```
 
 For ad-hoc notifications the imperative `toast.success/info/warn/error` each
 take an **options object**, not a bare string:
 `toast.info({ title: 'Saved', description: 'Your changes were saved.' })`.
+
+`CommandDialog` performs all of this itself — the flags matter most when
+executing a command outside a dialog.
 
 ### Command scope
 

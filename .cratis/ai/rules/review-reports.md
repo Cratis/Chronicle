@@ -43,9 +43,6 @@ not measured: code-shape inspection is not a benchmark, a build is not behaviora
 proof, and an unexamined surface is not verified. State `None` only when the entire
 declared scope was examined; otherwise give concrete limits and remaining checks.
 
-- **[contract]** A security reviewer's NOT PASS is blocking, never advisory. Resolve it with a fix plus re-review, or an explicit, recorded decision by the person who owns the risk; never downgrade it to advisory.
-- **[contract]** A review report, and any reviewer notes posted on a PR, lists only the commit ranges actually reviewed. Name unreviewed deltas as unreviewed; never imply they are covered.
-
 ## Verdict vocabulary
 
 | Verdict | Meaning |

@@ -109,7 +109,7 @@ another event source) in `Provide()`/`Handle()` and returning a validation resul
 at commit is reported as a concurrency violation. Equivalently a Chronicle decision-consistency
 read with a `concurrency` scope on the event source or stream. A passive read is fresh
 computation, not an atomic read-and-append; a plain materialized view and a validator are
-advisory under Arc read protection `Off` (an explicit opt-out on Arc 23, or the Arc 22 default); `On` is the default from Arc 23 (legacy: Arc 22.106.0 or later must set it) and the read
+advisory under Arc read protection `Off` (the default); under `On` (Arc 22.106.0 or later) the read
 model parameters of `Handle()` and of a validator constructor are guarded. Protection covers a single
 projection keyed directly by the event source id (routing key empty or `$eventSourceId`) and an
 unfiltered reducer without constructor dependencies. Filtered reducers, reducers with dependencies,

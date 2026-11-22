@@ -18,13 +18,6 @@ Chronicle kernel backed by a single-node MongoDB replica set. The Chronicle imag
 the development image without bundled MongoDB, so it uses the replica set below and
 accepts the well-known development client.
 
-Before `docker compose up`, create `chronicle-client.env` next to the compose file
-and keep it out of version control. It holds one setting,
-`Cratis__Chronicle__ConnectionString`, whose value is a `chronicle://` connection
-string for the kernel's service name `chronicle` and port `35000`, carrying the
-development client id and secret (see `cratis-chronicle-client-dotnet`). Both
-services read it through `env_file`, so no credential appears in the compose file.
-
 ```yaml
 services:
   mongodb:
@@ -84,9 +77,8 @@ services:
     depends_on:
       chronicle:
         condition: service_healthy
-    env_file:
-      - ./chronicle-client.env
     environment:
+      Cratis__Chronicle__ConnectionString: chronicle://chronicle-dev-client:chronicle-dev-secret@chronicle:35000
       Cratis__Chronicle__EventStore: Ordering
       Cratis__MongoDB__Server: mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true
       Cratis__MongoDB__Database: Ordering
@@ -98,9 +90,8 @@ services:
     depends_on:
       chronicle:
         condition: service_healthy
-    env_file:
-      - ./chronicle-client.env
     environment:
+      Cratis__Chronicle__ConnectionString: chronicle://chronicle-dev-client:chronicle-dev-secret@chronicle:35000
       Cratis__Chronicle__EventStore: Billing
       Cratis__MongoDB__Server: mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true
       Cratis__MongoDB__Database: Billing

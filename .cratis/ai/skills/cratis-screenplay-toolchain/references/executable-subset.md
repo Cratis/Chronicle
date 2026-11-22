@@ -390,12 +390,10 @@ standalone single-event reaction body (Requires Screenplay 4.258.0; see
   tool uses) they leave the whole model unbound, so no specification runs at all.
 - **Admissible compilation is narrower than that.** `CompileAdmissible` (the opt-in host API
   `IAdmissibleSemanticModelCompiler`; Requires Screenplay 4.254.0 or later) binds the supported
-  subset of a source-valid application, not a whole-model pass, and lists removals in `Exclusions`:
-  refused specifications, slices, imports and policies. `Diagnostics` preserves original binder errors.
-  Typed provenance (4.256.0) adds `Cause` (`Root` or `Dependent`) and `DependsOn`: immediate
-  exclusion references, ordered like `Exclusions`, empty for `Root`, not transitive ancestry or
-  message-derived edges. Security dependencies fail closed: a refused policy or protected read
-  removes everything it protects. It does not establish runtime identity safety. A top-level `trigger` that fails to bind is excluded
+  subset of a source-valid application and lists what it removed in `Exclusions`: refused
+  specifications, slices, imports and policies, each with a typed `Cause` (`Root` or `Dependent`)
+  and `DependsOn`. Security dependencies fail closed: a refused policy or protected read removes
+  everything it protects. It does not establish runtime identity safety. A top-level `trigger` that fails to bind is excluded
   (kind `Trigger`, cause `Root`, carrying the original binder diagnostic; it has no code of its own).
   The reactions and specifications it sets off stop binding and are excluded on later passes as
   `Dependent` exclusions whose `DependsOn` names the trigger. Independent slices stay in the
