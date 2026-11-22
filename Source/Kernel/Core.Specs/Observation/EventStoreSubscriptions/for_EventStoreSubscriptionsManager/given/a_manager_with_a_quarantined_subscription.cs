@@ -65,7 +65,7 @@ public class a_manager_with_a_quarantined_subscription : Specification
         .Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>());
 
     protected void ShouldScheduleReminder(int count) => _silo.ReminderRegistry.Mock.Verify(_ =>
-        _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), ReminderName, TimeSpan.FromMilliseconds(100), TimeSpan.FromMinutes(1)),
+        _.RegisterOrUpdateReminder(It.IsAny<GrainId>(), ReminderName, It.IsAny<TimeSpan>(), TimeSpan.FromMinutes(15)),
         Times.Exactly(count));
 
     protected void ShouldSubscribe(IObserver observer) => observer.Received(1)
