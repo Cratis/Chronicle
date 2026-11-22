@@ -35,6 +35,8 @@ public class when_reading_a_page_of_header_events : for_QueryExecutor.given.a_ro
         store.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(@namespace);
         @namespace.GetEventSequence(Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(sequence);
         store.EventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
+        store.EventTypes.GetDefinition(Arg.Any<EventTypeId>())
+            .Returns(call => Task.FromResult(new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.Server, false, [], [])));
         sequence.GetWindow(default!, default!, 0, false).ReturnsForAnyArgs(cursor);
         cursor.MoveNext().Returns(true, false);
         cursor.Current.Returns(_stored);
