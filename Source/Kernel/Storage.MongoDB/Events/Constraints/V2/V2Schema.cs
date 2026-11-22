@@ -115,8 +115,8 @@ internal sealed partial class V2Schema(IMongoDatabase database)
 
         // A publisher may have committed since Resolve's absent binding read. Re-read once before
         // diagnosing damage; a racing winner must still prove its complete binding and physical shape.
-        var published = await metadata.Find(new BsonDocument("_id", binding.Id), new FindOptions { Collation = Simple }).SingleOrDefaultAsync(cancellationToken);
-        if (published is null) throw new UniqueConstraintV2SchemaMismatch();
+        var published = await metadata.Find(new BsonDocument("_id", binding.Id), new FindOptions { Collation = Simple }).SingleOrDefaultAsync(cancellationToken)
+            ?? throw new UniqueConstraintV2SchemaMismatch();
         return await VerifyBinding(binding, published, cancellationToken);
     }
 

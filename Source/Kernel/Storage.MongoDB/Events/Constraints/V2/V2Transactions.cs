@@ -11,10 +11,10 @@ namespace Cratis.Chronicle.Storage.MongoDB.Events.Constraints.V2;
 /// <param name="readConcern">Local for new-collection schema transactions, snapshot for claim mutations.</param>
 internal sealed class V2Transactions(IMongoDatabase database, ReadConcern readConcern)
 {
-    // MongoDB reserves 244 as NOT_YET_AVAILABLE_TransactionAborted (LockBusy is 46).
+    /// <summary>MongoDB reserves 244 as NOT_YET_AVAILABLE_TransactionAborted (LockBusy is 46).</summary>
     const int ReservedTransactionAborted = 244;
 
-    // 12586 is BackgroundOperationInProgressForDatabase; the namespace variant is 12587.
+    /// <summary>12586 is BackgroundOperationInProgressForDatabase; the namespace variant is 12587.</summary>
     const int BackgroundOperationInProgressForDatabase = 12586;
 
     /// <summary>Recognizes duplicate-key failures without classifying unrelated server failures as claims.</summary>
