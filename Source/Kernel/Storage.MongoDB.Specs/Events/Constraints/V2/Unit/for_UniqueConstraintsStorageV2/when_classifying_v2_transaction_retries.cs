@@ -21,7 +21,7 @@ public class when_classifying_v2_transaction_retries
     public void should_retry_definite_aborts_including_post_schema_snapshot_errors(int code)
     {
         var connection = new ConnectionId(new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017)));
-        var error = new MongoCommandException(connection, "aborted", new BsonDocument { { "code", code }, { "errmsg", "aborted" } });
+        var error = new MongoCommandException(connection, "aborted", new BsonDocument(), new BsonDocument { { "ok", 0 }, { "code", code }, { "errmsg", "aborted" } });
         V2Transactions.CanRetry(error).ShouldBeTrue();
     }
 
