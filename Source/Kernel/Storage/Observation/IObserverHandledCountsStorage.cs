@@ -38,6 +38,12 @@ public interface IObserverHandledCountsStorage
     /// <param name="observerId">The <see cref="ObserverId"/> the counts are for.</param>
     /// <param name="countsPerPartition">The counts per event type for each partition.</param>
     /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// When a confirmed prefix was applied, <see cref="ObserverHandledCountsPartiallyIncremented.AppliedCount"/>
+    /// counts entries in the original input, including empty entries before the failure. Retry only the remaining suffix.
+    /// Other failures do not confirm any prefix. Retrying them retains at-least-once behavior and can repeat increments.
+    /// </remarks>
+    /// <exception cref="ObserverHandledCountsPartiallyIncremented">A confirmed prefix was applied before an entry failed.</exception>
     Task Increment(ObserverId observerId, IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition);
 
     /// <summary>
