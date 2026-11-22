@@ -86,6 +86,7 @@ internal sealed class Projections(
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
+        Array.ForEach(projections, EnsurePublicSequence);
         if (!string.IsNullOrEmpty(request.ConnectionId))
         {
             var access = await connectionOwnership.Verify(grainFactory, request.ConnectionId, ConnectionCallers.From(context, options.Value).Owner, options.Value.Clustering.ResponseTimeout, cancellationToken: context.CancellationToken);
@@ -204,7 +205,9 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                EnsurePublicSequence(definition);
                 await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId), StoreAccess.Read, namespaceAddressed: false);
+                definition = definition with { EventSequenceId = request.EventSequenceId };
                 ReadModelDefinition? readModelDefinition;
                 var isInferredReadModel = definition.ReadModel == ReadModelIdentifier.Inferred;
 
@@ -326,6 +329,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                EnsurePublicSequence(definition);
                 SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
                 var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
@@ -391,7 +395,7 @@ internal sealed class Projections(
                 }
 
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
-                if (definition.EventSequenceId.IsSystemSequence()) throw SystemStoreGuard.RefusedException();
+                EnsurePublicSequence(definition);
 
                 if (request.DraftReadModel is not null && draftDefinition is not null)
                 {
@@ -432,6 +436,11 @@ internal sealed class Projections(
                 return new SaveProjectionResult();
             },
             errors => Task.FromResult(new SaveProjectionResult { Errors = errors.ToContract().Errors }));
+    }
+
+    static void EnsurePublicSequence(Concepts.Projections.Definitions.ProjectionDefinition definition)
+    {
+        if (definition.EventSequenceId.IsSystemSequence()) throw SystemStoreGuard.RefusedException();
     }
 
     static ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
@@ -762,8 +771,9 @@ internal sealed class Projections(
         return await compileResult.Match(
             async graph =>
             {
+                EnsurePublicSequence(graph.Projection);
                 var definition = graph.Projection with { EventSequenceId = request.EventSequenceId };
-                if (definition.EventSequenceId.IsSystemSequence()) throw SystemStoreGuard.RefusedException();
+                EnsurePublicSequence(definition);
                 SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
 
                 var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);

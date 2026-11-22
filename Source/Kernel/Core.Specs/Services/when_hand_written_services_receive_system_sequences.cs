@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Services;
 public class when_hand_written_services_receive_system_sequences : for_QueryExecutor.given.a_routed_query
 {
     readonly Dictionary<string, List<Exception>> _errors = [];
+    readonly List<Exception> _administratorErrors = [];
     Dictionary<string, Func<string, CallContext, Task>> _requests;
 
     void Establish()
@@ -50,7 +51,9 @@ public class when_hand_written_services_receive_system_sequences : for_QueryExec
         foreach (var caller in new[] { Administrator, RevokedAdministrator, OrdinaryUser, Application, Anonymous })
         {
             var context = CallFor(new Probe(), CallerNamed(caller));
-            _errors[method].Add(await Catch.Exception(() => invoke(sequence, context)));
+            var error = await Catch.Exception(() => invoke(sequence, context));
+            _errors[method].Add(error);
+            if (caller == Administrator) _administratorErrors.Add(error);
         }
         _errors[method].Add(await Catch.Exception(() => invoke(sequence, default)));
     }
@@ -58,6 +61,7 @@ public class when_hand_written_services_receive_system_sequences : for_QueryExec
     bool RefusedEveryRequest(string method) =>
         _errors[method].Count == 24 && _errors[method].All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied });
 
+    [Fact] void should_refuse_every_administrator_request() => (_administratorErrors.Count == 24 && _administratorErrors.All(_ => _ is RpcException { StatusCode: StatusCode.PermissionDenied })).ShouldBeTrue();
     [Fact] void should_refuse_registration_for_every_caller_and_variant() => RefusedEveryRequest("Register").ShouldBeTrue();
     [Fact] void should_refuse_preview_for_every_caller_and_variant() => RefusedEveryRequest("Preview").ShouldBeTrue();
     [Fact] void should_refuse_instance_queries_for_every_caller_and_variant() => RefusedEveryRequest("GetInstanceByKey").ShouldBeTrue();

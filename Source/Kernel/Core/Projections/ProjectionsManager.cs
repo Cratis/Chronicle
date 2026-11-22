@@ -644,7 +644,7 @@ public partial class ProjectionsManager(
 
     async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired, bool reconcile = false, bool boundedByRegistration = false)
     {
-        if (!definition.IsActive)
+        if (!definition.IsActive || definition.UsesUnsupportedEventSequence())
         {
             return;
         }

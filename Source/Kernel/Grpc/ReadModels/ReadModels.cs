@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
 using Cratis.Chronicle.Json;
@@ -152,7 +153,7 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModel, request.Occurrence), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModel);
+        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
         var binding = await readBindings.ResolveOrReject(request.EventStore, request.Namespace, definition, occurrence);
         var skip = Math.Max(0, request.Page * request.PageSize);
@@ -183,7 +184,7 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
 
         var streamScoped = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId);
         if (streamScoped && (string.IsNullOrEmpty(request.EventStreamType) || ((EventStreamType)request.EventStreamType).IsAll))
@@ -314,7 +315,7 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
 
         // Every instance of a materialized read model is already in the sink, so read them from there. An
         // explicit event count is a request to re-apply exactly that many events from the beginning, which
@@ -460,7 +461,7 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
@@ -497,6 +498,7 @@ internal sealed class ReadModels(
         {
             request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
+            await EnsureSupportedProjection(request.EventStore, definition);
 
             var schema = definition.GetSchemaForLatestGeneration();
             var subscriptionId = Guid.NewGuid();
@@ -593,6 +595,23 @@ internal sealed class ReadModels(
                 }
             }
         }
+    }
+
+    async Task<Concepts.ReadModels.ReadModelDefinition> GetSupportedDefinition(EventStoreName eventStore, IReadModel readModel, ReadModelIdentifier identifier)
+    {
+        var definition = await readModel.GetKnownDefinition(identifier);
+        await EnsureSupportedProjection(eventStore, definition);
+        return definition;
+    }
+
+    async Task EnsureSupportedProjection(EventStoreName eventStore, Concepts.ReadModels.ReadModelDefinition definition)
+    {
+        if (definition.ObserverType != Concepts.ReadModels.ReadModelObserverType.Projection) return;
+        var projections = storage.GetEventStore(eventStore).Projections;
+        var identifier = (ProjectionId)definition.ObserverIdentifier.Value;
+        if (!await projections.Has(identifier)) return;
+        var projection = await projections.Get(identifier);
+        if (projection.UsesUnsupportedEventSequence()) throw SystemStoreGuard.RefusedException();
     }
 
     async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)

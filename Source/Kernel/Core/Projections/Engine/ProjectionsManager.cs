@@ -8,7 +8,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -254,7 +253,7 @@ public partial class ProjectionsManager(
 
     bool SkipDefinition(EventStoreName eventStore, ProjectionDefinition definition)
     {
-        if (definition.Owner == ProjectionOwner.Kernel || !definition.EventSequenceId.IsSystemSequence()) return false;
+        if (!definition.UsesUnsupportedEventSequence()) return false;
         UnsupportedEventSequence(logger, definition.Identifier);
         Evict(eventStore, definition.Identifier);
         return true;
