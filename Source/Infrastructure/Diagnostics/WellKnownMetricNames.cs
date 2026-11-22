@@ -415,46 +415,4 @@ public static class WellKnownMetricNames
 
     /// <summary>Unit of <see cref="EventSequenceAppendDuration"/>.</summary>
     public const string EventSequenceAppendDurationUnit = "s";
-
-    /// <summary>Bytes held live by a heap generation after the last garbage collection, by generation.</summary>
-    public const string GcHeapGenerationSize = "cratis.chronicle.gc.heap.generation.size";
-
-    /// <summary>Unit of <see cref="GcHeapGenerationSize"/>.</summary>
-    public const string GcHeapGenerationSizeUnit = "By";
-
-    /// <summary>Bytes of a heap generation lost to fragmentation after the last garbage collection, by generation.</summary>
-    public const string GcHeapGenerationFragmentation = "cratis.chronicle.gc.heap.generation.fragmentation";
-
-    /// <summary>Unit of <see cref="GcHeapGenerationFragmentation"/>.</summary>
-    public const string GcHeapGenerationFragmentationUnit = "By";
-
-    /// <summary>Size of the whole managed heap as of the last garbage collection.</summary>
-    public const string GcHeapSize = "cratis.chronicle.gc.heap.size";
-
-    /// <summary>Unit of <see cref="GcHeapSize"/>.</summary>
-    public const string GcHeapSizeUnit = "By";
-
-    /// <summary>Memory the garbage collector has committed from the operating system, as of the last garbage collection.</summary>
-    public const string GcHeapCommitted = "cratis.chronicle.gc.heap.committed";
-
-    /// <summary>Unit of <see cref="GcHeapCommitted"/>.</summary>
-    public const string GcHeapCommittedUnit = "By";
-
-    /// <summary>Total time the process has spent paused by garbage collection.</summary>
-    public const string GcPauseDuration = "cratis.chronicle.gc.pause.duration";
-
-    /// <summary>Unit of <see cref="GcPauseDuration"/>.</summary>
-    public const string GcPauseDurationUnit = "s";
-
-    /// <summary>Total bytes the process has allocated; its rate is the allocation rate.</summary>
-    public const string GcAllocated = "cratis.chronicle.gc.allocated";
-
-    /// <summary>Unit of <see cref="GcAllocated"/>.</summary>
-    public const string GcAllocatedUnit = "By";
-
-    /// <summary>Number of garbage collections that have happened, by generation.</summary>
-    public const string GcCollections = "cratis.chronicle.gc.collections";
-
-    /// <summary>Unit of <see cref="GcCollections"/>.</summary>
-    public const string GcCollectionsUnit = "{collection}";
 }

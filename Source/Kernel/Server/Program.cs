@@ -213,7 +213,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IFederationCaller, HttpFederationCaller>();
 builder.Services.AddSingleton<FederationListenerCertificate>();
 builder.Services.AddHostedService<FederationEnrollmentWorker>();
-builder.Services.AddHostedService<Cratis.Chronicle.Diagnostics.KernelGcMetrics>();
 builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("startup");
 
 if (chronicleOptions.Features.Api)
