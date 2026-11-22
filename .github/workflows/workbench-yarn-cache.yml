@@ -1,10 +1,9 @@
 name: Workbench Yarn Cache
 
 # Pull-request workflows only restore caches; they never save them (#5604). This workflow is the one that
-# writes the Workbench yarn cache, from main, so the restore in pull-requests.yml hits. A cache saved on
-# main is readable from every pull request, while one saved by a pull request is visible only to that
-# pull request. The path and key below must stay identical to the restore step in pull-requests.yml,
-# including the order of steps that resolve the yarn cache directory: GitHub matches on both.
+# writes the Workbench Yarn package cache, from main, for pull-requests.yml and workbench-build.yml.
+# A cache saved on main is readable from every pull request, while one saved by a pull request is
+# visible only to that pull request. All three use the shared action with the same package path and key.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,9 +16,11 @@ on:
     paths:
       - "**/yarn.lock"
       - "**/package.json"
+      - "Source/Workbench/.yarnrc.yml"
       - ".github/workflows/workbench-yarn-cache.yml"
-      # The consumer's restore defines the key and paths this workflow must save.
+      # The consumers use the same shared action inputs as this warmer.
       - ".github/workflows/pull-requests.yml"
+      - ".github/workflows/workbench-build.yml"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +28,7 @@ permissions:
 
 jobs:
   save-yarn-cache:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -36,10 +38,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
-
       - name: Setup node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -47,27 +45,15 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       # Caches are immutable per key, so skip the install when main already holds this one.
-      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - name: Cache Yarn packages
+        uses: Cratis/Workflows/.github/actions/yarn-cache@main
         id: yarn-cache
         with:
-          path: |
-            **/node_modules
-            **/.eslintcache
-            ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          lookup-only: true
+          working-directory: Source/Workbench
+          path: Source/Workbench/.yarn/cache
+          mode: save
 
       - name: Yarn install
         if: steps.yarn-cache.outputs.cache-hit != 'true'
         working-directory: ./Source/Workbench
         run: yarn
-
-      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        with:
-          path: |
-            **/node_modules
-            **/.eslintcache
-            ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          # The key computed before the install, so an install that touches a lockfile cannot shift it.
-          key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
