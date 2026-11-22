@@ -78,10 +78,13 @@ public partial class Observer
     /// its timeout - so a state write can still be in flight, or queued, at that point. The two locks are therefore
     /// never disposed: they are <see cref="AsyncGate"/>s, which hold nothing to give back, whereas disposing a
     /// semaphore under a holder makes its release throw and strands every waiter. Disposal instead seals
-    /// the activation: a write that has not started yet is skipped, and one already in flight runs to completion.
+    /// the activation: a write that has not started yet is skipped. A storage call already in flight may finish,
+    /// but its direct persistence continuation cannot start another persistence call or update write accounting.
+    /// This does not fence the internal continuations of unconverted collaborators or cancel the issued call.
     /// </remarks>
     public void Dispose()
     {
+        _continuationLifetime.Invalidate();
         _disposed = true;
         _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
