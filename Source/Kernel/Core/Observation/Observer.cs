@@ -211,7 +211,7 @@ public partial class Observer(
         await FinishWakeFromDormancy();
         await ReconcilePartitionDeferrals();
         RememberHandledEventsReportsForTheResponseTimeout();
-        ScheduleActivationAlertReport();
+        ScheduleActivationAlertReportIfNeeded();
     }
 
     /// <inheritdoc/>
@@ -646,6 +646,9 @@ public partial class Observer(
         }
         if (reminderName == AlertReminderName)
         {
+            // The reminder is the heal path for a report lost with a previous activation, which a healthy-looking
+            // activation cannot know about, so a tick always reports once.
+            _alertReconciliationPending = true;
             await ReconcileAlertsIfNeeded();
             await ReleaseAlertReminderWhenSettled();
             return;

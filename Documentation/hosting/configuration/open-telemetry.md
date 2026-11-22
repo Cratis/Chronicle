@@ -180,7 +180,7 @@ The three per-observer gauges report an observer only while it needs attention, 
 
 `cratis.chronicle.observer.resident` and `cratis.chronicle.job.running` report `0` for a combination of event store, namespace, type and state they have reported before, rather than leaving it out once it empties.
 
-The dormant observer counters are published under their `Telemetry:MetricNames` names (see [Telemetry names](telemetry-names.md)): `observer.dormant_releases`, `observer.dormant_wakes` with `cratis.chronicle.observer.wake_cause` (`event` or `safety_net`), `observer.dormant_wakes_delayed` and `observer.dormant_resumes` with `cratis.chronicle.observer.resume_outcome` (`cursor`, `catch_up` or `stale_record`). [Releasing dormant observers](observers.md#releasing-dormant-observers) says what to read from them.
+The dormant observer counters are published under their `Telemetry:MetricNames` names (see [Telemetry names](telemetry-names.md)): `observer.dormant_releases`, `observer.dormant_wakes` with `cratis.chronicle.observer.wake_cause` (`event` or `safety_net`), `observer.dormant_wakes_delayed`, `observer.dormant_safety_net_checks` with `cratis.chronicle.observer.safety_net_outcome` (`up_to_date`, `behind`, `unverified` or `full_wake`) and `observer.dormant_resumes` with `cratis.chronicle.observer.resume_outcome` (`cursor`, `catch_up` or `stale_record`). [Releasing dormant observers](observers.md#releasing-dormant-observers) says what to read from them.
 
 #### How many series to expect
 

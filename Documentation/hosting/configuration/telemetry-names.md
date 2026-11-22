@@ -40,6 +40,7 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 | `observer.dormant_releases` | `{observer}` | `chronicle-observer-dormant-releases` |
 | `observer.dormant_wakes` | `{wake}` | `chronicle-observer-dormant-wakes` |
 | `observer.dormant_wakes_delayed` | `{wake}` | `chronicle-observer-dormant-wakes-delayed` |
+| `observer.dormant_safety_net_checks` | `{check}` | `chronicle-observer-dormant-safety-net-checks` |
 | `observer.dormant_resumes` | `{resume}` | `chronicle-observer-dormant-resumes` |
 | `webhook.probes_scheduled` | `{probe}` | `chronicle-webhook-probe-scheduled` |
 | `webhook.probe_attempts` | `{probe}` | `chronicle-webhook-probe-attempts` |
@@ -127,6 +128,7 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `divergence` | `cratis.chronicle.observer.claim_divergence` |
 | `WakeCause` | `cratis.chronicle.observer.wake_cause` |
 | `ResumeOutcome` | `cratis.chronicle.observer.resume_outcome` |
+| `SafetyNetOutcome` | `cratis.chronicle.observer.safety_net_outcome` |
 | `Condition` | `cratis.chronicle.alert.condition` |
 | `Severity` | `cratis.chronicle.alert.severity` |
 | `state` | `cratis.chronicle.abandoned_delivery.result_state` |

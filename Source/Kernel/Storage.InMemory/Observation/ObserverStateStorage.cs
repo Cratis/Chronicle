@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
@@ -153,6 +154,15 @@ public sealed class ObserverStateStorage : IObserverStateStorage, IDisposable
         IReadOnlyDictionary<ObserverId, ObserverDurableSubscription> result = _states
             .Where(entry => entry.Value.DurableSubscription is not null && entry.Value.Owner == owner)
             .ToDictionary(entry => entry.Key, entry => entry.Value.DurableSubscription!);
+        return Task.FromResult(result);
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyDictionary<ObserverId, EventSequenceNumber>> GetNextEventSequenceNumbers(EventSequenceId owner)
+    {
+        IReadOnlyDictionary<ObserverId, EventSequenceNumber> result = _states
+            .Where(entry => entry.Value.DurableSubscription is not null && entry.Value.Owner == owner)
+            .ToDictionary(entry => entry.Key, entry => entry.Value.NextEventSequenceNumber);
         return Task.FromResult(result);
     }
 

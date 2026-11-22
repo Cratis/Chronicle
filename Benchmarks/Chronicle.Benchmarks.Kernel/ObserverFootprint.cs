@@ -130,6 +130,12 @@ public static class ObserverFootprint
         Console.WriteLine($"  warmup observers still subscribed: {await CountSubscribed(grainFactory, "warmup", warmup)} of {warmup}");
         await Hold(IntArgument(args, "--hold-unsubscribed", 0));
 
+        // Waking the released observers is an activation each, which is where an activation-time alert report shows up.
+        if (dormant && args.Contains("--wake-released"))
+        {
+            await phase.WakeReleased(grainFactory, "measured", count, await ActivationsOf<Observer>(grainFactory));
+        }
+
         await host.StopAsync();
         return 0;
     }

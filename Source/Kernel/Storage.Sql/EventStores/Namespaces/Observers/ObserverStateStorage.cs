@@ -4,6 +4,7 @@
 using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
@@ -212,6 +213,18 @@ public class ObserverStateStorage(EventStoreName eventStore, EventStoreNamespace
         return recorded.ToDictionary(
             _ => new ObserverId(_.Id),
             _ => JsonSerializer.Deserialize<ObserverDurableSubscription>(_.DurableSubscription!, ObserverStateJson.Options)!);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, EventSequenceNumber>> GetNextEventSequenceNumbers(EventSequenceId owner)
+    {
+        await using var scope = await database.Namespace(eventStore, @namespace);
+        var ownerValue = owner.Value;
+        var recorded = await scope.DbContext.Observers
+            .Where(observer => observer.Owner == ownerValue && observer.DurableSubscription != null)
+            .Select(observer => new { observer.Id, observer.NextEventSequenceNumber })
+            .ToListAsync();
+        return recorded.ToDictionary(_ => new ObserverId(_.Id), _ => new EventSequenceNumber(_.NextEventSequenceNumber));
     }
 
     /// <inheritdoc/>

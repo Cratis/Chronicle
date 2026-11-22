@@ -249,11 +249,26 @@ public class Observers
     /// </summary>
     /// <remarks>
     /// Defaults to 900 seconds (15 minutes). Each observer's interval is jittered so wake-ups do not line up. It bounds
-    /// how long a lost wake-up can delay delivery to a dormant observer, and costs about one activation per dormant
-    /// observer per interval. The wake-ups are driven by the appended events queue, so no timer or activation is held
-    /// for a dormant observer. Values below 1 select the default. A server-level setting (decision 0034).
+    /// how long a lost wake-up can delay delivery to a dormant observer. At each interval the queue compares the
+    /// persisted cursor of the observer with the tail of the event types it observes and wakes it only when an event is
+    /// waiting, or when the cursor cannot be compared; <see cref="DormantSafetyNetFullWake"/> sets how often it is woken
+    /// regardless. The checks are driven by the appended events queue, so no timer or activation is held for a dormant
+    /// observer. Values below 1 select the default. A server-level setting (decision 0034).
     /// </remarks>
     public int DormantSafetyNet { get; init; } = 900;
+
+    /// <summary>
+    /// Gets how many seconds pass at most before a dormant observer is woken whether or not an event is waiting for it.
+    /// </summary>
+    /// <remarks>
+    /// The comparison made every <see cref="DormantSafetyNet"/> interval finds a lost wake-up, but it cannot see what
+    /// only a running observer can: a client that left without notice, a definition that another registration took
+    /// over, a record that no longer matches the observer. This unconditional wake finds those. Defaults to 3600
+    /// seconds (60 minutes). Values below 1 select the default; a value below <see cref="DormantSafetyNet"/> is raised
+    /// to it, which wakes every dormant observer at every interval as before the comparison existed. A server-level
+    /// setting (decision 0034).
+    /// </remarks>
+    public int DormantSafetyNetFullWake { get; init; } = 3600;
 
     /// <summary>
     /// Gets how many dormant observers one silo wakes at the same time.
