@@ -5,8 +5,11 @@
 
 - Compound members
 - `DataPageProps`
+- Page landmarks
 - Snapshot versus observable
-- `MenuItemProps`
+- Selection reconciliation
+- Search and server queries
+- `MenuItemProps<TDataType>`
 - `IDetailsComponentProps<TDataType>`
 - `Column`
 - Type name caution
@@ -39,18 +42,22 @@ Three static members exist:
 | Prop | Type | Notes |
 | --- | --- | --- |
 | `title` | `string` | required — menubar title |
+| `landmark` | `boolean` | defaults to `true`; use `false` inside an existing main landmark |
 | `query` | `Constructor<TQuery>` | required — a snapshot **or** observable query proxy |
 | `emptyMessage` | `string` | required — only a real empty result |
 | `loadingMessage` / `failureMessage` / `unauthorizedMessage` | `ReactNode` | query-state rows; defaults from `messages.dataTable.loading/failed/unauthorized` |
 | `children` | `ReactNode` | required — `DataPage.Columns` and optionally `DataPage.MenuItems` |
 | `queryArguments` | `TArguments` | forwarded to the query |
 | `dataKey` | `string \| undefined` | row identity; pass whenever the read model has one |
-| `selection` | `any \| undefined \| null` | controlled single selection |
+| `selection` | `TDataType \| undefined \| null` | controlled single selection |
 | `selectionMode` | `'single' \| 'multiple'` | default single |
 | `selectedItems` / `onSelectedItemsChange` | `TDataType[]` / `(items: TDataType[]) => void` | multiple selection; omit `selectedItems` for internal state |
-| `onSelectionChange` | `(event: DataTableSelectionChangeEvent<any>) => void` | `event.value` is the row or `null` |
-| `detailsComponent` | `React.FC<IDetailsComponentProps<any>>` | rendered beside the table for the selected row |
+| `onSelectionChange` | `(event: DataTableSelectionChangeEvent<TDataType>) => void` | `event.value` is the row or `null`; accept it for controlled selection |
+| `detailsComponent` | `React.FC<IDetailsComponentProps<TDataType>>` | rendered beside the table for the selected row |
 | `globalFilterFields` | `string[] \| undefined` | enables the global search box over these fields |
+| `filteredEmptyMessage` | `ReactNode` | separate copy for an active search/filter with no shown rows |
+| `onGlobalFilterChange` | `(globalFilter: string) => void` | notifies every search-text change |
+| `serverQuery` | `DataTableServerQuery<TArguments>` | caller maps search/filter/sort state to backend query arguments; see below |
 | `defaultFilters` | `DataTableFilterMeta` | initial per-column filter state |
 | `onRefresh` | `() => void` | forwarded unchanged to details; DataPage never invokes it or refetches |
 | `actionsAriaLabel` | `string` | accessible name of the actions menubar, default `'Actions'` |
@@ -62,6 +69,14 @@ Three static members exist:
 | `menubarPt` | `ButtonParts` | per-part attributes on the action buttons (`menubarPtOptions`/`menubarUnstyled` are accepted no-ops) |
 | `paginatorPt` | `TablePaginatorParts` | per-part attributes on the paginator |
 | `clientFiltering` | `boolean` | **deprecated and a no-op** — do not use in new code |
+
+## Page landmarks
+
+`Page` from `@cratis/components/Common` renders its content as `<main>` by
+default. `landmark={false}` switches that content region to `<div>`, for a page
+already inside the application's main landmark. `DataPage` forwards its
+`landmark` prop to Page. Choose the main owner and avoid nested main landmarks;
+`showTitle` controls Page's heading separately, not its landmark.
 
 ## Snapshot versus observable
 
@@ -77,15 +92,70 @@ and unauthorized results show a failure row; `empty-row` means a real empty
 result. While refreshing, the table marks `aria-busy`. Style status rows with
 `tablePt.loadingRow/loadingCell/failureRow/failureCell`.
 
-## `MenuItemProps`
+## Selection reconciliation
+
+On a ready query result, single selection follows the replacement row with the
+same stringified `dataKey` value; if it disappears, `event.value` becomes `null`.
+Without `dataKey`, matching is by reference. DataPage updates its internal
+selection automatically; a controlled consumer must accept `event.value` in
+`onSelectionChange`, otherwise its stale selection and details remain. The event
+is `DataTableSelectionChangeEvent<TDataType>` (`value: TDataType | null`, optional
+`originalEvent`). Do not assume the same reconciliation contract for multiple
+selection.
+
+## Search and server queries
+
+Without `serverQuery`, filtering, global search and sorting operate only on the
+loaded page, not the whole dataset. Default filtered-empty copy says that only
+the loaded page was searched; `filteredEmptyMessage` overrides it.
+`onGlobalFilterChange` reports each typed change.
+
+`DataTableServerQuery<TArguments>` and `DataTableServerQueryState` are exported
+from `@cratis/components/DataTables`. The state contains `globalFilter`, `filters`
+and `sort`; the contract is:
+
+```ts
+interface DataTableServerQuery<TArguments> {
+    mapQueryArguments: (state: DataTableServerQueryState, baseArguments: TArguments | undefined) => TArguments;
+    debounceMs?: number; // defaults to 250
+}
+```
+
+The caller must map that state into real backend arguments whose query implements
+the search/filter/sort. With `serverQuery`, the table disables local filtering
+and sorting and resets paging when effective server arguments change; it does
+not invent backend search semantics. Global search text is debounced; column
+filters and sorting apply immediately. The default filtered-empty copy becomes
+neutral ("No rows match the search.").
+
+## `MenuItemProps<TDataType>`
 
 | Prop | Type | Notes |
 | --- | --- | --- |
 | `icon` | `React.ComponentType<{ className?: string }>` | a **component**, not an icon class string |
 | `label` | `string` | menu label |
-| `command` | `() => void` | the action — **not** `onClick` |
-| `disabled` | `boolean` | unconditionally disabled |
-| `disableOnUnselected` | `boolean` | disabled until a row is selected |
+| `command` | `(selection: DataPageSelection<TDataType>) => void` | the action — **not** `onClick`; zero-argument callbacks remain valid |
+| `disabled` | `boolean \| ((selection: DataPageSelection<TDataType>) => boolean)` | unconditional or selection-aware disabling |
+| `disableOnUnselected` | `boolean` | disabled until a row is selected; combined with `disabled` |
+
+`DataPageSelection<TDataType>` (exported from `@cratis/components/DataPage`) is a
+readonly discriminated union: `{ selectionMode: 'single', selectedItem: TDataType | null | undefined }`
+or `{ selectionMode: 'multiple', selectedItems: readonly TDataType[] }`. Both
+callbacks receive the immutable, committed selection, not a click event. The
+container and multiple-selection array are frozen, but row objects are not
+deep-frozen. A disabled item cannot dispatch its command. JSX does not infer the row type from
+DataPage's generic; supply it explicitly:
+
+```tsx
+<DataPage.MenuItem<AccountSummary>
+    label='Edit'
+    disabled={selection => selection.selectionMode !== 'single' || !selection.selectedItem}
+    command={selection => {
+        if (selection.selectionMode === 'single' && selection.selectedItem) {
+            showEditAccount({ accountId: selection.selectedItem.id });
+        }
+    }} />
+```
 
 `MenuItem` renders nothing on its own; it is a marker that `DataPage.MenuItems`
 reads. Icons are usually a small inline component:

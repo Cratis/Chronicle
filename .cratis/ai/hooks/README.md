@@ -37,14 +37,24 @@ payload omits cwd; glob probing does not. Filesystem check/use races remain: thi
 
 The Bash write guard checks manifest and environment-file names against both logical and resolved physical basenames; run `cratis ai update` to receive this change.
 
-A Pi session runs guards from its starting checkout. Refresh the corpus there with `cratis ai update`,
-or start a new session in the checkout you change. Selecting a newer installed guard corpus per call
-is tracked in [Cratis/AI#1114](https://github.com/Cratis/AI/issues/1114).
+A Pi session runs guards from its starting checkout (or the bundled corpus when that checkout has none). A command or
+file path that targets another checkout is judged by those guards; the bridge never runs the other checkout's scripts,
+because a checkout the agent can write cannot be a trust anchor. The guards do read policy data about the write target's
+repository for dependency-manifest writes, but only to tighten: the session's policy decides, and a target can block
+but never unlock ([Cratis/AI#1256](https://github.com/Cratis/AI/issues/1256); see *Dependency-manifest writes* below). Refresh the corpus in the starting checkout with
+`cratis ai update` (scripts are read per call, so no restart), or start a new session in the checkout you change.
+Proposed in Cratis/AI#1114 and drafted as `decisions/153-pi-hook-bridge-runs-only-the-starting-checkouts-guards.md`
+(status: proposed): do not select the guard corpus per call.
 
 Reader glob probes skip directories only when decoded options establish a nonrecursive reader;
 unknown or recursive grep options keep directory matches conservative. Simple sed print/substitution
 programs are data only without in-place edits, execution, or file writes; `-f` remains a file operand.
 GitHub API endpoints are normalized before checking sensitive paths.
+GitHub output filters (`--jq`/`-q`, `--template`/`-t`) may select response fields such as `.env`,
+but may not read the process environment through `env` or `$ENV`, including within expressions.
+Quoted strings and comments in jq filters remain data. Bundled filter flags are checked too;
+`-t` is a title or subject only for `pr`/`issue`/`release` create/edit, `pr merge`, and
+`ssh-key`/`gpg-key` add. API endpoint names never opt out of template checks.
 
 The shell-write guard classifies **write-target words**, not every word. It lexes the command into
 simple commands. When every command is a reviewed reader or staging verb (`cat`, `head`, `tail`, `wc`,
@@ -67,7 +77,45 @@ is admitted after a `cd`, and writes to those files stay refused. The working di
 copy runs. A write-target word with expansion syntax (`$`, backtick, `~`, parentheses or braces) is judged by every
 suffix that follows a slash in it (`$PWD/.cratis/x` and `~+/.cratis/x` are treated as `.cratis/x` in the working
 directory), without parsing the expansion, and refused if a suffix is protected, which includes a read of a protected path through a variable. This is a
-best-effort lexical check, not enforcement: a variable holding the whole path still passes.
+best-effort lexical check, not enforcement: a variable holding the whole path still passes for ordinary commands.
+A separate destructive-operand scan refuses removal, move sources, `find -delete` and `git clean` operands
+that reach protected controls or their ancestors. Literal cwd changes are resolved:
+`cd node_modules && rm -rf .` is allowed when that directory contains no controls; an uncertain cwd or
+unresolved destructive operand is refused only after a destructive operation is identified.
+
+Command positions are exposed only by assignments and these established execution prefixes:
+`sudo`, `doas`, `env`, `command`, `builtin`, `exec`, `nohup`, `nice`, `ionice`, `timeout`, `time`,
+`stdbuf`, `xargs`, `setsid`, `chroot`, `nsenter`, and `busybox`. The scan also handles `eval`, literal
+`sh`/`bash`/`dash`/`zsh`/`ksh`/`ash` scripts (`-c`, including option arguments), `find` actions
+(`-exec`, `-execdir`, `-ok`, `-okdir`, `-delete`), and Git global options before `clean` (including
+value-taking `--attr-source`, `--config-env`, and legacy `--super-prefix`). `env -S`/`--split-string`
+values are split into argv (whitespace, quotes and supported escapes), never parsed as shell source;
+argument punctuation remains data. Unsupported split-string shapes use the uncertainty rule below.
+Every wrapper uses the same argv dispatch, retaining the original command's redirections, heredoc
+bodies and inherited pipeline input through nested prefixes and split strings. Destructive `xargs`
+executions have unresolved stdin operands even with replacement strings or safe literal operands.
+Literal shell stdin from here-strings, heredocs, and `echo`, simple `printf`, or `cat` pipelines is
+inspected, including shells selecting `-`, `/dev/stdin`, `/dev/fd/0`, or `/proc/self/fd/0`. Input
+redirections are applied in order: fd-0 aliases retain inherited data, `/dev/null` or other opaque
+files replace it, and nonzero input descriptors do not replace stdin. Arbitrary file contents are not read.
+Only stdout that still feeds the pipeline is propagated; `|&` is a pipe operator with a conservative
+merged-descriptor route. Effective non-interactive `-n`/`-o noexec` scripts are not executed. Calling-shell substitutions are still inspected, including for syntax-only
+shells. Ordinary reader data, comments, and properly terminated non-executed heredoc bodies remain data.
+Arithmetic shifts are not heredoc redirections. Unquoted heredoc substitutions are checked accordingly.
+
+An unclassified execution boundary uses one uncertainty rule: refuse when its remaining executable text
+contains destructive-verb, Git-clean, or find-delete evidence; otherwise allow. This includes nesting
+beyond four recursive script levels, unterminated or ambiguous heredocs/arithmetic, and unknown option
+value shapes. Known heredoc bodies are removed from the depth fallback unless selected as shell stdin.
+
+This guard is cooperative, not a sandbox. Arbitrary wrappers, script files, interpreter programs, and
+unknown-program arguments are not inspected; for example, `unknown-program rm -rf .` is allowed.
+Expansion-produced verbs (`r=rm; $r -rf .`), dynamic stdin scripts,
+filesystem changes earlier in the command (including newly created symlinks), and `CDPATH`
+effects remain limitations. Tools outside the destructive verb set (such as `rsync --delete`,
+`tar --remove-files`, `zip -m`, and interpreter one-liners) are not covered. No command text is executed
+by the guard. The separate existing reference/readonly and secrets checks still apply.
+Run `cratis ai update` to receive this protection.
 
 Git reflog selectors with unprotected prefixes (`stash@{0}`, `HEAD@{1}`, `branch@{upstream}`) are revisions, not paths.
 
@@ -327,7 +375,8 @@ for protected references, including nested strings, heredoc bodies and option va
 removes simple quoting/escapes, checks case-insensitive spellings, and asks the write guard's
 `--references` batch mode to classify candidate paths relative to the hook cwd. Original
 spellings are retained too so existing generated headers can be checked on case-sensitive
-filesystems. Glob/bracket patterns are checked against that same policy; brace patterns
+filesystems. The lowercase alias of a path is dropped only where the original path exists and its
+lowercase spelling provably does not (a case-sensitive lookup); any doubt keeps it. Glob/bracket patterns are checked against that same policy; brace patterns
 are conservative. A directory containing owned controls/managed paths also counts, such as
 `.claude`, `.pi/extensions` or installed `.cratis/ai`; no second tree list lives in the shell
 guard. Other trees, including `.github/workflows`, count only if the write policy protects them.
@@ -351,15 +400,15 @@ arguments are operands. A lone `-` is a stdin operand. Value-free short flags ma
 | `wc` | `-l -w -c -m` |
 | `ls` | `-l -a -A -1 -h -d -R -t -r -F` |
 | `df` | `-h` |
-| `rg` | `-n -l -i`, `--files`; literal `--glob`/`-g` filters |
+| `rg` | `-n -l -i`, `--files`; literal `--glob`/`-g` filters; with an explicit `--no-config` option only: `-A N -B N -C N -m N` (digits), `-t NAME -T NAME` (alphanumeric), `-S -o -s -I -N` (also in short-flag groups). No `--hidden`, `--no-ignore` or `--iglob` |
 | `grep`, `egrep`, `fgrep` | `-n -i -r -R -l -L -c -v -w -x -F -E -H -h -o -q -s`; `-e PATTERN`, `-A N`, `-B N`, `-C N`; `--include=PATTERN`, `--exclude=PATTERN` or a separate literal pattern value; a search pattern is still required |
 | `echo` | `-n -e -E` |
 | `printf`, `test`, `[`, `true`, `false`, `pwd` | None (in particular, no `printf -v`) |
 | `git status` | `-s -b --short --porcelain` |
-| `git diff` | `--stat --numstat --name-only --name-status --cached --staged --check -p -U<N> --no-color` |
+| `git diff` | `--stat --numstat --name-only --name-status --cached --staged --check -p -U<N> --no-color`; extra presentation flags remain refused (see #1255 below) |
 | `git log` | `--oneline --stat --name-only -n N -nN -<N> -p --no-color --format=<fmt> --pretty=<fmt> --follow` |
 | `git show` | `--stat --name-only -p --no-color --format=<fmt>` |
-| `git add` | `-A -u -p -v --all`, including path globs for installed prompts |
+| `git add` | `-A -u -p -v --all`; literal named paths, including corpus files, and path globs for installed prompts. No `-f` or `-N`/`--intent-to-add` |
 | `git commit` | `-m MSG`, `--message MSG`, `-mMSG`, `-a`, `-q`; `-F FILE` only for a literal non-protected file; no `--no-verify` |
 | `git blame`, `ls-files`, `rev-parse`, `check-ignore`, `grep` | None |
 | `git branch` | Exactly `--show-current`, or `--list` followed only by literal patterns |
@@ -367,6 +416,38 @@ arguments are operands. A lone `-` is a stdin operand. Value-free short flags ma
 | `cp` | `-r -R -p -a -f -v -n -i -u -T -L -P -H`; `--recursive --force --verbose --no-clobber --archive --no-target-directory`; `-t DIR`, `-tDIR`, `--target-directory DIR`, `--target-directory=DIR` (also in short-flag groups) |
 | `rsync` | `-a -r -v -n -u -z -t -p`; `--archive --recursive --verbose --dry-run --update --compress --times --perms` |
 | `install` | `-c -v -C -p`; `-d` directory operands; `-m MODE`/`-mMODE` (three or four octal digits); the same target-directory forms as `cp` |
+
+### Read-only admissions and deliberate refusals (#1255)
+
+| Case | Decision | Reason | Workaround |
+| --- | --- | --- | --- |
+| 1: extra `git diff` flags | Refused, unchanged | Any `git diff`, including the forms already accepted, can run `diff.external`, `.gitattributes` textconv or the pager, and these flags do not prevent that (reproduced with `-w` and `--shortstat -p`). Keeping them refused limits what is newly accepted; it does not remove that risk. Re-admission needs guard-enforced sanitized configuration, tracked separately. | Use the existing exact option list above. |
+| 1: extra `rg` flags | Narrow admission | Only the numeric context/count, alphanumeric type and short display flags listed above qualify, and only with an actual `--no-config` option disabling environment-selected configuration. A value or operand spelling `--no-config` does not qualify. Hidden/ignored-file expansion and all other new options stay refused. | Add `--no-config`, for example `rg --no-config -n -C 2 'a]*b' .cratis`. |
+| 2: corpus script execution | Named allowlist, unchanged | The two exact entries below are already accepted; other scripts and `cd X && node …` remain refused because a script or another checkout's copy can write protected paths. | Run the exact named invocation from the current checkout without a `cd` prefix. |
+| 3: scratch heredoc mentioning a protected path | Refused, unchanged | The whole command includes its body even when the destination is unprotected; that file could later be executed or sourced. Quoted/unquoted delimiters and append redirects are not exemptions. Stdout-only `cat <<'EOF'` remains accepted. | Use the Write tool for scratch files containing protected text. |
+| 4: glob-like searches and file/test filters | Quoted search patterns and `ls -d Arc*` already accepted; wildcard test filter refused | `rg 'a]*b' .cratis` and `rg -n '^[a-z-]*' Source` (also with `\| sort`) treat the quoted pattern as data; path operands stay checked. `Foo*` can intersect `*.env`, and `dotnet test` compiles, executes code and writes bin/obj: it is not a read-only verb when a protected reference exists. | Use `dotnet test --filter 'FullyQualifiedName~Foo'` or `--filter 'ClassName=…'`; `~` is already a contains-match. With no protected reference the ordinary policy allows it, not a dotnet exemption. |
+| 5: `git add` a named corpus file | Accepted, unchanged | Staging changes the index, not the working-tree content. The Write/Edit guard still protects that content. Chained content writes, `-f`, `-N`, status-variable and push chains remain refused. | Use `git add -- .cratis/ai/skills/s/SKILL.md` with the exact allowed options. |
+
+These options were refused before #1255. This is a closed allowlist, not an admission
+of arbitrary presentation options: `--pre`, `-f`, `--hostname-bin`, `--type-add`, `-z`,
+unknown options and invalid values remain refused. Output redirects to protected paths
+and pipelines to writers remain refused too. The existing protected-reference scan and
+lexer are unchanged; the guard remains best-effort, not a sandbox.
+
+#### Named scripts
+
+Only these exact interpreter/path pairs qualify, with no `./`, variable, glob or
+alternate spelling and no preceding directory change:
+
+- `node .cratis/ai/hooks/scripts/cratis-check-pr.mjs`: `--strict`, and value options
+  `--body-file`, `--label`, `--add-label`, `--remove-label`, `--pr`, `--base`, `--repo`.
+  Values must be nonempty literal words, not start with `-`, and not be globbed.
+- `bash .cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh`: `--dry-run`, `--quiet`,
+  `--no-fetch` only.
+
+This is not permission to run arbitrary corpus scripts: `cratis-check-handoff.mjs`
+and all other scripts remain refused. Redirect destinations and chained commands
+are still checked separately.
 
 The only global Git option exemption is a single separate `-C <dir>` with a literal,
 non-empty directory word not starting with `-`, followed by exactly one of these tails:
@@ -378,6 +459,19 @@ all other global options (`-c`, `--git-dir`, `--work-tree`, `--no-pager`, `--exe
 remain denied. `-C` gives **no protection** from a hostile repository's configuration:
 fsmonitor, hooks, pager and diff/textconv helpers can still run. This is a syntax filter,
 not a repository sandbox.
+
+Known limitations of the same kind (both need control of the local environment or Git
+configuration, which the guard cannot see):
+
+- Plain `rg` forms that were already accepted (`-n`, `-l`, `-i`, `--files`) do not require
+  `--no-config`, so a `RIPGREP_CONFIG_PATH` set in the environment can add options such as
+  `--pre`. Only the flags admitted for #1255 require a literal `--no-config`; requiring it for
+  every `rg` would refuse the most common read-only searches.
+- Already accepted `git diff` forms (for example `-p` or `-U2`) run an inherited
+  `GIT_EXTERNAL_DIFF` program. Controlling the environment already implies code execution,
+  so the guard does not try to detect it.
+- `git add <file>` runs any `filter.<name>.clean` driver defined in Git configuration for a
+  path that `.gitattributes` assigns to that filter.
 Git format values containing `%(` are not accepted. Index/commit operations are deliberate
 allowances, not general shell execution permission. Output-to-file options such as
 `git diff --output=...` are never exempt, even with a non-protected destination on a line
@@ -422,14 +516,23 @@ Other protected classes still apply regardless of a generated header.
 
 ### Dependency-manifest writes
 
-Manifest writes are allowed **silently by default** when Git's `origin` points to
+The policy comes from the **session**, not from the file being written. The session repository is
+`CLAUDE_PROJECT_DIR` (else the checkout that holds the installed hook; in Pi, the working directory
+Pi was started in). Its `.cratis/ai.json` `allowDependencyManifestWrites` decides; without a boolean, manifest
+writes are allowed **silently by default** when that repository's Git `origin` points to
 `github.com/Cratis/<repo>` over HTTPS or SSH (including `git@github.com:Cratis/<repo>.git`;
-host and owner are case-insensitive). The hook resolves the policy repository from the write
-target, resolving relative paths against the tool's working directory, lexically collapsing
-repeated separators, `.` and `..`, then walking up to the nearest existing directory for new
-files. That directory is resolved physically before Git lookup, so symlinked directories use
-the repository they actually point into. Nested directories and linked worktrees work too.
-A missing or non-Cratis origin keeps the block; targets outside any Git repository are blocked. Installed corpus files and selected profiles do **not** prove organization
+host and owner are case-insensitive). A missing or non-Cratis origin keeps the block.
+
+The repository that owns the write target is consulted only to **tighten** the decision. The hook
+resolves it from the target, resolving relative paths against the tool's working directory, lexically
+collapsing repeated separators, `.` and `..`, then walking up to the nearest existing directory for new
+files; that directory is resolved physically before Git lookup, so symlinked directories use the
+repository they actually point into. The write is allowed only if the session policy **and** the target
+repository's own policy (same rule: its setting, else its Cratis origin) both allow it. A target's `true`
+or Cratis origin can never unlock a session that blocks, so an agent-created repository cannot opt itself
+in. A target outside any Git repository is blocked, and so is any session whose repository cannot be
+determined. `.cratis/ai.json` is itself a protected control, so the agent cannot edit the session policy.
+Installed corpus files and selected profiles do **not** prove organization
 ownership: consumer applications can have exactly the same installation and profiles.
 
 Set a repository-owned boolean in `.cratis/ai.json` to override that default in both Claude Code
@@ -440,7 +543,7 @@ and Pi:
 ```
 
 `false` re-enables the manifest block in a Cratis repository; `true` allows manifest writes
-in any repository. Merge this property into the existing configuration. An absent, malformed,
+in any repository, for targets that do not themselves block (see above). Merge this property into the existing configuration. An absent, malformed,
 or non-boolean setting uses the origin-based default. This setting never permits `.env` writes.
 The protected basename list is unchanged; `package.json` is not part of this guard's manifest category.
 

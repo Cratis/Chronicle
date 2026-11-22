@@ -119,6 +119,9 @@ on a design decision, consumer proof, or another repository out.
 After the cut, nothing joins. Late deliveries go into the next candidate.
 Corrections needed to make the frozen candidate pass are not new deliveries;
 rerun the affected required gates for that changed code state.
+A security-fix train is sealed the same way, with no exception for urgency:
+every correction gets its own review of the new head, including the security
+lens, plus gate evidence for that head before the train merges.
 
 Record the cut in one line in the reviewer comment, not the release note:
 `Cut with A and B; C waits for consumer proof.` Keep local

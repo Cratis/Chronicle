@@ -8,6 +8,7 @@ license: MIT
 # Screenplay toolchain
 
 Read [preferred syntax](references/preferred-syntax.md) when writing or reviewing `.play`.
+For agent access read [explicit exposure](references/agent-exposure.md); for portable allowlist export or MCP byte pages read [capability manifest](references/capability-manifest.md).
 
 This skill owns tool selection, verdicts and admission. Modeling method lives in
 `cratis-screenplay-modeling-lifecycle`; syntax lives in the construct skills.

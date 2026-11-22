@@ -193,6 +193,8 @@ Keep `[OnceOnly]` and idempotency. Expected refusals use `Invoke.Command` branch
 in **cratis-arc-command-execution**; handling stops remaining invocations.
 Unhandled refusals and framework failures remain partition failures. Inline operations can run again on reactor retry and do not
 replace durable delivery; see **cratis-arc-command-operation**.
+For a durable provider effect after a command, read [the recipe](references/durable-side-effects.md): hashed named-effect provider key, idempotent call, sent-fact event, retry spec.
+`[ExecuteCommandsAsSystem]` covers returned commands only; manual pipeline calls need `ISystemExecution` — see [reactors.md](../../rules/reactors.md).
 Mixed event-and-command returns and their ordering are owned by the Arc skills.
 
 ## Failure behavior

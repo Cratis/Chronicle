@@ -85,11 +85,12 @@ interface ScriptRun {
  * writes it exists to refuse. Callers decide what to do with `failed`; this function only reports
  * it honestly.
  */
-function runScript(script: string, stdinJson: string, cwd: string, signal?: AbortSignal, args: string[] = []): Promise<ScriptRun> {
+function runScript(script: string, stdinJson: string, cwd: string, signal?: AbortSignal, options: { args?: string[]; env?: NodeJS.ProcessEnv } = {}): Promise<ScriptRun> {
+	const { args = [], env } = options;
 	return new Promise<ScriptRun>((resolve) => {
 		let proc: ReturnType<typeof spawn>;
 		try {
-			proc = spawn("bash", [script, ...args], { cwd, stdio: ["pipe", "pipe", "pipe"] });
+			proc = spawn("bash", [script, ...args], { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
 		} catch (error) {
 			resolve({ code: 127, stdout: "", stderr: String(error), failed: true });
 			return;
@@ -148,9 +149,10 @@ async function runBlockingGuard(
 	subject: string,
 	payload: object,
 	ctx: ToolCallContext,
-	fixTarget = "this guard",
+	options: { fixTarget?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<{ block: true; reason: string } | undefined> {
-	const run = await runScript(script, JSON.stringify(payload), ctx.cwd, ctx.signal);
+	const { fixTarget = "this guard", env } = options;
+	const run = await runScript(script, JSON.stringify(payload), ctx.cwd, ctx.signal, { env });
 	if (run.failed) {
 		return {
 			block: true,
@@ -169,9 +171,10 @@ async function runCommandGuards(
 	guards: Array<[script: string, name: string]>,
 	payload: object,
 	ctx: ToolCallContext,
+	sessionEnv?: (script: string) => NodeJS.ProcessEnv | undefined,
 ): Promise<{ block: true; reason: string } | undefined> {
 	for (const [script, name] of guards.filter(([guard]) => isInstalled(guard))) {
-		const blocked = await runBlockingGuard(script, name, "command", payload, ctx);
+		const blocked = await runBlockingGuard(script, name, "command", payload, ctx, { env: sessionEnv?.(script) });
 		if (blocked) return blocked;
 	}
 	return undefined;
@@ -196,6 +199,7 @@ function isInstalled(script: string): boolean {
 	}
 }
 
+
 export default function (pi: ExtensionAPI) {
 	if (isPackagedExtension && fs.existsSync(path.join(process.cwd(), ".cratis", "ai.manifest.json"))) return;
 	const managedScriptsDir = path.join(process.cwd(), ".cratis", "ai", "hooks", "scripts");
@@ -204,6 +208,13 @@ export default function (pi: ExtensionAPI) {
 	const guardStoreMutations = path.join(scriptsDir, "cratis-guard-store-mutations.sh");
 	const guardSecrets = path.join(scriptsDir, "cratis-guard-secrets.sh");
 	const guardShellWrites = path.join(scriptsDir, "cratis-guard-shell-writes.sh");
+	// The dependency-manifest policy belongs to the session, so the two write guards are told which repository the session
+	// is in. It is fixed here, at start-up, not read from ctx.cwd, which follows the model's own directory changes. The
+	// bundled-script fallback would otherwise resolve to the Pi package. The root is always passed, so a session directory
+	// that is no longer usable makes the guards fail closed instead of falling back to the script's checkout.
+	const sessionRoot = process.cwd();
+	const writeGuardEnv = (script: string): NodeJS.ProcessEnv | undefined =>
+		script === guardWrites || script === guardShellWrites ? { ...process.env, CLAUDE_PROJECT_DIR: sessionRoot } : undefined;
 	const guardPrBody = path.join(scriptsDir, "cratis-guard-pr-body.sh");
 	const patternScan = path.join(scriptsDir, "cratis-pattern-scan.sh");
 	const qualityGate = path.join(scriptsDir, "cratis-quality-gate.sh");
@@ -232,7 +243,7 @@ export default function (pi: ExtensionAPI) {
 			const command = (event as any).input?.command;
 			if (typeof command !== "string" || !command.trim()) return;
 			const payload = { cwd: ctx.cwd, tool_name: "Bash", tool_input: { command } };
-			const blocked = await runCommandGuards([[guardStoreMutations, "cratis-guard-store-mutations"], [guardSecrets, "cratis-guard-secrets"], [guardShellWrites, "cratis-guard-shell-writes"]], payload, ctx);
+			const blocked = await runCommandGuards([[guardStoreMutations, "cratis-guard-store-mutations"], [guardSecrets, "cratis-guard-secrets"], [guardShellWrites, "cratis-guard-shell-writes"]], payload, ctx, writeGuardEnv);
 			if (blocked) return blocked;
 			if (isInstalled(guardPrBody)) {
 				const run = await runScript(guardPrBody, JSON.stringify(payload), ctx.cwd, ctx.signal);
@@ -246,9 +257,9 @@ export default function (pi: ExtensionAPI) {
 		if (!filePath) return;
 		if (!isInstalled(guardWrites)) return; // no guard installed in this repository - nothing to enforce
 		const payload = { cwd: ctx.cwd, tool_input: { file_path: filePath, content, new_string: newString } };
-		// The shared script resolves the write target's Git origin and allowDependencyManifestWrites setting;
-		// keep manifest defaults and generated/.env protection identical to Claude Code.
-		return runBlockingGuard(guardWrites, "cratis-guard-writes", "write", payload, ctx, "write guards");
+		// The shared script takes the manifest policy (allowDependencyManifestWrites, else Git origin) from the session
+		// repository, never the write target; keep that and generated/.env protection identical to Claude Code.
+		return runBlockingGuard(guardWrites, "cratis-guard-writes", "write", payload, ctx, { fixTarget: "write guards", env: writeGuardEnv(guardWrites) });
 	});
 
 	// ── Cleanup of delivered worktrees and branches ──
@@ -258,7 +269,7 @@ export default function (pi: ExtensionAPI) {
 	async function sweepDelivered(hookEvent: "PostToolUse" | "SessionStart", command: string | undefined, cwd: string, signal?: AbortSignal): Promise<string> {
 		if (!isInstalled(cleanupWorktrees)) return "";
 		const payload = JSON.stringify({ hook_event_name: hookEvent, cwd, tool_input: command ? { command } : undefined });
-		const run = await runScript(cleanupWorktrees, payload, cwd, signal, ["--hook"]);
+		const run = await runScript(cleanupWorktrees, payload, cwd, signal, { args: ["--hook"] });
 		if (run.failed) return "cratis-cleanup-worktrees is installed but could not be run, so delivered worktrees were not cleaned up.";
 		try {
 			return JSON.parse(run.stdout)?.hookSpecificOutput?.additionalContext?.trim() ?? run.stderr.trim();
