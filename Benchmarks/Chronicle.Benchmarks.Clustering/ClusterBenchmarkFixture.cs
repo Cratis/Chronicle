@@ -32,7 +32,8 @@ namespace Cratis.Chronicle.Benchmarks.Clustering;
 /// <param name="topology">The <see cref="ClusterTopology"/> to bring up.</param>
 /// <param name="configureDiagnostics">Optional scenario-local service instrumentation.</param>
 /// <param name="includeReplayShape">Whether to register the replay-shape scenario's artifacts.</param>
-public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<IServiceCollection>? configureDiagnostics = null, bool includeReplayShape = false) : IAsyncDisposable
+/// <param name="externalMongoUrl">Optional caller-owned MongoDB instance retained across host replacements.</param>
+public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<IServiceCollection>? configureDiagnostics = null, bool includeReplayShape = false, string? externalMongoUrl = null) : IAsyncDisposable
 {
     /// <summary>
     /// The name of the event store the benchmarks append to.
@@ -69,6 +70,15 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<ISe
         _cluster!.Silos[0].ServiceProvider.GetRequiredService<IGrainFactory>(),
         EventStore1,
         EventStore);
+
+    /// <summary>Gets the services of the current first silo.</summary>
+    internal IServiceProvider Services => _cluster!.Silos[0].ServiceProvider;
+
+    /// <summary>Gets the current host's grain factory.</summary>
+    internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();
+
+    /// <summary>Gets the identity of the current host generation.</summary>
+    internal Guid Generation { get; private set; }
 
     /// <summary>
     /// Gets the naming policy registered for the first silo's in-process client.
@@ -116,14 +126,38 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<ISe
     public async Task Start()
     {
         ClusterRoleAssignment.JobsProperty(new Configuration.ChronicleOptions().Clustering.Roles, topology);
-        _mongoRunner = await MongoRunner.RunAsync(new MongoRunnerOptions { UseSingleNodeReplicaSet = true });
-        await BringUpCluster(_mongoRunner.ConnectionString);
+        if (externalMongoUrl is null)
+        {
+            _mongoRunner = await MongoRunner.RunAsync(new MongoRunnerOptions { UseSingleNodeReplicaSet = true });
+            await BringUpCluster(_mongoRunner.ConnectionString);
+        }
+        else
+        {
+            await BringUpCluster(externalMongoUrl).WaitAsync(_bringUpTimeout);
+        }
         await WarmUp();
+    }
+
+    /// <summary>Replaces a single silo without disposing the caller-owned database or warming target grains.</summary>
+    /// <returns>The bounded host replacement task.</returns>
+    internal async Task Restart()
+    {
+        if (topology != ClusterTopology.SingleSilo) throw new InvalidOperationException("Host replacement requires a single silo.");
+        if (externalMongoUrl is null) throw new InvalidOperationException("Host replacement requires caller-owned MongoDB.");
+        await StopCluster();
+        await BringUpCluster(externalMongoUrl).WaitAsync(_bringUpTimeout);
     }
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
+        // Activation measurements must not turn a failed stop into an apparent successful restart/teardown.
+        if (externalMongoUrl is not null)
+        {
+            await StopCluster();
+            return;
+        }
+
         if (_cluster is not null)
         {
             try
@@ -159,6 +193,14 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<ISe
                 .Select(statistic => (statistic.GrainType, statistic.ActivationCount)));
             return (object)new { Silo = silo.Name, SiloAddress = silo.SiloAddress.ToString(), counts.TotalActivations, counts.ActivationsByGrainType };
         })];
+    }
+
+    async Task StopCluster()
+    {
+        if (_cluster is null) return;
+        await _cluster.StopAllSilosAsync().WaitAsync(_bringUpTimeout);
+        await ((IAsyncDisposable)_cluster).DisposeAsync().AsTask().WaitAsync(_bringUpTimeout);
+        _cluster = null;
     }
 
     async Task BringUpCluster(string mongoUrl)
@@ -218,6 +260,7 @@ public sealed class ClusterBenchmarkFixture(ClusterTopology topology, Action<ISe
             });
 
         _cluster = builder.Build();
+        Generation = Guid.NewGuid();
         await _cluster.DeployAsync();
         await WaitForActiveSilos();
         await KernelBootstrap.Run(_cluster.Silos[0].ServiceProvider, EventStore);

@@ -122,6 +122,78 @@ projection and replay results.
 Both observer benchmarks refuse to run unless their observer is actually subscribed — an unsubscribed
 observer would let the window close on the append alone and quietly report a meaningless number.
 
+### Grain activation (MongoDB; opt-in)
+
+`GrainActivationBenchmark` uses the existing clustering runner and a single in-process silo. It measures
+one real kernel `IEventSequence.GetNextSequenceNumber()` or `IObserver.GetState()` call, not an append,
+catch-up workload, HTTP/gRPC request, or complete startup. Only this suite requires Docker (`mongo:8.2`,
+a single-node replica set); other clustering scenarios retain their existing EphemeralMongo defaults.
+Do not run the local Docker smoke below 27 GiB free disk space.
+
+| Mode | Untimed preparation | Timed operation |
+|---|---|---|
+| `Warm` | Prime and validate the exact target | One read on the same activation |
+| `Cold` | Prime, then await `IManagementGrain.DeactivateGrain` for that exact identity | First read on a new activation, same silo |
+| `PostRestart` | Stop/dispose the silo; deploy a replacement against the same MongoDB; refresh all service/grain references | First read on the replacement silo |
+
+All six method × mode cells use the same fixed dataset shape: ten real `AppendOnlyEvent` events in a
+non-reserved, case-local sequence, plus a separate observer identity with a real persisted definition
+and state (handled count 10, checkpoint 9, next position 10). The observer is disconnected, has no event
+types/subscription, replay or failures, and is not a discoverable client artifact. This exercises the
+actual definition/state storage providers, not the missing-observer fast path or a substitute grain.
+No data is re-seeded after restart. Identities remain fixed within each case.
+
+Provisioning, registration, seeding, priming, readiness, deactivation, host replacement, durability
+checks, evidence and teardown are outside timing. Each invocation performs exactly one read and retains
+its result; the timed task wrapper also enforces a 30-second call deadline. Cleanup checks the returned
+position/checkpoint and durable records. Benchmark-local Orleans context diagnostics reject eager target
+activation before cold/restart timing, require a stable warm activation, exactly one new cold/restart
+activation and a changed host generation after restart. Preparation and teardown failures are recorded
+and propagated, never dropped as outliers.
+
+**PostRestart is a post-crash proxy (silo restart), not a real process crash.** Stop is graceful and may
+flush state. These are idle, already-persisted records; interrupted writes, SIGKILL/crash consistency and
+total restart time are not measured. Same-process JIT/static caches and MongoDB/page caches survive.
+Shared-runner contention also affects results: compare the six cells within a controlled hosted run,
+not against arbitrary workstation timings. No regression threshold is imposed.
+
+From the repository root, build separately, then run the correctness-only six-case BDN Dry smoke:
+
+```bash
+project=Benchmarks/Chronicle.Benchmarks.Clustering/Chronicle.Benchmarks.Clustering.csproj
+dotnet build "$project" -c Release -warnaserror -p:DisableDockerBuild=true -p:CratisProxiesSkip=true -p:CratisProxiesOutputPath=
+export ACTIVATION_ARTIFACTS="$PWD/.ai-work/6045/smoke"
+dotnet run --project "$project" -c Release --no-build -- --filter '*GrainActivationBenchmark*' \
+  --job Dry --invocationCount 1 --unrollFactor 1 --exporters json markdown --artifacts "$ACTIVATION_ARTIFACTS"
+```
+
+For a hosted baseline, use the same built project with these CLI-only counts (no fixed attribute job
+is added, so Dry selects only Dry rather than adding a second job):
+
+```bash
+export ACTIVATION_ARTIFACTS="$PWD/.ai-work/6045/baseline"
+dotnet run --project "$project" -c Release --no-build -- --filter '*GrainActivationBenchmark*' \
+  --launchCount 1 --warmupCount 3 --iterationCount 20 --invocationCount 1 --unrollFactor 1 \
+  --exporters json markdown --artifacts "$ACTIVATION_ARTIFACTS"
+```
+
+The dedicated **Grain activation benchmarks** workflow is `workflow_dispatch` only, with `smoke` and
+`baseline` modes on GitHub-hosted Ubuntu. It builds Release with warnings as errors, requires all six
+successful JSON result cells and matching lifecycle evidence, and writes a Markdown step summary.
+A switcher exit code or artifact directory alone does not prove success. Local runs must likewise be
+checked for six successful cells and lifecycle validation; local numbers are functional evidence only.
+The workflow retains full BenchmarkDotNet JSON/Markdown/logs, `lifecycle/*.jsonl`, command, SHA and
+runtime/Orleans/MongoDB versions for 30 days, including diagnostics on failure. Each successful lifecycle
+record contains the exact grain identity, before/after activation counts and IDs, host generations and
+validated seed/result markers. Failures, including stop/disposal errors, are retained as failure records.
+Existing `benchmarks.yml`/`run.sh` do not execute this clustering suite; Storage has its own workflow.
+
+**SQL extension is deferred.** [#6031](https://github.com/Cratis/Chronicle/issues/6031) already isolates
+activation-related storage reads across providers. Wiring SQL into the full clustering kernel would add
+provider/bootstrap/lifecycle work without isolating Orleans activation overhead more clearly. Revisit
+only if MongoDB results show storage-dominated activation or a SQL-specific activation regression needs
+end-to-end reproduction; these results make no cross-provider equivalence claim.
+
 ### LargeBatchAppendBenchmark
 
 `LargeBatchAppendBenchmark` measures one large `AppendMany` against a single in-process silo — the
