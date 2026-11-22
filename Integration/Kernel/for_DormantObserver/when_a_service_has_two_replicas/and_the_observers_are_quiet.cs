@@ -44,8 +44,12 @@ public class and_the_observers_are_quiet(context context) : Given<context>(conte
             await WaitForHandled(ReplicaReactor.Handled, 1);
         }
 
-        // The replica registers the definition that has one event type more; it is the one that holds the subscription once the
-        // observer has it, and the first client is then the standby.
+        /// <summary>
+        /// The replica registers the definition that has one event type more; it is the one that holds the subscription once the
+        /// observer has it, and the first client is then the standby.
+        /// </summary>
+        /// <returns>A task that completes when the replica holds the subscription.</returns>
+        /// <exception cref="TimeoutException">The replica never took over the subscription.</exception>
         async Task WaitUntilTheReplicaHoldsTheSubscription()
         {
             var observer = Services.GetRequiredService<IGrainFactory>().GetGrain<Cratis.Chronicle.Observation.IObserver>(new Concepts.Observation.ObserverKey(_handler.Id.Value, _store.Name.Value, Concepts.EventStoreNamespaceName.Default, Concepts.EventSequences.EventSequenceId.Log));
