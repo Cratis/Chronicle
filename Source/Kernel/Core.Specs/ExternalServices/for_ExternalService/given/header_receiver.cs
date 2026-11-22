@@ -9,7 +9,7 @@ public class header_receiver : HttpMessageHandler
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Headers = request.Headers.ToDictionary(_ => _.Key, _ => string.Join(",", _.Value));
+        Headers = request.Headers.ToDictionary(_ => _.Key, _ => string.Join(',', _.Value));
         return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
     }
 }

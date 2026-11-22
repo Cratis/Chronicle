@@ -16,7 +16,7 @@ public class with_header_metadata : given.webhook_query_responses
     async Task Because() => _definition = (await _webhooks.GetAll()).Single();
 
     [Fact] void should_keep_the_names() => _definition.Target.Headers.Keys.ShouldContainOnly("x-key", "x-empty");
-    [Fact] void should_discard_legacy_values() => _definition.Target.Headers.Values.All(_ => _ == string.Empty).ShouldBeTrue();
+    [Fact] void should_discard_legacy_values() => _definition.Target.Headers.Values.All(_ => _.Length == 0).ShouldBeTrue();
     [Fact] void should_copy_the_presence_metadata() => _definition.Target.HeaderValuesSet["x-key"].ShouldBeTrue();
     [Fact] void should_copy_the_empty_value_metadata() => _definition.Target.HeaderValuesSet["x-empty"].ShouldBeFalse();
     [Fact] void should_not_expose_values_in_json() => JsonSerializer.Serialize(new { _definition.Target.Headers, _definition.Target.HeaderValuesSet }).ShouldNotContain("synthetic-legacy-value");

@@ -25,7 +25,11 @@ public class stored_headers : Specification
 
     void Establish()
     {
-        _definition = new("webhook", WebhookOwner.Client, EventSequenceId.Log, [],
+        _definition = new(
+            "webhook",
+            WebhookOwner.Client,
+            EventSequenceId.Log,
+            [],
             new("https://example.com", new BearerTokenAuthorization("synthetic-authorization"), _headers));
         _storage = Substitute.For<IStorage>();
         var definitions = Substitute.For<IWebhookDefinitionsStorage>();

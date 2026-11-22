@@ -21,7 +21,7 @@ public class when_observing_with_custom_headers : given.stored_headers
     }
 
     [Fact] void should_emit_both_populated_updates() => _results.Count.ShouldEqual(2);
-    [Fact] void should_redact_every_emission() => _results.SelectMany(_ => _.Headers.Values).All(_ => _ == string.Empty).ShouldBeTrue();
+    [Fact] void should_redact_every_emission() => _results.SelectMany(_ => _.Headers.Values).All(_ => _.Length == 0).ShouldBeTrue();
     [Fact] void should_exclude_all_values_from_json() => JsonSerializer.Serialize(_results).ShouldNotContain("synthetic-");
     [Fact] void should_keep_the_initial_names_snapshot() => _results[0].HeaderValuesSet.Keys.ShouldContainOnly("x-first", "x-second", "x-empty", "x-whitespace");
     [Fact] void should_keep_the_initial_empty_flag() => _results[0].HeaderValuesSet["x-empty"].ShouldBeFalse();

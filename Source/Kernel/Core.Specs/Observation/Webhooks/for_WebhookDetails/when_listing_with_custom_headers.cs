@@ -12,7 +12,7 @@ public class when_listing_with_custom_headers : given.stored_headers
     async Task Because() => _result = (await WebhookDetails.GetWebhooks("store", _storage)).Single();
 
     [Fact] void should_keep_the_names() => _result.Headers.Keys.ShouldContainOnly("x-first", "x-second", "x-empty", "x-whitespace");
-    [Fact] void should_redact_all_legacy_values() => _result.Headers.Values.All(_ => _ == string.Empty).ShouldBeTrue();
+    [Fact] void should_redact_all_legacy_values() => _result.Headers.Values.All(_ => _.Length == 0).ShouldBeTrue();
     [Fact] void should_include_all_presence_flags() => _result.HeaderValuesSet.Keys.ShouldContainOnly(_headers.Keys);
     [Fact] void should_report_the_first_value_as_set() => _result.HeaderValuesSet["x-first"].ShouldBeTrue();
     [Fact] void should_report_the_second_value_as_set() => _result.HeaderValuesSet["x-second"].ShouldBeTrue();
