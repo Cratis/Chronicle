@@ -596,7 +596,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
         catch (SqlException error) when (error.Number == -2)
         {
             var diagnostics = await MsSqlWipeBlockerDiagnostics(connectionString, sessionId);
-            throw new TimeoutException($"SQL Server storage wipe timed out in database '{conn.Database}' (session {sessionId}). {diagnostics}", error);
+            throw new SqlServerStorageWipeTimedOut(conn.Database, sessionId, diagnostics, error);
         }
         timing?.Success();
     }
