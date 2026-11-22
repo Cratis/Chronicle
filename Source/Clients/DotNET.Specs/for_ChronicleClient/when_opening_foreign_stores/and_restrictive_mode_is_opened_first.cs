@@ -19,5 +19,5 @@ public class and_restrictive_mode_is_opened_first : when_opening_namespace_store
     [Fact] void should_separate_modes() => _restricted.ShouldNotBeSame(_inline);
     [Fact] void should_preserve_restrictive_handle() => _cached.ShouldBeSame(_restricted);
     [Fact] void should_share_transport() => _restricted.Connection.ShouldBeSame(_inline.Connection);
-    [Fact] void should_still_seed_inline_handle() => _requests.Count.ShouldEqual(1);
+    [Fact] void should_still_seed_inline_handle() => _requests.Count(_ => _.GlobalByEventSource.Any()).ShouldEqual(1);
 }

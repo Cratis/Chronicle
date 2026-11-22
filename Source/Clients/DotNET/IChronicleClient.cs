@@ -55,8 +55,11 @@ public interface IChronicleClient
     /// <see cref="RegistrationMode.AtDeployment"/> performs no automatic kernel registration or provisioning; the owner must provide these.
     /// Both modes retain local discovery and serialization. Neither enables <see cref="ChronicleOptions.AutoDiscoverAndRegister"/> when disabled,
     /// nor restricts explicit artifact API calls made by the caller. Different modes produce separate handles sharing the same connection.
+    /// Implementations that do not support per-store registration modes throw rather than ignore the requested mode.
     /// </remarks>
-    Task<IEventStore> GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace, RegistrationMode registrationMode);
+    /// <exception cref="NotSupportedException">The client implementation does not support per-store registration modes.</exception>
+    Task<IEventStore> GetEventStore(EventStoreName name, EventStoreNamespaceName? @namespace, RegistrationMode registrationMode) =>
+        throw new NotSupportedException("Per-store registration modes are not supported by this client.");
 
     /// <summary>
     /// List all the event stores.

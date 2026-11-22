@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Sequences;
 using Cratis.Chronicle.EventSequences;
 
@@ -12,11 +13,16 @@ public class and_appending_to_the_foreign_outbox : given.a_client_with_an_own_st
     AppendRequest _append;
     AppendResult _result;
 
-    void Establish() => _services.Sequences.Append(Arg.Any<AppendRequest>()).Returns(call =>
+    void Establish()
     {
-        _append = call.Arg<AppendRequest>();
-        return new CommandResult<AppendResponse> { Response = new() { IsSuccess = true, SequenceNumber = 42 } };
-    });
+        _services.Sequences.TailSequenceNumber(Arg.Any<TailSequenceNumberRequest>())
+            .Returns(QueryResult<EventSequenceTailResponse>.Success(Guid.NewGuid(), new() { SequenceNumber = 41 }));
+        _services.Sequences.Append(Arg.Any<AppendRequest>()).Returns(call =>
+        {
+            _append = call.Arg<AppendRequest>();
+            return new CommandResult<AppendResponse> { Response = new() { IsSuccess = true, SequenceNumber = 42 } };
+        });
+    }
 
     async Task Because()
     {

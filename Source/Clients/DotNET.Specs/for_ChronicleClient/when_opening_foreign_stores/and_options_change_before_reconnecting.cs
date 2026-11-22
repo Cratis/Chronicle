@@ -22,7 +22,7 @@ public class and_options_change_before_reconnecting : given.a_client_with_an_own
     }
 
     [Fact] void should_keep_foreign_store_restricted() => _services.ReadModels.Received(1).RegisterMany(Arg.Is<RegisterManyRequest>(_ => _.EventStore == "own"));
-    [Fact] void should_keep_own_store_inline() => _requests.Count(_ => _.EventStore == "own").ShouldEqual(2);
+    [Fact] void should_keep_own_store_inline() => _requests.Count(_ => _.EventStore == "own" && _.GlobalByEventSource.Any()).ShouldEqual(2);
     [Fact] void should_not_seed_foreign_store() => _requests.Exists(_ => _.EventStore == "foreign").ShouldBeFalse();
     [Fact] void should_register_event_types_on_both_handles() => _services.EventTypes.ReceivedCalls().Count().ShouldEqual(3);
 }
