@@ -34,6 +34,7 @@ internal static class PlanCapture
             await Capture(plans.Capture, prefix + "type-filtered", async () => await FirstPage(await storage.GetRange(0, (ulong)(size - 1), eventTypes: [BenchmarkEvents.Selected])));
             await Capture(plans.Capture, prefix + "tail", async () => await storage.GetTailSequenceNumber());
             await Capture(plans.Capture, prefix + "tail-per-type", async () => await storage.GetTailSequenceNumbersForEventTypes([BenchmarkEvents.Selected, BenchmarkEvents.Other]));
+            await CaptureSequenceReads(plans.Capture, storage, size, prefix);
             var results = new List<(string Label, string Sql, string Plan)>();
             var queries = plans.Capture.Queries.Where(_ => _.Key.StartsWith(prefix, StringComparison.Ordinal)).OrderBy(_ => _.Key, StringComparer.Ordinal).ToArray();
             foreach (var (key, query) in queries)
@@ -54,6 +55,19 @@ internal static class PlanCapture
         }
 
         return true;
+    }
+
+    static async Task CaptureSequenceReads(QueryCapture capture, IEventSequenceStorage storage, int size, string prefix)
+    {
+        var middle = (ulong)(size / 2);
+        var last = (ulong)(size - 1);
+        await Capture(capture, prefix + "source-filtered", async () => await FirstPage(await storage.GetRange(0, last, eventSourceId: BenchmarkEvents.SourceAt(0))));
+        await Capture(capture, prefix + "source-type-filtered", async () => await FirstPage(await storage.GetRange(0, last, eventSourceId: BenchmarkEvents.SourceAt(0), eventTypes: [BenchmarkEvents.Selected])));
+        await Capture(capture, prefix + "head", async () => await storage.GetHeadSequenceNumber());
+        await Capture(capture, prefix + "next", async () => await storage.GetNextSequenceNumberGreaterOrEqualThan(middle));
+        await Capture(capture, prefix + "metadata", async () => await storage.GetMetadataAt([0, middle, last]));
+        await Capture(capture, prefix + "count", async () => await storage.GetCount());
+        await Capture(capture, prefix + "parent-predecessor", async () => await storage.GetInstancesOfAnyInRange([BenchmarkEvents.SourceAt(0)], [BenchmarkEvents.Selected.Id], middle, last));
     }
 
     static async Task Capture(QueryCapture capture, string label, Func<Task> work)
