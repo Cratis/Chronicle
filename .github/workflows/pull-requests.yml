@@ -68,20 +68,25 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
           registry-url: "https://registry.npmjs.org"
 
-      # Saved on main by workbench-yarn-cache.yml using the same shared action and package path.
-      - name: Restore Yarn packages
-        uses: Cratis/Workflows/.github/actions/yarn-cache@main
+      # Saved on main by workbench-yarn-cache.yml; keep the path and key identical to that workflow.
+      - uses: actions/cache/restore@v4
         id: yarn-cache
         with:
-          working-directory: Source/Workbench
-          path: Source/Workbench/.yarn/cache
-          mode: restore
+          path: |
+            **/node_modules
+            **/.eslintcache
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
 
       - name: Yarn install
         working-directory: ./Source/Workbench

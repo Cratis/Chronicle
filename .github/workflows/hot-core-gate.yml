@@ -171,9 +171,12 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+        uses: actions/cache@v4
         with:
-          mode: restore
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
 
       - name: Restore obj cache
         uses: actions/cache@v4
