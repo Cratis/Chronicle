@@ -1086,6 +1086,28 @@ orleans Cratis.Chronicle.Observation.Jobs.HandledEventsReport
   [Id(1)] Counts: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId,Cratis.Chronicle.Concepts.Events.EventCount>
   [Id(2)] ReportedBy: Cratis.Choreography.Jobs.JobStepId
   [Id(3)] HandledUpTo: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+enum Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand : int
+  Replay = 0
+  RetryFailedPartitions = 1
+orleans [Alias("Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandRequest")] Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandRequest
+  [Id(0,Level=0,Constructor=true)] ObserverKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
+  [Id(1,Level=0,Constructor=true)] Command: Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand
+json Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandStepState
+  attempt: int
+  command: Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand
+  eventSequenceId: string
+  eventStore: string
+  id: Cratis.Choreography.Jobs.JobStepIdentifier
+  isPrepared: bool
+  lease: Cratis.Choreography.Storage.Jobs.JobStepLease
+  name: Cratis.Choreography.Jobs.JobStepName
+  namespace: string
+  observerId: string
+  progress: Cratis.Choreography.Jobs.JobStepProgress
+  stage: Cratis.Choreography.Jobs.Stages.JobStepStage
+  status: Cratis.Choreography.Jobs.JobStepStatus
+  statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>
+  type: Cratis.Choreography.Jobs.JobStepType
 orleans [Alias("Cratis.Chronicle.Observation.Jobs.ReplayObserverPartitionRequest")] Cratis.Chronicle.Observation.Jobs.ReplayObserverPartitionRequest
   [Id(6)] ReplaysAllEventTypes: bool
   [Id(7)] HeldBackFrom: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
@@ -1239,6 +1261,14 @@ orleans Cratis.Chronicle.Projections.SingleReadModelProjectionState
   [Id(2)] IsInitialized: bool
 custom Cratis.Chronicle.Properties.ArrayIndexers
 custom Cratis.Chronicle.Properties.PropertyPath
+orleans Cratis.Chronicle.Registrations.RegistrationAcceptance
+  [Id(0)] Revision: long
+  [Id(1)] State: Cratis.Chronicle.Storage.Registrations.RegistrationIntentState
+orleans Cratis.Chronicle.Registrations.RegistrationStatus
+  [Id(0)] State: Cratis.Chronicle.Storage.Registrations.RegistrationIntentState
+  [Id(1)] Revision: long
+  [Id(2)] AppliedRevision: long
+  [Id(3)] Failure: string
 custom Cratis.Chronicle.Schemas.JsonSchema
 orleans Cratis.Chronicle.Security.ConfiguredGrant
   [Id(0)] Holder: Cratis.Chronicle.Security.PrincipalKey
@@ -1529,6 +1559,12 @@ orleans [Alias("Cratis.Chronicle.Storage.ReadModels.ReplayContext")] Cratis.Chro
   [Id(1,Level=0,Constructor=true)] ContainerName: Cratis.Chronicle.Concepts.ReadModels.ReadModelContainerName
   [Id(2,Level=0,Constructor=true)] RevertContainerName: Cratis.Chronicle.Concepts.ReadModels.ReadModelContainerName
   [Id(3,Level=0,Constructor=true)] Started: System.DateTimeOffset
+enum Cratis.Chronicle.Storage.Registrations.RegistrationIntentState : int
+  Applied = 1
+  Failed = 2
+  Pending = 0
+enum Cratis.Chronicle.Storage.Registrations.RegistrationKind : int
+  Projections = 0
 orleans [Alias("Cratis.Chronicle.Storage.Seeding.EventSeeds")] Cratis.Chronicle.Storage.Seeding.EventSeeds
   [Id(0,Level=0,Constructor=true)] ByEventType: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId,System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Seeding.SeededEventEntry>>
   [Id(1,Level=0,Constructor=true)] ByEventSource: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventSourceId,System.Collections.Generic.IEnumerable<Cratis.Chronicle.Storage.Seeding.SeededEventEntry>>
