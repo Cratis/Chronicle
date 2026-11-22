@@ -48,7 +48,7 @@ public partial class when_running_the_sqlite_contract : given.a_sqlite_v2_storag
         (await _storage.Save(_owner, PerValue, 10, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
         var names = await Catalog();
         names.Length.ShouldBeGreaterThan(before.Length);
-        names.Where(name => name.Contains("CREATE TABLE", StringComparison.Ordinal)).Count().ShouldEqual(4);
+        names.Count(name => name.Contains("CREATE TABLE", StringComparison.Ordinal)).ShouldEqual(4);
         await ShouldRetainClaim();
     }
 

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2;
 
 [Collection(PostgreSqlCollection.Name)]
-public class when_running_the_postgresql_contract(PostgreSqlFixture fixture) : given.a_sql_v2_storage
+public class when_running_the_postgresql_contract(PostgreSqlFixture fixture) : UniqueConstraintsStorageV2SqlContract
 {
     protected override Task<string> CreateDatabase() => fixture.CreateDatabase();
 

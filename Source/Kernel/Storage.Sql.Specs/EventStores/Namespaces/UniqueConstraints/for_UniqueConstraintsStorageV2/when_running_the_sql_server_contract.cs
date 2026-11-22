@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2;
 
 [Collection(SqlServerCollection.Name)]
-public class when_running_the_sql_server_contract(SqlServerFixture fixture) : given.a_sql_v2_storage
+public class when_running_the_sql_server_contract(SqlServerFixture fixture) : UniqueConstraintsStorageV2SqlContract
 {
     protected override bool OwnerSpacesEqual => true;
 

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2.given;
 
-public abstract class a_sqlite_v2_storage : a_sql_v2_storage
+public abstract class a_sqlite_v2_storage : UniqueConstraintsStorageV2SqlContract
 {
     string _directory;
 
@@ -37,20 +37,12 @@ public abstract class a_sqlite_v2_storage : a_sql_v2_storage
         return rows.ToArray();
     }
 
-    protected async Task Execute(string sql, params (string Name, object Value)[] parameters)
+    protected async Task Execute(Action<SqliteCommand> configure)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        command.CommandText = sql;
-        foreach (var (name, value) in parameters)
-        {
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = name;
-            parameter.Value = value;
-            command.Parameters.Add(parameter);
-        }
-
+        configure(command);
         await command.ExecuteNonQueryAsync();
     }
 }

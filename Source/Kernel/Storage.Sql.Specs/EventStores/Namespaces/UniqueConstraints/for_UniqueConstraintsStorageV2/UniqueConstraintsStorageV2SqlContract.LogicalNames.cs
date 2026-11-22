@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2.given;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2;
 
-public abstract partial class a_sql_v2_storage
+public abstract partial class UniqueConstraintsStorageV2SqlContract
 {
     [Fact]
     public async Task should_isolate_case_and_padding_distinct_sequences()

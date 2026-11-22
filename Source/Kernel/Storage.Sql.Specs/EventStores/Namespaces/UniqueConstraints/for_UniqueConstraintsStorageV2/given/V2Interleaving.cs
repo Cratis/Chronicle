@@ -36,7 +36,7 @@ public class V2Interleaving : DbTransactionInterceptor
         _transitionFirst = transitionFirst;
         _enabled = true;
         var writer = Task.Run(mutation);
-        Task switching = Task.CompletedTask;
+        var switching = Task.CompletedTask;
         try
         {
             await _paused.Task.WaitAsync(TimeSpan.FromSeconds(30));

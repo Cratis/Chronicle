@@ -6,13 +6,13 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.V2;
 using Cratis.Monads;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2.given;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2;
 
-public abstract partial class a_sql_v2_storage : UniqueConstraintsStorageV2Contract
+public abstract partial class UniqueConstraintsStorageV2SqlContract : UniqueConstraintsStorageV2Contract
 {
     protected string _connectionString;
     protected int _optionsCreated;
-    readonly V2Interleaving _interleaving = new();
+    readonly given.V2Interleaving _interleaving = new();
 
     protected abstract Task<string> CreateDatabase();
 

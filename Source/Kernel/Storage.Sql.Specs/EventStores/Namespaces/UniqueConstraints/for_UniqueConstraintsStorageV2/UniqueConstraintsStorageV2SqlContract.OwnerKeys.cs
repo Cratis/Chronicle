@@ -5,9 +5,9 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Events.Constraints.V2;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.V2;
 
-namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2.given;
+namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorageV2;
 
-public abstract partial class a_sql_v2_storage
+public abstract partial class UniqueConstraintsStorageV2SqlContract
 {
     protected virtual bool OwnerSpacesEqual => false;
 

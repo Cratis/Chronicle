@@ -26,7 +26,11 @@ public partial class when_running_the_sqlite_contract
     public async Task should_fail_closed_on_a_logical_binding_mismatch()
     {
         await Seed();
-        await Execute("UPDATE UniqueConstraintBindingsV2 SET \"Sequence\" = @wrong", ("wrong", "another-sequence"));
+        await Execute(command =>
+        {
+            command.CommandText = "UPDATE UniqueConstraintBindingsV2 SET \"Sequence\" = @wrong";
+            command.Parameters.AddWithValue("@wrong", "another-sequence");
+        });
         await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.GetFor(_owner, _definition, _scope));
         await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.Save(_owner, _definition, 11, _otherValue, _scope, _authority));
     }
@@ -35,7 +39,11 @@ public partial class when_running_the_sqlite_contract
     public async Task should_fail_closed_on_a_physical_binding_mismatch()
     {
         await Seed();
-        await Execute("UPDATE UniqueConstraintBindingsV2 SET \"Table\" = @wrong", ("wrong", "arbitrary_table"));
+        await Execute(command =>
+        {
+            command.CommandText = "UPDATE UniqueConstraintBindingsV2 SET \"Table\" = @wrong";
+            command.Parameters.AddWithValue("@wrong", "arbitrary_table");
+        });
         await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.GetFor(_owner, _definition, _scope));
         await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.Save(_owner, _definition, 11, _otherValue, _scope, _authority));
     }
@@ -45,7 +53,7 @@ public partial class when_running_the_sqlite_contract
     {
         await Seed();
         var before = await Catalog();
-        await Execute("DELETE FROM UniqueConstraintBindingsV2");
+        await Execute(command => command.CommandText = "DELETE FROM UniqueConstraintBindingsV2");
         await Assert.ThrowsAsync<UniqueConstraintV2SchemaMismatch>(() => _storage.Save(_owner, _definition, 11, _otherValue, _scope, _authority));
         (await Catalog()).SequenceEqual(before).ShouldBeTrue();
     }
@@ -54,11 +62,11 @@ public partial class when_running_the_sqlite_contract
     public async Task should_roll_back_table_creation_when_binding_publication_fails_and_allow_retry()
     {
         await Initialize();
-        await Execute("CREATE TRIGGER refuse_binding BEFORE INSERT ON UniqueConstraintBindingsV2 BEGIN SELECT RAISE(ABORT, 'injected binding failure'); END");
+        await Execute(command => command.CommandText = "CREATE TRIGGER refuse_binding BEFORE INSERT ON UniqueConstraintBindingsV2 BEGIN SELECT RAISE(ABORT, 'injected binding failure'); END");
         var before = await Catalog();
         await Assert.ThrowsAsync<SqliteException>(() => _storage.Save(_owner, _definition, 10, _value, _scope, _authority));
         (await Catalog()).SequenceEqual(before).ShouldBeTrue();
-        await Execute("DROP TRIGGER refuse_binding");
+        await Execute(command => command.CommandText = "DROP TRIGGER refuse_binding");
         _storage = await ReopenStorage();
         (await _storage.Save(_owner, _definition, 10, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
         await ShouldRetainClaim();
