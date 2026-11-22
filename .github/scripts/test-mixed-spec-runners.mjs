@@ -405,7 +405,7 @@ test('producer API validates each exact-name pagination count before combining a
     const context = { ...retryContext, runAttempt: '1' };
     const endpoints = producerEndpoints(producerFixture());
     endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'][0].total_count = 2;
-    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), /Missing\/duplicated artifacts API pages/);
+    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), /Incomplete producer API pagination: artifacts/);
 });
 test('producer API still names invalid producer artifact ids', async () => {
     const context = { ...retryContext, runAttempt: '1' };
