@@ -44,6 +44,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # The RollingUpgrade lane is skipped when the release it upgrades from is waived as a stop-start release,
+          # which needs the release tags that are ancestors of this build.
+          fetch-depth: 0
 
       # The generator decides what every run actually verifies, so a silent
       # change in its selection is a silent change in coverage. Its specs cost a
