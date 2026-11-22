@@ -24,5 +24,10 @@ internal sealed class InProcessConnectionOwnership : KernelCore::Cratis.Chronicl
     }
 
     /// <inheritdoc/>
+    public void Revoke(KernelConnectionId connectionId, KernelConnectionOwner owner)
+    {
+    }
+
+    /// <inheritdoc/>
     public bool IsOwnedBy(string connectionId, KernelConnectionOwner owner) => true;
 }
