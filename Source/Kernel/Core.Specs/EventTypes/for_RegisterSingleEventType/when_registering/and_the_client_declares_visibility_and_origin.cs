@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.EventTypes.for_RegisterSingleEventType.when_registering;
 
@@ -19,17 +19,13 @@ public class and_the_client_declares_visibility_and_origin : Patterns.for_Patter
             EventStore = "owning-store",
             Visibility = Contracts.Events.EventTypeVisibility.Public
         });
-        _eventTypes.Register(Arg.Any<EventType>(), Arg.Any<JsonSchema>(), Arg.Any<EventTypeOwner>(), Arg.Any<EventTypeSource>(), Arg.Any<EventTypeVisibility>(), Arg.Any<string>()).Returns(false);
+        _eventTypes.RegisterIfAbsent(Arg.Any<EventTypeToRegister>()).Returns(new EventTypeRegistrationResult(false, [EventTypeGeneration.First]));
     }
 
     async Task Because() => await _command.Handle(_storage, Substitute.For<IEventTypesCacheClient>(), _capture);
 
-    [Fact] void should_hand_visibility_and_origin_to_storage() =>
-        _eventTypes.Received(1).Register(
-            Arg.Any<EventType>(),
-            Arg.Any<JsonSchema>(),
-            Arg.Any<EventTypeOwner>(),
-            Arg.Any<EventTypeSource>(),
-            EventTypeVisibility.Public,
-            "owning-store");
+    [Fact]
+    void should_hand_visibility_and_origin_to_storage() =>
+        _eventTypes.Received(1).RegisterIfAbsent(Arg.Is<EventTypeToRegister>(_ =>
+            _.Visibility == EventTypeVisibility.Public && _.Origin == "owning-store"));
 }

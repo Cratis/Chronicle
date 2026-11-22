@@ -104,7 +104,8 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
         // Evict the event type cache on every silo whenever a registration actually changed the stored
         // representation - a new generation, or a different owner, source, or tombstone. Idempotent
         // re-registrations report no change, so client reconnects do not trigger cluster-wide eviction.
-        var mutated = await eventTypesStorage.Register(eventTypesToRegister);
+        var conditional = await RegisterNewGenerations(eventTypesStorage, eventTypesToRegister, newGenerationsPerEventType);
+        var mutated = (await eventTypesStorage.Register(conditional.Remaining)).Concat(conditional.Mutated).Distinct().ToArray();
         LogAddedProtectionMetadata(registrationsWithSchemas, stored);
 
         foreach (var eventTypeId in mutated)
@@ -114,7 +115,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
             await eventTypesCacheClient.Invalidate(eventStore, eventTypeId);
         }
 
-        await AppendSystemEventsForNewGenerations(eventStore, newGenerationsPerEventType);
+        await AppendSystemEventsForNewGenerations(eventStore, conditional.Added);
         await CapturePatternsForNewEventTypes(patternCapture, eventStore, mutated);
     }
 
@@ -177,7 +178,10 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
                 schemaProblem.Generation,
                 new EventTypeSchemaChanged(id, schemaProblem.Generation).Message,
                 schemaProblem.Difference.Keyword,
-                schemaProblem.Difference.Path) with { Classification = classification };
+                schemaProblem.Difference.Path) with
+            {
+                Classification = classification
+            };
         }
 
         try

@@ -40,6 +40,10 @@ public class all_dependencies : Specification
         _eventTypesStorage.GetDefinition(Arg.Any<Concepts.Events.EventTypeId>()).Returns(call =>
             new Concepts.Events.EventTypeDefinition(call.Arg<Concepts.Events.EventTypeId>(), Concepts.Events.EventTypeOwner.Client, false, [], []));
         _eventTypesStorage.Register(Arg.Any<IEnumerable<Concepts.Events.EventTypeToRegister>>()).Returns([]);
+        _eventTypesStorage.RegisterIfAbsent(Arg.Any<Concepts.Events.EventTypeToRegister>()).Returns(call =>
+            Cratis.Chronicle.Storage.EventTypes.EventTypeRegistrationResult.Compare(
+                call.Arg<Concepts.Events.EventTypeToRegister>().Definition,
+                _storedDefinitions.FirstOrDefault(_ => _.Id == call.Arg<Concepts.Events.EventTypeToRegister>().Definition.Id)?.Generations ?? []));
         _subject = new EventTypeRegistrar(_grainFactory);
     }
 
