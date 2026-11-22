@@ -20,8 +20,8 @@ public class an_observer_with_a_partially_applied_chunk : an_observer_with_subsc
     protected ulong _totalAtFailure;
     protected ulong _runningTotalAtFailure;
     protected ulong _perTypeAtFailure;
-    readonly TaskCompletionSource _writeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    readonly TaskCompletionSource _releaseWrite = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    protected readonly TaskCompletionSource _writeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    protected readonly TaskCompletionSource _releaseWrite = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected virtual bool IsLive => false;
     protected virtual bool HasConfirmedPrefix => true;
     protected virtual ulong OriginalCount => 2UL;
@@ -41,27 +41,16 @@ public class an_observer_with_a_partially_applied_chunk : an_observer_with_subsc
         }
     }
 
-    async Task Because()
+    protected async Task Deliver(string partition, ulong sequence, ulong count)
     {
-        var flush = Catch.Exception(() => _observer.RunWatchdogAsync());
-        try
+        if (IsLive)
         {
-            await _writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            for (var index = 0; index < _freshPartitions.Count; index++)
-            {
-                await Deliver(_freshPartitions[index], (ulong)(1100 + index), FreshCount);
-            }
-        }
-        finally
-        {
-            _releaseWrite.TrySetResult();
+            await _observer.Handle((Key)partition, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, sequence)]);
+            return;
         }
 
-        _error = await flush;
-        _totalAtFailure = _persisted.Values.Aggregate(0UL, (total, count) => total + count);
-        _runningTotalAtFailure = _stateStorage.State.HandledEventCount.Value;
-        _perTypeAtFailure = _stateStorage.State.HandledEventCountPerEventType[event_type.Id].Value;
-        await _observer.RunWatchdogAsync();
+        var step = JobStepId.New();
+        await _observer.ReportHandledEventsBatch(step, [new HandledEventsReport(partition, new Dictionary<EventTypeId, EventCount> { [event_type.Id] = count }, step, sequence)]);
     }
 
     protected bool EveryPartitionHasItsExactCount() => Enumerable.Range(0, 1100).All(index =>
@@ -88,17 +77,5 @@ public class an_observer_with_a_partially_applied_chunk : an_observer_with_subsc
 
             throw error;
         }
-    }
-
-    async Task Deliver(string partition, ulong sequence, ulong count)
-    {
-        if (IsLive)
-        {
-            await _observer.Handle((Key)partition, [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, sequence)]);
-            return;
-        }
-
-        var step = JobStepId.New();
-        await _observer.ReportHandledEventsBatch(step, [new HandledEventsReport(partition, new Dictionary<EventTypeId, EventCount> { [event_type.Id] = count }, step, sequence)]);
     }
 }

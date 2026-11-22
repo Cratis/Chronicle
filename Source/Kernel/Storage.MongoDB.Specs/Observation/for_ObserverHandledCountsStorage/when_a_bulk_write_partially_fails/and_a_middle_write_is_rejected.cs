@@ -7,11 +7,17 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverHandledCounts
 
 public class and_a_middle_write_is_rejected : given.a_confirmed_bulk_failure
 {
+    async Task Because()
+    {
+        _error = await Catch.Exception(() => _storage.Increment(_observerId, _counts));
+        await _storage.Increment(_observerId, _counts.Skip(((ObserverHandledCountsPartiallyIncremented)_error).AppliedCount).ToArray());
+    }
+
     [Fact] void should_translate_the_confirmed_failure() => _error.ShouldBeOfExactType<ObserverHandledCountsPartiallyIncremented>();
     [Fact] void should_map_the_prefix_to_original_input_including_empty_entries() => ((ObserverHandledCountsPartiallyIncremented)_error).AppliedCount.ShouldEqual(3);
     [Fact] void should_preserve_the_driver_error() => _error.InnerException.ShouldBeSame(_driverError);
     [Fact] void should_retry_only_the_two_remaining_models() => _attempts[1].Length.ShouldEqual(2);
-    [Fact] void should_explicitly_order_both_attempts() => _options.TrueForAll(_ => _.IsOrdered == true).ShouldBeTrue();
+    [Fact] void should_explicitly_order_both_attempts() => _options.TrueForAll(_ => _.IsOrdered).ShouldBeTrue();
     [Fact] void should_apply_every_partition_once() => _applied.Values.Order().ShouldEqual(new long[] { 2, 3, 4 });
     [Fact] void should_not_retry_internally() => _attempts.Count.ShouldEqual(2);
 }

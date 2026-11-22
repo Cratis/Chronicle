@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation.for_ObserverHandledCounts
 
 public class and_the_outcome_is_ambiguous : given.a_bulk_write_that_fails
 {
-    readonly List<(Exception Original, Exception Surfaced)> _errors = [];
+    readonly List<(Exception Original, Exception? Surfaced)> _errors = [];
     Func<WriteModel<ObserverPartitionCounts>[], Exception>[] _failures;
 
     void Establish() => _failures =

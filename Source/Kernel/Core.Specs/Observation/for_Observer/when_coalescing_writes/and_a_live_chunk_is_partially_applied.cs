@@ -12,6 +12,29 @@ public class and_a_live_chunk_is_partially_applied : given.an_observer_with_a_pa
     protected override ulong OriginalCount => 1UL;
     protected override ulong FreshCount => 1UL;
 
+    async Task Because()
+    {
+        var flush = Catch.Exception(() => _observer.RunWatchdogAsync());
+        try
+        {
+            await _writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            for (var index = 0; index < _freshPartitions.Count; index++)
+            {
+                await Deliver(_freshPartitions[index], (ulong)(1100 + index), FreshCount);
+            }
+        }
+        finally
+        {
+            _releaseWrite.TrySetResult();
+        }
+
+        _error = await flush;
+        _totalAtFailure = _persisted.Values.Aggregate(0UL, (total, count) => total + count);
+        _runningTotalAtFailure = _stateStorage.State.HandledEventCount.Value;
+        _perTypeAtFailure = _stateStorage.State.HandledEventCountPerEventType[event_type.Id].Value;
+        await _observer.RunWatchdogAsync();
+    }
+
     [Fact] void should_surface_the_partial_failure() => _error.ShouldBeOfExactType<ObserverHandledCountsPartiallyIncremented>();
     [Fact] void should_keep_the_confirmed_prefix_total() => _totalAtFailure.ShouldEqual(649UL);
     [Fact] void should_not_advance_live_running_totals_at_flush_time() => _runningTotalAtFailure.ShouldEqual(1104UL);

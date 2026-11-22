@@ -63,7 +63,7 @@ public class a_bulk_write_that_fails : for_ObserverHandledCountsStorage.given.an
 
     void Apply(IEnumerable<WriteModel<ObserverPartitionCounts>> models)
     {
-        var arguments = new RenderArgs<ObserverPartitionCounts>(MongoDB.Bson.Serialization.BsonSerializer.LookupSerializer<ObserverPartitionCounts>(), MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry);
+        var arguments = new RenderArgs<ObserverPartitionCounts>(global::MongoDB.Bson.Serialization.BsonSerializer.LookupSerializer<ObserverPartitionCounts>(), global::MongoDB.Bson.Serialization.BsonSerializer.SerializerRegistry);
         foreach (var model in models.Cast<UpdateOneModel<ObserverPartitionCounts>>())
         {
             var id = model.Filter.Render(arguments).ToJson();

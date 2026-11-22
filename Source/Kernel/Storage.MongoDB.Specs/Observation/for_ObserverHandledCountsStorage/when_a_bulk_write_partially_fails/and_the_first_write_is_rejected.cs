@@ -9,6 +9,12 @@ public class and_the_first_write_is_rejected : given.a_confirmed_bulk_failure
 {
     protected override int FailedIndex => 0;
 
+    async Task Because()
+    {
+        _error = await Catch.Exception(() => _storage.Increment(_observerId, _counts));
+        await _storage.Increment(_observerId, _counts.Skip(((ObserverHandledCountsPartiallyIncremented)_error).AppliedCount).ToArray());
+    }
+
     [Fact] void should_include_only_the_leading_empty_entry() => ((ObserverHandledCountsPartiallyIncremented)_error).AppliedCount.ShouldEqual(1);
     [Fact] void should_retry_every_nonempty_entry() => _attempts[1].Length.ShouldEqual(3);
     [Fact] void should_apply_every_partition_once() => _applied.Values.Order().ShouldEqual(new long[] { 2, 3, 4 });
