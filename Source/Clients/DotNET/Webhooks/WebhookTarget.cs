@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Webhooks;
 /// </summary>
 /// <param name="Url">The <see cref="WebhookTargetUrl"/>.</param>
 /// <param name="Authorization">The authorization method.</param>
-/// <param name="Headers">The headers.</param>
+/// <param name="Headers">The headers to send when registering. Query results include names with empty values only.</param>
 public record WebhookTarget(
     WebhookTargetUrl Url,
     OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> Authorization,
@@ -20,4 +20,9 @@ public record WebhookTarget(
     /// Gets managed identity authorization, which takes precedence over <see cref="Authorization"/>.
     /// </summary>
     public ManagedIdentityAuthorization? ManagedIdentity { get; init; }
+
+    /// <summary>
+    /// Gets whether each queried header has a non-empty configured value. Never includes the values themselves.
+    /// </summary>
+    public IReadOnlyDictionary<string, bool> HeaderValuesSet { get; init; } = new Dictionary<string, bool>();
 }

@@ -297,7 +297,7 @@ public class ProjectionObserverSubscriber(
         }
     }
 
-    ReadModelChangeNotification CreateNotification(string partition, IChangeset<AppendedEvent, ExpandoObject> changeset, bool isNewInstance, AppendedEvent lastEvent)
+    ReadModelChangeNotification CreateNotification(string partition, IChangeset<AppendedEvent, ExpandoObject> changeset, ExpandoObject state, bool isNewInstance, AppendedEvent lastEvent)
     {
         var changeType = (changeset.HasBeenRemoved(), isNewInstance) switch
         {
@@ -305,8 +305,20 @@ public class ProjectionObserverSubscriber(
             (false, true) => ReadModelChangeType.Added,
             _ => ReadModelChangeType.Modified
         };
-        return CreateNotification(partition, changeset.CurrentState, ChangeContextFor(changeType, lastEvent), _schema!);
+        return CreateNotification(partition, state, ChangeContextFor(changeType, lastEvent), _schema!);
     }
+
+    /// <summary>
+    /// Picks the state to publish for the instance a run changed: the document as the sink stores it.
+    /// </summary>
+    /// <remarks>
+    /// Watch releases every published document exactly once, by its recorded lineage. A read model with protected
+    /// values therefore publishes the protected document the protection step produced, never the plaintext current
+    /// state, which a second release could corrupt. Without that document there is nothing safe to publish, so the
+    /// notification is withheld rather than guessed (Cratis/Chronicle#4566).
+    /// </remarks>
+    ExpandoObject? StateToPublish(ProjectionEventContext context) =>
+        _schema?.HasSchemaMetadata() == true ? context.ProtectedState : context.Changeset.CurrentState;
 
     ReadModelChangeNotification CreateNotification(string partition, ExpandoObject state, ReadModelChangeContext change, JsonSchema schema)
     {
@@ -327,17 +339,18 @@ public class ProjectionObserverSubscriber(
     ReadModelChangeContext ChangeContextFor(ReadModelChangeType changeType, AppendedEvent lastEvent) =>
         new(changeType, lastEvent.Context.SequenceNumber, lastEvent.Context.Occurred, lastEvent.Context.CorrelationId);
 
-    ReadModelChangeNotification? NotificationForOwnInstance(Key partition, IChangeset<AppendedEvent, ExpandoObject>? changeset, bool isNewInstance, AppendedEvent lastEvent)
+    ReadModelChangeNotification? NotificationForOwnInstance(Key partition, ProjectionEventContext? context, bool isNewInstance, AppendedEvent lastEvent)
     {
         // We don't want to send changesets if the projection is not active.
         // A run that only removes children from every parent changes no instance of its own: the parents are notified
         // with their own state instead, so the removal event's partition never gets an empty model.
-        if (!ChangesOwnInstance(changeset) || !CanNotify(changeset!.CurrentState))
+        var changeset = context?.Changeset;
+        if (!ChangesOwnInstance(changeset) || !CanNotify(changeset!.CurrentState) || StateToPublish(context!) is not { } state)
         {
             return null;
         }
 
-        return CreateNotification(partition.ToString(), changeset, isNewInstance, lastEvent);
+        return CreateNotification(partition.ToString(), changeset, state, isNewInstance, lastEvent);
     }
 
     bool ChangesOwnInstance(IChangeset<AppendedEvent, ExpandoObject>? changeset) =>
@@ -404,7 +417,7 @@ public class ProjectionObserverSubscriber(
         AppendedEvent? lastSuccessfullyObservedEvent = default;
         try
         {
-            IChangeset<AppendedEvent, ExpandoObject>? changeset = null;
+            ProjectionEventContext? lastContext = null;
             var isNewInstance = false;
 
             var staleFailure = await RefreshWhenEngineHasNewerDefinition();
@@ -439,7 +452,7 @@ public class ProjectionObserverSubscriber(
                     ? await _projection!.ReleaseEvent(pin, @event)
                     : @event;
                 var pipelineContext = await _pipeline.Handle(eventToHandle);
-                changeset = pipelineContext.Changeset;
+                lastContext = pipelineContext;
                 TrackAffectedParents(pipelineContext, @event);
 
                 // Accumulate across the batch: a single OnNext delivers all events for one partition
@@ -460,7 +473,7 @@ public class ProjectionObserverSubscriber(
                 logger.SuccessfullyHandledEvent(sequenceNumber, _key);
             }
 
-            var notification = NotificationForOwnInstance(partition, changeset, isNewInstance, lastSuccessfullyObservedEvent!);
+            var notification = NotificationForOwnInstance(partition, lastContext, isNewInstance, lastSuccessfullyObservedEvent!);
             return (ObserverSubscriberResult.Ok(lastSuccessfullyObservedEvent!.Context.SequenceNumber), notification);
         }
         catch (Exception ex)

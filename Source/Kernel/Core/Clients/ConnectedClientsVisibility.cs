@@ -52,7 +52,10 @@ public class ConnectedClientsVisibility(
         // then. The caller's identity is all that is needed, so authorize in a scope of our own.
         await using var scope = services.CreateAsyncScope();
         var authorization = scope.ServiceProvider.GetRequiredService<IAuthorizationService>();
-        var result = await authorization.AuthorizeAsync(caller.Principal, WellKnownAuthorizationPolicies.Administrator);
+
+        // The administrator decision reads the caller's services from the resource it is asked about, and denies without them.
+        var resource = new DefaultHttpContext { User = caller.Principal, RequestServices = scope.ServiceProvider };
+        var result = await authorization.AuthorizeAsync(caller.Principal, resource, WellKnownAuthorizationPolicies.Administrator);
         return result.Succeeded;
     }
 }

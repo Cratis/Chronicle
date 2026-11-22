@@ -56,12 +56,16 @@ public static class ExternalServiceConverters
             (Contracts.ExternalServices.ExternalServiceEndpointType)definition.Endpoint.Type,
             definition.Endpoint.Http?.Url ?? string.Empty,
             AuthorizationTypeOf(definition.Endpoint.Http),
-            definition.Endpoint.Http?.Headers.ToDictionary(_ => _.Key, _ => _.Value) ?? new Dictionary<string, string>(),
+            definition.Endpoint.Http?.Headers.ToDictionary(_ => _.Key, _ => string.Empty) ?? new Dictionary<string, string>(),
             definition.Endpoint.Database?.Host ?? string.Empty,
             definition.Endpoint.Database?.Port ?? 0,
             definition.Endpoint.Database?.Database ?? string.Empty,
             definition.Endpoint.Database?.Username ?? string.Empty,
-            definition.Endpoint.Database?.Options.ToDictionary(_ => _.Key, _ => _.Value) ?? new Dictionary<string, string>());
+            definition.Endpoint.Database?.Options.ToDictionary(_ => _.Key, _ => _.Value) ?? new Dictionary<string, string>(),
+            HeaderValuesSetOf(definition.Endpoint.Http));
+
+    static Dictionary<string, bool> HeaderValuesSetOf(HttpEndpointConfiguration? configuration) =>
+        configuration?.Headers.ToDictionary(_ => _.Key, _ => !string.IsNullOrEmpty(_.Value)) ?? new Dictionary<string, bool>();
 
     static AuthorizationType AuthorizationTypeOf(HttpEndpointConfiguration? configuration) =>
         configuration?.Authorization.Match(

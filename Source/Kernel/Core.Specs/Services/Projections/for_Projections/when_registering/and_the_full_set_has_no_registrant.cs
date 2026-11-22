@@ -25,6 +25,7 @@ public class and_the_full_set_has_no_registrant : Specification
         _service = new Projections(
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
+            new System.Text.Json.JsonSerializerOptions(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),

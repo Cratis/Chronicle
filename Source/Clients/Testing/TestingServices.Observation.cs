@@ -70,6 +70,7 @@ internal sealed partial class TestingServices
         new(
             context.GrainFactory,
             new ExpandoObjectConverter(new TypeFormats()),
+            context.JsonSerializerOptions,
             null!,
             null!,
             null!,

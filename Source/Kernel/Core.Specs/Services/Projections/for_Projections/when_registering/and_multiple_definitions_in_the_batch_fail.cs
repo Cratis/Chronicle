@@ -32,6 +32,7 @@ public class and_multiple_definitions_in_the_batch_fail : Specification
         _service = new Projections(
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
+            new System.Text.Json.JsonSerializerOptions(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),

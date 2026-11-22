@@ -12,6 +12,14 @@ When you provide no runtime arguments, the suite defaults to:
 - mode: `outofprocess`
 - database: `mongodb`
 
+## Switching off an xUnit integration tier
+
+xUnit can initialize a class fixture even when every fact in the class is skipped. In a context derived from `ChronicleClientFixture<TChronicleFixture>` or either `Specification` variant, override `ShouldBootstrap` with the same predicate that gates your facts, for example `protected override bool ShouldBootstrap => TierIsEnabled;`. Keep that predicate stable for the context's lifetime. The default is `true`.
+
+When it is `false`, the context skips `OnBeforeInitializeAsync`, including host bootstrap and storage, grain and client reset, as well as `OnInitializeAsync` and the matching scenario, service-scope, host and storage cleanup. Overriding only `OnInitializeAsync` does not stop the earlier bootstrap and reset. This applies to both the xUnit v2 and v3 packages, shared and per-fact context lifecycles, and custom storage configurations that use these base classes.
+
+The gate controls the context lifecycle, not construction of its backing fixture. `ChronicleFixture` starts its container eagerly in its constructor, before the context receives it. `ChronicleInProcessFixture` starts MongoDB this way; `ChronicleOutOfProcessFixture` starts the Chronicle development container. If xUnit registers a backing fixture, for example as a collection fixture, skipping the context cannot undo that startup. To keep a disabled tier container-free, exclude its backing fixture registration or keep that tier out of the run. The gate does not change how you select or skip facts, or prevent explicit access to host and storage APIs.
+
 ## When CI runs integration
 
 Pull-request pushes affecting the [build paths](https://github.com/Cratis/Chronicle/blob/main/.github/build-affecting-paths.txt) run the Release build, specs, and a local Docker image build from Release binaries without pushing it, **not** the Docker integration suites. Run the relevant integration namespace locally before requesting CI integration. The [hot-core gate](https://github.com/Cratis/Chronicle/blob/main/.github/hot-core-paths.txt) fails on hot-core PRs until Requested Integration passes for the current head commit; its ordinary PR check does not run the matrix. Hot core includes the kernel Core, Concepts, Storage, Storage.InMemory, Storage.MongoDB and Storage.Sql runtime trees, plus Infrastructure/Changes; spec trees are excluded.

@@ -415,6 +415,12 @@ public class WebhookDetailsResponse
     /// </summary>
     [ProtoMember(11)]
     public global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode Signing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HeaderValuesSet.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::System.Collections.Generic.IDictionary<string, bool> HeaderValuesSet { get; set; } = new global::System.Collections.Generic.Dictionary<string, bool>();
 }
 
 /// <summary>

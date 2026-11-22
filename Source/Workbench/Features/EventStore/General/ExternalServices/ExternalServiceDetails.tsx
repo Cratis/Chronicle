@@ -7,6 +7,7 @@ import { ExternalServiceEndpointType } from 'Features/Contracts/ExternalServices
 import { getEndpointTypeString } from './getEndpointTypeString';
 import { getAuthorizationTypeString } from './getAuthorizationTypeString';
 import strings from 'Strings';
+import { HeaderSummary } from 'Components/Headers/HeaderSummary';
 
 export const ExternalServiceDetails = (props: IDetailsComponentProps<ExternalService>) => {
     const endpointTypeName = getEndpointTypeString(props.item.endpointType);
@@ -37,11 +38,7 @@ export const ExternalServiceDetails = (props: IDetailsComponentProps<ExternalSer
                         <div className="field mb-3">
                             <label className="font-bold block mb-2">Headers</label>
                             <div className="text-sm">
-                                <ul>
-                                    {Object.entries(props.item.headers).map(([key, value]) => (
-                                        <li key={key}><strong>{key}:</strong> {String(value)}</li>
-                                    ))}
-                                </ul>
+                                <HeaderSummary headers={props.item.headers} headerValuesSet={props.item.headerValuesSet} />
                             </div>
                         </div>
                     )}
