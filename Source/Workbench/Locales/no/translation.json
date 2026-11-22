@@ -1,4 +1,10 @@
 {
+    "eventStore": {
+        "dashboard": {
+            "unavailable": "Utilgjengelig akkurat nå",
+            "stale": "Utdatert — siste oppdatering mislyktes"
+        }
+    },
     "components": {
         "timeScrubber": {
             "title": "Tidsskrubber",

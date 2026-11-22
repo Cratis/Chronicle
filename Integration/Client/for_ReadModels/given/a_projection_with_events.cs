@@ -50,16 +50,8 @@ public class a_projection_with_events(ChronicleFixture chronicleFixture) : Speci
     /// </remarks>
     protected async Task<IEnumerable<SomeReadModel>> WaitTillInstancesAreVisible(int expectedCount)
     {
-        using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-        while (true)
-        {
-            var instances = await EventStore.ReadModels.GetInstances<SomeReadModel>();
-            if (instances.Count(_ => _.Value is not null) >= expectedCount)
-            {
-                return instances;
-            }
-
-            await Task.Delay(50, cts.Token);
-        }
+        return await ReadinessWait.Until(
+            () => EventStore.ReadModels.GetInstances<SomeReadModel>(),
+            instances => instances.Count(_ => _.Value is not null) >= expectedCount);
     }
 }

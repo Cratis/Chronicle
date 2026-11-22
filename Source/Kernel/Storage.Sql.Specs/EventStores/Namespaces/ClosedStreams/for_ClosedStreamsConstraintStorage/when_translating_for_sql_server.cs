@@ -42,7 +42,7 @@ public class when_translating_for_sql_server : Specification
         await _storage.GetCovering(new(EventSourceId: "Order-1 ", EventStreamType: "Orders", EventStreamId: "order-1"), _masks);
         _covering = _captured.All;
         _captured.Clear();
-        await _storage.GetAll(new(EventSourceId: "Order-1 ", EventStreamId: "order-1"));
+        await _storage.GetAll(new(EventSourceId: "Order-1 ", EventStreamId: "order-1"), skip: 1, take: 2);
         _all = _captured.All;
     }
 
@@ -53,4 +53,7 @@ public class when_translating_for_sql_server : Specification
     [Fact] void should_compare_with_the_column_collation() => _covering[0].ShouldNotContain("COLLATE");
     [Fact] void should_filter_all_closures_by_event_source_id() => _all[0].ShouldContain("[EventSourceId] = @");
     [Fact] void should_filter_all_closures_with_the_column_collation() => _all[0].ShouldNotContain("COLLATE");
+    [Fact] void should_not_skip_rows_before_decoding_and_sorting() => _all[0].ShouldNotContain("OFFSET");
+    [Fact] void should_not_limit_rows_before_decoding_and_sorting() => _all[0].ShouldNotContain("FETCH");
+    [Fact] void should_not_sort_by_encoded_identifiers() => _all[0].ShouldNotContain("ORDER BY");
 }

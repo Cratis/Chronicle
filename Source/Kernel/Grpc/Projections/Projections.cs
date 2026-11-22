@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
@@ -399,13 +400,12 @@ internal sealed class Projections(
 
                 if (request.DraftReadModel is not null && draftDefinition is not null)
                 {
-                    var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
                     var definitionToSave = draftDefinition with
                     {
                         ObserverIdentifier = definition.Identifier.Value,
                         ObserverType = ReadModelObserverType.Projection
                     };
-                    await readModelsManager.RegisterSingle(definitionToSave);
+                    await SaveReadModelDefinition(request.EventStore, definitionToSave);
                 }
 
                 // Check if a projection with the same identifier already exists
@@ -704,6 +704,20 @@ internal sealed class Projections(
             ?.ToString();
     }
 
+    async Task SaveReadModelDefinition(EventStoreName eventStore, ReadModelDefinition definition)
+    {
+        var manager = grainFactory.GetReadModelsManager(eventStore);
+        var existing = await manager.GetDefinitions();
+        if (existing.Any(_ => _.Identifier == definition.Identifier))
+        {
+            await manager.UpdateDefinition(definition);
+        }
+        else
+        {
+            await manager.RegisterSingle(definition);
+        }
+    }
+
     /// <summary>
     /// Decrypts PII fields in a set of previewed read model instances, projected directly from stored
     /// (encrypted) events.
@@ -776,8 +790,7 @@ internal sealed class Projections(
                 EnsurePublicSequence(definition);
                 SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
 
-                var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
-                await readModelsManager.RegisterSingle(graph.ReadModel with { ObserverIdentifier = definition.Identifier.Value });
+                await SaveReadModelDefinition(request.EventStore, graph.ReadModel with { ObserverIdentifier = definition.Identifier.Value });
                 await grainFactory.GetGrain<IProjectionsManager>(request.EventStore).Register([definition]);
                 return new SaveProjectionResult();
             },

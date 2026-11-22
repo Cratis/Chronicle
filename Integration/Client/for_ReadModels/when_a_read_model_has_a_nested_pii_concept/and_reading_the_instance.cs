@@ -44,13 +44,9 @@ public class and_reading_the_instance(context context) : Given<context>(context)
         {
             await EventStore.EventLog.Append(PersonId, Event);
 
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            while (Instance?.DateOfBirth is null)
-            {
-                Instance = await EventStore.ReadModels.GetInstanceById<ExpressVerification>(PersonId.Value);
-                if (Instance?.DateOfBirth is not null) break;
-                await Task.Delay(200, cts.Token);
-            }
+            Instance = await ReadinessWait.Until(
+                () => EventStore.ReadModels.GetInstanceById<ExpressVerification>(PersonId.Value),
+                instance => instance?.DateOfBirth is not null);
 
             StoredDocument = await StoredReadModelDocument.Read(ChronicleFixture, CollectionName);
 

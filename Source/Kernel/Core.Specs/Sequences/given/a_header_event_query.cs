@@ -32,6 +32,8 @@ public class a_header_event_query : Specification
         store.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(@namespace);
         @namespace.GetEventSequence(Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(sequence);
         store.EventTypes.GetFor(Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns([]);
+        store.EventTypes.GetDefinition(Arg.Any<Concepts.Events.EventTypeId>())
+            .Returns(call => Task.FromResult(new Concepts.Events.EventTypeDefinition(call.Arg<Concepts.Events.EventTypeId>(), Concepts.Events.EventTypeOwner.Server, false, [], [])));
         sequence.GetCountMatching(Arg.Any<EventSequenceQueryCriteria>()).Returns(new Concepts.Events.EventCount((ulong)_stored.Length));
         sequence.GetPage(Arg.Any<EventSequenceQueryCriteria>(), 0, int.MaxValue, Arg.Any<EventSequenceQuerySort>()).Returns(cursor);
         sequence.GetFromSequenceNumberWithHistory(Arg.Any<Concepts.Events.EventSequenceNumber>(), Arg.Any<Concepts.Events.EventSourceId?>(), eventTypes: Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns(cursor);

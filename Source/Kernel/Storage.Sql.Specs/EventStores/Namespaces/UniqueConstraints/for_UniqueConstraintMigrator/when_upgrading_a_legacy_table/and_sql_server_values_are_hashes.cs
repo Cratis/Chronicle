@@ -13,6 +13,10 @@ public class and_sql_server_values_are_hashes(SqlServerFixture fixture) : given.
     long _length;
     long _secondUnique;
     long _secondLength;
+    string _valueCollation;
+    string _sourceCollation;
+    string _secondValueCollation;
+    string _secondSourceCollation;
     int _rows;
 
     async Task Establish()
@@ -27,10 +31,14 @@ public class and_sql_server_values_are_hashes(SqlServerFixture fixture) : given.
         await _context.EnsureTableExists();
         _unique = await IndexIsUnique();
         _length = await ColumnLength();
+        _valueCollation = await Collation("Value");
+        _sourceCollation = await Collation("EventSourceId");
         _migrator.ClearMigrationCache(_connectionString);
         await _context.EnsureTableExists();
         _secondUnique = await IndexIsUnique();
         _secondLength = await ColumnLength();
+        _secondValueCollation = await Collation("Value");
+        _secondSourceCollation = await Collation("EventSourceId");
         _rows = await _context.Entries.CountAsync();
     }
 
@@ -39,4 +47,10 @@ public class and_sql_server_values_are_hashes(SqlServerFixture fixture) : given.
     [Fact] void should_keep_the_index_on_a_second_run() => _secondUnique.ShouldEqual(_unique);
     [Fact] void should_not_widen_the_column_on_a_second_run() => _secondLength.ShouldEqual(_length);
     [Fact] void should_keep_every_row() => _rows.ShouldEqual(1);
+    [Fact] void should_keep_the_value_collation_ordinal_after_narrowing() => _valueCollation.ShouldEqual("Latin1_General_100_BIN2");
+    [Fact] void should_make_the_event_source_collation_ordinal() => _sourceCollation.ShouldEqual("Latin1_General_100_BIN2");
+    [Fact] void should_keep_the_value_collation_on_a_second_run() => _secondValueCollation.ShouldEqual(_valueCollation);
+    [Fact] void should_keep_the_event_source_collation_on_a_second_run() => _secondSourceCollation.ShouldEqual(_sourceCollation);
+
+    Task<string> Collation(string column) => _context.Database.SqlQuery<string>($"SELECT collation_name AS [Value] FROM sys.columns WHERE object_id = OBJECT_ID({_tableName}) AND name = {column}").SingleAsync();
 }

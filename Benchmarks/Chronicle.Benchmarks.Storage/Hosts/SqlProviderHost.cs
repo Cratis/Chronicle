@@ -1,22 +1,17 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.EntityFrameworkCore.Concepts;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Storage.Events.Constraints;
 using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
-using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_EventSequenceStorage.given;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Testcontainers.MsSql;
@@ -32,16 +27,10 @@ namespace Cratis.Chronicle.Benchmarks.Storage.Hosts;
 internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProviderHost, IQueryPlanHost
 {
     const string PostgreSqlImage = "postgres:16-alpine";
-    readonly List<EventSequenceStorageHost> _hosts = [];
-    readonly HashSet<string> _ensuredTables = [];
     readonly string _directory = Path.Combine(Path.GetTempPath(), $"chronicle-storage-bench-{Guid.NewGuid():N}");
-    readonly UniqueConstraintMigrator _migrator = new(
-        new TableMigrator<UniqueConstraintDbContext>(NullLogger<TableMigrator<UniqueConstraintDbContext>>.Instance),
-        new TableMigrator<UniqueConstraintValuesDbContext>(NullLogger<TableMigrator<UniqueConstraintValuesDbContext>>.Instance),
-        NullLogger<UniqueConstraintMigrator>.Instance);
     IContainer? _container;
     string _connectionString = string.Empty;
-    IInterceptor[] _interceptors = [];
+    SqlBenchmarkOptions _options = null!;
 
     /// <inheritdoc/>
     public StorageProvider Provider => provider;
@@ -52,8 +41,11 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <inheritdoc/>
     public QueryCapture Capture { get; } = new();
 
+    /// <summary>Gets the non-recording database adapter for this host.</summary>
+    internal BenchmarkDatabase Database { get; private set; } = null!;
+
     /// <inheritdoc/>
-    public Task<string> Explain(CapturedQuery query) => new SqlPlanQueries(provider, _connectionString).Explain(query);
+    public Task<string> Explain(CapturedQuery query, string? rawPlanPath = null) => new SqlPlanQueries(provider, _connectionString).Explain(query, rawPlanPath);
 
     /// <inheritdoc/>
     public Task<string> IndexDefinitions(CapturedQuery query) => new SqlPlanQueries(provider, _connectionString).IndexDefinitions(query);
@@ -61,7 +53,6 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <inheritdoc/>
     public async Task Start()
     {
-        _interceptors = CountingInterceptors.For(Counter, Capture);
         var password = $"Benchmark-{Guid.NewGuid():N}!";
         switch (provider)
         {
@@ -92,7 +83,9 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
                 throw new ArgumentOutOfRangeException(nameof(provider));
         }
 
-        await using var context = CreateNamespaceContext();
+        _options = new SqlBenchmarkOptions(provider, _connectionString, CountingInterceptors.For(Counter, Capture));
+        Database = new BenchmarkDatabase(_options);
+        await using var context = new NamespaceDbContext(_options.Namespace);
         await context.Database.MigrateAsync();
         Counter.Reset();
     }
@@ -100,21 +93,29 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <inheritdoc/>
     public IEventSequenceStorage CreateSequence()
     {
-        var host = new EventSequenceStorageHost(Configure<Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.EventSequenceDbContext>, null, BenchmarkEvents.CreateIdentities(), BenchmarkEvents.CreateEventTypes(), _interceptors);
+        var table = $"events_{Guid.NewGuid():N}";
+        using (var scope = Database.CreateEventSequenceScope(table))
+        {
+            scope.DbContext.EnsureTableExists().GetAwaiter().GetResult();
+        }
         Counter.Reset();
-        _hosts.Add(host);
-        return host.Open(CreateNamespaceContext);
+        return new EventSequenceStorage(
+            "test-store",
+            "test-namespace",
+            new EventSequenceId(table),
+            Database,
+            BenchmarkEvents.CreateIdentities(),
+            NullLogger<EventSequenceStorage>.Instance,
+            BenchmarkEvents.CreateEventTypes(),
+            new Json.ExpandoObjectConverter(new Schemas.TypeFormats()));
     }
 
     /// <inheritdoc/>
     public async Task<(IUniqueConstraintsStorage Storage, UniqueConstraintDefinition Definition)> CreateConstraints()
     {
-        var database = Substitute.For<IDatabase>();
-        database.UniqueConstraintTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>())
-            .Returns(call => CreateConstraintScope(call.ArgAt<string>(2)));
         var name = $"unique-{Guid.NewGuid():N}";
         var definition = new UniqueConstraintDefinition(name, [new UniqueConstraintEventDefinition(BenchmarkEvents.Selected.Id, ["value"])]);
-        var storage = new UniqueConstraintsStorage("bench-store", "bench-namespace", EventSequenceId.Log, database);
+        var storage = new UniqueConstraintsStorage("bench-store", "bench-namespace", EventSequenceId.Log, Database);
         await Task.CompletedTask;
         return (storage, definition);
     }
@@ -185,7 +186,6 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        foreach (var host in _hosts) host.Dispose();
         SqliteConnection.ClearAllPools();
         if (_container is not null) await _container.DisposeAsync();
         if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
@@ -195,10 +195,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <returns>The connection type.</returns>
     public Type ConnectionType()
     {
-        var builder = new DbContextOptionsBuilder<DbContext>();
-        Configure(builder);
-        builder.AddInterceptors(_interceptors);
-        using var context = new DbContext(builder.Options);
+        using var context = new NamespaceDbContext(_options.Namespace);
         return context.Database.GetDbConnection().GetType();
     }
 
@@ -208,43 +205,5 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
         return await command.ExecuteScalarAsync();
-    }
-
-    void Configure<TContext>(DbContextOptionsBuilder<TContext> builder)
-        where TContext : DbContext
-    {
-        _ = provider switch
-        {
-            StorageProvider.Sqlite => builder.UseSqlite(_connectionString),
-            StorageProvider.PostgreSql => builder.UseNpgsql(_connectionString),
-            _ => builder.UseSqlServer(_connectionString)
-        };
-        builder.EnableServiceProviderCaching(true);
-    }
-
-    NamespaceDbContext CreateNamespaceContext()
-    {
-        var builder = new DbContextOptionsBuilder<NamespaceDbContext>();
-        Configure(builder);
-        builder.AddConceptAsSupport().AddInterceptors(_interceptors);
-
-        // Namespace migrations must run in release order, as in the kernel's Database.BuildOptions.
-        if (provider == StorageProvider.PostgreSql) builder.ReplaceService<IMigrator, ReleaseOrderedNpgsqlMigrator>();
-        else builder.ReplaceService<IMigrator, ReleaseOrderedMigrator>();
-        return new NamespaceDbContext(builder.Options);
-    }
-
-    async Task<DbContextScope<UniqueConstraintDbContext>> CreateConstraintScope(string tableName)
-    {
-        var builder = new DbContextOptionsBuilder<UniqueConstraintDbContext>();
-        Configure(builder);
-        builder.AddConceptAsSupport().AddInterceptors(_interceptors);
-#pragma warning disable CA2000 // The scope returned below owns the context.
-        var context = new UniqueConstraintDbContext(builder.Options, tableName, _migrator);
-#pragma warning restore CA2000
-        bool ensure;
-        lock (_ensuredTables) ensure = _ensuredTables.Add(tableName);
-        if (ensure) await context.EnsureTableExists();
-        return new DbContextScope<UniqueConstraintDbContext>(context, () => { });
     }
 }

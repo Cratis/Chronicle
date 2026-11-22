@@ -15,6 +15,7 @@ public class SlowReducerThatSignalsCompletion(TaskCompletionSource completion) :
 
     public async Task<SomeReadModel?> OnSomeEvent(SomeEvent evt, SomeReadModel? input, EventContext ctx)
     {
+        // Task.Delay: time-behavior; configurable processing duration tests bounded completion waits.
         await Task.Delay(HandleTime);
         Interlocked.Increment(ref HandledEvents);
         completion.TrySetResult();

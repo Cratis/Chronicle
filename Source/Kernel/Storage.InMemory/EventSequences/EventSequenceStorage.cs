@@ -74,6 +74,20 @@ public partial class EventSequenceStorage(
     public bool SupportsRevisionTracking => true;
 
     /// <summary>
+    /// Gets whether this sequence contains persisted events, independently of its snapshot.
+    /// </summary>
+    internal bool HasEvents
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _events.Count > 0;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets the generation of the original append, independently of the generation currently read.
     /// </summary>
     /// <param name="sequenceNumber">The sequence number of the event.</param>

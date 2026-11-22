@@ -39,6 +39,8 @@ public partial class Database
     /// </summary>
     static readonly TimeSpan _maxRetryDelay = TimeSpan.FromSeconds(30);
 
+    readonly SqlConnectionStringCache _connectionStrings = new();
+
     /// <summary>
     /// Builds the options every database context of the kernel is created with.
     /// </summary>
@@ -161,7 +163,7 @@ public partial class Database
 
         var resolved = await _resolution.Resolve(identity, purpose);
         var connectionString = SqlConnectionStrings.OwnsPlacement(resolved)
-            ? SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved)
+            ? options.Value.Storage.ConnectionDetails
             : await ResolveConnectionString(identity, readOnly);
 
         return TargetFor(identity, purpose, connectionString, resolved);
@@ -177,8 +179,9 @@ public partial class Database
     SqlTarget TargetFor(DatabaseIdentity identity, ConnectionPurpose purpose, string connectionString, ResolvedConnection resolved)
     {
         var schema = _resolution.SchemaFor(resolved);
+        var input = SqlConnectionStringInput.From(connectionString, schema, options.Value.Storage.PostgreSqlPooling, identity.Kind == DatabaseKind.Cluster ? null : resolved);
         return new(
-            SqlConnectionStrings.WithPooling(SqlConnectionStrings.WithSchema(connectionString, schema), options.Value.Storage.PostgreSqlPooling),
+            _connectionStrings.Get(identity, purpose, input),
             schema,
             _resolution.IsConfigured ? _resolution.RequestFor(identity, purpose) : null);
     }

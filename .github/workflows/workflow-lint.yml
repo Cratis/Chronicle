@@ -24,6 +24,7 @@ on:
       - .github/scripts/test-previous-release-image.mjs
       - .github/scripts/assert-image-push-permissions.py
       - .github/scripts/test-assert-image-push-permissions.py
+      - .github/scripts/test-pr-prerelease-security.mjs
 
 permissions:
   contents: read
@@ -49,6 +50,8 @@ jobs:
           persist-credentials: false
       - name: Test scheduled nightly health policy
         run: node --test .github/scripts/test-nightly-build-health.mjs .github/scripts/test-last-green-watchdog.mjs .github/scripts/test-failed-spec-record.mjs .github/scripts/test-quarantine.mjs .github/scripts/test-previous-release-image.mjs
+      - name: Test PR prerelease security boundary
+        run: node --test .github/scripts/test-pr-prerelease-security.mjs
       - name: Reject expired quarantine entries
         run: node .github/scripts/quarantine.mjs lint
       - name: Install workflow parser

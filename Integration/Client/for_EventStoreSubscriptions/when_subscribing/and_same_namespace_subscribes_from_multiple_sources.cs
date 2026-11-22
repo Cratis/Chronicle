@@ -32,7 +32,7 @@ public class and_same_namespace_subscribes_from_multiple_sources(context context
             var event2 = new TestEvent("From source 2");
             await AppendEvent(SecondSourceEventStoreName, "source-2-id", event2);
 
-            // Wait for forwarding
+            // Task.Delay: unresolved forwarding condition (#6023); fixture appends to EventLog, not Outbox.
             await Task.Delay(500);
 
             // Verify both sources have their events in separate inboxes

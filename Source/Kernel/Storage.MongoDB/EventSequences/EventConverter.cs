@@ -33,7 +33,8 @@ public class EventConverter(
     /// <inheritdoc/>
     public async Task<AppendedEvent> ToAppendedEvent(Event @event)
     {
-        var (eventType, generationKey, content) = ExtractContent(@event);
+        var generationalContent = BuildGenerationalContent(@event);
+        var (eventType, generationKey, content) = ExtractContent(@event, generationalContent);
         var hash = ExtractHash(@event, generationKey);
         var resolvedContent = await ResolveContent(eventType, content);
         var revisions = await ResolveRevisions(@event);
@@ -41,8 +42,6 @@ public class EventConverter(
         var originalContent = @event.Revisions.Any() && @event.Content.TryGetValue(EventTypeGeneration.First.ToString(), out var originalBson)
             ? EventContentBson.ToJson(originalBson)
             : string.Empty;
-
-        var generationalContent = BuildGenerationalContent(@event);
 
         return new AppendedEvent(
             new(
@@ -125,7 +124,15 @@ public class EventConverter(
         return result;
     }
 
-    (EventType EventType, string GenerationKey, JsonObject Content) ExtractContent(Event @event)
+    static bool CanReuseRenderedContent(BsonValue value) => value switch
+    {
+        BsonDecimal128 => false,
+        BsonDocument document => document.Elements.All(element => CanReuseRenderedContent(element.Value)),
+        BsonArray array => array.All(CanReuseRenderedContent),
+        _ => true
+    };
+
+    (EventType EventType, string GenerationKey, JsonObject Content) ExtractContent(Event @event, Dictionary<int, string> generationalContent)
     {
         if (@event.Revisions.Any())
         {
@@ -142,7 +149,10 @@ public class EventConverter(
             .Max();
         var generationKey = highestGeneration.ToString();
         var eventType = new EventType(@event.Type, new EventTypeGeneration((uint)highestGeneration), false);
-        return (eventType, generationKey, ParseContent(@event.Content, generationKey));
+        var content = CanReuseRenderedContent(@event.Content[generationKey]) && generationalContent.TryGetValue(highestGeneration, out var json)
+            ? JsonNode.Parse(json)!.AsObject()
+            : ParseContent(@event.Content, generationKey);
+        return (eventType, generationKey, content);
     }
 
     async Task<ExpandoObject> ResolveContent(EventType eventType, JsonObject content)

@@ -132,6 +132,7 @@ function producerJob(jobs, shard, context) {
 function producerArtifact(artifacts, job, shard, context) {
     const artifactName = `coverage-results-specs-other-${shard}`;
     const matches = artifacts.filter(artifact => artifact.name === artifactName);
+    // Preserve the rerun rule: multiple same-name artifacts are ambiguous, even if one is newer or expired.
     if (matches.length !== 1) fail(`Missing/duplicate producer artifact: ${artifactName}`);
     const artifact = matches[0];
     const created = Date.parse(artifact.created_at);
@@ -206,14 +207,18 @@ async function producingJobs(jobPages, context, api) {
 export async function loadProducerEvidence(context, { env = process.env, execute = runProcess, wait = pause, now = Date.now } = {}) {
     if (!/^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPOSITORY ?? '')) fail('Missing/invalid producer repository');
     if (!/^[1-9]\d*$/.test(context.runId) || !/^[1-9]\d*$/.test(context.runAttempt)) fail('Invalid producer run/attempt');
-    const pages = [];
     const api = { env, execute, wait, now, deadline: now() + PRODUCER_API_BUDGET };
     // filter=latest returns each job's latest attempt only; filter=all grows by the whole matrix per rerun and outran the call deadline (#5967).
-    for (const endpoint of [`jobs?filter=latest&per_page=${PRODUCER_PAGE_SIZE}`, `artifacts?per_page=${PRODUCER_PAGE_SIZE}`]) {
-        pages.push(await producerApiPages(endpoint, context, api));
+    const latest = await producerApiPages(`jobs?filter=latest&per_page=${PRODUCER_PAGE_SIZE}`, context, api);
+    const artifacts = [];
+    // Exact-name queries exclude concurrent uploads that shift pagination of the whole run's artifacts (#6022).
+    for (const shard of ordinaryShardIds()) {
+        const name = encodeURIComponent(`coverage-results-specs-other-${shard}`);
+        const pages = await producerApiPages(`artifacts?name=${name}&per_page=${PRODUCER_PAGE_SIZE}`, context, api);
+        artifacts.push(...apiRecords(pages, 'artifacts'));
     }
-    const jobs = await producingJobs(pages[0], context, api);
-    return selectProducerArtifacts(jobs, pages[1], context);
+    const jobs = await producingJobs(latest, context, api);
+    return selectProducerArtifacts(jobs, [{ artifacts, total_count: artifacts.length }], context);
 }
 export function unitInfos(ids, ordinary, parts) {
     return ids.map(id => {

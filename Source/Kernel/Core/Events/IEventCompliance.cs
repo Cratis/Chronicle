@@ -30,6 +30,15 @@ public interface IEventCompliance
     Task<AppendedEvent[]> Release(IEnumerable<AppendedEvent> events, IDictionary<EventType, EventTypeSchema> eventTypeSchemas);
 
     /// <summary>
+    /// Releases protected history using each payload's generation schema, leaving current content unchanged.
+    /// Missing schemas leave their history payloads unchanged.
+    /// </summary>
+    /// <param name="event">The event with already released current content.</param>
+    /// <param name="eventTypeSchemas">The schemas for its stored history generations.</param>
+    /// <returns>The event with released history and unchanged current content and metadata.</returns>
+    Task<AppendedEvent> ReleaseHistory(AppendedEvent @event, IDictionary<EventType, EventTypeSchema> eventTypeSchemas);
+
+    /// <summary>
     /// Releases current event content and reports confirmed erased paths in that content only.
     /// </summary>
     /// <param name="event">The event to release.</param>

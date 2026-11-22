@@ -13,6 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="../Shared/ReadinessWait.cs" Link="ReadinessWait.cs" />
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="SharpCompress" />
         <PackageReference Include="Testcontainers" />

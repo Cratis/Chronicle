@@ -74,7 +74,10 @@ public class a_change_for_a_model_with_pii : for_ProjectionObserverSubscriber.gi
         var changeset = Substitute.For<IChangeset<AppendedEvent, ExpandoObject>>();
         changeset.HasChanges.Returns(true);
         changeset.CurrentState.Returns(_state);
-        _cachedPipeline.Handle(_event).Returns(new ProjectionEventContext("the-partition", _event, changeset, ProjectionOperationType.From, false));
+
+        // A model with protected values publishes the document the protection step produced; this stand-in protection
+        // leaves the state as is so the lineage and bookkeeping on it are what the specifications observe.
+        _cachedPipeline.Handle(_event).Returns(new ProjectionEventContext("the-partition", _event, changeset, ProjectionOperationType.From, false) { ProtectedState = _state });
 
         _notifier.When(_ => _.Notify(Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelKey>(), Arg.Any<JsonObject>(), Arg.Any<ReadModelChangeContext>()))
             .Do(call =>
