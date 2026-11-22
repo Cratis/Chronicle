@@ -6,6 +6,7 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage.Observation;
 
@@ -29,6 +30,7 @@ public static class ObserverSubscriptionDurability
         _ when subscriberType.IsAssignableTo(typeof(IProjectionObserverSubscriber)) => ObserverSubscriptionKind.Projection,
         _ when subscriberType.IsAssignableTo(typeof(IWebhookObserverSubscriber)) => ObserverSubscriptionKind.Webhook,
         _ when subscriberType.IsAssignableTo(typeof(IEventStoreSubscriptionObserverSubscriber)) => ObserverSubscriptionKind.EventStoreSubscription,
+        _ when subscriberType.IsAssignableTo(typeof(IPatternCaptureSubscriber)) => ObserverSubscriptionKind.PatternCapture,
         _ when IsKernelReactor(subscriberType) => ObserverSubscriptionKind.KernelReactor,
         _ => null
     };
@@ -46,7 +48,8 @@ public static class ObserverSubscriptionDurability
         ObserverSubscriptionKind.ClientReducer or
         ObserverSubscriptionKind.Projection or
         ObserverSubscriptionKind.CollapsingProjection or
-        ObserverSubscriptionKind.EventStoreSubscription;
+        ObserverSubscriptionKind.EventStoreSubscription or
+        ObserverSubscriptionKind.PatternCapture;
 
     /// <summary>
     /// Gets whether an observer of this kind is released while dormant under the configuration.

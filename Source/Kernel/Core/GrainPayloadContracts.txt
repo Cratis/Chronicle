@@ -1480,6 +1480,7 @@ enum Cratis.Chronicle.Storage.Observation.ObserverSubscriptionKind : int
   EventStoreSubscription = 6
   KernelReactor = 4
   None = 0
+  PatternCapture = 8
   Projection = 3
   Webhook = 5
 orleans [Alias("Cratis.Chronicle.Storage.Observation.ObserverTypeSetChange")] Cratis.Chronicle.Storage.Observation.ObserverTypeSetChange

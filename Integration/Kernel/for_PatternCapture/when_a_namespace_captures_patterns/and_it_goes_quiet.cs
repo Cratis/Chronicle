@@ -9,9 +9,10 @@ using EventFactory = Cratis.Chronicle.Kernel.Integration.Patterns.for_PatternMin
 namespace Cratis.Chronicle.Kernel.Integration.for_PatternCapture.when_a_namespace_captures_patterns;
 
 /// <summary>
-/// Pattern capture is on in every namespace (#6118): the namespace gets a capture observer that observes every event type
-/// and a miner that persists what it has mined. Pins what each of them costs once the namespace is quiet: today the miner
-/// and its capture observer stay resident for as long as the kernel runs.
+/// Pattern capture is on by default (#6118): the namespace gets a capture observer that observes every event type and a miner
+/// that persists what it has mined. Once the namespace is quiet neither of them stays resident: the miner leaves when a whole
+/// persistence interval passes without mining, and the capture observer is released like any dormant observer and woken by
+/// the next event.
 /// </summary>
 /// <param name="context">The specification context.</param>
 [Collection(given.PatternCaptureCollection.Name)]
@@ -52,6 +53,6 @@ public class and_it_goes_quiet(context context) : Given<context>(context)
     [Fact] void should_have_activated_the_miner() => Context.MinerWasResident.ShouldBeTrue();
     [Fact] void should_persist_what_was_mined() => Context.MinedPatternsWerePersisted.ShouldBeTrue();
 
-    [Fact] void should_keep_the_miner_resident_when_idle() => Context.MinerReleasedWhenIdle.ShouldBeFalse();
-    [Fact] void should_keep_the_capture_observer_resident_when_quiet() => Context.CaptureObserverReleasedWhenQuiet.ShouldBeFalse();
+    [Fact] void should_release_the_miner_when_idle() => Context.MinerReleasedWhenIdle.ShouldBeTrue();
+    [Fact] void should_release_the_capture_observer_when_quiet() => Context.CaptureObserverReleasedWhenQuiet.ShouldBeTrue();
 }

@@ -11,6 +11,7 @@ using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.DependencyInjection;
@@ -112,6 +113,7 @@ public partial class Observer
             ObserverSubscriptionKind.CollapsingProjection => RestoreKernelSubscription<ICollapsingProjectionObserverSubscriber>(eventTypes, filters),
             ObserverSubscriptionKind.Projection => RestoreKernelSubscription<IProjectionObserverSubscriber>(eventTypes, filters),
             ObserverSubscriptionKind.EventStoreSubscription => RestoreEventStoreSubscription(eventTypes, filters),
+            ObserverSubscriptionKind.PatternCapture => RestoreKernelSubscription<IPatternCaptureSubscriber>(eventTypes, filters),
             _ => false
         };
 
