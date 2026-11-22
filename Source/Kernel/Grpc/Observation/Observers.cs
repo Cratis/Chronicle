@@ -87,8 +87,11 @@ internal sealed class Observers(
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
 
-        // Clients read an empty job id as JobId.NotSet (not replayable, disconnected or quarantined), so keep reporting it rather than throwing.
-        var jobId = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).Replay();
+        // The replay is accepted as a job and the job id returned at once: the observer grain also serves its client's
+        // subscriptions, so asking it directly can queue behind them for longer than a call may take. Clients read an empty
+        // job id as JobId.NotSet (not replayable), so keep reporting it rather than throwing.
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        var jobId = await Chronicle.Observation.Jobs.ObserverOperatorCommandJobs.AcceptReplay(grainFactory, storage, key);
         return new ReplayResponse { JobId = jobId.Value.ToString() };
     }
 
@@ -264,10 +267,9 @@ internal sealed class Observers(
     public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var observer = await grainFactory.GetObserver(command, storage, namespaceCasing);
-        var failedPartitions = (await observer.GetFailedPartitionKeys()).ToArray();
-        await Chronicle.Observation.RetryFailedPartitions.Start(observer, failedPartitions);
-        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions.Length };
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        var (failedPartitions, _) = await Chronicle.Observation.RetryFailedPartitions.Accept(grainFactory, storage, key);
+        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions };
     }
 
     /// <inheritdoc/>

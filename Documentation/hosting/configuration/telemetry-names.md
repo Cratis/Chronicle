@@ -36,6 +36,7 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 | `observer.quarantines` | `{quarantine}` | `chronicle-observer-quarantined` |
 | `observer.suspected_skipped_events` | `{event}` | `chronicle-observer-events-suspected-skipped` |
 | `observer.zero_work_catch_ups` | `{catch_up}` | `chronicle-observer-zero-work-catch-ups` |
+| `observer.catch_up_deferrals` | `{catch_up}` | `chronicle-observer-catch-up-deferrals` |
 | `observer.claim_divergences` | `{divergence}` | `chronicle-observer-claim-divergences` |
 | `observer.dormant_releases` | `{observer}` | `chronicle-observer-dormant-releases` |
 | `observer.dormant_wakes` | `{wake}` | `chronicle-observer-dormant-wakes` |

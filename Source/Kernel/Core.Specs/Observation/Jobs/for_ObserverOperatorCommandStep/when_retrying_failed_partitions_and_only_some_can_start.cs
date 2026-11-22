@@ -3,37 +3,26 @@
 
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Storage;
 
-namespace Cratis.Chronicle.Observation.for_RetryFailedPartitions;
+namespace Cratis.Chronicle.Observation.Jobs.for_ObserverOperatorCommandStep;
 
-public class when_only_some_partitions_can_start : Specification
+public class when_retrying_failed_partitions_and_only_some_can_start : given.an_observer_to_give_commands_to
 {
-    readonly ObserverKey _key = new("observer", "store", "namespace", "event-log");
-    readonly Key[] _partitions = [(Key)"quarantined", (Key)"can-start", (Key)"cannot-start", (Key)"also-can-start"];
-    IGrainFactory _grainFactory;
-    IStorage _storage;
-    IObserver _observer;
-    RetryFailedPartitionsResult _result;
+    static readonly Key[] _partitions = [(Key)"one", (Key)"two", (Key)"three", (Key)"four"];
 
     void Establish()
     {
-        _storage = Substitute.For<IStorage>();
-        _grainFactory = Substitute.For<IGrainFactory>();
-        _observer = Substitute.For<IObserver>();
-        _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
         _observer.GetFailedPartitionKeys().Returns(Task.FromResult<IEnumerable<Key>>(_partitions));
         _observer.TryStartRecoverJobForFailedPartition(_partitions[0]).Returns(PartitionRecoveryOutcome.PartitionQuarantined);
         _observer.TryStartRecoverJobForFailedPartition(_partitions[1]).Returns(PartitionRecoveryOutcome.Started);
         _observer.TryStartRecoverJobForFailedPartition(_partitions[2]).Returns(Task.FromException<PartitionRecoveryOutcome>(
-            new FailedPartitionRecoveryCouldNotStart(_partitions[2], _key)));
+            new FailedPartitionRecoveryCouldNotStart(_partitions[2], ObserverKey.NotSet)));
         _observer.TryStartRecoverJobForFailedPartition(_partitions[3]).Returns(PartitionRecoveryOutcome.Started);
     }
 
-    async Task Because() => _result = await new RetryFailedPartitions("store", "namespace", "observer", "event-log").Handle(_grainFactory, _storage);
+    async Task Because() => await Give(ObserverOperatorCommand.RetryFailedPartitions);
 
     [Fact] void should_attempt_every_partition() => _observer.Received(4).TryStartRecoverJobForFailedPartition(Arg.Any<Key>());
     [Fact] void should_continue_after_the_quarantined_partition() => _observer.Received(1).TryStartRecoverJobForFailedPartition(_partitions[1]);
     [Fact] void should_continue_after_the_failed_job_start() => _observer.Received(1).TryStartRecoverJobForFailedPartition(_partitions[3]);
-    [Fact] void should_preserve_the_failed_partition_count() => _result.FailedPartitions.ShouldEqual(4);
 }
