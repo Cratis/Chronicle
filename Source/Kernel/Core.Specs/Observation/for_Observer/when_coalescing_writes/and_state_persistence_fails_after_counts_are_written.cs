@@ -42,7 +42,7 @@ public class and_state_persistence_fails_after_counts_are_written : for_Observer
 
     async Task Because()
     {
-        _error = await Catch.Exception(() => _observer.RunWatchdogAsync());
+        _error = await Catch.Exception(_observer.RunWatchdogAsync);
         _heldStorage.WriteStateAsync().Returns(Task.CompletedTask);
         await _observer.RunWatchdogAsync();
     }

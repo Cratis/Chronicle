@@ -14,10 +14,10 @@ public class and_a_live_chunk_is_partially_applied : given.an_observer_with_a_pa
 
     async Task Because()
     {
-        var flush = Catch.Exception(() => _observer.RunWatchdogAsync());
+        var flush = Catch.Exception(_observer.RunWatchdogAsync);
         try
         {
-            await _writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await _writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
             for (var index = 0; index < _freshPartitions.Count; index++)
             {
                 await Deliver(_freshPartitions[index], (ulong)(1100 + index), FreshCount);

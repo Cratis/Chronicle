@@ -12,10 +12,10 @@ public class and_a_live_chunk_has_an_unknown_outcome : given.an_observer_with_a_
 
     async Task Because()
     {
-        var flush = Catch.Exception(() => _observer.RunWatchdogAsync());
+        var flush = Catch.Exception(_observer.RunWatchdogAsync);
         try
         {
-            await _writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await _writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
             for (var index = 0; index < _freshPartitions.Count; index++)
             {
                 await Deliver(_freshPartitions[index], (ulong)(1100 + index), FreshCount);
