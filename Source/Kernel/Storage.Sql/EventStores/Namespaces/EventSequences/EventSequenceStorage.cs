@@ -73,7 +73,7 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var entry = await scope.DbContext.EventSequences.FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId.Value);
+        var entry = await EventSequenceStateQueries.Get(scope.DbContext, eventSequenceId.Value);
         if (entry is null)
         {
             return new Chronicle.Storage.EventSequences.EventSequenceState();
