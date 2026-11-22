@@ -68,31 +68,12 @@ public class PropertyMappersBenchmark
     [Benchmark]
     public PropertyDifference MapCurrent() => _current(_event, _currentTarget, ArrayIndexers.NoIndexers);
 
-    /// <summary>
-    /// Runs the baseline algorithm from 81fb14c with two extracted, inlined validation predicates.
-    /// Parsing, key validation, property-path construction and provider lookup still run on every invocation.
-    /// </summary>
-    /// <param name="targetProperty">The unresolved target property path.</param>
-    /// <param name="eventValueProvider">The provider invoked for every mapped event.</param>
-    /// <returns>The reusable baseline mapper.</returns>
-    static PropertyMapper<AppendedEvent, ExpandoObject> BaselineMapper(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
-    {
-        return (@event, target, arrayIndexers) =>
-        {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
-            {
-                return new(targetProperty, null, null, arrayIndexers);
-            }
-
-            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
-            var property = resolvedProperty.LastSegment.Value;
-            var originalValue = actualTarget.TryGetValue(property, out var value) ? value : null;
-            var newValue = actualTarget[property] = StateValues.Copy(eventValueProvider(@event));
-            return new(resolvedProperty, originalValue, newValue, arrayIndexers);
-        };
-    }
-
-    static PropertyPath? ResolveDynamicPropertyPath(PropertyPath propertyPath, AppendedEvent @event)
+    /// <summary>Resolves a path with the unchanged 81fb14c algorithm for the benchmark-only operation baselines.</summary>
+    /// <param name="propertyPath">The unresolved target path.</param>
+    /// <param name="event">The event supplying the dynamic key.</param>
+    /// <returns>The resolved path, or null for a missing key.</returns>
+    /// <exception cref="UnsupportedDynamicPropertyPathExpression">The target expression is unsupported.</exception>
+    internal static PropertyPath? ResolveDynamicPropertyPath(PropertyPath propertyPath, AppendedEvent @event)
     {
         var pathString = propertyPath.Path;
         var markerIndex = pathString.IndexOf(".$", StringComparison.Ordinal);
@@ -125,6 +106,30 @@ public class PropertyMappersBenchmark
         };
         var resolvedValue = EventValueProviders.EventContext(new PropertyPath(contextPath))(@event);
         return resolvedValue is null ? null : new PropertyPath($"{staticPrefix}.{FormatEventContextKeyValue(resolvedValue)}");
+    }
+
+    /// <summary>
+    /// Runs the baseline algorithm from 81fb14c with two extracted, inlined validation predicates.
+    /// Parsing, key validation, property-path construction and provider lookup still run on every invocation.
+    /// </summary>
+    /// <param name="targetProperty">The unresolved target property path.</param>
+    /// <param name="eventValueProvider">The provider invoked for every mapped event.</param>
+    /// <returns>The reusable baseline mapper.</returns>
+    static PropertyMapper<AppendedEvent, ExpandoObject> BaselineMapper(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
+    {
+        return (@event, target, arrayIndexers) =>
+        {
+            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+            {
+                return new(targetProperty, null, null, arrayIndexers);
+            }
+
+            var actualTarget = target.EnsurePath(resolvedProperty, arrayIndexers) as IDictionary<string, object>;
+            var property = resolvedProperty.LastSegment.Value;
+            var originalValue = actualTarget.TryGetValue(property, out var value) ? value : null;
+            var newValue = actualTarget[property] = StateValues.Copy(eventValueProvider(@event));
+            return new(resolvedProperty, originalValue, newValue, arrayIndexers);
+        };
     }
 
     static string FormatEventContextKeyValue(object value) => value switch
