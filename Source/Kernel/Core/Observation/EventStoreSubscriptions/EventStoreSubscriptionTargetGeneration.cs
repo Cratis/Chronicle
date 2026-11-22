@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -17,8 +18,8 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="release">The generation release service.</param>
 /// <param name="sourceStore">The source event store.</param>
 /// <param name="targetStore">The target event store.</param>
-/// <param name="context">The delivery context retaining unreleased stored content.</param>
-public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, IEventTypesStorage target, IEventGenerationRelease release, EventStoreName sourceStore, EventStoreName targetStore, ObserverSubscriberContext context)
+/// <param name="sourceSequence">The source sequence containing protected event history.</param>
+public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, IEventTypesStorage target, IEventGenerationRelease release, EventStoreName sourceStore, EventStoreName targetStore, IEventSequenceStorage sourceSequence)
 {
     readonly Dictionary<EventTypeId, EventTypeGeneration[]> _generations = [];
     readonly Dictionary<EventType, EventTypeSchema> _schemas = [];
@@ -49,10 +50,10 @@ public class EventStoreSubscriptionTargetGeneration(IEventTypesStorage source, I
                 _schemas[selected] = await EventStoreSubscriptionGenerationValidation.GetExactSchema(source, selected);
             }
 
-            // History on incoming is plaintext. Use retained stored content with the incoming delivery context.
-            var stored = context.GetUnreleasedEvent(incoming) ?? throw new PinnedEventTypeGenerationUnavailable(selected);
-            var released = await release.Release(sourceStore, [selected], _schemas, [stored]);
-            return released.Single();
+            // Incoming history is plaintext. Release only protected storage, then restore this dispatch's context.
+            var stored = await sourceSequence.GetEventAt(incoming.Context.SequenceNumber);
+            var released = (await release.Release(sourceStore, [selected], _schemas, [stored])).Single();
+            return released with { Context = incoming.Context with { EventType = released.Context.EventType, Hash = released.Context.Hash } };
         }
         catch (Exception exception) when (exception is EventTypeGenerationNotRegisteredForObserver or PinnedEventTypeGenerationUnavailable)
         {

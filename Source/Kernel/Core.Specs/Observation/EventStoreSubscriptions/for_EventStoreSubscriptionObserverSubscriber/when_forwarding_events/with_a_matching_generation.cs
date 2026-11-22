@@ -13,4 +13,5 @@ public class with_a_matching_generation : given.a_pinned_subscriber
     [Fact] void should_forward_without_releasing_twice() => _metadata.DidNotReceive().Release(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<System.Text.Json.Nodes.JsonObject>());
     [Fact] void should_forward_the_matching_generation() => ForwardedType().ShouldEqual(new EventType("event-type-1", 1));
     [Fact] void should_succeed() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
+    [Fact] void should_not_reload_storage() => _storage.GetEventStore("Admin").GetNamespace(Concepts.EventStoreNamespaceName.Default).GetEventSequence("outbox").DidNotReceive().GetEventAt(Arg.Any<EventSequenceNumber>());
 }

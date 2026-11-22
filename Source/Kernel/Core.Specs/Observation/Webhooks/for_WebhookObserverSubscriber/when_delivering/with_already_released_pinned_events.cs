@@ -9,9 +9,11 @@ public class with_already_released_pinned_events : given.a_webhook_delivery
     {
         _events = await _release.Release("store", [_pin], _schemas, _events);
         _metadata.ClearReceivedCalls();
+        _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log").ClearReceivedCalls();
     }
 
     async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
     [Fact] void should_preserve_the_released_payload() => _receiver.Payloads.Single().ShouldEqual(Fixture("pinned"));
     [Fact] void should_not_release_values_twice() => _metadata.ReceivedCalls().ShouldBeEmpty();
+    [Fact] void should_not_reload_storage() => _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log").ReceivedCalls().ShouldBeEmpty();
 }

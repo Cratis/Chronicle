@@ -29,7 +29,6 @@ public class a_subscriber_with_events : Specification
     protected EventStoreSubscriptionObserverSubscriber _subscriber = null!;
     protected IEventSequence _inboxSequence = null!;
     protected AppendedEvent[] _events = null!;
-    protected AppendedEvent[] _unreleasedEvents = [];
     protected Cratis.Chronicle.Namespaces.INamespaceCasing _namespaceCasing;
     protected string _inboxKey;
     protected virtual EventStoreName SourceEventStore => "Admin";
@@ -89,7 +88,7 @@ public class a_subscriber_with_events : Specification
     protected virtual IEventGenerationRelease CreateGenerationRelease() => Substitute.For<IEventGenerationRelease>();
 
     protected Task<ObserverSubscriberResult> Forward() =>
-        _subscriber.OnNext(new Key("partition", ArrayIndexers.NoIndexers), _events, new ObserverSubscriberContext("Lobby") { UnreleasedEvents = _unreleasedEvents });
+        _subscriber.OnNext(new Key("partition", ArrayIndexers.NoIndexers), _events, new ObserverSubscriberContext("Lobby"));
 
     protected int AppendCalls() => _inboxSequence.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IEventSequence.Append));
 

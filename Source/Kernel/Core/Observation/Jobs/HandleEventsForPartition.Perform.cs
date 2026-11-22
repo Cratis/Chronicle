@@ -446,7 +446,6 @@ public partial class HandleEventsForPartition
             {
                 var decryptedEvents = await DecryptEvents(eventsToHandle);
                 var subscriberContext = plan.Context
-                    .WithUnreleasedEvents(eventsToHandle, _deliverySubscription.SubscriberType)
                     .WithDeadlines(plan.Timeout, _abandonedDeliveryHold, _clock);
                 _deliveryFence = AbandonedDeliveryDrain.Capture(_deliverySubscription, plan.State.Partition, _deliveryTarget, subscriberContext);
                 var deliveryCancellation = _subscriber is IWebhookObserverSubscriber ? cancellationToken : CancellationToken.None;

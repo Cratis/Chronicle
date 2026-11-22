@@ -1069,7 +1069,6 @@ public partial class HandleEventsForObserver(
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
             var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }
-                .WithUnreleasedEvents(events, _subscription.SubscriberType)
                 .WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
             _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, subscriberContext);
             if (page) onPageDispatch?.Invoke();

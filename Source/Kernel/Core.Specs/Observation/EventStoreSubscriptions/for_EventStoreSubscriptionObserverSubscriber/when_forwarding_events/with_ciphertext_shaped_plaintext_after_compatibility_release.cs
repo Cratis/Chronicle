@@ -29,7 +29,6 @@ public class with_ciphertext_shaped_plaintext_after_compatibility_release : give
             OriginalContent = "{\"message\":\"ciphertext\"}",
             Revisions = [new(1, CorrelationId.NotSet, [], Concepts.Identities.Identity.System, DateTimeOffset.UnixEpoch, "{\"message\":\"ciphertext\"}")]
         };
-        _unreleasedEvents = [_stored];
         _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox")
             .GetEventAt(42UL).Returns(_stored);
         _metadata.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
@@ -48,14 +47,16 @@ public class with_ciphertext_shaped_plaintext_after_compatibility_release : give
         _result = await Forward();
         var source = _storage.GetEventStore("Admin");
         var target = _storage.GetEventStore("Lobby");
-        _selected = await new EventStoreSubscriptionTargetGeneration(source.EventTypes, target.EventTypes, _generationRelease, "Admin", "Lobby", new ObserverSubscriberContext("Lobby") { UnreleasedEvents = [_stored] })
+        _selected = await new EventStoreSubscriptionTargetGeneration(source.EventTypes, target.EventTypes, _generationRelease, "Admin", "Lobby", source.GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox"))
             .Release(_events[0], new Dictionary<EventTypeId, EventType>());
     }
 
     [Fact] void should_release_for_the_lower_target_generation() => ForwardedContent()["message"]!.GetValue<string>().ShouldEqual("enc:plaintext");
     [Fact] void should_never_release_plaintext_again() => _repeatedReleases.ShouldEqual(0);
     [Fact] void should_keep_the_incoming_replay_context() => _selected.Context.ObservationState.ShouldEqual(EventObservationState.Replay);
-    [Fact] void should_not_reload_each_event() => _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox").DidNotReceive().GetEventAt(Arg.Any<EventSequenceNumber>());
+    [Fact] void should_reload_protected_history_for_each_selection() => _storage.GetEventStore("Admin").GetNamespace(EventStoreNamespaceName.Default).GetEventSequence("outbox").Received(2).GetEventAt(42UL);
+    [Fact] void should_not_inherit_replay_from_storage() => _stored.Context.ObservationState.ShouldEqual(EventObservationState.Initial);
+    [Fact] void should_preserve_all_other_dispatch_context() => _selected.Context.ShouldEqual(_events[0].Context with { EventType = _selected.Context.EventType, Hash = _selected.Context.Hash });
     [Fact] void should_succeed() => _result.State.ShouldEqual(ObserverSubscriberState.Ok);
     [Fact] void should_acknowledge_the_source_position() => _result.LastSuccessfulObservation.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_preserve_stored_history() => _stored.OriginalContent.ShouldEqual("{\"message\":\"ciphertext\"}");

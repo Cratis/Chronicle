@@ -69,7 +69,7 @@ public class EventStoreSubscriptionObserverSubscriber(
         var inboxSequenceId = new EventSequenceId($"{EventSequenceId.InboxPrefix}{_key.EventStore}");
         var inboxSequence = grainFactory.GetEventSequence(inboxSequenceId, targetEventStore, targetNamespace);
 
-        var generation = new EventStoreSubscriptionTargetGeneration(storage.GetEventStore(_key.EventStore).EventTypes, storage.GetEventStore(targetEventStore).EventTypes, generationRelease, _key.EventStore, targetEventStore, context);
+        var generation = new EventStoreSubscriptionTargetGeneration(storage.GetEventStore(_key.EventStore).EventTypes, storage.GetEventStore(targetEventStore).EventTypes, generationRelease, _key.EventStore, targetEventStore, storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).GetEventSequence(_key.EventSequenceId));
         var state = new ForwardingState(inboxSequence, targetEventStore, targetNamespace, generation);
         try
         {

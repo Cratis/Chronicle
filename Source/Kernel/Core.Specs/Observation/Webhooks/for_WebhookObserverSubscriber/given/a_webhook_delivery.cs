@@ -112,7 +112,7 @@ public class a_webhook_delivery : Events.for_EventGenerationRelease.given.a_rele
     void ConfigureEventStorage()
     {
         var stored = _events.ToArray();
-        _context = new(null) { UnreleasedEvents = stored };
+        _context = new(null);
         _storage.GetEventStore("store").GetNamespace("namespace").GetEventSequence("log")
             .GetEventAt(Arg.Any<EventSequenceNumber>()).Returns(call => stored.Single(@event => @event.Context.SequenceNumber == call.Arg<EventSequenceNumber>()));
         _eventTypes.GetFor(_pin.Id, _pin.Generation).Returns(_schemas[_pin]);

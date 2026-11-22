@@ -314,7 +314,7 @@ public partial class Observer
 
     async Task<ObserverSubscriberResult> InvokeWebhookProbe(WebhookProbeDelivery delivery, WebhookProbe options)
     {
-        var (control, failure, subscriber, selected, released) = delivery;
+        var (control, failure, subscriber, _, released) = delivery;
         using var cancellation = new CancellationTokenSource();
         _webhookProbeCancellation = cancellation;
         _webhookProbeSubscriber = subscriber;
@@ -322,7 +322,7 @@ public partial class Observer
         {
             _metrics?.WebhookProbeAttempt();
             logger.WebhookProbeAttempt(control.Id, failure.Id);
-            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery) { ReplayEpoch = failure.ReplayEpoch, UnreleasedEvents = [selected] }, cancellation.Token);
+            _webhookProbeDelivery = subscriber.OnNextWithin(TimeSpan.FromSeconds(options.TimeoutSeconds), failure.Partition, released, new ObserverSubscriberContext(_subscription.GenerationDelivery) { ReplayEpoch = failure.ReplayEpoch }, cancellation.Token);
             var result = await _webhookProbeDelivery;
 
             // Even a nominal result cannot release quarantine before the completion barrier.

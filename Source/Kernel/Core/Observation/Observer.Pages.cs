@@ -155,7 +155,6 @@ public partial class Observer
                 var target = subscriberSelector.Select(_subscription, candidates[0].Partition);
                 var subscriber = (IObserverPartitionPageSubscriber)GrainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(ObserverSubscriberKey.AllPartitions, target.SiloAddress));
                 var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }
-                    .WithUnreleasedEvents(candidates.SelectMany(candidate => candidate.Events), _subscription.SubscriberType)
                     .WithDeadlines(subscriberTimeout, hold, _clock);
                 fence = AbandonedDeliveryDrain.Capture(_subscription, ObserverSubscriberKey.AllPartitions, target, context);
                 var pageResult = await subscriber.OnNextPartitionsWithin(subscriberTimeout, decrypted, context);

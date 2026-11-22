@@ -114,7 +114,6 @@ public partial class HandleEventsForObserver
             var target = subscriberSelector.Select(_subscription, batches[0].Partition);
             var subscriber = (IObserverPartitionPageSubscriber)grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(ObserverSubscriberKey.AllPartitions, target.SiloAddress));
             var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }
-                .WithUnreleasedEvents(batches.SelectMany(batch => batch.Events), _subscription.SubscriberType)
                 .WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
             _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, ObserverSubscriberKey.AllPartitions, target, subscriberContext);
             onDispatch();

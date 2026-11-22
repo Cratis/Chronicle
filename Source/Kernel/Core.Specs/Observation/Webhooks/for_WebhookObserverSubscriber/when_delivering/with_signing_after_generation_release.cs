@@ -16,12 +16,12 @@ public class with_signing_after_generation_release : given.a_subscriber_with_sig
     {
         var incoming = AppendedEvent.EmptyWithEventSequenceNumber(42);
         _events = [incoming with { Context = incoming.Context with { EventType = new("customer", 2) } }];
-        _released = incoming with { Context = incoming.Context with { EventType = new("customer", 1), SequenceNumber = 43 } };
+        _released = incoming with { Context = incoming.Context with { EventType = new("customer", 1) } };
         _definitions.Get("webhook").Returns(_definition with { GenerationDelivery = EventGenerationDelivery.Pinned, EventTypes = [new("customer", 1)] });
         _release.Release(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns([_released]);
     }
 
-    Task Because() => _subscriber.OnNext("partition", _events, new(null) { UnreleasedEvents = _events });
+    Task Because() => _subscriber.OnNext("partition", _events, new(null));
 
     [Fact] void should_identify_the_released_batch() => _identities.Single()!.Batches.Single().First.ShouldEqual(_released.Context.SequenceNumber);
     [Fact] void should_deliver_the_released_batch() => _batches.Single().Single().ShouldEqual(_released);
