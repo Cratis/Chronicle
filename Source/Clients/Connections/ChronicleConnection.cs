@@ -333,6 +333,38 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     public void RequestReconnect() => _watchDog.RequestReconnect();
 
     /// <summary>
+    /// Decides how reactors and reducers observe: over one multiplexed stream when it is enabled and the kernel advertises it,
+    /// otherwise over one stream each, which is all an older kernel serves.
+    /// </summary>
+    /// <param name="perObserver">The services with one stream per reactor and reducer.</param>
+    /// <param name="enabled">Whether multiplexed observation is enabled.</param>
+    /// <param name="capabilities">The capabilities the kernel advertised.</param>
+    /// <param name="multiplexedObservation">Creates the proxy of the kernel's multiplexed observation. Only called when it is used.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> for the shared channel.</param>
+    /// <returns>The services to use.</returns>
+    internal static Services ChooseObservation(
+        Services perObserver,
+        bool enabled,
+        IReadOnlyCollection<string> capabilities,
+        Func<Contracts.Observation.Multiplexed.IMultiplexedObservation> multiplexedObservation,
+        ILoggerFactory loggerFactory)
+    {
+        if (!enabled || !capabilities.Contains(Contracts.Clients.KernelCapabilities.MultiplexedObservation))
+        {
+            return perObserver;
+        }
+
+        var channel = new Multiplexed.MultiplexedObservationChannel(
+            multiplexedObservation(),
+            loggerFactory.CreateLogger<Multiplexed.MultiplexedObservationChannel>());
+        return perObserver with
+        {
+            Reactors = new Multiplexed.MultiplexedReactors(perObserver.Reactors, channel),
+            Reducers = new Multiplexed.MultiplexedReducers(channel)
+        };
+    }
+
+    /// <summary>
     /// Reconnect on behalf of the watchdog, which must always get to attempt.
     /// </summary>
     /// <returns>Awaitable task.</returns>
@@ -721,23 +753,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     IConnectionService CreateConnectionService(ChronicleServerAddress address, CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory) =>
         ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
 
-    Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
-    {
-        var services = CreatePerObserverServices(callInvoker, clientFactory);
-        if (!MultiplexObservation || !Capabilities.Contains(Contracts.Clients.KernelCapabilities.MultiplexedObservation))
-        {
-            return services;
-        }
-
-        var channel = new Multiplexed.MultiplexedObservationChannel(
-            callInvoker.CreateGrpcService<Contracts.Observation.Multiplexed.IMultiplexedObservation>(clientFactory),
-            _loggerFactory.CreateLogger<Multiplexed.MultiplexedObservationChannel>());
-        return services with
-        {
-            Reactors = new Multiplexed.MultiplexedReactors(services.Reactors, channel),
-            Reducers = new Multiplexed.MultiplexedReducers(channel)
-        };
-    }
+    Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory) =>
+        ChooseObservation(
+            CreatePerObserverServices(callInvoker, clientFactory),
+            MultiplexObservation,
+            Capabilities,
+            () => callInvoker.CreateGrpcService<Contracts.Observation.Multiplexed.IMultiplexedObservation>(clientFactory),
+            _loggerFactory);
 
     Services CreatePerObserverServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
     {
