@@ -45,7 +45,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     internal BenchmarkDatabase Database { get; private set; } = null!;
 
     /// <inheritdoc/>
-    public Task<string> Explain(CapturedQuery query) => new SqlPlanQueries(provider, _connectionString).Explain(query);
+    public Task<string> Explain(CapturedQuery query, string? rawPlanPath = null) => new SqlPlanQueries(provider, _connectionString).Explain(query, rawPlanPath);
 
     /// <inheritdoc/>
     public Task<string> IndexDefinitions(CapturedQuery query) => new SqlPlanQueries(provider, _connectionString).IndexDefinitions(query);
