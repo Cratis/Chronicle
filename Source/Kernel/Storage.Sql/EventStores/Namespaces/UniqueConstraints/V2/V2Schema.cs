@@ -31,6 +31,7 @@ sealed class V2Schema(Func<DbContextOptions> createOptions)
     /// </summary>
     /// <param name="actual">The persisted binding.</param>
     /// <param name="expected">The requested binding.</param>
+    /// <exception cref="UniqueConstraintV2SchemaMismatch">The persisted binding differs from the requested one.</exception>
     internal static void Verify(V2Binding actual, V2Binding expected)
     {
         if (actual != expected) throw new UniqueConstraintV2SchemaMismatch();
@@ -64,6 +65,7 @@ sealed class V2Schema(Func<DbContextOptions> createOptions)
     /// <param name="create">Whether missing claim storage may be created.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The bound table name, or null when read-only storage is absent.</returns>
+    /// <exception cref="UniqueConstraintV2SchemaMismatch">The persisted binding's table is missing.</exception>
     internal async Task<string?> Resolve(V2Binding expected, bool create, CancellationToken cancellationToken)
     {
         if (create)
