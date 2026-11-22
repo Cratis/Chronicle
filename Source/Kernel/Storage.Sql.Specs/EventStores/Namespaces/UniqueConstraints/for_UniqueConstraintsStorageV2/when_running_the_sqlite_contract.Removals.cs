@@ -11,7 +11,7 @@ public partial class when_running_the_sqlite_contract
     [Fact]
     public async Task should_fence_removals_without_provisioning_a_binding()
     {
-        await Seed();
+        await Initialize();
         (await _storage.Remove("owner", PerValue, _scope, _authority)).IsSuccess.ShouldBeTrue();
         (await _storage.RemoveValue("owner", PerValue, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
         (await _storage.RemoveAllFor(PerValue, _authority)).IsSuccess.ShouldBeTrue();
