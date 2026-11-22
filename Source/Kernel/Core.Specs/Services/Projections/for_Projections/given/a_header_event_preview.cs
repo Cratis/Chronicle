@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.for_PublicEventContentRedactor.given;
+using Cratis.Chronicle.Schemas;
 
 namespace Cratis.Chronicle.Services.Projections.for_Projections.given;
 
@@ -22,6 +23,8 @@ public class a_header_event_preview : all_dependencies
         SetCompiledDefinition(_projectionDefinition);
         _eventCursor.MoveNext().Returns(true, false);
         _eventCursor.Current.Returns(_stored);
+        _readModelsCompliance.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<ExpandoObject>())
+            .Returns(call => call.Arg<ExpandoObject>());
         _projectionGrain.Process(Arg.Any<EventStoreNamespaceName>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns(call => CopyIntoState(call.Arg<IEnumerable<AppendedEvent>>()));
         _projectionGrain.ProcessForPreview(Arg.Any<EventStoreNamespaceName>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>()).Returns(call => CopyIntoState(call.Arg<IEnumerable<AppendedEvent>>()));
     }

@@ -34,7 +34,7 @@ public class a_header_event_query : Specification
         store.EventTypes.GetFor(Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns([]);
         sequence.GetCountMatching(Arg.Any<EventSequenceQueryCriteria>()).Returns(new Concepts.Events.EventCount((ulong)_stored.Length));
         sequence.GetPage(Arg.Any<EventSequenceQueryCriteria>(), 0, int.MaxValue, Arg.Any<EventSequenceQuerySort>()).Returns(cursor);
-        sequence.GetFromSequenceNumber(Arg.Any<Concepts.Events.EventSequenceNumber>(), Arg.Any<Concepts.Events.EventSourceId>(), eventTypes: Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns(cursor);
+        sequence.GetFromSequenceNumberWithHistory(Arg.Any<Concepts.Events.EventSequenceNumber>(), Arg.Any<Concepts.Events.EventSourceId?>(), eventTypes: Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns(cursor);
         cursor.MoveNext().Returns(true, false);
         cursor.Current.Returns(_stored);
         _queryContext.Current.Returns(QueryContext.NotSet);
