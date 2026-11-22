@@ -27,8 +27,6 @@ public class an_inbox : Specification
 
     protected virtual ChronicleOptions Options => new() { Registration = new() { MaxApplyAttempts = 2, ApplyRetryDelaySeconds = 5 } };
 
-    protected virtual bool SupportsIntents => true;
-
     async Task Establish()
     {
         _silo = new TestKitSilo();
@@ -37,14 +35,7 @@ public class an_inbox : Specification
         _clock = new();
         _manager = Substitute.For<IProjectionsManager>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
-        if (SupportsIntents)
-        {
-            _eventStoreStorage.RegistrationIntents.Returns(_intents);
-        }
-        else
-        {
-            _eventStoreStorage.RegistrationIntents.Returns(_ => throw new RegistrationIntentsStorageNotSupported());
-        }
+        _eventStoreStorage.RegistrationIntents.Returns(_intents);
 
         var storage = Substitute.For<IStorage>();
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
@@ -71,6 +62,6 @@ public class an_inbox : Specification
         }
     }
 
-    protected Task<RegistrationAcceptance?> Accept(ProjectionDefinition[] definitions, string registrant, ProjectionOwner? fullSetOwner = ProjectionOwner.Client, string version = "1.0") =>
+    protected Task<RegistrationAcceptance> Accept(ProjectionDefinition[] definitions, string registrant, ProjectionOwner? fullSetOwner = ProjectionOwner.Client, string version = "1.0") =>
         _grain.AcceptProjections(ProjectionRegistrationSignature.For(definitions, fullSetOwner, registrant, version), definitions, fullSetOwner, registrant, version);
 }

@@ -60,8 +60,7 @@ public interface IEventStoreStorage
     /// <summary>
     /// Gets the <see cref="Registrations.IRegistrationIntentStorage"/> for the event store.
     /// </summary>
-    /// <exception cref="Registrations.RegistrationIntentsStorageNotSupported">The provider has not implemented registration intents.</exception>
-    Registrations.IRegistrationIntentStorage RegistrationIntents => throw new Registrations.RegistrationIntentsStorageNotSupported();
+    Registrations.IRegistrationIntentStorage RegistrationIntents { get; }
 
     /// <summary>
     /// Gets the event store the storage represents.

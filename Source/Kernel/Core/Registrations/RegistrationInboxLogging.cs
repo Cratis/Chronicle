@@ -32,7 +32,4 @@ internal static partial class RegistrationInboxLogging
 
     [LoggerMessage(LogLevel.Information, "Event store {EventStore} has {Count} accepted registration(s) waiting to be applied")]
     internal static partial void ResumingPending(this ILogger<RegistrationInbox> logger, EventStoreName eventStore, int count);
-
-    [LoggerMessage(LogLevel.Debug, "The storage provider of event store {EventStore} cannot keep registration intents; registrations are applied before they are answered")]
-    internal static partial void IntentsNotSupported(this ILogger<RegistrationInbox> logger, EventStoreName eventStore);
 }

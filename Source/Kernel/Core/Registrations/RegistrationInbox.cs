@@ -41,7 +41,7 @@ public class RegistrationInbox(
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "No wait handle is used; the source is only cancelled on deactivation.")]
     readonly CancellationTokenSource _stopping = new();
     EventStoreName _eventStore = EventStoreName.NotSet;
-    IRegistrationIntentStorage? _storage;
+    IRegistrationIntentStorage _storage = null!;
     string _supervisionKey = string.Empty;
     long _revision;
     Task _worker = Task.CompletedTask;
@@ -50,15 +50,7 @@ public class RegistrationInbox(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventStore = this.GetPrimaryKeyString();
-        try
-        {
-            _storage = storage.GetEventStore(_eventStore).RegistrationIntents;
-        }
-        catch (RegistrationIntentsStorageNotSupported)
-        {
-            logger.IntentsNotSupported(_eventStore);
-            return;
-        }
+        _storage = storage.GetEventStore(_eventStore).RegistrationIntents;
 
         foreach (var intent in await _storage.GetAll())
         {
@@ -100,7 +92,7 @@ public class RegistrationInbox(
     /// <inheritdoc/>
     public Task Ensure()
     {
-        if (_storage is not null && _intents.Values.Any(intent => intent.State == RegistrationIntentState.Pending))
+        if (_intents.Values.Any(intent => intent.State == RegistrationIntentState.Pending))
         {
             StartWorker();
         }
@@ -109,13 +101,8 @@ public class RegistrationInbox(
     }
 
     /// <inheritdoc/>
-    public async Task<RegistrationAcceptance?> AcceptProjections(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    public async Task<RegistrationAcceptance> AcceptProjections(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version)
     {
-        if (_storage is null)
-        {
-            return null;
-        }
-
         var registrantName = registrant ?? string.Empty;
 
         // Only a full set from an identified registrant replaces what that registrant sent before. Other registrations
@@ -282,7 +269,7 @@ public class RegistrationInbox(
         _intents[slot] = outcome;
         try
         {
-            await _storage!.Save(outcome);
+            await _storage.Save(outcome);
         }
         catch (Exception exception)
         {

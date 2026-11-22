@@ -122,7 +122,7 @@ internal sealed class Projections(
             }
 
             // The kernel takes the registration in and answers; applying it happens in the background, so what the
-            // kernel is busy with does not reach the client. Without durable storage for the intent it is applied first.
+            // kernel is busy with does not reach the client. A silo that cannot take the registration in leaves it to be applied first.
             if (options.Value.Registration.AcceptAsynchronously && await TryAccept(request.EventStore, signature, projections, fullSetOwner, registrant, version))
             {
                 return;
@@ -762,8 +762,8 @@ internal sealed class Projections(
     {
         try
         {
-            var acceptance = await grainFactory.GetGrain<IRegistrationInbox>(eventStore).AcceptProjections(signature, projections, fullSetOwner, registrant, version);
-            return acceptance is not null;
+            await grainFactory.GetGrain<IRegistrationInbox>(eventStore).AcceptProjections(signature, projections, fullSetOwner, registrant, version);
+            return true;
         }
         catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
         {
