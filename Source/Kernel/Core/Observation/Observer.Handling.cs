@@ -410,38 +410,49 @@ public partial class Observer
         }
     }
 
-    bool HasSubscribedEvent(IEnumerable<AppendedEvent> events)
+    FrozenSet<EventTypeId> SubscribedEventTypeIds()
     {
         if (!ReferenceEquals(_eventTypeSubscription, _subscription))
         {
             _subscribedEventTypeIds = _subscription.EventTypes.Select(static eventType => eventType.Id).ToFrozenSet();
             _eventTypeSubscription = _subscription;
         }
-        foreach (var @event in events)
-        {
-            if (_subscribedEventTypeIds.Contains(@event.Context.EventType.Id)) return true;
-        }
-        return false;
+
+        return _subscribedEventTypeIds;
     }
 
-    bool HasNoApplicableEvents(IEnumerable<AppendedEvent> events) =>
-        (!State.SubscribesToAllEvents && !HasSubscribedEvent(events)) || ExcludedByFilters([.. events]);
+    ObserverRunPreparationContext ContextForRunPreparation()
+    {
+        var subscribesToAllEvents = State.SubscribesToAllEvents;
+        return new(
+            _pageFloor ?? State.NextEventSequenceNumber,
+            subscribesToAllEvents,
+            subscribesToAllEvents ? _subscribedEventTypeIds : SubscribedEventTypeIds(),
+            _subscription.Filters);
+    }
+
+    void RecordInapplicableRun(Key partition, EventSequenceNumber observedTail)
+    {
+        State = State with
+        {
+            NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(observedTail.Next())),
+            TailEventSequenceNumber = TailAfter(observedTail)
+        };
+        RecordedHandlingState();
+    }
 
     async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
-        var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
+        var preparationContext = ContextForRunPreparation();
+        var prepared = ObserverRunPreparation.Prepare(events, preparationContext);
+        var observedTailEventSequenceNumber = prepared.ObservedTail;
 
         // An observer subscribed to all events has no fixed event type list to match against - every event is
         // of interest to it by definition, so this "none of these events are ones we're subscribed to" fast
         // path never applies to it.
-        if (HasNoApplicableEvents(events))
+        if (!prepared.IsApplicable)
         {
-            State = State with
-            {
-                NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(observedTailEventSequenceNumber.Next())),
-                TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-            };
-            RecordedHandlingState();
+            RecordInapplicableRun(partition, observedTailEventSequenceNumber);
             await WriteProgressStateDebounced();
             return;
         }
@@ -452,9 +463,9 @@ public partial class Observer
         var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
-        var tailEventSequenceNumber = _pageFloor ?? State.NextEventSequenceNumber;
+        var tailEventSequenceNumber = preparationContext.NextEventSequenceNumber;
 
-        var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
+        var eventsToHandle = prepared.EventsToHandle;
         if (await RepairDiscardedDeliveries(partition, events, tailEventSequenceNumber)) return;
         var configuration = await configurationProvider.GetFor(_observerKeyText);
         if (ExceedsLiveBudget(configuration, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
