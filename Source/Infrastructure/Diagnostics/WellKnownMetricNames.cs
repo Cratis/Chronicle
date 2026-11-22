@@ -278,6 +278,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="ObserverDormantWakesDelayed"/>.</summary>
     public const string ObserverDormantWakesDelayedUnit = "{wake}";
 
+    /// <summary>Number of dormant observers the safety net looked at, by what it found: up to date, behind, not comparable, or due for the unconditional wake.</summary>
+    public const string ObserverDormantSafetyNetChecks = "cratis.chronicle.observer.dormant_safety_net_checks";
+
+    /// <summary>Unit of <see cref="ObserverDormantSafetyNetChecks"/>.</summary>
+    public const string ObserverDormantSafetyNetChecksUnit = "{check}";
+
     /// <summary>Number of woken observers that resumed from their cursor or fell back to catch-up, by outcome.</summary>
     public const string ObserverDormantResumes = "cratis.chronicle.observer.dormant_resumes";
 

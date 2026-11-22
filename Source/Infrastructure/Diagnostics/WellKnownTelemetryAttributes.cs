@@ -68,6 +68,9 @@ public static class WellKnownTelemetryAttributes
     /// <summary>What woke a dormant observer: an appended event, the safety net or a sweep.</summary>
     public const string ObserverWakeCause = "cratis.chronicle.observer.wake_cause";
 
+    /// <summary>What the safety net found when it looked at a dormant observer: up to date, behind, not comparable, or due for the unconditional wake.</summary>
+    public const string ObserverSafetyNetOutcome = "cratis.chronicle.observer.safety_net_outcome";
+
     /// <summary>How a woken observer found its way back to its cursor: resumed from it, fell back to catch-up or found its client gone.</summary>
     public const string ObserverResumeOutcome = "cratis.chronicle.observer.resume_outcome";
 

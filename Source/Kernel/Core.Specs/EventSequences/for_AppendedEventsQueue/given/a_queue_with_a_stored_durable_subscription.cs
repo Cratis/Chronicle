@@ -40,6 +40,10 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
     protected IObserverStateStorage _observerStates;
     protected IObserverDefinitionsStorage _observerDefinitions;
     protected int _handledEvents;
+    protected IEventSequence _eventSequenceGrain;
+    protected readonly Dictionary<EventTypeId, EventSequenceNumber> _tails = [];
+    protected readonly Dictionary<ObserverId, EventSequenceNumber> _cursors = [];
+    protected readonly ConcurrentQueue<string> _lookups = new();
 
     protected virtual ObserverSubscriptionKind StoredKind => ObserverSubscriptionKind.ClientReactor;
 
@@ -50,6 +54,8 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
     protected virtual int DormantAfter => 900;
 
     protected virtual int SafetyNetSeconds => 900;
+
+    protected virtual int FullWakeSeconds => 3600;
 
     protected virtual IShutdownDrainBudget? StopBudget => null;
 
@@ -66,6 +72,13 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
             }
         };
 
+    /// <summary>
+    /// Records the persisted cursor of an observer, the next event sequence number it expects.
+    /// </summary>
+    /// <param name="id">The observer.</param>
+    /// <param name="cursor">The cursor.</param>
+    protected void SetCursor(ObserverId id, EventSequenceNumber cursor) => _cursors[id] = cursor;
+
     protected ObserverKey KeyOf(ObserverId id) => new(id, EventStore, Namespace, _eventSequence);
 
     protected ObserverId IdInQueue(int queue, string name)
@@ -78,7 +91,7 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
     {
         var options = new ChronicleOptions
         {
-            Observers = new() { DormantAfter = DormantAfter, DormantSafetyNet = SafetyNetSeconds, DurableSubscriptions = Mode }
+            Observers = new() { DormantAfter = DormantAfter, DormantSafetyNet = SafetyNetSeconds, DormantSafetyNetFullWake = FullWakeSeconds, DurableSubscriptions = Mode }
         };
         var queue = new AppendedEventsQueue(
             _taskFactory,
@@ -144,6 +157,21 @@ public class a_queue_with_a_stored_durable_subscription : all_dependencies
         _observerStates = Substitute.For<IObserverStateStorage>();
         _observerDefinitions = Substitute.For<IObserverDefinitionsStorage>();
         _observerStates.GetDurableSubscriptions(_eventSequence).Returns(new Dictionary<ObserverId, ObserverDurableSubscription>());
+        _observerStates.GetNextEventSequenceNumbers(_eventSequence).Returns(_ =>
+        {
+            _lookups.Enqueue("cursors");
+            return Task.FromResult<IReadOnlyDictionary<ObserverId, EventSequenceNumber>>(new Dictionary<ObserverId, EventSequenceNumber>(_cursors));
+        });
+        _eventSequenceGrain = Substitute.For<IEventSequence>();
+        _eventSequenceGrain.GetTailSequenceNumberForEventTypes(Arg.Any<IEnumerable<EventType>>()).Returns(callInfo =>
+        {
+            _lookups.Enqueue("tail");
+            return Task.FromResult(callInfo.Arg<IEnumerable<EventType>>()
+                .Select(eventType => _tails.GetValueOrDefault(eventType.Id, EventSequenceNumber.Unavailable))
+                .OrderDescending()
+                .First());
+        });
+        _grainFactory.GetGrain<IEventSequence>(new EventSequenceKey(_eventSequence, EventStore, Namespace)).Returns(_eventSequenceGrain);
         var eventStore = _storage.GetEventStore(EventStore);
         eventStore.GetNamespace(Namespace).Observers.Returns(_observerStates);
         eventStore.Observers.Returns(_observerDefinitions);
