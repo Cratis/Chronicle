@@ -53,7 +53,7 @@ internal sealed class ProtectedValueRelease(
         }
         catch (EncryptionKeyFenceUnavailable error)
         {
-            System.Diagnostics.Trace.TraceWarning("A protected value was released empty because its erasure fence could not be validated: {0}", error.Message);
+            ProtectedValueReleaseLogging.FenceUnavailable(error.GetType().Name);
             return null;
         }
     }
