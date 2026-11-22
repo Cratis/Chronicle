@@ -118,6 +118,12 @@ public class ClusteringFixture : IAsyncLifetime
     protected virtual short SiloCount => 2;
 
     /// <summary>
+    /// Gets how the client's observation reaches the kernel: <see langword="null"/> for one stream per reactor and reducer,
+    /// otherwise the function that passes the kernel's multiplexed observation to the client, which a fixture uses to watch it.
+    /// </summary>
+    protected virtual Func<Cratis.Chronicle.Contracts.Observation.Multiplexed.IMultiplexedObservation, Cratis.Chronicle.Contracts.Observation.Multiplexed.IMultiplexedObservation>? MultiplexedObservation => null;
+
+    /// <summary>
     /// Configures the backing store without replacing cluster membership.
     /// </summary>
     /// <param name="builder">The kernel builder.</param>
@@ -271,7 +277,8 @@ public class ClusteringFixture : IAsyncLifetime
                     // across multiple connected client instances.
                     services.AddInProcessChronicleClient(
                         new DefaultClientArtifactsProvider(new SingleAssemblyDiscovery(typeof(ClusteringFixture).Assembly)),
-                        Constants.EventStore);
+                        Constants.EventStore,
+                        MultiplexedObservation);
                 });
             });
 
