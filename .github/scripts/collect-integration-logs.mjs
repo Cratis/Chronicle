@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { isUtf8 } from 'node:buffer';
 import { spawnSync } from 'node:child_process';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -12,21 +12,30 @@ import { pathToFileURL } from 'node:url';
 // never print matched text, docker output, or exception messages from untrusted logs.
 const rules = [
     ['private-key', /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----/i],
-    ['credential-assignment', /\b(?:password|passwd|pwd|[\w-]*secret|[\w-]*token|api[_-]?key|access[_-]?key|accountkey)\b["']?\s*[:=]\s*["']?[^\s"';,<}\]]+/i],
+    ['credential-assignment', /\b(?:[\w-]{0,64}(?:password|passwd|pwd|secret|token)|api[_-]?key|access[_-]?key|accountkey)\b["']?\s*[:=]\s*["']?[^\s"';,<}\]]+/i],
     ['authorization', /\b(?:bearer|basic)\s+[a-z0-9+/_.=-]+/i],
-    ['uri-credentials', /[a-z][a-z0-9+.-]*:\/\/[^\s/@]+:[^\s/@]+@/i],
+    ['uri-credentials', /[a-z][a-z0-9+.-]{0,31}:\/\/[^\s/@]+:[^\s/@]+@/i],
     ['provider-token', /\b(?:gh[pousr]_[a-z0-9_]+|github_pat_[a-z0-9_]+|AKIA[A-Z0-9]{16}|xox[baprs]-[a-z0-9-]+)\b/i],
     ['jwt', /\beyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+/i],
     ['signed-url', /[?&](?:sig|signature|x-amz-signature)=[^\s&"'<>]+/i],
-    ['xml-credential', /<(?:password|passwd|pwd|[\w-]*secret|[\w-]*token|api[_-]?key)\b[^>]*>\s*[^\s<]+/i]
+    ['xml-credential', /<(?:[\w-]{0,64}(?:password|passwd|pwd|secret|token)|api[_-]?key)\b[^>]*>\s*[^\s<]+/i]
 ];
 const maxBytes = 32 * 1024 * 1024;
+const maxTotalBytes = 500 * 1024 * 1024;
 const containerLogBytes = logs => Buffer.concat([logs.stdout, Buffer.from('\n'), logs.stderr]);
+
+export function sizeRule(bytes, retainedBytes) {
+    return bytes > maxBytes ? 'size-limit' : retainedBytes + bytes > maxTotalBytes ? 'total-size-limit' : undefined;
+}
 
 export function selfTest() {
     const violations = [
         ['private-key', '-----BEGIN PRIVATE KEY-----'],
         ['credential-assignment', 'Password=example-value;'],
+        ['credential-assignment', 'MSSQL_SA_PASSWORD=example-value'],
+        ['credential-assignment', '"CertificatePassword": "example-value"'],
+        ['credential-assignment', 'DefaultAdminPassword=example-value'],
+        ['xml-credential', '<CertificatePassword>example-value</CertificatePassword>'],
         ['credential-assignment', '"ClientSecret": "example-value"'],
         ['credential-assignment', '{\\"api_key\\":\\"example-value\\"}'],
         ['credential-assignment', '&quot;token&quot;: &quot;example-value&quot;'],
@@ -41,7 +50,12 @@ export function selfTest() {
     ];
     for (const [rule, text] of violations) assert.equal(secretRule(text), rule, `Missed rule: ${rule}`);
     assert.equal(secretRule('Information CatchUpObserver prepared no job steps'), undefined);
+    assert.equal(secretRule('a-'.repeat(20000)), undefined);
+    assert.equal(secretRule(`${'a-'.repeat(20000)}password=example-value`), 'credential-assignment');
     assert.equal(secretRule(containerLogBytes({ stdout: Buffer.from('no-newline'), stderr: Buffer.from('Bearer example-value') }).toString()), 'authorization');
+    assert.equal(sizeRule(maxBytes + 1, 0), 'size-limit');
+    assert.equal(sizeRule(maxBytes, maxTotalBytes - maxBytes), undefined);
+    assert.equal(sizeRule(1, maxTotalBytes), 'total-size-limit');
     console.log(`Secret-screen self-test checked ${violations.length} planted violations and one clean diagnostic.`);
 }
 
@@ -70,21 +84,23 @@ async function logFiles(directory) {
 export async function collect({ root, output, docker = spawnSync, report = console.log }) {
     // Must be a fresh directory: stale or partially scanned files must never be uploaded.
     await mkdir(output);
-    let examined = 0, retained = 0;
+    let examined = 0, retained = 0, retainedBytes = 0;
+    // Names are printed as JSON so file names cannot inject workflow commands or new lines.
+    const omit = (name, rule) => report(`Omitted file=${JSON.stringify(name)} rule=${rule}`);
     const screen = async (name, bytes) => {
         examined++;
-        // Names are printed as JSON so file names cannot inject workflow commands or new lines.
-        const file = JSON.stringify(name);
-        const rule = bytes.length > maxBytes ? 'size-limit' : bytes.includes(0) ? 'binary-log' :
-            !isUtf8(bytes) ? 'invalid-utf8' : secretRule(bytes.toString('utf8'));
+        // Recheck actual bytes too, in case a file grew between stat and readFile.
+        const rule = sizeRule(bytes.length, retainedBytes) ?? (bytes.includes(0) ? 'binary-log' :
+            !isUtf8(bytes) ? 'invalid-utf8' : secretRule(bytes.toString('utf8')));
         if (rule) {
-            report(`Omitted file=${file} rule=${rule}`);
+            omit(name, rule);
             return;
         }
         const destination = path.join(output, name);
         await mkdir(path.dirname(destination), { recursive: true });
         await writeFile(destination, bytes);
         retained++;
+        retainedBytes += bytes.length;
     };
     const directories = ['Integration', 'Source/Clients/XUnit.Integration', 'Source/Clients/XUnit.Integration.v3', 'coverage-results'];
     const files = (await Promise.all(directories.map(directory => logFiles(path.join(root, directory))))).flat();
@@ -92,7 +108,16 @@ export async function collect({ root, output, docker = spawnSync, report = conso
     for (const entry of await readdir(root, { withFileTypes: true })) {
         if (entry.isFile() && /\.log$/i.test(entry.name)) files.push(path.join(root, entry.name));
     }
-    for (const file of files) await screen(path.relative(root, file), await readFile(file));
+    for (const file of files) {
+        const name = path.relative(root, file);
+        const rule = sizeRule((await stat(file)).size, retainedBytes);
+        if (rule) {
+            examined++;
+            omit(name, rule);
+            continue;
+        }
+        await screen(name, await readFile(file));
+    }
 
     // DisposeAsync normally removes Testcontainers. Capture any survivors after a crash, including
     // stopped containers, without inspecting environment/configuration (which can contain secrets).
@@ -113,7 +138,7 @@ export async function collect({ root, output, docker = spawnSync, report = conso
             await screen(`containers/${id}.log`, containerLogBytes(logs));
         }
     }
-    report(`Screened ${examined} log files; retained ${retained}.`);
+    report(`Examined ${examined} log files; retained ${retained} (${retainedBytes}/${maxTotalBytes} bytes).`);
     if (!examined) report('No log files available; no diagnostic artifact will be uploaded.');
     return { examined, retained };
 }
