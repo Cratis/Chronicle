@@ -38,7 +38,7 @@ public class when_receiving_invalid_revision_content : Specification
         _currentErrors = _malformed.Select(content => Catch.Exception(() => PublicEventContentRedactor.Redact(given.revised_header_events.All()[0] with { Content = JsonSerializer.Deserialize<ExpandoObject>(content)! }, given.header_events.Options))).ToArray();
     }
 
-    [Fact] void should_reject_malformed_serialized_envelopes() => _serializedErrors.All(error => error is JsonException { Message: "Invalid public event content.", InnerException: null }).ShouldBeTrue();
-    [Fact] void should_reject_malformed_current_envelopes() => _currentErrors.All(error => error is JsonException { Message: "Invalid public event content.", InnerException: null }).ShouldBeTrue();
-    [Fact] void should_not_include_values_in_errors() => given.header_events.ContainsSentinel(string.Join(" ", _serializedErrors.Concat(_currentErrors).Select(error => error?.ToString()))).ShouldBeFalse();
+    [Fact] void should_reject_malformed_serialized_envelopes() => _serializedErrors.All(error => error is JsonException { InnerException: null } && error.Message == "Invalid public event content.").ShouldBeTrue();
+    [Fact] void should_reject_malformed_current_envelopes() => _currentErrors.All(error => error is JsonException { InnerException: null } && error.Message == "Invalid public event content.").ShouldBeTrue();
+    [Fact] void should_not_include_values_in_errors() => given.header_events.ContainsSentinel(string.Join(' ', _serializedErrors.Concat(_currentErrors).Select(error => error?.ToString()))).ShouldBeFalse();
 }

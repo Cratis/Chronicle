@@ -8,7 +8,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Contracts.Queries;
-using Cratis.Chronicle.Contracts.Sequences;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Events.for_PublicEventContentRedactor.given;
 using Cratis.Chronicle.Storage;
@@ -20,7 +19,7 @@ namespace Cratis.Chronicle.Services.Sequences.for_EventSequences;
 public class when_reading_a_page_of_header_events : for_QueryExecutor.given.a_routed_query
 {
     EventSequences _service;
-    QueryResult<EventSequencePageResponse> _result;
+    QueryResult<Contracts.Sequences.EventSequencePageResponse> _result;
     Concepts.Events.AppendedEvent[] _stored;
 
     void Establish()
@@ -36,7 +35,7 @@ public class when_reading_a_page_of_header_events : for_QueryExecutor.given.a_ro
         store.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(@namespace);
         @namespace.GetEventSequence(Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(sequence);
         store.EventTypes.GetFor(Arg.Any<IEnumerable<EventType>>()).Returns([]);
-        sequence.GetWindow(Arg.Any<EventSequenceWindowCriteria>()).Returns(cursor);
+        sequence.GetWindow(default!, default!, 0, false).ReturnsForAnyArgs(cursor);
         cursor.MoveNext().Returns(true, false);
         cursor.Current.Returns(_stored);
         compliance.Release(Arg.Any<IEnumerable<Concepts.Events.AppendedEvent>>(), Arg.Any<IDictionary<EventType, EventTypeSchema>>())
@@ -52,7 +51,7 @@ public class when_reading_a_page_of_header_events : for_QueryExecutor.given.a_ro
             NullLogger<EventSequences>.Instance);
     }
 
-    async Task Because() => _result = await _service.GetPage(
+    async Task Because() => _result = await _service.Page(
         new() { EventStore = "application-store", Namespace = "namespace", EventSequenceId = "system", From = 12, Count = _stored.Length },
         CallFor(new Probe(), CallerNamed(Administrator)));
 

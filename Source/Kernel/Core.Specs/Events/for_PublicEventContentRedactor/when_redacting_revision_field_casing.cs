@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Events.EventSequences;
 
 namespace Cratis.Chronicle.Events.for_PublicEventContentRedactor;
@@ -30,5 +31,5 @@ public class when_redacting_revision_field_casing : Specification
 
     [Fact] void should_redact_serialized_fields_independently_of_casing() => _serialized.All(content => given.header_events.HasEmptyHeaders(JsonElement.Parse(content).GetProperty("CONTENT").GetString()!)).ShouldBeTrue();
     [Fact] void should_redact_current_fields_independently_of_casing() => _current.All(content => given.header_events.HasEmptyHeaders(JsonElement.Parse(content).GetProperty("CONTENT").GetString()!)).ShouldBeTrue();
-    [Fact] void should_omit_values_with_different_field_casing() => given.header_events.ContainsSentinel(string.Join(" ", _serialized.Concat(_current))).ShouldBeFalse();
+    [Fact] void should_omit_values_with_different_field_casing() => given.header_events.ContainsSentinel(string.Join(' ', _serialized.Concat(_current))).ShouldBeFalse();
 }

@@ -28,7 +28,7 @@ public static class revised_header_events
             Context = original.Context with { EventType = typeof(EventRevised).GetEventType() with { Generation = type.Generation } },
             Content = JsonSerializer.Deserialize<ExpandoObject>(Envelope(type, JsonSerializer.Serialize(original.Content)))!,
             OriginalContent = Envelope(type, original.OriginalContent),
-            Revisions = original.Revisions.Select(revision => revision with { Content = Envelope(type with { Generation = revision.Generation }, revision.Content) }).ToArray(),
+            Revisions = original.Revisions.Select(revision => revision with { Content = Envelope(type with { Generation = revision.EventTypeGeneration }, revision.Content) }).ToArray(),
             GenerationalContent = original.GenerationalContent.ToDictionary(pair => pair.Key, pair => Envelope(type with { Generation = (uint)pair.Key }, pair.Value))
         };
     }
