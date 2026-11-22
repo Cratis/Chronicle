@@ -15,7 +15,7 @@ public class with_a_transport_exception_echoing_sensitive_content : given.a_webh
         _receiver.Failure = error;
     }
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
 
     [Fact] void should_fail_the_batch() => _deliveryResult.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_not_acknowledge_events() => _deliveryResult.LastSuccessfulObservation.ShouldEqual(EventSequenceNumber.Unavailable);

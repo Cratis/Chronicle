@@ -86,8 +86,8 @@ public static class EventEntryConverter
         {
             SequenceNumber = sequenceNumber.Value,
             CorrelationId = correlationId.ToString(),
-            Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
-            CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
+            Causation = SerializeCausation(causation),
+            CausedBy = SerializeCausedBy(causedByChain),
             Type = eventType.Id,
             AppendedGeneration = eventType.Generation.Value,
             Occurred = occurred,
@@ -151,8 +151,8 @@ public static class EventEntryConverter
         {
             SequenceNumber = sequenceNumber.Value,
             CorrelationId = correlationId.ToString(),
-            Causation = JsonSerializer.Serialize(causation, _jsonSerializerOptions),
-            CausedBy = JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions),
+            Causation = SerializeCausation(causation),
+            CausedBy = SerializeCausedBy(causedByChain),
             Type = eventType.Id,
             AppendedGeneration = eventType.Generation.Value,
             Occurred = occurred,
@@ -183,7 +183,7 @@ public static class EventEntryConverter
     public static string SerializeTags(IEnumerable<Tag> tags)
     {
         var values = tags.Select(tag => tag.Value).ToArray();
-        return values.Length == 0 ? string.Empty : JsonSerializer.Serialize(values, _jsonSerializerOptions);
+        return values.Length == 0 ? string.Empty : JsonSerializer.Serialize(values, EventMetadataJsonContext.Default.TagValues);
     }
 
     /// <summary>
@@ -192,7 +192,7 @@ public static class EventEntryConverter
     /// </summary>
     /// <param name="tag">The tag to serialize.</param>
     /// <returns>The serialized tag token, including its quotes and any escaping.</returns>
-    public static string SerializeTagToken(Tag tag) => JsonSerializer.Serialize(tag.Value, _jsonSerializerOptions);
+    public static string SerializeTagToken(Tag tag) => JsonSerializer.Serialize(tag.Value, EventMetadataJsonContext.Default.String);
 
     /// <summary>
     /// Get the <see cref="Tag">tags</see> stored on an <see cref="EventEntry"/>.
@@ -476,7 +476,7 @@ public static class EventEntryConverter
     /// <param name="causation">The causation chain to serialize.</param>
     /// <returns>Serialized JSON string.</returns>
     public static string SerializeCausation(IEnumerable<Causation> causation) =>
-        JsonSerializer.Serialize(causation, _jsonSerializerOptions);
+        JsonSerializer.Serialize(causation, EventMetadataJsonContext.Default.CausationChain);
 
     /// <summary>
     /// Serialize a caused-by identity chain to JSON.
@@ -484,7 +484,7 @@ public static class EventEntryConverter
     /// <param name="causedByChain">The identity chain to serialize.</param>
     /// <returns>Serialized JSON string.</returns>
     public static string SerializeCausedBy(IEnumerable<IdentityId> causedByChain) =>
-        JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), _jsonSerializerOptions);
+        JsonSerializer.Serialize(causedByChain.Select(id => id.ToString()), EventMetadataJsonContext.Default.IdentityValues);
 
     /// <summary>
     /// Gets the <see cref="EventSourceName"/> of a stored event.
@@ -663,6 +663,11 @@ public static class EventEntryConverter
     {
         JsonValueKind.Object => ConvertJsonObjectToExpando(element),
         JsonValueKind.Array => ConvertJsonArrayToClrValues(element),
+        _ => ConvertJsonScalarToClrValue(element)
+    };
+
+    static object? ConvertJsonScalarToClrValue(JsonElement element) => element.ValueKind switch
+    {
         JsonValueKind.String => element.GetString(),
         JsonValueKind.Number => ConvertJsonNumberToClrValue(element),
         JsonValueKind.True => true,

@@ -28,6 +28,7 @@ public class when_exporting_an_event_with_named_tags : Specification
         var eventStoreNamespace = Substitute.For<IEventStoreNamespaceStorage>();
         var eventSequence = Substitute.For<IEventSequenceStorage>();
         var eventTypes = Substitute.For<IEventTypesStorage>();
+        eventTypes.GetDefinition(Arg.Any<Concepts.Events.EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<Concepts.Events.EventTypeId>(), EventTypeOwner.None, false, [], []));
         var compliance = Substitute.For<IEventCompliance>();
         var queryContextManager = Substitute.For<IQueryContextManager>();
         var cursor = Substitute.For<IEventCursor>();

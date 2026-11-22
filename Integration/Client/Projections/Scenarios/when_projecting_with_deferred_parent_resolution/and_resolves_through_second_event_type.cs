@@ -78,19 +78,10 @@ public class and_resolves_through_second_event_type(context context) : Given<con
 
         async Task<Root> WaitForUpdatedRoot(TimeSpan? timeout = null)
         {
-            timeout ??= TimeSpanFactory.DefaultTimeout();
-
-            using var cts = new CancellationTokenSource(timeout.Value);
-            while (true)
-            {
-                var result = await EventStore.ReadModels.GetInstanceById<Root>(RootId.ToString());
-                if (result?.Name == UpdatedRootName && result.__lastHandledEventSequenceNumber == LastEventSequenceNumber)
-                {
-                    return result;
-                }
-
-                await Task.Delay(50, cts.Token);
-            }
+            return await ReadinessWait.Until(
+                () => EventStore.ReadModels.GetInstanceById<Root>(RootId.ToString()),
+                result => result?.Name == UpdatedRootName && result.__lastHandledEventSequenceNumber == LastEventSequenceNumber,
+                timeout);
         }
     }
 

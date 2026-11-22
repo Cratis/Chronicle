@@ -10,7 +10,7 @@ public class with_a_timed_out_delivery_and_sensitive_target : given.a_webhook_de
 {
     void Establish() => _receiver.Failure = new TaskCanceledException(SensitiveTarget.Reason);
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
 
     [Fact] void should_fail_the_partition() => _deliveryResult.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_keep_retry_policy() => _deliveryResult.FailurePolicy.ShouldEqual(WebhookDeliveryFailurePolicy.Retry);

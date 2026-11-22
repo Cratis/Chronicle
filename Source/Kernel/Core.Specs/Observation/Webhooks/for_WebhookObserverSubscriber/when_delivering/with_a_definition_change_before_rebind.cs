@@ -17,7 +17,7 @@ public class with_a_definition_change_before_rebind : given.a_webhook_delivery
         _events = [_events[0] with { Context = _events[0].Context with { EventType = _pin, Hash = "second-hash" } }];
     }
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
     [Fact] void should_deliver_instead_of_dropping_the_mismatch() => _receiver.Payloads.Count.ShouldEqual(1);
     [Fact] void should_deliver_the_current_generation() => JsonNode.Parse(_receiver.Payloads.Single())!["events"]![0]!["context"]!["eventType"]!["generation"]!.GetValue<uint>().ShouldEqual(1u);
     [Fact] void should_release_the_current_pins_content() => JsonNode.Parse(_receiver.Payloads.Single())!["events"]![0]!["content"]!["name"]!.GetValue<string>().ShouldEqual("Ada Lovelace");
