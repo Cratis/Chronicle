@@ -33,9 +33,10 @@ public class and_child_every_mappings_apply_on_the_creating_event : given.a_chil
             }}
             """);
         var all = new FromEveryDefinition(new Dictionary<PropertyPath, string> { ["lastValue"] = "value" }, true);
-        _definition.Children["notes"] = Child() with { All = all, FromEvery = all };
-        _definition.Children["notes"].From[_childAdded] = new(new Dictionary<PropertyPath, string>(), "noteId", "$eventSourceId");
-        _definition.Children["notes"].From[_childUpdated] = new(new Dictionary<PropertyPath, string>(), "noteId", "$eventSourceId");
+        _definition = _definition
+            .WithChild("notes", Child() with { All = all, FromEvery = all })
+            .WithChild("notes", c1 => c1.WithFrom(_childAdded, new(new Dictionary<PropertyPath, string>(), "noteId", "$eventSourceId")))
+            .WithChild("notes", c1 => c1.WithFrom(_childUpdated, new(new Dictionary<PropertyPath, string>(), "noteId", "$eventSourceId")));
         _definition = _definition with
         {
             FromEvery = new(new Dictionary<PropertyPath, string> { ["source"] = "$eventContext(eventSourceId)" }, true)

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -24,19 +23,20 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="Nested">All the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.</param>
 /// <param name="NoAutoMapProperties">The properties on the child excluded from auto-mapping.</param>
 /// <param name="Ordering">Optional <see cref="ChildrenOrdering"/> for where new children are inserted. Appended when null.</param>
+[Immutable]
 [GenerateSerializer]
 [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition")]
 public record ChildrenDefinition(
     [Id(0)] PropertyPath IdentifiedBy,
-    IDictionary<EventType, FromDefinition> From,
-    IDictionary<EventType, JoinDefinition> Join,
-    IDictionary<PropertyPath, ChildrenDefinition> Children,
+    IReadOnlyDictionary<EventType, FromDefinition> From,
+    IReadOnlyDictionary<EventType, JoinDefinition> Join,
+    IReadOnlyDictionary<PropertyPath, ChildrenDefinition> Children,
     [Id(1)] FromEveryDefinition All,
-    IDictionary<EventType, RemovedWithDefinition> RemovedWith,
-    IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
+    IReadOnlyDictionary<EventType, RemovedWithDefinition> RemovedWith,
+    IReadOnlyDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
     FromEventPropertyDefinition? FromEventProperty = default,
     AutoMap AutoMap = AutoMap.Inherit,
-    IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
+    IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
     IEnumerable<PropertyPath>? NoAutoMapProperties = default,
     [Id(2)] ChildrenOrdering? Ordering = default) :
     ProjectionDefinition(
@@ -46,7 +46,7 @@ public record ChildrenDefinition(
         ReadModelIdentifier.NotSet,
         true,
         false,
-        new JsonObject(),
+        ImmutableJsonObject.Empty,
         From,
         Join,
         Children,

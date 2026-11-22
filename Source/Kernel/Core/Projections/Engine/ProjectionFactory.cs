@@ -344,9 +344,9 @@ public class ProjectionFactory(
     }
 
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
-        projectionDefinition.InitialModelState.Count == 0 ?
-            CreateInitialState(readModelSchema) :
-            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, readModelSchema);
+        projectionDefinition.InitialModelState.ToJsonObject() is { Count: > 0 } initialModelState ?
+            expandoObjectConverter.ToExpandoObject(initialModelState, readModelSchema) :
+            CreateInitialState(readModelSchema);
 
     static ExpandoObject CreateInitialState(JsonSchema readModelSchema)
     {
@@ -1204,7 +1204,7 @@ public class ProjectionFactory(
 
     List<(EventTypeWithKeyResolver Event, ProjectionOperationType Operation)> CollectNestedEventTypes(
         Projection projection,
-        IDictionary<PropertyPath, ChildrenDefinition>? nested,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? nested,
         PropertyPath actualIdentifiedByProperty,
         bool hasParent,
         PropertyPath parentPath)
@@ -1349,7 +1349,7 @@ public class ProjectionFactory(
 
     sealed record ProjectionTarget(ProjectionDefinition Definition, JsonSchema Schema, PropertyPath AccessorPath, PropertyPath IdentifiedBy);
 
-    sealed class FingerprintEventDefinitionsConverter<TDefinition> : DictionaryJsonConverter<EventType, TDefinition>
+    sealed class FingerprintEventDefinitionsConverter<TDefinition> : ReadOnlyDictionaryJsonConverter<EventType, TDefinition>
     {
         protected override EventType GetKeyFromString(string key) => EventType.Parse(key);
         protected override string GetKeyString(EventType key) => key.ToString();

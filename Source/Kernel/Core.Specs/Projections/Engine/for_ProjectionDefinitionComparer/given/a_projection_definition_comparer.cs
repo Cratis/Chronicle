@@ -39,9 +39,9 @@ public class a_projection_definition_comparer : Specification
     }
 
     protected static ProjectionDefinition CreateDefinition(
-        IDictionary<EventType, FromDefinition>? from = null,
-        IDictionary<EventType, JoinDefinition>? join = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? children = null,
+        IReadOnlyDictionary<EventType, FromDefinition>? from = null,
+        IReadOnlyDictionary<EventType, JoinDefinition>? join = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? children = null,
         IEnumerable<FromDerivatives>? fromDerivatives = null) =>
         new(
             ProjectionOwner.Client,

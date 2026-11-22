@@ -513,6 +513,15 @@ orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefini
   [Id(0,Level=0,Constructor=true)] IdentifiedBy: Cratis.Chronicle.Properties.PropertyPath
   [Id(1,Level=0,Constructor=true)] All: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
   [Id(2,Level=0,Constructor=true)] Ordering: Cratis.Chronicle.Changes.ChildrenOrdering
+  [Id(7,Level=1,Constructor=false)] From: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition>
+  [Id(8,Level=1,Constructor=false)] Join: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.JoinDefinition>
+  [Id(9,Level=1,Constructor=false)] Children: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
+  [Id(10,Level=1,Constructor=false)] FromDerivatives: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.FromDerivatives>
+  [Id(12,Level=1,Constructor=false)] RemovedWith: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition>
+  [Id(13,Level=1,Constructor=false)] RemovedWithJoin: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithJoinDefinition>
+  [Id(16,Level=1,Constructor=false)] Tags: System.Collections.Generic.IEnumerable<string>
+  [Id(18,Level=1,Constructor=false)] Nested: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
+  [Id(20,Level=1,Constructor=false)] NoAutoMapProperties: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Properties.PropertyPath>
   [Id(22,Level=1,Constructor=false)] GenerationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
   [Id(23,Level=1,Constructor=false)] Graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   [Id(24,Level=1,Constructor=false)] Version: string
@@ -523,43 +532,45 @@ orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefini
   [Id(3,Level=1,Constructor=true)] ReadModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   [Id(4,Level=1,Constructor=true)] IsActive: bool
   [Id(5,Level=1,Constructor=true)] IsRewindable: bool
-  [Id(6,Level=1,Constructor=true)] InitialModelState: System.Text.Json.Nodes.JsonObject
-  [Id(7,Level=1,Constructor=true)] From: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition>
-  [Id(8,Level=1,Constructor=true)] Join: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.JoinDefinition>
-  [Id(9,Level=1,Constructor=true)] Children: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
-  [Id(10,Level=1,Constructor=true)] FromDerivatives: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.FromDerivatives>
+  [Id(6,Level=1,Constructor=true)] InitialModelState: Cratis.Chronicle.Concepts.Projections.Definitions.ImmutableJsonObject
   [Id(11,Level=1,Constructor=true)] FromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
-  [Id(12,Level=1,Constructor=true)] RemovedWith: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition>
-  [Id(13,Level=1,Constructor=true)] RemovedWithJoin: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithJoinDefinition>
   [Id(14,Level=1,Constructor=true)] FromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   [Id(15,Level=1,Constructor=true)] LastUpdated: System.DateTimeOffset?
-  [Id(16,Level=1,Constructor=true)] Tags: System.Collections.Generic.IEnumerable<string>
   [Id(17,Level=1,Constructor=true)] AutoMap: Cratis.Chronicle.Concepts.Projections.Definitions.AutoMap
-  [Id(18,Level=1,Constructor=true)] Nested: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
   [Id(19,Level=1,Constructor=true)] SubscribesToAllEvents: bool
-  [Id(20,Level=1,Constructor=true)] NoAutoMapProperties: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Properties.PropertyPath>
   [Id(21,Level=1,Constructor=true)] Scope: Cratis.Chronicle.Concepts.Projections.ProjectionScope
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition")] Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition
-  [Id(0,Level=0,Constructor=true)] Properties: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,string>
+  [Id(0)] Properties: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Properties.PropertyPath,string>
   [Id(1,Level=0,Constructor=true)] Key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(2,Level=0,Constructor=true)] ParentKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromDerivatives")] Cratis.Chronicle.Concepts.Projections.Definitions.FromDerivatives
-  [Id(0,Level=0,Constructor=true)] EventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
+  [Id(0)] EventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   [Id(1,Level=0,Constructor=true)] From: Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition")] Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   [Id(0,Level=0,Constructor=true)] Event: Cratis.Chronicle.Concepts.Events.EventType
   [Id(1,Level=0,Constructor=true)] PropertyExpression: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition")] Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
+  [Id(0)] Properties: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Properties.PropertyPath,string>
   [Id(2)] AutoMap: Cratis.Chronicle.Concepts.Projections.Definitions.AutoMap
   [Id(3)] Key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
-  [Id(0,Level=0,Constructor=true)] Properties: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,string>
   [Id(1,Level=0,Constructor=true)] IncludeChildren: bool
+orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ImmutableJsonObject")] Cratis.Chronicle.Concepts.Projections.Definitions.ImmutableJsonObject
+  [Id(0)] Json: string
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.JoinDefinition")] Cratis.Chronicle.Concepts.Projections.Definitions.JoinDefinition
+  [Id(1)] Properties: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Properties.PropertyPath,string>
   [Id(0,Level=0,Constructor=true)] On: Cratis.Chronicle.Properties.PropertyPath
-  [Id(1,Level=0,Constructor=true)] Properties: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,string>
   [Id(2,Level=0,Constructor=true)] Key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(3,Level=0,Constructor=true)] AutoMap: Cratis.Chronicle.Concepts.Projections.Definitions.AutoMap
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition")] Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition
+  [Id(7)] From: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition>
+  [Id(8)] Join: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.JoinDefinition>
+  [Id(9)] Children: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
+  [Id(10)] FromDerivatives: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.FromDerivatives>
+  [Id(12)] RemovedWith: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition>
+  [Id(13)] RemovedWithJoin: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithJoinDefinition>
+  [Id(16)] Tags: System.Collections.Generic.IEnumerable<string>
+  [Id(18)] Nested: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
+  [Id(20)] NoAutoMapProperties: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Properties.PropertyPath>
   [Id(22)] GenerationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
   [Id(23)] Graph: Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
   [Id(24)] Version: string
@@ -570,21 +581,12 @@ orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefi
   [Id(3,Level=0,Constructor=true)] ReadModel: Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier
   [Id(4,Level=0,Constructor=true)] IsActive: bool
   [Id(5,Level=0,Constructor=true)] IsRewindable: bool
-  [Id(6,Level=0,Constructor=true)] InitialModelState: System.Text.Json.Nodes.JsonObject
-  [Id(7,Level=0,Constructor=true)] From: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition>
-  [Id(8,Level=0,Constructor=true)] Join: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.JoinDefinition>
-  [Id(9,Level=0,Constructor=true)] Children: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
-  [Id(10,Level=0,Constructor=true)] FromDerivatives: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.FromDerivatives>
+  [Id(6,Level=0,Constructor=true)] InitialModelState: Cratis.Chronicle.Concepts.Projections.Definitions.ImmutableJsonObject
   [Id(11,Level=0,Constructor=true)] FromEvery: Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition
-  [Id(12,Level=0,Constructor=true)] RemovedWith: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition>
-  [Id(13,Level=0,Constructor=true)] RemovedWithJoin: System.Collections.Generic.IDictionary<Cratis.Chronicle.Concepts.Events.EventType,Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithJoinDefinition>
   [Id(14,Level=0,Constructor=true)] FromEventProperty: Cratis.Chronicle.Concepts.Projections.Definitions.FromEventPropertyDefinition
   [Id(15,Level=0,Constructor=true)] LastUpdated: System.DateTimeOffset?
-  [Id(16,Level=0,Constructor=true)] Tags: System.Collections.Generic.IEnumerable<string>
   [Id(17,Level=0,Constructor=true)] AutoMap: Cratis.Chronicle.Concepts.Projections.Definitions.AutoMap
-  [Id(18,Level=0,Constructor=true)] Nested: System.Collections.Generic.IDictionary<Cratis.Chronicle.Properties.PropertyPath,Cratis.Chronicle.Concepts.Projections.Definitions.ChildrenDefinition>
   [Id(19,Level=0,Constructor=true)] SubscribesToAllEvents: bool
-  [Id(20,Level=0,Constructor=true)] NoAutoMapProperties: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Properties.PropertyPath>
   [Id(21,Level=0,Constructor=true)] Scope: Cratis.Chronicle.Concepts.Projections.ProjectionScope
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition")] Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition
   [Id(0,Level=0,Constructor=true)] Key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
@@ -609,34 +611,34 @@ enum Cratis.Chronicle.Concepts.Projections.Generations.Enablement.GenerationInit
   None = 0
 concept Cratis.Chronicle.Concepts.Projections.Generations.Enablement.StoreIncarnation : System.Guid
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition")] Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition
+  [Id(3)] Properties: System.Collections.Generic.IReadOnlyDictionary<string,string>
   [Id(0,Level=0,Constructor=true)] SourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(1,Level=0,Constructor=true)] TargetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(2,Level=0,Constructor=true)] Identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
-  [Id(3,Level=0,Constructor=true)] Properties: System.Collections.Generic.IDictionary<string,string>
   [Id(4,Level=0,Constructor=true)] ForEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition")] Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition
-  [Id(0,Level=0,Constructor=true)] From: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition>
-  [Id(1,Level=0,Constructor=true)] RemovedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition>
+  [Id(0)] From: System.Collections.Generic.IReadOnlyDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeFromDefinition>
+  [Id(1)] RemovedWith: System.Collections.Generic.IReadOnlyDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition>
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition")] Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeRemovedWithDefinition
   [Id(0,Level=0,Constructor=true)] SourceKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(1,Level=0,Constructor=true)] TargetKey: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(2,Level=0,Constructor=true)] Identity: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(3,Level=0,Constructor=true)] ForEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition")] Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition
+  [Id(1)] Properties: System.Collections.Generic.IReadOnlyDictionary<string,string>
   [Id(0,Level=0,Constructor=true)] Key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
-  [Id(1,Level=0,Constructor=true)] Properties: System.Collections.Generic.IDictionary<string,string>
   [Id(2,Level=0,Constructor=true)] UpdateOnly: bool
   [Id(3,Level=0,Constructor=true)] ForEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition")] Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition
-  [Id(0,Level=0,Constructor=true)] From: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition>
-  [Id(1,Level=0,Constructor=true)] RemovedWith: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition>
+  [Id(0)] From: System.Collections.Generic.IReadOnlyDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeFromDefinition>
+  [Id(1)] RemovedWith: System.Collections.Generic.IReadOnlyDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition>
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition")] Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeRemovedWithDefinition
   [Id(0,Level=0,Constructor=true)] Key: Cratis.Chronicle.Concepts.Projections.PropertyExpression
   [Id(1,Level=0,Constructor=true)] Detach: bool
   [Id(2,Level=0,Constructor=true)] ForEach: Cratis.Chronicle.Concepts.Projections.PropertyExpression
 orleans [Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition")] Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition
-  [Id(0,Level=0,Constructor=true)] Nodes: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition>
-  [Id(1,Level=0,Constructor=true)] Edges: System.Collections.Generic.IDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition>
+  [Id(0)] Nodes: System.Collections.Generic.IReadOnlyDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphNodeProjectionDefinition>
+  [Id(1)] Edges: System.Collections.Generic.IReadOnlyDictionary<string,Cratis.Chronicle.Concepts.Projections.Graphs.GraphEdgeProjectionDefinition>
 concept Cratis.Chronicle.Concepts.Projections.ProjectionDeclaration : string
 concept Cratis.Chronicle.Concepts.Projections.ProjectionFutureId : System.Guid
 concept Cratis.Chronicle.Concepts.Projections.ProjectionId : string

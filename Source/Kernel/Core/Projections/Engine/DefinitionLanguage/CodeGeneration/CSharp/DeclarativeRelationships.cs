@@ -44,7 +44,7 @@ static class DeclarativeRelationships
     /// <param name="children">The child scopes.</param>
     /// <param name="scope">The enclosing schema, output and renderer.</param>
     /// <param name="nested">Whether the scopes are single objects.</param>
-    internal static void Children(IDictionary<PropertyPath, ChildrenDefinition> children, Scope scope, bool nested)
+    internal static void Children(IReadOnlyDictionary<PropertyPath, ChildrenDefinition> children, Scope scope, bool nested)
     {
         foreach (var child in children)
         {
