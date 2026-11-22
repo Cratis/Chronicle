@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Buffers;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -33,7 +34,7 @@ internal static class CanonicalJson
     /// <returns>The canonical text.</returns>
     internal static string Encode(object? content)
     {
-        var buffer = new ArrayBufferWriter<byte>();
+        using var buffer = new CanonicalJsonBuffer();
         Write(content, buffer);
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
@@ -52,41 +53,77 @@ internal static class CanonicalJson
         writer.Flush();
     }
 
+    static void WriteObject(JsonElement element, Utf8JsonWriter writer)
+    {
+        var nameCapacity = 0;
+        foreach (var property in element.EnumerateObject()) nameCapacity += JsonMarshal.GetRawUtf8PropertyName(property).Length;
+        var names = ArrayPool<char>.Shared.Rent(nameCapacity);
+        try
+        {
+            foreach (var property in SortedProperties(element, names))
+            {
+                writer.WritePropertyName(names.AsSpan(property.Start, property.Length));
+                WriteSorted(property.Value, writer);
+            }
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(names, clearArray: true);
+        }
+    }
+
     /// <summary>
-    /// Orders the properties of an object by name, ordinally, keeping the original order of equal names.
+    /// Decodes into one call-local UTF-16 buffer: byte order differs from ordinal string order for supplementary characters.
     /// </summary>
     /// <param name="element">The object.</param>
-    /// <returns>The properties in canonical order.</returns>
-    /// <remarks>
-    /// The same order a stable ordinal sort gives. Hashing runs for every appended event, so this avoids the
-    /// allocations of a LINQ ordering, and the sort altogether when the properties already are in order.
-    /// </remarks>
-    static (string Name, JsonElement Value)[] SortedProperties(JsonElement element)
+    /// <param name="names">The decoded property names.</param>
+    /// <returns>Properties in stable ordinal order.</returns>
+    static (int Start, int Length, int Position, JsonElement Value)[] SortedProperties(JsonElement element, char[] names)
     {
-        var properties = new (string Name, JsonElement Value)[element.GetPropertyCount()];
+        var properties = new (int Start, int Length, int Position, JsonElement Value)[element.GetPropertyCount()];
         var count = 0;
+        var offset = 0;
         var sorted = true;
         foreach (var property in element.EnumerateObject())
         {
-            var name = property.Name;
-            if (count > 0 && string.CompareOrdinal(properties[count - 1].Name, name) > 0) sorted = false;
-            properties[count++] = (name, property.Value);
+            var length = CopyName(property, names.AsSpan(offset));
+            if (count > 0 && names.AsSpan(properties[count - 1].Start, properties[count - 1].Length).SequenceCompareTo(names.AsSpan(offset, length)) > 0) sorted = false;
+            properties[count] = (offset, length, count, property.Value);
+            count++;
+            offset += length;
         }
 
-        if (!sorted)
-        {
-            var positions = new int[count];
-            for (var index = 0; index < count; index++) positions[index] = index;
-            var unsorted = properties;
-            Array.Sort(positions, (left, right) =>
-            {
-                var byName = string.CompareOrdinal(unsorted[left].Name, unsorted[right].Name);
-                return byName != 0 ? byName : left.CompareTo(right);
-            });
-            properties = [.. positions.Select(position => unsorted[position])];
-        }
-
+        if (!sorted) SortProperties(properties, names);
         return properties;
+    }
+
+    static void SortProperties((int Start, int Length, int Position, JsonElement Value)[] properties, char[] names) =>
+        Array.Sort(properties, (left, right) =>
+        {
+            var byName = names.AsSpan(left.Start, left.Length).SequenceCompareTo(names.AsSpan(right.Start, right.Length));
+            return byName != 0 ? byName : left.Position.CompareTo(right.Position);
+        });
+
+    static int CopyName(JsonProperty property, Span<char> destination)
+    {
+        var raw = JsonMarshal.GetRawUtf8PropertyName(property);
+        if (!raw.Contains((byte)'\\')) return Encoding.UTF8.GetChars(raw, destination);
+
+        byte[]? rented = null;
+        var quoted = raw.Length <= 254 ? stackalloc byte[raw.Length + 2] : (rented = ArrayPool<byte>.Shared.Rent(raw.Length + 2)).AsSpan();
+        try
+        {
+            quoted[0] = (byte)'"';
+            raw.CopyTo(quoted[1..]);
+            quoted[raw.Length + 1] = (byte)'"';
+            var reader = new Utf8JsonReader(quoted[..(raw.Length + 2)]);
+            reader.Read();
+            return reader.CopyString(destination);
+        }
+        finally
+        {
+            if (rented is not null) ArrayPool<byte>.Shared.Return(rented, clearArray: true);
+        }
     }
 
     static void WriteSorted(JsonElement element, Utf8JsonWriter writer)
@@ -95,11 +132,7 @@ internal static class CanonicalJson
         {
             case JsonValueKind.Object:
                 writer.WriteStartObject();
-                foreach (var property in SortedProperties(element))
-                {
-                    writer.WritePropertyName(property.Name);
-                    WriteSorted(property.Value, writer);
-                }
+                WriteObject(element, writer);
                 writer.WriteEndObject();
                 break;
 
