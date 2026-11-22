@@ -10,15 +10,22 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// </summary>
 /// <param name="Properties">Properties and expressions for each property.</param>
 /// <param name="IncludeChildren">Include event types from child projections.</param>
+[Immutable]
 [GenerateSerializer]
 [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromEveryDefinition")]
-public record FromEveryDefinition([Id(0)] IDictionary<PropertyPath, string> Properties, [Id(1)] bool IncludeChildren)
+public record FromEveryDefinition(IReadOnlyDictionary<PropertyPath, string> Properties, [Id(1)] bool IncludeChildren)
 {
+    /// <summary>
+    /// Gets properties and expressions for each property.
+    /// </summary>
+    [Id(0)]
+    public IReadOnlyDictionary<PropertyPath, string> Properties { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(Properties);
+
     /// <summary>
     /// Gets or sets whether properties should be auto-mapped from events.
     /// </summary>
     [Id(2)]
-    public AutoMap AutoMap { get; set; } = AutoMap.Inherit;
+    public AutoMap AutoMap { get; init; } = AutoMap.Inherit;
 
     /// <summary>
     /// Gets or sets the key the projection folds every event into.
@@ -35,5 +42,5 @@ public record FromEveryDefinition([Id(0)] IDictionary<PropertyPath, string> Prop
     /// </para>
     /// </remarks>
     [Id(3)]
-    public PropertyExpression Key { get; set; } = WellKnownExpressions.EventSourceId;
+    public PropertyExpression Key { get; init; } = WellKnownExpressions.EventSourceId;
 }

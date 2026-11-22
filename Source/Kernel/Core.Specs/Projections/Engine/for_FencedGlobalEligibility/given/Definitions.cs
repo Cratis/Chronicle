@@ -29,10 +29,10 @@ public static class Definitions
         Root(Joins(false), Children(), Removals(false), Nested(NestedChild(nested: Nested(NestedChild(children: Children(NestedChild()))))));
 
     static ProjectionDefinition Root(
-        IDictionary<EventType, JoinDefinition> joins,
-        IDictionary<PropertyPath, ChildrenDefinition> children,
-        IDictionary<EventType, RemovedWithDefinition> removals,
-        IDictionary<PropertyPath, ChildrenDefinition> nested) =>
+        IReadOnlyDictionary<EventType, JoinDefinition> joins,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition> children,
+        IReadOnlyDictionary<EventType, RemovedWithDefinition> removals,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition> nested) =>
         new(
             ProjectionOwner.Client,
             EventSequenceId.Log,
@@ -52,10 +52,10 @@ public static class Definitions
             Scope: ProjectionScope.Global);
 
     static ChildrenDefinition NestedChild(
-        IDictionary<EventType, JoinDefinition>? joins = null,
-        IDictionary<EventType, RemovedWithDefinition>? removals = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? children = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? nested = null) =>
+        IReadOnlyDictionary<EventType, JoinDefinition>? joins = null,
+        IReadOnlyDictionary<EventType, RemovedWithDefinition>? removals = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? children = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? nested = null) =>
         new(
             "id",
             new Dictionary<EventType, FromDefinition>(),

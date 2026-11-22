@@ -19,8 +19,9 @@ public class a_definition : when_creating.given.a_child_collection_projection
     void Establish()
     {
         _definition = _definition with { Children = new Dictionary<PropertyPath, ChildrenDefinition>() };
-        _definition.From[_first] = new(new Dictionary<PropertyPath, string> { ["name"] = "name" }, "$eventSourceId", null);
-        _definition.From[_second] = new(new Dictionary<PropertyPath, string> { ["value"] = "value" }, "$eventSourceId", null);
+        _definition = _definition
+            .WithFrom(_first, new(new Dictionary<PropertyPath, string> { ["name"] = "name" }, "$eventSourceId", null))
+            .WithFrom(_second, new(new Dictionary<PropertyPath, string> { ["value"] = "value" }, "$eventSourceId", null));
         _other = _definition;
     }
 

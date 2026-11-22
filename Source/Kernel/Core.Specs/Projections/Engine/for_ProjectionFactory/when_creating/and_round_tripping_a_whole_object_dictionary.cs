@@ -10,7 +10,7 @@ public class and_round_tripping_a_whole_object_dictionary : given.a_dictionary_p
 {
     DictionaryReadModel _result;
 
-    void Establish() => _definition.From[_payloadReceived] = new(new Dictionary<PropertyPath, string> { ["payload"] = "data" }, "$eventSourceId", null);
+    void Establish() => _definition = _definition.WithFrom(_payloadReceived, new(new Dictionary<PropertyPath, string> { ["payload"] = "data" }, "$eventSourceId", null));
 
     async Task Because()
     {

@@ -115,7 +115,7 @@ public static class ProjectionDefinitionConverters
         return options;
     }
 
-    sealed class PinnedFromDefinitionsConverter : DictionaryJsonConverter<EventType, FromDefinition>
+    sealed class PinnedFromDefinitionsConverter : ReadOnlyDictionaryJsonConverter<EventType, FromDefinition>
     {
         /// <inheritdoc/>
         protected override EventType GetKeyFromString(string key) => EventType.Parse(key);
@@ -124,7 +124,7 @@ public static class ProjectionDefinitionConverters
         protected override string GetKeyString(EventType key) => key.ToString();
     }
 
-    sealed class PinnedJoinDefinitionsConverter : DictionaryJsonConverter<EventType, JoinDefinition>
+    sealed class PinnedJoinDefinitionsConverter : ReadOnlyDictionaryJsonConverter<EventType, JoinDefinition>
     {
         /// <inheritdoc/>
         protected override EventType GetKeyFromString(string key) => EventType.Parse(key);
@@ -133,7 +133,7 @@ public static class ProjectionDefinitionConverters
         protected override string GetKeyString(EventType key) => key.ToString();
     }
 
-    sealed class PinnedRemovedWithDefinitionsConverter : DictionaryJsonConverter<EventType, RemovedWithDefinition>
+    sealed class PinnedRemovedWithDefinitionsConverter : ReadOnlyDictionaryJsonConverter<EventType, RemovedWithDefinition>
     {
         /// <inheritdoc/>
         protected override EventType GetKeyFromString(string key) => EventType.Parse(key);
@@ -142,7 +142,7 @@ public static class ProjectionDefinitionConverters
         protected override string GetKeyString(EventType key) => key.ToString();
     }
 
-    sealed class PinnedRemovedWithJoinDefinitionsConverter : DictionaryJsonConverter<EventType, RemovedWithJoinDefinition>
+    sealed class PinnedRemovedWithJoinDefinitionsConverter : ReadOnlyDictionaryJsonConverter<EventType, RemovedWithJoinDefinition>
     {
         /// <inheritdoc/>
         protected override EventType GetKeyFromString(string key) => EventType.Parse(key);

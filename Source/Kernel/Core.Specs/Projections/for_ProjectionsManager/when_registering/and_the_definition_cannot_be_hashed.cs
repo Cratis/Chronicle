@@ -13,7 +13,9 @@ public class and_the_definition_cannot_be_hashed : given.a_projections_manager_g
     void Establish()
     {
         _definition = CreateDefinition("the-projection", "the-read-model");
-        _definition.InitialModelState["value"] = double.NaN;
+
+        // A snapshot of a JSON tree can not hold a value JSON can not write, so the unwritable state is text that is not JSON.
+        _definition = _definition with { InitialModelState = new ImmutableJsonObject("{ not json") };
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
     }
 

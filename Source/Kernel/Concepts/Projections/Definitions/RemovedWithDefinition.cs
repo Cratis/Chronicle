@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// </summary>
 /// <param name="Key">Key expression, represents the key to use for identifying the model instance.</param>
 /// <param name="ParentKey">Optional parent key expression, typically used in child relationships for identifying parent read model.</param>
+[Immutable]
 [GenerateSerializer]
 [Alias("Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithDefinition")]
 public record RemovedWithDefinition([Id(0)] PropertyExpression Key, [Id(1)] PropertyExpression? ParentKey);

@@ -13,7 +13,7 @@ public class and_targets_are_missing_at_multiple_levels : given.a_projection_def
 {
     void Establish()
     {
-        _definition.FromEvery.Properties["LastUpdated"] = "$eventContext.occurred";
+        _definition = _definition.WithEveryProperty("LastUpdated", "$eventContext.occurred");
         var properties = new Dictionary<PropertyPath, string>
         {
             ["IsShipped"] = "false",
@@ -24,11 +24,12 @@ public class and_targets_are_missing_at_multiple_levels : given.a_projection_def
             ["Added"] = $"{WellKnownExpressions.Add}(Quantity)",
             ["Subtracted"] = $"{WellKnownExpressions.Subtract}(Quantity)"
         };
-        _definition.From[EventType] = new(properties, WellKnownExpressions.EventSourceId, null);
-        _definition.From[new EventType("ItemRemoved", EventTypeGeneration.First)] = new(properties, WellKnownExpressions.EventSourceId, null);
-        _definition.Children["Lines"] = Child();
-        _definition.Children["ItemlessLines"] = Child();
-        _definition.Children["MissingLines"] = Child();
+        _definition = _definition
+            .WithFrom(EventType, new(properties, WellKnownExpressions.EventSourceId, null))
+            .WithFrom(new EventType("ItemRemoved", EventTypeGeneration.First), new(properties, WellKnownExpressions.EventSourceId, null))
+            .WithChild("Lines", Child())
+            .WithChild("ItemlessLines", Child())
+            .WithChild("MissingLines", Child());
         _definition = _definition with
         {
             Nested = new Dictionary<PropertyPath, ChildrenDefinition> { ["Details"] = Child() }

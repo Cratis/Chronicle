@@ -35,7 +35,7 @@ public class when_generating_from_an_untyped_fluent_composite_key : given.a_lang
         var compiled = _languageService.Compile(Declaration, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(value => value, errors => throw new InvalidOperationException(string.Join(", ", errors.Errors)));
         var eventType = compiled.From.Keys.Single();
-        compiled.From[eventType] = compiled.From[eventType] with { Key = _fluentExpression };
+        compiled = compiled.WithFrom(eventType, compiled.From[eventType] with { Key = _fluentExpression });
         _generated = _languageService.Generate(compiled, _readModelDefinition);
         _code = new CodeGeneration.CSharp.DeclarativeCodeGenerator().Generate(compiled, _readModelDefinition).ToFullString();
         var recompiled = _languageService.Compile(_generated, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)

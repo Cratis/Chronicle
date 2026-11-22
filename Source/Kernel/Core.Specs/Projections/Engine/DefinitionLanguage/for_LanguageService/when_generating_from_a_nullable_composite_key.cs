@@ -34,7 +34,7 @@ public class when_generating_from_a_nullable_composite_key : given.a_language_se
         var compiled = _languageService.Compile(Declaration, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(value => value, errors => throw new InvalidOperationException(string.Join(", ", errors.Errors)));
         var eventType = compiled.From.Keys.Single();
-        compiled.From[eventType] = compiled.From[eventType] with { Key = _fluentExpression };
+        compiled = compiled.WithFrom(eventType, compiled.From[eventType] with { Key = _fluentExpression });
         _generated = _languageService.Generate(compiled, _readModelDefinition);
         var recompiled = _languageService.Compile(_generated, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(value => value, errors => throw new InvalidOperationException(string.Join(", ", errors.Errors)));
