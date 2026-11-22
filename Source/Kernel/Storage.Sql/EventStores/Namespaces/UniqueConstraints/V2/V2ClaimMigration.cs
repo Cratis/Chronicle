@@ -53,10 +53,11 @@ static class V2ClaimMigration
     static void ConfigureTypes(V2DbContext context, MigrationBuilder migration)
     {
         var columns = migration.Operations.OfType<CreateTableOperation>().Single().Columns;
+
         // The column helpers carry the length only in the provider store type and leave MaxLength unset, so the fixed lengths are explicit here.
         foreach (var (name, length) in new[] { ("Scope", ScopeLength), ("Value", ValueLength) })
         {
-            var column = columns.Single(column => string.Equals(column.Name, name, StringComparison.Ordinal));
+            var column = columns.Single(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal));
             column.MaxLength = length;
             column.ColumnType = context.Database.IsSqlite() ? "TEXT" : $"char({length})";
             column.IsUnicode = false;
