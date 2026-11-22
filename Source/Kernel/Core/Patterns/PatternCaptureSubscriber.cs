@@ -4,8 +4,10 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Patterns;
 
@@ -14,6 +16,7 @@ namespace Cratis.Chronicle.Patterns;
 /// every event it observes and hands them to the <see cref="IPatternMiner"/> of its event store and namespace.
 /// </summary>
 /// <param name="extractor">The <see cref="IEventFeatureExtractor"/> for reading an event's contextual facts.</param>
+/// <param name="options">The <see cref="IOptions{TOptions}"/> holding the <see cref="ChronicleOptions"/> that say where capture is on.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
 /// <remarks>
 /// <para>
@@ -31,6 +34,7 @@ namespace Cratis.Chronicle.Patterns;
 /// </remarks>
 public class PatternCaptureSubscriber(
     IEventFeatureExtractor extractor,
+    IOptions<ChronicleOptions> options,
     ILogger<PatternCaptureSubscriber> logger) : Grain, IPatternCaptureSubscriber
 {
     ObserverSubscriberKey _key = ObserverSubscriberKey.Unspecified;
@@ -51,6 +55,13 @@ public class PatternCaptureSubscriber(
         if (batch.Length == 0)
         {
             return ObserverSubscriberResult.Ok(EventSequenceNumber.Unavailable);
+        }
+
+        // Capture that was switched off after the observer subscribed: the observer still delivers, and what it
+        // delivers is dropped before the miner - and with it the miner's grain and storage - is ever involved.
+        if (!options.Value.PatternDetection.IsEnabledFor(_key.EventStore.Value, _key.Namespace.Value))
+        {
+            return ObserverSubscriberResult.Ok(batch[^1].Context.SequenceNumber);
         }
 
         try
