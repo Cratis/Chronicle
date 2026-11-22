@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
@@ -31,29 +30,6 @@ public partial class EventTypesStorage(
     IEventStoreDatabase sharedDatabase,
     ILogger<EventTypesStorage> logger) : IEventTypesStorage
 {
-    /// <summary>
-    /// Caches the parsed <see cref="EventTypeSchema"/> per event type and generation, so the append and
-    /// event-read paths reuse the same instance instead of reparsing a fresh <see cref="JsonSchema"/> whose
-    /// lazy caches never warm.
-    /// </summary>
-    /// <remarks>
-    /// Concurrency: <see cref="ConcurrentDictionary{TKey,TValue}"/> with GetOrAdd semantics (mirroring
-    /// <c language="csharp">EventTypes</c> in the kernel core) - a race may parse twice but only one instance is ever stored and
-    /// shared; no per-call locking is taken. Growth is bounded by the number of registered event types times
-    /// their generations; generations are immutable once written, so an entry is only removed when a new
-    /// generation for its type is registered (see <see cref="Invalidate"/>).
-    /// </remarks>
-    readonly ConcurrentDictionary<(EventTypeId Id, EventTypeGeneration Generation), EventTypeSchema> _schemasByTypeAndGeneration = new();
-
-    /// <summary>
-    /// Caches the parsed <see cref="EventTypeDefinition"/> per event type. Evicted whenever the type is
-    /// registered, since a new generation changes the aggregated definition. Growth is bounded by the number
-    /// of registered event types.
-    /// </summary>
-    readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
-    readonly object _definitionInvalidation = new();
-    long _definitionRevision;
-
     /// <inheritdoc/>
     public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
     {
@@ -89,7 +65,7 @@ public partial class EventTypesStorage(
             update,
             new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
 
-        return InvalidateIfMutated(type.Id, result.ModifiedCount > 0 || result.UpsertedId is not null);
+        return result.ModifiedCount > 0 || result.UpsertedId is not null;
     }
 
     /// <inheritdoc/>
@@ -99,7 +75,7 @@ public partial class EventTypesStorage(
         var filter = Builders<EventType>.Filter.Eq(_ => _.Id, eventTypeId) & Builders<EventType>.Filter.Exists(path);
         var update = Builders<EventType>.Update.Set(path, BsonDocument.Parse(schema.ToJson()));
         var result = await GetCollection().UpdateOneAsync(filter, update).ConfigureAwait(false);
-        return InvalidateIfMutated(eventTypeId, result.ModifiedCount > 0);
+        return result.ModifiedCount > 0;
     }
 
     /// <inheritdoc/>
@@ -130,12 +106,6 @@ public partial class EventTypesStorage(
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
-        var key = (type, generation);
-
-        if (_schemasByTypeAndGeneration.TryGetValue(key, out var cached))
-        {
-            return cached;
-        }
 
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
@@ -149,18 +119,13 @@ public partial class EventTypesStorage(
                 generation);
         }
 
-        return _schemasByTypeAndGeneration.GetOrAdd(key, static (key, document) => document.ToKernel(key.Generation), schemas[0]);
+        return schemas[0].ToKernel(generation);
     }
 
     /// <inheritdoc/>
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = default)
     {
         generation ??= EventTypeGeneration.First;
-
-        if (_schemasByTypeAndGeneration.ContainsKey((type, generation)))
-        {
-            return true;
-        }
 
         var filter = GetFilterForSpecificEventType(type);
         using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
@@ -191,7 +156,7 @@ public partial class EventTypesStorage(
             BuildUpdate(existingDocument, mongoEventType),
             new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
 
-        return InvalidateIfMutated(definition.Id, result.ModifiedCount > 0 || result.UpsertedId is not null);
+        return result.ModifiedCount > 0 || result.UpsertedId is not null;
     }
 
     /// <inheritdoc/>
@@ -254,8 +219,6 @@ public partial class EventTypesStorage(
             await collection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false }).ConfigureAwait(false);
         }
 
-        mutated.ForEach(Invalidate);
-
         return mutated;
     }
 
@@ -269,66 +232,39 @@ public partial class EventTypesStorage(
     /// <inheritdoc/>
     public async Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId)
     {
-        if (_definitionsByType.TryGetValue(eventTypeId, out var cached))
+        var filter = GetFilterForSpecificEventType(eventTypeId);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        var eventType = await result.FirstOrDefaultAsync();
+        if (eventType is null)
         {
-            return cached;
+            var schema = await GetFor(eventTypeId);
+            return new EventTypeDefinition(
+                eventTypeId,
+                EventTypeOwner.None,
+                false,
+                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                []);
         }
 
-        while (true)
-        {
-            long revision;
-            lock (_definitionInvalidation)
-            {
-                revision = _definitionRevision;
-            }
-
-            var filter = GetFilterForSpecificEventType(eventTypeId);
-            using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-            var eventType = await result.FirstOrDefaultAsync();
-            if (eventType is null)
-            {
-                var schema = await GetFor(eventTypeId);
-                return new EventTypeDefinition(
-                    eventTypeId,
-                    EventTypeOwner.None,
-                    false,
-                    [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
-                    []);
-            }
-
-            lock (_definitionInvalidation)
-            {
-                // A read started before invalidation cannot repopulate the definition cache.
-                if (revision != _definitionRevision)
-                {
-                    continue;
-                }
-
-                return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
-            }
-        }
+        return eventType.ToDefinition();
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventTypeId> eventTypeIds)
     {
         var ids = eventTypeIds.ToList();
-        var missing = ids.Where(id => !_schemasByTypeAndGeneration.ContainsKey((id, EventTypeGeneration.First))).ToList();
-
-        if (missing.Count > 0)
+        if (ids.Count == 0)
         {
-            var filter = Builders<EventType>.Filter.In(et => et.Id, missing);
-            using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-            foreach (var document in await result.ToListAsync())
-            {
-                _schemasByTypeAndGeneration.GetOrAdd((document.Id, EventTypeGeneration.First), static (key, document) => document.ToKernel(key.Generation), document);
-            }
+            return [];
         }
 
+        var filter = Builders<EventType>.Filter.In(et => et.Id, ids);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        var documents = (await result.ToListAsync()).ToDictionary(_ => _.Id);
+
         return ids
-            .Select(id => _schemasByTypeAndGeneration.TryGetValue((id, EventTypeGeneration.First), out var schema) ? schema : null)
-            .Where(_ => _ is not null)
-            .Select(_ => _!)
+            .Where(documents.ContainsKey)
+            .Select(id => documents[id].ToKernel(EventTypeGeneration.First))
             .ToList();
     }
 
@@ -336,48 +272,20 @@ public partial class EventTypesStorage(
     public async Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<Concepts.Events.EventType> eventTypes)
     {
         var eventTypesList = eventTypes.ToList();
-        var missing = eventTypesList.Where(et => !_schemasByTypeAndGeneration.ContainsKey((et.Id, et.Generation))).ToList();
-
-        if (missing.Count > 0)
+        if (eventTypesList.Count == 0)
         {
-            var ids = missing.ConvertAll(et => et.Id);
-            var filter = Builders<EventType>.Filter.In(et => et.Id, ids);
-            using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
-            var mongoTypeMap = (await result.ToListAsync()).ToDictionary(m => m.Id);
-            foreach (var eventType in missing)
-            {
-                if (mongoTypeMap.TryGetValue(eventType.Id, out var document))
-                {
-                    _schemasByTypeAndGeneration.GetOrAdd((eventType.Id, eventType.Generation), static (key, document) => document.ToKernel(key.Generation), document);
-                }
-            }
+            return [];
         }
+
+        var ids = eventTypesList.ConvertAll(et => et.Id);
+        var filter = Builders<EventType>.Filter.In(et => et.Id, ids);
+        using var result = await GetCollection().FindAsync(filter).ConfigureAwait(false);
+        var documents = (await result.ToListAsync()).ToDictionary(_ => _.Id);
 
         return eventTypesList
-            .Select(et => _schemasByTypeAndGeneration.TryGetValue((et.Id, et.Generation), out var schema) ? schema : null)
-            .Where(_ => _ is not null)
-            .Select(_ => _!)
+            .Where(et => documents.ContainsKey(et.Id))
+            .Select(et => documents[et.Id].ToKernel(et.Generation))
             .ToList();
-    }
-
-    /// <inheritdoc/>
-    public void Invalidate(EventTypeId eventTypeId)
-    {
-        lock (_definitionInvalidation)
-        {
-            _definitionRevision++;
-            _definitionsByType.TryRemove(eventTypeId, out _);
-        }
-
-        _latestSchemasByType.TryRemove(eventTypeId, out _);
-
-        foreach (var key in _schemasByTypeAndGeneration.Keys)
-        {
-            if (key.Id == eventTypeId)
-            {
-                _schemasByTypeAndGeneration.TryRemove(key, out _);
-            }
-        }
     }
 
     static EventType Merge(EventType? existing, EventType incoming) => incoming with
@@ -470,16 +378,6 @@ public partial class EventTypesStorage(
         }
 
         return update;
-    }
-
-    bool InvalidateIfMutated(EventTypeId eventTypeId, bool mutated)
-    {
-        if (mutated)
-        {
-            Invalidate(eventTypeId);
-        }
-
-        return mutated;
     }
 
     IMongoCollection<EventType> GetCollection() => sharedDatabase.GetCollection<EventType>(WellKnownCollectionNames.EventTypes);

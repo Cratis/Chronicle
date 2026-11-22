@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionEventContextExtensions.when_resolving_join;
 
-public class and_the_same_stored_generation_inherits_protection_after_invalidation : a_stored_generation_with_inherited_protection
+public class and_the_same_stored_generation_inherits_protection_after_the_definition_changed : a_stored_generation_with_inherited_protection
 {
     System.Reactive.Subjects.Subject<ProjectionEventContext> _subject;
     IEventSequenceStorage _sequenceStorage;
@@ -37,7 +37,6 @@ public class and_the_same_stored_generation_inherits_protection_after_invalidati
         _subject = new();
         _subject.ResolveJoin(_sequenceStorage, _type, new PropertyPath("joinId"), NullLogger.Instance, _compliance, _own).Subscribe(_results.Add);
         _definition = currentDefinition;
-        _cache.Invalidate("store", _type.Id);
     }
 
     async Task Because()

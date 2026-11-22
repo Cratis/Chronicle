@@ -100,7 +100,7 @@ public class EventStoreStorage(
     public INamespaceStorage Namespaces { get; } = new NamespaceStorage(eventStoreDatabase, loggerFactory.CreateLogger<NamespaceStorage>());
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>());
+    public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>()));
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSourcesStorage(eventStoreDatabase);

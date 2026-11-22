@@ -57,7 +57,6 @@ public class a_populated_migration_chain : Specification, IDisposable
             row.Visibility = EventTypeVisibility.Public;
             await context.SaveChangesAsync();
         }
-        _storage.Invalidate(_chain.Id);
         _version = EventTypeMigrationsVersion.For(_chain.Migrations);
         await _storage.RecordMigrationsVersion(_chain.Id, _version, _chain.Migrations);
         _before = await ReadRow();
