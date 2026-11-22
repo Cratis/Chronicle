@@ -16,6 +16,8 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <!-- Exercise the real append benchmark artifact scopes without starting their container fixtures. -->
     <ProjectReference Include="../Chronicle.Benchmarks/Chronicle.Benchmarks.csproj" AdditionalProperties="DisableDockerBuild=true" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/ActivationIteration.cs" Link="ActivationIteration.cs" />
+    <Compile Include="../Chronicle.Benchmarks.Clustering/GrainActivationMode.cs" Link="GrainActivationMode.cs" />
     <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineProbe.cs" Link="RebuildBaselineProbe.cs" />
     <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs" Link="RebuildBaselineMath.cs" />
     <Compile Include="../Chronicle.Benchmarks.Clustering/RebuildBaselineComparison.cs" Link="RebuildBaselineComparison.cs" />
