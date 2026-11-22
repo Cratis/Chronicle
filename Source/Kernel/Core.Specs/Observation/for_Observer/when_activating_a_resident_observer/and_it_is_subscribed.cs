@@ -5,5 +5,13 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_activating_a_resident_o
 
 public class and_it_is_subscribed : given.an_observer_with_subscription
 {
-    [Fact] void should_have_a_watchdog_timer_of_its_own() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldBeGreaterThan(0);
+    [Fact] void should_register_with_the_supervisor_of_the_silo() => _supervisor.Received(1).Register(
+        _observerKey.ToString(),
+        TimeSpan.FromSeconds(_observersConfig.WatchdogInterval),
+        Arg.Any<Func<Task<TimeSpan?>>>(),
+        Arg.Any<Func<Task>>());
+
+    async Task Because() => await _silo.TimerRegistry.FireAllAsync();
+
+    [Fact] void should_not_leave_a_watchdog_timer_of_its_own() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(0);
 }

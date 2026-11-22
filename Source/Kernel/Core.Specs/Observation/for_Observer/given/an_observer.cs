@@ -23,6 +23,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -55,6 +56,7 @@ public class an_observer : Specification
     protected IJobsManager _jobsManager;
     protected IObserverAlerts _observerAlerts;
     protected IObserverServiceClient _observerServiceClient;
+    protected ISiloSupervisor _supervisor;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
     protected virtual ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
@@ -116,6 +118,7 @@ public class an_observer : Specification
         silo.AddService<ISubscriptionAdmission>(new SubscriptionAdmission(1000, Environment.ProcessorCount));
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
+        silo.AddService(_supervisor);
         silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
@@ -232,6 +235,7 @@ public class an_observer : Specification
         _failedPartitionsState = Substitute.For<FailedPartitions>();
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _supervisor = Substitute.For<ISiloSupervisor>();
 
         _logger = CreateLogger();
         _loggerFactory = Substitute.For<ILoggerFactory>();

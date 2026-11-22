@@ -109,7 +109,7 @@ public partial class Observer
         _safetyNetWake = true;
         try
         {
-            await Watchdog(CancellationToken.None);
+            await Watchdog();
         }
         finally
         {

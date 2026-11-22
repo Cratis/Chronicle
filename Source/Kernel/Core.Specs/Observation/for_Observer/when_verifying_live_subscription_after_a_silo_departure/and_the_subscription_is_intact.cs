@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_verifying_live_subscrip
 
 public class and_the_subscription_is_intact : given.an_observing_observer
 {
-    async Task Because() => await _observer.VerifyLiveSubscriptionForTesting();
+    async Task Because() => await _observer.VerifyLiveSubscriptionAfterDeparture();
 
     [Fact] async Task should_ask_the_queue_whether_it_holds_the_subscription() => await _appendedEventsQueues.Received(1).IsSubscribed(_observerKey);
     [Fact] void should_not_resubscribe_the_observer() => ShouldNotHaveResubscribed();

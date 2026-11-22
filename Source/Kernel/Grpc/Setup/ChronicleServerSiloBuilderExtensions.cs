@@ -166,6 +166,11 @@ public static class ChronicleServerSiloBuilderExtensions
         });
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, AlertIncidentsMetricsOwnerKeeper>();
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Federation.FederationConsumerKeeper>();
+        // One supervisor per silo, shared by every grain and by the silo lifecycle. It is registered explicitly, and replaces
+        // what convention binding may have registered for the interface, so the lifecycle starts the instance the grains use.
+        builder.Services.Replace(ServiceDescriptor.Singleton<Cratis.Chronicle.Supervision.SiloSupervisor, Cratis.Chronicle.Supervision.SiloSupervisor>());
+        builder.Services.Replace(ServiceDescriptor.Singleton<Cratis.Chronicle.Supervision.ISiloSupervisor>(sp => sp.GetRequiredService<Cratis.Chronicle.Supervision.SiloSupervisor>()));
+        builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(sp => sp.GetRequiredService<Cratis.Chronicle.Supervision.SiloSupervisor>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Observation.DormantSiloDepartures>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Observation.UnseenObserverRemoval>());
 
@@ -240,9 +245,9 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reactors.Reactors>>(),
                     sp.GetRequiredService<IObserverRegistrationGate>(),
                     sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(),
-                    sp.GetRequiredService<ISiloDepartures>(),
+                    sp.GetRequiredService<Cratis.Chronicle.Supervision.ISiloSupervisor>(),
                     sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
-                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IClientReducerSubscriptions>(), sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(), sp.GetRequiredService<ISiloDepartures>(), sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
+                new Cratis.Chronicle.Services.Observation.Reducers.Reducers(grainFactory, sp.GetRequiredService<IClientReducerSubscriptions>(), sp.GetRequiredService<IReducerMediator>(), expandoObjectConverter, jsonSerializerOptions, sp.GetRequiredKeyedService<Cratis.Traces.IActivitySource<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(Cratis.Chronicle.Concepts.WellKnown.MeterName), sp.GetRequiredService<IOptions<ChronicleOptions>>(), sp.GetRequiredService<IConnectionOwnership>(), sp.GetRequiredService<ILogger<Cratis.Chronicle.Services.Observation.Reducers.Reducers>>(), sp.GetRequiredService<IObserverRegistrationGate>(), sp.GetRequiredService<Cratis.Chronicle.Namespaces.INamespaceCasing>(), sp.GetRequiredService<Cratis.Chronicle.Supervision.ISiloSupervisor>(), sp.GetRequiredService<Cratis.Chronicle.Observation.IDormantObservers>()),
                 projections,
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Observation.Webhooks.Webhooks>(sp),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.ExternalServices.ExternalServices>(sp),

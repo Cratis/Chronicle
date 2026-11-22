@@ -11,7 +11,7 @@ public class and_the_observer_is_replaying : given.an_observing_observer
         _appendedEventsQueues.IsSubscribed(_observerKey).Returns(false);
     }
 
-    async Task Because() => await _observer.VerifyLiveSubscriptionForTesting();
+    async Task Because() => await _observer.VerifyLiveSubscriptionAfterDeparture();
 
     [Fact] async Task should_not_ask_the_queue() => await _appendedEventsQueues.DidNotReceive().IsSubscribed(_observerKey);
     [Fact] void should_not_resubscribe_the_observer() => ShouldNotHaveResubscribed();
