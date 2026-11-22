@@ -17,6 +17,7 @@ public class when_clearing_the_quarantine_of_a_failed_partition_with_other_outco
         new() { Outcome = ContractClearOutcome.NotFound },
         new() { Outcome = ContractClearOutcome.NotQuarantined },
         new() { Outcome = ContractClearOutcome.Cleared, RetryOutcome = ContractRecoveryOutcome.ObserverQuarantined },
+        new() { Outcome = ContractClearOutcome.Accepted, RetryOutcome = ContractRecoveryOutcome.Accepted },
         new() { Outcome = (ContractClearOutcome)999 }
     ];
     ReactorPartitionQuarantineClearResult[] _results;
@@ -48,7 +49,9 @@ public class when_clearing_the_quarantine_of_a_failed_partition_with_other_outco
     [Fact] void should_return_not_found() => _results[0].Outcome.ShouldEqual(ReactorPartitionQuarantineClearOutcome.NotFound);
     [Fact] void should_return_not_quarantined() => _results[1].Outcome.ShouldEqual(ReactorPartitionQuarantineClearOutcome.NotQuarantined);
     [Fact] void should_return_the_retry_outcome_when_the_observer_is_quarantined() => _results[2].RetryOutcome.ShouldEqual(ReactorPartitionRetryOutcome.ObserverQuarantined);
-    [Fact] void should_return_unknown_for_an_unrecognized_outcome() => _results[3].Outcome.ShouldEqual(ReactorPartitionQuarantineClearOutcome.Unknown);
+    [Fact] void should_return_accepted() => _results[3].Outcome.ShouldEqual(ReactorPartitionQuarantineClearOutcome.Accepted);
+    [Fact] void should_return_that_the_retry_was_accepted() => _results[3].RetryOutcome.ShouldEqual(ReactorPartitionRetryOutcome.Accepted);
+    [Fact] void should_return_unknown_for_an_unrecognized_outcome() => _results[4].Outcome.ShouldEqual(ReactorPartitionQuarantineClearOutcome.Unknown);
     [Fact] void should_pass_on_that_no_retry_was_requested() => _retryRequested.ShouldBeFalse();
 
     [Reactor("73c0c8ed-f2cd-49a2-b5b9-f2f4e1b7b5d4")]

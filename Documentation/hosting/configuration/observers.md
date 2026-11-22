@@ -170,7 +170,7 @@ Some of what a woken observer does cannot be seen from its cursor: noticing that
 When a client application drops and returns, every observer it owns needs a catch-up job. Two rules keep that from becoming a burst of kernel work:
 
 - An observer owned by a client with no connected instance starts no catch-up, partition catch-up or retry job. Such a job can only fail. The observer stays behind and catches up when its client subscribes again.
-- At most `maxConcurrentCatchUpJobs` catch-up jobs run at once in a namespace. An observer past the limit settles, tries again after five to fifteen seconds and starts its job when a place is free. An observer that already has a catch-up job is never held back.
+- At most `maxConcurrentCatchUpJobs` catch-up jobs run at once in a namespace. An observer past the limit settles and tries again after five to ten seconds. A place that comes free goes to the observer furthest behind its event sequence (the one that has waited longest among equals), so a burst drains the largest backlogs first. An observer that already has a catch-up job is never held back.
 
 Both are counted in `cratis.chronicle.observer.catch_up_deferrals`, by `cratis.chronicle.observer.catch_up_deferral_reason`: `no_client` or `capacity`. A persistently high `capacity` count means the limit is lower than your reconnect bursts need; `no_client` is expected while a client application is down.
 

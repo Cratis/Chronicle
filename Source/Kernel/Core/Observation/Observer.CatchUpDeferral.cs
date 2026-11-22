@@ -97,7 +97,12 @@ public partial class Observer
             }
 
             var next = State.NextEventSequenceNumber;
-            return next.IsActualValue ? (tail.Value >= next.Value ? tail.Value - next.Value + 1 : 0) : tail.Value + 1;
+            if (!next.IsActualValue)
+            {
+                return tail.Value + 1;
+            }
+
+            return tail.Value >= next.Value ? tail.Value - next.Value + 1 : 0;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

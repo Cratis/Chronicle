@@ -35,6 +35,7 @@ enum ClearPartitionQuarantineOutcome {
    Cleared = 0;
    NotFound = 1;
    NotQuarantined = 2;
+   CLEAR_PARTITION_QUARANTINE_OUTCOME_Accepted = 3;
 }
 message ClearPartitionQuarantineResponse {
    ClearPartitionQuarantineOutcome Outcome = 1;
@@ -89,6 +90,7 @@ enum FastForwardOutcome {
    AlreadyAtTail = 1;
    ObserverReplaying = 2;
    NotAvailable = 3;
+   FAST_FORWARD_OUTCOME_Accepted = 4;
 }
 message FastForwardResponse {
    FastForwardOutcome Outcome = 1;
@@ -172,6 +174,7 @@ enum PartitionRecoveryOutcome {
    PartitionNotFound = 1;
    ObserverQuarantined = 2;
    PartitionQuarantined = 3;
+   PARTITION_RECOVERY_OUTCOME_Accepted = 4;
 }
 message RemoveObserver {
    string EventStore = 1;

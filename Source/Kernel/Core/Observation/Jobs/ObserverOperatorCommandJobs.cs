@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using Cratis.Choreography.Jobs;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
@@ -13,11 +15,13 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 /// <remarks>
 /// Accepting asks the jobs manager, never the observer, so it is answered at once however busy the observer is. The same
-/// command given again while its job is unfinished joins that job. Two commands given at the very same moment may start two
-/// jobs; both commands are idempotent on the observer, so the second changes nothing.
+/// command given again while its job is unfinished joins that job, also when two are given at the very same moment on one
+/// silo (see <see cref="Accept(IJobsManager, ObserverKey, ObserverOperatorCommand, string?, bool)"/>).
 /// </remarks>
 public static class ObserverOperatorCommandJobs
 {
+    static readonly ConcurrentDictionary<(EventStoreName EventStore, EventStoreNamespaceName Namespace), SemaphoreSlim> _gates = [];
+
     /// <summary>
     /// Accepts a replay of an observer, unless the observer cannot be replayed.
     /// </summary>
@@ -43,9 +47,11 @@ public static class ObserverOperatorCommandJobs
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the jobs manager with.</param>
     /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer the command is for.</param>
     /// <param name="command">The <see cref="ObserverOperatorCommand"/> to carry out.</param>
+    /// <param name="partition">The partition the command is for, for the commands that are for one partition.</param>
+    /// <param name="retryImmediately">Whether clearing the quarantine of a partition also retries it.</param>
     /// <returns>The <see cref="JobId"/> of the job carrying out the command; <see cref="JobId.NotSet"/> if no job could be started.</returns>
-    public static Task<JobId> Accept(IGrainFactory grainFactory, ObserverKey observerKey, ObserverOperatorCommand command) =>
-        Accept(grainFactory.GetJobsManager(observerKey.EventStore, observerKey.Namespace), observerKey, command);
+    public static Task<JobId> Accept(IGrainFactory grainFactory, ObserverKey observerKey, ObserverOperatorCommand command, string? partition = null, bool retryImmediately = false) =>
+        Accept(grainFactory.GetJobsManager(observerKey.EventStore, observerKey.Namespace), observerKey, command, partition, retryImmediately);
 
     /// <summary>
     /// Accepts a command for an observer.
@@ -53,29 +59,47 @@ public static class ObserverOperatorCommandJobs
     /// <param name="jobsManager">The <see cref="IJobsManager"/> of the namespace of the observer.</param>
     /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer the command is for.</param>
     /// <param name="command">The <see cref="ObserverOperatorCommand"/> to carry out.</param>
+    /// <param name="partition">The partition the command is for, for the commands that are for one partition.</param>
+    /// <param name="retryImmediately">Whether clearing the quarantine of a partition also retries it.</param>
     /// <returns>The <see cref="JobId"/> of the job carrying out the command; <see cref="JobId.NotSet"/> if no job could be started.</returns>
-    internal static async Task<JobId> Accept(IJobsManager jobsManager, ObserverKey observerKey, ObserverOperatorCommand command)
+    /// <remarks>
+    /// Finding the job to join and starting one is one step at a time per namespace on this silo: a job being started is
+    /// not listed by the jobs manager until its start completes, so two identical commands arriving together would both
+    /// find nothing and start a job each. Identical commands arriving on different silos at the same moment can still start
+    /// one job each; the observer carries out the second as a no-op, because it refuses what is already running.
+    /// </remarks>
+    internal static async Task<JobId> Accept(IJobsManager jobsManager, ObserverKey observerKey, ObserverOperatorCommand command, string? partition = null, bool retryImmediately = false)
     {
-        var sameCommand = (await jobsManager.GetOutstandingJobsOf<IObserverOperatorCommandJob>())
-            .Where(job => job.Request is ObserverOperatorCommandRequest request && request.ObserverKey == observerKey && request.Command == command)
-            .ToArray();
-
-        var now = DateTimeOffset.UtcNow;
-        var running = sameCommand.FirstOrDefault(job => job.IsLive(now));
-        if (running is not null)
+        var request = new ObserverOperatorCommandRequest(observerKey, command, partition, retryImmediately);
+        var gate = _gates.GetOrAdd((observerKey.EventStore, observerKey.Namespace), _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
         {
-            return running.Id;
-        }
+            var same = (await jobsManager.GetOutstandingJobsOf<IObserverOperatorCommandJob>())
+                .Where(job => job.Request is ObserverOperatorCommandRequest outstanding && outstanding == request)
+                .ToArray();
 
-        foreach (var stopped in sameCommand.Where(job => job.Status == JobStatus.Stopped))
-        {
-            if (await jobsManager.Resume(stopped.Id))
+            var now = DateTimeOffset.UtcNow;
+            var running = same.FirstOrDefault(job => job.IsLive(now));
+            if (running is not null)
             {
-                return stopped.Id;
+                return running.Id;
             }
-        }
 
-        var started = await jobsManager.Start<IObserverOperatorCommandJob, ObserverOperatorCommandRequest>(new(observerKey, command));
-        return started.TryGetResult(out var jobId) ? jobId : JobId.NotSet;
+            foreach (var stopped in same.Where(job => job.Status == JobStatus.Stopped))
+            {
+                if (await jobsManager.Resume(stopped.Id))
+                {
+                    return stopped.Id;
+                }
+            }
+
+            var started = await jobsManager.Start<IObserverOperatorCommandJob, ObserverOperatorCommandRequest>(request);
+            return started.TryGetResult(out var jobId) ? jobId : JobId.NotSet;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 }

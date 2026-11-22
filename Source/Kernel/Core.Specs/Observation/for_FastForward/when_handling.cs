@@ -2,38 +2,29 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_FastForward;
 
-public class when_handling : Specification
+public class when_handling : given.a_grain_factory_accepting_operator_commands
 {
-    readonly ObserverKey _key = new("some-observer", "some-event-store", "some-namespace", "inbox-source");
-    readonly FastForwardResult _fastForwarded = new(FastForwardOutcome.FastForwarded, 3UL, 10UL);
-    IStorage _storage;
-    IGrainFactory _grainFactory;
-    IObserver _observer;
+    readonly TaskCompletionSource<FastForwardResult> _grainCall = new();
     FastForwardResult _result;
 
-    void Establish()
+    void Establish() => _observer.FastForward().Returns(_grainCall.Task);
+
+    async Task Because()
     {
-        _storage = Substitute.For<IStorage>();
-        var eventStoreStorage = Substitute.For<IEventStoreStorage>();
-        var definitions = Substitute.For<IObserverDefinitionsStorage>();
-        _storage.GetEventStore(_key.EventStore).Returns(eventStoreStorage);
-        eventStoreStorage.Observers.Returns(definitions);
-        definitions.Get(_key.ObserverId).Returns(new ObserverDefinition(
-            _key.ObserverId, [], _key.EventSequenceId, ObserverType.Reactor, ObserverOwner.Client, true));
-        _observer = Substitute.For<IObserver>();
-        _observer.FastForward().Returns(_fastForwarded);
-        _grainFactory = Substitute.For<IGrainFactory>();
-        _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
+        // Fails with a timeout, not by hanging, when the command waits for the observer.
+        _result = await new FastForward("some-event-store", "some-namespace", "some-observer", string.Empty)
+            .Handle(_grainFactory, _storage)
+            .WaitAsync(TimeSpan.FromSeconds(5));
     }
 
-    async Task Because() => _result = await new FastForward("some-event-store", "some-namespace", "some-observer", string.Empty).Handle(_grainFactory, _storage);
+    void Destroy() => _grainCall.TrySetResult(new(FastForwardOutcome.FastForwarded, 0UL, 0UL));
 
-    [Fact] void should_address_the_observer_of_the_stored_sequence() => _grainFactory.Received(1).GetGrain<IObserver>(_key);
-    [Fact] void should_fast_forward_the_observer() => _observer.Received(1).FastForward();
-    [Fact] void should_report_what_the_observer_reported() => _result.ShouldEqual(_fastForwarded);
+    [Fact] void should_accept_the_fast_forward_as_a_job_for_the_observer_of_the_stored_sequence() => _jobsManager.Received(1).Start<IObserverOperatorCommandJob, ObserverOperatorCommandRequest>(
+        new ObserverOperatorCommandRequest(_key, ObserverOperatorCommand.FastForward));
+    [Fact] void should_report_that_it_was_accepted() => _result.Outcome.ShouldEqual(FastForwardOutcome.Accepted);
+    [Fact] void should_not_call_the_observer() => _observer.DidNotReceive().FastForward();
 }

@@ -301,6 +301,7 @@ enum Cratis.Chronicle.Concepts.Observation.AlertDisposition : int
   Active = 0
   Retired = 1
 enum Cratis.Chronicle.Concepts.Observation.ClearPartitionQuarantineOutcome : int
+  Accepted = 3
   Cleared = 0
   NotFound = 1
   NotQuarantined = 2
@@ -377,6 +378,7 @@ enum Cratis.Chronicle.Concepts.Observation.FailureKind : int
   Unknown = 0
   WaitingForHandler = 4
 enum Cratis.Chronicle.Concepts.Observation.FastForwardOutcome : int
+  Accepted = 4
   AlreadyAtTail = 1
   FastForwarded = 0
   NotAvailable = 3
@@ -440,6 +442,7 @@ enum Cratis.Chronicle.Concepts.Observation.PartitionDeferralReason : int
   RetryAfter = 2
   RetryBackoff = 3
 enum Cratis.Chronicle.Concepts.Observation.PartitionRecoveryOutcome : int
+  Accepted = 4
   ObserverQuarantined = 2
   PartitionNotFound = 1
   PartitionQuarantined = 3
@@ -1087,11 +1090,18 @@ orleans Cratis.Chronicle.Observation.Jobs.HandledEventsReport
   [Id(2)] ReportedBy: Cratis.Choreography.Jobs.JobStepId
   [Id(3)] HandledUpTo: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 enum Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand : int
+  ClearObserverQuarantine = 5
+  ClearPartitionQuarantine = 6
+  FastForward = 2
   Replay = 0
+  ReplayPartition = 3
   RetryFailedPartitions = 1
+  RetryPartition = 4
 orleans [Alias("Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandRequest")] Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandRequest
   [Id(0,Level=0,Constructor=true)] ObserverKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   [Id(1,Level=0,Constructor=true)] Command: Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand
+  [Id(2,Level=0,Constructor=true)] Partition: string
+  [Id(3,Level=0,Constructor=true)] RetryImmediately: bool
 json Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandStepState
   attempt: int
   command: Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand
@@ -1103,7 +1113,9 @@ json Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandStepState
   name: Cratis.Choreography.Jobs.JobStepName
   namespace: string
   observerId: string
+  partition: string
   progress: Cratis.Choreography.Jobs.JobStepProgress
+  retryImmediately: bool
   stage: Cratis.Choreography.Jobs.Stages.JobStepStage
   status: Cratis.Choreography.Jobs.JobStepStatus
   statusChanges: System.Collections.Generic.IList<Cratis.Choreography.Jobs.JobStepStatusChanged>

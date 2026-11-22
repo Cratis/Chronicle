@@ -17,5 +17,30 @@ public enum ObserverOperatorCommand
     /// <summary>
     /// Retry every failed partition of the observer.
     /// </summary>
-    RetryFailedPartitions = 1
+    RetryFailedPartitions = 1,
+
+    /// <summary>
+    /// Move the observer to the tail of its event sequence.
+    /// </summary>
+    FastForward = 2,
+
+    /// <summary>
+    /// Replay one partition of the observer.
+    /// </summary>
+    ReplayPartition = 3,
+
+    /// <summary>
+    /// Retry one failed partition of the observer.
+    /// </summary>
+    RetryPartition = 4,
+
+    /// <summary>
+    /// Clear the quarantine of the observer.
+    /// </summary>
+    ClearObserverQuarantine = 5,
+
+    /// <summary>
+    /// Clear the quarantine of one partition of the observer, optionally retrying it at once.
+    /// </summary>
+    ClearPartitionQuarantine = 6
 }
