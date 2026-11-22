@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -178,6 +179,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
@@ -308,6 +310,7 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
@@ -446,11 +449,14 @@ internal sealed class ReadModels(
 
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default) =>
-        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read, () => WatchGuarded(request, context));
+        EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)
+            ? Observable.Throw<ReadModelChangeset>(SystemStoreGuard.RefusedException())
+            : SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read, () => WatchGuarded(request, context));
 
     /// <inheritdoc/>
     public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);

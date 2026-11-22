@@ -71,7 +71,7 @@ public record AddExternalService(
     /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
     /// <returns>Awaitable task.</returns>
     public Task Handle(IStorage storage) =>
-        storage.GetEventStore(EventStore).ExternalServices.Save(
+        storage.GetEventStore(EventStore).ExternalServices.SavePreservingOptions(
             new Contracts.ExternalServices.ExternalServiceDefinition
             {
                 Id = Id == Concepts.ExternalServices.ExternalServiceId.Unspecified ? Name : Id,

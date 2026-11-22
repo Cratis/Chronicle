@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -80,6 +81,7 @@ internal sealed class Projections(
         foreach (var definition in request.Projections)
         {
             SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
+            if (EventSequenceIdExtensions.IsSystemSequence(definition.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         }
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
@@ -156,6 +158,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))
@@ -388,6 +391,7 @@ internal sealed class Projections(
                 }
 
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
+                if (definition.EventSequenceId.IsSystemSequence()) throw SystemStoreGuard.RefusedException();
 
                 if (request.DraftReadModel is not null && draftDefinition is not null)
                 {
@@ -759,6 +763,7 @@ internal sealed class Projections(
             async graph =>
             {
                 var definition = graph.Projection with { EventSequenceId = request.EventSequenceId };
+                if (definition.EventSequenceId.IsSystemSequence()) throw SystemStoreGuard.RefusedException();
                 SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
 
                 var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
