@@ -603,7 +603,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager"
   A9B07C4C: GetProjectionDeclarations() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Projections.ProjectionWithDeclaration>>
   7C666A08: GetProjectionDefinitions() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>>
   F436C56F: Register(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task
-  7D652C49: RegisterShared(string, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task
+  F0FA9FE6: RegisterShared(string, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?, Orleans.GrainCancellationToken?) -> Task
   3C273B4B: Remove(Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<Cratis.Chronicle.Concepts.Observation.ObserverRemovalResult>
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsService")] Cratis.Chronicle.Projections.IProjectionsService [Version(1)]
@@ -676,6 +676,13 @@ interface [GrainInterfaceType("Cratis.Chronicle.Recommendations.IRecommendations
 class [GrainType("recommendation`1")] Cratis.Chronicle.Recommendations.Recommendation<TRequest>
 
 class [GrainType("recommendationsmanager")] Cratis.Chronicle.Recommendations.RecommendationsManager
+
+interface [GrainInterfaceType("Cratis.Chronicle.Registrations.IRegistrationInbox")] Cratis.Chronicle.Registrations.IRegistrationInbox [Version(0)]
+  BFAB4334: AcceptProjections(string, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task<Cratis.Chronicle.Registrations.RegistrationAcceptance?>
+  A4DBB932: Ensure() -> Task
+  0FE2A9D6: GetStatus(Cratis.Chronicle.Storage.Registrations.RegistrationKind, string) -> Task<Cratis.Chronicle.Registrations.RegistrationStatus>
+
+class [GrainType("registrationinbox")] Cratis.Chronicle.Registrations.RegistrationInbox
 
 class [GrainType("administratorroster")] Cratis.Chronicle.Security.AdministratorRoster
 

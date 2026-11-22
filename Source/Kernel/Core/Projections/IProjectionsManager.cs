@@ -85,14 +85,20 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// <param name="fullSetOwner">The owner whose full set this is, if any; as for <see cref="Register"/>.</param>
     /// <param name="registrant">The application registering, if it identified itself; as for <see cref="Register"/>.</param>
     /// <param name="version">The registering application's version, if known; as for <see cref="Register"/>.</param>
+    /// <param name="cancellation">
+    /// Cancelled when the caller has stopped waiting. The registration is abandoned when every caller sharing it has: it
+    /// leaves the queue, and is skipped if it is still waiting for the grain's turn.
+    /// </param>
     /// <returns>Awaitable task, completing when the shared registration has.</returns>
+    /// <exception cref="Registrations.RegistrationBusyException">The registration waited for a place for longer than the configured queue age; the caller should retry later.</exception>
     /// <remarks>
     /// After a kernel restart every replica of a client, and each of its retries, registers the same set. Queueing each
     /// behind the last made the queue outlast the callers' timeout, and the callers' retries then lengthened it. A
     /// registration whose signature matches one already in flight waits for that one instead, and gets its outcome.
+    /// How many distinct registrations are applied at once is bounded, and the rest wait in arrival order.
     /// </remarks>
     [AlwaysInterleave]
-    Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
+    Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null, GrainCancellationToken? cancellation = null);
 
     /// <summary>
     /// Removes an orphaned projection and its observer in every namespace, serialized with registration.

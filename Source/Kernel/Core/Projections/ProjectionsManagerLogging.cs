@@ -40,6 +40,9 @@ internal static partial class ProjectionsManagerLogging
     [LoggerMessage(LogLevel.Information, "Skipping a repeat of the registration of {Definitions} projections for event store {EventStore} from '{Registrant}': an identical one has just completed")]
     internal static partial void SkippingRepeatedRegistration(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant, int definitions);
 
+    [LoggerMessage(LogLevel.Information, "Skipping the registration of {Definitions} projections for event store {EventStore} from '{Registrant}': every caller waiting for it has left")]
+    internal static partial void SkippingAbandonedRegistration(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant, int definitions);
+
     [LoggerMessage(LogLevel.Debug, "Joining the identical registration already in flight for event store {EventStore} from '{Registrant}'")]
     internal static partial void JoiningRegistrationInFlight(this ILogger<ProjectionsManager> logger, EventStoreName eventStore, string registrant);
 

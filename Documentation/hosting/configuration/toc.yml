@@ -22,6 +22,8 @@
   href: clustering.md
 - name: Observers
   href: observers.md
+- name: Registration
+  href: registration.md
 - name: Read Models
   href: read-models.md
 - name: Sinks
