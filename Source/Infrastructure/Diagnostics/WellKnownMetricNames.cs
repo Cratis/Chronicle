@@ -62,6 +62,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="ObserverZeroWorkCatchUps"/>.</summary>
     public const string ObserverZeroWorkCatchUpsUnit = "{catch_up}";
 
+    /// <summary>Number of catch-ups that were deferred instead of starting a catch-up job.</summary>
+    public const string ObserverCatchUpDeferrals = "cratis.chronicle.observer.catch_up_deferrals";
+
+    /// <summary>Unit of <see cref="ObserverCatchUpDeferrals"/>.</summary>
+    public const string ObserverCatchUpDeferralsUnit = "{catch_up}";
+
     /// <summary>Number of shadow claim divergences.</summary>
     public const string ObserverClaimDivergences = "cratis.chronicle.observer.claim_divergences";
 

@@ -101,6 +101,17 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    /// <summary>
+    /// Creates the admission of catch-up jobs. By default every observer is admitted, so the limit never gets in the way.
+    /// </summary>
+    /// <returns>The <see cref="ICatchUpAdmission"/> to register.</returns>
+    protected virtual ICatchUpAdmission CreateCatchUpAdmission()
+    {
+        var admission = Substitute.For<ICatchUpAdmission>();
+        admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>()).Returns(_ => Task.FromResult<IDisposable?>(Substitute.For<IDisposable>()));
+        return admission;
+    }
+
     protected virtual IActivitySource<Observer> CreateActivitySource() => new ActivitySource<Observer>();
 
     void AddServices(TestKitSilo silo)
@@ -119,6 +130,7 @@ public class an_observer : Specification
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
         silo.AddService(_supervisor);
+        silo.AddService(CreateCatchUpAdmission());
         silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);

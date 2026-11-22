@@ -74,6 +74,9 @@ public static class WellKnownTelemetryAttributes
     /// <summary>How a woken observer found its way back to its cursor: resumed from it, fell back to catch-up or found its client gone.</summary>
     public const string ObserverResumeOutcome = "cratis.chronicle.observer.resume_outcome";
 
+    /// <summary>Why a catch-up was deferred: the observer has no connected client, or too many catch-up jobs are running.</summary>
+    public const string ObserverCatchUpDeferralReason = "cratis.chronicle.observer.catch_up_deferral_reason";
+
     /// <summary>The kind of claim divergence.</summary>
     public const string ObserverClaimDivergence = "cratis.chronicle.observer.claim_divergence";
 

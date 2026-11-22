@@ -54,6 +54,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
 /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo of the cluster supports dormant observers.</param>
 /// <param name="supervisor">The <see cref="ISiloSupervisor"/> running the watchdog and the checks after a silo departure for the observers resident on the silo.</param>
+/// <param name="catchUpAdmission">The <see cref="ICatchUpAdmission"/> limiting how many catch-up jobs run at once; without one they are not limited.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
 [KeepAlive]
 [ObserverPlacement]
@@ -76,7 +77,8 @@ public partial class Observer(
     TimeProvider? timeProvider = null,
     IObserverGauges? observerGauges = null,
     IClusterReleases? clusterReleases = null,
-    ISiloSupervisor? supervisor = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    ISiloSupervisor? supervisor = null,
+    ICatchUpAdmission? catchUpAdmission = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
