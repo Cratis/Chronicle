@@ -33,7 +33,8 @@ public class when_selecting_the_direct_value_writer : Specification
         var properties = new Dictionary<string, object?>(ReferenceEqualityComparer.Instance);
         for (var index = 0; index < 24; index++) properties[new string('a', 1)] = index;
         CanonicalJsonValues.CanWrite(properties).ShouldBeTrue();
-        CanonicalJson.Encode(properties).ShouldEqual($"{{{string.Join(',', Enumerable.Range(0, 24).Select(index => $"\"a\":{index}"))}}}");
+        var expectedProperties = string.Join(',', Enumerable.Range(0, 24).Select(index => $"\"a\":{index}"));
+        CanonicalJson.Encode(properties).ShouldEqual($"{{{expectedProperties}}}");
     }
 
     [Fact]
