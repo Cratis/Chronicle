@@ -23,6 +23,21 @@ A different `healthCheckEndpoint` moves all three routes: `/probe` also exposes 
 
 Until ready, the kernel refuses non-health traffic, including the Workbench and static files, with HTTP 503 and `Retry-After`, or gRPC `Unavailable`. Catch-up that continues in the background after startup does not hold readiness back. A startup failure still fails the host.
 
+### Kernel overload
+
+The `kernel-overload` check turns readiness `Degraded` when a silo is overloaded, with the reason in the response, for example:
+
+```text
+Degraded
+The kernel is overloaded: The oldest call to IProjectionsManager (the-store) has been waiting 40 s (limit 15 s)
+```
+
+A silo is overloaded when, for one grain type, the oldest call it has made to that grain type that has not been answered has waited longer than `overload.maxOldestPendingCallAgeSeconds` (15), more than `overload.maxPendingCalls` (2000) such calls are waiting, or more than `overload.maxRunningCalls` (2000) calls are running on this silo's grains of that type. The numbers are counted by the silo itself, in memory, so the check answers while the grains are saturated. It clears once the silo has stayed under every limit for `overload.recoverySeconds` (30): it reports `Degraded` with the reason `recovering` until then, so a silo hovering around a limit does not flap.
+
+Degraded stays HTTP 200: the other silos are probably as busy, and taking this one out of rotation would only push its clients onto them. The report is for people and for the dashboards and alerts built on `cratis.chronicle.kernel.load_status`. Connected clients are told as well: the keep-alive the kernel pushes carries the status, and the .NET client logs when the kernel turns busy and when it recovers. Set `overload.enabled` to `false` to stop evaluating the limits; the metrics are still produced.
+
+The `Diagnostics` query service, `GetKernelBusiness`, answers an administrator with what the silo that served the request is busy with: its status and reasons, the grain types it waits on the longest with the age of the oldest queued call, its open streams, and the observer jobs it runs by event store, namespace and type.
+
 ### MongoDB health
 
 The `mongodb` check reads the shared MongoDB driver's monitored cluster state. It does not create a

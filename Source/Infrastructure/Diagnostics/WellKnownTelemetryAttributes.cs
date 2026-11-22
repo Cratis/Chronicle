@@ -112,4 +112,7 @@ public static class WellKnownTelemetryAttributes
 
     /// <summary>The type of a job, in lowercase.</summary>
     public const string JobType = "cratis.chronicle.job.type";
+
+    /// <summary>The name of the grain interface calls are made to.</summary>
+    public const string GrainType = "cratis.chronicle.grain.type";
 }

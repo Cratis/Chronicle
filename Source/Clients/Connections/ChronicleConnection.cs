@@ -77,6 +77,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     ChronicleServerAddress? _lastDroppedAddress;
     DateTimeOffset? _lastConnectFailure;
     int _consecutiveResolutionFailures;
+    int _kernelStatus;
     bool _hasEverConnected;
 
     /// <summary>
@@ -968,6 +969,28 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
+    /// <summary>
+    /// Tells in the log when the kernel reports that it is busy, and when it stops, rather than leaving the client's
+    /// users to guess from timeouts.
+    /// </summary>
+    /// <param name="status">The <see cref="KernelStatus"/> the keep-alive carried.</param>
+    void ReportKernelStatus(KernelStatus status)
+    {
+        if (Interlocked.Exchange(ref _kernelStatus, (int)status) == (int)status)
+        {
+            return;
+        }
+
+        if (status == KernelStatus.Accepting)
+        {
+            _logger.KernelIsAccepting();
+        }
+        else
+        {
+            _logger.KernelIsBusy(status);
+        }
+    }
+
     void HandleConnection(TaskCompletionSource handshake, ConnectionKeepAlive keepAlive)
     {
         // A late callback from an attempt that has since been replaced must not touch the current one.
@@ -978,6 +1001,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         handshake.TrySetResult();
         _watchDog.NotifyKeepAlive();
+        ReportKernelStatus(keepAlive.Status);
 
         // Always answer, also with a debugger attached: the kernel drops a connection whose keep-alives go unanswered.
         _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();

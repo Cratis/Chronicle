@@ -166,6 +166,11 @@ These instruments are new, so they have no legacy name. They are published under
 | `cratis.chronicle.job.running` | Gauge `{job}` | event store, namespace, `cratis.chronicle.job.type` | Running catch-up and replay jobs. |
 | `cratis.chronicle.observer.job.handled_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Completed steps, successful or failed, of the observer's running jobs of that type. |
 | `cratis.chronicle.observer.job.total_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Steps of the observer's running jobs of that type. |
+| `cratis.chronicle.grain.calls.running` | Gauge `{call}` | `cratis.chronicle.grain.type`, event store | Calls running on the grains of this silo, interleaved or not. The event store is left out for a grain whose key does not carry one. |
+| `cratis.chronicle.grain.calls.pending` | Gauge `{call}` | `cratis.chronicle.grain.type`, event store | Calls this silo has made to grains that have not been answered: running or queued at the grain. |
+| `cratis.chronicle.grain.calls.oldest_pending_age` | Gauge `s` | `cratis.chronicle.grain.type`, event store | How long the oldest unanswered call this silo made to a grain has been waiting. |
+| `cratis.chronicle.kernel.load_status` | Gauge `1` | none | `0` accepting, `1` degraded, `2` recovering. See [Kernel overload](health-endpoint.md#kernel-overload). |
+| `cratis.chronicle.grpc.streams.open` | Gauge `{stream}` | none | gRPC streaming calls this silo is serving. |
 | `cratis.chronicle.event_sequence.append.duration` | Histogram `s` | event store, namespace, event sequence | Duration of an append or append-many call, from validation to its outcome, rejected appends included. |
 
 The tags use the shared keys `cratis.event_store.name`, `cratis.event_store.namespace`, `cratis.event_sequence.id` and `cratis.observer.id`. No partition, event source or job id is ever a tag. `cratis.observer.type` is `reactor`, `reducer`, `projection`, `external` or `unknown`; `cratis.chronicle.observer.state` uses the lowercase state names, such as `active`, `quarantined` and `changing_definition`; `cratis.chronicle.job.type` is `catch_up` or `replay`.

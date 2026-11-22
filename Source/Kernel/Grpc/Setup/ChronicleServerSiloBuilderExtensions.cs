@@ -80,6 +80,9 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
         builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
         builder.AddOutgoingGrainCallFilter<MixedReleaseCallDiagnostics>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Diagnostics.Load.IKernelLoad, Cratis.Chronicle.Diagnostics.Load.KernelLoad>();
+        builder.AddIncomingGrainCallFilter<Cratis.Chronicle.Diagnostics.Load.GrainCallLoadIncomingFilter>();
+        builder.AddOutgoingGrainCallFilter<Cratis.Chronicle.Diagnostics.Load.GrainCallLoadOutgoingFilter>();
         builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
         builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
 

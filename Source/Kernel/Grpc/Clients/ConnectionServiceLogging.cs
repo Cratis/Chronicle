@@ -14,6 +14,12 @@ internal static partial class ConnectionServiceLogMessages
     [LoggerMessage(LogLevel.Error, "Could not register client connection {ConnectionId}")]
     internal static partial void ClientRegistrationFailed(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "The registry is slow to register client connection {ConnectionId}; the client is served and the registration continues in the background")]
+    internal static partial void ClientRegistrationContinuesInBackground(this ILogger<ConnectionService> logger, string connectionId);
+
+    [LoggerMessage(LogLevel.Warning, "The registry is slow to handle the keep-alive of client connection {ConnectionId}; the client has been answered and the bookkeeping continues in the background")]
+    internal static partial void KeepAliveBookkeepingContinuesInBackground(this ILogger<ConnectionService> logger, string connectionId);
+
     [LoggerMessage(LogLevel.Error, "Failure while running or closing connection {ConnectionId}")]
     internal static partial void ConnectionFailed(this ILogger<ConnectionService> logger, string connectionId, Exception exception);
 

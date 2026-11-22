@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Security.Claims;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Server.Authentication.Controllers.for_AuthorizationController.given;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +35,7 @@ public class when_exchanging_client_credentials_for_a_known_client : a_client_cr
         _principal = ((SignInResult)_result).Principal;
     }
 
+    [Fact] void should_append_the_authentication_audit_event() => _eventLog.Received(1).Append(Arg.Any<EventSourceId>(), Arg.Is<object>(_ => _.GetType().Name == "ApplicationAuthenticated"));
     [Fact] void should_sign_in() => _result.ShouldBeOfExactType<SignInResult>();
     [Fact] void should_sign_in_with_the_openiddict_scheme() => ((SignInResult)_result).AuthenticationScheme.ShouldEqual(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     [Fact] void should_resolve_to_the_configured_grant_holder() => Security.PrincipalKey.From(_principal, new Configuration.Authentication()).ShouldEqual(new Security.PrincipalKey(Security.PrincipalKey.LocalIssuer, _applicationId.ToString()));
