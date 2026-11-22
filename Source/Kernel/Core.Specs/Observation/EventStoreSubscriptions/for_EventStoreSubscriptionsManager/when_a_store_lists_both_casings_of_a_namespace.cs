@@ -69,7 +69,7 @@ public class when_a_store_lists_both_casings_of_a_namespace : a_subscriber_with_
 
     async Task Because() => _activationError = await Catch.Exception(async () =>
     {
-        var manager = await _managerSilo.CreateGrainAsync<EventStoreSubscriptionsManager>("Lobby");
+        var manager = await _managerSilo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("Lobby");
         await manager.Ensure();
     });
 

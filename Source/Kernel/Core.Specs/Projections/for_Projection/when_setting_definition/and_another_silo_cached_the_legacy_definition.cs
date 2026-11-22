@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
@@ -51,7 +52,7 @@ public class and_another_silo_cached_the_legacy_definition : given.a_projection_
         namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
         _observer = Substitute.For<Observation.IObserver>();
-        _observer.GetDefinition().Returns(Storage.Observation.ObserverDefinition.Empty);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _silo.AddProbe(_ => _observer);
     }
 

@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.BroadcastChannel;
 using Orleans.Providers;
@@ -18,12 +19,14 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="storage">The <see cref="IStorage"/> whose observer definition registry holds the definitions of the subscriptions' observers.</param>
 [ImplicitChannelSubscription]
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventStoreSubscriptionsManager)]
 public class EventStoreSubscriptionsManager(
     ILocalSiloDetails localSiloDetails,
     ILogger<EventStoreSubscriptionsManager> logger,
-    INamespaceCasing namespaceCasing) : Grain<EventStoreSubscriptionsState>, IEventStoreSubscriptionsManager, IOnBroadcastChannelSubscribed, IRemindable
+    INamespaceCasing namespaceCasing,
+    IStorage storage) : Grain<EventStoreSubscriptionsState>, IEventStoreSubscriptionsManager, IOnBroadcastChannelSubscribed, IRemindable
 {
     const string SubscriptionReminderPrefix = "event-store-subscription-subscribe:";
     static readonly TimeSpan _pollInterval = TimeSpan.FromMilliseconds(10);
@@ -240,7 +243,7 @@ public class EventStoreSubscriptionsManager(
         try
         {
             var observer = await GetObserver(definition, namespaceName);
-            return await observer.IsSubscribed() && await HasCurrentEventTypes(observer, definition);
+            return await observer.IsSubscribed() && await HasCurrentEventTypes(definition);
         }
         catch (OperationCanceledException)
         {
@@ -339,24 +342,22 @@ public class EventStoreSubscriptionsManager(
     /// <summary>
     /// Checks whether an observer's definition holds the event types and generation delivery the subscription has now.
     /// </summary>
-    /// <param name="observer">The observer to check.</param>
     /// <param name="definition">The subscription definition.</param>
     /// <returns>True if the observer is up to date.</returns>
     /// <remarks>
     /// The observer of a subscription is subscribed with its event types listed, never to all events, so the event types
-    /// it reports are the ones in its definition. Reading them from the definition returned for the generation check
-    /// saves a second grain call that would carry the same list again.
+    /// it reports are the ones in its definition. Reading them from the registry costs no grain call.
     /// </remarks>
-    async Task<bool> HasCurrentEventTypes(IObserver observer, EventStoreSubscriptionDefinition definition)
+    async Task<bool> HasCurrentEventTypes(EventStoreSubscriptionDefinition definition)
     {
-        var observerDefinition = await observer.GetDefinition();
-        var currentMode = observerDefinition?.GenerationDelivery ?? EventGenerationDelivery.Compatibility;
+        var observerDefinition = await GetObserverDefinition(definition);
+        var currentMode = observerDefinition.GenerationDelivery;
         if (currentMode != definition.GenerationDelivery)
         {
             return false;
         }
 
-        var eventTypes = observerDefinition?.EventTypes ?? [];
+        var eventTypes = observerDefinition.EventTypes;
         return definition.GenerationDelivery == EventGenerationDelivery.Pinned
             ? eventTypes.ToHashSet().SetEquals(definition.EventTypes)
             : eventTypes.Select(eventType => eventType.Id).ToHashSet().SetEquals(definition.EventTypes.Select(eventType => eventType.Id));
@@ -364,8 +365,8 @@ public class EventStoreSubscriptionsManager(
 
     async Task<bool> IsSubscribedToCurrentEventTypes(IObserver observer, EventStoreSubscriptionDefinition definition)
     {
-        var observerDefinition = await observer.GetDefinition();
-        var currentMode = observerDefinition?.GenerationDelivery ?? EventGenerationDelivery.Compatibility;
+        var observerDefinition = await GetObserverDefinition(definition);
+        var currentMode = observerDefinition.GenerationDelivery;
         if (currentMode != definition.GenerationDelivery)
         {
             return false;
@@ -387,8 +388,8 @@ public class EventStoreSubscriptionsManager(
                 return false;
             }
 
-            var current = await observer.GetDefinition();
-            return (current?.GenerationDelivery ?? EventGenerationDelivery.Compatibility) == definition.GenerationDelivery &&
+            var current = await GetObserverDefinition(definition);
+            return current.GenerationDelivery == definition.GenerationDelivery &&
                 (definition.GenerationDelivery == EventGenerationDelivery.Compatibility || await IsSubscribedToCurrentEventTypes(observer, definition));
         }
         catch (Exception ex)
@@ -533,16 +534,29 @@ public class EventStoreSubscriptionsManager(
         return ObserverFor(definition, await namespaceCasing.Canonicalize(definition.SourceEventStore, namespaceName));
     }
 
-    IObserver ObserverFor(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName)
+    IObserver ObserverFor(EventStoreSubscriptionDefinition definition, EventStoreNamespaceName namespaceName) =>
+        GrainFactory.GetGrain<IObserver>(new ObserverKey(ObserverIdFor(definition), definition.SourceEventStore, namespaceName, EventSequenceId.Outbox));
+
+    ObserverId ObserverIdFor(EventStoreSubscriptionDefinition definition)
     {
         // The observer id must be unique per (source, target) event store. The subscription Identifier is only
         // the source store, so without the target here two target stores subscribing to the same source's
         // outbox would collide on one shared observer grain — the first-subscribed target wins and the second
         // is silently starved (IsSubscribed() short-circuits its Subscribe). Include the target
         // (_targetEventStoreName) so each subscriber gets its own outbox observer and delivery.
-        var observerId = new ObserverId($"{definition.Identifier.Value}->{_targetEventStoreName.Value}");
-        return GrainFactory.GetGrain<IObserver>(new ObserverKey(observerId, definition.SourceEventStore, namespaceName, EventSequenceId.Outbox));
+        return new($"{definition.Identifier.Value}->{_targetEventStoreName.Value}");
     }
+
+    /// <summary>
+    /// Gets the definition of the observer of a subscription from the observer definition registry.
+    /// </summary>
+    /// <param name="definition">The subscription definition.</param>
+    /// <returns>The <see cref="Storage.Observation.ObserverDefinition"/>, empty - compatibility delivery with no event types - while the observer has not registered.</returns>
+    /// <remarks>
+    /// The definition is event-store-level data, so it is read from the registry rather than asked of an observer grain.
+    /// </remarks>
+    Task<Storage.Observation.ObserverDefinition> GetObserverDefinition(EventStoreSubscriptionDefinition definition) =>
+        storage.GetEventStore(definition.SourceEventStore).Observers.Get(ObserverIdFor(definition));
 
     Task<IGrainReminder> ScheduleSubscriptionReminder(EventStoreSubscriptionId subscriptionId)
     {

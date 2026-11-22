@@ -701,7 +701,7 @@ public class Projection(
         // Compared by id: the observer is subscribed with the delivery-specific generations of the registered
         // definition, while this grain's projection always resolves compatibility generations.
         var expected = (await GetOrCreateProjectionForNamespace(@namespace)).EventTypes.Select(_ => _.Id).ToHashSet();
-        var subscribed = (await observer.GetDefinition()).EventTypes.Select(_ => _.Id).ToHashSet();
+        var subscribed = (await observer.GetEventTypes()).Select(_ => _.Id).ToHashSet();
         return expected.SetEquals(subscribed);
     }
 

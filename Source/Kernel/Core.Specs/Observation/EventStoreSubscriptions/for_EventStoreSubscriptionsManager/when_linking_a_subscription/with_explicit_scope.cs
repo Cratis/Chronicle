@@ -31,7 +31,7 @@ public class with_explicit_scope : Specification
             namespaces.GetAll().Returns(_namespaces);
             silo.AddProbe(_ => namespaces);
             silo.AddProbe<IObserver>(identity => GetObserver(identity.ToString()));
-            var manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>(consumer);
+            var manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(consumer);
             await manager.Add(new EventStoreSubscriptionDefinition(SubscriptionId, Source, [new EventType("published", 1)]));
             _managers.Add(manager);
         }

@@ -71,7 +71,7 @@ public class a_manager_over_several_namespaces : Specification
 
             return observer;
         });
-        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
+        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
     }
 
     protected static string KeyFor(string @namespace) => new ObserverKey($"{SubscriptionName}->Target", "Source", @namespace, EventSequenceId.Outbox).ToString();

@@ -10,10 +10,12 @@ namespace Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvide
 public class when_reading_the_same_definition_for_two_namespaces : given.the_provider
 {
     GrainState<ObserverDefinition> _otherNamespaceState;
+    ObserverDefinition _stored;
 
     async Task Because()
     {
-        _definitionsStorage.Get(_observerId).Returns(DefinitionOn(EventSequenceId.Log));
+        _stored = DefinitionOn(EventSequenceId.Log);
+        _definitionsStorage.Get(_observerId).Returns(_stored);
         var otherNamespaceGrainId = GrainId.Create("type", new ObserverKey(_observerId, "an-event-store", "another-namespace", EventSequenceId.Log).ToString());
         _otherNamespaceState = new() { State = new() };
         await _provider.ReadStateAsync("name", _grainId, _grainState);
@@ -21,5 +23,6 @@ public class when_reading_the_same_definition_for_two_namespaces : given.the_pro
     }
 
     [Fact] void should_give_the_first_namespace_the_definition() => _grainState.State.ShouldEqual(DefinitionOn(EventSequenceId.Log));
-    [Fact] void should_give_the_second_namespace_the_same_definition() => _otherNamespaceState.State.ShouldEqual(_grainState.State);
+    [Fact] void should_give_the_second_namespace_the_same_instance() => ReferenceEquals(_otherNamespaceState.State, _grainState.State).ShouldBeTrue();
+    [Fact] void should_give_the_registry_instance() => ReferenceEquals(_grainState.State, _stored).ShouldBeTrue();
 }

@@ -7,7 +7,6 @@ using context = Cratis.Chronicle.Kernel.Integration.for_DormantObserver.when_a_d
 
 namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.when_a_dormant_observer_is_woken;
 
-// Waking a dormant observer leaves its event-store-level definition as it was (#6110).
 [Collection(given.DormantSafetyNetCollection.Name)]
 public class and_its_definition_is_read(context context) : Given<context>(context)
 {

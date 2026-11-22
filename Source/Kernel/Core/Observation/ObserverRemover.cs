@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for reaching observer and manager grains.</param>
 /// <param name="storage">The <see cref="IStorage"/> for deleting the observer's records.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+/// <param name="definitionsCacheClient">The <see cref="IObserverDefinitionsCacheClient"/> that tells every silo a definition was deleted.</param>
 /// <remarks>
 /// Removal is deliberately store-wide rather than per namespace. An observer's definition, and the projection
 /// definition it has when it is a projection, are store-level records shared by every namespace; deleting those while
@@ -29,7 +30,8 @@ namespace Cratis.Chronicle.Observation;
 public class ObserverRemover(
     IGrainFactory grainFactory,
     IStorage storage,
-    ILogger<ObserverRemover> logger) : IObserverRemover
+    ILogger<ObserverRemover> logger,
+    IObserverDefinitionsCacheClient definitionsCacheClient) : IObserverRemover
 {
     /// <inheritdoc/>
     public async Task<ObserverRemovalResult> Remove(EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId)
@@ -66,6 +68,7 @@ public class ObserverRemover(
         }
 
         await eventStoreStorage.Observers.Delete(observerId);
+        await definitionsCacheClient.Invalidate(eventStore, observerId);
 
         logger.RemovedObserver(observerId, eventStore);
         return ObserverRemovalResult.Removed;

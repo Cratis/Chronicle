@@ -34,7 +34,7 @@ public class and_subscription_is_not_ready_within_timeout : Specification
         observer.IsSubscribed().Returns(false);
         _silo.AddProbe(_ => observer);
 
-        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
+        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
 
         await _manager.Add(
             new EventStoreSubscriptionDefinition(
