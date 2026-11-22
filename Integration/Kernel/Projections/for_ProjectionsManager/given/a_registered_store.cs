@@ -40,6 +40,19 @@ public class a_registered_store(NamespaceSubscriptionFixture fixture) : Specific
         });
     };
 
+    /// <summary>
+    /// Gets the event store handle for the tenant that does not exist yet, with its event types discovered. A handle created
+    /// after the shared client evicted its stores has not discovered anything yet, and registers in the background; appending
+    /// before that has finished fails with UnknownEventType, which made the specs depend on the order they ran in.
+    /// </summary>
+    /// <returns>The event store for the new tenant.</returns>
+    protected async Task<IEventStore> GetNewTenantStore()
+    {
+        var store = await ChronicleClient.GetEventStore(_storeName.Value, _newTenant.Value);
+        await store.DiscoverAll();
+        return store;
+    }
+
     async Task Establish()
     {
         var initialStore = await ChronicleClient.GetEventStore($"subs-{Guid.NewGuid():N}", "initial-tenant");

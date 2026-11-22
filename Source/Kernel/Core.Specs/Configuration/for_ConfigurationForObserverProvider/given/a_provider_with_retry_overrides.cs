@@ -46,6 +46,7 @@ public class a_provider_with_retry_overrides : Specification
             DurableSubscriptions = DurableSubscriptionMode.Off,
             DormantAfter = 601,
             DormantSafetyNet = 1203,
+            DormantSafetyNetFullWake = 7203,
             MaxConcurrentWakes = 6,
             DormantResumeMaxEvents = 77,
             DurableSubscriptionCheckInterval = TimeSpan.FromMinutes(31),
