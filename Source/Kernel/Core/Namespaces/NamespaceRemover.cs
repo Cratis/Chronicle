@@ -18,12 +18,14 @@ namespace Cratis.Chronicle.Namespaces;
 /// <param name="reminderTable">The <see cref="IReminderTable"/> holding the persistent reminders of the observers.</param>
 /// <param name="logger">The <see cref="ILogger{TCategoryName}"/>.</param>
 /// <param name="namespaceCasing">The namespace casing cache.</param>
+/// <param name="incarnations">The optional opt-in lifecycle routing.</param>
 public class NamespaceRemover(
     IGrainFactory grainFactory,
     IStorage storage,
     IReminderTable reminderTable,
     ILogger<NamespaceRemover> logger,
-    INamespaceCasing namespaceCasing) : INamespaceRemover, INamespaceRemovalSteps
+    INamespaceCasing namespaceCasing,
+    INamespaceIncarnations? incarnations = null) : INamespaceRemover, INamespaceRemovalSteps
 {
     const string ObserverGrainType = "observer";
     const int MaxRemovalAttempts = 5;
@@ -33,6 +35,11 @@ public class NamespaceRemover(
     public async Task Remove(EventStoreName eventStore, EventStoreNamespaceName @namespace)
     {
         GuardDefaultNamespace(eventStore, @namespace);
+        if (incarnations?.Enabled == true)
+        {
+            await incarnations.Remove(eventStore, @namespace);
+            return;
+        }
         logger.RemovingNamespace(eventStore, @namespace);
         await Execute(eventStore, @namespace, NamespaceRemovalStage.Forget);
         await Execute(eventStore, @namespace, NamespaceRemovalStage.Cleanup);
@@ -53,6 +60,14 @@ public class NamespaceRemover(
             NamespaceRemovalStage.DeleteListing => DeleteListing(eventStore, @namespace),
             _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, "The lifecycle owner must handle this checkpoint.")
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task ForgetForIncarnation(EventStoreName eventStore, NamespaceLifecycle state)
+    {
+        GuardDefaultNamespace(eventStore, state.Namespace);
+        if (NamespaceNameRules.ContainsComma(state.Namespace.Value)) await RemoveObservers(eventStore, state.Namespace);
+        await grainFactory.GetGrain<INamespaces>(eventStore).ForgetIncarnation(state.Namespace, state.Incarnation, state.OperationId);
     }
 
     /// <summary>

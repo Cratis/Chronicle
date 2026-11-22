@@ -18,4 +18,10 @@ public interface INamespaceRemovalSteps
     /// <param name="stage">The persisted removal checkpoint.</param>
     /// <returns>The acknowledged checkpoint completion; exceptions do not prove the provider's terminal outcome.</returns>
     Task Execute(EventStoreName eventStore, EventStoreNamespaceName @namespace, NamespaceRemovalStage stage);
+
+    /// <summary>Performs the opt-in Forget checkpoint with its exact persisted operation identity.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="state">The issued lifecycle intent.</param>
+    /// <returns>The acknowledged callback and any required legacy observer cleanup.</returns>
+    Task ForgetForIncarnation(EventStoreName eventStore, NamespaceLifecycle state);
 }

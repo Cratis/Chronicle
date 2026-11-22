@@ -382,6 +382,7 @@ enum Cratis.Chronicle.Concepts.Imports.OnInvalidEvent : int
   Reject = 0
   Skip = 1
 custom Cratis.Chronicle.Concepts.Keys.Key
+concept Cratis.Chronicle.Concepts.NamespaceIncarnationId : System.Guid
 enum Cratis.Chronicle.Concepts.Observation.AlertDisposition : int
   Active = 0
   Retired = 1

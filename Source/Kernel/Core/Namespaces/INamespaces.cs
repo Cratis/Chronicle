@@ -3,13 +3,14 @@
 
 using Cratis.Chronicle.Concepts;
 using Orleans.CodeGeneration;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Namespaces;
 
 /// <summary>
 /// Defines a system that manages namespaces.
 /// </summary>
-[Version(1)]
+[Version(2)]
 public interface INamespaces : IGrainWithStringKey
 {
     /// <summary>
@@ -52,4 +53,15 @@ public interface INamespaces : IGrainWithStringKey
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to forget.</param>
     /// <returns>Awaitable task.</returns>
     Task Forget(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Forgets an exact issued lifecycle operation while Ensure may be waiting for its owner. Only this guarded callback
+    /// interleaves; the lifecycle owner and ordinary namespace operations remain non-reentrant.
+    /// </summary>
+    /// <param name="namespace">The canonical namespace.</param>
+    /// <param name="incarnation">The closing identity.</param>
+    /// <param name="operation">The removal operation.</param>
+    /// <returns>The acknowledged listing callback.</returns>
+    [AlwaysInterleave]
+    Task ForgetIncarnation(EventStoreNamespaceName @namespace, NamespaceIncarnationId incarnation, Guid operation);
 }
