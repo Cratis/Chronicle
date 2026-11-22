@@ -26,7 +26,7 @@ This skill follows the `@cratis/components` package manifest (`exports`, peers),
 `Source/DataTables/*`, `Source/Dialogs/*`, `Source/CommandDialog/*` and `Source/MIGRATION.md`.
 Peers declared by `@cratis/components`: `@cratis/arc` and `@cratis/arc.react` and `react`.
 
-Requires `@cratis/arc` and `@cratis/arc.react` 20.3.1 or later (below 23) and `react` 19 or later, as `@cratis/components` declares them peers.
+Read the [Components compatibility rule](../../rules/components.md) for the declared peer ranges before choosing package versions; it is the compatibility owner.
 
 `@cratis/arc.react.mvvm` ships with `@cratis/arc.react` and is an explicit
 application dependency.
@@ -148,7 +148,8 @@ compound members; `MenuItem` and `Column` are also **named exports** of the
 subpath (there is no `DataPage.Column`). Pass `dataKey` whenever the read model has an
 identity.
 
-Read [data-page.md](references/data-page.md) when configuring DataPage props; it lists every prop, and
+Read [data-page.md](references/data-page.md) when configuring typed menu selection,
+reconciliation, search/server mapping or Page/DataPage landmarks, and
 [data-tables.md](references/data-tables.md) when you need a table without the
 page chrome.
 
@@ -182,6 +183,11 @@ Render the wrapper returned by `useDialog` once in the tree. Read
 [dialogs.md](references/dialogs.md) when implementing dialog opening, closing, input, response, validation, or focus behavior; it gives the full dialog contract.
 
 ## Step 5 — Command dialogs
+
+Read the owning [CommandResult reference](../cratis-arc-command/references/command-result.md)
+for the complete result decision table, protected-read refusals and safe feedback.
+Read [queries-and-commands.md](references/queries-and-commands.md) for `/validate`
+and `autoServerValidate` feedback under read protection, not a promise of execution.
 
 A dialog that runs a command is its own component built on `CommandDialog`.
 Bind each input with a `CommandForm` field whose `value` accessor selects the
@@ -282,6 +288,13 @@ props handling, or teardown.
 | Complex page state | `withViewModel` |
 | A `.play` `screen` or `form` is the spec | [from-screenplay.md](references/from-screenplay.md) |
 
+## Availability
+
+Read [availability.md](references/availability.md) when offering navigation,
+screens or actions conditionally with `@cratis/arc.react/availability`.
+It is presentation only: keep unknown, errors and not opted in distinct, and
+leave authorization and enforcement to the server.
+
 ## Verify
 
 - Every Cratis Components import uses a subpath, not the root barrel.
@@ -292,7 +305,12 @@ props handling, or teardown.
 - Columns sit in `<DataPage.Columns>`; menu items sit in
   `<DataPage.MenuItems>` and use `command`, not `onClick`.
 - No component pre-fetches rows and passes them to `DataPage` as an array.
-- Every command value in a dialog is bound through a `CommandForm` field.
+- Every command value in a dialog is bound through a `CommandForm` field;
+  use `AutoCommandFields` for generated fields inside an existing form/dialog
+  ([dialogs.md](references/dialogs.md)), not a nested `AutoCommandForm`.
+- Page/DataPage has one main landmark owner; use `landmark={false}` inside it.
+- Availability presentation distinguishes loading/unknown from denial and errors;
+  it never replaces server authorization.
 - Values required for validity come from `initialValues`, not
   `onBeforeExecute`.
 - Confirmations and busy indicators are raised by hook, registered once at the
@@ -300,11 +318,12 @@ props handling, or teardown.
 - Every `showBusy()` has a matching close in a `finally`.
 - Every displayed or captured value has an origin from the Step 2 table; none
   is computed from another query on the client.
-- Each page's states are designed: empty (`emptyMessage`), loading, a command
-  that fails (read through the granular `CommandResult` flags in
-  [queries-and-commands.md](references/queries-and-commands.md)), denied (a
-  persona that can reach the page but whose policy refuses the action), and the
-  state after success.
+- Each page's states are designed: empty (`emptyMessage`), loading, command
+  refusal/retry/fault (use the owning
+  [CommandResult table](../cratis-arc-command/references/command-result.md)),
+  denied (a persona that can reach the page but whose policy refuses the action),
+  and the state after success. Protected-read refusals retain the draft;
+  preflight validation is feedback only.
 - When a `.play` model describes the page, the page matches it element by
   element and adds no data or action the model lacks
   ([from-screenplay.md](references/from-screenplay.md)).

@@ -144,7 +144,7 @@ Stage admits ESM v25.
 
 Requires Stage 4.138.0 for the Cratis renderer to render protected reads; `cratis render` gets it from the first CLI that bundles it, and CLI 3.75.0 (Stage 4.137.0) and older refuse every protected read with STAGE-ESM-044.
 
-Each command with `reads` becomes an Arc command with `[ReadProtection(On)]`, a
+Each command with `reads` becomes an Arc command (the renderer emits `[ReadProtection(On)]`, redundant on Arc 23, where `On` is the default; do not hand-write it), a
 nullable read-model `Handle` parameter per read looked up with `[LookUpBy]`, the
 `<View> '<key>' does not exist.` rejection, and every requirement evaluated in `Handle`
 after the reads. Generated specifications run protected commands in decision mode.

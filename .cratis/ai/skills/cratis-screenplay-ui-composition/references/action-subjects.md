@@ -25,6 +25,13 @@ accept it. A hook (an outlet or toolbar `button` naming a State Change `slice`) 
 (`outlet rowActions of actions for item`); a hook's `enabled when` that reads `item` while it
 acts `for screen` is `PLAY0915` (Requires Screenplay 6.0 or later).
 
+`for item` and `for screen` are contextual words, not reserved names. A command, or the last
+segment of a dotted command name, may still be called `for`: `action for` names command `for`
+with no subject, `action for for screen` names command `for` acting on the screen, and
+`action Work.Items.Details.for for item` keeps the dotted name. Label text such as
+`label "Retry for screen"` stays text. Keep these identifiers when repairing or migrating
+actions; do not rename them to avoid the subject clause.
+
 ```screenplay
 concept TaskId : Uuid
 concept Title : String
