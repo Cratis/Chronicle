@@ -43,7 +43,7 @@ jobs:
       # Full history and tags: the script measures every commit and every release tag, and it
       # refuses to report from a shallow clone rather than mistake a truncated one for a quiet month.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
