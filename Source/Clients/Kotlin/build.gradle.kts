@@ -17,7 +17,7 @@ repositories {
 val grpcVersion = "1.85.1"
 val grpcKotlinVersion = "1.5.0"
 val protobufVersion = "4.36.2"
-val coroutinesVersion = "1.9.0"
+val coroutinesVersion = "1.11.0"
 
 dependencies {
     api("io.grpc:grpc-kotlin-stub:$grpcKotlinVersion")
