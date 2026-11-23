@@ -23,10 +23,10 @@
         <IsPackable>false</IsPackable>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Update="Microsoft.CodeAnalysis.Common" VersionOverride="5.0.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.9.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="5.9.0" />
-        <PackageReference Update="Microsoft.CodeAnalysis.Workspaces.Common" VersionOverride="5.9.0" />
+        <PackageReference Update="Microsoft.CodeAnalysis.Common" VersionOverride="5.12.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.12.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" VersionOverride="5.12.0" />
+        <PackageReference Update="Microsoft.CodeAnalysis.Workspaces.Common" VersionOverride="5.12.0" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Remove="Cratis.Fundamentals" />
