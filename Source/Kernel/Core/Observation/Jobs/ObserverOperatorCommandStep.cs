@@ -43,6 +43,11 @@ public class ObserverOperatorCommandStep(
     internal const string ReplayNotStartedMessage = "Replay could not be started for this observer.";
 
     /// <summary>
+    /// The time to wait between checks for a replay job to finish.
+    /// </summary>
+    internal static readonly TimeSpan ReplayPollInterval = TimeSpan.FromSeconds(1);
+
+    /// <summary>
     /// The time to wait before giving the command to the observer again.
     /// </summary>
     internal static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
@@ -61,7 +66,7 @@ public class ObserverOperatorCommandStep(
     /// <returns>Awaitable task.</returns>
     /// <exception cref="InvalidOperationException">The observer did not start what the command asked for.</exception>
     /// <exception cref="TimeoutException">The observer did not answer in any attempt.</exception>
-    internal static async Task Give(IObserver observer, ObserverOperatorCommand command, int maxAttempts, TimeSpan retryDelay, CancellationToken cancellationToken, string? partition = null, bool retryImmediately = false, ObserverKey? observerKey = null)
+    internal static async Task<JobId> Give(IObserver observer, ObserverOperatorCommand command, int maxAttempts, TimeSpan retryDelay, CancellationToken cancellationToken, string? partition = null, bool retryImmediately = false, ObserverKey? observerKey = null)
     {
         var arguments = new OperatorCommandArguments(partition ?? string.Empty, retryImmediately, observerKey ?? ObserverKey.NotSet);
         for (var attempt = 1; ; attempt++)
@@ -69,13 +74,27 @@ public class ObserverOperatorCommandStep(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await Run(observer, command, arguments, attempt == 1);
-                return;
+                return await Run(observer, command, arguments, attempt == 1);
             }
             catch (TimeoutException) when (attempt < maxAttempts)
             {
                 await Task.Delay(retryDelay, cancellationToken);
             }
+        }
+    }
+
+    /// <summary>
+    /// Waits until the replay job is no longer outstanding.
+    /// </summary>
+    /// <param name="isOutstanding">Gets whether the replay job is still outstanding.</param>
+    /// <param name="pollInterval">How long to wait between checks.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that stops the wait.</param>
+    /// <returns>Awaitable task.</returns>
+    internal static async Task WaitForReplay(Func<Task<bool>> isOutstanding, TimeSpan pollInterval, CancellationToken cancellationToken)
+    {
+        while (await isOutstanding())
+        {
+            await Task.Delay(pollInterval, cancellationToken);
         }
     }
 
@@ -109,7 +128,15 @@ public class ObserverOperatorCommandStep(
                 (EventStoreName)currentState.EventStore,
                 (EventStoreNamespaceName)currentState.Namespace,
                 (EventSequenceId)currentState.EventSequenceId);
-            await Give(grainFactory.GetGrain<IObserver>(key), currentState.Command, MaxAttempts, RetryDelay, cancellationToken, currentState.Partition, currentState.RetryImmediately, key);
+            var replayJobId = await Give(grainFactory.GetGrain<IObserver>(key), currentState.Command, MaxAttempts, RetryDelay, cancellationToken, currentState.Partition, currentState.RetryImmediately, key);
+
+            // The command was accepted at once; the job it returned to the caller only concludes when the replay has.
+            if (replayJobId != JobId.NotSet)
+            {
+                var jobsManager = grainFactory.GetJobsManager(key.EventStore, key.Namespace);
+                await WaitForReplay(async () => (await jobsManager.GetOutstandingJobsOf<IReplayObserver>()).Any(job => job.Id == replayJobId), ReplayPollInterval, cancellationToken);
+            }
+
             return JobStepResult.Succeeded(null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -123,17 +150,18 @@ public class ObserverOperatorCommandStep(
         }
     }
 
-    static async Task Run(IObserver observer, ObserverOperatorCommand command, OperatorCommandArguments arguments, bool firstAttempt)
+    static async Task<JobId> Run(IObserver observer, ObserverOperatorCommand command, OperatorCommandArguments arguments, bool firstAttempt)
     {
         switch (command)
         {
             case ObserverOperatorCommand.Replay:
-                if (await observer.Replay() == JobId.NotSet)
+                var replayJobId = await observer.Replay();
+                if (replayJobId == JobId.NotSet)
                 {
                     throw new InvalidOperationException(ReplayNotStartedMessage);
                 }
 
-                break;
+                return replayJobId;
 
             case ObserverOperatorCommand.RetryFailedPartitions:
                 var failedPartitions = (await observer.GetFailedPartitionKeys()).ToArray();
@@ -185,6 +213,8 @@ public class ObserverOperatorCommandStep(
 
                 break;
         }
+
+        return JobId.NotSet;
     }
 
     sealed record OperatorCommandArguments(Key Partition, bool RetryImmediately, ObserverKey ObserverKey);
