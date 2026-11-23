@@ -21,12 +21,14 @@ A client registers its artifacts every time it starts or reconnects. Chronicle a
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| acceptAsynchronously | boolean | true | Accept a projection registration with one write and apply it afterwards. Takes effect only when the [storage provider](storage.mdx) keeps registration intents (MongoDB and in-memory do; SQL does not, and applies the registration before answering) |
+| acceptAsynchronously | boolean | true | Accept a projection registration with one write and apply it afterwards. Every [storage provider](storage.mdx) keeps registration intents: MongoDB, SQL and in-memory. Set it to false to apply each registration before answering it. |
 | maxConcurrentRegistrations | number | 4 | How many distinct projection registrations one event store applies at the same time. The rest wait in arrival order. Identical registrations share the one in flight |
 | maxQueueAgeSeconds | number | 20 | How long a registration waits for a place before it is answered with a retryable "unavailable" response carrying a `retry-after` trailer, instead of waiting for the 30 second call timeout |
 | busyRetryAfterSeconds | number | 5 | The `retry-after` the busy response carries |
 | maxApplyAttempts | number | 3 | How many times an accepted registration is applied before it is recorded as failed |
 | applyRetryDelaySeconds | number | 5 | Seconds between those attempts. A failing registration waits; the registrations behind it do not |
+
+Watch `cratis.chronicle.registration.pending` and `cratis.chronicle.registration.oldest_pending_age` (see [OpenTelemetry](open-telemetry.md)) to see whether accepted registrations are being applied: an age that keeps growing means the backlog is not draining.
 
 ## What the kernel does
 

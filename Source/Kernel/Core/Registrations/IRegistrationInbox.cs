@@ -35,15 +35,12 @@ public interface IRegistrationInbox : IGrainWithStringKey
     /// <param name="fullSetOwner">The owner whose full set this is, if any.</param>
     /// <param name="registrant">The application registering, if it identified itself.</param>
     /// <param name="version">The registering application's version, if known.</param>
-    /// <returns>
-    /// The <see cref="RegistrationAcceptance"/>; null when the storage provider cannot keep registration intents, in
-    /// which case the caller applies the registration before it answers.
-    /// </returns>
+    /// <returns>The <see cref="RegistrationAcceptance"/>.</returns>
     /// <remarks>
     /// A newer registration of a full set supersedes an older one that has not been applied. A registration that
     /// repeats the last one accepted for the same key changes nothing and touches no downstream grain.
     /// </remarks>
-    Task<RegistrationAcceptance?> AcceptProjections(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version);
+    Task<RegistrationAcceptance> AcceptProjections(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner, string? registrant, string? version);
 
     /// <summary>
     /// Gets the state of what a registrant has registered.

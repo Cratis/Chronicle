@@ -446,6 +446,24 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="GrpcStreamsOpen"/>.</summary>
     public const string GrpcStreamsOpenUnit = "{stream}";
 
+    /// <summary>Number of accepted registrations that have not been applied yet.</summary>
+    public const string RegistrationPending = "cratis.chronicle.registration.pending";
+
+    /// <summary>Unit of <see cref="RegistrationPending"/>.</summary>
+    public const string RegistrationPendingUnit = "{registration}";
+
+    /// <summary>How long the oldest accepted registration that has not been applied has been waiting.</summary>
+    public const string RegistrationOldestPendingAge = "cratis.chronicle.registration.oldest_pending_age";
+
+    /// <summary>Unit of <see cref="RegistrationOldestPendingAge"/>.</summary>
+    public const string RegistrationOldestPendingAgeUnit = "s";
+
+    /// <summary>Number of jobs that ended with failures, or could not prepare their steps.</summary>
+    public const string JobFailed = "cratis.chronicle.job.failed";
+
+    /// <summary>Unit of <see cref="JobFailed"/>.</summary>
+    public const string JobFailedUnit = "{job}";
+
     /// <summary>Duration of an append to an event sequence.</summary>
     public const string EventSequenceAppendDuration = "cratis.chronicle.event_sequence.append.duration";
 

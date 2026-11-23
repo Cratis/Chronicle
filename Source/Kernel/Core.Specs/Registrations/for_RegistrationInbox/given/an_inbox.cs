@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Registrations;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
@@ -24,10 +23,9 @@ public class an_inbox : Specification
     protected ManualTimeProvider _clock;
     protected IProjectionsManager _manager;
     protected IEventStoreStorage _eventStoreStorage;
+    protected IRegistrationBacklog _backlog;
 
     protected virtual ChronicleOptions Options => new() { Registration = new() { MaxApplyAttempts = 2, ApplyRetryDelaySeconds = 5 } };
-
-    protected virtual bool SupportsIntents => true;
 
     async Task Establish()
     {
@@ -37,14 +35,9 @@ public class an_inbox : Specification
         _clock = new();
         _manager = Substitute.For<IProjectionsManager>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
-        if (SupportsIntents)
-        {
-            _eventStoreStorage.RegistrationIntents.Returns(_intents);
-        }
-        else
-        {
-            _eventStoreStorage.RegistrationIntents.Returns(_ => throw new RegistrationIntentsStorageNotSupported());
-        }
+        _eventStoreStorage.RegistrationIntents.Returns(_intents);
+        _backlog = Substitute.For<IRegistrationBacklog>();
+        _silo.AddService(_backlog);
 
         var storage = Substitute.For<IStorage>();
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
@@ -71,6 +64,6 @@ public class an_inbox : Specification
         }
     }
 
-    protected Task<RegistrationAcceptance?> Accept(ProjectionDefinition[] definitions, string registrant, ProjectionOwner? fullSetOwner = ProjectionOwner.Client, string version = "1.0") =>
+    protected Task<RegistrationAcceptance> Accept(ProjectionDefinition[] definitions, string registrant, ProjectionOwner? fullSetOwner = ProjectionOwner.Client, string version = "1.0") =>
         _grain.AcceptProjections(ProjectionRegistrationSignature.For(definitions, fullSetOwner, registrant, version), definitions, fullSetOwner, registrant, version);
 }

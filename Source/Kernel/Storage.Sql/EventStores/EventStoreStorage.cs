@@ -114,6 +114,9 @@ public class EventStoreStorage(
     public ISequenceQueryStorage SequenceQueries { get; } = new SequenceQueries.SequenceQueryStorage(eventStore, database);
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Registrations.IRegistrationIntentStorage RegistrationIntents { get; } = new Registrations.RegistrationIntentStorage(eventStore, database);
+
+    /// <inheritdoc/>
     public ICapturesStorage Captures { get; } = new Captures.CapturesStorage(eventStore, database);
 
     /// <inheritdoc/>

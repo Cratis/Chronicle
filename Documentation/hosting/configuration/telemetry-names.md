@@ -105,6 +105,9 @@ These instruments were added after the convention. They have no legacy name and 
 | `grain.calls.oldest_pending_age` | `s` |
 | `kernel.load_status` | `1` |
 | `grpc.streams.open` | `{stream}` |
+| `registration.pending` | `{registration}` |
+| `registration.oldest_pending_age` | `s` |
+| `job.failed` | `{job}` |
 | `observer.job.handled_steps` | `{step}` |
 | `observer.job.total_steps` | `{step}` |
 | `event_sequence.append.duration` | `s` |

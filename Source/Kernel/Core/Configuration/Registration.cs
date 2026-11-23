@@ -10,8 +10,7 @@ public class Registration
 {
     /// <summary>
     /// Gets a value indicating whether the kernel accepts registrations durably and applies them in the background
-    /// instead of applying them before it answers. The default is true; it only takes effect when the storage provider
-    /// keeps registration intents.
+    /// instead of applying them before it answers. The default is true.
     /// </summary>
     public bool AcceptAsynchronously { get; init; } = true;
 

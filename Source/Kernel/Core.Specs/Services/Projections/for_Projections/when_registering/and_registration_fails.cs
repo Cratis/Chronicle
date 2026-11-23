@@ -28,7 +28,7 @@ public class and_registration_fails : Specification
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
             Substitute.For<ILocalSiloDetails>(),
             AllowingConnectionOwnership.Create(),
-            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()),
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions { Registration = new() { AcceptAsynchronously = false } }),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
             NamespaceCasingContext.Create());
     }

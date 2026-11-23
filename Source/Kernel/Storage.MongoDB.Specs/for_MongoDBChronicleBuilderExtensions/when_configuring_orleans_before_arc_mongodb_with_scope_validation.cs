@@ -47,7 +47,7 @@ public class when_configuring_orleans_before_arc_mongodb_with_scope_validation :
                     options.Server = ConnectionString;
                     options.Database = "arc";
                 },
-                _ => { });
+                SpecSerializationSetup.ConfigureLikeTheServer);
     }
 
     void Because() => _error = Catch.Exception(() =>
