@@ -74,7 +74,7 @@ class RequestedIntegrationProvenance(unittest.TestCase):
         return next(step for step in self.steps if step.get("name") == name)
 
     def test_checkout_is_required_and_does_not_persist_credentials(self):
-        checkouts = [step for step in self.steps if step.get("uses") == "actions/checkout@v4"]
+        checkouts = [step for step in self.steps if step.get("uses") == "actions/checkout@v7"]
         self.assertEqual(1, len(checkouts))
         for step in checkouts:
             self.assertEqual("false", step["with"]["persist-credentials"])

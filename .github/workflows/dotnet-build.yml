@@ -116,7 +116,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Needs nothing but the checkout, so it runs first and costs a second. A hole in the `paths:` filter
       # above is invisible by construction - the run that would have caught the change never starts - so
@@ -328,7 +328,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -368,7 +368,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -497,7 +497,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -559,7 +559,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -614,7 +614,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -669,7 +669,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -706,7 +706,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .Net
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
@@ -749,7 +749,7 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -881,7 +881,7 @@ jobs:
         shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, sqlserver-4, remaining]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -966,7 +966,7 @@ jobs:
       ChronicleTfm: net10.0
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -1041,7 +1041,7 @@ jobs:
         run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$RUNNER_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success && { test "$DEV_ANALYZER_RESULT" = success || { test "$EVENT_NAME" = pull_request && test "$INTEGRATION_REQUESTED" != true && test "$DEV_ANALYZER_RESULT" = skipped; }; } && { test "$PACK_RESULT" = success || { test "$EVENT_NAME" != pull_request && test "$PACK_RESULT" = skipped; }; }
 
       - name: Checkout shard contract
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -1071,7 +1071,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -1102,7 +1102,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -1169,7 +1169,7 @@ jobs:
     needs: [already-ran, dotnet-build, integration-preflight]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -1246,7 +1246,7 @@ jobs:
     needs: [already-ran, dotnet-build, integration-preflight]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -1426,7 +1426,7 @@ jobs:
             database-mode: PerNamespace
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4
@@ -1586,7 +1586,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
@@ -1687,7 +1687,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
         uses: actions/setup-dotnet@v4

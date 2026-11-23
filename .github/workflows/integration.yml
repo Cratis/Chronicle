@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The generator decides what every run actually verifies, so a silent
       # change in its selection is a silent change in coverage. Its specs cost a
@@ -129,7 +129,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The integration test projects target net11.0 only (Directory.Build.props),
       # and these jobs only run already-built net11.0 assemblies, so installing the
@@ -291,7 +291,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The integration test projects target net11.0 only (Directory.Build.props),
       # and these jobs only run already-built net11.0 assemblies, so installing the
@@ -407,7 +407,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
@@ -496,7 +496,7 @@ jobs:
     # Shared verbatim with the separately gated RollingUpgrade lane below.
     steps: &sql-clustering-steps
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: ${{ matrix.provider == 'RollingUpgrade' && '0' || '1' }}
 

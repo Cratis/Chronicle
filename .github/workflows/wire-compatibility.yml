@@ -80,7 +80,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # The baseline major is read from the tags when no release version is supplied, and a shallow
           # checkout has none of them.

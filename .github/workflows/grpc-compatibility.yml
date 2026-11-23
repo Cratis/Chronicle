@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout current code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: current
 
@@ -54,7 +54,7 @@ jobs:
       # triggering ref -- making the baseline identical to the current tree and
       # the comparison below unable to report a breaking change.
       - name: Checkout base code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.base-ref || github.event.pull_request.base.ref || 'main' }}
           path: baseline
