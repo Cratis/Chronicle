@@ -45,7 +45,7 @@ jobs:
       - name: Release
         id: release
         # This version's PR decision does not create a release in its post step.
-        uses: cratis/release-action@26976c4c37ac8c0454077c0f41abb31650e36405 # v1.5.1
+        uses: cratis/release-action@fefcf36b86e78ff5d4d116da7f472bacf2d3d3c1 # v1.5.2
 
   workbench:
     if: needs.release.outputs.publish == 'true'
@@ -57,15 +57,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
       - name: Setup node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.x
+          package-manager-cache: false
           registry-url: "https://registry.npmjs.org"
 
       # Saved on main by workbench-yarn-cache.yml using the same shared action and package path.
@@ -90,7 +91,7 @@ jobs:
 
       # Build outputs are required inputs to later jobs, not best-effort caches.
       - name: Upload Workbench outputs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 3
           name: workbench-out
@@ -109,13 +110,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -126,7 +127,7 @@ jobs:
           cp -r out/development/x64 out/development/arm64
 
       - name: Upload development outputs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 3
           name: kernel-development-out
@@ -143,13 +144,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
       - name: Download Workbench outputs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: workbench-out
           path: ./Source/Workbench/wwwroot
@@ -158,7 +159,7 @@ jobs:
         run: test -s Source/Workbench/wwwroot/index.html
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -186,7 +187,7 @@ jobs:
           done
 
       - name: Upload NuGet packages
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 3
           name: pr-nuget-packages
@@ -204,12 +205,12 @@ jobs:
 
     steps:
       - name: Setup .Net
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download NuGet packages
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: pr-nuget-packages
           path: ${{ runner.temp }}/pr-nuget-packages
@@ -291,16 +292,15 @@ jobs:
         run: rm -f "$NUGET_CONFIG"
 
       - name: Add comment for NuGet packages
-        uses: mshick/add-pr-comment@aa9cf72a2e3105665c82fee3de5f46e6a26dba76 # v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12.0
         with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          message-id: nuget-${{ needs.release.outputs.version }}
           message: |
             NuGet packages for this PR, e.g. Chronicle:
             https://github.com/Cratis/Chronicle/pkgs/nuget/Cratis.Chronicle
 
             Use version: ${{ needs.release.outputs.version }}
-          allow-repeats: false
 
   build-docker:
     if: needs.release.outputs.publish == 'true'
@@ -312,13 +312,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
       - name: Download Workbench outputs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: workbench-out
           path: ./Source/Workbench/wwwroot
@@ -326,7 +326,7 @@ jobs:
       # The artifact already contains x64/ and arm64/. Docker/copy-server-files.sh
       # consumes out/<architecture>, so download directly without flattening or deleting it.
       - name: Download development outputs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: kernel-development-out
           path: Source/Kernel/Server/out
@@ -348,10 +348,10 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@bf8388060db527dff14f48b6a5fdbe70763c1213 # master
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build Development Docker Image
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
@@ -374,7 +374,7 @@ jobs:
         run: test -s "$IMAGE_ARCHIVE"
 
       - name: Upload Docker image
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 3
           name: pr-docker-image
@@ -392,7 +392,7 @@ jobs:
 
     steps:
       - name: Download Docker image
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: pr-docker-image
           path: ${{ runner.temp }}/pr-docker-image
@@ -408,7 +408,7 @@ jobs:
           test -n "$(docker image inspect --format '{{.Id}}' "$IMAGE_TAG")"
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -420,13 +420,12 @@ jobs:
         run: docker push "$IMAGE_TAG"
 
       - name: Add comment for Docker image
-        uses: mshick/add-pr-comment@aa9cf72a2e3105665c82fee3de5f46e6a26dba76 # v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12.0
         with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          message-id: docker-${{ needs.release.outputs.version }}
           message: |
             Docker Image for this PR:
             https://ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
 
             docker run ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
-          allow-repeats: false

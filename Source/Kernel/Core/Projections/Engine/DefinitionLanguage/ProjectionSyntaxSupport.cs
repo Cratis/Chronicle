@@ -21,6 +21,8 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
         [typeof(ExpressionKeySyntax)] = null,
         [typeof(CompositeKeySyntax)] = null,
         [typeof(SetMappingSyntax)] = null,
+        [typeof(SetOnceMappingSyntax)] = "Set-once mappings have no projection definition lowering",
+        [typeof(RemoveKeyMappingSyntax)] = "Dictionary-entry removal has no projection definition lowering",
         [typeof(ClearMappingSyntax)] = null,
         [typeof(AddMappingSyntax)] = null,
         [typeof(SubtractMappingSyntax)] = null,
@@ -37,6 +39,7 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
         [typeof(TemplateTextSyntax)] = null,
         [typeof(TemplateInterpolationSyntax)] = null,
         [typeof(RefusalExpressionSyntax)] = "Refusal values belong to reactions, not stored event projections",
+        [typeof(InvocationValueExpressionSyntax)] = "Invocation results belong to abilities and workflows, not stored event projections",
         [typeof(ListExpressionSyntax)] = "Inline lists have no projection property expression lowering",
         [typeof(ObjectExpressionSyntax)] = "Inline objects have no projection property expression lowering",
         [typeof(CaseValueExpressionSyntax)] = "Case parameters belong to specifications, not stored event projections",
@@ -52,6 +55,11 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
     /// <inheritdoc/>
     public override void VisitNode(SyntaxNode node)
     {
+        if (UnsupportedOption(node) is { } option)
+        {
+            errors.Add(option, node.Location.Line, node.Location.Column);
+        }
+
         if (node is not (MappingSyntax or KeySyntax or ExpressionSyntax or TemplatePartSyntax))
         {
             return;
@@ -72,4 +80,13 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
             errors.Add(error, node.Location.Line, node.Location.Column);
         }
     }
+
+    static string? UnsupportedOption(SyntaxNode node) => node switch
+    {
+        AddMappingSyntax { Factor: not null } or SubtractMappingSyntax { Factor: not null } => "Projection arithmetic factors are not supported",
+        CompositeKeySyntax { Type.Length: 0 } => "Untyped composite projection keys are not supported; name the key type",
+        RemoveWithSyntax { PartsKey: not null } => "Untyped composite removal keys are not supported; name the key type",
+        ChildrenSyntax { Ordering: not null } => "Projection children ordering has no declaration-language lowering",
+        _ => null
+    };
 }
