@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Occurrences;
 using Cratis.Monads;
 
 namespace Cratis.Chronicle.Storage.EventSequences;
@@ -40,4 +41,62 @@ public interface INamespaceFencedEventSequenceStorage
     /// <param name="events">The validated events with optional immutable identities and fingerprints.</param>
     /// <returns>The appended events, a sequence-slot collision, or fenced durable identity receipts.</returns>
     Task<Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>> AppendManyWithIdentities(NamespaceCommitContext context, IEnumerable<EventToAppendToStorage> events);
+
+    /// <summary>
+    /// Looks up a publication under the namespace fence, rejecting a different fingerprint.
+    /// </summary>
+    /// <param name="context">The expected namespace identity and captured activation state/lifetime.</param>
+    /// <param name="publication">The immutable publication identity and fingerprint.</param>
+    /// <returns>The fenced durable receipt, if present.</returns>
+    Task<Option<EventPublicationReceipt>> TryGetPublication(NamespaceCommitContext context, EventPublication publication);
+
+    /// <summary>
+    /// Looks up publication identities under the namespace fence without comparing fingerprints.
+    /// </summary>
+    /// <param name="context">The expected namespace identity and captured activation state/lifetime.</param>
+    /// <param name="identities">The identities to look up.</param>
+    /// <returns>The stored sequence number and fingerprint per identity found.</returns>
+    Task<IReadOnlyDictionary<string, StoredEventPublication>> TryGetPublications(NamespaceCommitContext context, IEnumerable<string> identities);
+
+    /// <summary>
+    /// Atomically appends a publication or settles its existing receipt under the namespace fence.
+    /// </summary>
+    /// <param name="context">The expected namespace identity and captured activation state/lifetime.</param>
+    /// <param name="publication">The immutable publication identity and fingerprint.</param>
+    /// <param name="event">The validated and protected event to append.</param>
+    /// <returns>The fenced receipt or a sequence-slot collision.</returns>
+    Task<Result<EventPublicationReceipt, DuplicateEventSequenceNumber>> AppendPublication(NamespaceCommitContext context, EventPublication publication, EventToAppendToStorage @event);
+
+    /// <summary>
+    /// Looks up an effect receipt under the namespace fence, independently of its destination sequence.
+    /// </summary>
+    /// <param name="context">The expected namespace identity and captured activation state/lifetime.</param>
+    /// <param name="id">The receipt identity.</param>
+    /// <returns>The fenced durable receipt, if present.</returns>
+    Task<EffectReceipt?> GetEffectReceipt(NamespaceCommitContext context, string id);
+
+    /// <summary>
+    /// Reads an occurrence's effect receipts under the namespace fence across destination sequences.
+    /// </summary>
+    /// <param name="context">The expected namespace identity and captured activation state/lifetime.</param>
+    /// <param name="occurrenceId">The occurrence identity.</param>
+    /// <returns>The fenced durable receipts.</returns>
+    Task<IEnumerable<EffectReceipt>> GetEffectReceipts(NamespaceCommitContext context, OccurrenceId occurrenceId);
+
+    /// <summary>
+    /// Reads effect receipts for occurrences under the namespace fence across destination sequences.
+    /// </summary>
+    /// <param name="context">The expected namespace identity and captured activation state/lifetime.</param>
+    /// <param name="occurrenceIds">The occurrence identities.</param>
+    /// <returns>The fenced durable receipts.</returns>
+    Task<IEnumerable<EffectReceipt>> GetEffectReceiptsForOccurrences(NamespaceCommitContext context, IEnumerable<OccurrenceId> occurrenceIds);
+
+    /// <summary>
+    /// Atomically appends a batch and effect receipt, or settles its replay, under the namespace fence.
+    /// </summary>
+    /// <param name="context">The expected namespace identity and captured activation state/lifetime.</param>
+    /// <param name="events">The validated and protected events; may be empty.</param>
+    /// <param name="receipt">The immutable receipt to persist.</param>
+    /// <returns>The fenced durable storage outcome.</returns>
+    Task<EffectReceiptWriteResult> AppendManyWithEffectReceipt(NamespaceCommitContext context, IEnumerable<EventToAppendToStorage> events, EffectReceipt receipt);
 }
