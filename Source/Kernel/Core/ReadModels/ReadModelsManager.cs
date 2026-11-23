@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
 using Orleans.Providers;
 
@@ -18,11 +19,15 @@ namespace Cratis.Chronicle.ReadModels;
 /// Represents an implementation of <see cref="IReadModelsManager"/>.
 /// </summary>
 /// <param name="projectionPipelines"><see cref="IProjectionPipelineManager"/> for evicting pipelines left bound to a read model's former definition.</param>
+/// <param name="storage">The authoritative definition and sink storage.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 /// <param name="sinkConfigurations">The <see cref="ISinkConfigurations"/> a named sink must be known to; none configured when omitted.</param>
 /// <param name="sinkChangeReplays">The <see cref="ISinkChangeReplays"/> rebuilding a read model moved to another sink; no rebuild when omitted.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ReadModelsManager)]
 public class ReadModelsManager(
     IProjectionPipelineManager projectionPipelines,
+    IStorage storage,
+    IReadModelSinkProvenance provenance,
     ISinkConfigurations? sinkConfigurations = null,
     ISinkChangeReplays? sinkChangeReplays = null) : Grain<ReadModelsManagerState>, IReadModelsManager
 {
@@ -102,6 +107,7 @@ public class ReadModelsManager(
 
     async Task ApplyDefinitions(IEnumerable<ReadModelDefinition> definitions)
     {
+        await ReadModelDefinitionProvenance.Ensure(storage, provenance, this.GetPrimaryKeyString(), definitions);
         // Only successfully reconciled definitions qualify for the fast path. Persisted manager state alone
         // cannot prove that SetDefinition and pipeline eviction completed during a previous attempt.
         definitions = definitions.Where(definition => !_completed.TryGetValue(definition.Identifier, out var completed) ||

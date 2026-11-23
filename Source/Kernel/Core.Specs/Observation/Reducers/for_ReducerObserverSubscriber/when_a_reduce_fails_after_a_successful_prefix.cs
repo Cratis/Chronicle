@@ -36,7 +36,8 @@ public class when_a_reduce_fails_after_a_successful_prefix : given.a_subscriber_
             Substitute.For<IObjectComparer>(),
             Substitute.For<IReadModelsCompliance>(),
             _key.EventStore,
-            _key.Namespace);
+            _key.Namespace,
+            () => Task.CompletedTask);
 
         _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>())
             .Returns(callInfo => pipeline.Reduce(callInfo.Arg<ReducerContext>(), callInfo.Arg<ReducerDelegate>(), callInfo.Arg<bool>()));

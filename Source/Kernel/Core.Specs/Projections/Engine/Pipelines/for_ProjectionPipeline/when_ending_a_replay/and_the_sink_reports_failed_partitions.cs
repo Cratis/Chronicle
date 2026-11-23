@@ -58,7 +58,8 @@ public class and_the_sink_reports_failed_partitions : Specification
             [],
             new ProjectionHandleLock(),
             _replayScopedCache,
-            NullLogger<ProjectionPipeline>.Instance);
+            NullLogger<ProjectionPipeline>.Instance,
+            () => Task.CompletedTask);
     }
 
     async Task Because() => _result = (await _pipeline.EndReplay(_context)).ToArray();

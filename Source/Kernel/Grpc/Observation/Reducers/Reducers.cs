@@ -23,7 +23,6 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
-using Cratis.Chronicle.Storage;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,7 +51,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
 /// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
 /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
-/// <param name="storage">The storage for database-local read-model admission.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
     IReducerMediator reducerMediator,
@@ -65,8 +64,8 @@ internal sealed class Reducers(
     IObserverRegistrationGate registrationGate,
     INamespaceCasing namespaceCasing,
     ISiloDepartures siloDepartures,
-    IDormantObservers? dormantObservers = null,
-    IStorage? storage = null) : IReducers
+    IReadModelSinkProvenance provenance,
+    IDormantObservers? dormantObservers = null) : IReducers
 {
     /// <summary>
     /// The size, in characters, of a reducer's serialized state from which each reduce is reported as expensive.
@@ -164,7 +163,7 @@ internal sealed class Reducers(
                         {
                             model = await grainFactory.GetReadModel(registration.Reducer.ReadModel, registration.EventStore).GetDefinition();
                             ValidateReadModelDefinition(registration, model);
-                            await ReadModelPublicReadGuard.EnsureRegistration(storage, registration.EventStore, registration.Namespace, model);
+                            await provenance.EnsureReadable(registration.EventStore, registration.Namespace, model);
                         }
                         catch (Exception exception)
                         {

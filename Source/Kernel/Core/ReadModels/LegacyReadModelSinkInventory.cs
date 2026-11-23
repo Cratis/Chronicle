@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -12,7 +11,7 @@ namespace Cratis.Chronicle.ReadModels;
 /// <summary>
 /// Finds retained producer evidence without relying on active-manager caches or identifier conventions.
 /// </summary>
-internal static class ReadModelProvenanceInventory
+internal static class LegacyReadModelSinkInventory
 {
     /// <summary>
     /// Reads current definitions and every discoverable projection history before any mutation can remove them.
@@ -24,25 +23,17 @@ internal static class ReadModelProvenanceInventory
     {
         var models = (await storage.ReadModels.GetAll()).ToArray();
         var projections = (await storage.Projections.GetAll()).ToArray();
-        var reducers = (await storage.Reducers.GetAll()).ToArray();
         var protectedModels = projections.Where(IsProtected).Select(_ => _.ReadModel).ToHashSet();
-        protectedModels.UnionWith(reducers.Where(_ => IsProtected(_.EventSequenceId)).Select(_ => _.ReadModel));
         await AddHistory(storage, models, projections, protectedModels);
         return models.Where(model => protectedModels.Contains(model.Identifier) ||
-            (includeUnresolved && IsUnresolved(model, projections, reducers.Select(_ => _.Identifier.Value)))).ToArray();
+            (includeUnresolved && IsUnresolved(model, projections))).ToArray();
     }
 
-    static bool IsProtected(ProjectionDefinition definition) => IsProtected(definition.EventSequenceId);
+    static bool IsProtected(ProjectionDefinition definition) => definition.UsesUnsupportedEventSequence();
 
-    static bool IsProtected(EventSequenceId sequence) => sequence.IsSystemSequence();
-
-    static bool IsUnresolved(ReadModelDefinition model, IEnumerable<ProjectionDefinition> projections, IEnumerable<string> reducers) =>
-        model.ObserverType switch
-        {
-            ReadModelObserverType.Projection => !projections.Any(_ => _.Identifier.Value == model.ObserverIdentifier.Value),
-            ReadModelObserverType.Reducer => !reducers.Contains(model.ObserverIdentifier.Value),
-            _ => false
-        };
+    static bool IsUnresolved(ReadModelDefinition model, IEnumerable<ProjectionDefinition> projections) =>
+        model.ObserverType == ReadModelObserverType.Projection &&
+        !projections.Any(_ => _.Identifier.Value == model.ObserverIdentifier.Value);
 
     static async Task AddHistory(
         IEventStoreStorage storage,

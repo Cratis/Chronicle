@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -34,7 +33,7 @@ internal static class ReadModelReadPolicy
 
         // A registration can still be in flight or have failed after persisting the definition, so the stored one decides.
         projection ??= await manager.GetStoredProjectionDefinition((ProjectionId)definition.ObserverIdentifier.Value);
-        if (projection is null || projection.EventSequenceId.IsSystemSequence())
+        if (projection?.UsesUnsupportedEventSequence() != false)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
         }

@@ -13,7 +13,8 @@ namespace Cratis.Chronicle.ReadModels;
 /// <param name="storage">The storage from which to resolve the sink.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for looking up the occurrences of a read model.</param>
 /// <param name="visibilities">The <see cref="IReadModelInstanceVisibilities"/> deciding which stored roots are read.</param>
-public class ReadModelReadBindings(IStorage storage, IGrainFactory grainFactory, IReadModelInstanceVisibilities visibilities) : IReadModelReadBindings
+/// <param name="provenance">The database provenance coordinator.</param>
+public class ReadModelReadBindings(IStorage storage, IGrainFactory grainFactory, IReadModelInstanceVisibilities visibilities, IReadModelSinkProvenance provenance) : IReadModelReadBindings
 {
     /// <inheritdoc/>
     public async Task<ReadModelReadBinding> Resolve(
@@ -22,7 +23,7 @@ public class ReadModelReadBindings(IStorage storage, IGrainFactory grainFactory,
         ReadModelDefinition definition,
         ReadModelContainerName? occurrence = null)
     {
-        await ReadModelPublicReadGuard.Ensure(storage, grainFactory, eventStore, eventStoreNamespace, definition);
+        await ReadModelPublicReadGuard.Ensure(provenance, grainFactory, eventStore, eventStoreNamespace, definition);
         await EnsureKnownOccurrence(eventStore, eventStoreNamespace, definition, occurrence);
         var sinks = storage.GetEventStore(eventStore).GetNamespace(eventStoreNamespace).Sinks;
 

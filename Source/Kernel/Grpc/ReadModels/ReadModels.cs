@@ -45,6 +45,7 @@ namespace Cratis.Chronicle.Services.ReadModels;
 /// <param name="materializedReadModels">The <see cref="IMaterializedReadModelStore"/> for reading instances that are already materialized.</param>
 /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 internal sealed class ReadModels(
     IGrainFactory grainFactory,
     IStorage storage,
@@ -56,7 +57,8 @@ internal sealed class ReadModels(
     IReadModelsCompliance complianceHelper,
     IMaterializedReadModelStore materializedReadModels,
     JsonSerializerOptions jsonSerializerOptions,
-    INamespaceCasing namespaceCasing) : IReadModels
+    INamespaceCasing namespaceCasing,
+    IReadModelSinkProvenance provenance) : IReadModels
 {
     /// <summary>
     /// Gets or sets the delay between attempts to resolve a read model definition.
@@ -511,7 +513,7 @@ internal sealed class ReadModels(
         {
             request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
-            await ReadModelPublicReadGuard.Ensure(storage, grainFactory, request.EventStore, request.Namespace, definition);
+            await ReadModelPublicReadGuard.Ensure(provenance, grainFactory, request.EventStore, request.Namespace, definition);
 
             var schema = definition.GetSchemaForLatestGeneration();
             var subscriptionId = Guid.NewGuid();
@@ -533,7 +535,6 @@ internal sealed class ReadModels(
 
                 // Decrypt through the shared release path so observable queries resolve the compliance
                 // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
-                await ReadModelPublicReadGuard.Ensure(storage, grainFactory, request.EventStore, namespaceName, definition);
                 var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance, change: change);
                 observer.OnNext(new ReadModelChangeset
                 {
@@ -620,7 +621,7 @@ internal sealed class ReadModels(
     async Task<Concepts.ReadModels.ReadModelDefinition> GetSupportedDefinition(EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadModel readModel, ReadModelIdentifier identifier)
     {
         var definition = await readModel.GetKnownDefinition(identifier);
-        await ReadModelPublicReadGuard.Ensure(storage, grainFactory, eventStore, @namespace, definition);
+        await ReadModelPublicReadGuard.Ensure(provenance, grainFactory, eventStore, @namespace, definition);
         return definition;
     }
 

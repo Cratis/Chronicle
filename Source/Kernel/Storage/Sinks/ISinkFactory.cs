@@ -44,7 +44,8 @@ public interface ISinkFactory
     /// <param name="eventStore">The event store.</param>
     /// <param name="namespace">The namespace.</param>
     /// <param name="sink">The sink configuration.</param>
+    /// <param name="containerName">The destination to validate before acquiring an ordinary sink.</param>
     /// <returns>The database-local marker storage.</returns>
-    ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink) =>
+    ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? containerName = null) =>
         UnsupportedSinkProvenanceStorage.Instance;
 }

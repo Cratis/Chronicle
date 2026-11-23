@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="projectionDefinitionComparer"><see cref="IProjectionDefinitionComparer"/> for comparing incoming definitions against the registered ones.</param>
 /// <param name="languageService"><see cref="Generator"/> for generating projection declaration language strings.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for getting the local silo details.</param>
 /// <param name="clusterMembership"><see cref="IClusterMembershipService"/> for noticing silos that leave the cluster.</param>
 /// <param name="subscriptionThrottle">Host-wide projection subscription admission.</param>
@@ -43,6 +44,7 @@ public partial class ProjectionsManager(
     IProjectionDefinitionComparer projectionDefinitionComparer,
     ILanguageService languageService,
     IStorage storage,
+    IReadModelSinkProvenance provenance,
     ILocalSiloDetails localSiloDetails,
     IClusterMembershipService clusterMembership,
     ISubscriptionAdmission subscriptionThrottle,

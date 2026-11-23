@@ -46,7 +46,8 @@ public class and_a_projection_publishes_over_several_events : given.a_sink
             ],
             new ProjectionHandleLock(),
             Substitute.For<IReplayScopedCache>(),
-            NullLogger<ProjectionPipeline>.Instance);
+            NullLogger<ProjectionPipeline>.Instance,
+            () => Task.CompletedTask);
     }
 
     async Task Because()

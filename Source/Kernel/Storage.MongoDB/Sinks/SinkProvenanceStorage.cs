@@ -21,17 +21,27 @@ public class SinkProvenanceStorage(IMongoDatabase database) : ISinkProvenanceSto
         .WithWriteConcern(WriteConcern.WMajority);
 
     /// <inheritdoc/>
-    public async Task<bool> IsQuarantined() =>
-        await _collection.CountDocumentsAsync(new BsonDocument("_id", Marker)) != 0;
+    public async Task<bool> IsQuarantined()
+    {
+        var records = await _collection.Find(FilterDefinition<BsonDocument>.Empty).Limit(2).ToListAsync();
+        if (records.Count == 0) return false;
+        if (records.Count != 1 || !IsValid(records[0]))
+        {
+            throw new InvalidOperationException("Read-model storage is not available.");
+        }
+
+        return true;
+    }
 
     /// <inheritdoc/>
     public async Task MarkQuarantined()
     {
+        if (await IsQuarantined()) return;
         try
         {
             await _collection.UpdateOneAsync(
                 new BsonDocument("_id", Marker),
-                Builders<BsonDocument>.Update.SetOnInsert("protected", true),
+                Builders<BsonDocument>.Update.SetOnInsert("restricted", true).SetOnInsert("version", 1),
                 new UpdateOptions { IsUpsert = true });
         }
         catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
@@ -39,5 +49,12 @@ public class SinkProvenanceStorage(IMongoDatabase database) : ISinkProvenanceSto
             // A concurrent silo may have inserted the same singleton. Verify it before accepting success.
             if (!await IsQuarantined()) throw;
         }
+
+        if (!await IsQuarantined()) throw new InvalidOperationException("Read-model storage is not available.");
     }
+
+    static bool IsValid(BsonDocument record) =>
+        record.GetValue("_id", BsonNull.Value) == Marker &&
+        record.GetValue("version", BsonNull.Value) is BsonInt32 version && version.Value == 1 &&
+        record.GetValue("restricted", BsonNull.Value) is BsonBoolean restricted && restricted.Value;
 }

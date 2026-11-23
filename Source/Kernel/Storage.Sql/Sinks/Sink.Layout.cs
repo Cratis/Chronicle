@@ -25,6 +25,7 @@ public partial class Sink
     /// <returns>Awaitable task.</returns>
     async Task EnsureLayout()
     {
+        await EnsureDestinationAvailable(_tableName);
         if (!_needsLayout)
         {
             return;
@@ -66,6 +67,7 @@ public partial class Sink
     /// <returns>Awaitable task.</returns>
     async Task EnsureLayoutForRead()
     {
+        await EnsureDestinationAvailable(_tableName);
         // Once resolved, a read costs only these field checks.
         if (!_needsLayout || Volatile.Read(ref _layoutResolvedForRead))
         {

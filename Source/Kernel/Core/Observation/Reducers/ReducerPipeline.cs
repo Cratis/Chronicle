@@ -29,6 +29,7 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="eventStore">The <see cref="EventStoreName"/> this pipeline belongs to.</param>
 /// <param name="eventStoreNamespace">The <see cref="EventStoreNamespaceName"/> this pipeline belongs to.</param>
+/// <param name="ensureProvenance">Rechecks database eligibility before accessing the sink.</param>
 /// <param name="guardWritesOnWatermark">Whether a write may be made conditional on advancing the read model's watermark.</param>
 /// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
 /// <param name="memoryGate">Optional <see cref="ReducerMemoryGate"/> that makes reduces of large states wait for room in the memory budget.</param>
@@ -39,6 +40,7 @@ public partial class ReducerPipeline(
     IReadModelsCompliance readModelsCompliance,
     EventStoreName eventStore,
     EventStoreNamespaceName eventStoreNamespace,
+    Func<Task> ensureProvenance,
     bool guardWritesOnWatermark = true,
     IExpandoObjectConverter? expandoObjectConverter = null,
     ReducerMemoryGate? memoryGate = null) : IReducerPipeline
@@ -56,18 +58,30 @@ public partial class ReducerPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
-        await Sink.EnsureProvenance();
+        await EnsureProvenance();
         await Sink.BeginReplay(context);
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context) => Sink.EndReplay(context);
+    public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
+    {
+        await EnsureProvenance();
+        return await Sink.EndReplay(context);
+    }
 
     /// <inheritdoc/>
-    public Task BeginBulk() => Sink.BeginBulk();
+    public async Task BeginBulk()
+    {
+        await EnsureProvenance();
+        await Sink.BeginBulk();
+    }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk() => Sink.EndBulk();
+    public async Task<IEnumerable<FailedPartition>> EndBulk()
+    {
+        await EnsureProvenance();
+        return await Sink.EndBulk();
+    }
 
     /// <inheritdoc/>
     public long StateSizeOf(Key partition) => memoryGate?.RememberedSizeOf(_memoryScope, partition) ?? 0;
@@ -75,7 +89,7 @@ public partial class ReducerPipeline(
     /// <inheritdoc/>
     public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true)
     {
-        await Sink.EnsureProvenance();
+        await EnsureProvenance();
         using var memoryTicket = memoryGate is null ? ReducerMemoryTicket.None : await memoryGate.Enter(_memoryScope, context.Key);
         var storedInitial = await Sink.FindOrDefault(context.Key);
         if (memoryGate is not null)

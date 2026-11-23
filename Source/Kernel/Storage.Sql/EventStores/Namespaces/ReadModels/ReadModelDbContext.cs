@@ -176,7 +176,9 @@ public class ReadModelDbContext(
         })
         .SharedTypeEntity<DynamicReadModelEntity>(tableName, entity =>
         {
-            entity.ToTable(tableName);
+            entity.ToTable(tableName, tableName == Storage.Sinks.SinkProvenanceNames.Metadata
+                ? Sinks.SinkProvenanceSchema.Schema(databaseType)
+                : null);
 
             ProjectedColumn? keyColumn = null;
             foreach (var column in columns)

@@ -21,7 +21,8 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="timeProvider">The clock for first-registration metadata.</param>
-public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider timeProvider) : IGrainStorage
+/// <param name="provenance">The database provenance coordinator.</param>
+public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider timeProvider, IReadModelSinkProvenance provenance) : IGrainStorage
 {
     readonly ConcurrentDictionary<(EventStoreName EventStore, ProjectionId Projection), ProjectionDefinitionDigest> _lastRecordedDigests = new();
 
@@ -29,7 +30,7 @@ public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider 
     /// Initializes a provider using the system clock.
     /// </summary>
     /// <param name="storage">The storage.</param>
-    public ProjectionDefinitionStorageProvider(IStorage storage) : this(storage, TimeProvider.System)
+    public ProjectionDefinitionStorageProvider(IStorage storage) : this(storage, TimeProvider.System, new ReadModelSinkProvenance(storage))
     {
     }
 
@@ -38,7 +39,7 @@ public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider 
     {
         var projectionKey = ProjectionKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
-        await ReadModelProvenance.For(storage, projectionKey.EventStore).Preserve();
+        await provenance.Preserve(projectionKey.EventStore);
         await eventStore.Projections.Delete(projectionKey.ProjectionId);
     }
 
@@ -64,7 +65,7 @@ public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider 
         }
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
         var definition = actualGrainState.State!;
-        await ReadModelProducerWriteGuard.Ensure(storage, projectionKey.EventStore, definition.EventSequenceId);
+        await ReadModelProducerWriteGuard.Ensure(provenance, projectionKey.EventStore, definition.UsesUnsupportedEventSequence());
         var cacheKey = (projectionKey.EventStore, projectionKey.ProjectionId);
         var digest = ProjectionFactory.DefinitionDigestFor(definition);
 

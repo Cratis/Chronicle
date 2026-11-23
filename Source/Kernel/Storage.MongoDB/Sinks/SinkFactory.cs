@@ -55,7 +55,7 @@ public class SinkFactory(
             : Create(eventStore, @namespace, readModel, _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace));
 
     /// <inheritdoc/>
-    public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink) =>
+    public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? containerName = null) =>
         new SinkProvenanceStorage(sink.IsDefault
             ? serviceProvider.GetRequiredService<IDatabase>().GetReadModelDatabase(eventStore, @namespace)
             : _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace));

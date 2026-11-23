@@ -62,7 +62,7 @@ public class and_reducer_changes_a_field_on_an_existing_child(context ctx) : ICl
             _mongoDBConverter = new MongoDBConverter(_expandoObjectConverter, typeFormats, readModel, NullLogger<MongoDBConverter>.Instance);
             var changesetConverter = new ChangesetConverter(readModel, _mongoDBConverter, collections, _expandoObjectConverter);
             _sink = new Sink(readModel, _mongoDBConverter, collections, changesetConverter, _expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
-            _pipeline = new ReducerPipeline(readModel, _sink, _objectComparer, new PassthroughReadModelsCompliance(), "test-store", "test-namespace");
+            _pipeline = new ReducerPipeline(readModel, _sink, _objectComparer, new PassthroughReadModelsCompliance(), "test-store", "test-namespace", () => Task.CompletedTask);
             _collection = collections.GetCollection();
 
             var initial = CreateTeam("pending");

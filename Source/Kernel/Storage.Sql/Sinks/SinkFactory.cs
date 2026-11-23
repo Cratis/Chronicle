@@ -33,10 +33,10 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
     /// <inheritdoc/>
-    public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink) =>
+    public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? containerName = null) =>
         new SinkProvenanceStorage(sink.IsDefault
             ? serviceProvider.GetRequiredService<IDatabase>()
-            : _namedDatabases.Value.Get(sink).Database, eventStore, @namespace);
+            : _namedDatabases.Value.Get(sink).Database, eventStore, @namespace, containerName);
 
     /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel)

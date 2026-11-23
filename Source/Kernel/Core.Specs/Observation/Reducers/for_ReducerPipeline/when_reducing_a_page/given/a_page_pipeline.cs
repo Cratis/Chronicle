@@ -63,6 +63,7 @@ public class a_page_pipeline : Specification
             readModelsCompliance,
             EventStore,
             EventStoreNamespace,
+            () => Task.CompletedTask,
             memoryGate: CreateMemoryGate());
     }
 

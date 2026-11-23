@@ -1,0 +1,92 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage.Sql.Connections;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Cratis.Chronicle.Storage.Sql.Sinks.for_SinkProvenanceStorage.given;
+
+public abstract class a_provenance_database : Specification
+{
+    readonly List<string> _openedTables = [];
+    bool _empty;
+    bool _alias;
+    bool _reloaded;
+    bool _verify;
+    bool _independent;
+    Exception? _malformedError;
+    Exception? _missingError;
+
+    protected async Task Exercise(string connectionString, string independentConnection, string? aliasConnection = null)
+    {
+        var first = new SinkProvenanceStorage(DatabaseFor(connectionString), "store", "namespace");
+        var alias = new SinkProvenanceStorage(DatabaseFor(aliasConnection ?? connectionString), "other-store", "other-namespace");
+        _empty = await first.IsQuarantined();
+        await Task.WhenAll(first.MarkQuarantined(), alias.MarkQuarantined());
+        _alias = await alias.IsQuarantined();
+        _reloaded = await new SinkProvenanceStorage(DatabaseFor(connectionString), "store", "namespace").IsQuarantined();
+        _verify = await new SinkProvenanceStorage(DatabaseFor(connectionString, SchemaMode.Verify), "store", "namespace").IsQuarantined();
+        var independent = new SinkProvenanceStorage(DatabaseFor(independentConnection), "store", "namespace");
+        _independent = await independent.IsQuarantined();
+        await new SinkProvenanceStorage(DatabaseFor(independentConnection, SchemaMode.Verify), "store", "namespace").MarkQuarantined();
+        await Execute(independentConnection, "UPDATE \"__cratis_sink_provenance\" SET \"Version\" = 99");
+        _malformedError = await Catch.Exception(() => independent.IsQuarantined());
+        await Execute(independentConnection, "DROP TABLE \"__cratis_sink_provenance\"");
+        _missingError = await Catch.Exception(() => new SinkProvenanceStorage(DatabaseFor(independentConnection, SchemaMode.Verify), "store", "namespace").IsQuarantined());
+    }
+
+    protected IDatabase DatabaseFor(string connectionString, SchemaMode mode = SchemaMode.Migrate)
+    {
+        var database = Substitute.For<IDatabase>();
+        database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
+            .Returns(call => Open(connectionString, mode, (call.ArgAt<string>(2), call.ArgAt<IReadOnlyList<ProjectedColumn>>(3))));
+        return database;
+    }
+
+    async Task<DbContextScope<ReadModelDbContext>> Open(string connectionString, SchemaMode mode, (string Table, IReadOnlyList<ProjectedColumn> Columns) shape)
+    {
+        _openedTables.Add(shape.Table);
+        var context = Context(connectionString, mode, shape.Table, shape.Columns);
+        try
+        {
+            await context.EnsureTableExists();
+            return new(context);
+        }
+        catch
+        {
+            await context.DisposeAsync();
+            throw;
+        }
+    }
+
+    static ReadModelDbContext Context(string connectionString, SchemaMode mode, string table, IReadOnlyList<ProjectedColumn> columns)
+    {
+        var builder = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(connectionString));
+        ((IDbContextOptionsBuilderInfrastructure)builder).AddOrUpdateExtension(new SchemaModeOptionsExtension(mode));
+        var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(NullLogger<TableMigrator<ReadModelDbContext>>.Instance), NullLogger<ReadModelMigrator>.Instance);
+        return new(builder.Options, table, columns, migrator);
+    }
+
+    protected static async Task Execute(string connectionString, string sql)
+    {
+        await using var context = Context(connectionString, SchemaMode.Migrate, "command", [new("Id", typeof(string), true, false, false, false)]);
+        await context.Database.ExecuteSqlRawAsync(sql);
+    }
+
+    [Fact] void should_refuse_unknown_provider_modes() => Catch.Exception(() => SinkProvenanceSchema.Schema((DatabaseType)int.MaxValue)).ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] void should_allow_a_database_without_positive_evidence() => _empty.ShouldBeFalse();
+    [Fact] void should_share_a_monotonic_mark_across_resolved_database_aliases() => _alias.ShouldBeTrue();
+    [Fact] void should_retain_the_mark_after_context_and_coordinator_recreation() => _reloaded.ShouldBeTrue();
+    [Fact] void should_read_existing_metadata_in_verify_mode() => _verify.ShouldBeTrue();
+    [Fact] void should_leave_an_independent_physical_database_unmarked() => _independent.ShouldBeFalse();
+    [Fact] void should_fail_closed_on_an_unsupported_marker_version() => _malformedError.ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] void should_fail_closed_on_missing_metadata_in_verify_mode() => _missingError.ShouldNotBeNull();
+    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.All(table => table == Storage.Sinks.SinkProvenanceNames.Metadata).ShouldBeTrue();
+}

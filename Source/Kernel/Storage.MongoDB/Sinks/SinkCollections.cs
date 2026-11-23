@@ -37,7 +37,7 @@ public class SinkCollections(
     const int NamespaceNotFound = 26;
     const int NamespaceExists = 48;
 
-    readonly SinkCollectionNames _names = SinkCollectionNames.For(readModel.ContainerName);
+    readonly SinkCollectionNames _names = CollectionNamesFor(readModel);
     readonly ILogger<SinkCollections> _logger = logger ?? NullLogger<SinkCollections>.Instance;
     bool _isReplaying;
 
@@ -124,7 +124,11 @@ public class SinkCollections(
     public IMongoCollection<BsonDocument> GetCollection() => database.GetCollection<BsonDocument>(_isReplaying ? ReplayCollectionName : _names.Primary);
 
     /// <inheritdoc/>
-    public IMongoCollection<BsonDocument> GetCollection(string collectionName) => database.GetCollection<BsonDocument>(collectionName);
+    public IMongoCollection<BsonDocument> GetCollection(string collectionName)
+    {
+        SinkProvenanceNames.EnsureNotReserved(collectionName);
+        return database.GetCollection<BsonDocument>(collectionName);
+    }
 
     static bool IsNamespaceConflict(MongoCommandException exception) =>
         exception.Code is NamespaceNotFound or NamespaceExists;
@@ -185,6 +189,12 @@ public class SinkCollections(
         Guard(SinkCollectionOperation.Rename, PromotingCollectionName, () => SinkCollectionGuards.ThrowIfPromotingCollectionChanged(_names, claimed, current));
     }
 
+    static SinkCollectionNames CollectionNamesFor(ReadModelDefinition definition)
+    {
+        SinkProvenanceNames.EnsureNotReserved(definition.ContainerName);
+        return SinkCollectionNames.For(definition.ContainerName);
+    }
+
     async Task Clear(IMongoCollection<BsonDocument> collection, bool isReplaying)
     {
         var name = collection.CollectionNamespace.CollectionName;
@@ -195,6 +205,8 @@ public class SinkCollections(
 
     async Task Rename(string source, string target)
     {
+        SinkProvenanceNames.EnsureNotReserved(source);
+        SinkProvenanceNames.EnsureNotReserved(target);
         await GuardGenerations(SinkCollectionOperation.Rename, source);
         await GuardGenerations(SinkCollectionOperation.Rename, target);
         await database.RenameCollectionAsync(source, target);

@@ -71,7 +71,8 @@ public class Sinks(
     {
         var resolved = _configurations.ResolveFor(readModel, graph: false);
         ThrowIfUnknownSink(resolved.Type);
-        return _factories[resolved.Type].GetProvenance(eventStoreName, eventStoreNamespaceName, resolved.Name);
+        SinkProvenanceNames.EnsureNotReserved(readModel.ContainerName);
+        return _factories[resolved.Type].GetProvenance(eventStoreName, eventStoreNamespaceName, resolved.Name, readModel.ContainerName);
     }
 
     static async Task Initialize(ISink sink, bool changed)

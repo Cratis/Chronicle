@@ -74,7 +74,8 @@ public class a_registration : Specification
             NullLogger<Reducers>.Instance,
             _gate,
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloDepartures.Instance,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
         _grainFactory.ClearReceivedCalls();
         _readModel.ClearReceivedCalls();
         _client.ClearReceivedCalls();

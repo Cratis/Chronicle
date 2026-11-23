@@ -38,9 +38,10 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
 /// <param name="meter">The pipeline manager meter.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> used to judge idleness.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 /// <param name="watchGates">The <see cref="IProjectionWatchGates"/> telling whether a projection is watched; without it no projection is considered watched.</param>
 [Singleton]
-public class ProjectionPipelineManager(
+public partial class ProjectionPipelineManager(
     IStorage storage,
     IGrainFactory grainFactory,
     IObjectComparer objectComparer,
@@ -48,6 +49,7 @@ public class ProjectionPipelineManager(
     IReadModelsCompliance readModelsCompliance,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
+    IReadModelSinkProvenance provenance,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ProjectionPipelineManager>? meter = null,
     TimeProvider? timeProvider = null,
     IProjectionWatchGates? watchGates = null) : IProjectionPipelineManager
@@ -132,6 +134,8 @@ public class ProjectionPipelineManager(
         EventStoreNamespaceName @namespace,
         EngineProjection projection)
     {
+        var sinkNamespace = projection.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace;
+        await EnsureProvenance(eventStore, sinkNamespace, projection);
         var key = KeyHelper.Combine(eventStore, @namespace, projection.Identifier);
         if (_pipelines.TryGetValue(key, out var pipeline) && pipeline.Fingerprint == projection.DefinitionFingerprint)
         {
@@ -173,7 +177,7 @@ public class ProjectionPipelineManager(
         }
 
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, projection.Identifier);
-        var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, null);
+        var newPipeline = Build(eventStore, @namespace, sinkNamespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, null);
         Bind(key, projection, newPipeline);
         return newPipeline;
     }
@@ -187,6 +191,7 @@ public class ProjectionPipelineManager(
     {
         if (projection.Graph is not null) throw new EventGenerationDeliveryNotSupported();
         MaterializationGenerationCapabilities.ThrowIfCannotBuild(projection, generation);
+        await EnsureProvenance(eventStore, @namespace, projection);
         var key = GenerationKey(eventStore, @namespace, generation);
         if (_pipelines.TryGetValue(key, out var pipeline) && pipeline.Fingerprint == projection.DefinitionFingerprint)
         {
@@ -203,7 +208,7 @@ public class ProjectionPipelineManager(
         // Futures, like observer state, belong to the generation's observer. Generation 1's observer is the projection
         // itself, so its futures stay where they always were.
         var projectionFutures = grainFactory.GetProjectionFutures(eventStore, @namespace, generation.ObserverId);
-        var newPipeline = Build(eventStore, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, generation);
+        var newPipeline = Build(eventStore, @namespace, @namespace, projection, namespaceStorage, namespaceStorage.Changesets, sink, new ProjectionFuturesStore(projectionFutures), key, generation);
         Bind(key, projection, newPipeline);
         return newPipeline;
     }
@@ -220,7 +225,7 @@ public class ProjectionPipelineManager(
         // Never cached and never keyed like the live pipeline, so the live pipeline, its handle lock and its cache entry stay as they are.
         // The pipeline holds its own lock, so the key is released again rather than accumulating one entry per rebuild.
         var isolatedKey = $"{KeyHelper.Combine(eventStore, @namespace, projection.Identifier)}/isolated/{Guid.NewGuid():N}";
-        var pipeline = Build(eventStore, @namespace, projection, namespaceStorage, new PartitionRebuildChangesets(), sink, new PartitionRebuildFutures(), isolatedKey, null);
+        var pipeline = Build(eventStore, @namespace, @namespace, projection, namespaceStorage, new PartitionRebuildChangesets(), sink, new PartitionRebuildFutures(), isolatedKey, null);
         _handleLocks.Remove(isolatedKey);
         return pipeline;
     }
@@ -374,6 +379,7 @@ public class ProjectionPipelineManager(
     ProjectionPipeline Build(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
+        EventStoreNamespaceName sinkNamespace,
         EngineProjection projection,
         IEventStoreNamespaceStorage namespaceStorage,
         IChangesetStorage changesetStorage,
@@ -413,6 +419,7 @@ public class ProjectionPipelineManager(
             handleLock,
             replayScopedStorage,
             loggerFactory.CreateLogger<ProjectionPipeline>(),
+            () => EnsureProvenance(eventStore, sinkNamespace, projection),
             generation,
 
             // The sink of a globally scoped projection is shared by every namespace's pipeline: no window of its own.

@@ -56,7 +56,7 @@ public class when_removing_a_child_carrying_pii_from_a_projection(MongoDBFixture
     async Task Because()
     {
         // Seed two contacts, each with a [PII] name, encrypted at rest as the whole stored state.
-        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace);
+        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace, () => Task.CompletedTask);
         await pipeline.Reduce(
             new ReducerContext([Event()], Key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), TwoContacts())));

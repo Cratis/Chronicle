@@ -38,6 +38,7 @@ public record ReadModelLookup(ReadModelLookupOutcome Outcome, string ReadModel, 
     /// <param name="typeFormats">The schema's type formats.</param>
     /// <param name="expandoObjectConverter">The JSON converter.</param>
     /// <param name="jsonSerializerOptions">The JSON serialization options.</param>
+    /// <param name="provenance">The database provenance coordinator.</param>
     /// <returns>The lookup outcome and released instance when found.</returns>
     /// <exception cref="ReadModelNotFound">The read model is not registered.</exception>
     public static async Task<ReadModelLookup> FindByCompositeKey(
@@ -49,12 +50,13 @@ public record ReadModelLookup(ReadModelLookupOutcome Outcome, string ReadModel, 
         IMaterializedReadModelStore store,
         ITypeFormats typeFormats,
         IExpandoObjectConverter expandoObjectConverter,
-        JsonSerializerOptions jsonSerializerOptions)
+        JsonSerializerOptions jsonSerializerOptions,
+        IReadModelSinkProvenance provenance)
     {
         var identifier = new ReadModelIdentifier(readModel);
         var definition = await grainFactory.GetReadModel(identifier, eventStore).GetDefinition();
         if (definition?.Sink is null) throw new ReadModelNotFound(identifier);
-        await ReadModelReadPolicy.EnsureReadable(grainFactory, eventStore, definition);
+        await ReadModelPublicReadGuard.Ensure(provenance, grainFactory, eventStore, @namespace, definition);
         if (!store.IsMaterialized(definition)) return ReadModelLookupResults.Empty(ReadModelLookupOutcome.NotSupported, "Only materialized read models can be looked up by composite key.");
         var schema = definition.GetSchemaForLatestGeneration();
         var normalization = CompositeKeyNormalizer.Normalize(schema, parts.AsReadOnly(), typeFormats);

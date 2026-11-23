@@ -43,6 +43,12 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
     {
+        if (tableName == Storage.Sinks.SinkProvenanceNames.Metadata)
+        {
+            await Sinks.SinkProvenanceSchema.Ensure(context);
+            return;
+        }
+
         await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable);
         await EnsureMissingColumnsAdded(tableName, context);
     }

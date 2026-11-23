@@ -173,7 +173,7 @@ public class a_rebuild_with_erased_subjects : Specification
 
     protected async Task Reduce(string subject, IReadModelsCompliance? compliance = null)
     {
-        var pipeline = new ReducerPipeline(Model(ReadModelObserverType.Reducer), _destination.Sink, _comparer, compliance ?? _compliance, "store", "Default");
+        var pipeline = new ReducerPipeline(Model(ReadModelObserverType.Reducer), _destination.Sink, _comparer, compliance ?? _compliance, "store", "Default", () => Task.CompletedTask);
         var state = State(subject == Erased ? string.Empty : "live personal data");
         if (subject == Erased) ((IDictionary<string, object?>)state)["privateTags"] = Array.Empty<string>();
         var @event = Event(Created, subject, state);

@@ -14,14 +14,15 @@ namespace Cratis.Chronicle.ReadModels;
 /// Initializes a new instance of the <see cref="ReadModelDefinitionStorageProvider"/> class.
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorage
+/// <param name="provenance">The database provenance coordinator.</param>
+public class ReadModelDefinitionStorageProvider(IStorage storage, IReadModelSinkProvenance provenance) : IGrainStorage
 {
     /// <inheritdoc/>
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
-        await ReadModelProvenance.For(storage, readModelKey.EventStore).Preserve();
+        await provenance.Preserve(readModelKey.EventStore);
         await eventStore.ReadModels.Delete(readModelKey.Identifier);
     }
 
@@ -42,7 +43,7 @@ public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorag
         var actualGrainState = (grainState as IGrainState<ReadModelDefinition>)!;
         var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
-        await ReadModelProvenance.For(storage, readModelKey.EventStore).Preserve();
+        await ReadModelDefinitionProvenance.Ensure(storage, provenance, readModelKey.EventStore, [actualGrainState.State!]);
         await eventStore.ReadModels.Save(actualGrainState.State!);
     }
 }

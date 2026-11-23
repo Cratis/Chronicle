@@ -85,7 +85,8 @@ public class an_observation_stream : Specification
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloDepartures.Instance,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReducer
         {

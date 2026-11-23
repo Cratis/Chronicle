@@ -1,28 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 
 /// <summary>
-/// Represents the process-lifetime provenance of the in-memory provider's logical database.
+/// Represents monotonic provenance for one in-memory storage scope.
 /// </summary>
-/// <param name="eventStore">The event store.</param>
-/// <param name="namespace">The namespace.</param>
-public class InMemorySinkProvenanceStorage(EventStoreName eventStore, EventStoreNamespaceName @namespace) : ISinkProvenanceStorage
+public class InMemorySinkProvenanceStorage : ISinkProvenanceStorage
 {
-    static readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName), bool> _markers = new();
+    int _quarantined;
 
     /// <inheritdoc/>
-    public Task<bool> IsQuarantined() => Task.FromResult(_markers.ContainsKey((eventStore, @namespace)));
+    public Task<bool> IsQuarantined() => Task.FromResult(Volatile.Read(ref _quarantined) != 0);
 
     /// <inheritdoc/>
     public Task MarkQuarantined()
     {
-        _markers.TryAdd((eventStore, @namespace), true);
+        Interlocked.Exchange(ref _quarantined, 1);
         return Task.CompletedTask;
     }
 }

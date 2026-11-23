@@ -30,6 +30,7 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="handleLock">Per-projection lock that serializes <see cref="Handle"/> calls across all pipeline instances that share the same projection identifier.</param>
 /// <param name="replayScopedCache">The <see cref="IReplayScopedCache"/> whose key-resolution caching is active only for the duration of a replay.</param>
 /// <param name="logger"><see cref="ILogger{T}"/> for logging.</param>
+/// <param name="ensureProvenance">Rechecks database eligibility before accessing the sink.</param>
 /// <param name="generation">The <see cref="MaterializationGenerationIdentity"/> the pipeline builds, if it builds a materialization generation.
 /// A generation writes only to its own destination and never puts its sink or changesets into replay mode: the destination is its own,
 /// so there is nothing to shadow and nothing to rename.</param>
@@ -45,6 +46,7 @@ public partial class ProjectionPipeline(
     ProjectionHandleLock handleLock,
     IReplayScopedCache replayScopedCache,
     ILogger<ProjectionPipeline> logger,
+    Func<Task> ensureProvenance,
     MaterializationGenerationIdentity? generation = null,
     bool usesBulkWindow = true) : IProjectionPipeline
 {
@@ -88,7 +90,7 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
-        await sink.EnsureProvenance();
+        await EnsureProvenance();
         Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
@@ -104,19 +106,21 @@ public partial class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public Task ResumeReplay(ReplayContext context)
+    public async Task ResumeReplay(ReplayContext context)
     {
+        await EnsureProvenance();
         Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
         _sessionOpened?.Invoke();
         replayScopedCache.BeginReplaySession();
-        return generation is null ? sink.ResumeReplay(context) : Task.CompletedTask;
+        if (generation is null) await sink.ResumeReplay(context);
     }
 
     /// <inheritdoc/>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        await EnsureProvenance();
         ClearPreparedPage();
         _isReplaying = false;
         replayScopedCache.EndReplaySession();
@@ -159,47 +163,54 @@ public partial class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public Task BeginBulk()
+    public async Task BeginBulk()
     {
+        await EnsureProvenance();
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
         _sessionOpened?.Invoke();
-        return usesBulkWindow ? sink.BeginBulk() : Task.CompletedTask;
+        if (usesBulkWindow) await sink.BeginBulk();
     }
 
     /// <inheritdoc/>
-    public Task ResumeBulk()
+    public async Task ResumeBulk()
     {
+        await EnsureProvenance();
         Interlocked.Increment(ref _activity);
         Volatile.Write(ref _bulkOpen, true);
         _sessionOpened?.Invoke();
-        return usesBulkWindow ? sink.ResumeBulk() : Task.CompletedTask;
+        if (usesBulkWindow) await sink.ResumeBulk();
     }
 
     /// <inheritdoc/>
-    public Task<BulkFlushResult> FlushBulk() =>
-        usesBulkWindow ? sink.FlushBulk() : Task.FromResult(new BulkFlushResult(null, []));
-
-    /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk()
+    public async Task<BulkFlushResult> FlushBulk()
     {
-        ClearPreparedPage();
-        Volatile.Write(ref _bulkOpen, false);
-        return usesBulkWindow ? sink.EndBulk() : Task.FromResult<IEnumerable<FailedPartition>>([]);
+        await EnsureProvenance();
+        return usesBulkWindow ? await sink.FlushBulk() : new BulkFlushResult(null, []);
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
+    public async Task<IEnumerable<FailedPartition>> EndBulk()
     {
+        await EnsureProvenance();
         ClearPreparedPage();
         Volatile.Write(ref _bulkOpen, false);
-        return usesBulkWindow ? sink.EndBulk(cancellationToken) : Task.FromResult<IEnumerable<FailedPartition>>([]);
+        return usesBulkWindow ? await sink.EndBulk() : [];
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
+    {
+        await EnsureProvenance();
+        ClearPreparedPage();
+        Volatile.Write(ref _bulkOpen, false);
+        return usesBulkWindow ? await sink.EndBulk(cancellationToken) : [];
     }
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
-        await sink.EnsureProvenance();
+        await EnsureProvenance();
         Interlocked.Increment(ref _activity);
 
         // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping
@@ -231,6 +242,7 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
     {
+        await EnsureProvenance();
         // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
         using var handleScope = await _handleLock.AcquireCoarse();
         var states = new List<(Key Key, ExpandoObject State)>(keys.Count);

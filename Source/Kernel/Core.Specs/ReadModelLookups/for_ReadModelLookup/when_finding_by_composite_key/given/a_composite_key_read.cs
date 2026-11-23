@@ -25,6 +25,7 @@ public class a_composite_key_read : Specification
     protected IReadModel _readModel;
     protected IEnumerable<ProjectionDefinition> _projections;
     protected IMaterializedReadModelStore _store;
+    protected IReadModelSinkProvenance _provenance;
     protected IExpandoObjectConverter _converter;
     protected ReadModelDefinition _definition;
     protected IDictionary<string, string> _parts;
@@ -34,6 +35,7 @@ public class a_composite_key_read : Specification
     protected Key _key;
     void Establish()
     {
+        _provenance = Substitute.For<IReadModelSinkProvenance>();
         _parts = new Dictionary<string, string> { ["first"] = "\"a\"", ["second"] = "42" };
         _definition = new(
             "model",
@@ -65,7 +67,7 @@ public class a_composite_key_read : Specification
         _converter = Substitute.For<IExpandoObjectConverter>();
         _converter.ToJsonObject(Arg.Do<ExpandoObject>(_ => _serialized = _), Arg.Any<JsonSchema>()).Returns(new JsonObject { ["name"] = "released" });
     }
-    protected async Task Read() => _result = await ReadModelLookup.FindByCompositeKey(EventStore, Namespace, "model", _parts, _grains, _store, new TypeFormats(), _converter, new JsonSerializerOptions());
+    protected async Task Read() => _result = await ReadModelLookup.FindByCompositeKey(EventStore, Namespace, "model", _parts, _grains, _store, new TypeFormats(), _converter, new JsonSerializerOptions(), _provenance);
     protected Task DidNotLookUp() => _store.DidNotReceive().FindByCompositeKey(EventStore, Namespace, Arg.Any<ReadModelDefinition>(), Arg.Any<Key>());
     protected void Schema(string json) => _definition = _definition with { Schemas = new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = JsonSchema.FromJson(json) } };
 }

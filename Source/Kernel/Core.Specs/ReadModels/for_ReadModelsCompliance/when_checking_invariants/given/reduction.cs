@@ -29,7 +29,7 @@ public static class reduction
         var observed = Substitute.For<IReadModelsCompliance>();
         observed.Apply(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<ExpandoObject>())
             .Returns(async call => stored = await compliance.Apply(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<JsonSchema>(2), call.ArgAt<string>(3), call.ArgAt<ExpandoObject>(4)));
-        var pipeline = new ReducerPipeline(readModel, sink, new ObjectComparer(), observed, "store", "Default");
+        var pipeline = new ReducerPipeline(readModel, sink, new ObjectComparer(), observed, "store", "Default", () => Task.CompletedTask);
         var @event = new AppendedEvent(EventContext.From("store", "Default", EventType.Unknown, EventSourceType.Default, subject, EventStreamType.All, EventStreamId.Default, EventSequenceNumber.First, CorrelationId.NotSet), new ExpandoObject());
         await pipeline.Reduce(new ReducerContext([@event], new Key(subject, ArrayIndexers.NoIndexers)), (_, _) => Task.FromResult(new ReducerSubscriberResult(new ObserverSubscriberResult(ObserverSubscriberState.Ok, EventSequenceNumber.First, [], string.Empty), state)));
         await sink.Received(1).ApplyChanges(Arg.Any<Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<SinkWriteMode>());

@@ -48,7 +48,7 @@ public class and_the_client_declared_a_bound_smaller_than_the_events : given.a_s
         compliance.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<ExpandoObject>())
             .Returns(callInfo => Task.FromResult((ExpandoObject)callInfo[3]));
         _sink = new InMemorySink(definition, new TypeFormats());
-        var pipeline = new ReducerPipeline(definition, _sink, new ObjectComparer(), compliance, _eventStore, _namespace);
+        var pipeline = new ReducerPipeline(definition, _sink, new ObjectComparer(), compliance, _eventStore, _namespace, () => Task.CompletedTask);
         _firstPipeline.Reduce(Arg.Any<ReducerContext>(), Arg.Any<ReducerDelegate>(), Arg.Any<bool>())
             .Returns(call => pipeline.Reduce(call.Arg<ReducerContext>(), call.Arg<ReducerDelegate>(), call.Arg<bool>()));
 

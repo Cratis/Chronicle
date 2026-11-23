@@ -49,6 +49,6 @@ public class a_pinned_pipeline : a_projection_with_generations
             new HandleEvent(_sequence, _sink, NullLogger<HandleEvent>.Instance),
             new SaveChanges(_sink, changes, true, NullLogger<SaveChanges>.Instance)
         };
-        return new(_projection, _sink, changes, new ObjectComparer(), steps, new ProjectionHandleLock(), Substitute.For<IReplayScopedCache>(), NullLogger<ProjectionPipeline>.Instance);
+        return new(_projection, _sink, changes, new ObjectComparer(), steps, new ProjectionHandleLock(), Substitute.For<IReplayScopedCache>(), NullLogger<ProjectionPipeline>.Instance, () => Task.CompletedTask);
     }
 }

@@ -31,7 +31,7 @@ public partial class ReducerPipeline
             return new(_noResults, new Dictionary<Key, ReadModelChangeNotification>(), []);
         }
 
-        await Sink.EnsureProvenance();
+        await EnsureProvenance();
         var keys = contexts.Select(_ => _.Key).ToArray();
         using var memoryTicket = memoryGate is null ? ReducerMemoryTicket.None : await memoryGate.EnterPage(_memoryScope, keys);
 

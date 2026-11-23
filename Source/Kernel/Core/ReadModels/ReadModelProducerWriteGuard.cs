@@ -2,9 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Security;
-using Cratis.Chronicle.Storage;
 using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -17,14 +15,14 @@ internal static class ReadModelProducerWriteGuard
     /// <summary>
     /// Preserves existing evidence before validating a replacement. Refusal never overwrites that evidence.
     /// </summary>
-    /// <param name="storage">The storage.</param>
+    /// <param name="provenance">The database provenance coordinator.</param>
     /// <param name="eventStore">The event store.</param>
-    /// <param name="sequence">The incoming producer's event sequence.</param>
+    /// <param name="restricted">Whether the incoming producer uses an unsupported source.</param>
     /// <returns>The validation task.</returns>
-    internal static async Task Ensure(IStorage storage, EventStoreName eventStore, EventSequenceId sequence)
+    internal static async Task Ensure(IReadModelSinkProvenance provenance, EventStoreName eventStore, bool restricted)
     {
-        await ReadModelProvenance.For(storage, eventStore).Preserve();
-        if (!SystemStoreAccess.IsSystem(eventStore) && sequence.IsSystemSequence())
+        await provenance.Preserve(eventStore);
+        if (restricted)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
         }

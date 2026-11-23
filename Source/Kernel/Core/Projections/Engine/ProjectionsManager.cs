@@ -35,6 +35,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="meter">The engine cache meter.</param>
 /// <param name="options">The kernel configuration.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 [Singleton]
 public partial class ProjectionsManager(
     IProjectionFactory projectionFactory,
@@ -42,7 +43,8 @@ public partial class ProjectionsManager(
     IGrainFactory grainFactory,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ProjectionsManager>? meter,
     IOptions<ChronicleOptions> options,
-    ILogger<ProjectionsManager> logger) : IProjectionsManager
+    ILogger<ProjectionsManager> logger,
+    IReadModelSinkProvenance provenance) : IProjectionsManager
 {
     /// <summary>The silo-wide limit on cached compiled root graphs.</summary>
     internal const int CacheCapacity = 256;
@@ -69,7 +71,7 @@ public partial class ProjectionsManager(
     /// <param name="meter">The engine cache meter.</param>
     /// <param name="options">The kernel configuration.</param>
     public ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage, IGrainFactory grainFactory, IMeter<ProjectionsManager>? meter, IOptions<ChronicleOptions> options)
-        : this(projectionFactory, storage, grainFactory, meter, options, NullLogger<ProjectionsManager>.Instance)
+        : this(projectionFactory, storage, grainFactory, meter, options, NullLogger<ProjectionsManager>.Instance, new ReadModelSinkProvenance(storage))
     {
     }
 
@@ -241,7 +243,7 @@ public partial class ProjectionsManager(
         if (SkipDefinition(eventStore, definition)) return null;
         var fingerprint = ProjectionFactory.DefinitionFingerprintFor(definition);
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
-        await ReadModelProvenance.For(storage, eventStore).EnsureReadable(definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.Default : @namespace, readModel);
+        await provenance.EnsureReadable(eventStore, definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace, readModel);
         if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
         var schemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
         var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, schemas);

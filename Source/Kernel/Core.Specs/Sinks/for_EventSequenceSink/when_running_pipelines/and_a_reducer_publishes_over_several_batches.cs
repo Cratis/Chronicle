@@ -30,7 +30,7 @@ public class and_a_reducer_publishes_over_several_batches : given.a_sink
         compliance.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<ExpandoObject>())
             .Returns(callInfo => Task.FromResult((ExpandoObject)callInfo[3]));
 
-        _pipeline = new ReducerPipeline(_definition, _sink, new ObjectComparer(), compliance, Store, Tenant);
+        _pipeline = new ReducerPipeline(_definition, _sink, new ObjectComparer(), compliance, Store, Tenant, () => Task.CompletedTask);
     }
 
     async Task Because()

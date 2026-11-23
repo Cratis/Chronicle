@@ -55,8 +55,8 @@ public class and_events_interleave_partitions_across_pages : Specification
 
         _perPartitionSink = new InMemorySink(definition, new TypeFormats());
         _pagedSink = new InMemorySink(definition, new TypeFormats());
-        _perPartition = new ReducerPipeline(definition, _perPartitionSink, new ObjectComparer(), compliance, _eventStore, _namespace);
-        _paged = new ReducerPipeline(definition, _pagedSink, new ObjectComparer(), compliance, _eventStore, _namespace);
+        _perPartition = new ReducerPipeline(definition, _perPartitionSink, new ObjectComparer(), compliance, _eventStore, _namespace, () => Task.CompletedTask);
+        _paged = new ReducerPipeline(definition, _pagedSink, new ObjectComparer(), compliance, _eventStore, _namespace, () => Task.CompletedTask);
 
         // Twelve events spread over four partitions, interleaved, so each page holds several partitions and each partition several pages.
         _events = [.. Enumerable.Range(0, 12).Select(index => CreateEvent(PartitionAt(index), (ulong)index))];

@@ -57,7 +57,7 @@ public class when_the_query_path_releases_a_pii_list(MongoDBFixture fixture)
 
     async Task Because()
     {
-        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace);
+        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace, () => Task.CompletedTask);
         await pipeline.Reduce(
             new ReducerContext([Event()], Key),
             (_, _) => Task.FromResult(new ReducerSubscriberResult(ObserverSubscriberResult.Ok(EventSequenceNumber.First), State())));

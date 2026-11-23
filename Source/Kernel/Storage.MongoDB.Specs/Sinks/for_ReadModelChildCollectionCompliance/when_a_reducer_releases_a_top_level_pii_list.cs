@@ -62,7 +62,7 @@ public class when_a_reducer_releases_a_top_level_pii_list(MongoDBFixture fixture
 
     async Task Because()
     {
-        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace);
+        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace, () => Task.CompletedTask);
 
         // First reduce creates the read model with a coarse [PII] scores list.
         await pipeline.Reduce(

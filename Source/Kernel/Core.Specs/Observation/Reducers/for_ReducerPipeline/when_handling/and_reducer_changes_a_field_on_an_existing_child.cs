@@ -42,7 +42,8 @@ public class and_reducer_changes_a_field_on_an_existing_child : given.all_depend
             _objectComparer,
             new ReadModelsCompliance(_complianceManager, _expandoObjectConverter),
             EventStore,
-            EventStoreNamespace);
+            EventStoreNamespace,
+            () => Task.CompletedTask);
 
         Reducer = CreateReducer(changed);
     }

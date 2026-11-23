@@ -54,6 +54,6 @@ public class a_read_binding_resolver : Specification
             [new ReadModelOccurrence(ObserverId.Unspecified, DateTimeOffset.UnixEpoch, new ReadModelType(_definition.Identifier, ReadModelGeneration.First), _definition.ContainerName, "historical-container")]);
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_replayManager);
-        _resolver = new(storage, grainFactory, _visibilities);
+        _resolver = new(storage, grainFactory, _visibilities, Substitute.For<IReadModelSinkProvenance>());
     }
 }

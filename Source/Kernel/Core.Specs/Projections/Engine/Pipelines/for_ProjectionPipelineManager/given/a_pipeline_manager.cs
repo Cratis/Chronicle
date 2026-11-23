@@ -45,6 +45,7 @@ public class a_pipeline_manager : Specification
             Substitute.For<IReadModelsCompliance>(),
             Options.Create(new ChronicleOptions()),
             NullLoggerFactory.Instance,
+            Substitute.For<IReadModelSinkProvenance>(),
             null,
             _time);
     }

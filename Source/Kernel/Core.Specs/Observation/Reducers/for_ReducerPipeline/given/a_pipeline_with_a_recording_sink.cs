@@ -54,6 +54,7 @@ public class a_pipeline_with_a_recording_sink : Specification
             readModelsCompliance,
             EventStore,
             EventStoreNamespace,
+            () => Task.CompletedTask,
             GuardWritesOnWatermark);
     }
 
