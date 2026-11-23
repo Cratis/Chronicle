@@ -2,7 +2,7 @@ import com.google.protobuf.gradle.id
 
 plugins {
     kotlin("jvm") version "2.4.21"
-    id("com.google.protobuf") version "0.9.4"
+    id("com.google.protobuf") version "0.10.1"
     `java-library`
     id("com.vanniktech.maven.publish") version "0.30.0"
 }
@@ -14,9 +14,9 @@ repositories {
     mavenCentral()
 }
 
-val grpcVersion = "1.70.0"
-val grpcKotlinVersion = "1.4.1"
-val protobufVersion = "4.29.3"
+val grpcVersion = "1.85.1"
+val grpcKotlinVersion = "1.5.0"
+val protobufVersion = "4.36.2"
 val coroutinesVersion = "1.9.0"
 
 dependencies {
