@@ -58,23 +58,9 @@ public class MongoDBConverter(
 
                 case ArrayProperty:
                     {
-                        var collectionIdentifier = currentPropertyPath.LastSegment.Value.ToCamelCase();
-                        if (arrayIndexers.HasFor(currentPropertyPath))
-                        {
-                            var arrayIndexer = arrayIndexers.GetFor(currentPropertyPath);
-                            var arrayPropertyName = segment.Value.ToMongoDBPropertyName();
-                            propertyBuilder.AppendFormat("{0}.$[{1}]", arrayPropertyName, collectionIdentifier);
-                            var identifierPropertyName = arrayIndexer.IdentifierProperty.ToMongoDB();
-                            var identifierPath = currentPropertyPath + arrayIndexer.IdentifierProperty;
-                            var identifierBsonValue = ToBsonValueForArrayIndexer(arrayIndexer.Identifier, identifierPath);
-                            var filterDocument = new BsonDocument { [$"{collectionIdentifier}.{identifierPropertyName}"] = identifierBsonValue };
-                            arrayFilters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(filterDocument));
-                        }
-                        else
-                        {
-                            var arrayPropertyName = segment.Value.ToMongoDBPropertyName();
-                            propertyBuilder.Append(arrayPropertyName);
-                        }
+                        var arrayProperty = ToArrayProperty(currentPropertyPath, arrayIndexers);
+                        propertyBuilder.Append(arrayProperty.Property);
+                        arrayFilters.AddRange(arrayProperty.ArrayFilters);
                     }
                     break;
             }
@@ -115,28 +101,13 @@ public class MongoDBConverter(
 
         if (input is ExpandoObject expandoObject)
         {
-            var expandoObjectAsDictionary = expandoObject as IDictionary<string, object>;
-            var document = new BsonDocument();
-
-            foreach (var kvp in expandoObjectAsDictionary)
-            {
-                document[kvp.Key.ToMongoDBPropertyName()] = ToBsonValue(kvp.Value);
-            }
-
-            return document;
+            return ToBsonDocument(expandoObject);
         }
 
         var bsonValue = input.ToBsonValue();
         if (bsonValue == BsonNull.Value && input is IEnumerable enumerable)
         {
-            var array = new BsonArray();
-
-            foreach (var item in enumerable)
-            {
-                array.Add(ToBsonValue(item));
-            }
-
-            return array;
+            return ToBsonArray(enumerable);
         }
 
         return bsonValue;
@@ -186,23 +157,69 @@ public class MongoDBConverter(
 
         if (input is IEnumerable enumerable)
         {
-            var items = new List<BsonValue>();
-            foreach (var item in enumerable)
-            {
-                if (item is ExpandoObject itemAsExpandoObject)
-                {
-                    items.Add(expandoObjectConverter.ToBsonDocument(itemAsExpandoObject, schemaProperty.Item!));
-                }
-                else
-                {
-                    items.Add(ToBsonValue(item, schemaProperty));
-                }
-            }
-            return new BsonArray(items);
+            return ToBsonArray(enumerable, schemaProperty);
         }
 
         var value = input.ToBsonValueBasedOnSchemaPropertyType(schemaProperty);
         return value == BsonNull.Value ? BsonNull.Value : value;
+    }
+
+    BsonDocument ToBsonDocument(ExpandoObject input)
+    {
+        var document = new BsonDocument();
+        foreach (var kvp in input)
+        {
+            document[kvp.Key.ToMongoDBPropertyName()] = ToBsonValue(kvp.Value!);
+        }
+        return document;
+    }
+
+    BsonArray ToBsonArray(IEnumerable input)
+    {
+        var array = new BsonArray();
+        foreach (var item in input)
+        {
+            array.Add(ToBsonValue(item));
+        }
+        return array;
+    }
+
+    BsonArray ToBsonArray(IEnumerable input, JsonSchemaProperty schemaProperty)
+    {
+        var items = new List<BsonValue>();
+        foreach (var item in input)
+        {
+            items.Add(item is ExpandoObject expando
+                ? expandoObjectConverter.ToBsonDocument(expando, schemaProperty.Item!)
+                : ToBsonValue(item, schemaProperty));
+        }
+        return new BsonArray(items);
+    }
+
+    MongoDBProperty ToArrayProperty(PropertyPath propertyPath, ArrayIndexers arrayIndexers)
+    {
+        var indexers = arrayIndexers.All.Where(_ => _.ArrayProperty == propertyPath).ToArray();
+        var propertyName = propertyPath.LastSegment.Value.ToMongoDBPropertyName();
+        if (indexers.Length == 0)
+        {
+            return new(propertyName, []);
+        }
+
+        var collectionIdentifier = propertyPath.LastSegment.Value.ToCamelCase();
+        var segments = new List<string>();
+        var filters = new ArrayFilters();
+        for (var level = 0; level < indexers.Length; level++)
+        {
+            var indexer = indexers[level];
+            var identifier = indexers.Length == 1 ? collectionIdentifier : $"{collectionIdentifier}{level}";
+            segments.Add($"{propertyName}.$[{identifier}]");
+            var identifierPropertyName = indexer.IdentifierProperty.ToMongoDB();
+            var identifierPath = propertyPath + indexer.IdentifierProperty;
+            var identifierValue = ToBsonValueForArrayIndexer(indexer.Identifier, identifierPath);
+            filters.Add(new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument($"{identifier}.{identifierPropertyName}", identifierValue)));
+        }
+
+        return new(string.Join('.', segments), filters);
     }
 
     BsonValue ToBsonValueForArrayIndexer(object? input, PropertyPath property)
