@@ -134,6 +134,11 @@ for (const verdict of ['PASS', 'FAIL', 'INCONCLUSIVE', 'exception', 'unavailable
             import { main } from './.github/scripts/measure-rolling-delivery-overhead.mjs';
             const paths = ${JSON.stringify(paths)}, mode = ${JSON.stringify(verdict)};
             const measurement = ${measurement.toString()};
+            function delaySample(sample, enabled, count) {
+                if (!enabled) return;
+                if (mode === 'FAIL') sample.steady.elapsedMilliseconds = 100;
+                if (mode === 'INCONCLUSIVE' && count === 10) sample.steady.elapsedMilliseconds = 30;
+            }
             const arms = [];
             const result = await main(${JSON.stringify(argumentsFor(paths))}, { summaryPath: paths.summaryPath, execute: async (command, args, options) => {
                 assert.equal(command, 'dotnet');
@@ -145,8 +150,7 @@ for (const verdict of ['PASS', 'FAIL', 'INCONCLUSIVE', 'exception', 'unavailable
                 const enabled = args[0] === paths.enabled;
                 arms.push(enabled ? 'B' : 'A');
                 const sample = measurement(enabled);
-                if (mode === 'FAIL' && enabled) sample.steady.elapsedMilliseconds = 100;
-                if (mode === 'INCONCLUSIVE' && enabled && arms.length === 10) sample.steady.elapsedMilliseconds = 30;
+                delaySample(sample, enabled, arms.length);
                 if (mode !== 'unavailable') await writeFile(process.env.CRATIS_ROLLING_OVERHEAD_SAMPLE, JSON.stringify(sample));
                 await writeFile(args.at(-1), ${JSON.stringify(trx)});
                 return { code: 0 };
