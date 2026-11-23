@@ -3,16 +3,16 @@
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager.when_namespace_is_added;
 
-public class and_restricted_and_the_namespace_is_outside : given.a_manager_over_several_namespaces
+public class and_the_source_has_the_namespace : given.a_manager_over_several_namespaces
 {
     async Task Establish()
     {
-        await _manager.Add(DefinitionFor("Default"));
+        _sourceHas.Add("Tenant9");
+        await _manager.Add(DefinitionFor());
         await AttachNamespaceAdded();
-        _requestedKeys.Clear();
     }
 
-    async Task Because() => await _onNamespaceAdded(new("Target", "Tenant9"));
+    async Task Because() => await _onNamespaceAdded(new("Target", "tenant9"));
 
-    [Fact] void should_not_resolve_any_observer() => RequestedKeys.ShouldBeEmpty();
+    [Fact] void should_subscribe_the_namespace() => WasSubscribed("tenant9").ShouldBeTrue();
 }
