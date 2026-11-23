@@ -37,7 +37,7 @@ public partial class EventSequence
             MarkConstraintIndexGap(first);
             AdoptTails(adoptedTails);
             State.SequenceNumber = tail.Next();
-            await SpillAppendedEventsQueuesToCatchup();
+            RequestSpillToCatchup();
         }
         _appendTailUncertain = false;
     }
@@ -70,7 +70,7 @@ public partial class EventSequence
     {
         _appendTailUncertain = true;
         MarkConstraintIndexGap(first);
-        await SpillAppendedEventsQueuesToCatchup();
+        RequestSpillToCatchup();
         _metrics?.AppendOutcomeUnknown();
         logger.AppendOutcomeUnknown(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, first);
     }
@@ -120,7 +120,7 @@ public partial class EventSequence
             // The commit is known. A post-commit fault must not escape to an append failure handler.
             MarkConstraintIndexGap(events[0].Context.SequenceNumber);
             logger.ErrorAppendingMany(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, error);
-            await SpillAppendedEventsQueuesToCatchup();
+            RequestSpillToCatchup();
         }
     }
 }

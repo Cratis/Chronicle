@@ -24,7 +24,7 @@ public partial class EventSequence
     {
         try
         {
-            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask);
+            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask).WaitAsync(LiveDispatchTimeout);
             StopSpillRetry();
         }
         catch (Exception ex)
@@ -50,10 +50,11 @@ public partial class EventSequence
             });
     }
 
-    async Task RetrySpillOnTimer(CancellationToken cancellationToken)
+    Task RetrySpillOnTimer(CancellationToken cancellationToken)
     {
-        if (_spillRetryTimer is null) return;
-        await SpillAppendedEventsQueuesToCatchup();
+        // The timer only asks: the call can take its whole timeout and, run here, would hold every append behind it.
+        if (_spillRetryTimer is not null) RequestSpillToCatchup();
+        return Task.CompletedTask;
     }
 
     void StopSpillRetry()
@@ -67,6 +68,7 @@ public partial class EventSequence
 
     void DisposeSpillRetry()
     {
+        StopDispatchPump();
         _spillRetryTimer?.Dispose();
         _spillRetryTimer = null;
         _spillRetryAttempts = 0;

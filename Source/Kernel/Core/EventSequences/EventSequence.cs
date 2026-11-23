@@ -1028,18 +1028,10 @@ public partial class EventSequence(
         List<AppendedEvent> appendedEvents,
         IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> constraintUpdates)
     {
-        try
-        {
-            // An import commit is never delivered live: each committed chunk hands the observers it is meant for to
-            // their catch-up path, which reads it and any interleaving appends in order (decision 0023).
-            if (_committingImport) await (_appendedEventsQueues?.SpillMatchingToCatchup(appendedEvents) ?? Task.CompletedTask);
-            else await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedEnqueueingAppendedEvents(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedEvents.Count, ex);
-            await SpillAppendedEventsQueuesToCatchup();
-        }
+        // An import commit is never delivered live: each committed chunk hands the observers it is meant for to
+        // their catch-up path, which reads it and any interleaving appends in order (decision 0023). Neither call
+        // holds the append; see EventSequence.LiveDispatch.cs.
+        HandOverToLiveDelivery(appendedEvents, _committingImport);
 
         await UpdateConstraintIndexes(constraintUpdates);
         try
