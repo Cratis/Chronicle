@@ -49,7 +49,10 @@ internal static class JsonSerializedTypes
         //  - Job step states derive from the Choreography JobStepState, whose members (id, status, status changes) Orleans
         //    can only carry if Choreography annotates it. A serializer generated for the derived type alone would silently
         //    leave them out, so these stay on the JSON codec until Choreography does.
+        //  - The state a grain persists and the request and result of a job step are not arguments of a grain method, so the
+        //    payload manifest never sees them; the ones without a generated serializer stay on the JSON codec.
         return type.Namespace == "OneOf.Types"
+            || JobAndStatePayloads.Includes(type)
             || (type.Namespace?.StartsWith("Cratis.Choreography", StringComparison.Ordinal) ?? false)
             || Attribute.IsDefined(type, typeof(EventTypeAttribute), inherit: false)
             || typeof(JobStepState).IsAssignableFrom(type);
