@@ -24,7 +24,7 @@ public partial class EventSequence
     {
         try
         {
-            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask).WaitAsync(LiveDispatchTimeout);
+            await (_appendedEventsQueues?.SpillToCatchup() ?? Task.CompletedTask).WaitAsync(LiveDispatchTimeout, _timeProvider);
             StopSpillRetry();
         }
         catch (Exception ex)

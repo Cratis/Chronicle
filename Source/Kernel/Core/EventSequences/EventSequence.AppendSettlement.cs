@@ -66,7 +66,7 @@ public partial class EventSequence
         }
     }
 
-    async Task MarkAppendOutcomeUnknown(EventSequenceNumber first)
+    void MarkAppendOutcomeUnknown(EventSequenceNumber first)
     {
         _appendTailUncertain = true;
         MarkConstraintIndexGap(first);

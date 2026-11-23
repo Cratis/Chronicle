@@ -740,10 +740,10 @@ public partial class EventSequence(
                 error => RenumberAppendMany(eventsToAppend, error),
                 () => ValidateAppendManyRetry(correlationId),
                 async () => await ReadBackAppend(eventsToAppend),
-                async () =>
+                () =>
                 {
-                    await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
-                    return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] };
+                    MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
+                    return Task.FromResult(new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] });
                 })
             : await AppendEffectToStorage(eventsToAppend, effectReceipt, correlationId);
     }
@@ -769,7 +769,7 @@ public partial class EventSequence(
         var readBack = await ReadBackAppend(eventsToAppend);
         if (readBack is null)
         {
-            await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
+            MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
             return (appendedEventsList, new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] });
         }
 
@@ -969,10 +969,10 @@ public partial class EventSequence(
                 error => HandleFailedAppendResult((Result<AppendedEvent, DuplicateEventSequenceNumber>)error, eventType, eventSourceId, eventType.Id),
                 () => ValidateAppendRetry(correlationId),
                 async () => (await ReadBackAppend([attempted!]))?.Single(),
-                async () =>
+                () =>
                 {
-                    await MarkAppendOutcomeUnknown(attempted!.SequenceNumber);
-                    return AppendResult.Failed(correlationId, [AppendError.AppendOutcomeUnknown]);
+                    MarkAppendOutcomeUnknown(attempted!.SequenceNumber);
+                    return Task.FromResult(AppendResult.Failed(correlationId, [AppendError.AppendOutcomeUnknown]));
                 });
             if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
 

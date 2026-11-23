@@ -92,7 +92,7 @@ public partial class EventSequence
                 {
                     var queues = _appendedEventsQueues!;
                     var call = batch.Import ? queues.SpillMatchingToCatchup(batch.Events) : queues.Enqueue(batch.Events);
-                    await call.WaitAsync(LiveDispatchTimeout);
+                    await call.WaitAsync(LiveDispatchTimeout, _timeProvider);
                 }
                 catch (Exception ex)
                 {

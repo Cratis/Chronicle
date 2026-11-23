@@ -104,7 +104,7 @@ public partial class EventSequence
 
     async Task SettleUnknownKeyedAppend(List<KeyedAppend> requests, List<EventToAppendToStorage> batch, List<ConstraintValidationContext> contexts, CorrelationId correlationId, bool concurrencyChecked)
     {
-        await MarkAppendOutcomeUnknown(batch[0].SequenceNumber);
+        MarkAppendOutcomeUnknown(batch[0].SequenceNumber);
         var readBack = await ReadBackAppend(batch);
         if (readBack is not null)
         {
