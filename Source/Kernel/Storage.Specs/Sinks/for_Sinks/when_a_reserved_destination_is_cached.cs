@@ -18,7 +18,7 @@ public class when_a_reserved_destination_is_cached : given.a_sink_factory
         _errors.Add(await Catch.Exception(() => _sinks.GetFor(_model, SinkProvenanceNames.Metadata)));
     }
 
-    [Fact] void should_refuse_reserved_names_even_after_the_cache_is_populated() => _errors.All(error => error is InvalidOperationException).ShouldBeTrue();
+    [Fact] void should_refuse_reserved_names_even_after_the_cache_is_populated() => _errors.TrueForAll(error => error is InvalidOperationException).ShouldBeTrue();
     [Fact] void should_not_ask_the_provider_to_resolve_or_create_a_reserved_destination() => _factory.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_not_use_the_cached_sink() => _sink.ReceivedCalls().Any().ShouldBeFalse();
 }

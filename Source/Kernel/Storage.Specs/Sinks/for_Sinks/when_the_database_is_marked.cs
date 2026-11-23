@@ -31,7 +31,7 @@ public class when_the_database_is_marked : given.a_sink_factory
         _errors.Add(await Catch.Exception(() => _sinks.GetFor(_model with { ContainerName = "new-container" })));
     }
 
-    [Fact] void should_refuse_cached_explicit_and_new_destinations() => _errors.All(error => error is InvalidOperationException).ShouldBeTrue();
+    [Fact] void should_refuse_cached_explicit_and_new_destinations() => _errors.TrueForAll(error => error is InvalidOperationException).ShouldBeTrue();
     [Fact] void should_not_construct_a_sink() => _factory.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "CreateFor").ShouldBeFalse();
     [Fact] void should_not_provision_or_return_the_cached_sink() => _sink.ReceivedCalls().Any().ShouldBeFalse();
 }
