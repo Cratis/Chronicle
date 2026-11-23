@@ -83,7 +83,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.13'
+          gradle-version: '9.9.2'
 
       - name: Publish to Maven Central
         working-directory: ./Source/Clients/Kotlin

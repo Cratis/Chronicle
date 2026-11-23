@@ -43,7 +43,7 @@ tasks.test {
 // The canonical descriptor set travels with the package so a client can hand the kernel exactly the contracts it
 // was built against, and the kernel can own the one compatibility check instead of every language reimplementing
 // it. See Source/Kernel/Compatibility.
-val embedDescriptorSet by tasks.registering(Copy::class) {
+val embedDescriptorSet = tasks.register<Copy>("embedDescriptorSet") {
     from(file("../../Kernel/Protobuf/chronicle.desc"))
     into(layout.buildDirectory.dir("generated/resources/chronicle"))
 }
