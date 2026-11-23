@@ -53,20 +53,9 @@ internal static class ChildCollectionRemovals
     /// <param name="key">The identifier value of the child to remove.</param>
     /// <param name="keyAsString">The key in string form.</param>
     /// <returns>True if it is the removed child, false if not.</returns>
-    internal static bool IsRemovedChild(object? item, PropertyPath identifier, object? key, string? keyAsString)
-    {
-        if (!ChildIdentity.TryGetValue(item, identifier, out var value))
-        {
-            return false;
-        }
-
-        if (ChildKeyComparison.RequiresStructuralComparison(value, key))
-        {
-            return ChildKeyComparison.AreEqual(value, key);
-        }
-
-        return Equals(value, key) || (value is not null && value.ToString() == keyAsString);
-    }
+    internal static bool IsRemovedChild(object? item, PropertyPath identifier, object? key, string? keyAsString) =>
+        ChildIdentity.TryGetValue(item, identifier, out var value) &&
+        ChildRemovalMatching.Matches(value, key, keyAsString);
 
     /// <summary>
     /// Removes the child described by <paramref name="removal"/> from its collection, selecting every ancestor array element through <paramref name="indexers"/>.
