@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.
 /// </summary>
-[Version(1)]
+[Version(2)]
 public interface IProjectionsManager : IGrainWithStringKey
 {
     /// <summary>
