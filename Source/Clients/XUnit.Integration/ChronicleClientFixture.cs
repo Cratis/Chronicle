@@ -579,7 +579,7 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         }
     }
 
-    IEnumerable<Type> GetArtifactTypes(Func<DefaultClientArtifactsProvider, IEnumerable<Type>> getTypes)
+    Type[] GetArtifactTypes(Func<DefaultClientArtifactsProvider, IEnumerable<Type>> getTypes)
     {
         if (!AutoDiscoverArtifacts)
         {

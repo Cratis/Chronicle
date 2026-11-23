@@ -54,7 +54,7 @@ public class and_the_observers_are_quiet(context context) : Given<context>(conte
         {
             var observer = Services.GetRequiredService<IGrainFactory>().GetGrain<Cratis.Chronicle.Observation.IObserver>(new Concepts.Observation.ObserverKey(_handler.Id.Value, _store.Name.Value, Concepts.EventStoreNamespaceName.Default, Concepts.EventSequences.EventSequenceId.Log));
             var deadline = DateTimeOffset.UtcNow.AddSeconds(45);
-            while ((await observer.GetSubscription()).EventTypes.Count() < 2)
+            while ((await observer.GetSubscription()).EventTypes.Count < 2)
             {
                 if (DateTimeOffset.UtcNow > deadline)
                 {

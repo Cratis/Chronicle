@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
-using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProtoBuf.Grpc;
 using ContractProjections = Cratis.Chronicle.Contracts.Projections.IProjections;
@@ -43,7 +42,7 @@ public class and_the_kernel_applies_the_registration_in_the_background : given.a
         await _projections.Discover();
     }
 
-    async Task Because() => _exception = await Catch.Exception(() => _projections.Register());
+    async Task Because() => _exception = await Catch.Exception(_projections.Register);
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
     [Fact] async Task should_have_sent_the_registration_once() => await _contractProjections.Received(1).Register(Arg.Any<RegisterRequest>(), Arg.Any<CallContext>());

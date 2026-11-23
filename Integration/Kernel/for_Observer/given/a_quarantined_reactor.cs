@@ -85,7 +85,11 @@ public class a_quarantined_reactor(QuarantineRecoveryFixture fixture) : Specific
         }
     }
 
-    // Operator commands are accepted as jobs; this is the job carrying the command, once it has finished.
+    /// <summary>
+    /// Waits for the job carrying an operator command to finish. Operator commands are accepted as jobs.
+    /// </summary>
+    /// <param name="timeout">How long to wait.</param>
+    /// <returns>The job, once it has finished.</returns>
     protected async Task<Job?> WaitForOperatorCommandJobToFinish(TimeSpan timeout)
     {
         var deadline = DateTimeOffset.UtcNow + timeout;

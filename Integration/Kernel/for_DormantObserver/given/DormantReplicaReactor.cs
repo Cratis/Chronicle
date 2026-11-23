@@ -4,7 +4,6 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
-using Cratis.Chronicle.XUnit.Integration;
 
 namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given;
 
