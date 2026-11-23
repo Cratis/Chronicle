@@ -709,7 +709,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 steps = jobs[job_id]["steps"]
                 self.assertFalse(any(step.get("name") == "Cache NuGet packages" for step in steps))
                 cache = next(step for step in steps if step.get("name") == "Restore obj cache")
-                self.assertEqual("actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual("actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9", cache["uses"])
                 self.assertEqual(build_cache["with"], cache["with"])
                 restore = next(step for step in steps if step.get("run") == command)
                 self.assertNotIn("if", restore)
@@ -725,7 +725,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(job=job_id):
                 steps = self.build["jobs"][job_id]["steps"]
                 cache = next(step for step in steps if step.get("name") == "Cache pinned coverage tool")
-                self.assertEqual("actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9", cache["uses"])
                 self.assertEqual(expected, cache["with"])
                 restore = next(step for step in steps if step.get("name") == "Restore pinned coverage tool")
                 self.assertEqual("dotnet tool restore", restore["run"])

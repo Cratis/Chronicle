@@ -210,7 +210,7 @@ jobs:
 
       - name: Restore obj cache
         id: restore-obj
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           # Key on the package manifests so a dependency version change never restores a stale obj
@@ -311,7 +311,7 @@ jobs:
 
       - name: Save obj cache
         if: github.event_name != 'pull_request' && steps.restore-obj.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ./**/obj
           key: ${{ steps.restore-obj.outputs.cache-primary-key }}
@@ -382,7 +382,7 @@ jobs:
       # inputs from the pack artifact instead of an optional, potentially stale cache.
       - name: Restore obj cache
         if: github.event_name != 'pull_request'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -509,7 +509,7 @@ jobs:
 
       # Restore only: dotnet-build remains the sole writer of this optional cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -574,7 +574,7 @@ jobs:
           prune-on-miss: 'true'
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
@@ -629,7 +629,7 @@ jobs:
           prune-on-miss: 'true'
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
@@ -714,7 +714,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -768,7 +768,7 @@ jobs:
       # on every hit or miss, refreshing stale inputs and fetching any missing packages.
       # Read only: dotnet-build remains the sole writer of the Release obj cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -799,7 +799,7 @@ jobs:
           fi
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -899,7 +899,7 @@ jobs:
       # Reuse evaluated inputs without adding the full NuGet cache's extraction cost.
       # Read only: dotnet-build remains the sole writer of the Release obj cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -910,7 +910,7 @@ jobs:
         run: dotnet restore Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -1649,7 +1649,7 @@ jobs:
           overwrite: false
 
       - name: Cache merged coverage
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./coverage-reports
           key: coverage-cache-${{ github.sha }}

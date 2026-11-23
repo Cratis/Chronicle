@@ -176,7 +176,7 @@ jobs:
           mode: restore
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           # Package-aware key, as in `.NET Build & Integration`: a dependency bump must not restore
           # an obj cache built against a different package set.
