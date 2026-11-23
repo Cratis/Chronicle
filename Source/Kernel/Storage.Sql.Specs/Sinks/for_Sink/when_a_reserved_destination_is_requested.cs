@@ -36,6 +36,6 @@ public class when_a_reserved_destination_is_requested : Specification
 
     Sink Create(ReadModelDefinition definition) => new("store", "namespace", definition, _database, Substitute.For<IExpandoObjectConverter>(), new ReplayingTables(), NullLogger<Sink>.Instance);
 
-    [Fact] void should_refuse_construction_remove_and_revert_before_table_access() => _errors.All(error => error is InvalidOperationException).ShouldBeTrue();
+    [Fact] void should_refuse_construction_remove_and_revert_before_table_access() => _errors.TrueForAll(error => error is InvalidOperationException).ShouldBeTrue();
     [Fact] void should_never_resolve_probe_or_provision_a_table() => _database.ReceivedCalls().Any().ShouldBeFalse();
 }

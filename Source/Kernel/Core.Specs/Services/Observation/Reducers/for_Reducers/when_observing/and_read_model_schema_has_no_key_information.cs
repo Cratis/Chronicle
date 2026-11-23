@@ -55,7 +55,8 @@ public class and_read_model_schema_has_no_key_information : Specification
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloDepartures.Instance,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
 
         _messages = new Subject<ReducerMessage>();
     }

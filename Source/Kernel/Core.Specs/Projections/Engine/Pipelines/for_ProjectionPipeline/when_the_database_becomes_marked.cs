@@ -26,11 +26,11 @@ public class when_the_database_becomes_marked : for_ProjectionPipelineManager.gi
         _errors.Add(await Catch.Exception(() => pipeline.BeginReplay(_replay)));
         _errors.Add(await Catch.Exception(() => pipeline.ResumeReplay(_replay)));
         _errors.Add(await Catch.Exception(() => pipeline.EndReplay(_replay)));
-        _errors.Add(await Catch.Exception(() => pipeline.BeginBulk()));
-        _errors.Add(await Catch.Exception(() => pipeline.EndBulk()));
+        _errors.Add(await Catch.Exception(pipeline.BeginBulk));
+        _errors.Add(await Catch.Exception(pipeline.EndBulk));
     }
 
-    [Fact] void should_recheck_every_retained_operation_including_page_prefetch() => _errors.All(error => error is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_recheck_every_retained_operation_including_page_prefetch() => _errors.TrueForAll(error => error is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_exercise_cached_generation_and_isolated_pipelines() => _errors.Count.ShouldEqual(24);
     [Fact] void should_not_touch_the_live_sink_after_denial() => _liveSink.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_not_touch_the_generation_sink_after_denial() => _generationSink.ReceivedCalls().Any().ShouldBeFalse();

@@ -31,6 +31,7 @@ public class when_an_ineligible_global_projection_is_activated_in_several_namesp
             Substitute.For<IReadModelsCompliance>(),
             Options.Create(new ChronicleOptions()),
             _loggers,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>(),
             null,
             _time);
         await Task.CompletedTask;

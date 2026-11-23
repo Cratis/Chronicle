@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage.InMemory.Sinks;
-using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.given;
 
@@ -20,7 +19,7 @@ public class a_database_with_provenance : all_dependencies
     {
         _readModelDefinition = _readModelDefinition with
         {
-            Owner = ReadModelOwner.Kernel,
+            Owner = ReadModelOwner.Server,
             ObserverType = ReadModelObserverType.NotSet,
             Sink = new(SinkConfigurationId.None, WellKnownSinkTypes.InMemory)
         };

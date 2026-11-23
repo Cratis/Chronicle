@@ -36,6 +36,6 @@ public class when_a_mark_is_reloaded(ReplicaSetMongoDBFixture fixture) : given.a
     }
 
     [Fact] void should_retain_a_valid_versioned_mark_after_recreation() => _reloaded.ShouldBeTrue();
-    [Fact] void should_refuse_malformed_unsupported_or_unexpected_records() => _errors.All(error => error is InvalidOperationException).ShouldBeTrue();
+    [Fact] void should_refuse_malformed_unsupported_or_unexpected_records() => _errors.TrueForAll(error => error is InvalidOperationException).ShouldBeTrue();
     [Fact] void should_propagate_a_failed_durable_write() => _writeError.ShouldNotBeNull();
 }

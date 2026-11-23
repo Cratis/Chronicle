@@ -119,7 +119,7 @@ public class all_dependencies : Specification
         _service = CreateService(Substitute.For<IReadModelSinkProvenance>());
     }
 
-    protected ReadModels CreateService(IReadModelSinkProvenance provenance) => new(
+    private protected ReadModels CreateService(IReadModelSinkProvenance provenance) => new(
         _grainFactory,
         _storage,
         _readBindings,

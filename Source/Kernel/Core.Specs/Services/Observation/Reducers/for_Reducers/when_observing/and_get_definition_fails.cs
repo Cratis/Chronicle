@@ -42,7 +42,8 @@ public class and_get_definition_fails : Specification
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloDepartures.Instance);
+            NoSiloDepartures.Instance,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
 
         _messages = new Subject<ReducerMessage>();
     }

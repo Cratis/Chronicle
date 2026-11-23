@@ -88,5 +88,5 @@ public abstract class a_provenance_database : Specification
     [Fact] void should_leave_an_independent_physical_database_unmarked() => _independent.ShouldBeFalse();
     [Fact] void should_fail_closed_on_an_unsupported_marker_version() => _malformedError.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_fail_closed_on_missing_metadata_in_verify_mode() => _missingError.ShouldNotBeNull();
-    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.All(table => table == Storage.Sinks.SinkProvenanceNames.Metadata).ShouldBeTrue();
+    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.TrueForAll(table => table == global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata).ShouldBeTrue();
 }

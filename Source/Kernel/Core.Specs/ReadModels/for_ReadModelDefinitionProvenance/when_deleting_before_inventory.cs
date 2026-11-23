@@ -44,12 +44,12 @@ public class when_deleting_before_inventory : Projections.for_ProjectionsManager
         _errors.Add(await Catch.Exception(() => models.WriteStateAsync("read-models", GrainId.Create("read-models", EventStore), new GrainState<ReadModelsManagerState> { State = _pending })));
         var reducers = new ReducerDefinitionStorageProvider(_storage, _provenance);
         var reducer = new ReducerDefinition("reducer", "log", [], "model", true, []);
-        var reducerKey = GrainId.Create("reducer", new ReducerKey(reducer.Identifier, EventStore).ToString());
+        var reducerKey = GrainId.Create("reducer", new ReducerKey(reducer.Identifier, EventStore, Concepts.EventStoreNamespaceName.Default, reducer.EventSequenceId).ToString());
         _errors.Add(await Catch.Exception(() => reducers.WriteStateAsync("reducer", reducerKey, new GrainState<ReducerDefinition> { State = reducer })));
     }
 
-    [Fact] void should_refuse_every_evidence_changing_operation() => _errors.All(error => ReferenceEquals(error, _failure)).ShouldBeTrue();
-    [Fact] void should_not_call_any_delete_or_save() => _eventStoreStorage.Projections.ReceivedCalls().Concat(_eventStoreStorage.ReadModels.ReceivedCalls()).Concat(_eventStoreStorage.Reducers.ReceivedCalls()).Any(call => call.GetMethodInfo().Name is "Delete" or "Save").ShouldBeFalse();
+    [Fact] void should_refuse_every_evidence_changing_operation() => _errors.TrueForAll(error => ReferenceEquals(error, _failure)).ShouldBeTrue();
+    [Fact] void should_not_call_any_delete_or_save() => _eventStoreStorage.Projections.ReceivedCalls().Concat(_eventStoreStorage.ReadModels.ReceivedCalls()).Concat(_eventStoreStorage.Reducers.ReceivedCalls()).Any(call => call.GetMethodInfo().Name == "Delete" || call.GetMethodInfo().Name == "Save").ShouldBeFalse();
     [Fact] void should_not_append_projection_history() => _eventStoreStorage.ProjectionDefinitionHistory.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_not_stop_or_remove_an_observer() => _observerGrain.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_retain_pending_read_model_changes() => _pending.Modified.Count().ShouldEqual(1);

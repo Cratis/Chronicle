@@ -197,6 +197,7 @@ public class a_projections_manager_grain : Specification
     /// <summary>
     /// Creates admission for this independent fixture.
     /// </summary>
+    /// <param name="storage">The fixture's backing storage.</param>
     /// <returns>The activation's host admission gate.</returns>
     protected virtual IReadModelSinkProvenance CreateProvenance(Storage.IStorage storage) => Substitute.For<IReadModelSinkProvenance>();
 

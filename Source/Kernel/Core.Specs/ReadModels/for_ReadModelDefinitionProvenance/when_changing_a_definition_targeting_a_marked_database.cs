@@ -22,7 +22,7 @@ public class when_changing_a_definition_targeting_a_marked_database : for_ReadMo
         _markers[(EventStoreNamespaceName.Default, "alias")] = Marker(EventStoreNamespaceName.Default);
         _provider = new(_storage, _provenance);
         _ordinary = _model with { Identifier = "ordinary", Sink = _model.Sink with { Configuration = "clean" } };
-        await Attempt(_model with { Owner = ReadModelOwner.Kernel, ObserverType = ReadModelObserverType.NotSet });
+        await Attempt(_model with { Owner = ReadModelOwner.Server, ObserverType = ReadModelObserverType.NotSet });
         await Attempt(_model with { Identifier = "alias", Sink = _model.Sink with { Configuration = "alias" } });
         await Attempt(_model with { Sink = _model.Sink with { Configuration = "clean" } });
         await Attempt(_ordinary, _model);
@@ -38,9 +38,9 @@ public class when_changing_a_definition_targeting_a_marked_database : for_ReadMo
         _errors.Add(await Catch.Exception(() => _provider.WriteStateAsync("read-models", GrainId.Create("read-models", Store.Value), new GrainState<ReadModelsManagerState> { State = state })));
     }
 
-    [Fact] void should_refuse_relabels_aliases_retargets_and_a_mixed_batch() => _errors.All(error => error is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
+    [Fact] void should_refuse_relabels_aliases_retargets_and_a_mixed_batch() => _errors.TrueForAll(error => error is RpcException { StatusCode: StatusCode.PermissionDenied }).ShouldBeTrue();
     [Fact] void should_preflight_the_whole_batch_before_any_save() => _savesBeforeSuccess.ShouldEqual(0);
-    [Fact] void should_retain_unsaved_modifications_on_failure() => _failedStates.All(state => state.Modified.Any()).ShouldBeTrue();
+    [Fact] void should_retain_unsaved_modifications_on_failure() => _failedStates.TrueForAll(state => state.Modified.Any()).ShouldBeTrue();
     [Fact] void should_save_an_ordinary_batch() => _eventStore.ReadModels.Received(1).Save(_ordinary);
     [Fact] void should_clear_modifications_only_after_success() => _successfulState.Modified.ShouldBeEmpty();
 }

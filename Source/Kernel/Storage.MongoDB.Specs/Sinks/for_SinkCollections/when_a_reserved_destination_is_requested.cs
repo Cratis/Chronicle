@@ -34,6 +34,6 @@ public class when_a_reserved_destination_is_requested : Specification
         _errors.Add(await Catch.Exception(() => collections.EndReplay(new ReplayContext(new(_definition.Identifier, 1), _definition.ContainerName, SinkProvenanceNames.Metadata, DateTimeOffset.UnixEpoch))));
     }
 
-    [Fact] void should_refuse_constructor_explicit_lookup_remove_and_revert_destinations() => _errors.All(error => error is InvalidOperationException).ShouldBeTrue();
+    [Fact] void should_refuse_constructor_explicit_lookup_remove_and_revert_destinations() => _errors.TrueForAll(error => error is InvalidOperationException).ShouldBeTrue();
     [Fact] void should_never_resolve_query_drop_or_rename_a_collection() => _database.ReceivedCalls().Any().ShouldBeFalse();
 }

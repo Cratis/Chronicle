@@ -62,14 +62,14 @@ public class when_named_sinks_share_a_database : Specification
         _alias = await _sinks.GetProvenance(aliasModel).IsQuarantined();
         _errors.Add(await Catch.Exception(() => _sinks.GetFor(_model)));
         _errors.Add(await Catch.Exception(() => _sinks.GetFor(aliasModel)));
-        _errors.Add(await Catch.Exception(() => _sinks.GetFor(aliasModel with { Owner = ReadModelOwner.Kernel, ContainerName = "renamed" })));
+        _errors.Add(await Catch.Exception(() => _sinks.GetFor(aliasModel with { Owner = ReadModelOwner.Server, ContainerName = "renamed" })));
         _independent = await _sinks.GetProvenance(_model with { Sink = _model.Sink with { Name = "Independent" } }).IsQuarantined();
         var restarted = new SinkFactory(_services, new ExpandoObjectConverter(new TypeFormats()));
         _restarted = await restarted.GetProvenance("store", "namespace", "Alias").IsQuarantined();
     }
 
     [Fact] void should_mark_the_configured_default_through_the_resolved_sql_provider() => _alias.ShouldBeTrue();
-    [Fact] void should_refuse_default_alias_and_relabelled_destinations() => _errors.All(error => error is InvalidOperationException).ShouldBeTrue();
+    [Fact] void should_refuse_default_alias_and_relabelled_destinations() => _errors.TrueForAll(error => error is InvalidOperationException).ShouldBeTrue();
     [Fact] void should_retain_the_mark_in_a_new_factory_and_database_instance() => _restarted.ShouldBeTrue();
     [Fact] void should_leave_a_separate_named_database_unmarked() => _independent.ShouldBeFalse();
 
