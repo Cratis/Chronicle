@@ -39,7 +39,7 @@ jobs:
           fetch-depth: 0
 
       - name: Lint Markdown and MDX files
-        uses: DavidAnson/markdownlint-cli2-action@v18
+        uses: DavidAnson/markdownlint-cli2-action@v25
         with:
           globs: 'Documentation/**/*.{md,mdx}'
 
