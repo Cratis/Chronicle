@@ -18,6 +18,15 @@ function actionSteps(action) {
     return steps;
 }
 
+test('secret-bearing third-party actions use immutable release SHAs with version comments', () => {
+    const actions = ['docker/login-action', 'docker/build-push-action', 'peter-evans/repository-dispatch',
+        'peter-evans/dockerhub-description', 'NuGet/login', 'nick-fields/retry'];
+    for (const action of actions) {
+        const pinned = new RegExp(`uses: ${action}@[0-9a-f]{40} # v[0-9]+\\.[0-9]+\\.[0-9]+$`, 'm');
+        for (const { file, step } of actionSteps(action)) assert.match(step, pinned, file);
+    }
+});
+
 test('Node setup leaves dependency caching to the existing explicit cache steps', () => {
     for (const { file, step } of actionSteps('actions/setup-node')) {
         assert.match(step, /^ {10}package-manager-cache: false$/m, file);

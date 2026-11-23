@@ -152,7 +152,7 @@ jobs:
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -176,7 +176,7 @@ jobs:
       # images (mssql) and locally built images (cratis/chronicle) do not
       # need pre-pulling.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v4
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -326,7 +326,7 @@ jobs:
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v4
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -552,7 +552,7 @@ jobs:
           echo "CRATIS_CHRONICLE_BUILD_VERSION=${stamped[0]}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -602,7 +602,7 @@ jobs:
           retention-days: 7
 
       - name: Pre-pull images
-        uses: nick-fields/retry@v4
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5

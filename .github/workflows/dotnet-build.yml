@@ -223,7 +223,7 @@ jobs:
 
       - name: Login to GitHub Docker Registry
         if: github.event_name != 'pull_request' || inputs.integration_requested
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1185,7 +1185,7 @@ jobs:
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1262,7 +1262,7 @@ jobs:
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1443,7 +1443,7 @@ jobs:
 
       # Pre-pull once per job so the Testcontainers image check does not race anonymous Docker Hub rate limits.
       - name: Pre-pull Neo4j image
-        uses: nick-fields/retry@v4
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5
