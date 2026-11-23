@@ -16,7 +16,7 @@ public class a_recursive_module(ChronicleFixture fixture) : Specification(fixtur
 
     IProjectionHandler _handler;
 
-    public override IEnumerable<Type> EventTypes => [typeof(ModuleAdded), typeof(FeatureAddedToModule), typeof(SubFeatureAdded), typeof(SliceAddedToFeature)];
+    public override IEnumerable<Type> EventTypes => [typeof(ModuleAdded), typeof(FeatureAddedToModule), typeof(SubFeatureAdded), typeof(SubFeatureRemoved), typeof(SliceAddedToFeature)];
     public override IEnumerable<Type> ModelBoundProjections => [typeof(RecursiveModule), typeof(RecursiveFeature)];
 
     async Task Establish()

@@ -70,7 +70,7 @@ public partial class ChangesetConverter
             return converter.ToMongoDBProperty(childrenProperty.GetChildrenProperty(), parentIndexers);
         }
 
-        // Recursive parents share the child's normalized path; retain their selectors before the collection being appended to.
+        // Recursive parents share the child's normalized path; retain their selectors before the target collection.
         var parent = converter.ToMongoDBProperty(childrenProperty, parentIndexers);
         return new($"{parent.Property}.{childrenProperty.LastSegment.Value.ToMongoDBPropertyName()}", parent.ArrayFilters);
     }
@@ -84,9 +84,7 @@ public partial class ChangesetConverter
 
     void ApplyChildRemoved(Key key, UpdateAccumulator updates, ChildRemoved childRemoved)
     {
-        var childrenProperty = childRemoved.ChildrenProperty.GetChildrenProperty();
-        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
-        var property = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
+        var property = ToChildCollectionProperty(childRemoved.ChildrenProperty, key.ArrayIndexers);
         updates.AddArrayFilters(property);
 
         var isPrimitive = ChildStateTypes.IsPrimitive(childRemoved.State);

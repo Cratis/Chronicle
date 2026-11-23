@@ -14,6 +14,7 @@ public record RecursiveFeature(
     [Key] Guid Id,
     string Name,
     [ChildrenFrom<SubFeatureAdded>(parentKey: nameof(SubFeatureAdded.ParentFeatureId), identifiedBy: nameof(Id))]
+    [RemovedWith<SubFeatureRemoved>(parentKey: nameof(SubFeatureRemoved.ParentFeatureId))]
     IEnumerable<RecursiveFeature> SubFeatures,
     [ChildrenFrom<SliceAddedToFeature>(key: nameof(SliceAddedToFeature.SliceId), parentKey: nameof(SliceAddedToFeature.FeatureId))]
     IEnumerable<SliceItem> Slices);
