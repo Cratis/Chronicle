@@ -53,7 +53,7 @@ public abstract class a_sqlite_ordered_decimal_index_sink : Specification
         await Write($"{name}-minus", name, -10m);
     }
 
-    protected DbContext OpenContext() => new(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).Options);
+    protected DbContext OpenContext() => new(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).IgnoringManyServiceProviders().Options);
 
     protected static async Task<string[]> Indexes(DbContext context, string table) => await context.Database.SqlQuery<string>($"SELECT name AS Value FROM pragma_index_list({table})").ToArrayAsync();
 

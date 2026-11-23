@@ -29,7 +29,7 @@ public class and_an_old_kernel_rebuilds_a_sqlite_table : given.a_composite_key_s
             IsCompositeKey = false,
             IsNullable = column.Name != "name" && column.IsNullable
         }).ToArray();
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_harness.ConnectionString).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_harness.ConnectionString).IgnoringManyServiceProviders().Options;
         await using var old = new ReadModelDbContext(options, Table, columns, Substitute.For<IReadModelMigrator>());
         var migration = new MigrationBuilder(old.Database.ProviderName);
 
