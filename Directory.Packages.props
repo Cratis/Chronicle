@@ -31,7 +31,7 @@
     <PackageVersion Include="Cratis.Arc.ProxyGenerator.Build" Version="23.15.1" />
     <PackageVersion Include="Cratis.Arc.Swagger" Version="23.15.1" />
     <PackageVersion Include="Cratis.Arc.Testing" Version="23.15.1" />
-    <PackageVersion Include="Cratis.Screenplay" Version="6.0.0" />
+    <PackageVersion Include="Cratis.Screenplay" Version="6.38.0" />
     <!-- Microsoft -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />

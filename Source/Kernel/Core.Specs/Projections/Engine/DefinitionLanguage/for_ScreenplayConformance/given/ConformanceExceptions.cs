@@ -21,7 +21,6 @@ public static class ConformanceExceptions
         ["keys-literal-number"] = new(ConformanceDirection.ScreenplayRejects, "A key literal other than text is stored by Chronicle as a property path, so the semantic model admits only 'literal \"...\"' keys (PLAY0268)"),
         ["keys-template"] = new(ConformanceDirection.ScreenplayRejects, "The semantic model has no portable string-template expression, so a template key is not admitted (PLAY0268)"),
         ["mapping-template"] = new(ConformanceDirection.ScreenplayRejects, "The semantic model has no portable string-template expression, so a template mapping is not admitted (PLAY0268)"),
-        ["mapping-caused-by"] = new(ConformanceDirection.ScreenplayRejects, "'$causedBy' has no runtime resolver in Chronicle (#4119); the semantic model requires '$eventContext.causedBy.*' (PLAY0268)"),
         ["mapping-dynamic-key"] = new(ConformanceDirection.ScreenplayRejects, "The semantic model has no dictionary-keyed target, so a dynamic dictionary key is not admitted (PLAY0268)"),
         ["sequence"] = new(ConformanceDirection.ScreenplayRejects, "Which event sequence a projection observes is a realization concern, not portable behavior (PLAY0268)"),
         ["parent-outside-children"] = new(ConformanceDirection.ScreenplayRejects, "Chronicle never reads a parent key outside 'children'; the semantic model reports it instead of binding and ignoring it (PLAY0268)"),
