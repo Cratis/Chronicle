@@ -549,7 +549,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@master
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: all
 
@@ -633,7 +633,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@master
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: all
 
@@ -700,7 +700,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@master
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: all
 
@@ -775,7 +775,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@master
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: all
 
