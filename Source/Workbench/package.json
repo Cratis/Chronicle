@@ -73,7 +73,7 @@
         "autoprefixer": "10.5.4",
         "chai": "6.2.2",
         "chai-as-promised": "8.0.2",
-        "eslint": "10.9.1",
+        "eslint": "10.15.0",
         "eslint-config-prettier": "10.1.8",
         "eslint-plugin-import": "2.32.0",
         "eslint-plugin-no-null": "1.0.2",
