@@ -82,7 +82,6 @@
         "eslint-plugin-react-hooks": "7.1.1",
         "eslint-plugin-react-refresh": "0.5.5",
         "globals": "17.11.0",
-        "hash-files": "1.1.1",
         "mocha": "12.0.3",
         "prettier": "3.9.6",
         "react": "19.2.8",
@@ -99,7 +98,6 @@
         "typescript-for-eslint": "npm:typescript@6.0.3",
         "vite": "8.2.4",
         "vite-plugin-commonjs": "0.10.4",
-        "vite-tsconfig-paths": "6.1.1",
         "vitest": "5.1.1"
     },
     "resolutions": {
