@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Patterns;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Patterns.for_PatternCaptureSubscriber.given;
@@ -18,6 +19,7 @@ public class a_pattern_capture_subscriber : Specification
 
     protected TestKitSilo _silo;
     protected PatternCaptureSubscriber _subscriber;
+    protected Cratis.Chronicle.Configuration.ChronicleOptions _options;
     protected IEventFeatureExtractor _extractor;
     protected IPatternMiner _miner;
     protected string _minerIdentity;
@@ -34,6 +36,8 @@ public class a_pattern_capture_subscriber : Specification
 
         _silo = new TestKitSilo();
         _silo.AddService(_extractor);
+        _options = new Cratis.Chronicle.Configuration.ChronicleOptions();
+        _silo.AddService(Options.Create(_options));
         _silo.AddService(Substitute.For<ILogger<PatternCaptureSubscriber>>());
         _silo.AddProbe<IPatternMiner>(identity =>
         {

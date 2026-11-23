@@ -43,7 +43,7 @@ public class and_the_context_did_not_survive_on_its_own : given.a_pattern_miner
         // restart. It mines one stray event, which is what forces the scope to be restored first.
         var patterns = Substitute.For<IBehaviorPatternStorage>();
         patterns.GetForScope(_scope).Returns(_established);
-        var (_, restartedMiner) = await CreateMiner(_eventStore, _namespace, patterns);
+        var (_, restartedMiner) = await CreateMiner(_eventStore, _namespace, patterns, _supervisor, _clock);
 
         await restartedMiner.Mine([Features(_scope, "RejectExpenseReport", DayOfWeek.Wednesday, TimeBucket.Afternoon)]);
         _restored = [.. await restartedMiner.GetSurvivingPatterns(_scope)];

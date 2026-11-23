@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
@@ -10,6 +11,7 @@ using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Patterns;
 
@@ -19,6 +21,7 @@ namespace Cratis.Chronicle.Patterns;
 /// <param name="storage">The <see cref="IStorage"/> to read registered event types from.</param>
 /// <param name="localSiloDetails">The local silo details.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> to resolve the observer with.</param>
+/// <param name="options">The <see cref="IOptions{TOptions}"/> holding the <see cref="ChronicleOptions"/> that say where capture is on.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
 /// <remarks>
 /// <para>
@@ -34,6 +37,10 @@ namespace Cratis.Chronicle.Patterns;
 /// server restarts. <see cref="PatternCaptureSubscriptions"/> handles namespaces added after registration.
 /// </para>
 /// <para>
+/// Capture is on unless <see cref="PatternDetection.IsEnabledFor"/> says otherwise for the namespace. A namespace where it
+/// is off gets no observer and no miner, so it costs nothing - not a grain, a subscription or a timer.
+/// </para>
+/// <para>
 /// The observer is not replayable. Replaying it would re-mine history that is already reflected in the sketch, and
 /// the sketch is a summary rather than a projection - there is no state to rebuild by starting over, only counts
 /// to double.
@@ -44,6 +51,7 @@ public class PatternCapture(
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
     IGrainFactory grainFactory,
+    IOptions<ChronicleOptions> options,
     ILogger<PatternCapture> logger) : IPatternCapture
 {
     /// <summary>
@@ -79,6 +87,11 @@ public class PatternCapture(
 
     async Task Subscribe(EventStoreName eventStore, EventStoreNamespaceName @namespace, bool recovering)
     {
+        if (!options.Value.PatternDetection.IsEnabledFor(eventStore.Value, @namespace.Value))
+        {
+            return;
+        }
+
         // The per-type storage caches are not a complete registry. Read the authoritative set to detect
         // registrations missed by this namespace, including types it has never observed. No schemas are
         // otherwise needed here; a healthy matching subscription must not rewrite its reactor definition.

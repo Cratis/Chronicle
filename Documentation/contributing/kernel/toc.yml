@@ -10,6 +10,8 @@
   href: ./mutation-registry.md
 - name: Kernel caches
   href: ./caches.md
+- name: Grain lifetime and placement
+  href: ./grain-lifetime-and-placement.md
 - name: Patches
   href: ./patches/toc.yml
 - name: Legacy contract matrix

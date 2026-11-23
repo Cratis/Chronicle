@@ -22,7 +22,8 @@ public class Observers
         ObserverSubscriptionKind.ClientReducer,
         ObserverSubscriptionKind.Projection,
         ObserverSubscriptionKind.CollapsingProjection,
-        ObserverSubscriptionKind.EventStoreSubscription
+        ObserverSubscriptionKind.EventStoreSubscription,
+        ObserverSubscriptionKind.PatternCapture
     ];
 
     /// <summary>
@@ -247,8 +248,8 @@ public class Observers
     /// <remarks>
     /// Defaults to 900 seconds (15 minutes), the same as <see cref="IdleDeactivationAfter"/>; 0 keeps every subscribed
     /// observer resident. A released observer is woken by the appended events queue when an event it observes arrives,
-    /// and by the safety net (<see cref="DormantSafetyNet"/>). Applies to client reactors, client reducers and
-    /// projections only, and only while <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Release"/>
+    /// and by the safety net (<see cref="DormantSafetyNet"/>). Applies to client reactors, client reducers,
+    /// projections, event store subscriptions and pattern capture only, and only while <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Release"/>
     /// and every silo of the cluster runs the same release, which supports it. An observer resumes from its persisted
     /// cursor when it wakes (decision 0034). A server-level setting.
     /// </remarks>
@@ -258,8 +259,8 @@ public class Observers
     /// Gets the kinds of subscription whose observer is released when dormant and woken from its durable record.
     /// </summary>
     /// <remarks>
-    /// Empty by default, which selects client reactors, client reducers, projections, collapsing projections and event
-    /// store subscriptions (see <see cref="EffectiveDormantKinds"/>). When set, only the listed kinds are released and the
+    /// Empty by default, which selects client reactors, client reducers, projections, collapsing projections, event
+    /// store subscriptions and pattern capture (see <see cref="EffectiveDormantKinds"/>). When set, only the listed kinds are released and the
     /// others stay resident. Kinds that cannot be woken from a record (kernel reactors, webhooks) are never released,
     /// whatever is listed. Only takes effect while <see cref="DormantAfter"/> is above zero. A server-level setting.
     /// </remarks>
