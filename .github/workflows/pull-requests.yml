@@ -292,16 +292,13 @@ jobs:
         run: rm -f "$NUGET_CONFIG"
 
       - name: Add comment for NuGet packages
-        uses: mshick/add-pr-comment@aa9cf72a2e3105665c82fee3de5f46e6a26dba76 # v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12.0
         with:
           message: |
             NuGet packages for this PR, e.g. Chronicle:
             https://github.com/Cratis/Chronicle/pkgs/nuget/Cratis.Chronicle
 
             Use version: ${{ needs.release.outputs.version }}
-          allow-repeats: false
 
   build-docker:
     if: needs.release.outputs.publish == 'true'
@@ -421,13 +418,10 @@ jobs:
         run: docker push "$IMAGE_TAG"
 
       - name: Add comment for Docker image
-        uses: mshick/add-pr-comment@aa9cf72a2e3105665c82fee3de5f46e6a26dba76 # v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12.0
         with:
           message: |
             Docker Image for this PR:
             https://ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
 
             docker run ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
-          allow-repeats: false
