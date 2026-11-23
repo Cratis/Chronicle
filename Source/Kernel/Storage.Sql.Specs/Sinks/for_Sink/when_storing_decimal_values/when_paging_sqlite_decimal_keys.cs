@@ -48,7 +48,7 @@ public class when_paging_sqlite_decimal_keys : Specification
             changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [new PropertyDifference("label", null, value)])]);
             (await _sink.ApplyChanges(new Key(decimal.Parse(value, CultureInfo.InvariantCulture), ArrayIndexers.NoIndexers), changeset, 1UL)).ShouldBeEmpty();
         }
-        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).Options);
+        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).IgnoringManyServiceProviders().Options);
 
         // An old kernel can promote a table with the original TEXT schema after the cache is warm.
         await context.Database.ExecuteSqlRawAsync("CREATE TABLE old_decimal_keys AS SELECT * FROM decimal_keys; DROP TABLE decimal_keys; CREATE TABLE decimal_keys(id TEXT NOT NULL PRIMARY KEY, label TEXT NULL, __lastHandledEventSequenceNumber INTEGER NULL, __initialized INTEGER NOT NULL DEFAULT 1); INSERT INTO decimal_keys SELECT id,label,__lastHandledEventSequenceNumber,__initialized FROM old_decimal_keys; DROP TABLE old_decimal_keys");

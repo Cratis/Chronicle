@@ -10,6 +10,23 @@ namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 [Singleton, IgnoreConvention]
 public class TheJobStepProcessor
 {
+    static volatile TheJobStepProcessor? _current;
+
+    /// <summary>
+    /// Gets the processor of the spec context that is running.
+    /// </summary>
+    /// <remarks>
+    /// The silo is shared by every spec context and its container is built from the first one, so a processor registered by a
+    /// later context never reaches grain construction. The grains read the running context's processor from here instead.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when no spec context has published a processor.</exception>
+    public static TheJobStepProcessor Current => _current ?? throw new InvalidOperationException("No job step processor has been published by the running spec context.");
+
+    /// <summary>
+    /// Publishes this processor as the one the job step grains report to.
+    /// </summary>
+    public void MakeCurrent() => _current = this;
+
     public class PreparedJobSteps(IEnumerable<(JobStepId JobStepId, Type JobStepType)> list) : List<(JobStepId JobStepId, Type JobStepType)>(list);
 
     public class PerformedJobStepCalls : Dictionary<JobStepId, IList<TheJobStepState>>;
