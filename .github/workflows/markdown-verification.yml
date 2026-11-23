@@ -44,9 +44,10 @@ jobs:
           globs: 'Documentation/**/*.{md,mdx}'
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24.x
+          package-manager-cache: false
 
       - name: Install documentation authoring dependencies
         run: npm ci --prefix .github/scripts/docs-verification
