@@ -34,7 +34,7 @@ jobs:
       # (workflows, their runs, open issues) plus a multi-line issue body. In JavaScript that
       # is plain objects and template literals; in bash it is jq pipelines and quoting.
       - name: Find workflows that have been red for three runs
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const STREAK_LENGTH = 3;
