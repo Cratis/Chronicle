@@ -197,7 +197,7 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, request.Namespace, readModel, request.ReadModelIdentifier);
 
         var streamScoped = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId);
         if (streamScoped && (string.IsNullOrEmpty(request.EventStreamType) || ((EventStreamType)request.EventStreamType).IsAll))
@@ -328,7 +328,7 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, request.Namespace, readModel, request.ReadModelIdentifier);
 
         // Every instance of a materialized read model is already in the sink, so read them from there. An
         // explicit event count is a request to re-apply exactly that many events from the beginning, which
@@ -474,7 +474,7 @@ internal sealed class ReadModels(
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, request.Namespace, readModel, request.ReadModelIdentifier);
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
@@ -511,7 +511,7 @@ internal sealed class ReadModels(
         {
             request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
-            await ReadModelReadPolicy.EnsureReadable(grainFactory, request.EventStore, definition);
+            await ReadModelPublicReadGuard.Ensure(storage, grainFactory, request.EventStore, request.Namespace, definition);
 
             var schema = definition.GetSchemaForLatestGeneration();
             var subscriptionId = Guid.NewGuid();
@@ -533,6 +533,7 @@ internal sealed class ReadModels(
 
                 // Decrypt through the shared release path so observable queries resolve the compliance
                 // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
+                await ReadModelPublicReadGuard.Ensure(storage, grainFactory, request.EventStore, namespaceName, definition);
                 var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance, change: change);
                 observer.OnNext(new ReadModelChangeset
                 {
@@ -616,10 +617,10 @@ internal sealed class ReadModels(
         }
     }
 
-    async Task<Concepts.ReadModels.ReadModelDefinition> GetSupportedDefinition(EventStoreName eventStore, IReadModel readModel, ReadModelIdentifier identifier)
+    async Task<Concepts.ReadModels.ReadModelDefinition> GetSupportedDefinition(EventStoreName eventStore, EventStoreNamespaceName @namespace, IReadModel readModel, ReadModelIdentifier identifier)
     {
         var definition = await readModel.GetKnownDefinition(identifier);
-        await ReadModelReadPolicy.EnsureReadable(grainFactory, eventStore, definition);
+        await ReadModelPublicReadGuard.Ensure(storage, grainFactory, eventStore, @namespace, definition);
         return definition;
     }
 

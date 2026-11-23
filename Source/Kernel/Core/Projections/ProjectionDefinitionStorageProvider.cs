@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Projections;
 using Orleans.Storage;
@@ -33,11 +34,12 @@ public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider 
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var projectionKey = ProjectionKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
-        return eventStore.Projections.Delete(projectionKey.ProjectionId);
+        await ReadModelProvenance.For(storage, projectionKey.EventStore).Preserve();
+        await eventStore.Projections.Delete(projectionKey.ProjectionId);
     }
 
     /// <inheritdoc/>
@@ -62,6 +64,7 @@ public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider 
         }
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
         var definition = actualGrainState.State!;
+        await ReadModelProducerWriteGuard.Ensure(storage, projectionKey.EventStore, definition.EventSequenceId);
         var cacheKey = (projectionKey.EventStore, projectionKey.ProjectionId);
         var digest = ProjectionFactory.DefinitionDigestFor(definition);
 

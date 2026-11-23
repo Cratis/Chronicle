@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -15,6 +16,7 @@ public partial class ProjectionsManager
     /// <inheritdoc/>
     public async Task<ObserverRemovalResult> Remove(ProjectionId identifier)
     {
+        await ReadModelProvenance.For(storage, _eventStoreName).Preserve();
         var eventStoreStorage = storage.GetEventStore(_eventStoreName);
         var definition = State.Projections.FirstOrDefault(projection => projection.Identifier == identifier);
         if (definition is null)

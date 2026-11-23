@@ -88,6 +88,7 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        await sink.EnsureProvenance();
         Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
@@ -198,6 +199,7 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
+        await sink.EnsureProvenance();
         Interlocked.Increment(ref _activity);
 
         // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping

@@ -22,5 +22,9 @@ public class InMemorySinkFactory(ITypeFormats typeFormats) : ISinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
-    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) => new InMemorySink(readModel, typeFormats);
+    public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink) =>
+        sink.IsDefault ? new InMemorySinkProvenanceStorage(eventStore, @namespace) : throw new SinkTypeDoesNotSupportNamedConfigurations(TypeId, sink);
+
+    /// <inheritdoc/>
+    public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) => new InMemorySink(readModel, typeFormats, new InMemorySinkProvenanceStorage(eventStore, @namespace));
 }

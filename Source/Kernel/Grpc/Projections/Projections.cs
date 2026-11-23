@@ -239,6 +239,7 @@ internal sealed class Projections(
                     definition = definition with { ReadModel = readModelDefinition.Identifier };
                 }
 
+                await ReadModelPublicReadGuard.Ensure(storage, grainFactory, request.EventStore, request.Namespace, readModelDefinition);
                 var projectionId = ProjectionId.CreatePreviewId();
                 var projectionKey = new ProjectionKey(projectionId, request.EventStore);
                 var projection = grainFactory.GetGrain<IProjection>(projectionKey);

@@ -54,7 +54,11 @@ public partial class ReducerPipeline(
     public ISink Sink { get; } = sink;
 
     /// <inheritdoc/>
-    public Task BeginReplay(ReplayContext context) => Sink.BeginReplay(context);
+    public async Task BeginReplay(ReplayContext context)
+    {
+        await Sink.EnsureProvenance();
+        await Sink.BeginReplay(context);
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context) => Sink.EndReplay(context);
@@ -71,6 +75,7 @@ public partial class ReducerPipeline(
     /// <inheritdoc/>
     public async Task<ReadModelChangeNotification?> Reduce(ReducerContext context, ReducerDelegate reducer, bool createNotification = true)
     {
+        await Sink.EnsureProvenance();
         using var memoryTicket = memoryGate is null ? ReducerMemoryTicket.None : await memoryGate.Enter(_memoryScope, context.Key);
         var storedInitial = await Sink.FindOrDefault(context.Key);
         if (memoryGate is not null)

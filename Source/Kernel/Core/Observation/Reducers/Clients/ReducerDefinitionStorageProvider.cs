@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Orleans.Storage;
 
@@ -17,11 +18,12 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 public class ReducerDefinitionStorageProvider(IStorage storage) : IGrainStorage
 {
     /// <inheritdoc/>
-    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var reducerKey = ReducerKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(reducerKey.EventStore);
-        return eventStore.Reducers.Delete(reducerKey.ReducerId);
+        await ReadModelProvenance.For(storage, reducerKey.EventStore).Preserve();
+        await eventStore.Reducers.Delete(reducerKey.ReducerId);
     }
 
     /// <inheritdoc/>
@@ -41,6 +43,7 @@ public class ReducerDefinitionStorageProvider(IStorage storage) : IGrainStorage
         var actualGrainState = (grainState as IGrainState<ReducerDefinition>)!;
         var reducerKey = ReducerKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(reducerKey.EventStore);
+        await ReadModelProducerWriteGuard.Ensure(storage, reducerKey.EventStore, actualGrainState.State!.EventSequenceId);
         await eventStore.Reducers.Save(actualGrainState.State!);
     }
 }

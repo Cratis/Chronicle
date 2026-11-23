@@ -22,6 +22,7 @@ public class ReadModelReadBindings(IStorage storage, IGrainFactory grainFactory,
         ReadModelDefinition definition,
         ReadModelContainerName? occurrence = null)
     {
+        await ReadModelPublicReadGuard.Ensure(storage, grainFactory, eventStore, eventStoreNamespace, definition);
         await EnsureKnownOccurrence(eventStore, eventStoreNamespace, definition, occurrence);
         var sinks = storage.GetEventStore(eventStore).GetNamespace(eventStoreNamespace).Sinks;
 

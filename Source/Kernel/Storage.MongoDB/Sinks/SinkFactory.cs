@@ -54,6 +54,12 @@ public class SinkFactory(
             ? CreateFor(eventStore, @namespace, readModel)
             : Create(eventStore, @namespace, readModel, _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace));
 
+    /// <inheritdoc/>
+    public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink) =>
+        new SinkProvenanceStorage(sink.IsDefault
+            ? serviceProvider.GetRequiredService<IDatabase>().GetReadModelDatabase(eventStore, @namespace)
+            : _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace));
+
     Sink Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, IMongoDatabase readModelDatabase)
     {
         // A named sink stores to MongoDB whatever engine the kernel runs on, and the kernel removes the MongoDB storage services

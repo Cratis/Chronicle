@@ -152,6 +152,9 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
 
+    /// <inheritdoc/>
+    public Task EnsureProvenance() => SinkAcquisitionProvenance.Ensure(new SinkProvenanceStorage(_database, _eventStoreName, _namespace));
+
     /// <summary>
     /// Gets the table name the projection pipeline currently reads and writes through the sink. Resolves to
     /// <c language="csharp">replay-{tableName}</c> while a replay is in progress, and to the primary table name
@@ -395,6 +398,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <exception cref="UnverifiedReplayBackup">An existing backup cannot be distinguished from a legacy half-swap.</exception>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        SinkProvenanceNames.EnsureNotReserved(context.RevertContainerName.Value);
         var failedPartitions = await EndBulk();
         try
         {
@@ -418,6 +422,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task Remove(ReadModelContainerName containerName)
     {
+        SinkProvenanceNames.EnsureNotReserved(containerName.Value);
         // Do not migrate the backup being removed: a truncated logical name may now address another
         // replay's backup. Resolve ownership through the marker table on the primary's connection.
         await using var scope = await OpenScope(_tableName);

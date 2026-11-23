@@ -17,11 +17,12 @@ namespace Cratis.Chronicle.ReadModels;
 public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorage
 {
     /// <inheritdoc/>
-    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
-        return eventStore.ReadModels.Delete(readModelKey.Identifier);
+        await ReadModelProvenance.For(storage, readModelKey.EventStore).Preserve();
+        await eventStore.ReadModels.Delete(readModelKey.Identifier);
     }
 
     /// <inheritdoc/>
@@ -41,6 +42,7 @@ public class ReadModelDefinitionStorageProvider(IStorage storage) : IGrainStorag
         var actualGrainState = (grainState as IGrainState<ReadModelDefinition>)!;
         var readModelKey = ReadModelGrainKey.Parse(grainId.Key.ToString()!);
         var eventStore = storage.GetEventStore(readModelKey.EventStore);
+        await ReadModelProvenance.For(storage, readModelKey.EventStore).Preserve();
         await eventStore.ReadModels.Save(actualGrainState.State!);
     }
 }

@@ -66,6 +66,14 @@ public class Sinks(
     /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
 
+    /// <inheritdoc/>
+    public ISinkProvenanceStorage GetProvenance(ReadModelDefinition readModel)
+    {
+        var resolved = _configurations.ResolveFor(readModel, graph: false);
+        ThrowIfUnknownSink(resolved.Type);
+        return _factories[resolved.Type].GetProvenance(eventStoreName, eventStoreNamespaceName, resolved.Name);
+    }
+
     static async Task Initialize(ISink sink, bool changed)
     {
         if (changed && sink is ICanReconcileIndexes reconciler)
@@ -91,6 +99,7 @@ public class Sinks(
         readModel.Sink.EnsureReadModelSupported();
         var resolved = _configurations.ResolveFor(readModel, graph: false);
         ThrowIfUnknownSink(resolved.Type);
+        await SinkAcquisitionProvenance.Ensure(readModel, GetProvenance(readModel));
         var key = new SinkKey(resolved.Type, resolved.Name, readModel.Sink.Configuration, readModel.ContainerName, readModel.Sink.EventSequence);
         if (_sinks.TryGetValue(key, out var cached) && CanServe(cached, readModel, initialize)) return cached.Sink;
         var gate = _gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));

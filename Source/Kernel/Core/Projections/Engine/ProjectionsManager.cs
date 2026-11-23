@@ -8,11 +8,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Metrics;
@@ -238,9 +240,9 @@ public partial class ProjectionsManager(
         var definition = await eventStoreStorage.Projections.Get(id);
         if (SkipDefinition(eventStore, definition)) return null;
         var fingerprint = ProjectionFactory.DefinitionFingerprintFor(definition);
-        if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
-
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
+        await ReadModelProvenance.For(storage, eventStore).EnsureReadable(definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.Default : @namespace, readModel);
+        if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
         var schemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
         var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, schemas);
         lock (_publication)
@@ -256,7 +258,7 @@ public partial class ProjectionsManager(
 
     bool SkipDefinition(EventStoreName eventStore, ProjectionDefinition definition)
     {
-        if (!definition.UsesUnsupportedEventSequence()) return false;
+        if (SystemStoreAccess.IsSystem(eventStore) || !definition.EventSequenceId.IsSystemSequence()) return false;
         UnsupportedEventSequence(logger, definition.Identifier);
         Evict(eventStore, definition.Identifier);
         return true;

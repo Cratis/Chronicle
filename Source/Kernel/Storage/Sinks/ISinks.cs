@@ -20,6 +20,14 @@ public interface ISinks
     bool HasType(SinkTypeId typeId);
 
     /// <summary>
+    /// Resolves the database-local provenance independently of the sink instance cache.
+    /// </summary>
+    /// <param name="readModel">The sink destination.</param>
+    /// <returns>The marker storage.</returns>
+    ISinkProvenanceStorage GetProvenance(ReadModelDefinition readModel) =>
+        throw new NotSupportedException("Read-model storage is not available.");
+
+    /// <summary>
     /// Get a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/>.
     /// </summary>
     /// <param name="readModel"><see cref="ReadModelDefinition"/> to get for.</param>
