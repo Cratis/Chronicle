@@ -1,4 +1,5 @@
 import com.google.protobuf.gradle.id
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
     kotlin("jvm") version "2.4.21"
@@ -35,6 +36,8 @@ dependencies {
 kotlin {
     jvmToolchain(17)
     compilerOptions {
+        apiVersion.set(KotlinVersion.KOTLIN_2_1)
+        languageVersion.set(KotlinVersion.KOTLIN_2_1)
         allWarningsAsErrors.set(true)
     }
 }
