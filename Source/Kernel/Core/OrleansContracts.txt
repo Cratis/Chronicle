@@ -475,7 +475,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IRe
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber [Version(0)]
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager")] Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager")] Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager [Version(1)]
+  11956C77: HasReducerForReadModel(Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier) -> Task<bool>
   0E9E79CB: Register(Cratis.Chronicle.Concepts.Clients.ConnectionId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition>) -> Task
 
 class [GrainType("reducer")] Cratis.Chronicle.Observation.Reducers.Clients.Reducer

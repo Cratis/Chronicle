@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Security;
 using Grpc.Core;
@@ -29,6 +30,7 @@ public class when_the_producer_is_only_stored : Specification
         _manager = Substitute.For<IProjectionsManager>();
         _manager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         _grains.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(_manager);
+        _grains.GetGrain<IReducersManager>(Arg.Any<string>()).Returns(Substitute.For<IReducersManager>());
         _definition = Cratis.Chronicle.Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateReadModelDefinition("read-model") with { ObserverIdentifier = Producer };
         _stored = Cratis.Chronicle.Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateDefinition(Producer, "read-model");
     }

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Security;
 using Grpc.Core;
@@ -16,7 +17,7 @@ namespace Cratis.Chronicle.ReadModels;
 internal static class ReadModelReadPolicy
 {
     /// <summary>
-    /// Ensures that every projection producing the read model is supported and projection-backed models have a producer.
+    /// Ensures that every projection producing the read model is supported and projection-backed models have a projection or reducer producer.
     /// </summary>
     /// <param name="grainFactory">The grain factory.</param>
     /// <param name="eventStore">The event store to read.</param>
@@ -32,8 +33,13 @@ internal static class ReadModelReadPolicy
             .Where(_ => IsProducer(_, definition))
             .ToArray();
         var hasUnsupportedProducer = projections.Any(_ => _.UsesUnsupportedEventSequence());
-        var isMissingProjectionProducer = projections.Length == 0 && definition.ObserverType == ReadModelObserverType.Projection;
-        if (hasUnsupportedProducer || isMissingProjectionProducer)
+        var isMissingProducer = projections.Length == 0 && definition.ObserverType == ReadModelObserverType.Projection;
+        if (isMissingProducer)
+        {
+            var reducers = grainFactory.GetGrain<IReducersManager>(eventStore);
+            isMissingProducer = !await reducers.HasReducerForReadModel(definition.Identifier);
+        }
+        if (hasUnsupportedProducer || isMissingProducer)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
         }

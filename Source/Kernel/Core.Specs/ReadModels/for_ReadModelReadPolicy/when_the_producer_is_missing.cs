@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Security;
 using Grpc.Core;
@@ -24,6 +25,7 @@ public class when_the_producer_is_missing : Specification
         _manager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         _manager.GetStoredProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         _grains.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(_manager);
+        _grains.GetGrain<IReducersManager>(Arg.Any<string>()).Returns(Substitute.For<IReducersManager>());
         var definition = Cratis.Chronicle.Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateReadModelDefinition("read-model") with { ObserverIdentifier = "missing-producer" };
         _definitions = Enum.GetValues<ReadModelOwner>().SelectMany(owner =>
             Enum.GetValues<ReadModelSource>().Select(source => definition with { Owner = owner, Source = source })).ToArray();
