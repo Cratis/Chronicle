@@ -41,6 +41,11 @@ internal static class JsonColumnSearch
     /// <returns>True if they match, false if not.</returns>
     internal static bool CompareLoose(object? value, object? target)
     {
+        if (ChildKeyComparison.RequiresStructuralComparison(value, target))
+        {
+            return ChildKeyComparison.AreEqual(value, target);
+        }
+
         if (value is null || target is null)
         {
             return value is null && target is null;

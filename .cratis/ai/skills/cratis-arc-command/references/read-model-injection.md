@@ -3,13 +3,14 @@
 
 ## Contents
 
+- Choose the key
 - Nullability is the required/optional switch
 - `null` is not always what absence looks like
 - Which provider owns a read model type
 
 Source: [read models in commands](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).
-Under read protection `Off` (the default) and `Measure`, injected models and keyed
-reads are plain reads, not concurrency guards. Under `On`, a read-model parameter of
+Under read protection `Off` (Arc 22 default; on Arc 23 only an explicit, reasoned opt-out) and `Measure`, injected models and keyed
+reads are plain reads, not concurrency guards. Under `On`, the Arc 23 default, a read-model parameter of
 `Handle()` or a validator constructor is guarded; `IReadModels.GetInstanceById` in a
 command is refused, so read another entity's model with a second parameter and
 `[LookUpBy(nameof(Cmd.Prop))]`. See [decisions and routing](decisions-and-routing.md)
@@ -17,28 +18,43 @@ and, for per-command opt-in, `[ProtectedDecision]` with `DecisionRead<T>`.
 
 A read model can be injected into a `CommandValidator<T>` constructor, into
 `Provide()`, or into `Handle()`. Arc resolves it through an
-`ICanResolveReadModelForCommand` provider, **by the command's resolved key** —
-not by the read-model type, and not by "the property that looks like its key".
+`ICanResolveReadModelForCommand` provider using the selected lookup key. An
+explicit command-property or caller-provider lookup is not limited to protected
+commands. Without one, the default depends on the read-protection mode.
 
-If the instance you need is keyed by anything else, direct injection hands you
-the wrong instance or nothing at all. That is a correctness bug, not a compile
-error. The three shapes it takes:
+Choose the key explicitly when the default is wrong. Three common cases:
 
 1. you need a *referenced other* entity — act on A, check B;
 2. the command has more than one candidate identity property, so resolution is
    ambiguous;
 3. the id is generated inside `Handle()` and does not exist yet.
 
-In all three, under `Off` read by explicit key in `Provide()`; under `On` use a
-second parameter with `[LookUpBy]`, or `IDecisionReads.Get` in `Provide()` for a
-key computed there:
+Explicit lookup works in every read-protection mode. Choosing a key does not
+make a plain read protected. For a key computed in `Provide()`, use
+`IDecisionReads.Get` when it must guard the append; a direct by-id read under
+`Off` remains unprotected.
 
-```csharp
-var other = await readModels.GetInstanceById<<Other>>((EventSourceId)<OtherId>);
-```
+## Choose the key
 
-`ReadModelKey` converts implicitly from `EventSourceId`, `Guid` and `string`, so
-the cast is all that is needed.
+Use one explicit form on a read-model `Handle()` parameter (`Cratis.Arc.Commands`):
+
+- `[LookUpBy(nameof(CommandName.KeyProperty))]` selects a command property.
+- `[LookUpBy<CallerSubject>]`, a `CallerClaim` subclass or another
+  `IReadModelKeyProvider` selects a caller-derived key. See
+  [command identity](../../cratis-arc-authentication-authorization-and-identity/references/command-identity.md)
+  for exact claims, immutable caller capture, denial, actor injection and audit.
+
+Do not combine property and provider forms or specify several providers. Without
+an explicit lookup, `On` uses the single command property whose type exactly
+matches the model's `Id` type; several matches raise `AmbiguousReadModelLookup`;
+no match falls back to the command event source id. `Off` and `Measure` retain
+the legacy event-source-id default. A caller provider cannot redirect a
+per-stream model away from the command route.
+
+Ordinary `Provide()` values assignable to a `Handle()` parameter are used before
+service/read-model resolution. For a caller-provider read-model parameter, a
+supplied matching value is refused with `InvalidLookUpBy`, not bypassed: do not
+try to replace the identity-keyed model with a provided value.
 
 Requires Arc 22.93.0 for ARCCHR0023 (no unique key-type match), ARCCHR0025
 (keyless command reads a newly generated id and finds no model) and ARCCHR0026

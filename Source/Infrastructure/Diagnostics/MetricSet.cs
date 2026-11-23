@@ -105,12 +105,7 @@ internal sealed class MetricSet
     internal MetricInstrument<T, HistogramMetricRecorder<T>> ConventionOnlyHistogram<T>(string name, string unit, string description, IReadOnlyList<T> bucketBoundaries, string firstKey = "")
         where T : struct
     {
-#if NET9_0_OR_GREATER
         var histogram = _meter?.CreateHistogram(name, unit, description, tags: null, advice: new InstrumentAdvice<T> { HistogramBucketBoundaries = bucketBoundaries });
-#else
-        _ = bucketBoundaries;
-        var histogram = _meter?.CreateHistogram<T>(name, unit, description);
-#endif
         return Created(new MetricInstrument<T, HistogramMetricRecorder<T>>(
             new SingleMetricInstrument<T, HistogramMetricRecorder<T>>(new HistogramMetricRecorder<T>(histogram), ConventionTags, firstKey, string.Empty)));
     }

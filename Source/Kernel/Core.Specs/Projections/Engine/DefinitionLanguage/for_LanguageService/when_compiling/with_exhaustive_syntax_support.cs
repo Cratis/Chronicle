@@ -34,9 +34,12 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
         [typeof(TemplateInterpolationSyntax)] = "from DocEvent\n  name = `Hello ${name}`"
     };
 
-    static readonly ExpressionSyntax[] _rejected =
+    static readonly SyntaxNode[] _rejected =
     [
         new RefusalExpressionSyntax("reason", _location),
+        new InvocationValueExpressionSyntax("result", "name", _location),
+        new SetOnceMappingSyntax("name", new PathExpressionSyntax("name", _location), _location),
+        new RemoveKeyMappingSyntax("names.$eventContent.id", _location),
         new ListExpressionSyntax([], _location),
         new ObjectExpressionSyntax([], _location),
         new CaseValueExpressionSyntax("value", _location),
@@ -89,17 +92,46 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
     }
 
     [Fact]
-    void should_reject_every_unsupported_expression_at_its_location()
+    void should_reject_every_unsupported_node_at_its_location()
     {
-        foreach (var expression in _rejected)
+        foreach (var node in _rejected)
         {
             var errors = new CompilerErrors([]);
-            new ProjectionSyntaxSupport(errors).VisitExpression(expression);
+            new ProjectionSyntaxSupport(errors).VisitNode(node);
             errors.HasErrors.ShouldBeTrue();
             errors.Errors.Single().Line.ShouldEqual(_location.Line);
             errors.Errors.Single().Column.ShouldEqual(_location.Column);
-            ProjectionSyntaxSupport.NodeSupport[expression.GetType()].ShouldNotBeNull();
+            ProjectionSyntaxSupport.NodeSupport[node.GetType()].ShouldNotBeNull();
         }
+    }
+
+    [Theory]
+    [InlineData("set once name = name", nameof(SetOnceMappingSyntax))]
+    [InlineData("remove names.$eventContent.id", nameof(RemoveKeyMappingSyntax))]
+    void should_report_unsupported_mappings_without_schemas(string mapping, string nodeType)
+    {
+        var result = _languageService.Compile($"projection Doc => DocReadModel\n  from DocEvent\n    {mapping}", ProjectionOwner.Client, [], []);
+        var errors = result.Match(_ => CompilerErrors.Empty, _ => _);
+        var error = Assert.Single(errors.Errors);
+        Assert.Contains(nodeType, error.Message);
+        error.Line.ShouldEqual(3);
+        error.Column.ShouldEqual(5);
+    }
+
+    [Theory]
+    [InlineData("from DocEvent\n  add total by amount * price", "arithmetic factors")]
+    [InlineData("from DocEvent\n  subtract total by amount * price", "arithmetic factors")]
+    [InlineData("from DocEvent\n  key\n    id = id", "Untyped composite projection keys")]
+    [InlineData("remove with DocEvent\n  key\n    id = id", "Untyped composite removal keys")]
+    [InlineData("children docs identified by id\n  sort by name ascending\n  from DocEvent", "children ordering")]
+    [InlineData("children docs identified by id\n  insert first\n  from DocEvent", "children ordering")]
+    [InlineData("children docs identified by id\n  insert last\n  from DocEvent", "children ordering")]
+    void should_report_options_without_definition_lowering(string snippet, string diagnostic)
+    {
+        var source = "projection Doc => DocReadModel\n" + string.Join('\n', snippet.Split('\n').Select(line => "  " + line));
+        var result = _languageService.Compile(source, ProjectionOwner.Client, [], []);
+        var errors = result.Match(_ => CompilerErrors.Empty, _ => _);
+        Assert.Contains(errors.Errors, error => error.Message.Contains(diagnostic, StringComparison.Ordinal));
     }
 
     [Fact]

@@ -27,12 +27,12 @@ public class a_manager_with_a_quarantined_subscription : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
+        _silo.AddEventStoreStorage();
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
         _logger = new();
         _silo.AddService<ILogger<EventStoreSubscriptionsManager>>(_logger);
         _namespaces = Substitute.For<INamespaces>();
-        _namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        _namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => _namespaces);
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(false);

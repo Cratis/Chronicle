@@ -93,7 +93,7 @@ Proxies now exist. Build React components from the generated proxies (`react.md`
 ## Hard rules (the silent-failure ones)
 
 - All backend artifacts in one `<Slice>.cs`; namespace mirrors the path; layout per `general.md` (no `Features/` wrapper; `<Module>` optional).
-- `Handle()` returns the event/result directly (no `Task.FromResult` without `await`); validation in `CommandValidator<T>`/`ConceptValidator<T>`/`Provide()`; **never throw for normal business rejection** — return `ValidationResult`/`Result<,>`.
+- `Handle()` returns the event/result directly (no `Task.FromResult` without `await`); validation in `CommandValidator<T>`/`ConceptValidator<T>`; **never throw for normal business rejection** — return `ValidationResult`/`Result<,>`.
 - Start with model-bound attributes, fluent for structured mappings, reducer code for clearer prior-state branches/calculations/guards; **never `.AutoMap()`**. New .NET reducers default to static `Reduce` on the model; separate `IReducerFor<T>` for DI/replay instance behavior/separation; plain-class nomination only when its assembly cannot reference Chronicle. Follow the read-model/reducer skills for Arc query discovery, exact signatures and builder ownership. Preserve admission/ordering guards when converting; do not infer Stage renders the self form or apply it to other SDKs.
 - Events: plain `[EventType]` for new events (explicit id only to retain a persisted id or resolve a cross-package short-name collision; never change a persisted id), non-nullable, past tense, `<summary>`, never carry the event-source id.
 - `[OnceOnly]` on non-idempotent reactor side effects; reactors return side-effect events or use `ICommandPipeline` (never `IEventLog`).

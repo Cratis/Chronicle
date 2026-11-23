@@ -106,7 +106,7 @@ public static class ExpandoObjectExtensions
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
     public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
-        var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
+        var inner = EnsureCollectionParent(target, childrenProperty, arrayIndexers) as IDictionary<string, object>;
         if (!inner.TryGetValue(childrenProperty.LastSegment.Value, out var value) || value is null)
         {
             value = new List<TChild>();
@@ -168,6 +168,20 @@ public static class ExpandoObjectExtensions
                 nested.RemoveNulls();
             }
         }
+    }
+
+    static ExpandoObject EnsureCollectionParent(ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
+    {
+        var indexers = arrayIndexers.All.ToArray();
+        var childIndex = Array.FindLastIndex(indexers, indexer => indexer.ArrayProperty == childrenProperty);
+        if (!indexers.Take(childIndex).Any(indexer => indexer.ArrayProperty == childrenProperty))
+        {
+            return target.EnsurePath(childrenProperty, arrayIndexers);
+        }
+
+        // EnsurePath skips the final segment. Traverse every recursive ancestor, but not the addressed child.
+        var parentIndexers = new ArrayIndexers(indexers.Where((_, index) => index != childIndex));
+        return target.EnsurePath(childrenProperty + childrenProperty.LastSegment, parentIndexers);
     }
 
     static object MergeValue(IDictionary<string, object> result, string key, object value)

@@ -28,8 +28,13 @@ public record EventStoreSubscriptionDefinition(
     public IEnumerable<NamedTag> NamedTags { get; init; } = [];
 
     /// <summary>
-    /// Gets the source namespaces the subscription observes. Empty means every namespace. Names are compared case-insensitively
-    /// and a namespace outside a non-empty list is neither observed nor created in the source event store.
+    /// Gets the retired source namespace restriction. Nothing reads it, nothing sets it and it is always empty: a subscription
+    /// observes every namespace its source event store has, and never creates one.
     /// </summary>
+    /// <remarks>
+    /// Only here because this definition is a grain call payload, and a payload member cannot be removed within a major release
+    /// without silos of the previous release failing to read it. Remove it in the next major release.
+    /// </remarks>
+    [Obsolete("Retired. A subscription observes every namespace its source event store has. Kept only for wire compatibility within the major release.")]
     public IEnumerable<EventStoreNamespaceName> SourceNamespaces { get; init; } = [];
 }

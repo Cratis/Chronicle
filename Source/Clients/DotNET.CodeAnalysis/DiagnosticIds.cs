@@ -297,7 +297,7 @@ public static class DiagnosticIds
     public const string NonAwaitedAssertion = "CHR0039";
 
     /// <summary>
-    /// One member carries several [SetFromContext] for the same event type, so all but the last are discarded.
+    /// One member carries several [SetFromContext] or [SetFromEventSourceId] mappings for the same event type, so all but the last are discarded.
     /// </summary>
     public const string DuplicateSetFromContextForSameEventType = "CHR0040";
 
