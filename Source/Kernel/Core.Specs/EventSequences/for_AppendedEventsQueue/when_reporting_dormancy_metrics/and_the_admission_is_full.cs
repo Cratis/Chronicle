@@ -8,8 +8,23 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_reporting
 public class and_the_admission_is_full : given.a_queue_reporting_its_metrics
 {
     const int Observers = 4;
+    readonly Observation.WakeAdmission _admission = new(1, Environment.ProcessorCount);
+    readonly TaskCompletionSource _wakeWaiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    protected override Observation.IWakeAdmission CreateWakeAdmission() => new Observation.WakeAdmission(1, Environment.ProcessorCount);
+    protected override Observation.IWakeAdmission CreateWakeAdmission()
+    {
+        var admission = Substitute.For<Observation.IWakeAdmission>();
+        admission.Limit.Returns(_admission.Limit);
+        admission.InProgress.Returns(_ => _admission.InProgress);
+        admission.WaitAsync(Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            var waiting = _admission.WaitAsync(call.Arg<CancellationToken>());
+            if (!waiting.IsCompleted) _wakeWaiting.TrySetResult();
+            return waiting;
+        });
+        admission.When(_ => _.Release()).Do(_ => _admission.Release());
+        return admission;
+    }
 
     async Task Establish()
     {
@@ -17,7 +32,7 @@ public class and_the_admission_is_full : given.a_queue_reporting_its_metrics
         {
             var id = IdInQueue(0, $"storm-{index}");
             Store(id, Storage.Observation.ObserverSubscriptionKind.ClientReactor);
-            ObserverFor(KeyOf(id), () => Task.Delay(30));
+            ObserverFor(KeyOf(id));
         }
 
         await _queue.SeedDormantSubscriptions();
@@ -25,7 +40,17 @@ public class and_the_admission_is_full : given.a_queue_reporting_its_metrics
 
     async Task Because()
     {
-        await _queue.Enqueue([EventAt(1)]);
+        // Hold the real slot until a wake is waiting for it; observer/thread startup timing cannot create the overlap.
+        await _admission.WaitAsync(CancellationToken.None);
+        try
+        {
+            await _queue.Enqueue([EventAt(1)]);
+            await _wakeWaiting.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        }
+        finally
+        {
+            _admission.Release();
+        }
         await _queue.AwaitQueueDepletion(periodNum: 500);
     }
 

@@ -28,6 +28,12 @@ public partial class Observer
     /// </summary>
     TaskCompletionSource? _catchUpConclusionsApplied;
 
+    /// <summary>
+    /// A completing job awaits its handover, but routing must not await the acquisition that is starting that job.
+    /// That acquisition continues the lap once it returns, keeping the handover owned until routing has settled.
+    /// </summary>
+    bool? _catchUpLapAfterAcquisition;
+
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
 
     /// <inheritdoc/>
@@ -71,6 +77,7 @@ public partial class Observer
 
             // A failed acquisition hands waiters no job, so they acquire one themselves rather than inherit the failure.
             acquisition.SetResult(jobId);
+            await ContinueCatchUpLapAfterAcquisition(jobId);
         }
     }
 
@@ -132,8 +139,7 @@ public partial class Observer
 
         // From the moment the reporting job stops counting as an owner until routing has asked for its successor, the
         // handover itself owns catch-up. The watchdog interleaves with this call and must not rescue in that window.
-        _catchUpHandoversInFlight++;
-        _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+        BeginCatchUpHandover();
         _catchUpOwnershipEpoch++;
         try
         {
@@ -141,11 +147,7 @@ public partial class Observer
         }
         finally
         {
-            if (--_catchUpHandoversInFlight == 0 && _catchUpHandoversSettled is { } settled)
-            {
-                _catchUpHandoversSettled = null;
-                settled.SetResult();
-            }
+            EndCatchUpHandover();
         }
     }
 
@@ -277,9 +279,48 @@ public partial class Observer
         return madeProgress;
     }
 
+    void BeginCatchUpHandover()
+    {
+        _catchUpHandoversInFlight++;
+        _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    void EndCatchUpHandover()
+    {
+        if (--_catchUpHandoversInFlight == 0 && _catchUpHandoversSettled is { } settled)
+        {
+            _catchUpHandoversSettled = null;
+            settled.SetResult();
+        }
+    }
+
+    async Task ContinueCatchUpLapAfterAcquisition(JobId acquiredJob)
+    {
+        if (_catchUpLapAfterAcquisition is not bool settleInObserving) return;
+        _catchUpLapAfterAcquisition = null;
+        try
+        {
+            // The pending acquisition may already have found the successor. Routing again would duplicate that
+            // work and reconcile partition holds after the handover queued their repair. Only an acquisition that
+            // returned no owner, or the job that just concluded inside Start/Resume, still owes routing.
+            if (acquiredJob != JobId.NotSet && !_concludedCatchUpJobs.Contains(acquiredJob)) return;
+            await ContinueAfterCatchUpLap(settleInObserving);
+        }
+        finally
+        {
+            EndCatchUpHandover();
+        }
+    }
+
     async Task ContinueAfterCatchUpLap(bool settleInObserving)
     {
         if (IsCatchUpEnded()) return;
+        if (_pendingCatchUpAcquisition is not null)
+        {
+            if (_catchUpLapAfterAcquisition is null) BeginCatchUpHandover();
+            _catchUpLapAfterAcquisition = settleInObserving;
+            return;
+        }
 
         if (settleInObserving)
         {

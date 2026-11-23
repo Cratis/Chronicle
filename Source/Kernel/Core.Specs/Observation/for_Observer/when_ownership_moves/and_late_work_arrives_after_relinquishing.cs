@@ -31,7 +31,9 @@ public class and_late_work_arrives_after_relinquishing : given.a_live_observer_w
         _jobsManager.ClearReceivedCalls();
     }
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         await MoveDefinition();
         _before = await _guarded.Get(_observerId);

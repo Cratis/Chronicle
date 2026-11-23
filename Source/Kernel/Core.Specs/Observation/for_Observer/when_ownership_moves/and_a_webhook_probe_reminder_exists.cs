@@ -17,7 +17,9 @@ public class and_a_webhook_probe_reminder_exists : given.a_live_observer_with_gu
         _jobsManager.ClearReceivedCalls();
     }
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         await MoveDefinition();
         _before = await _guarded.Get(_observerId);

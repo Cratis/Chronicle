@@ -8,7 +8,9 @@ public class and_history_reloads_finish_out_of_order : given.an_observer_with_co
     readonly given.held_storage_operation<DateTimeOffset?> _olderRead = new();
     DateTimeOffset? _observedTimestamp;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         var first = true;
         _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(_observerId).Returns(_ =>

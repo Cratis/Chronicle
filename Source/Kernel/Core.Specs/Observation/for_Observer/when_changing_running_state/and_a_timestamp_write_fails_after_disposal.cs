@@ -10,7 +10,9 @@ public class and_a_timestamp_write_fails_after_disposal : given.an_observer_with
     Exception? _error;
     int _attemptsBefore;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _attemptsBefore = _writes.Attempts;
         _eventStoreNamespaceStorage.Observers.SaveRunningStateChangedAt(_observerId, _now.AddHours(1), _observerKey.EventSequenceId).Returns(_ => _timestamp.Invoke());

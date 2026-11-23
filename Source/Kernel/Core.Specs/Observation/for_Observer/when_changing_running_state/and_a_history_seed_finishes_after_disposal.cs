@@ -8,7 +8,9 @@ public class and_a_history_seed_finishes_after_disposal : given.an_observer_with
     readonly given.held_storage_operation<DateTimeOffset?> _history = new();
     DateTimeOffset? _observedTimestamp;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(_observerId).Returns(_ => _history.Invoke());
         var activating = _observer.OnActivation(CancellationToken.None);

@@ -8,7 +8,9 @@ public class and_a_history_reload_finishes_after_disposal : given.an_observer_wi
     readonly given.held_storage_operation<DateTimeOffset?> _history = new();
     DateTimeOffset? _observedTimestamp;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(_observerId).Returns(_ => _history.Invoke());
         var subscribing = Subscribe();

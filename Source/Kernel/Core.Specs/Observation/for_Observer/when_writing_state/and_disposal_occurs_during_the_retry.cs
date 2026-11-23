@@ -14,7 +14,9 @@ public class and_disposal_occurs_during_the_retry : given.an_observer_with_contr
     int _readsBeforeRetry;
     int _attemptsBefore;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _failure = new(_observerKey, EventSequenceId.Log);
         _attemptsBefore = _writes.Attempts;
