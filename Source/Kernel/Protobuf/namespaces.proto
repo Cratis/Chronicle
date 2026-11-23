@@ -17,6 +17,23 @@ message EnsureNamespaceRequest {
    string EventStore = 1;
    string Namespace = 2;
 }
+message LookupNamespaceBindingRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
+message NamespaceBindingResponse {
+   string Namespace = 1;
+   .bcl.Guid Incarnation = 2;
+   NamespaceLifecycleStatus Status = 3;
+   int32 ProtocolVersion = 4;
+}
+enum NamespaceLifecycleStatus {
+   Preparing = 0;
+   Open = 1;
+   Closing = 2;
+   Removed = 3;
+   RecoveryRequired = 4;
+}
 message NamespaceNamesResponse {
    string Name = 1;
    string Id = 2;
@@ -31,6 +48,14 @@ message QueryResult_IEnumerable_NamespaceNamesResponse {
    repeated string ExceptionMessages = 4;
    string ExceptionStackTrace = 5;
    repeated NamespaceNamesResponse Data = 6;
+}
+message QueryResult_NamespaceBindingResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   NamespaceBindingResponse Data = 6;
 }
 message RemoveNamespaceRequest {
    string EventStore = 1;
@@ -50,6 +75,7 @@ enum ValidationResultSeverity {
 service Namespaces {
    rpc AllNamespaces (AllNamespacesRequest) returns (QueryResult_IEnumerable_NamespaceNamesResponse);
    rpc EnsureNamespace (EnsureNamespaceRequest) returns (CommandResult);
+   rpc LookupNamespaceBinding (LookupNamespaceBindingRequest) returns (QueryResult_NamespaceBindingResponse);
    rpc ObserveNamespaces (ObserveNamespacesRequest) returns (stream QueryResult_IEnumerable_NamespaceNamesResponse);
    rpc RemoveNamespace (RemoveNamespaceRequest) returns (CommandResult);
 }

@@ -36,6 +36,14 @@ public interface INamespaces
     [Operation]
     Task<CommandResult> RemoveNamespace(RemoveNamespaceRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the LookupNamespaceBinding query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<NamespaceBindingResponse>> LookupNamespaceBinding(LookupNamespaceBindingRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AllNamespaces query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -86,6 +94,56 @@ public class RemoveNamespaceRequest
 
     /// <summary>
     /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the NamespaceBindingResponse message.
+/// </summary>
+[ProtoContract]
+public class NamespaceBindingResponse
+{
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Incarnation.
+    /// </summary>
+    [ProtoMember(2)]
+    public Guid? Incarnation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(3)]
+    public global::Cratis.Chronicle.Contracts.Storage.Namespaces.NamespaceLifecycleStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ProtocolVersion.
+    /// </summary>
+    [ProtoMember(4)]
+    public int ProtocolVersion { get; set; }
+}
+
+/// <summary>
+/// Represents the LookupNamespaceBindingRequest message.
+/// </summary>
+[ProtoContract]
+public class LookupNamespaceBindingRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
     /// </summary>
     [ProtoMember(2)]
     public string Namespace { get; set; } = string.Empty;

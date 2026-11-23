@@ -16,7 +16,9 @@ namespace Cratis.Chronicle.Services.Namespaces;
 /// </summary>
 internal sealed class Namespaces(
     global::Cratis.Arc.Commands.ICommandPipeline commandPipeline,
+    global::Cratis.Chronicle.Namespaces.INamespaceIncarnations namespaceIncarnations,
     global::Cratis.Chronicle.Storage.IStorage storage,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Namespaces.Namespaces> logger) : global::Cratis.Chronicle.Contracts.Namespaces.INamespaces
 {
     /// <inheritdoc/>
@@ -30,6 +32,22 @@ internal sealed class Namespaces(
         CommandExecutor.Execute(
             commandPipeline,
             new global::Cratis.Chronicle.Namespaces.RemoveNamespace((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace));
+
+    /// <inheritdoc/>
+    public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceBindingResponse>> LookupNamespaceBinding(global::Cratis.Chronicle.Contracts.Namespaces.LookupNamespaceBindingRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
+        QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceBindingResponse>(
+            callContext,
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
+            async () =>
+            {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
+                var result = await global::Cratis.Chronicle.Namespaces.NamespaceBinding.LookupNamespaceBinding((global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, namespaceIncarnations);
+                return ToNamespaceBindingResponse(result);
+            },
+            exception => logger.QueryFailed(exception, "Namespaces", "LookupNamespaceBinding"));
 
     /// <inheritdoc/>
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>>> AllNamespaces(global::Cratis.Chronicle.Contracts.Namespaces.AllNamespacesRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
@@ -52,6 +70,15 @@ internal sealed class Namespaces(
                 .CompletedBy(callContext.CancellationToken)
                 .Select(_ => (IEnumerable<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse>)_.Select(ToNamespaceNamesResponse).ToList()),
             exception => logger.QueryFailed(exception, "Namespaces", "ObserveNamespaces"));
+
+    static global::Cratis.Chronicle.Contracts.Namespaces.NamespaceBindingResponse ToNamespaceBindingResponse(global::Cratis.Chronicle.Namespaces.NamespaceBinding source) =>
+        new()
+        {
+            Namespace = (string)source.Namespace,
+            Incarnation = source.Incarnation is null ? null : (global::System.Guid)source.Incarnation,
+            Status = (global::Cratis.Chronicle.Contracts.Storage.Namespaces.NamespaceLifecycleStatus)source.Status,
+            ProtocolVersion = source.ProtocolVersion
+        };
 
     static global::Cratis.Chronicle.Contracts.Namespaces.NamespaceNamesResponse ToNamespaceNamesResponse(global::Cratis.Chronicle.Namespaces.NamespaceNames source) =>
         new()
