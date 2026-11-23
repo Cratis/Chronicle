@@ -3,21 +3,19 @@
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager.when_receiving_subscription_reminder;
 
-public class and_the_subscription_excludes_namespaces : given.a_manager_over_several_namespaces
+public class and_the_target_has_a_malformed_namespace : given.a_manager_over_several_namespaces
 {
     async Task Establish()
     {
         _observersAreSubscribed = true;
-        await _manager.Add(DefinitionFor("Default"));
+        await _manager.Add(DefinitionFor());
         _requestedKeys.Clear();
         _sourceNamespacesRequested.Clear();
     }
 
     async Task Because() => await _manager.ReceiveReminder($"event-store-subscription-subscribe:{SubscriptionName}", default);
 
-    [Fact] void should_not_resolve_the_first_excluded_observer() => RequestedKeys.ShouldNotContain(KeyFor("Tenant1"));
-    [Fact] void should_not_resolve_the_second_excluded_observer() => RequestedKeys.ShouldNotContain(KeyFor("Tenant2"));
     [Fact] void should_not_resolve_the_malformed_namespace_observer() => RequestedKeys.ShouldNotContain(KeyFor(Malformed));
-    [Fact] void should_not_look_up_excluded_source_namespaces() => _sourceNamespacesRequested.ShouldBeEmpty();
-    [Fact] void should_still_check_the_observed_namespace() => RequestedKeys.ShouldContain(KeyFor("Default"));
+    [Fact] void should_not_look_up_the_malformed_source_namespace() => _sourceNamespacesRequested.ShouldNotContain(Malformed);
+    [Fact] void should_still_check_every_well_formed_namespace() => RequestedKeys.ShouldContainOnly(KeyFor("Default"), KeyFor("Tenant1"), KeyFor("Tenant2"));
 }

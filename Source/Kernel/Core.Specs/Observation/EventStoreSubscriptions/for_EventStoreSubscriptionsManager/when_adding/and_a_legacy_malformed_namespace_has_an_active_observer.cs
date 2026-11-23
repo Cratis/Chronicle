@@ -15,9 +15,8 @@ public class and_a_legacy_malformed_namespace_has_an_active_observer : given.a_m
         _requestedKeys.Clear();
     }
 
-    async Task Because() => await _manager.Add(DefinitionFor("Default"));
+    async Task Because() => await _manager.Add(DefinitionFor());
 
     [Fact] void should_revoke_the_malformed_namespace_observer() => _observers[KeyFor(Malformed)].Received(1).Unsubscribe();
-    [Fact] void should_revoke_the_namespaces_outside_the_list() => _observers[KeyFor("Tenant1")].Received(1).Unsubscribe();
-    [Fact] void should_keep_the_listed_namespace() => _requestedKeys.ShouldNotContain(KeyFor("Default"));
+    [Fact] void should_keep_the_well_formed_namespaces() => _requestedKeys.ShouldNotContain(KeyFor("Tenant1"));
 }

@@ -3,7 +3,7 @@
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager.when_activating;
 
-public class and_not_restricted : given.a_manager_over_several_namespaces
+public class and_the_source_has_every_namespace : given.a_manager_over_several_namespaces
 {
     async Task Establish() => await _manager.Add(DefinitionFor());
     async Task Because() => await _manager.OnActivateAsync(CancellationToken.None);

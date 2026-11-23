@@ -7,13 +7,13 @@ public class and_a_revocation_failed_earlier : given.a_manager_over_several_name
 {
     async Task Establish()
     {
+        _sourceHas.Add(Malformed);
         _observersAreSubscribed = true;
+        _unsubscribeFailures[KeyFor(Malformed)] = 1;
         await _manager.Add(DefinitionFor());
-        _unsubscribeFailures[KeyFor("Tenant2")] = 1;
-        await _manager.Add(DefinitionFor("Default"));
     }
 
     async Task Because() => await _manager.ReceiveReminder($"event-store-subscription-subscribe:{SubscriptionName}", default);
 
-    [Fact] void should_retry_the_unsubscribe_of_the_namespace_that_is_still_subscribed() => _observers[KeyFor("Tenant2")].Received(2).Unsubscribe();
+    [Fact] void should_retry_the_unsubscribe_of_the_malformed_namespace_that_is_still_subscribed() => _observers[KeyFor(Malformed)].Received(2).Unsubscribe();
 }
