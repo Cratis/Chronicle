@@ -294,6 +294,8 @@ jobs:
       - name: Add comment for NuGet packages
         uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12.0
         with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          message-id: nuget-${{ needs.release.outputs.version }}
           message: |
             NuGet packages for this PR, e.g. Chronicle:
             https://github.com/Cratis/Chronicle/pkgs/nuget/Cratis.Chronicle
@@ -420,6 +422,8 @@ jobs:
       - name: Add comment for Docker image
         uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12.0
         with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          message-id: docker-${{ needs.release.outputs.version }}
           message: |
             Docker Image for this PR:
             https://ghcr.io/cratis/chronicle:${{ needs.release.outputs.version }}
