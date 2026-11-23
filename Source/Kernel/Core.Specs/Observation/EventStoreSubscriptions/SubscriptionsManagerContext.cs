@@ -6,7 +6,7 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
 using Orleans.TestKit;
 
-namespace Cratis.Chronicle;
+namespace Cratis.Chronicle.Observation.EventStoreSubscriptions;
 
 /// <summary>
 /// Helpers for specifying the event store subscriptions manager.
