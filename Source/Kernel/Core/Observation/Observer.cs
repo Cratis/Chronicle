@@ -753,7 +753,6 @@ public partial class Observer(
     /// <inheritdoc/>
     protected override async Task OnBeforeEnteringState(IState<ObserverState> state)
     {
-        _leavingState = false;
         ResetRecoveryFlagsForEntering(state);
         _isQuarantined = state is QuarantinedObserver;
         await _alertMutationLock.WaitAsync();
@@ -780,7 +779,6 @@ public partial class Observer(
         _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
         PublishRunningStateGauge();
-        await RecoverSubscriptionAfterLeaving();
         if (state is States.Replay { StartRefusal: { } refusal })
         {
             // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
@@ -1331,14 +1329,6 @@ public partial class Observer(
         if (IsQuarantined)
         {
             await ReconcileWebhookProbe();
-            return;
-        }
-
-        // A concurrent subscription can finish while the preceding transition is still unsubscribing its queue.
-        // Choreography only admits nested transitions during entry, so recover from the next entry hook instead.
-        if (_leavingState)
-        {
-            _recoverSubscriptionAfterLeaving = true;
             return;
         }
 

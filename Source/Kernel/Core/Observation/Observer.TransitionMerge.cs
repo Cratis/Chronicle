@@ -30,14 +30,11 @@ public partial class Observer
     /// transition completes, which only makes the fast handover fall back to the full subscribe.
     /// </remarks>
     bool _stateTransitionInProgress;
-    bool _leavingState;
-    bool _recoverSubscriptionAfterLeaving;
 
     /// <inheritdoc/>
     protected override Task OnBeforeLeavingState(IState<ObserverState> state)
     {
         _stateTransitionInProgress = true;
-        _leavingState = true;
         BeginTransitionHook();
         return Task.CompletedTask;
     }
@@ -47,13 +44,6 @@ public partial class Observer
     {
         KeepWhatWasRecordedDuringTransitionHook();
         return Task.CompletedTask;
-    }
-
-    Task RecoverSubscriptionAfterLeaving()
-    {
-        var recover = _recoverSubscriptionAfterLeaving && _subscription.IsSubscribed;
-        _recoverSubscriptionAfterLeaving = false;
-        return recover ? RecoverAfterSubscribing(leavesQuarantine: false) : Task.CompletedTask;
     }
 
     /// <summary>
