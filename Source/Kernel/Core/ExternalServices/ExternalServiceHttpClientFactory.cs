@@ -3,6 +3,7 @@
 
 using System.Net.Http.Headers;
 using Cratis.Chronicle.Concepts.ExternalServices;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,7 +52,7 @@ public class ExternalServiceHttpClientFactory(
 
         foreach (var header in http.Headers)
         {
-            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+            CustomHttpHeaders.Add(client.DefaultRequestHeaders, header.Key, header.Value);
         }
 
         return Task.FromResult(client);

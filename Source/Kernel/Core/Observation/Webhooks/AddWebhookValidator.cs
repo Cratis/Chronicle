@@ -3,6 +3,7 @@
 
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Sequences;
 using Cratis.Chronicle.Storage;
@@ -71,21 +72,26 @@ public class AddWebhookValidator : CommandValidator<AddWebhook>
             .WithMessage("Managed identity scope is required when using managed identity authorization.")
             .When(_ => _.AuthorizationType == AuthorizationType.ManagedIdentity);
 
-        RuleFor(_ => _)
-            .CustomAsync(ValidateTargets)
+        RuleFor(_ => _.Headers)
+            .SetValidator(new CustomHttpHeadersValidator())
             .DependentRules(() =>
             {
                 RuleFor(_ => _)
-                    .MustAsync(BeValidOAuthConfiguration)
-                    .WithMessage("Unable to acquire a valid OAuth token.");
+                    .CustomAsync(ValidateTargets)
+                    .DependentRules(() =>
+                    {
+                        RuleFor(_ => _)
+                            .MustAsync(BeValidOAuthConfiguration)
+                            .WithMessage("Unable to acquire a valid OAuth token.");
 
-                RuleFor(_ => _)
-                    .MustAsync(BeValidManagedIdentityConfiguration)
-                    .WithMessage("Unable to acquire a valid managed identity token.");
+                        RuleFor(_ => _)
+                            .MustAsync(BeValidManagedIdentityConfiguration)
+                            .WithMessage("Unable to acquire a valid managed identity token.");
 
-                RuleFor(_ => _)
-                    .MustAsync(BeValidWebhookEndpoint)
-                    .WithMessage("Unable to connect to the webhook endpoint.");
+                        RuleFor(_ => _)
+                            .MustAsync(BeValidWebhookEndpoint)
+                            .WithMessage("Unable to connect to the webhook endpoint.");
+                    });
             });
 
         RuleFor(_ => _)
