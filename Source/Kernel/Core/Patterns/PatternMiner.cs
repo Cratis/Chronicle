@@ -73,6 +73,10 @@ public class PatternMiner(
 
     IBehaviorPatternStorage Patterns => storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).Patterns;
 
+    TimeSpan PersistenceInterval => TimeSpan.FromSeconds(Math.Max(1, _configuration.PersistenceInterval));
+
+    string SupervisionKey => $"pattern-miner:{_key.EventStore}:{_key.Namespace}";
+
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -156,9 +160,50 @@ public class PatternMiner(
         }
     }
 
-    TimeSpan PersistenceInterval => TimeSpan.FromSeconds(Math.Max(1, _configuration.PersistenceInterval));
+    /// <summary>
+    /// Add the context entries a restore has to synthesize, each with the frequency its patterns say it must
+    /// have had.
+    /// </summary>
+    /// <param name="established">The persisted <see cref="BehaviorPattern">patterns</see> being restored.</param>
+    /// <param name="entries">The entries being restored, keyed by itemset - contexts already among them are left alone.</param>
+    /// <remarks>
+    /// Only surviving patterns were persisted, but re-deriving a pattern's confidence needs the frequency of its
+    /// context - the itemset without its action - and a pure context rarely survives on its own, because its
+    /// confidence is just its support. Every number needed is still recoverable from what was written: confidence
+    /// was frequency over context frequency, so every missing context entry is synthesized back from the patterns
+    /// that reference it. Several patterns can share one context, and each names the same context frequency
+    /// through its own confidence; the largest recovered answer is kept as the most precise against rounding.
+    /// </remarks>
+    static void SynthesizeMissingContexts(BehaviorPattern[] established, Dictionary<FacetSetKey, LossyCountingEntry> entries)
+    {
+        var contexts = new Dictionary<FacetSetKey, (FacetSet Context, long Frequency, BehaviorPattern Pattern)>();
 
-    string SupervisionKey => $"pattern-miner:{_key.EventStore}:{_key.Namespace}";
+        foreach (var pattern in established.Where(pattern => pattern.Facets.ConstrainsAction && pattern.Confidence.Value > 0d))
+        {
+            var context = pattern.Facets.WithoutActions();
+            if (context.IsEmpty || entries.ContainsKey(context.Key))
+            {
+                continue;
+            }
+
+            var frequency = (long)Math.Round(pattern.Occurrences.Value / pattern.Confidence.Value);
+            if (!contexts.TryGetValue(context.Key, out var existing) || existing.Frequency < frequency)
+            {
+                contexts[context.Key] = (context, frequency, pattern);
+            }
+        }
+
+        foreach (var (context, frequency, pattern) in contexts.Values)
+        {
+            entries[context.Key] = new LossyCountingEntry(
+                context,
+                frequency,
+                0L,
+                pattern.Weight,
+                pattern.FirstSeen,
+                pattern.LastSeen);
+        }
+    }
 
     void Supervise()
     {
@@ -203,51 +248,6 @@ public class PatternMiner(
 
         Unsupervise();
         DeactivateOnIdle();
-    }
-
-    /// <summary>
-    /// Add the context entries a restore has to synthesize, each with the frequency its patterns say it must
-    /// have had.
-    /// </summary>
-    /// <param name="established">The persisted <see cref="BehaviorPattern">patterns</see> being restored.</param>
-    /// <param name="entries">The entries being restored, keyed by itemset - contexts already among them are left alone.</param>
-    /// <remarks>
-    /// Only surviving patterns were persisted, but re-deriving a pattern's confidence needs the frequency of its
-    /// context - the itemset without its action - and a pure context rarely survives on its own, because its
-    /// confidence is just its support. Every number needed is still recoverable from what was written: confidence
-    /// was frequency over context frequency, so every missing context entry is synthesized back from the patterns
-    /// that reference it. Several patterns can share one context, and each names the same context frequency
-    /// through its own confidence; the largest recovered answer is kept as the most precise against rounding.
-    /// </remarks>
-    static void SynthesizeMissingContexts(BehaviorPattern[] established, Dictionary<FacetSetKey, LossyCountingEntry> entries)
-    {
-        var contexts = new Dictionary<FacetSetKey, (FacetSet Context, long Frequency, BehaviorPattern Pattern)>();
-
-        foreach (var pattern in established.Where(pattern => pattern.Facets.ConstrainsAction && pattern.Confidence.Value > 0d))
-        {
-            var context = pattern.Facets.WithoutActions();
-            if (context.IsEmpty || entries.ContainsKey(context.Key))
-            {
-                continue;
-            }
-
-            var frequency = (long)Math.Round(pattern.Occurrences.Value / pattern.Confidence.Value);
-            if (!contexts.TryGetValue(context.Key, out var existing) || existing.Frequency < frequency)
-            {
-                contexts[context.Key] = (context, frequency, pattern);
-            }
-        }
-
-        foreach (var (context, frequency, pattern) in contexts.Values)
-        {
-            entries[context.Key] = new LossyCountingEntry(
-                context,
-                frequency,
-                0L,
-                pattern.Weight,
-                pattern.FirstSeen,
-                pattern.LastSeen);
-        }
     }
 
     async Task RestoreScopesActingForTheFirstTime(IEnumerable<PatternGroupingKey> scopes)
