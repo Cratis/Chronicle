@@ -60,6 +60,11 @@ internal static class ChildCollectionRemovals
             return false;
         }
 
+        if (ChildKeyComparison.RequiresStructuralComparison(value, key))
+        {
+            return ChildKeyComparison.AreEqual(value, key);
+        }
+
         return Equals(value, key) || (value is not null && value.ToString() == keyAsString);
     }
 
@@ -199,12 +204,13 @@ internal static class ChildCollectionRemovals
             ? PropertyPath.CreateFrom(identifierSegments.Skip(1).ToArray())
             : indexer.IdentifierProperty;
 
-        // Normalize identifiers to string form. JSON round-trips turn Guid identifiers into
+        // Normalize scalar identifiers to string form. JSON round-trips turn Guid identifiers into
         // strings and strip ConceptAs<T> wrappers, so the inside-EnsurePath comparison of the
         // stored value (string) against the original Identifier (concept/Guid) never matches
         // and manufactures a duplicate entry instead of finding the existing one. Comparing
-        // the two as strings makes the lookup deterministic across types.
-        var normalizedIdentifier = JsonColumnDocuments.UnwrapConceptValue(indexer.Identifier)?.ToString();
+        // the two as strings makes the lookup deterministic across types. Composite identifiers
+        // must keep their materialized properties instead of collapsing to a type name.
+        var normalizedIdentifier = ChildKeyComparison.NormalizeIndexerValue(indexer.Identifier);
         return new ArrayIndexer(trimmedArray, trimmedIdentifier, normalizedIdentifier!);
     }
 }
