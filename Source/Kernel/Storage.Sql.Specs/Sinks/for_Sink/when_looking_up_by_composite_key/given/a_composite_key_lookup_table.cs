@@ -31,7 +31,7 @@ public class a_composite_key_lookup_table : when_writing_a_composite_key.given.a
         await using var context = CreateContext();
         var sql = context.GetService<ISqlGenerationHelper>();
         var command = $"UPDATE {sql.DelimitIdentifier(Table)} SET {sql.DelimitIdentifier(SqlCompositeKeyShadow.ColumnName)}={{0}}";
-        await context.Database.ExecuteSqlInterpolatedAsync(FormattableStringFactory.Create(command, stamp));
+        await context.Database.ExecuteSqlAsync(FormattableStringFactory.Create(command, stamp));
     }
 
     protected async Task<CompositeKeyLookupResult[]> LookupLegacyStampedAndCollidingRows()

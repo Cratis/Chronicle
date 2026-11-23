@@ -177,7 +177,7 @@
     <PackageVersion Include="SharpCompress" Version="0.50.8" />
   </ItemGroup>
 
-  <!-- Align net11.0 platform dependencies while retaining major 10 for net10.0 consumers. -->
+  <!-- Align net11.0 dependencies while retaining major 10 platform and EF packages for net10.0 consumers. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
     <PackageVersion Update="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.0" />
     <PackageVersion Update="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
@@ -196,6 +196,11 @@
     <PackageVersion Update="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
     <PackageVersion Update="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="11.0.0" />
     <PackageVersion Update="Microsoft.AspNetCore.DataProtection" Version="11.0.0" />
+    <PackageVersion Update="Microsoft.EntityFrameworkCore" Version="11.0.0" />
+    <PackageVersion Update="Microsoft.EntityFrameworkCore.Relational" Version="11.0.0" />
+    <PackageVersion Update="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
+    <PackageVersion Update="Microsoft.EntityFrameworkCore.SqlServer" Version="11.0.0" />
+    <PackageVersion Update="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0" />
     <PackageVersion Update="System.Text.Json" Version="11.0.0" />
     <PackageVersion Update="System.Security.Cryptography.Pkcs" Version="11.0.0" />
   </ItemGroup>

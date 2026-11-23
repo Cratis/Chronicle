@@ -49,7 +49,7 @@ internal static class MembershipSql
         var sql = context.Database.IsNpgsql()
             ? $"INSERT INTO {table} ({cluster}, {version}, {timestamp}) VALUES ({{0}}, 0, {{1}}) ON CONFLICT ({cluster}) DO NOTHING"
             : $"INSERT INTO {table} ({cluster}, {version}, {timestamp}) SELECT {{0}}, 0, {{1}} WHERE NOT EXISTS (SELECT 1 FROM {table} WITH (UPDLOCK, HOLDLOCK) WHERE {cluster} = {{0}})";
-        return await context.Database.ExecuteSqlInterpolatedAsync(FormattableStringFactory.Create(sql, clusterId, DateTime.UtcNow));
+        return await context.Database.ExecuteSqlAsync(FormattableStringFactory.Create(sql, clusterId, DateTime.UtcNow));
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ internal static class MembershipSql
         var sql = context.Database.IsNpgsql()
             ? $"INSERT INTO {table} ({columns}) VALUES ({parameters}) ON CONFLICT DO NOTHING"
             : $"INSERT INTO {table} ({columns}) SELECT {parameters} WHERE NOT EXISTS (SELECT 1 FROM {table} WHERE {predicate})";
-        return await context.Database.ExecuteSqlInterpolatedAsync(FormattableStringFactory.Create(sql, values));
+        return await context.Database.ExecuteSqlAsync(FormattableStringFactory.Create(sql, values));
     }
 
     static async Task<string> Table<TEntity>(ClusterDbContext context)
