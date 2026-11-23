@@ -119,6 +119,7 @@ public partial class EventSequence(
     int _appendsSinceStateWrite;
     bool _stateWrittenSinceActivation;
     bool _mayWriteSequence = true;
+    bool _namespaceEnsured;
     IEventSequenceStorage EventSequenceStorage => _eventSequenceStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceId);
     IEventSourcesStorage EventSourcesStorage => storage.GetEventStore(_eventSequenceKey.EventStore).EventSources;
     IEventTypesStorage EventTypesStorage => _eventTypesStorage ??= storage.GetEventStore(_eventSequenceKey.EventStore).EventTypes;
@@ -151,15 +152,17 @@ public partial class EventSequence(
 
         // Bootstrap ensures System/Default before registering its schemas and observers. Calling back
         // into Namespaces(System) here can deadlock when its Ensure is activating this sequence to append
-        // NamespaceAdded. All other store/namespace combinations still need their normal creation path.
+        // NamespaceAdded. Activation never creates a namespace: a read, an observer subscribing or a restart waking
+        // persisted observers all activate a sequence, and none of them may bring back a namespace that was removed
+        // or never existed. Only an append creates it (see EnsureNamespaceForAppend).
         if (_eventSequenceKey.EventStore != EventStoreName.System || _eventSequenceKey.Namespace != EventStoreNamespaceName.Default || _eventSequenceId != EventSequenceId.System)
         {
             var namespaces = GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore);
-            var canonical = await namespaces.EnsureCanonical(_eventSequenceKey.Namespace);
-            if (!string.Equals(canonical.Value, _eventSequenceKey.Namespace.Value, StringComparison.Ordinal))
+            var canonical = await namespaces.GetCanonical(_eventSequenceKey.Namespace);
+            if (canonical is not null)
             {
-                logger.RefusedCaseVariant(_eventSequenceKey.Namespace.Value, _eventSequenceKey.EventStore.Value, canonical.Value);
-                throw new NamespaceIsCaseVariant(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, canonical);
+                RefuseWhenCaseVariant(canonical);
+                _namespaceEnsured = true;
             }
         }
 
@@ -671,6 +674,32 @@ public partial class EventSequence(
             SequenceNumbers = appendedEventsList.Select(@event => @event.Context.SequenceNumber).ToImmutableList(),
             EffectReceipt = recordedReceipt is null ? null : Occurrences.EffectReceiptConverters.ToDetails(recordedReceipt)
         };
+    }
+
+    /// <summary>
+    /// Creates the namespace when it does not exist yet. Every append path calls it, so the first append is what brings a
+    /// namespace into being, never an activation.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    async Task EnsureNamespaceForAppend()
+    {
+        if (_namespaceEnsured) return;
+        if (_eventSequenceKey.EventStore == EventStoreName.System && _eventSequenceKey.Namespace == EventStoreNamespaceName.Default && _eventSequenceId == EventSequenceId.System)
+        {
+            _namespaceEnsured = true;
+            return;
+        }
+
+        var canonical = await GrainFactory.GetGrain<INamespaces>(_eventSequenceKey.EventStore).EnsureCanonical(_eventSequenceKey.Namespace);
+        RefuseWhenCaseVariant(canonical);
+        _namespaceEnsured = true;
+    }
+
+    void RefuseWhenCaseVariant(EventStoreNamespaceName canonical)
+    {
+        if (string.Equals(canonical.Value, _eventSequenceKey.Namespace.Value, StringComparison.Ordinal)) return;
+        logger.RefusedCaseVariant(_eventSequenceKey.Namespace.Value, _eventSequenceKey.EventStore.Value, canonical.Value);
+        throw new NamespaceIsCaseVariant(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, canonical);
     }
 
     async Task<(List<EventToAppendToStorage> Events, List<ConstraintValidationContext> ConstraintContexts)> BuildStorageBatch(

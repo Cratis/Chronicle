@@ -488,6 +488,7 @@ public partial class Observer(
 
         logger.Subscribing();
         logger.SubscribingToAllEvents();
+        await EnsureObservedNamespaceExists();
 
         var storageWasReset = await ReloadObserverState();
         await _definitionReads.Read(observerDefinition.ReadStateAsync);
@@ -981,6 +982,10 @@ public partial class Observer(
         if (!automatic)
         {
             _recoverSubscriptionAfterQuarantine = false;
+            if (!recovering)
+            {
+                await EnsureObservedNamespaceExists();
+            }
         }
 
         // Automatic kernel subscription cannot revive a retired observer or a sealed activation.
