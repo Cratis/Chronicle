@@ -35,7 +35,7 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "unseenRemovalSweepInterval": "01:00:00",
     "unseenRemovalBatchSize": 100,
     "maxConcurrentPartitions": 32,
-    "maxConcurrentRegistrations": 0,
+    "maxConcurrentRegistrations": 16,
     "maxConcurrentSubscriptions": 0,
     "fanOutStrategy": "round-robin",
     "subscriptionReadyTimeout": 5,
@@ -83,7 +83,7 @@ The example shows the defaults of a production build. The `-development` image s
 | unseenRemovalBatchSize | number | 100 | How many observers one storage read of that sweep covers. A value below `1` uses the default |
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
-| maxConcurrentRegistrations | number | 0 (unlimited) | Maximum gRPC reactor and reducer registrations running concurrently on each silo. When configured above 0, excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
+| maxConcurrentRegistrations | number | 16 | Maximum gRPC reactor and reducer registrations running concurrently on each silo. Excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
 | maxConcurrentSubscriptions | number | 0 (automatic) | Maximum projection subscriptions and failed-partition recovery batches running concurrently on each silo, shared by every event store. `0` or less selects two per processor, at least 4 and at most 16. See [Subscription concurrency](#subscription-concurrency) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 | subscriptionReadyTimeout | number | 5 | Seconds the Kernel waits for an event store subscription to become ready before it returns to the client. The wait keeps events from being missed when the client starts appending right away. When it elapses the subscription can still activate afterwards and the client is not blocked further. Raise it only when clients report subscriptions that are not ready on a slow or busy cluster |
@@ -247,7 +247,7 @@ An observer that has no recorded time, for example one created before the kernel
 
 ## Registration concurrency
 
-`maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `0` (unlimited); values below `1` disable the gate. With the gate disabled, no semaphore is created and registration does not wait. Set a positive limit to opt in: excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
+`maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `16`, so a client that registers thousands of observers at once is admitted gradually instead of overwhelming the observers it subscribes. Values below `1` disable the gate: no semaphore is created and registration does not wait. Excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
 
 A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. When subscribing times out because the observer is busy, the registration gives its permit back and queues for a new one before it asks again, so a busy observer does not keep other registrations out for every attempt it makes. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
 
