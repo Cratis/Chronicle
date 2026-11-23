@@ -11,4 +11,7 @@ public class an_observer_to_give_commands_to : Specification
 
     protected Task Give(ObserverOperatorCommand command, int maxAttempts = 3) =>
         ObserverOperatorCommandStep.Give(_observer, command, maxAttempts, TimeSpan.Zero, CancellationToken.None);
+
+    protected Task Give(ObserverOperatorCommand command, string partition, bool retryImmediately = false) =>
+        ObserverOperatorCommandStep.Give(_observer, command, 3, TimeSpan.Zero, CancellationToken.None, partition, retryImmediately);
 }

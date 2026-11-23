@@ -19,19 +19,36 @@ namespace Cratis.Chronicle.Observation;
 /// observer is only held back by those that asked before it, so two observers never hold each other back.
 /// </para>
 /// <para>
+/// An observer that is held back is remembered with how far behind it is. When a place is free it goes to the observers
+/// furthest behind, the one that has waited longest first among equals, so a burst drains the largest backlogs first
+/// instead of in whatever order the retries happen to land. A held-back observer that stops asking (it was removed, or its
+/// client went away) is forgotten after <see cref="WaiterLifetime"/>, so it never holds a place back for good.
+/// </para>
+/// <para>
 /// A listing that fails admits the observer: the limit protects the kernel from a burst and must not stop catch-up
 /// when the job storage cannot answer.
 /// </para>
 /// </remarks>
 /// <param name="storage">The <see cref="IStorage"/> holding the jobs.</param>
+/// <param name="timeProvider">The <see cref="TimeProvider"/> telling how long an observer has been held back.</param>
 [Singleton]
-public class CatchUpAdmission(IStorage storage) : ICatchUpAdmission
+public class CatchUpAdmission(IStorage storage, TimeProvider? timeProvider = null) : ICatchUpAdmission
 {
+    /// <summary>
+    /// How long a held-back observer keeps its turn without asking again.
+    /// </summary>
+    /// <remarks>
+    /// It is a few times the longest delay before a held-back observer asks again.
+    /// </remarks>
+    internal static readonly TimeSpan WaiterLifetime = TimeSpan.FromSeconds(30);
+
     readonly Lock _lock = new();
+    readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly Dictionary<(EventStoreName EventStore, EventStoreNamespaceName Namespace), List<ObserverKey>> _admitted = [];
+    readonly Dictionary<(EventStoreName EventStore, EventStoreNamespaceName Namespace), Dictionary<ObserverKey, Waiter>> _waiting = [];
 
     /// <inheritdoc/>
-    public async Task<IDisposable?> TryAdmit(ObserverKey observerKey, int limit)
+    public async Task<IDisposable?> TryAdmit(ObserverKey observerKey, int limit, ulong eventsBehind)
     {
         if (limit <= 0)
         {
@@ -44,7 +61,13 @@ public class CatchUpAdmission(IStorage storage) : ICatchUpAdmission
         try
         {
             var running = await CountRunningCatchUps(observerKey);
-            if (running.Own || running.Others + ahead < limit)
+            if (running.Own)
+            {
+                Forget(scope, observerKey);
+                return lease;
+            }
+
+            if (HasPlace(scope, observerKey, eventsBehind, limit - running.Others - ahead))
             {
                 return lease;
             }
@@ -57,6 +80,52 @@ public class CatchUpAdmission(IStorage storage) : ICatchUpAdmission
 
         lease.Dispose();
         return null;
+    }
+
+    void Forget((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey)
+    {
+        lock (_lock)
+        {
+            if (_waiting.TryGetValue(scope, out var waiters) && waiters.Remove(observerKey) && waiters.Count == 0)
+            {
+                _waiting.Remove(scope);
+            }
+        }
+    }
+
+    bool HasPlace((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey, ulong eventsBehind, int freePlaces)
+    {
+        var now = _clock.GetUtcNow();
+        lock (_lock)
+        {
+            if (!_waiting.TryGetValue(scope, out var waiters))
+            {
+                _waiting[scope] = waiters = [];
+            }
+
+            foreach (var expired in waiters.Where(_ => now - _.Value.LastAsked > WaiterLifetime).Select(_ => _.Key).ToArray())
+            {
+                waiters.Remove(expired);
+            }
+
+            var since = waiters.TryGetValue(observerKey, out var existing) ? existing.Since : now;
+            var hasPlace = freePlaces > 0 && waiters.Count(_ => _.Key != observerKey && _.Value.IsAheadOf(eventsBehind, since)) < freePlaces;
+            if (hasPlace)
+            {
+                waiters.Remove(observerKey);
+            }
+            else
+            {
+                waiters[observerKey] = new(eventsBehind, since, now);
+            }
+
+            if (waiters.Count == 0)
+            {
+                _waiting.Remove(scope);
+            }
+
+            return hasPlace;
+        }
     }
 
     int Reserve((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey)
@@ -115,6 +184,12 @@ public class CatchUpAdmission(IStorage storage) : ICatchUpAdmission
             .Distinct()
             .Count();
         return (own, others);
+    }
+
+    sealed record Waiter(ulong EventsBehind, DateTimeOffset Since, DateTimeOffset LastAsked)
+    {
+        internal bool IsAheadOf(ulong eventsBehind, DateTimeOffset since) =>
+            EventsBehind > eventsBehind || (EventsBehind == eventsBehind && Since < since);
     }
 
     sealed class NoLease : IDisposable

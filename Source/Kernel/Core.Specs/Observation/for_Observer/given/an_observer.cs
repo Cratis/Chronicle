@@ -108,7 +108,7 @@ public class an_observer : Specification
     protected virtual ICatchUpAdmission CreateCatchUpAdmission()
     {
         var admission = Substitute.For<ICatchUpAdmission>();
-        admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>()).Returns(_ => Task.FromResult<IDisposable?>(Substitute.For<IDisposable>()));
+        admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>(), Arg.Any<ulong>()).Returns(_ => Task.FromResult<IDisposable?>(Substitute.For<IDisposable>()));
         return admission;
     }
 

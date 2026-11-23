@@ -20,6 +20,7 @@ internal static class ReactorPartitionRetryOutcomeConverters
             Contracts.Observation.PartitionRecoveryOutcome.PartitionNotFound => ReactorPartitionRetryOutcome.PartitionNotFound,
             Contracts.Observation.PartitionRecoveryOutcome.ObserverQuarantined => ReactorPartitionRetryOutcome.ObserverQuarantined,
             Contracts.Observation.PartitionRecoveryOutcome.PartitionQuarantined => ReactorPartitionRetryOutcome.PartitionQuarantined,
+            Contracts.Observation.PartitionRecoveryOutcome.Accepted => ReactorPartitionRetryOutcome.Accepted,
             _ => ReactorPartitionRetryOutcome.Unknown
         };
 
@@ -35,6 +36,7 @@ internal static class ReactorPartitionRetryOutcomeConverters
                 Contracts.Observation.ClearPartitionQuarantineOutcome.Cleared => ReactorPartitionQuarantineClearOutcome.Cleared,
                 Contracts.Observation.ClearPartitionQuarantineOutcome.NotFound => ReactorPartitionQuarantineClearOutcome.NotFound,
                 Contracts.Observation.ClearPartitionQuarantineOutcome.NotQuarantined => ReactorPartitionQuarantineClearOutcome.NotQuarantined,
+                Contracts.Observation.ClearPartitionQuarantineOutcome.Accepted => ReactorPartitionQuarantineClearOutcome.Accepted,
                 _ => ReactorPartitionQuarantineClearOutcome.Unknown
             },
             response.RetryOutcome.ToClient());

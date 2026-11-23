@@ -11,6 +11,8 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// </summary>
 /// <param name="ObserverKey">The <see cref="ObserverKey"/> of the observer the command is for.</param>
 /// <param name="Command">The <see cref="ObserverOperatorCommand"/> to carry out.</param>
+/// <param name="Partition">The partition the command is for, for the commands that are for one partition; otherwise null.</param>
+/// <param name="RetryImmediately">Whether clearing the quarantine of a partition also retries it.</param>
 /// <remarks>
 /// It is deliberately not an observer job request: it owns no part of the observer's event stream and is not subject to
 /// the ownership rules of the jobs that do. Whatever the command starts on the observer is.
@@ -19,4 +21,6 @@ namespace Cratis.Chronicle.Observation.Jobs;
 [Alias("Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandRequest")]
 public record ObserverOperatorCommandRequest(
     [Id(0)] ObserverKey ObserverKey,
-    [Id(1)] ObserverOperatorCommand Command) : IJobRequest;
+    [Id(1)] ObserverOperatorCommand Command,
+    [Id(2)] string? Partition = null,
+    [Id(3)] bool RetryImmediately = false) : IJobRequest;

@@ -21,7 +21,7 @@ public partial class Observer
     internal const string CapacityDeferral = "capacity";
 
     static readonly TimeSpan _catchUpDeferralBase = TimeSpan.FromSeconds(5);
-    static readonly TimeSpan _catchUpDeferralJitter = TimeSpan.FromSeconds(10);
+    static readonly TimeSpan _catchUpDeferralJitter = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Gets whether the observer is owned by a client application and none of its instances is connected.
@@ -53,8 +53,10 @@ public partial class Observer
     /// <returns>A lease to hold while the job is acquired, or null when the catch-up was deferred.</returns>
     /// <remarks>
     /// An observer without a client is left behind without a retry: nothing it can do now would succeed, and the client
-    /// subscribing again routes it. An observer held back by the limit settles into observing for a short, randomized
-    /// delay, like a catch-up that moved nothing, and the watchdog routes it again once the delay has passed.
+    /// subscribing again routes it. An observer held back by the limit settles into observing for a short delay, like a
+    /// catch-up that moved nothing, and the watchdog routes it again once the delay has passed. The places that come free go
+    /// to the observers furthest behind (see <see cref="CatchUpAdmission"/>); the delay is only jittered so that the held-back
+    /// observers do not all ask at the same moment.
     /// </remarks>
     async Task<IDisposable?> AdmitCatchUpOrDefer()
     {
@@ -71,7 +73,7 @@ public partial class Observer
         }
 
         var config = await configurationProvider.GetFor(_observerKey);
-        var lease = await catchUpAdmission.TryAdmit(_observerKey, config.MaxConcurrentCatchUpJobs);
+        var lease = await catchUpAdmission.TryAdmit(_observerKey, config.MaxConcurrentCatchUpJobs, await GetEventsBehind());
         if (lease is not null)
         {
             return lease;
@@ -82,6 +84,31 @@ public partial class Observer
         _catchUpBackoffUntil = DateTimeOffset.UtcNow + delay;
         await EndDeferredCatchUp(CapacityDeferral);
         return null;
+    }
+
+    async Task<ulong> GetEventsBehind()
+    {
+        try
+        {
+            var tail = await GetTailForWatchdog();
+            if (!tail.IsActualValue)
+            {
+                return 0;
+            }
+
+            var next = State.NextEventSequenceNumber;
+            if (!next.IsActualValue)
+            {
+                return tail.Value + 1;
+            }
+
+            return tail.Value >= next.Value ? tail.Value - next.Value + 1 : 0;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // How far behind it is only orders the observers; not knowing must not stop it from catching up.
+            return 0;
+        }
     }
 
     async Task EndDeferredCatchUp(string reason)

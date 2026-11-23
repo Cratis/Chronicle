@@ -2,9 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
@@ -27,15 +30,19 @@ namespace Cratis.Chronicle.Observation;
 public record FastForward(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {
     /// <summary>
-    /// Handles the command by fast forwarding the target observer grain.
+    /// Handles the command by accepting it as a job that fast forwards the target observer grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
     /// <param name="storage">The storage containing observer definitions.</param>
-    /// <returns>The <see cref="FastForwardResult"/> describing what happened.</returns>
+    /// <returns>A <see cref="FastForwardResult"/> with the outcome <see cref="FastForwardOutcome.Accepted"/>; the job reports what became of it.</returns>
+    /// <exception cref="ObserverOperatorCommandNotAccepted">The jobs manager did not accept the command.</exception>
     public async Task<FastForwardResult> Handle(IGrainFactory grainFactory, IStorage storage)
     {
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
-        return await grainFactory.GetGrain<IObserver>(key).FastForward();
+        var jobId = await ObserverOperatorCommandJobs.Accept(grainFactory, key, ObserverOperatorCommand.FastForward);
+        return jobId == JobId.NotSet
+            ? throw new ObserverOperatorCommandNotAccepted(ObserverOperatorCommand.FastForward, key)
+            : new FastForwardResult(FastForwardOutcome.Accepted, EventSequenceNumber.Unavailable, EventSequenceNumber.Unavailable);
     }
 }

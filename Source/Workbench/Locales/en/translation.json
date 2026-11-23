@@ -696,6 +696,7 @@
                         "alreadyAtTail": "'{observerId}' is already at the end of the event sequence.",
                         "replaying": "'{observerId}' is replaying and cannot be fast forwarded until the replay has completed.",
                         "notAvailable": "'{observerId}' is retired or removed and cannot be fast forwarded.",
+                        "accepted": "Fast forward of '{observerId}' was accepted. It runs as a job; see Jobs for what became of it.",
                         "failed": "Fast forward of '{observerId}' failed: {error}"
                     },
                     "removeObserver": {

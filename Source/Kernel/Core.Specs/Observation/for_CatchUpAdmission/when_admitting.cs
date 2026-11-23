@@ -16,15 +16,15 @@ public class when_admitting : given.a_catch_up_admission
     async Task Because()
     {
         RunningJobs(CatchUpOf("one"), CatchUpOf("two"));
-        _belowTheLimit = await _admission.TryAdmit(KeyOf("three"), 3);
+        _belowTheLimit = await _admission.TryAdmit(KeyOf("three"), 3, 0);
         _belowTheLimit?.Dispose();
 
-        _atTheLimit = await _admission.TryAdmit(KeyOf("three"), 2);
-        _alreadyCatchingUp = await _admission.TryAdmit(KeyOf("one"), 2);
-        _withoutLimit = await _admission.TryAdmit(KeyOf("three"), 0);
+        _atTheLimit = await _admission.TryAdmit(KeyOf("three"), 2, 0);
+        _alreadyCatchingUp = await _admission.TryAdmit(KeyOf("one"), 2, 0);
+        _withoutLimit = await _admission.TryAdmit(KeyOf("three"), 0, 0);
 
         RunningJobs(CatchUpOf("one", JobStatus.Stopped), CatchUpOf("two", JobStatus.Stopped));
-        _whileOthersAreStopped = await _admission.TryAdmit(KeyOf("three"), 2);
+        _whileOthersAreStopped = await _admission.TryAdmit(KeyOf("three"), 2, 0);
     }
 
     [Fact] void should_admit_below_the_limit() => _belowTheLimit.ShouldNotBeNull();

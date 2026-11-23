@@ -37,4 +37,14 @@ public class ObserverOperatorCommandStepState : JobStepState
     /// Gets or sets the command to carry out.
     /// </summary>
     public ObserverOperatorCommand Command { get; set; }
+
+    /// <summary>
+    /// Gets or sets the partition the command is for, for the commands that are for one partition; otherwise empty.
+    /// </summary>
+    public string Partition { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets whether clearing the quarantine of a partition also retries it.
+    /// </summary>
+    public bool RetryImmediately { get; set; }
 }

@@ -16,6 +16,7 @@ public class and_the_failed_partition_is_retried(context context) : Given<contex
     public class context(given.QuarantineRecoveryFixture fixture) : given.a_quarantined_reactor(fixture)
     {
         public ReactorPartitionRetryOutcome RefusedOutcome;
+        public Job? RefusedJob;
         public ReactorPartitionRetryOutcome Outcome;
         public IEnumerable<Job> RetryJobs;
         public ReactorState State;
@@ -26,6 +27,7 @@ public class and_the_failed_partition_is_retried(context context) : Given<contex
         async Task Establish()
         {
             RefusedOutcome = await RetryFailedPartition();
+            RefusedJob = await WaitForOperatorCommandJobToFinish(TimeSpan.FromSeconds(30));
             Reactor.Mode = given.QuarantineRecoveryReactor.RecoveryMode.BlockUntilReleased;
         }
 
@@ -36,7 +38,7 @@ public class and_the_failed_partition_is_retried(context context) : Given<contex
                 await ClearObserverQuarantine();
                 await _handler.WaitTillActive(TimeSpan.FromSeconds(30));
                 Outcome = await RetryFailedPartition();
-                RetryJobs = await GetRetryJobs();
+                RetryJobs = await GetRetryJobs(TimeSpan.FromSeconds(30));
                 Reactor.Release();
                 await Reactor.RetryHandled.Task.WaitAsync(TimeSpan.FromSeconds(30));
                 var appended = await _store.EventLog.Append("after-recovery", new given.QuarantineRecoveryEvent("after"));
@@ -51,8 +53,9 @@ public class and_the_failed_partition_is_retried(context context) : Given<contex
         }
     }
 
-    [Fact] void should_have_refused_the_retry_before_clearing() => Context.RefusedOutcome.ShouldEqual(ReactorPartitionRetryOutcome.ObserverQuarantined);
-    [Fact] void should_start_the_retry_after_clearing() => Context.Outcome.ShouldEqual(ReactorPartitionRetryOutcome.Started);
+    [Fact] void should_have_accepted_the_retry_before_clearing() => Context.RefusedOutcome.ShouldEqual(ReactorPartitionRetryOutcome.Accepted);
+    [Fact] void should_have_failed_the_job_of_that_retry_before_clearing() => Context.RefusedJob?.Status.ShouldEqual(JobStatus.CompletedWithFailures);
+    [Fact] void should_accept_the_retry_after_clearing() => Context.Outcome.ShouldEqual(ReactorPartitionRetryOutcome.Accepted);
     [Fact] void should_have_a_retry_job() => Context.RetryJobs.ShouldNotBeEmpty();
     [Fact] void should_be_active() => Context.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_be_subscribed() => Context.State.IsSubscribed.ShouldBeTrue();

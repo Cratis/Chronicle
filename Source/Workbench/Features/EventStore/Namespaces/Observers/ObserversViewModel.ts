@@ -198,6 +198,8 @@ export class ObserversViewModel {
                 return fastForwardStrings.replaying;
             case FastForwardOutcome.notAvailable:
                 return fastForwardStrings.notAvailable;
+            case FastForwardOutcome.accepted:
+                return fastForwardStrings.accepted;
             default:
                 return undefined;
         }
