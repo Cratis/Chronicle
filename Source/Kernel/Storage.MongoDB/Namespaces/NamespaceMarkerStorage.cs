@@ -50,14 +50,15 @@ public sealed class NamespaceMarkerStorage(IMongoCollection<BsonDocument> collec
     /// <summary>Writes the real conflict revision inside the caller's event/receipt transaction; never upserts.</summary>
     /// <param name="session">An active transaction on this namespace's client, with majority commit acknowledgement.</param>
     /// <param name="expected">The exact supplied incarnation.</param>
+    /// <param name="cancellationToken">Cancellation for the calling activation.</param>
     /// <returns>True only when exactly one open marker was changed.</returns>
     /// <exception cref="InvalidOperationException">The caller did not start a transaction.</exception>
-    public async Task<bool> TryFence(IClientSessionHandle session, NamespaceIncarnationId expected)
+    public async Task<bool> TryFence(IClientSessionHandle session, NamespaceIncarnationId expected, CancellationToken cancellationToken = default)
     {
         if (expected.Value == Guid.Empty) return false;
         if (!session.IsInTransaction) throw new InvalidOperationException("A namespace fence requires an active event transaction.");
         var filter = Identity(expected) & Builders<BsonDocument>.Filter.Eq("isOpen", true);
-        var result = await _collection.UpdateOneAsync(session, filter, Builders<BsonDocument>.Update.Inc("revision", 1L), new UpdateOptions { IsUpsert = false });
+        var result = await _collection.UpdateOneAsync(session, filter, Builders<BsonDocument>.Update.Inc("revision", 1L), new UpdateOptions { IsUpsert = false }, cancellationToken);
         return Changed(result);
     }
 
