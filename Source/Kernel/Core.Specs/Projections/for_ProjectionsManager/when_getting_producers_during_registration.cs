@@ -17,8 +17,9 @@ public class when_getting_producers_during_registration : given.a_projections_ma
     void Establish()
     {
         _incoming = CreateDefinition("in-flight", "read-model") with { EventSequenceId = "system" };
+        _readModelDefinitions = [CreateReadModelDefinition(_incoming.ReadModel)];
         _namespacesReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _namespaces.GetAll().Returns(_namespacesReady.Task);
+        _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([]), _namespacesReady.Task);
         _eventStoreStorage.Projections.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns([]);
     }
 
@@ -27,6 +28,7 @@ public class when_getting_producers_during_registration : given.a_projections_ma
         var registration = _grain.Register([_incoming]);
         try
         {
+            while (_namespaces.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(_namespaces.GetAll)) < 2) await Task.Yield();
             _result = await _grain.GetProducersFor("read-model", null);
         }
         finally
