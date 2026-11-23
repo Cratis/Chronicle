@@ -92,6 +92,14 @@ public interface IEventSequences
     [Operation]
     Task<CommandResult<AppendOnceResponse>> AppendOnceWithNamedTags(AppendOnceWithNamedTagsRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the AppendToNamespace command.
+    /// </summary>
+    /// <param name = "request">The AppendToNamespace request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<AppendResponse>> AppendToNamespace(AppendToNamespaceRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the AppendWithNamedTags command.
     /// </summary>
     /// <param name = "request">The AppendWithNamedTags request.</param>
@@ -430,6 +438,12 @@ public class AppendRequest
     /// </summary>
     [ProtoMember(18)]
     public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ExpectedIncarnation.
+    /// </summary>
+    [ProtoMember(19)]
+    public Guid? ExpectedIncarnation { get; set; }
 }
 
 /// <summary>
@@ -1447,6 +1461,133 @@ public class AppendOnceWithNamedTagsRequest
 }
 
 /// <summary>
+/// Represents the AppendToNamespaceRequest message.
+/// </summary>
+[ProtoContract]
+public class AppendToNamespaceRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ExpectedIncarnation.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid ExpectedIncarnation { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the EventSequenceId.
+    /// </summary>
+    [ProtoMember(4)]
+    public string EventSequenceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceId.
+    /// </summary>
+    [ProtoMember(5)]
+    public string EventSourceId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventSourceType.
+    /// </summary>
+    [ProtoMember(6)]
+    public string EventSourceType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventStreamType.
+    /// </summary>
+    [ProtoMember(7)]
+    public string EventStreamType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventStreamId.
+    /// </summary>
+    [ProtoMember(8)]
+    public string EventStreamId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventType.
+    /// </summary>
+    [ProtoMember(9)]
+    public global::Cratis.Chronicle.Contracts.Sequences.EventType EventType { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Content.
+    /// </summary>
+    [ProtoMember(10)]
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the CorrelationId.
+    /// </summary>
+    [ProtoMember(11)]
+    public Guid? CorrelationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Tags.
+    /// </summary>
+    [ProtoMember(12)]
+    public IEnumerable<string>? Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Occurred.
+    /// </summary>
+    [ProtoMember(13)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset Occurred { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Subject.
+    /// </summary>
+    [ProtoMember(14)]
+    public string? Subject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Causation.
+    /// </summary>
+    [ProtoMember(15)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.Causation>? Causation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CausedBy.
+    /// </summary>
+    [ProtoMember(16)]
+    public global::Cratis.Chronicle.Contracts.Sequences.Identity? CausedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ConcurrencyScope.
+    /// </summary>
+    [ProtoMember(17)]
+    public global::Cratis.Chronicle.Contracts.Sequences.ConcurrencyScope? ConcurrencyScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EventSource.
+    /// </summary>
+    [ProtoMember(18)]
+    public string? EventSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the EffectReceipt.
+    /// </summary>
+    [ProtoMember(19)]
+    public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the NamedTags.
+    /// </summary>
+    [ProtoMember(20)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Sequences.NamedTag>? NamedTags { get; set; }
+}
+
+/// <summary>
 /// Represents the AppendWithNamedTagsRequest message.
 /// </summary>
 [ProtoContract]
@@ -1565,6 +1706,12 @@ public class AppendWithNamedTagsRequest
     /// </summary>
     [ProtoMember(19)]
     public global::Cratis.Chronicle.Contracts.Occurrences.EffectReceipt? EffectReceipt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ExpectedIncarnation.
+    /// </summary>
+    [ProtoMember(20)]
+    public Guid? ExpectedIncarnation { get; set; }
 }
 
 /// <summary>
