@@ -40,8 +40,8 @@ public class Observers
     /// <summary>
     /// Gets the maximum number of gRPC reactor and reducer registrations running concurrently on a silo.
     /// </summary>
-    /// <remarks>Defaults to 0 (unlimited). Values below 1 disable the gate. Does not limit event append or observer delivery.</remarks>
-    public int MaxConcurrentRegistrations { get; init; }
+    /// <remarks>Defaults to 16, so a client registering thousands of observers at once is admitted gradually. Values below 1 disable the gate. Does not limit event append or observer delivery.</remarks>
+    public int MaxConcurrentRegistrations { get; init; } = 16;
 
     /// <summary>
     /// Gets the maximum number of projection subscriptions and failed-partition recoveries running concurrently on a silo.
