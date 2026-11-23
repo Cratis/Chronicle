@@ -3,9 +3,9 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Sinks;
 using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -55,7 +55,7 @@ internal sealed class ReadModelProvenance(IStorage storage, EventStoreName event
 
     async Task Check(EventStoreNamespaceName @namespace, ReadModelDefinition definition)
     {
-        if (definition.Sink.Type == SinkTypeId.None) return;
+        if (SinkProvenanceExemptions.IsNonDatabase(definition.Sink.Type)) return;
         if (await _storage.GetNamespace(@namespace).Sinks.GetProvenance(definition).IsQuarantined())
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
@@ -73,7 +73,7 @@ internal sealed class ReadModelProvenance(IStorage storage, EventStoreName event
     async Task Mark(EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> candidates)
     {
         var sinks = _storage.GetNamespace(@namespace).Sinks;
-        foreach (var definition in candidates.Where(_ => _.Sink.Type != SinkTypeId.None))
+        foreach (var definition in candidates.Where(_ => !SinkProvenanceExemptions.IsNonDatabase(_.Sink.Type)))
         {
             await sinks.GetProvenance(definition).MarkQuarantined();
         }

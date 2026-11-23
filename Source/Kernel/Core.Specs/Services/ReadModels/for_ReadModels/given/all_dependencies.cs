@@ -120,18 +120,18 @@ public class all_dependencies : Specification
     }
 
     protected ReadModels CreateService(IReadModelSinkProvenance provenance) => new(
-            _grainFactory,
-            _storage,
-            _readBindings,
-            _expandoObjectConverter,
-            _reducerMediator,
-            _changesetMediator,
-            _localSiloDetails,
-            _complianceHelper,
-            _materializedReadModels,
-            new JsonSerializerOptions(),
-            NamespaceCasingContext.Create(),
-            provenance);
+        _grainFactory,
+        _storage,
+        _readBindings,
+        _expandoObjectConverter,
+        _reducerMediator,
+        _changesetMediator,
+        _localSiloDetails,
+        _complianceHelper,
+        _materializedReadModels,
+        new JsonSerializerOptions(),
+        NamespaceCasingContext.Create(),
+        provenance);
 
     void ConfigureJsonCompliance()
     {

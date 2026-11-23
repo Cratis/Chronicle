@@ -68,7 +68,8 @@ public class a_composed_watch_topology : for_ReadModels.given.all_dependencies
             _complianceHelper,
             _materializedReadModels,
             new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
         _service = _readModels;
     }
 

@@ -4,7 +4,7 @@
 namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
-/// Preserves ordinary custom sinks while refusing protected producers without durable provenance support.
+/// Refuses admission when a database provider cannot determine durable provenance.
 /// </summary>
 internal sealed class UnsupportedSinkProvenanceStorage : ISinkProvenanceStorage
 {
@@ -14,7 +14,7 @@ internal sealed class UnsupportedSinkProvenanceStorage : ISinkProvenanceStorage
     internal static readonly UnsupportedSinkProvenanceStorage Instance = new();
 
     /// <inheritdoc/>
-    public Task<bool> IsQuarantined() => Task.FromResult(false);
+    public Task<bool> IsQuarantined() => Task.FromResult(true);
 
     /// <inheritdoc/>
     public Task MarkQuarantined() => throw new NotSupportedException("Read-model storage is not available.");

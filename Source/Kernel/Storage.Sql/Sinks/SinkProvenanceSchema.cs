@@ -102,13 +102,7 @@ internal static class SinkProvenanceSchema
         var databaseType = context.Database.GetDatabaseType();
         _ = Schema(databaseType);
         if (SinkCycleReceiptSchema.IsVerify(context)) return;
-        var sql = databaseType switch
-        {
-            DatabaseType.PostgreSql => "CREATE TABLE IF NOT EXISTS public.\"__cratis_sink_provenance\" (\"Id\" varchar(200) PRIMARY KEY, \"Version\" integer NOT NULL, \"Restricted\" boolean NOT NULL)",
-            DatabaseType.SqlServer => "IF OBJECT_ID(N'dbo.__cratis_sink_provenance', N'U') IS NULL CREATE TABLE [dbo].[__cratis_sink_provenance] ([Id] nvarchar(200) NOT NULL PRIMARY KEY, [Version] int NOT NULL, [Restricted] bit NOT NULL)",
-            DatabaseType.Sqlite => "CREATE TABLE IF NOT EXISTS [main].[__cratis_sink_provenance] ([Id] TEXT NOT NULL PRIMARY KEY, [Version] INTEGER NOT NULL, [Restricted] INTEGER NOT NULL)",
-            _ => throw new InvalidOperationException("Read-model storage is not available.")
-        };
+        var sql = CreateTable(databaseType);
         try
         {
             await context.Database.ExecuteSqlRawAsync(sql);
@@ -122,4 +116,12 @@ internal static class SinkProvenanceSchema
             // PostgreSQL can race on the table or its catalog type; the typed read must still succeed.
         }
     }
+
+    static string CreateTable(DatabaseType databaseType) => databaseType switch
+    {
+        DatabaseType.PostgreSql => "CREATE TABLE IF NOT EXISTS public.\"__cratis_sink_provenance\" (\"Id\" varchar(200) PRIMARY KEY, \"Version\" integer NOT NULL, \"Restricted\" boolean NOT NULL)",
+        DatabaseType.SqlServer => "IF OBJECT_ID(N'dbo.__cratis_sink_provenance', N'U') IS NULL CREATE TABLE [dbo].[__cratis_sink_provenance] ([Id] nvarchar(200) NOT NULL PRIMARY KEY, [Version] int NOT NULL, [Restricted] bit NOT NULL)",
+        DatabaseType.Sqlite => "CREATE TABLE IF NOT EXISTS [main].[__cratis_sink_provenance] ([Id] TEXT NOT NULL PRIMARY KEY, [Version] INTEGER NOT NULL, [Restricted] INTEGER NOT NULL)",
+        _ => throw new InvalidOperationException("Read-model storage is not available.")
+    };
 }

@@ -88,7 +88,8 @@ public class and_protected_plaintext_has_cipher_shape : given.all_dependencies
             _compliance,
             _materializedReadModels,
             new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
     }
 
     async Task Because()

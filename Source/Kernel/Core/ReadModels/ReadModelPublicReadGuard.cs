@@ -3,6 +3,9 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Security;
+using Cratis.Chronicle.Storage.Sinks;
+using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -27,6 +30,11 @@ public static class ReadModelPublicReadGuard
         EventStoreNamespaceName @namespace,
         ReadModelDefinition definition)
     {
+        if (!SinkProvenanceExemptions.AllowsPublicReads(definition.Sink.Type))
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
+        }
+
         await provenance.EnsureReadable(eventStore, @namespace, definition);
         await ReadModelReadPolicy.EnsureReadable(grains, eventStore, definition);
     }

@@ -64,7 +64,8 @@ public class when_creating_a_stored_global_kernel_projection : Specification
             formats,
             Substitute.For<IReadModelsCompliance>(),
             Options.Create(new ChronicleOptions()),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            Substitute.For<IReadModelSinkProvenance>());
         await pipelines.GetFor(_eventStore, _namespace, _projection);
     }
 

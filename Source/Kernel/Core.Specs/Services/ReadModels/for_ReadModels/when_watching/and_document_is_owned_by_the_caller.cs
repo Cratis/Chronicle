@@ -79,7 +79,8 @@ public class and_document_is_owned_by_the_caller : given.all_dependencies
                 _expandoObjectConverter),
             _materializedReadModels,
             new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
     }
 
     async Task Because()

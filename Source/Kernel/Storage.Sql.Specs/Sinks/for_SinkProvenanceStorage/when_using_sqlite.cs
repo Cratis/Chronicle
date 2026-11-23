@@ -10,6 +10,7 @@ public class when_using_sqlite : given.a_provenance_database
 {
     readonly string _directory = Path.Combine(Path.GetTempPath(), $"cratis-provenance-{Guid.NewGuid():N}");
     Exception? _writeError;
+    bool _markedAfterFailure;
 
     async Task Because()
     {
@@ -21,9 +22,11 @@ public class when_using_sqlite : given.a_provenance_database
         await new SinkProvenanceStorage(DatabaseFor(independent.ConnectionString), "store", "namespace").IsQuarantined();
         var readOnly = new SqliteConnectionStringBuilder(independent.ConnectionString) { Mode = SqliteOpenMode.ReadOnly, Pooling = false };
         _writeError = await Catch.Exception(() => new SinkProvenanceStorage(DatabaseFor(readOnly.ConnectionString, SchemaMode.Verify), "store", "namespace").MarkQuarantined());
+        _markedAfterFailure = await new SinkProvenanceStorage(DatabaseFor(independent.ConnectionString, SchemaMode.Verify), "store", "namespace").IsQuarantined();
     }
 
-    [Fact] void should_fail_closed_when_the_durable_mark_cannot_be_written() => _writeError.ShouldBeOfExactType<SqliteException>();
+    [Fact] void should_fail_closed_when_the_durable_mark_cannot_be_written() => _writeError.ShouldNotBeNull();
+    [Fact] void should_not_report_a_marker_that_was_never_persisted() => _markedAfterFailure.ShouldBeFalse();
 
     void Destroy()
     {

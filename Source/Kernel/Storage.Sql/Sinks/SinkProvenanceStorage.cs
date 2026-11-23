@@ -73,12 +73,13 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
     {
         var rows = await context.Entries.FromSqlRaw(SinkProvenanceSchema.Select(context.Database.GetDatabaseType())).AsNoTracking().Take(2).ToListAsync();
         if (rows.Count == 0) return false;
-        if (rows.Count != 1 || rows[0]["Id"] is not string id || id != Marker ||
-            rows[0]["Version"] is not int version || version != 1 || rows[0]["Restricted"] is not true)
+        if (rows.Count != 1 || !IsMarker(rows[0]))
         {
             throw new InvalidOperationException("Read-model storage is not available.");
         }
 
         return true;
     }
+
+    static bool IsMarker(DynamicReadModelEntity row) => (row["Id"], row["Version"], row["Restricted"]) is (Marker, 1, true);
 }

@@ -154,6 +154,10 @@ public class ReadModelDbContext(
         optionsBuilder.ReplaceService<IModelCacheKeyFactory, ReadModelCacheKeyFactory>();
     }
 
+    string? TableSchema(DatabaseType databaseType) => tableName == Storage.Sinks.SinkProvenanceNames.Metadata
+        ? Sinks.SinkProvenanceSchema.Schema(databaseType)
+        : null;
+
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -176,9 +180,7 @@ public class ReadModelDbContext(
         })
         .SharedTypeEntity<DynamicReadModelEntity>(tableName, entity =>
         {
-            entity.ToTable(tableName, tableName == Storage.Sinks.SinkProvenanceNames.Metadata
-                ? Sinks.SinkProvenanceSchema.Schema(databaseType)
-                : null);
+            entity.ToTable(tableName, TableSchema(databaseType));
 
             ProjectedColumn? keyColumn = null;
             foreach (var column in columns)

@@ -70,14 +70,14 @@ public class a_materializing_pipeline_manager : a_projection_with_generations
     }
 
     protected ProjectionPipelineManager CreateManager(IReadModelSinkProvenance provenance) => new(
-            _managerStorage,
-            _grainFactory,
-            new ObjectComparer(),
-            new TypeFormats(),
-            Substitute.For<IReadModelsCompliance>(),
-            Options.Create(new Configuration.ChronicleOptions()),
-            NullLoggerFactory.Instance,
-            provenance);
+        _managerStorage,
+        _grainFactory,
+        new ObjectComparer(),
+        new TypeFormats(),
+        Substitute.For<IReadModelsCompliance>(),
+        Options.Create(new Configuration.ChronicleOptions()),
+        NullLoggerFactory.Instance,
+        provenance);
 
     protected void ClearSharedCalls()
     {

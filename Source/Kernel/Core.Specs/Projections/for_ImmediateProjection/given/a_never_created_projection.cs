@@ -66,7 +66,8 @@ public class a_never_created_projection : an_immediate_projection
             compliance,
             Substitute.For<IMaterializedReadModelStore>(),
             new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            Substitute.For<IReadModelSinkProvenance>());
     }
 
     protected async Task Read()
