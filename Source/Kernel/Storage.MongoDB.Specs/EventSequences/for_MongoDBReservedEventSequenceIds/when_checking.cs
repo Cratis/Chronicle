@@ -25,6 +25,12 @@ public class when_checking : Specification
     [InlineData("orders+closed_streams")]
     [InlineData("event-log+constraint")]
     [InlineData("orders+email+values+constraint")]
+    [InlineData("uc+authorities+uc2")]
+    [InlineData("uc+bindings+uc2")]
+    [InlineData("uc+0123456789abcdef0123456789abcdef0123456789abcdef+uc2")]
+    [InlineData("uc+0123456789abcdef0123456789abcdef0123456789abcdef+uc2v")]
+    [InlineData("UC+Authorities+UC2")]
+    [InlineData("Uc+0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF+Uc2V")]
     void should_reserve(string id) => IsReserved(id).ShouldBeTrue();
 
     [Theory]
@@ -34,5 +40,9 @@ public class when_checking : Specification
     [InlineData("orders-changes")]
     [InlineData("price-changes")]
     [InlineData("chronicle_capability_probes")]
+    [InlineData("orders+uc2-archive")]
+    [InlineData("orders+uc2")]
+    [InlineData("orders+uc2v")]
+    [InlineData("uc+orders")]
     void should_not_reserve(string id) => IsReserved(id).ShouldBeFalse();
 }

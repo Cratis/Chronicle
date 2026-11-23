@@ -21,7 +21,8 @@ Check package versions and the actual configuration/TFM; the 4.x migration check
 below applies only when migrating, not as a prerequisite to running an existing suite.
 
 Sources: [Running specifications fast](https://github.com/Cratis/Specifications/blob/main/Documentation/running-fast.md),
-[The native runner](https://github.com/Cratis/Specifications/blob/main/Documentation/runner.md) and
+[The native runner](https://github.com/Cratis/Specifications/blob/main/Documentation/runner.md),
+[Phase timings](https://github.com/Cratis/Specifications/blob/main/Documentation/phase-timings.md) and
 [Upgrading to 5.0](https://github.com/Cratis/Specifications/blob/main/Documentation/upgrading-5.0.md).
 
 ## Project shape
@@ -45,9 +46,10 @@ is a worked example, including the CI step that runs the built executable.
 
 ## Local loop
 
-An xUnit v3 suite costs about 4.5 times more CPU through `dotnet test` than as the
-built executable (indicative, from the upstream benchmark). Restore and build once,
-then run the executable:
+In the upstream reported benchmark of 1,500 trivial tests on a loaded Mac, an
+xUnit v3 suite used about 4.5 times more CPU through `dotnet test` than as the
+built executable. This is a measurement, not a universal ratio. Restore and build
+once, then run the executable:
 
 ```bash
 dotnet restore Source/MyProject.Specs
@@ -84,6 +86,62 @@ time; an individual fact's duration is not its isolated startup cost. Keep packa
 versions, configuration, filters, concurrency/shards and machine fixed; preserve
 discovered/passed/failed/skipped counts and investigate any change. Do not count
 restore/build time as test execution or repeat unchanged runs merely for reassurance.
+
+### Diagnose before changing the harness
+
+Measure the existing suite before a rewrite. Separate restore/build, runner
+startup/discovery and reporting from specification execution. Phase timings do
+not measure total process startup or discovery; compare launch wall time separately.
+For repeated local runs, use the built executable rather than repeatedly invoking
+`dotnet test`/MSBuild. Keep the evaluated runner and its supported flags.
+
+Enable phase diagnostics without changing pass/fail behavior. This example assumes
+the Release/net10.0 executable built above and runs from the repository root:
+
+```bash
+mkdir -p .ai-work/spec-timings
+CRATIS_SPECS_TIMINGS=1 CRATIS_SPECS_TIMINGS_FILE="$PWD/.ai-work/spec-timings/phases.json" \
+    ./Source/MyProject.Specs/bin/Release/net10.0/MyProject.Specs
+```
+
+Alternatively, set `<CratisSpecificationsPhaseTimings>true</CratisSpecificationsPhaseTimings>`
+in the project. Slow phases default to a 1,000 ms threshold; set
+`<CratisSpecificationsSlowPhaseThreshold>500</CratisSpecificationsSlowPhaseThreshold>`
+for a 500 ms diagnostic threshold, not a performance budget. The JSON file records
+`Establish`, `Because` and `Destroy` durations; native-runner output also records
+facts. Other frameworks time facts through their own runner output. Timings are
+off by default, additive when enabled, and never change whether a spec passes.
+
+| Cost observed | Next check |
+| --- | --- |
+| Restore/build | Keep it outside the execution comparison; restore/build once for the local loop. |
+| Runner startup/discovery | Compare the built executable's launch path, not just fact durations. |
+| Repeated `Establish`/`Because` | Check shared lifecycle eligibility and opt-outs before changing packages. |
+| Scenario setup/action | Identify pipeline, mapping or append-time proof a plain call cannot provide. |
+| Slow fact | Keep assertions read-only; inspect the measured operation rather than adding sleeps. |
+| `Destroy` | Measure disposal/cleanup separately from setup and action. |
+
+Specifications 5 shares eligible xUnit v2/v3 lifecycle by default. `Establish` and
+`Because` run once per class; facts only read that shared context. Repeating a
+200 ms `Because` across five facts costs about 1 s instead of about 200 ms in
+this illustrative calculation, before other costs. Remove accidental opt-outs
+rather than weakening assertions; retain `[PerFactSpecificationLifecycle]` only
+where mutation genuinely cannot move into `Because`.
+
+Record a before/after comparison, not a claimed universal timing:
+
+| Field | Keep or report |
+| --- | --- |
+| Environment | Machine, package versions, configuration/TFM, launch command, filters and unchanged concurrency/shards. |
+| Coverage | Discovered, passed, failed and skipped counts plus the class/method list; investigate any difference. |
+| Execution | Suite wall time, class totals and phase/fact durations in separate result files. |
+| Change | Name the removed repeated cost or the extra framework proof that justifies scenario cost. |
+
+Do not merge unrelated behaviors, remove facts or turn off production guards to
+meet a timing target. One class per declarative read model remains the default:
+share a meaningful event sequence, capture intermediate states and assert them
+with many read-only facts; add a class only for a sequence that cannot share it.
+A slow mandatory scenario is an upstream harness gap, not permission to drop proof.
 
 ## Filters
 

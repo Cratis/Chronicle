@@ -67,22 +67,28 @@ else
 fi
 
 # One record per line. Fields separated by US (0x1f); list members inside a field by SOH (0x01).
-# `join` is used instead of @tsv because @tsv escapes backslashes, which would corrupt regexes.
-records="$(printf '%s' "$merged" | jq -r '
+# Raw output preserves regex backslashes (@tsv would escape them). Emit list members separately:
+# jq join repeatedly copies its growing string, making large glob lists quadratic.
+records="$(printf '%s' "$merged" | jq -j '
+    def emit_joined($separator):
+        . as $items
+        | range(0; length) as $index
+        | (if $index > 0 then $separator else "" end),
+          ([$items[$index]] | join(""));
     .patterns // []
     | map(select((.enabled // true) == true))
     | .[]
-    | [ .id,
-        .pattern,
-        .message,
-        (.rule // ""),
-        ((.paths // ["**/*"]) | join("")),
-        ((.exclude_paths // []) | join("")),
-        ((.requires_in_file // []) | join("")),
-        ((.absent_in_file // []) | join("")),
-        (.within_type_attribute // ""),
-        ((.join_lines // 1) | tostring) ]
-    | join("")
+    | [ ([ .id, .pattern, .message, (.rule // "") ] | join("")),
+        ([ (.paths // ["**/*"]),
+           (.exclude_paths // []),
+           (.requires_in_file // []),
+           (.absent_in_file // []) ]
+         | .[] | "", emit_joined("")),
+        "",
+        ([ (.within_type_attribute // ""),
+           ((.join_lines // 1) | tostring) ] | join("")),
+        "\n" ]
+    | .[]
 ' 2>/dev/null || true)"
 [ -n "$records" ] || exit 0
 

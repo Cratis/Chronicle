@@ -241,13 +241,14 @@ public static class ProjectionEventContextExtensions
     {
         return observable.Do(_ =>
         {
-            var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
-            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+            var resolvedChildrenProperty = ResolvedCollectionPath.ForChild(childrenProperty, _.Key.ArrayIndexers);
+            var items = _.Changeset.InitialState.EnsureCollection<object>(resolvedChildrenProperty, _.Key.ArrayIndexers);
+            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(resolvedChildrenProperty);
             if (identifiedByProperty.IsSet &&
                 items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
             {
                 _.Changeset.RemoveChild(
-                    childrenProperty,
+                    resolvedChildrenProperty,
                     identifiedByProperty,
                     childrenPropertyIndexer.Identifier,
                     _.Key.ArrayIndexers);
@@ -350,6 +351,7 @@ public static class ProjectionEventContextExtensions
         ExpandoObject? childInitialState,
         ChildrenOrdering? ordering)
     {
+        childrenProperty = ResolvedCollectionPath.ForChild(childrenProperty, context.Key.ArrayIndexers);
         if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
         {
             return;
