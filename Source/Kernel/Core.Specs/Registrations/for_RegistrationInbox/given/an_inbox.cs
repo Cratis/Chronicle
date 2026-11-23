@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage;
-using Cratis.Chronicle.Storage.Registrations;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
@@ -24,6 +23,7 @@ public class an_inbox : Specification
     protected ManualTimeProvider _clock;
     protected IProjectionsManager _manager;
     protected IEventStoreStorage _eventStoreStorage;
+    protected IRegistrationBacklog _backlog;
 
     protected virtual ChronicleOptions Options => new() { Registration = new() { MaxApplyAttempts = 2, ApplyRetryDelaySeconds = 5 } };
 
@@ -36,6 +36,8 @@ public class an_inbox : Specification
         _manager = Substitute.For<IProjectionsManager>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _eventStoreStorage.RegistrationIntents.Returns(_intents);
+        _backlog = Substitute.For<IRegistrationBacklog>();
+        _silo.AddService(_backlog);
 
         var storage = Substitute.For<IStorage>();
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);

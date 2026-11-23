@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.Jobs;
+using Cratis.Chronicle.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences.Migrations;
@@ -29,8 +30,16 @@ public class MigrateExistingEventsForType(
     protected override JobDetails GetJobDetails() => $"Migrate events for type {Request.EventTypeId}";
 
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "migrate_existing_events_for_type");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "migrate_existing_events_for_type", State.Progress);
         if (AllStepsCompletedSuccessfully)
         {
             logger.MigrationCompleted(Request.EventTypeId);

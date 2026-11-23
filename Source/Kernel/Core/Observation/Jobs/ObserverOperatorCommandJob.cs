@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.Jobs;
+using Cratis.Chronicle.Jobs;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -21,6 +22,20 @@ public class ObserverOperatorCommandJob : Job<ObserverOperatorCommandRequest, Jo
     /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ObserverOperatorCommandRequest request) =>
         Task.FromResult<IImmutableList<JobStepDetails>>([CreateStep<IObserverOperatorCommandStep>(request)]);
+
+    /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "operator_command");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnAllStepsCompleted()
+    {
+        JobFailures.Completed(ServiceProvider, "operator_command", State.Progress);
+        return base.OnAllStepsCompleted();
+    }
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"{Request.Command} {Request.ObserverKey.ObserverId}";

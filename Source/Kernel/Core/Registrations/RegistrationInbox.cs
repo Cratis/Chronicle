@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Registrations;
 /// <param name="logger">The logger.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/>. Defaults to the system clock.</param>
 /// <param name="supervisor">The optional <see cref="ISiloSupervisor"/> that resumes unapplied registrations on a schedule.</param>
+/// <param name="backlog">The optional <see cref="IRegistrationBacklog"/> that publishes how many registrations wait, and for how long.</param>
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "No wait handle is used; the source is only cancelled on deactivation.")]
 public class RegistrationInbox(
     IStorage storage,
@@ -31,13 +32,15 @@ public class RegistrationInbox(
     IOptions<ChronicleOptions> options,
     ILogger<RegistrationInbox> logger,
     TimeProvider? timeProvider = null,
-    ISiloSupervisor? supervisor = null) : Grain, IRegistrationInbox
+    ISiloSupervisor? supervisor = null,
+    IRegistrationBacklog? backlog = null) : Grain, IRegistrationInbox
 {
     static readonly TimeSpan _resumeInterval = TimeSpan.FromSeconds(30);
 
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly Dictionary<(RegistrationKind Kind, string Key), RegistrationIntent> _intents = [];
     readonly Dictionary<(RegistrationKind Kind, string Key), DateTimeOffset> _retryAt = [];
+    readonly Dictionary<(RegistrationKind Kind, string Key), DateTimeOffset> _pendingSince = [];
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "No wait handle is used; the source is only cancelled on deactivation.")]
     readonly CancellationTokenSource _stopping = new();
     EventStoreName _eventStore = EventStoreName.NotSet;
@@ -56,6 +59,10 @@ public class RegistrationInbox(
         {
             _intents[(intent.Kind, intent.Key)] = intent;
             _revision = Math.Max(_revision, intent.Revision);
+            if (intent.State == RegistrationIntentState.Pending)
+            {
+                _pendingSince[(intent.Kind, intent.Key)] = intent.UpdatedAt;
+            }
         }
 
         // One supervisor loop per silo resumes what a lost silo left unapplied; the grain arms no timer of its own.
@@ -74,6 +81,7 @@ public class RegistrationInbox(
                 null);
         }
 
+        ReportBacklog();
         var pending = _intents.Values.Count(intent => intent.State == RegistrationIntentState.Pending);
         if (pending > 0)
         {
@@ -86,6 +94,7 @@ public class RegistrationInbox(
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         supervisor?.Unregister(_supervisionKey);
+        backlog?.Forget(_eventStore);
         await _stopping.CancelAsync();
     }
 
@@ -132,7 +141,11 @@ public class RegistrationInbox(
         await _storage.Save(intent);
         _revision = intent.Revision;
         _intents[slot] = intent;
+
+        // A registration this one supersedes has been waiting since it was accepted, and so has the registrant.
+        _pendingSince.TryAdd(slot, intent.UpdatedAt);
         _retryAt.Remove(slot);
+        ReportBacklog();
         logger.Accepted(_eventStore, intent.Kind, intent.Revision, registrantName);
         StartWorker();
         return new RegistrationAcceptance(intent.Revision, intent.State);
@@ -256,6 +269,9 @@ public class RegistrationInbox(
         await Record(updated);
     }
 
+    void ReportBacklog() =>
+        backlog?.Report(_eventStore, _pendingSince.Count, _pendingSince.Count == 0 ? null : _pendingSince.Values.Min());
+
     async Task Record(RegistrationIntent outcome)
     {
         var slot = (outcome.Kind, outcome.Key);
@@ -267,6 +283,12 @@ public class RegistrationInbox(
         }
 
         _intents[slot] = outcome;
+        if (outcome.State != RegistrationIntentState.Pending)
+        {
+            _pendingSince.Remove(slot);
+        }
+
+        ReportBacklog();
         try
         {
             await _storage.Save(outcome);
