@@ -36,9 +36,9 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
 /// <param name="loggerFactory"><see cref="ILoggerFactory"/> for creating loggers.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 /// <param name="meter">The pipeline manager meter.</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/> used to judge idleness.</param>
-/// <param name="provenance">The database provenance coordinator.</param>
 /// <param name="watchGates">The <see cref="IProjectionWatchGates"/> telling whether a projection is watched; without it no projection is considered watched.</param>
 [Singleton]
 public partial class ProjectionPipelineManager(

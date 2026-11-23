@@ -25,5 +25,5 @@ public class ReadModelSinkProvenance(IStorage storage) : IReadModelSinkProvenanc
     public Task EnsureReadable(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition definition) =>
         For(eventStore).EnsureReadable(@namespace, definition);
 
-    ReadModelProvenance For(EventStoreName eventStore) => _eventStores.GetOrAdd(eventStore, name => new(storage, name));
+    ReadModelProvenance For(EventStoreName eventStore) => _eventStores.GetOrAdd(eventStore, static (name, storage) => new(storage, name), storage);
 }

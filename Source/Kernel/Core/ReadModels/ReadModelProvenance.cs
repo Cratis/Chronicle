@@ -18,28 +18,15 @@ namespace Cratis.Chronicle.ReadModels;
 internal sealed class ReadModelProvenance(IStorage storage, EventStoreName eventStore)
 {
     readonly IEventStoreStorage _storage = storage.GetEventStore(eventStore);
-    readonly SemaphoreSlim _gate = new(1, 1);
+    readonly Lock _gate = new();
+    Task _pending = Task.CompletedTask;
     IReadOnlyList<ReadModelDefinition>? _legacy;
 
     /// <summary>
     /// Persists all discoverable evidence before a definition can be changed.
     /// </summary>
     /// <returns>The preservation task.</returns>
-    internal async Task Preserve()
-    {
-        await _gate.WaitAsync();
-        try
-        {
-            var candidates = await Candidates();
-            var namespaces = (await _storage.Namespaces.GetAll()).Select(_ => _.Name)
-                .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet).Distinct();
-            foreach (var @namespace in namespaces) await Mark(@namespace, candidates);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+    internal Task Preserve() => Serialize(PreserveEvidence);
 
     /// <summary>
     /// Checks the live database marker and retained definition before admitting a read.
@@ -47,21 +34,39 @@ internal sealed class ReadModelProvenance(IStorage storage, EventStoreName event
     /// <param name="namespace">The actual destination namespace.</param>
     /// <param name="definition">The requested definition.</param>
     /// <returns>The admission task.</returns>
-    internal async Task EnsureReadable(EventStoreNamespaceName @namespace, ReadModelDefinition definition)
+    internal Task EnsureReadable(EventStoreNamespaceName @namespace, ReadModelDefinition definition) =>
+        Serialize(() => CheckEvidence(@namespace, definition));
+
+    static async Task RunAfter(Task previous, Func<Task> operation)
     {
-        await _gate.WaitAsync();
-        try
+        // Each caller observes its own failure; a failed inventory must not prevent a later retry.
+        await previous.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
+        await operation();
+    }
+
+    Task Serialize(Func<Task> operation)
+    {
+        lock (_gate)
         {
-            await Mark(@namespace, await Candidates());
-            await Check(@namespace, definition);
-            if (await _storage.ReadModels.Has(definition.Identifier))
-            {
-                await Check(@namespace, await _storage.ReadModels.Get(definition.Identifier));
-            }
+            return _pending = RunAfter(_pending, operation);
         }
-        finally
+    }
+
+    async Task PreserveEvidence()
+    {
+        var candidates = await Candidates();
+        var namespaces = (await _storage.Namespaces.GetAll()).Select(_ => _.Name)
+            .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet).Distinct();
+        foreach (var @namespace in namespaces) await Mark(@namespace, candidates);
+    }
+
+    async Task CheckEvidence(EventStoreNamespaceName @namespace, ReadModelDefinition definition)
+    {
+        await Mark(@namespace, await Candidates());
+        await Check(@namespace, definition);
+        if (await _storage.ReadModels.Has(definition.Identifier))
         {
-            _gate.Release();
+            await Check(@namespace, await _storage.ReadModels.Get(definition.Identifier));
         }
     }
 

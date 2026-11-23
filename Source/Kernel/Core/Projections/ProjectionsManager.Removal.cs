@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.ReadModels;
 
 namespace Cratis.Chronicle.Projections;
 
