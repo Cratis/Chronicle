@@ -25,10 +25,10 @@ public class with_explicit_scope : Specification
         foreach (var consumer in _consumers)
         {
             var silo = new TestKitSilo();
-            silo.AddNamespaceCasing();
+            silo.AddEventStoreStorage();
             silo.AddService(Substitute.For<ILocalSiloDetails>());
             var namespaces = Substitute.For<INamespaces>();
-            namespaces.GetAll().Returns(_namespaces);
+            namespaces.HasEveryNamespace().GetAll().Returns(_namespaces);
             silo.AddProbe(_ => namespaces);
             silo.AddProbe<IObserver>(identity => GetObserver(identity.ToString()));
             var manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>(consumer);

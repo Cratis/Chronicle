@@ -7,7 +7,7 @@ using MongoDB.Bson.Serialization;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionDefinitionConverters.when_reading;
 
-public class with_a_record_without_source_namespaces : Specification
+public class with_a_record_that_still_has_source_namespaces : Specification
 {
     BsonDocument _document;
     Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition _result;
@@ -15,12 +15,11 @@ public class with_a_record_without_source_namespaces : Specification
     void Establish()
     {
         _document = new EventStoreSubscriptionDefinition { Id = "subscription", SourceEventStore = "source", EventTypes = [new EventType("customer", 1)] }.ToBsonDocument();
-        var map = BsonClassMap.LookupClassMap(typeof(EventStoreSubscriptionDefinition));
-        _document.Remove(map.GetMemberMap(nameof(EventStoreSubscriptionDefinition.SourceNamespaces)).ElementName);
+        _document["SourceNamespaces"] = new BsonArray(["Customers"]);
     }
 
     void Because() => _result = BsonSerializer.Deserialize<EventStoreSubscriptionDefinition>(_document).ToKernel();
 
-    [Fact] void should_have_removed_the_field() => _document.Contains("SourceNamespaces").ShouldBeFalse();
-    [Fact] void should_observe_every_namespace() => _result.SourceNamespaces.ShouldBeEmpty();
+    [Fact] void should_still_carry_the_retired_element() => _document.Contains("SourceNamespaces").ShouldBeTrue();
+    [Fact] void should_read_the_subscription() => _result.SourceEventStore.Value.ShouldEqual("source");
 }

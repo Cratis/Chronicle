@@ -9,6 +9,7 @@ namespace Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 /// Represents the definition of an event store subscription.
 /// </summary>
 [ProtoContract]
+[ReservedProtoFields(6)]
 public class EventStoreSubscriptionDefinition
 {
     /// <summary>
@@ -41,10 +42,4 @@ public class EventStoreSubscriptionDefinition
     /// </summary>
     [ProtoMember(5)]
     public IList<NamedTag> NamedTags { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the source namespaces to observe. Empty means every namespace.
-    /// </summary>
-    [ProtoMember(6)]
-    public IList<string> SourceNamespaces { get; set; } = [];
 }
