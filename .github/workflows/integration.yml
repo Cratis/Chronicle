@@ -176,7 +176,7 @@ jobs:
       # images (mssql) and locally built images (cratis/chronicle) do not
       # need pre-pulling.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -326,7 +326,7 @@ jobs:
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -602,7 +602,7 @@ jobs:
           retention-days: 7
 
       - name: Pre-pull images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           timeout_minutes: 5
           max_attempts: 5
