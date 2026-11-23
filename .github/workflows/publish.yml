@@ -571,7 +571,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build Production Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
@@ -655,7 +655,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build Workbench Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
@@ -722,7 +722,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build Development Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
@@ -797,7 +797,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build Development Slim Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
