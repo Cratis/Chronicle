@@ -141,7 +141,7 @@ jobs:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-client
 
@@ -303,7 +303,7 @@ jobs:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-kernel
 
@@ -416,7 +416,7 @@ jobs:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-clustering
 
@@ -527,7 +527,7 @@ jobs:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-sqlclustering
 

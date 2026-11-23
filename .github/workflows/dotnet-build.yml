@@ -403,7 +403,7 @@ jobs:
           echo "CRATIS_CHRONICLE_BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -414,7 +414,7 @@ jobs:
       # overwrite the exact bin/obj inputs that passed stable Pack, including both TFMs.
       - name: Download client package build output
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: client-package-build-output
 
@@ -757,7 +757,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -889,7 +889,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1052,7 +1052,7 @@ jobs:
         run: node .github/scripts/spec-shards.mjs --select-producers .ai-work/5501/producers.json
 
       - name: Download ordinary shard receipts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ steps.producers.outputs.artifact_ids }}
           path: .ai-work/5501/spec-shard-receipts
@@ -1177,7 +1177,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1254,7 +1254,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1434,7 +1434,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1530,7 +1530,7 @@ jobs:
 
     steps:
       - name: Download coverage artifacts of the group
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./coverage-input
           pattern: ${{ matrix.pattern }}
@@ -1598,7 +1598,7 @@ jobs:
 
       # The per-lane artifacts are merged by the coverage-partial groups; only their merged output is needed here.
       - name: Download the merged coverage of every group
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./coverage-partials
           pattern: coverage-partial-*
@@ -1695,7 +1695,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 

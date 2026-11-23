@@ -50,7 +50,7 @@ jobs:
 
       - name: Download proto files
         if: inputs.protos-artifact != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.protos-artifact }}
           path: Source/Kernel/Protobuf/

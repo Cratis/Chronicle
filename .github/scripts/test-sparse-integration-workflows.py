@@ -993,7 +993,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         for lane in lanes:
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
-                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
+                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v8")
                 # Every lane downloads only its own project's artifact; the SQL clustering one also carries the
                 # stamped client output that the RollingUpgrade provider reads.
                 suffix = "-sqlclustering" if lane == "sql-clustering" else f"-{lane}"
@@ -1070,7 +1070,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertIn("Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll", stamp["run"])
         for step in steps:
-            if step.get("uses") == "actions/download-artifact@v4":
+            if step.get("uses") == "actions/download-artifact@v8":
                 self.assertEqual("${{ inputs.build-output-artifact }}-sqlclustering", step["with"]["name"])
             self.assertNotRegex(step.get("run", ""), r'BUILD_OUTPUT_ARTIFACT\}\.tar')
 
