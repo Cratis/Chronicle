@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Security;
 using Grpc.Core;
@@ -17,7 +18,7 @@ namespace Cratis.Chronicle.ReadModels;
 internal static class ReadModelReadPolicy
 {
     /// <summary>
-    /// Ensures that a projection-backed read model has a supported producer.
+    /// Ensures that every projection producing the read model is supported and projection-backed models have a projection or reducer producer.
     /// </summary>
     /// <param name="grainFactory">The grain factory.</param>
     /// <param name="eventStore">The event store to read.</param>
@@ -26,16 +27,26 @@ internal static class ReadModelReadPolicy
     /// <exception cref="RpcException">Thrown when the projection is missing or uses an unsupported event sequence.</exception>
     internal static async Task EnsureReadable(IGrainFactory grainFactory, EventStoreName eventStore, ReadModelDefinition definition)
     {
-        if (definition.ObserverType != ReadModelObserverType.Projection) return;
         var manager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
-        var projections = await manager.GetProjectionDefinitions();
-        var projection = projections.FirstOrDefault(_ => _.Identifier.Value == definition.ObserverIdentifier.Value);
-
-        // A registration can still be in flight or have failed after persisting the definition, so the stored one decides.
-        projection ??= await manager.GetStoredProjectionDefinition((ProjectionId)definition.ObserverIdentifier.Value);
-        if (projection?.UsesUnsupportedEventSequence() != false)
+        var identifier = definition.ObserverIdentifier.Value;
+        ProjectionId? namedProjection = string.IsNullOrEmpty(identifier) ? null : new(identifier);
+        var projections = (await manager.GetProducersFor(definition.Identifier, namedProjection))
+            .Where(_ => IsProducer(_, definition))
+            .ToArray();
+        var hasUnsupportedProducer = projections.Any(_ => _.UsesUnsupportedEventSequence());
+        var isMissingProducer = projections.Length == 0 && definition.ObserverType == ReadModelObserverType.Projection;
+        if (isMissingProducer)
+        {
+            var reducers = grainFactory.GetGrain<IReducersManager>(eventStore);
+            isMissingProducer = !await reducers.HasReducerForReadModel(definition.Identifier);
+        }
+        if (hasUnsupportedProducer || isMissingProducer)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
         }
     }
+
+    static bool IsProducer(ProjectionDefinition projection, ReadModelDefinition definition) =>
+        projection.ReadModel == definition.Identifier ||
+        (!string.IsNullOrEmpty(definition.ObserverIdentifier.Value) && projection.Identifier.Value == definition.ObserverIdentifier.Value);
 }

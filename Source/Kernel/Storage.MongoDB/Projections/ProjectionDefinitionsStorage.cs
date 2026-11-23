@@ -28,6 +28,19 @@ public class ProjectionDefinitionsStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection)
+    {
+        var filter = Builders<Projection>.Filter.Eq(projection => projection.ReadModel.Identifier, readModel);
+        if (namedProjection is not null)
+        {
+            filter |= Builders<Projection>.Filter.Eq(projection => projection.Id, namedProjection);
+        }
+        using var result = await Collection.FindAsync(filter);
+        var projections = await result.ToListAsync();
+        return projections.Select(projection => projection.Definitions.Last().Value.ToKernel()).ToArray();
+    }
+
+    /// <inheritdoc/>
     public Task<bool> Has(ProjectionId id) => Collection.Find(_ => _.Id == id).AnyAsync();
 
     /// <inheritdoc/>

@@ -5,7 +5,9 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
@@ -18,8 +20,9 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 /// Initializes a new instance of the <see cref="Reducers"/> class.
 /// </remarks>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
+/// <param name="storage">The storage for persisted reducer definitions.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ReducersManager)]
-public class ReducersManager(ILogger<ReducersManager> logger) : Grain<ReducersManagerState>, IReducersManager
+public class ReducersManager(ILogger<ReducersManager> logger, IStorage storage) : Grain<ReducersManagerState>, IReducersManager
 {
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
@@ -36,6 +39,11 @@ public class ReducersManager(ILogger<ReducersManager> logger) : Grain<ReducersMa
         logger.RegisterReducers();
         await SetDefinitionForAllProjectionsInAllNamespaces(connectionId);
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasReducerForReadModel(ReadModelIdentifier readModel) =>
+        State.Reducers.Any(definition => definition.ReadModel == readModel) ||
+        await storage.GetEventStore(_eventStoreName).Reducers.HasForReadModel(readModel);
 
     async Task SetDefinitionForAllProjectionsInAllNamespaces(ConnectionId connectionId)
     {
