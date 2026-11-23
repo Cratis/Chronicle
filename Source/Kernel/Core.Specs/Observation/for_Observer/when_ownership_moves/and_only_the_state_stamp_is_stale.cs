@@ -19,9 +19,7 @@ public class and_only_the_state_stamp_is_stale : given.a_live_observer_with_guar
         ]);
     }
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         await _guarded.ClaimOwnership(_observerId, "another-sequence");
         await _observer.SetHandledStats(99);

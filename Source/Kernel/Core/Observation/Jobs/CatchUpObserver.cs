@@ -74,12 +74,13 @@ public class CatchUpObserver(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Keep the job unfinished until the observer has persisted its progress. Otherwise a lookup can find no
-        // job before the callback even enters, and start again from the observer's old position (#6145).
-        // CaughtUp interleaves, and defers routing while an acquisition is pending, so it never awaits our start.
+        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
+        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
+        // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
+        // grain become free to process CaughtUp().
         // Only a catch-up whose every step completed may move the observer past events it read but did not
         // handle; a step that stopped early can leave events behind the furthest point another step reached.
-        await observer.CaughtUp(
+        _ = observer.CaughtUp(
             JobId,
             State.LastHandledEventSequenceNumber,
             AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);

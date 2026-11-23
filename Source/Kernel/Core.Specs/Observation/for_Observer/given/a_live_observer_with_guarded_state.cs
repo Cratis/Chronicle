@@ -8,7 +8,7 @@ using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
-public class a_live_observer_with_guarded_state : an_observer_in_grain_turns
+public class a_live_observer_with_guarded_state : an_observer
 {
     protected Storage.InMemory.Observation.ObserverStateStorage _guarded;
     protected ObserverDefinition _storedDefinition;

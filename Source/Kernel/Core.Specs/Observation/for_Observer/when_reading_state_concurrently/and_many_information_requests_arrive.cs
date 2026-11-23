@@ -8,9 +8,7 @@ public class and_many_information_requests_arrive : given.a_live_observer_with_o
     const int Requests = 16;
     Exception? _error;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         try
         {

@@ -13,9 +13,7 @@ public class and_ownership_moves_to_another_event_sequence : given.a_live_observ
 
     void Establish() => _registeredBeforeMoving = _registered.Count;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         await MoveDefinition();
         await _observer.SetHandledStats(99);

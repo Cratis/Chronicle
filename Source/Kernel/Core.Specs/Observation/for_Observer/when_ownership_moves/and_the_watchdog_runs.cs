@@ -10,9 +10,7 @@ public class and_the_watchdog_runs : given.a_live_observer_with_guarded_state
 {
     ObserverState _before;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         await MoveDefinition();
         _before = await _guarded.Get(_observerId);

@@ -11,9 +11,7 @@ public class and_disposal_occurs_during_the_timestamp_save : given.an_observer_w
     ulong? _epoch;
     int _attemptsBefore;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         _attemptsBefore = _writes.Attempts;
         _eventStoreNamespaceStorage.Observers.SaveRunningStateChangedAt(_observerId, _now.AddHours(1), _observerKey.EventSequenceId).Returns(_ => _timestamp.Invoke());

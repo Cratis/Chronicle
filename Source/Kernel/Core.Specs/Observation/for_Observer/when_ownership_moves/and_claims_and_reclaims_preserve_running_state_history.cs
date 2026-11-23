@@ -13,9 +13,7 @@ public class and_claims_and_reclaims_preserve_running_state_history : given.a_li
     readonly List<(ObserverState State, DateTimeOffset? ChangedAt)> _claimed = [];
     readonly List<(ObserverState State, DateTimeOffset? ChangedAt)> _reclaimed = [];
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         foreach (var timestamp in new DateTimeOffset?[] { _entryTime, null })
         {

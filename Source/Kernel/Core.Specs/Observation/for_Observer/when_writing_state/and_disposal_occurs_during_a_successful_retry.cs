@@ -11,9 +11,7 @@ public class and_disposal_occurs_during_a_successful_retry : given.an_observer_w
     int _attemptsBefore;
     bool _stillJoined;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         _attemptsBefore = _writes.Attempts;
         _writes.BeforeWrite = () =>

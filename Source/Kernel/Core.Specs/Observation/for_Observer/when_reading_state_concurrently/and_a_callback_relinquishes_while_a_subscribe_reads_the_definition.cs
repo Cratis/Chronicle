@@ -10,9 +10,7 @@ public class and_a_callback_relinquishes_while_a_subscribe_reads_the_definition 
     Exception? _callbackError;
     Exception? _subscribeError;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         _guardedDefinition.HoldNextRead = true;
         var subscribing = _observer.SubscribeToAllEvents<NullObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero);

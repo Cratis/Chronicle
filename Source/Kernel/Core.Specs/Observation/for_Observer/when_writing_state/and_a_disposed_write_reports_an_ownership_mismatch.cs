@@ -15,9 +15,7 @@ public class and_a_disposed_write_reports_an_ownership_mismatch : given.an_obser
     int _readsBefore;
     int _attemptsBefore;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         _failure = new(_observerKey, EventSequenceId.Log);
         _readsBefore = _definition.Stats.Reads;

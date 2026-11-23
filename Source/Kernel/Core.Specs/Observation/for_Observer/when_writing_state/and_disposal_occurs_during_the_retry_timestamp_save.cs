@@ -12,9 +12,7 @@ public class and_disposal_occurs_during_the_retry_timestamp_save : given.an_obse
     ulong? _epoch;
     int _attemptsBefore;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         _attemptsBefore = _writes.Attempts;
         _writes.BeforeWrite = () =>

@@ -10,9 +10,7 @@ public class and_a_live_owner_recovers_a_mismatched_write : given.an_observer_wi
 {
     int _attemptsBefore;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    Task PerformScenario()
+    Task Because()
     {
         _attemptsBefore = _writes.Attempts;
         _writes.BeforeWrite = () =>

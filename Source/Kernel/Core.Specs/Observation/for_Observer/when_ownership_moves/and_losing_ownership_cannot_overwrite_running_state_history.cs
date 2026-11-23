@@ -15,9 +15,7 @@ public class and_losing_ownership_cannot_overwrite_running_state_history : given
 
     async Task Establish() => await _guarded.SaveRunningStateChangedAt(_observerId, _entryTime, _observerKey.EventSequenceId);
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         await MoveDefinition();
         _claimed = await _guarded.Get(_observerId);

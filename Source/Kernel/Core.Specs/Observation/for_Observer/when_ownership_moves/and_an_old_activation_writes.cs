@@ -11,9 +11,7 @@ public class and_an_old_activation_writes : given.a_live_observer_with_guarded_s
     ObserverState _before;
     ObserverState _after;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         await MoveDefinition();
         _before = await _guarded.Get(_observerId);

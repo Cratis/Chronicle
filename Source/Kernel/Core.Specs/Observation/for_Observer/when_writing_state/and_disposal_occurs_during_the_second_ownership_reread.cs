@@ -11,9 +11,7 @@ public class and_disposal_occurs_during_the_second_ownership_reread : given.an_o
     ulong? _epoch;
     int _attemptsBefore;
 
-    Task Because() => InGrainTurn(PerformScenario);
-
-    async Task PerformScenario()
+    async Task Because()
     {
         _attemptsBefore = _writes.Attempts;
         _writes.BeforeWrite = () =>
