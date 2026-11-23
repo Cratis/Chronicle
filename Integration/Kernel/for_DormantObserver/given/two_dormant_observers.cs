@@ -10,14 +10,14 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given;
 /// Two observers that have each handled one event and been released, in a kernel whose safety net looks every few seconds.
 /// </summary>
 /// <param name="fixture">The fixture.</param>
-public class two_dormant_observers(DormantSafetyNetFixture fixture) : a_dormant_reactor(fixture)
+public class two_dormant_observers(DormantSafetyNetFixture fixture) : a_dormant_reactor<DormantSafetyNetFixture>(fixture)
 {
     protected IReactorHandler _alpha;
     protected IReactorHandler _beta;
     protected EventSequenceNumber _alphaEvent;
     protected EventSequenceNumber _betaEvent;
 
-    protected GrainCallRecorder Calls => ((DormantSafetyNetFixture)ChronicleFixture).Calls;
+    protected GrainCallRecorder Calls => ChronicleFixture.Calls;
     protected DormantAlphaReactor Alpha => ChronicleFixture.Alpha;
     protected DormantBetaReactor Beta => ChronicleFixture.Beta;
 

@@ -8,9 +8,9 @@ using Cratis.Chronicle.Storage;
 using KernelConcepts::Cratis.Chronicle.Concepts.Events;
 using KernelConcepts::Cratis.Chronicle.Concepts.EventTypes;
 using KernelCore::Cratis.Chronicle.EventTypes;
-using context = Cratis.Chronicle.Integration.Clustering.for_EventTypeRegistry.when_an_event_type_is_registered_on_one_silo.context;
 using ConceptsEventStoreName = KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName;
 using ConceptsJsonSchema = Cratis.Chronicle.Schemas.JsonSchema;
+using context = Cratis.Chronicle.Integration.Clustering.for_EventTypeRegistry.when_an_event_type_is_registered_on_one_silo.context;
 
 namespace Cratis.Chronicle.Integration.Clustering.for_EventTypeRegistry;
 

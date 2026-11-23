@@ -13,7 +13,14 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given;
 /// A registered reactor of a kernel that releases a subscribed observer after two quiet seconds and wakes dormant ones every five.
 /// </summary>
 /// <param name="fixture">The fixture that hosts the in-process kernel.</param>
-public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<DormantObserverFixture>(fixture)
+/// <typeparam name="TFixture">The type of the fixture.</typeparam>
+/// <remarks>
+/// The in-process kernel is created once for every type a specification is a <see cref="Specification{T}"/> of, with the settings
+/// of the first context that needed it. A variant of the kernel with other settings therefore has to be its own type, which is
+/// why this is generic over the fixture instead of deriving from <see cref="Specification{T}"/> of the base fixture.
+/// </remarks>
+public class a_dormant_reactor<TFixture>(TFixture fixture) : Specification<TFixture>(fixture)
+    where TFixture : DormantObserverFixture
 {
     protected const string ObserverGrainPrefix = "observer/";
 

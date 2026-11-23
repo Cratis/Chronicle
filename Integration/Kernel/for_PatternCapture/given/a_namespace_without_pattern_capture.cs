@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Kernel.Integration.for_PatternCapture.given;
 /// A namespace of a kernel whose pattern capture is switched off for every event store.
 /// </summary>
 /// <param name="fixture">The fixture that hosts the in-process kernel.</param>
-public class a_namespace_without_pattern_capture(PatternCaptureOffFixture fixture) : a_dormant_reactor(fixture)
+public class a_namespace_without_pattern_capture(PatternCaptureOffFixture fixture) : a_dormant_reactor<PatternCaptureOffFixture>(fixture)
 {
     protected override void ConfigureObserverSettings(Dictionary<string, string?> settings) =>
         settings["PatternDetection:Enabled"] = "false";

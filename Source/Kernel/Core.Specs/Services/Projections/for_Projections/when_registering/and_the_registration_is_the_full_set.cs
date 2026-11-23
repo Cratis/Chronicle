@@ -27,7 +27,8 @@ public class and_the_registration_is_the_full_set : Specification
             Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(),
             Arg.Any<Concepts.Projections.ProjectionOwner?>(),
             Arg.Any<string?>(),
-            Arg.Any<string?>(), Arg.Any<GrainCancellationToken?>()).Returns(call =>
+            Arg.Any<string?>(),
+            Arg.Any<GrainCancellationToken?>()).Returns(call =>
             {
                 _signature = call.ArgAt<string>(0);
                 _definitions = call.ArgAt<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(1).ToArray();
@@ -73,11 +74,13 @@ public class and_the_registration_is_the_full_set : Specification
 
     [Fact]
     void should_register_as_the_full_set_for_the_owner() =>
-        _projectionsManager.Received(1).RegisterShared(Arg.Any<string>(),
+        _projectionsManager.Received(1).RegisterShared(
+            Arg.Any<string>(),
             Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(),
             Concepts.Projections.ProjectionOwner.Client,
             "the-app",
-            "1.2.3", Arg.Any<GrainCancellationToken?>());
+            "1.2.3",
+            Arg.Any<GrainCancellationToken?>());
 
     [Fact] void should_compute_the_canonical_signature_from_the_mapped_definitions_and_context() => _signature.ShouldEqual(Chronicle.Projections.ProjectionRegistrationSignature.For(_definitions, _fullSetOwner, _registrant, _version));
     [Fact] void should_map_one_definition() => _definitions.Length.ShouldEqual(1);

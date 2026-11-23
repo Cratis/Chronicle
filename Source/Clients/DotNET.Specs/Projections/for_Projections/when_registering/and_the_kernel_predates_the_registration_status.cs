@@ -42,7 +42,7 @@ public class and_the_kernel_predates_the_registration_status : given.all_depende
         await _projections.Discover();
     }
 
-    async Task Because() => _exception = await Catch.Exception(() => _projections.Register());
+    async Task Because() => _exception = await Catch.Exception(_projections.Register);
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
     [Fact] async Task should_have_sent_the_registration() => await _contractProjections.Received(1).Register(Arg.Any<RegisterRequest>(), Arg.Any<CallContext>());

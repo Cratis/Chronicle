@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given;
 /// </summary>
 [Reactor("Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given.DormantObserverReactor")]
 [DependencyInjection.IgnoreConvention]
+[ExcludeFromFixtureDiscovery]
 public class DormantReplicaReactor : IReactor
 {
     public ConcurrentQueue<EventSequenceNumber> Handled { get; } = new();

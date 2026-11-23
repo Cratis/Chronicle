@@ -3,8 +3,6 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Registrations;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_registering_shared;
@@ -33,7 +31,9 @@ public class and_every_caller_leaves_before_the_registration_gets_its_turn : giv
     {
         _registration = _grain.RegisterShared(_signature, _definitions, ProjectionOwner.Client, "studio", "1.0", _caller.Token);
         await _caller.Cancel();
-        await Task.WhenAny(_registration, Task.Delay(TimeSpan.FromSeconds(5)));
+        using var timeout = new CancellationTokenSource();
+        await Task.WhenAny(_registration, Task.Delay(TimeSpan.FromSeconds(5), TimeProvider.System, timeout.Token));
+        await timeout.CancelAsync();
         _namespaceLookupsBeforeTurn = _namespaces.ReceivedCalls().Count();
 
         // The turn the registration was queued for arrives after its callers have gone.

@@ -4,7 +4,6 @@
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Projections;
-using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProtoBuf.Grpc;
 using ContractProjections = Cratis.Chronicle.Contracts.Projections.IProjections;
@@ -42,7 +41,7 @@ public class and_the_kernel_cannot_apply_the_registration : given.all_dependenci
         await _projections.Discover();
     }
 
-    async Task Because() => _exception = await Catch.Exception(() => _projections.Register());
+    async Task Because() => _exception = await Catch.Exception(_projections.Register);
 
     [Fact] void should_fail_the_registration() => _exception.ShouldBeOfExactType<ProjectionRegistrationNotApplied>();
     [Fact] void should_say_why() => _exception.Message.ShouldContain("the read model schema conflicts");

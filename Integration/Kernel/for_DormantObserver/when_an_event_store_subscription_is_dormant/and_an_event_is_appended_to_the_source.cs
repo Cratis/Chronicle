@@ -16,7 +16,7 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.when_an_event_
 [Collection(given.DormantObserverCollection.Name)]
 public class and_an_event_is_appended_to_the_source(context context) : Given<context>(context)
 {
-    public class context(given.DormantObserverFixture fixture) : given.a_dormant_reactor(fixture)
+    public class context(given.DormantObserverFixture fixture) : given.a_dormant_reactor<given.DormantObserverFixture>(fixture)
     {
         const string SubscriptionId = "dormant-subscription";
 
