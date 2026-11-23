@@ -15,6 +15,8 @@ repositories {
 }
 
 val grpcVersion = "1.85.1"
+// Preserve the published BlockingV2Stub unary exception contract while upgrading the runtime.
+val grpcJavaGeneratorVersion = "1.70.0"
 val grpcKotlinVersion = "1.5.0"
 val protobufVersion = "4.36.2"
 val coroutinesVersion = "1.11.0"
@@ -27,6 +29,7 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     compileOnly("javax.annotation:javax.annotation-api:1.3.2")
     testImplementation(kotlin("test"))
+    testImplementation("io.grpc:grpc-inprocess:$grpcVersion")
 }
 
 kotlin {
@@ -69,7 +72,7 @@ protobuf {
     }
     plugins {
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:$grpcVersion"
+            artifact = "io.grpc:protoc-gen-grpc-java:$grpcJavaGeneratorVersion"
         }
         create("grpckt") {
             artifact = "io.grpc:protoc-gen-grpc-kotlin:$grpcKotlinVersion:jdk8@jar"
