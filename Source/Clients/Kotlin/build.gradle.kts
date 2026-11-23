@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "2.4.21"
     id("com.google.protobuf") version "0.10.1"
     `java-library`
-    id("com.vanniktech.maven.publish") version "0.30.0"
+    id("com.vanniktech.maven.publish") version "0.37.0"
 }
 
 group = "io.cratis"
@@ -89,7 +89,7 @@ protobuf {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
 
     coordinates("io.cratis", "chronicle-contracts", version.toString())
