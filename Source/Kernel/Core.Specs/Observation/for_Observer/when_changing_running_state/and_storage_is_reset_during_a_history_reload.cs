@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Observation.States;
+
 namespace Cratis.Chronicle.Observation.for_Observer.when_changing_running_state;
 
 public class and_storage_is_reset_during_a_history_reload : given.an_observer_with_controlled_persistence
@@ -31,6 +33,7 @@ public class and_storage_is_reset_during_a_history_reload : given.an_observer_wi
         _observedTimestamp = (await _observer.GetInformation()).RunningStateChangedAt;
     }
 
+    [Fact] async Task should_resume_observing() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
     [Fact] void should_keep_the_reset_history_empty() => _observedTimestamp.ShouldBeNull();
     [Fact] void should_not_restore_stale_timestamp_debt() => ShouldNotSaveTimestamp();
 }
