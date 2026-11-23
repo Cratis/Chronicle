@@ -21,18 +21,19 @@ public abstract partial class UniqueConstraintsStorageV2SqlContract
     }
 
     [Fact]
-    public async Task should_refuse_overlength_owners_on_every_owner_api_before_creating_contexts()
+    public async Task should_refuse_overlength_reads_and_saves_without_truncation()
     {
         await Seed();
         EventSourceId owner = new string('界', 451);
         var contexts = _optionsCreated;
         await Assert.ThrowsAsync<UniqueConstraintV2OwnerTooLong>(() => _storage.Save(owner, _definition, 99, _value, _scope, _authority));
-        await Assert.ThrowsAsync<UniqueConstraintV2OwnerTooLong>(() => _storage.Remove(owner, _definition, _scope, _authority));
-        await Assert.ThrowsAsync<UniqueConstraintV2OwnerTooLong>(() => _storage.RemoveValue(owner, PerValue, _value, _scope, _authority));
         await Assert.ThrowsAsync<UniqueConstraintV2OwnerTooLong>(() => _storage.IsAllowed(owner, _definition, _value, _scope));
         await Assert.ThrowsAsync<UniqueConstraintV2OwnerTooLong>(() => _storage.GetFor(owner, _definition, _scope));
         await Assert.ThrowsAsync<UniqueConstraintV2OwnerTooLong>(() => _storage.GetForStream(owner, _definition, _scope));
         _optionsCreated.ShouldEqual(contexts);
+        (await _storage.Remove(owner, _definition, _scope, _authority)).IsSuccess.ShouldBeTrue();
+        (await _storage.RemoveValue(owner, PerValue, _value, _scope, _authority)).IsSuccess.ShouldBeTrue();
+        ShouldRefuse(await _storage.Remove(owner, _definition, _scope, _authority with { Revision = new(1) }), UniqueConstraintWriteFailure.AuthorityMismatch);
         await ShouldRetainClaim();
     }
 
