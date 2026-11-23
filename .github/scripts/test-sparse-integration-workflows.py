@@ -709,7 +709,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 steps = jobs[job_id]["steps"]
                 self.assertFalse(any(step.get("name") == "Cache NuGet packages" for step in steps))
                 cache = next(step for step in steps if step.get("name") == "Restore obj cache")
-                self.assertEqual("actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual("actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9", cache["uses"])
                 self.assertEqual(build_cache["with"], cache["with"])
                 restore = next(step for step in steps if step.get("run") == command)
                 self.assertNotIn("if", restore)
@@ -725,7 +725,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(job=job_id):
                 steps = self.build["jobs"][job_id]["steps"]
                 cache = next(step for step in steps if step.get("name") == "Cache pinned coverage tool")
-                self.assertEqual("actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9", cache["uses"])
                 self.assertEqual(expected, cache["with"])
                 restore = next(step for step in steps if step.get("name") == "Restore pinned coverage tool")
                 self.assertEqual("dotnet tool restore", restore["run"])
@@ -993,7 +993,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         for lane in lanes:
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
-                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
+                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v8")
                 # Every lane downloads only its own project's artifact; the SQL clustering one also carries the
                 # stamped client output that the RollingUpgrade provider reads.
                 suffix = "-sqlclustering" if lane == "sql-clustering" else f"-{lane}"
@@ -1070,7 +1070,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertIn("Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll", stamp["run"])
         for step in steps:
-            if step.get("uses") == "actions/download-artifact@v4":
+            if step.get("uses") == "actions/download-artifact@v8":
                 self.assertEqual("${{ inputs.build-output-artifact }}-sqlclustering", step["with"]["name"])
             self.assertNotRegex(step.get("run", ""), r'BUILD_OUTPUT_ARTIFACT\}\.tar')
 

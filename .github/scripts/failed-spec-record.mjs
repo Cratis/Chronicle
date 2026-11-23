@@ -39,15 +39,22 @@ function isResultArtifact(name) {
     return /^sql-clustering-.+-results$/.test(name);
 }
 
+async function collectLane(directory, name) {
+    const lane = { name, attempts: new Map(), files: 0, quarantined: [] };
+    await scan(directory, lane);
+    return lane;
+}
+
 export async function collect(root) {
     const lanes = [];
     for (const file of await readdir(root, { withFileTypes: true })) {
         if (!file.isDirectory() || !isResultArtifact(file.name)) continue;
-        const lane = { name: file.name, attempts: new Map(), files: 0, quarantined: [] };
-        await scan(path.join(root, file.name), lane);
-        lanes.push(lane);
+        lanes.push(await collectLane(path.join(root, file.name), file.name));
     }
-    return lanes.sort((a, b) => a.name.localeCompare(b.name));
+    if (lanes.length) return lanes.sort((a, b) => a.name.localeCompare(b.name));
+    // download-artifact v8 extracts a single pattern match directly into root.
+    const single = await collectLane(root, 'single matching result');
+    return single.files ? [single] : [];
 }
 
 function namesSection(label, names, artifact, cap) {
