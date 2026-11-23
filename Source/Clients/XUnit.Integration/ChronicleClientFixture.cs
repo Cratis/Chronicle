@@ -184,6 +184,11 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <inheritdoc/>
     string IChronicleSetupFixture.DatabaseNamePrefix => DatabaseNamePrefix;
 
+    /// <inheritdoc/>
+#pragma warning disable CA1033 // The provider is internal, so there is no visible member to offer to derived fixtures instead.
+    DelegatingClientArtifactsProvider IChronicleSetupFixture.SharedArtifactsProvider => SharedArtifactsProvider;
+#pragma warning restore CA1033
+
     /// <summary>
     /// Gets the artifacts provider that the silo shared by every context of this fixture type serves its artifacts from.
     /// </summary>
