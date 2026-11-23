@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Reactors;
+using Cratis.Chronicle.XUnit.Integration;
 
 namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given;
 
@@ -13,6 +14,7 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given;
 /// </summary>
 [Reactor("Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given.DormantObserverReactor")]
 [DependencyInjection.IgnoreConvention]
+[ExcludeFromFixtureDiscovery]
 public class DormantReplicaReactor : IReactor
 {
     public ConcurrentQueue<EventSequenceNumber> Handled { get; } = new();

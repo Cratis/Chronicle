@@ -585,7 +585,7 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         {
             return [];
         }
-        return getTypes(_defaultClientArtifactsProvider);
+        return getTypes(_defaultClientArtifactsProvider).Where(_ => !_.IsDefined(typeof(ExcludeFromFixtureDiscoveryAttribute), false)).ToArray();
     }
 }
 
