@@ -27,7 +27,7 @@ public class when_aliases_share_a_database(ReplicaSetMongoDBFixture fixture) : g
         _independent = await new SinkProvenanceStorage(_client.GetDatabase($"{_databaseName}_independent")).IsQuarantined();
         using var cursor = await _database.ListCollectionNamesAsync();
         _collections = (await cursor.ToListAsync()).ToArray();
-        _records = await _metadata.CountDocumentsAsync(MongoDB.Driver.FilterDefinition<MongoDB.Bson.BsonDocument>.Empty);
+        _records = await _metadata.CountDocumentsAsync(FilterDefinition<global::MongoDB.Bson.BsonDocument>.Empty);
     }
 
     [Fact] void should_allow_an_unmarked_ordinary_database() => _initial.ShouldBeFalse();

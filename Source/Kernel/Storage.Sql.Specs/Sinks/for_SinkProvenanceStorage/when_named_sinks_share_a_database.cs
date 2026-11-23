@@ -49,10 +49,17 @@ public class when_named_sinks_share_a_database : Specification
         _services = new ServiceCollection().AddLogging().AddSingleton(Options.Create(options)).BuildServiceProvider();
         var factory = new SinkFactory(_services, new ExpandoObjectConverter(new TypeFormats()));
         _sinks = new("store", "namespace", new KnownInstancesOf<ISinkFactory>([factory]), new SinkConfigurations(Options.Create(options)));
-        _model = new("model", "model", "Model", ReadModelOwner.Client, ReadModelSource.Code,
-            ReadModelObserverType.NotSet, ReadModelObserverIdentifier.Unspecified,
+        _model = new(
+            "model",
+            "model",
+            "Model",
+            ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.NotSet,
+            ReadModelObserverIdentifier.Unspecified,
             new(SinkConfigurationId.None, WellKnownSinkTypes.MongoDB),
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() }, []);
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() },
+            []);
     }
 
     async Task Because()

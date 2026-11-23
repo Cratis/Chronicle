@@ -20,9 +20,17 @@ public class when_a_reserved_destination_is_requested : Specification
     void Establish()
     {
         _database = Substitute.For<IDatabase>();
-        _definition = new("model", "ordinary", "Model", ReadModelOwner.Client, ReadModelSource.Code,
-            ReadModelObserverType.NotSet, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"}}}""") }, []);
+        _definition = new(
+            "model",
+            "ordinary",
+            "Model",
+            ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.NotSet,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"}}}""") },
+            []);
     }
 
     async Task Because()

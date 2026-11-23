@@ -19,16 +19,24 @@ public class when_a_reserved_destination_is_requested : Specification
     void Establish()
     {
         _database = Substitute.For<IMongoDatabase>();
-        _definition = new("model", "ordinary", "Model", ReadModelOwner.Client, ReadModelSource.Code,
-            ReadModelObserverType.NotSet, ReadModelObserverIdentifier.Unspecified, SinkDefinition.None,
-            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"}}}""") }, []);
+        _definition = new(
+            "model",
+            "ordinary",
+            "Model",
+            ReadModelOwner.Client,
+            ReadModelSource.Code,
+            ReadModelObserverType.NotSet,
+            ReadModelObserverIdentifier.Unspecified,
+            SinkDefinition.None,
+            new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = JsonSchema.FromJson("""{"type":"object","properties":{"id":{"type":"string"}}}""") },
+            []);
     }
 
     async Task Because()
     {
         var collections = new SinkCollections(_definition, _database);
         _database.ClearReceivedCalls();
-        _errors.Add(Catch.Exception(() => new SinkCollections(_definition with { ContainerName = SinkProvenanceNames.Metadata.ToUpperInvariant() }, _database)));
+        _errors.Add(Catch.Exception(() => _ = new SinkCollections(_definition with { ContainerName = SinkProvenanceNames.Metadata.ToUpperInvariant() }, _database)));
         _errors.Add(Catch.Exception(() => collections.GetCollection(SinkProvenanceNames.Metadata)));
         _errors.Add(await Catch.Exception(() => collections.Remove(SinkProvenanceNames.Metadata)));
         _errors.Add(await Catch.Exception(() => collections.EndReplay(new ReplayContext(new(_definition.Identifier, 1), _definition.ContainerName, SinkProvenanceNames.Metadata, DateTimeOffset.UnixEpoch))));
