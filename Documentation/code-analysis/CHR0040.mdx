@@ -1,10 +1,10 @@
 ---
 title: "CHR0040: Several [SetFromContext] or [SetFromEventSourceId] for the same event type on one member"
-description: Chronicle analyzer rule CHR0040 reports duplicate [SetFromContext] or [SetFromEventSourceId] mappings for the same event type on one member, where only the last one applies.
+description: Chronicle analyzer rule CHR0040 reports duplicate [SetFromContext] or [SetFromEventSourceId] mappings for the same event type on one member, where only one of them applies.
 ---
 ## Rule Description
 
-One read model member carries more than one context-sourced mapping for the *same* event type: `[SetFromContext<TEvent>]`, `[SetFromEventSourceId<TEvent>]`, or a mix of both. They write the same property in the projection definition, so only the last declared is kept — the earlier capture is silently discarded, with no build, registration, or runtime signal.
+One read model member carries more than one context-sourced mapping for the *same* event type: `[SetFromContext<TEvent>]`, `[SetFromEventSourceId<TEvent>]`, or a mix of both. They write the same property in the projection definition, so only one is kept — among `[SetFromContext]` the last declared wins, and `[SetFromEventSourceId]` wins over `[SetFromContext]`. The other capture is silently discarded, with no build, registration, or runtime signal.
 
 Allowing multiple `[SetFromContext]` or `[SetFromEventSourceId]` attributes on one member is deliberate and load-bearing: a property capturing context from several *different* event types is exactly what these attributes are for, and that use never triggers this rule. Two for the same event type is different — a single value cannot hold two context values under any configuration, naming policy, or event shape.
 

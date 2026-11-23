@@ -15,8 +15,9 @@ namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 /// <remarks>
 /// The attributes allow multiple deliberately, and that is load-bearing: one property capturing context from
 /// several <em>distinct</em> event types is exactly what they are for. Two for the <em>same</em> event type on one
-/// member is different - they write the same key into the same definition, so the last declared wins and the
-/// earlier is discarded with no build, registration or runtime signal.
+/// member is different - they write the same key into the same definition, so only one is kept (among
+/// <c language="csharp">[SetFromContext]</c> the last declared wins; <c language="csharp">[SetFromEventSourceId]</c> wins over
+/// <c language="csharp">[SetFromContext]</c>) and the others are discarded with no build, registration or runtime signal.
 /// <para>
 /// This is reported where the neighbouring auto-map collision rule deliberately only informs, and the difference
 /// is the point: that collision has two legitimate resolutions and only the author knows which was meant, while a
@@ -43,11 +44,11 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
     static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticIds.DuplicateSetFromContextForSameEventType,
         title: "Several [SetFromContext] or [SetFromEventSourceId] for the same event type on one member",
-        messageFormat: "'{0}' carries more than one context-sourced mapping ([SetFromContext<{1}>] or [SetFromEventSourceId<{1}>]), and they map to the same property - only the last declared is kept",
+        messageFormat: "'{0}' carries more than one context-sourced mapping ([SetFromContext<{1}>] or [SetFromEventSourceId<{1}>]), and they map to the same property - only one of them is kept",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "A member can capture context through [SetFromContext] or [SetFromEventSourceId] from several different event types, but not several times from the same one - a single value cannot hold two. All but the last declared are silently dropped. Keep the one that was intended, or move the other onto its own property.");
+        description: "A member can capture context through [SetFromContext] or [SetFromEventSourceId] from several different event types, but not several times from the same one - a single value cannot hold two. All but one are silently dropped: among [SetFromContext] the last declared wins, and [SetFromEventSourceId] wins over [SetFromContext]. Keep the one that was intended, or move the other onto its own property.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
