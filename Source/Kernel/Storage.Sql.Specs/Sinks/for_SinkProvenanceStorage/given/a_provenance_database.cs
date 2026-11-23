@@ -4,7 +4,6 @@
 using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Schema;
@@ -16,14 +15,14 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_SinkProvenanceStorage.given;
 
 public abstract class a_provenance_database : Specification
 {
-    readonly List<string> _openedTables = [];
-    bool _empty;
-    bool _alias;
-    bool _reloaded;
-    bool _verify;
-    bool _independent;
-    Exception? _malformedError;
-    Exception? _missingError;
+    protected readonly List<string> _openedTables = [];
+    protected bool _empty;
+    protected bool _alias;
+    protected bool _reloaded;
+    protected bool _verify;
+    protected bool _independent;
+    protected Exception? _malformedError;
+    protected Exception? _missingError;
 
     protected async Task Exercise(string connectionString, string independentConnection, string? aliasConnection = null)
     {
@@ -80,14 +79,4 @@ public abstract class a_provenance_database : Specification
         await using var context = Context(connectionString, SchemaMode.Migrate, "command", [new("Id", typeof(string), true, false, false, false)]);
         await context.Database.ExecuteSqlRawAsync(sql);
     }
-
-    [Fact] void should_refuse_unknown_provider_modes() => Catch.Exception(() => SinkProvenanceSchema.Schema((DatabaseType)int.MaxValue)).ShouldBeOfExactType<InvalidOperationException>();
-    [Fact] void should_allow_a_database_without_positive_evidence() => _empty.ShouldBeFalse();
-    [Fact] void should_share_a_monotonic_mark_across_resolved_database_aliases() => _alias.ShouldBeTrue();
-    [Fact] void should_retain_the_mark_after_context_and_coordinator_recreation() => _reloaded.ShouldBeTrue();
-    [Fact] void should_read_existing_metadata_in_verify_mode() => _verify.ShouldBeTrue();
-    [Fact] void should_leave_an_independent_physical_database_unmarked() => _independent.ShouldBeFalse();
-    [Fact] void should_fail_closed_on_an_unsupported_marker_version() => _malformedError.ShouldBeOfExactType<InvalidOperationException>();
-    [Fact] void should_fail_closed_on_missing_metadata_in_verify_mode() => _missingError.ShouldNotBeNull();
-    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.TrueForAll(table => table == global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata).ShouldBeTrue();
 }
