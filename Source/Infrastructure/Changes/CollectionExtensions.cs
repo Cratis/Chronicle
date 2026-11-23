@@ -29,8 +29,8 @@ public static class CollectionExtensions
         }
 
         return items.FirstOrDefault(item => item is IDictionary<string, object?>
-            ? ChildIdentity.TryGetValue(item, identityProperty, out var identity) && (identity?.Equals(key) ?? false)
-            : identityProperty.GetValue(item!, ArrayIndexers.NoIndexers)?.Equals(key) ?? false);
+            ? ChildIdentity.TryGetValue(item, identityProperty, out var identity) && MatchesKey(identity, key)
+            : MatchesKey(identityProperty.GetValue(item!, ArrayIndexers.NoIndexers), key));
     }
 
     /// <summary>
@@ -85,4 +85,9 @@ public static class CollectionExtensions
             ? ChildIdentity.TryGetValue(item, identityProperty, out var identity) && identity?.IsEqualTo(key) == true
             : identityProperty.GetValue(item!, ArrayIndexers.NoIndexers)!.IsEqualTo(key));
     }
+
+    static bool MatchesKey(object? identity, object key) =>
+        key is IDictionary<string, object?> or System.Collections.IDictionary
+            ? KeyValueEquality.AreEqual(identity, key)
+            : identity?.Equals(key) ?? false;
 }
