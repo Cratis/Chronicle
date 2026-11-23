@@ -491,7 +491,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_KeyResolvers.",
-            "weight": 0.0016478966460343684
+            "weight": 0.0006478966460343684
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_LegacyChildEveryEventMappings.",
