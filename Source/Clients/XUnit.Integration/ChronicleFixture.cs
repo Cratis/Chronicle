@@ -23,7 +23,6 @@ public abstract class ChronicleFixture : IChronicleFixture
     public const int MongoDBPort = 27018;
 
     readonly Lock _containerLock = new();
-    readonly List<Func<ValueTask>> _disposalHooks = [];
 
     readonly IntegrationTimings _timings;
     MongoDBContextStorage? _contextStorage;
@@ -142,20 +141,7 @@ public abstract class ChronicleFixture : IChronicleFixture
         var phase = _timings.Begin("fixture-disposal");
         try
         {
-            Exception? failure = null;
-            Func<ValueTask>[] disposalHooks;
-            lock (_disposalHooks)
-            {
-                disposalHooks = [.. _disposalHooks];
-            }
-
-            // What was started against this fixture's storage stops while the storage is still there.
-            foreach (var disposalHook in disposalHooks.Reverse())
-            {
-                failure = await Cleanup(disposalHook, failure);
-            }
-
-            failure = await Cleanup(() => new ValueTask(DisposeContextStorage()), failure);
+            var failure = await Cleanup(() => new ValueTask(DisposeContextStorage()), null);
             failure = await Cleanup(
                 () => KernelCertificate is { } certificate
                     ? certificate.DisposeAfter(() => DisposeKernelContainer(() => _container?.DisposeAsync() ?? ValueTask.CompletedTask))
@@ -274,18 +260,6 @@ public abstract class ChronicleFixture : IChronicleFixture
     /// <returns>The disposal operation.</returns>
     internal ValueTask DisposeOwnedContainer(IContainer? container, Func<ValueTask> realDispose) =>
         container is not null && LifecycleHooks?.Dispose is { } dispose ? dispose(container, realDispose) : realDispose();
-
-    /// <summary>
-    /// Registers something that has to stop before this fixture takes its storage down.
-    /// </summary>
-    /// <param name="disposal">The disposal to run when the fixture is disposed, before its storage is.</param>
-    internal void RegisterDisposal(Func<ValueTask> disposal)
-    {
-        lock (_disposalHooks)
-        {
-            _disposalHooks.Add(disposal);
-        }
-    }
 
     /// <summary>
     /// Starts a fresh MongoDB storage identity for a test context.
