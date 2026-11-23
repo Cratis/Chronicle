@@ -1,10 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Arc.Connections;
 using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
-using Cratis.Chronicle.Storage.Sql.Connections;
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,7 @@ public abstract class a_provenance_database : Specification
         _independent = await independent.IsQuarantined();
         await new SinkProvenanceStorage(DatabaseFor(independentConnection, SchemaMode.Verify), "store", "namespace").MarkQuarantined();
         await Execute(independentConnection, "UPDATE \"__cratis_sink_provenance\" SET \"Version\" = 99");
-        _malformedError = await Catch.Exception(() => independent.IsQuarantined());
+        _malformedError = await Catch.Exception(independent.IsQuarantined);
         await Execute(independentConnection, "DROP TABLE \"__cratis_sink_provenance\"");
         _missingError = await Catch.Exception(() => new SinkProvenanceStorage(DatabaseFor(independentConnection, SchemaMode.Verify), "store", "namespace").IsQuarantined());
     }
@@ -57,7 +58,7 @@ public abstract class a_provenance_database : Specification
         try
         {
             await context.EnsureTableExists();
-            return new(context);
+            return new(context, static () => { });
         }
         catch
         {

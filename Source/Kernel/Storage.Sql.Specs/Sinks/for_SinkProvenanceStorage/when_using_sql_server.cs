@@ -19,7 +19,7 @@ public class when_using_sql_server(SqlServerFixture fixture) : given.a_provenanc
         var alias = new SqlConnectionStringBuilder(_primary) { ApplicationName = "provenance-alias" };
         await Exercise(_primary, _independent, alias.ConnectionString);
         var reserved = new SinkProvenanceStorage(DatabaseFor(_primary), "store", "namespace", "__cratis_sink_provenance ");
-        _catalogEquivalentError = await Catch.Exception(() => reserved.IsQuarantined());
+        _catalogEquivalentError = await Catch.Exception(reserved.IsQuarantined);
     }
 
     [Fact] void should_reserve_catalog_equivalent_names_not_just_ordinal_matches() => _catalogEquivalentError.ShouldBeOfExactType<InvalidOperationException>();
