@@ -14,12 +14,6 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 public interface ISinkCollections
 {
     /// <summary>
-    /// Revalidates the database-local marker before admitting a retained pipeline operation.
-    /// </summary>
-    /// <returns>The admission task.</returns>
-    Task EnsureProvenance() => Task.CompletedTask;
-
-    /// <summary>
     /// Gets the name of the collection a rebuilt replay collection is renamed to while it is being promoted to the primary collection.
     /// </summary>
     /// <remarks>
@@ -28,6 +22,12 @@ public interface ISinkCollections
     /// collection exists and the primary collection does not.
     /// </remarks>
     string PromotingCollectionName { get; }
+
+    /// <summary>
+    /// Revalidates the database-local marker before admitting a retained pipeline operation.
+    /// </summary>
+    /// <returns>The admission task.</returns>
+    Task EnsureProvenance() => Task.CompletedTask;
 
     /// <summary>
     /// Gets the <see cref="IMongoCollection{TDocument}"/> used by the <see cref="Sink"/>.

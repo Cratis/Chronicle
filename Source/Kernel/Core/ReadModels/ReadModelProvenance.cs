@@ -13,12 +13,18 @@ namespace Cratis.Chronicle.ReadModels;
 /// <summary>
 /// Preserves evidence and checks live provenance for one event store.
 /// </summary>
+/// <param name="storage">The authoritative definition and sink storage.</param>
+/// <param name="eventStore">The event store to inventory.</param>
 internal sealed class ReadModelProvenance(IStorage storage, EventStoreName eventStore)
 {
     readonly IEventStoreStorage _storage = storage.GetEventStore(eventStore);
     readonly SemaphoreSlim _gate = new(1, 1);
     IReadOnlyList<ReadModelDefinition>? _legacy;
 
+    /// <summary>
+    /// Persists all discoverable evidence before a definition can be changed.
+    /// </summary>
+    /// <returns>The preservation task.</returns>
     internal async Task Preserve()
     {
         await _gate.WaitAsync();
@@ -35,6 +41,12 @@ internal sealed class ReadModelProvenance(IStorage storage, EventStoreName event
         }
     }
 
+    /// <summary>
+    /// Checks the live database marker and retained definition before admitting a read.
+    /// </summary>
+    /// <param name="namespace">The actual destination namespace.</param>
+    /// <param name="definition">The requested definition.</param>
+    /// <returns>The admission task.</returns>
     internal async Task EnsureReadable(EventStoreNamespaceName @namespace, ReadModelDefinition definition)
     {
         await _gate.WaitAsync();

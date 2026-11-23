@@ -24,6 +24,7 @@ public interface ISinks
     /// </summary>
     /// <param name="readModel">The sink destination.</param>
     /// <returns>The marker storage.</returns>
+    /// <exception cref="NotSupportedException">The provider cannot resolve database provenance.</exception>
     ISinkProvenanceStorage GetProvenance(ReadModelDefinition readModel) =>
         throw new NotSupportedException("Read-model storage is not available.");
 

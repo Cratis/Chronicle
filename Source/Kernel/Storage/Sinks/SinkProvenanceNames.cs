@@ -17,6 +17,7 @@ public static class SinkProvenanceNames
     /// Rejects metadata names, including names a provider compares without case sensitivity.
     /// </summary>
     /// <param name="destination">The ordinary destination.</param>
+    /// <exception cref="InvalidOperationException">The destination is reserved for provenance metadata.</exception>
     public static void EnsureNotReserved(string destination)
     {
         if (string.Equals(destination, Metadata, StringComparison.OrdinalIgnoreCase))

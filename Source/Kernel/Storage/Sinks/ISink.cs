@@ -24,12 +24,6 @@ public interface ISink
     SinkTypeId TypeId { get; }
 
     /// <summary>
-    /// Revalidates database provenance before a retained pipeline starts another operation.
-    /// </summary>
-    /// <returns>The admission task.</returns>
-    Task EnsureProvenance() => Task.CompletedTask;
-
-    /// <summary>
     /// Gets a value indicating whether this sink supports watermark-conditional whole-instance replacement.
     /// </summary>
     bool SupportsIsolatedReplace => false;
@@ -43,6 +37,12 @@ public interface ISink
     /// and use the default implementation.
     /// </remarks>
     bool IsInBulkMode => false;
+
+    /// <summary>
+    /// Revalidates database provenance before a retained pipeline starts another operation.
+    /// </summary>
+    /// <returns>The admission task.</returns>
+    Task EnsureProvenance() => Task.CompletedTask;
 
     /// <summary>
     /// Replaces an isolated instance unless its stored watermark is beyond the supplied watermark.

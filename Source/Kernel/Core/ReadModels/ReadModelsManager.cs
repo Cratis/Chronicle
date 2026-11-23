@@ -108,6 +108,7 @@ public class ReadModelsManager(
     async Task ApplyDefinitions(IEnumerable<ReadModelDefinition> definitions)
     {
         await ReadModelDefinitionProvenance.Ensure(storage, provenance, this.GetPrimaryKeyString(), definitions);
+
         // Only successfully reconciled definitions qualify for the fast path. Persisted manager state alone
         // cannot prove that SetDefinition and pipeline eviction completed during a previous attempt.
         definitions = definitions.Where(definition => !_completed.TryGetValue(definition.Identifier, out var completed) ||

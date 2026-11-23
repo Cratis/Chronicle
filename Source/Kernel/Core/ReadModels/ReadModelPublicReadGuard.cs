@@ -23,6 +23,7 @@ public static class ReadModelPublicReadGuard
     /// <param name="namespace">The actual read namespace.</param>
     /// <param name="definition">The requested definition.</param>
     /// <returns>The admission task.</returns>
+    /// <exception cref="RpcException">The sink does not support public read-model reads.</exception>
     public static async Task Ensure(
         IReadModelSinkProvenance provenance,
         IGrainFactory grains,

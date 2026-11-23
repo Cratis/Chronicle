@@ -27,6 +27,7 @@ public static class SinkAcquisitionProvenance
     /// </summary>
     /// <param name="provenance">The database-local marker.</param>
     /// <returns>The admission task.</returns>
+    /// <exception cref="InvalidOperationException">Database provenance refuses admission.</exception>
     public static async Task Ensure(ISinkProvenanceStorage provenance)
     {
         if (await provenance.IsQuarantined())

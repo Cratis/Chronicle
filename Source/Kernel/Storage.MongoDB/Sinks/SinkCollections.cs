@@ -56,10 +56,10 @@ public class SinkCollections(
     /// <inheritdoc/>
     public string PromotingCollectionName => _names.Promoting;
 
+    string ReplayCollectionName => _names.Replay;
+
     /// <inheritdoc/>
     public Task EnsureProvenance() => SinkAcquisitionProvenance.Ensure(new SinkProvenanceStorage(database));
-
-    string ReplayCollectionName => _names.Replay;
 
     /// <inheritdoc/>
     public async Task BeginReplay(Chronicle.Storage.ReadModels.ReplayContext context)
@@ -87,6 +87,7 @@ public class SinkCollections(
     public async Task EndReplay(Chronicle.Storage.ReadModels.ReplayContext context)
     {
         SinkProvenanceNames.EnsureNotReserved(context.RevertContainerName.Value);
+
         // Ending a replay is sent to every silo, and every silo holds its own sink for the read model.
         // Whatever happens to the swap, this sink must stop writing to the replay collection: a sink left
         // in replay mode keeps sending every live change to a collection nothing reads, with no error to

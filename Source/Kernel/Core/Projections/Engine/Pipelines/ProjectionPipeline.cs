@@ -243,6 +243,7 @@ public partial class ProjectionPipeline(
     public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
     {
         await EnsureProvenance();
+
         // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
         using var handleScope = await _handleLock.AcquireCoarse();
         var states = new List<(Key Key, ExpandoObject State)>(keys.Count);

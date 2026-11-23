@@ -67,6 +67,7 @@ internal static class SinkProvenanceSchema
     /// <param name="context">The metadata context.</param>
     /// <param name="containerName">The ordinary destination, if any.</param>
     /// <returns>The validation task.</returns>
+    /// <exception cref="InvalidOperationException">The destination identifies protected metadata.</exception>
     internal static async Task EnsureDestinationAvailable(ReadModelDbContext context, ReadModelContainerName? containerName)
     {
         if (containerName is null) return;

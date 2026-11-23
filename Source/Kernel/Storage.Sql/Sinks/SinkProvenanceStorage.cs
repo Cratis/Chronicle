@@ -48,6 +48,10 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
         if (!await ContainsMarker(context)) throw new InvalidOperationException("Read-model storage is not available.");
     }
 
+    /// <summary>
+    /// Validates the ordinary destination against the database-local metadata reservation.
+    /// </summary>
+    /// <returns>The validation task.</returns>
     internal async Task EnsureDestinationAvailable()
     {
         await using var scope = await Open();

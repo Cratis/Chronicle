@@ -19,6 +19,7 @@ internal static class ReadModelProducerWriteGuard
     /// <param name="eventStore">The event store.</param>
     /// <param name="restricted">Whether the incoming producer uses an unsupported source.</param>
     /// <returns>The validation task.</returns>
+    /// <exception cref="RpcException">The producer uses a restricted event sequence.</exception>
     internal static async Task Ensure(IReadModelSinkProvenance provenance, EventStoreName eventStore, bool restricted)
     {
         await provenance.Preserve(eventStore);

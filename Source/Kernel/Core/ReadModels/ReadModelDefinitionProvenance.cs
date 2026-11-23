@@ -12,6 +12,14 @@ namespace Cratis.Chronicle.ReadModels;
 /// </summary>
 internal static class ReadModelDefinitionProvenance
 {
+    /// <summary>
+    /// Validates every destination before persisting any definition in the batch.
+    /// </summary>
+    /// <param name="storage">The storage.</param>
+    /// <param name="provenance">The database provenance coordinator.</param>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="definitions">The submitted definitions.</param>
+    /// <returns>The validation task.</returns>
     internal static async Task Ensure(
         IStorage storage,
         IReadModelSinkProvenance provenance,

@@ -48,9 +48,6 @@ public partial class InMemorySink(
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
-    /// <inheritdoc/>
-    public Task EnsureProvenance() => provenance is null ? Task.CompletedTask : SinkAcquisitionProvenance.Ensure(provenance);
-
     /// <summary>
     /// Gets the current collection for the sink represented as a key value of key to <see cref="ExpandoObject"/>.
     /// </summary>
@@ -66,6 +63,9 @@ public partial class InMemorySink(
     /// </remarks>
     Dictionary<object, ulong> LastHandledEventSequenceNumbers =>
         _isReplaying ? _rewindLastHandledEventSequenceNumbers : _lastHandledEventSequenceNumbers;
+
+    /// <inheritdoc/>
+    public Task EnsureProvenance() => provenance is null ? Task.CompletedTask : SinkAcquisitionProvenance.Ensure(provenance);
 
     /// <summary>
     /// Gets the value this sink addresses a document by for a given <see cref="Key"/>.
