@@ -45,6 +45,7 @@ public class BusyProjectionsManagerCalls : IIncomingGrainCallFilter
             {
                 if (Hold > TimeSpan.Zero)
                 {
+                    // Task.Delay: a projections manager that is busy on purpose; the hold is the condition under test.
                     await Task.Delay(Hold);
                 }
 

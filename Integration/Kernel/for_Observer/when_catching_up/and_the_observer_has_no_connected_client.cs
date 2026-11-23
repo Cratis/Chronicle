@@ -30,6 +30,7 @@ public class and_the_observer_has_no_connected_client(context context) : Given<c
             await _store.EventLog.Append("second", new given.QuarantineRecoveryEvent("second"));
 
             // Long enough for the watchdog and the dormant-observer sweeps to have looked at the observer that is behind.
+            // Task.Delay: proving an absence; no catch-up job may start, so there is no fact to await.
             await Task.Delay(TimeSpan.FromSeconds(30));
             CatchUpJobs = await GetCatchUpJobs();
             Handled = Reactor.HandledSequenceNumbers.Count;
@@ -45,6 +46,7 @@ public class and_the_observer_has_no_connected_client(context context) : Given<c
                     throw new TimeoutException("The condition was not met in time.");
                 }
 
+                // Task.Delay: poll interval while waiting for the condition, bounded by the deadline.
                 await Task.Delay(250);
             }
         }

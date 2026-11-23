@@ -58,11 +58,13 @@ public class and_one_observer_is_behind(context context) : Given<context>(contex
                     throw new TimeoutException($"The observer that was behind was not woken to deliver its event: {SafetyNetWakes(_alpha)} wakes");
                 }
 
+                // Task.Delay: poll interval while waiting for the safety net to wake the observer, bounded by the deadline.
                 await Task.Delay(250);
             }
 
             // The beta observer is looked at every few seconds too: stay long enough for it to have been looked at, and for the
             // alpha observer to settle and be released again.
+            // Task.Delay: the safety net is periodic and exposes no signal for a completed pass over the beta observer.
             await Task.Delay(TimeSpan.FromSeconds(25));
 
             AlphaWakes = SafetyNetWakes(_alpha) - AlphaWakesBefore;

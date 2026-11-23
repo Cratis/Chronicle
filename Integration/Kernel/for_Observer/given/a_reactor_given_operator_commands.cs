@@ -57,6 +57,7 @@ public class a_reactor_given_operator_commands(OperatorCommandFixture fixture) :
                 return jobs;
             }
 
+            // Task.Delay: poll interval while waiting for the jobs, bounded by the deadline.
             await Task.Delay(250);
         }
     }
@@ -71,6 +72,7 @@ public class a_reactor_given_operator_commands(OperatorCommandFixture fixture) :
                 throw new TimeoutException("The condition was not met in time.");
             }
 
+            // Task.Delay: poll interval while waiting for the condition, bounded by the deadline.
             await Task.Delay(250);
         }
     }

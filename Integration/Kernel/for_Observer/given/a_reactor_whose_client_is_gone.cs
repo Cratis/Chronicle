@@ -93,6 +93,7 @@ public class a_reactor_whose_client_is_gone(OperatorCommandFixture fixture) : Sp
                 throw new TimeoutException($"The observer did not become disconnected; it is {information.RunningState}.");
             }
 
+            // Task.Delay: poll interval while waiting for the observer to become disconnected, bounded by the deadline.
             await Task.Delay(250);
         }
     }

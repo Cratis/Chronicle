@@ -77,6 +77,7 @@ public class a_projection_in_many_namespaces(ProjectionPlanSharingFixture fixtur
                 notProjectedYet = exception;
             }
 
+            // Task.Delay: poll interval while waiting for the projection to catch up, bounded by the deadline.
             await Task.Delay(250);
         }
 

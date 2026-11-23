@@ -31,6 +31,7 @@ public class and_it_is_healthy(context context) : Given<context>(context)
             await WaitUntilReleased(_alpha);
 
             // Long enough for a report that was scheduled by the activation to have been made.
+            // Task.Delay: proving an absence; no alert may be raised, so there is no fact to await.
             await Task.Delay(TimeSpan.FromSeconds(10));
             AlertCallsAfter = AlertCalls(_alpha);
             AlphaHandled = Alpha.Handled.Count;

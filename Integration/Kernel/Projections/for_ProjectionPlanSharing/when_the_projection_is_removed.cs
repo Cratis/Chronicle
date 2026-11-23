@@ -35,6 +35,7 @@ public class when_the_projection_is_removed(context context) : Given<context>(co
             }
 
             // Nothing is left to project it; give a surviving observer ample time to prove it wrong.
+            // Task.Delay: proving an absence; there is no fact to await that something did not happen.
             await Task.Delay(TimeSpan.FromSeconds(5));
             foreach (var @namespace in Namespaces)
             {

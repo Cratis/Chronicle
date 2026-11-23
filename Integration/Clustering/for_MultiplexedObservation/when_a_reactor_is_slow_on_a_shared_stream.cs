@@ -63,6 +63,7 @@ public class when_a_reactor_is_slow_on_a_shared_stream(context _context)
             using var deadline = new CancellationTokenSource(_timeout);
             while (_quick.Count < Events && !deadline.IsCancellationRequested)
             {
+                // Task.Delay: poll interval while waiting for the quick reactor, bounded by the deadline.
                 await Task.Delay(50, deadline.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
 
@@ -70,6 +71,7 @@ public class when_a_reactor_is_slow_on_a_shared_stream(context _context)
             _release.SetResult();
             while (_slow.Count < Events && !deadline.IsCancellationRequested)
             {
+                // Task.Delay: poll interval while waiting for the released slow reactor, bounded by the deadline.
                 await Task.Delay(50, deadline.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
         }

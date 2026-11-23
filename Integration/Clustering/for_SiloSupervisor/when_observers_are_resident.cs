@@ -38,6 +38,7 @@ public class when_observers_are_resident(context _context)
             ObserverGrains = statistics.Count(_ => _.GrainType.StartsWith("Cratis.Chronicle.Observation.Observer,", StringComparison.Ordinal));
 
             // The loop ticks once a second; give each supervisor a moment so its last tick is a real one.
+            // Task.Delay: the supervisor loop is time-driven and exposes no signal for a completed tick.
             await Task.Delay(TimeSpan.FromSeconds(3));
             var supervisors = new[] { fixture.SiloServices, fixture.ObserversSiloServices }
                 .Select(services => services.GetRequiredService<ISiloSupervisor>())

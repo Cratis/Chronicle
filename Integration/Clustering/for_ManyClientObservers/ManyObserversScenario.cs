@@ -78,6 +78,7 @@ public class ManyObserversScenario
                 throw new InvalidOperationException($"Not every reactor received {Events} events: {string.Join(", ", _received.OrderBy(_ => _.Key).Select(_ => $"{_.Key}={_.Value.Count}"))}.");
             }
 
+            // Task.Delay: poll interval while waiting for every reactor to receive its events, bounded by the cancellation.
             await Task.Delay(100, cancellation.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
     }

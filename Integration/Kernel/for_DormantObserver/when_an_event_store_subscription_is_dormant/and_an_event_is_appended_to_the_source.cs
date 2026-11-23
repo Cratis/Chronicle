@@ -91,6 +91,7 @@ public class and_an_event_is_appended_to_the_source(context context) : Given<con
                     throw new TimeoutException($"The subscription observer was not released: {string.Join(", ", await ResidentSubscriptionObservers(sourceEventStore))}");
                 }
 
+                // Task.Delay: poll interval while waiting for the subscription observer to be released, bounded by the deadline.
                 await Task.Delay(500);
             }
         }
@@ -109,6 +110,7 @@ public class and_an_event_is_appended_to_the_source(context context) : Given<con
                     throw new TimeoutException($"The event was not forwarded to the target in time: subscribed {await observer.IsSubscribed()}, running state {state.RunningState}, next {state.NextEventSequenceNumber}, last handled {state.LastHandledEventSequenceNumber}; subscriptions [{definitions}]");
                 }
 
+                // Task.Delay: poll interval while waiting for the event to be forwarded, bounded by the deadline.
                 await Task.Delay(250);
             }
         }

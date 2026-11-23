@@ -46,6 +46,7 @@ public class a_pattern_capturing_namespace(PatternCaptureFixture fixture) : a_do
                 return false;
             }
 
+            // Task.Delay: poll interval while waiting for the capture to be observed, bounded by the deadline.
             await Task.Delay(500);
         }
 

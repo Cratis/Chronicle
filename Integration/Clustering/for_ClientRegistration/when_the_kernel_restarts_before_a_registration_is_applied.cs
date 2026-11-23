@@ -57,6 +57,7 @@ public class when_the_kernel_restarts_before_a_registration_is_applied(context _
                     break;
                 }
 
+                // Task.Delay: poll interval while waiting for the restarted kernel to apply the registration, bounded by the deadline.
                 await Task.Delay(200);
             }
         }

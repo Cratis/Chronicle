@@ -81,6 +81,7 @@ public class a_quarantined_reactor(QuarantineRecoveryFixture fixture) : Specific
                 return jobs;
             }
 
+            // Task.Delay: poll interval while waiting for the jobs, bounded by the deadline.
             await Task.Delay(250);
         }
     }
@@ -106,6 +107,7 @@ public class a_quarantined_reactor(QuarantineRecoveryFixture fixture) : Specific
                 return null;
             }
 
+            // Task.Delay: poll interval while waiting for the observer state, bounded by the deadline.
             await Task.Delay(250);
         }
     }

@@ -27,6 +27,7 @@ public class and_capture_is_off(context context) : Given<context>(context)
 
             // Subscribing happens when a namespace is added and when event types are registered, both of which are
             // long done by now; the settle time covers the reconcile that the event log runs when it activates.
+            // Task.Delay: proving an absence; nothing may be captured, so there is no fact to await.
             await Task.Delay(TimeSpan.FromSeconds(15));
 
             CaptureWasRegistered = await Services.GetRequiredService<Storage.IStorage>().GetEventStore(_store.Name.Value).Reactors.Has(PatternCapture.ObserverIdentifier);

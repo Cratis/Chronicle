@@ -56,6 +56,7 @@ public class when_a_projection_is_registered_while_the_kernel_is_busy(context _c
             var deadline = DateTime.UtcNow + _timeout;
             while (DateTime.UtcNow < deadline && NumberAfterwards != Events)
             {
+                // Task.Delay: poll interval while waiting for the projected count, bounded by the deadline.
                 await Task.Delay(100);
                 try
                 {

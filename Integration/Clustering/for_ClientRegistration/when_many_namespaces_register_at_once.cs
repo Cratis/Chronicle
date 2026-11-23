@@ -72,6 +72,7 @@ public class when_many_namespaces_register_at_once(context _context) : IClassFix
                     break;
                 }
 
+                // Task.Delay: poll interval while waiting for every namespace to be projected, bounded by the deadline.
                 await Task.Delay(200);
             }
 

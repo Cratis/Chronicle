@@ -39,6 +39,7 @@ public class when_a_silo_leaves_the_cluster(context _context)
             var deadline = DateTimeOffset.UtcNow + _timeout;
             while (!supervisor.IsDepartureWindowOpen && DateTimeOffset.UtcNow < deadline)
             {
+                // Task.Delay: poll interval while waiting for the departure window to open, bounded by the deadline.
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
             }
 

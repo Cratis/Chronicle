@@ -97,6 +97,7 @@ public class ServedSignal
                 throw new InvalidOperationException($"Expected {expected} deliveries to the reactor and the reducer, saw {Reacted.Count} and {Reduced.Count}.");
             }
 
+            // Task.Delay: poll interval while waiting for the deliveries, bounded by the cancellation.
             await Task.Delay(100, cancellation.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
     }

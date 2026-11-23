@@ -79,6 +79,7 @@ public class when_a_registration_cannot_be_applied(context _context) : IClassFix
                     break;
                 }
 
+                // Task.Delay: poll interval while waiting for the registration outcome, bounded by the deadline.
                 await Task.Delay(200);
             }
 

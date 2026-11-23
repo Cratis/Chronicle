@@ -120,6 +120,7 @@ public class a_namespace_with_observers_behind_a_cap(CatchUpCapFixture fixture) 
                 throw new TimeoutException($"The condition was not met in time: {string.Join(", ", (await GetObservers()).Select(observer => $"{observer.Id}={observer.RunningState}"))}");
             }
 
+            // Task.Delay: poll interval while waiting for the observers to reach the condition, bounded by the deadline.
             await Task.Delay(250);
         }
     }

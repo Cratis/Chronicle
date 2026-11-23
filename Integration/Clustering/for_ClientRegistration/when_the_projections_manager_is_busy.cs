@@ -68,6 +68,7 @@ public class when_the_projections_manager_is_busy(context _context) : IClassFixt
                     break;
                 }
 
+                // Task.Delay: poll interval while waiting for the registration to be applied, bounded by the deadline.
                 await Task.Delay(100);
             }
 
