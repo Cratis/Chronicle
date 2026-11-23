@@ -132,7 +132,7 @@ public partial class EventSequence
             var appendManyResult = await AppendManyToStorage(validatedEvents, correlationId, causation, identity, effectReceipt);
             return appendManyResult.ReportingConcurrencyCheck(concurrencyScopes.ShouldAllBeValidated);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (_namespaceAppendStorage is null)
         {
             System.Diagnostics.Activity.Current?.RecordFailure(ex);
             logger.ErrorAppendingMany(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, ex);

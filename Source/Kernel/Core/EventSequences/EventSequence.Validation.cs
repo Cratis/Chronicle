@@ -141,7 +141,7 @@ public partial class EventSequence
 
             return appendResult.ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (_namespaceAppendStorage is null)
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }

@@ -20,8 +20,8 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeyedBy<EventSequenceKey>]
 [BelongsTo(WellKnownServices.EventSequenceQueries)]
-[Version(2)]
-public interface IEventSequence : IGrainWithStringKey
+[Version(3)]
+public partial interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>
     /// Appends a compensating event for an event that is already in the event sequence.

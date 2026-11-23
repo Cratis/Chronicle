@@ -77,6 +77,9 @@ public class an_event_sequence : Specification
     protected virtual TimeProvider EventTimeProvider => TimeProvider.System;
     protected virtual Telemetry Telemetry => new();
     protected virtual EventSequenceId SequenceId => EventSequenceId.Log;
+    protected virtual NamespaceIncarnationId? ActivationIncarnation => null;
+
+    protected virtual IEventSequenceStorage CreateEventSequenceStorage() => Substitute.For<IEventSequenceStorage>();
     protected long StateWrites => _silo.StorageStats<EventSequence, EventSequenceState>().Writes;
     protected virtual int StatePersistenceInterval => 1000;
     protected virtual CausationPropertyRetention CausationPropertyRetention => CausationPropertyRetention.Retain;
@@ -107,7 +110,7 @@ public class an_event_sequence : Specification
         _storage = Substitute.For<IStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
-        _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
+        _eventSequenceStorage = CreateEventSequenceStorage();
         _eventTypesStorage = EventTypesWithCachedDefinitions();
         _identityStorage = Substitute.For<IIdentityStorage>();
         _constraintValidationFactory = Substitute.For<IConstraintValidationFactory>();
@@ -156,39 +159,7 @@ public class an_event_sequence : Specification
                 callInfo.ArgAt<EventTypeId>(1),
                 callInfo.ArgAt<ExpandoObject>(2)));
 
-        _eventSequenceStorage.Append(
-            Arg.Any<EventSequenceNumber>(),
-            Arg.Any<EventSourceType>(),
-            Arg.Any<EventSourceId>(),
-            Arg.Any<EventStreamType>(),
-            Arg.Any<EventStreamId>(),
-            Arg.Any<EventType>(),
-            Arg.Any<CorrelationId>(),
-            Arg.Any<IEnumerable<Causation>>(),
-            Arg.Any<IEnumerable<IdentityId>>(),
-            Arg.Any<IEnumerable<Tag>>(),
-            Arg.Any<DateTimeOffset>(),
-            Arg.Any<IDictionary<EventTypeGeneration, ExpandoObject>>(),
-            Arg.Any<IDictionary<EventTypeGeneration, EventHash>>(),
-            Arg.Any<Subject?>())
-            .Returns(callInfo =>
-            {
-                var sequenceNumber = callInfo.ArgAt<EventSequenceNumber>(0);
-                _appendedSequenceNumber = sequenceNumber;
-                var appendedEvent = new AppendedEvent(
-                    EventContext.From(
-                        EventStore,
-                        EventStoreNamespace,
-                        _eventType,
-                        EventSourceType.Default,
-                        _eventSourceId,
-                        EventStreamType.All,
-                        EventStreamId.Default,
-                        sequenceNumber,
-                        CorrelationId.NotSet),
-                    new ExpandoObject());
-                return Task.FromResult<Result<AppendedEvent, DuplicateEventSequenceNumber>>(appendedEvent);
-            });
+        ConfigureSingleAppend();
 
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.EnsureCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => _.Arg<EventStoreNamespaceName>());
@@ -202,11 +173,36 @@ public class an_event_sequence : Specification
 
         ConfigureSilo();
         _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
-        _stateStorage.State = new EventSequenceState { ConstraintIndexWatermark = EventSequenceNumber.First };
+        _stateStorage.State = new EventSequenceState { ConstraintIndexWatermark = EventSequenceNumber.First, ActivationIncarnation = ActivationIncarnation };
 
         _eventSequence = await CreateEventSequence();
         _eventSequence?.ConstraintIndexRetryJitterSample = () => 0.5;
     }
+
+    void ConfigureSingleAppend() => _eventSequenceStorage.Append(
+        Arg.Any<EventSequenceNumber>(),
+        Arg.Any<EventSourceType>(),
+        Arg.Any<EventSourceId>(),
+        Arg.Any<EventStreamType>(),
+        Arg.Any<EventStreamId>(),
+        Arg.Any<EventType>(),
+        Arg.Any<CorrelationId>(),
+        Arg.Any<IEnumerable<Causation>>(),
+        Arg.Any<IEnumerable<IdentityId>>(),
+        Arg.Any<IEnumerable<Tag>>(),
+        Arg.Any<DateTimeOffset>(),
+        Arg.Any<IDictionary<EventTypeGeneration, ExpandoObject>>(),
+        Arg.Any<IDictionary<EventTypeGeneration, EventHash>>(),
+        Arg.Any<Subject?>())
+        .Returns(callInfo =>
+        {
+            var sequenceNumber = callInfo.ArgAt<EventSequenceNumber>(0);
+            _appendedSequenceNumber = sequenceNumber;
+            var appendedEvent = new AppendedEvent(
+                EventContext.From(EventStore, EventStoreNamespace, _eventType, EventSourceType.Default, _eventSourceId, EventStreamType.All, EventStreamId.Default, sequenceNumber, CorrelationId.NotSet),
+                new ExpandoObject());
+            return Task.FromResult<Result<AppendedEvent, DuplicateEventSequenceNumber>>(appendedEvent);
+        });
 
     /// <summary>
     /// Registers the existing collaborators in a fresh test silo for activation lifecycle specifications.
