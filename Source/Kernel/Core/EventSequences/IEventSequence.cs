@@ -20,7 +20,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeyedBy<EventSequenceKey>]
 [BelongsTo(WellKnownServices.EventSequenceQueries)]
-[Version(3)]
+[Version(4)]
 public partial interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>

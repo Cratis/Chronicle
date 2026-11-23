@@ -42,7 +42,7 @@ public partial class EventSequence
 
     async Task<Result<Concepts.Events.AppendedEvent, DuplicateEventSequenceNumber>> AppendPublicationToStorage(EventPublication publication, EventToAppendToStorage @event)
     {
-        var publicationStorage = EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
+        var publicationStorage = PublicationStorage;
         var result = await publicationStorage.AppendPublication(publication, @event);
         if (result.TryGetError(out var conflict))
         {

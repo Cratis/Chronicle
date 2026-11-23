@@ -151,7 +151,7 @@ public partial class EventSequence
     {
         if (publication is null) return null;
 
-        var publicationStorage = EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
+        var publicationStorage = PublicationStorage;
         if (!(await publicationStorage.TryGetPublication(publication)).TryGetValue(out var receipt)) return null;
 
         await ReconcileExistingPublication(receipt, eventType);

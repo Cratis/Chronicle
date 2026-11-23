@@ -19,7 +19,7 @@ namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
-    IEffectReceiptStorage EffectReceiptStorage => EventSequenceStorage as IEffectReceiptStorage ?? throw new OccurrencesStorageNotSupported();
+    IEffectReceiptStorage EffectReceiptStorage => _namespaceAppendStorage is { } bound ? bound : EventSequenceStorage as IEffectReceiptStorage ?? throw new OccurrencesStorageNotSupported();
 
     /// <inheritdoc/>
     public Task<AppendManyResult> AppendManyWithEffectReceipt(
@@ -171,7 +171,7 @@ public partial class EventSequence
         {
             return await EffectReceiptStorage.AppendManyWithEffectReceipt(events, receipt);
         }
-        catch (Exception exception)
+        catch (Exception exception) when (_namespaceAppendStorage is null)
         {
             // A storage exception cannot establish whether the commit happened. Both callers settle by
             // receipt lookup, reconciling the durable winner or reporting EffectReceiptUnsettled on a miss.

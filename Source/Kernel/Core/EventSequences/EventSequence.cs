@@ -975,7 +975,7 @@ public partial class EventSequence(
                     GenerationalContent = migratedContent,
                     ContentHashes = contentHashes
                 };
-                return AppendSingleWithNamespaceFence(attempted, namedTags, eventSource, WriteToStorage);
+                return publication is null ? AppendSingleWithNamespaceFence(attempted, namedTags, eventSource, WriteToStorage) : WriteToStorage();
             }
             var appendResult = await AppendWithRetries(
                 AppendToStorage,
