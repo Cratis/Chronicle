@@ -59,6 +59,7 @@ public partial class EventSequence
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
+            await EnsureNamespaceForAppend();
             var result = await AppendManyValidatedCore(events, correlationId, causation, causedBy, concurrencyScopes, effectReceipt, legacyScopes);
             span?.Activity?.RecordAppendOutcome(result);
             return result;

@@ -51,6 +51,11 @@ internal sealed class InProcessGrainFactory(
             return (TGrainInterface)occurrenceResolver(primaryKey);
         }
 
+        if (typeof(TGrainInterface) == typeof(KernelCore::Cratis.Chronicle.Namespaces.INamespaces))
+        {
+            return (TGrainInterface)(object)new InProcessNamespaces();
+        }
+
         if (grain is TGrainInterface fromGrain)
         {
             return fromGrain;
