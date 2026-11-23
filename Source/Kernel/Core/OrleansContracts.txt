@@ -616,6 +616,7 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager"
   A9B07C4C: GetProjectionDeclarations() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Projections.ProjectionWithDeclaration>>
   7C666A08: GetProjectionDefinitions() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>>
   093D2C13: GetStoredProjectionDefinition(Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition?>
+  3770C1C3: GetStoredProjectionDefinitions() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>>
   F436C56F: Register(System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task
   7D652C49: RegisterShared(string, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>, Cratis.Chronicle.Concepts.Projections.ProjectionOwner?, string?, string?) -> Task
   3C273B4B: Remove(Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<Cratis.Chronicle.Concepts.Observation.ObserverRemovalResult>

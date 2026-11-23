@@ -44,7 +44,7 @@ public class when_the_producer_is_only_stored : Specification
 
     async Task<Exception?> ReadWith(ProjectionDefinition? stored)
     {
-        _manager.GetStoredProjectionDefinition(Arg.Any<ProjectionId>()).Returns(Task.FromResult<ProjectionDefinition?>(stored));
+        _manager.GetStoredProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>(stored is null ? [] : [stored]));
         return await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", _definition));
     }
 
