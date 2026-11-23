@@ -66,7 +66,7 @@ public partial class ProjectionsManager(
     /// <param name="grainFactory">The grain factory.</param>
     /// <param name="meter">The engine cache meter.</param>
     /// <param name="options">The kernel configuration.</param>
-    public ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage, IGrainFactory grainFactory, IMeter<ProjectionsManager>? meter, IOptions<ChronicleOptions> options)
+    internal ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage, IGrainFactory grainFactory, IMeter<ProjectionsManager>? meter, IOptions<ChronicleOptions> options)
         : this(projectionFactory, storage, grainFactory, meter, options, NullLogger<ProjectionsManager>.Instance)
     {
     }
