@@ -51,8 +51,8 @@ public sealed class NamespaceIncarnationCoordinator(
         if (current?.Status == NamespaceLifecycleStatus.Closing) throw new NamespaceClosing(current.Namespace);
         if (current?.Status == NamespaceLifecycleStatus.RecoveryRequired) throw new NamespaceRecoveryRequired(current.Namespace);
         if (current?.Status == NamespaceLifecycleStatus.Open) return await VerifyOpen(current);
-        await effects.EnsureWake();
         if (current is null || current.Status == NamespaceLifecycleStatus.Removed) current = await Reserve(current, listed);
+        else await effects.EnsureWake(current.Revision);
         if (!await marker.TryOpen(current.Incarnation, current.PreviousIncarnation))
         {
             await Save(current, current.RequireRecovery("NamespaceMarkerOpenNotAcknowledged"));
@@ -70,7 +70,7 @@ public sealed class NamespaceIncarnationCoordinator(
         var current = await lifecycle.Get(name);
         if (current is null || current.Status == NamespaceLifecycleStatus.Preparing) current = await Ensure(true);
         if (current.Status is NamespaceLifecycleStatus.Removed or NamespaceLifecycleStatus.RecoveryRequired) return current;
-        await effects.EnsureWake();
+        await effects.EnsureWake(current.Status == NamespaceLifecycleStatus.Open ? current.Revision + 1 : current.Revision);
         if (current.Status == NamespaceLifecycleStatus.Open)
         {
             await Save(current, current.BeginRemoval(Guid.NewGuid(), clock.GetUtcNow()));
@@ -86,6 +86,7 @@ public sealed class NamespaceIncarnationCoordinator(
             PreviousIncarnation = previous?.Incarnation,
             NotifyOnOpen = previous is not null || !listed
         };
+        await effects.EnsureWake(prepared.Revision);
         if (!await lifecycle.TryWrite(name, previous?.Revision, prepared)) throw new NamespaceLifecycleChanged(name);
         return prepared;
     }

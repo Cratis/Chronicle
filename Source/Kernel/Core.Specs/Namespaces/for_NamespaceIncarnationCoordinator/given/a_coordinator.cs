@@ -49,7 +49,7 @@ public class a_coordinator : Specification
             return Task.FromResult(true);
         });
         _effects = Substitute.For<INamespaceIncarnationEffects>();
-        _effects.EnsureWake().Returns(_ => Record("Wake"));
+        _effects.EnsureWake(Arg.Any<long>()).Returns(_ => Record("Wake"));
         _effects.Create(Arg.Any<NamespaceLifecycle>()).Returns(_ => Record("Create"));
         _effects.Remove(Arg.Any<NamespaceLifecycle>()).Returns(call => Record(call.Arg<NamespaceLifecycle>().Stage.ToString()));
         _coordinator = CreateCoordinator();

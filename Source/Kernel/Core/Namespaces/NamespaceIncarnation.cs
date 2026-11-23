@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.EventSequences;
@@ -27,15 +28,15 @@ public sealed class NamespaceIncarnation(
     ILogger<NamespaceIncarnation> logger,
     TimeProvider? clock = null) : Grain, INamespaceIncarnation, IRemindable, INamespaceIncarnationEffects
 {
-    const string WakeReminder = "namespace-incarnation-wake";
+    const string WakeReminderPrefix = "namespace-incarnation-wake:";
     readonly TimeProvider _clock = clock ?? TimeProvider.System;
+    readonly HashSet<long> _durableWakes = [];
     EventStoreName _eventStore = null!;
     EventStoreNamespaceName _name = null!;
     IEventStoreStorage _store = null!;
     IHaveNamespaceIncarnations _capability = null!;
     NamespaceIncarnationCoordinator? _coordinator;
     IGrainTimer? _timer;
-    bool _durableWake;
 
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
@@ -105,10 +106,10 @@ public sealed class NamespaceIncarnation(
     }
 
     /// <inheritdoc/>
-    public Task ReceiveReminder(string reminderName, TickStatus status) => reminderName == WakeReminder ? Wake() : Task.CompletedTask;
+    public Task ReceiveReminder(string reminderName, TickStatus status) => WakeRevision(reminderName).HasValue ? Wake() : Task.CompletedTask;
 
     /// <inheritdoc/>
-    Task INamespaceIncarnationEffects.EnsureWake() => EnsureWake();
+    Task INamespaceIncarnationEffects.EnsureWake(long revision) => EnsureWake(revision);
 
     /// <inheritdoc/>
     async Task INamespaceIncarnationEffects.Create(NamespaceLifecycle state)
@@ -126,6 +127,12 @@ public sealed class NamespaceIncarnation(
         ? steps.ForgetForIncarnation(_eventStore, state)
         : steps.Execute(_eventStore, state.Namespace, state.Stage);
 
+    static long? WakeRevision(string name) =>
+        name.StartsWith(WakeReminderPrefix, StringComparison.Ordinal) &&
+        long.TryParse(name.AsSpan(WakeReminderPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var revision) && revision > 0
+            ? revision
+            : null;
+
     NamespaceIncarnationCoordinator Coordinator(EventStoreNamespaceName name) => _coordinator ??= new(
         name, _capability.NamespaceLifecycles, _capability.GetNamespaceMarker(name), this, _clock);
 
@@ -141,23 +148,35 @@ public sealed class NamespaceIncarnation(
         Interleave = false
     });
 
-    async Task EnsureWake()
+    async Task EnsureWake(long revision)
     {
-        if (!_durableWake)
+        if (!_durableWakes.Contains(revision))
         {
-            await this.RegisterOrUpdateReminder(WakeReminder, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-            _durableWake = true;
+            await this.RegisterOrUpdateReminder($"{WakeReminderPrefix}{revision.ToString(CultureInfo.InvariantCulture)}", TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            _durableWakes.Add(revision);
         }
         ArmTimer();
     }
 
     async Task ClearTerminalWake(NamespaceLifecycle? state)
     {
-        if (state?.Status is NamespaceLifecycleStatus.Preparing or NamespaceLifecycleStatus.Closing) return;
-        if (state?.Status == NamespaceLifecycleStatus.RecoveryRequired) logger.NamespaceRecoveryRequired(state.Namespace, state.LastFailure);
-        var reminder = await this.GetReminder(WakeReminder);
-        if (reminder is not null) await this.UnregisterReminder(reminder);
-        _durableWake = false;
+        if (state is null || state.Status is NamespaceLifecycleStatus.Preparing or NamespaceLifecycleStatus.Closing) return;
+        if (state.Status == NamespaceLifecycleStatus.RecoveryRequired) logger.NamespaceRecoveryRequired(state.Namespace, state.LastFailure);
+        var outstanding = false;
+        foreach (var reminder in await this.GetReminders())
+        {
+            if (WakeRevision(reminder.ReminderName) is not { } revision) continue;
+
+            // A missing or predecessor row cannot disprove a pending CAS whose outcome is still unknown.
+            if (revision > state.Revision)
+            {
+                outstanding = true;
+                continue;
+            }
+            await this.UnregisterReminder(reminder);
+            _durableWakes.Remove(revision);
+        }
+        if (outstanding) return;
         _timer?.Dispose();
         _timer = null;
     }

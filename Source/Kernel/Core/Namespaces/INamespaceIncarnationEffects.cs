@@ -9,8 +9,9 @@ namespace Cratis.Chronicle.Namespaces;
 public interface INamespaceIncarnationEffects
 {
     /// <summary>Installs the durable recovery reminder before pending control state is committed.</summary>
+    /// <param name="revision">The pending control revision this wake must protect until terminal proof covers it.</param>
     /// <returns>The durable reminder acknowledgement.</returns>
-    Task EnsureWake();
+    Task EnsureWake(long revision);
 
     /// <summary>Records the creation notification, then commits the namespace listing and publishes its notification.</summary>
     /// <param name="state">The reserved identity; repeated notifications must be safe after a lost acknowledgement.</param>

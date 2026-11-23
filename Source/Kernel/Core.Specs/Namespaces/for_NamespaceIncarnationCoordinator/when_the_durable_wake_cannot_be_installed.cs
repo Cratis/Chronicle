@@ -10,7 +10,7 @@ public class when_the_durable_wake_cannot_be_installed : given.a_coordinator
 {
     Exception _error;
 
-    void Establish() => _effects.EnsureWake().Returns(Task.FromException(new InvalidOperationException("reminder unavailable")));
+    void Establish() => _effects.EnsureWake(Arg.Any<long>()).Returns(Task.FromException(new InvalidOperationException("reminder unavailable")));
 
     async Task Because() => _error = await Catch.Exception(() => _coordinator.Ensure(false));
 
