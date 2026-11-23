@@ -210,7 +210,7 @@ jobs:
           dotnet publish -c Release -f net11.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/x64
 
       - name: Upload x64 kernel output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 1
           name: dotnet-x64
@@ -237,7 +237,7 @@ jobs:
           dotnet publish -c Release -f net11.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} --self-contained -o out/arm64
 
       - name: Upload arm64 kernel output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 1
           name: dotnet-arm64
@@ -286,7 +286,7 @@ jobs:
           PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}
 
       - name: Upload workbench output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 1
           name: workbench
@@ -342,7 +342,7 @@ jobs:
         run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:IsPackaging=true -p:DisableProxyGenerator=true -p:Version=${{ needs.release.outputs.version }} -p:PackageVersion=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }}
 
       - name: Upload NuGet packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 1
           name: nuget-packages
@@ -481,7 +481,7 @@ jobs:
           dotnet publish -c Release -f net11.0 -r linux-x64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/x64
 
       - name: Upload x64 development kernel output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 1
           name: dotnet-x64-development
@@ -508,7 +508,7 @@ jobs:
           dotnet publish -c Release -f net11.0 -r linux-arm64 -p:PublishReadyToRun=true -p:DisableProxyGenerator=true -p:DefineConstants=DEVELOPMENT -p:Version=${{ needs.release.outputs.version }} -p:SourceRevisionId=${{ github.sha }} -o out/arm64
 
       - name: Upload arm64 development kernel output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           retention-days: 1
           name: dotnet-arm64-development

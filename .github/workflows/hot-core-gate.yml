@@ -230,7 +230,7 @@ jobs:
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf hot-core-build-output.tar.zst -T -
 
       - name: Upload hot-core build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hot-core-build-output
           path: hot-core-build-output.tar.zst

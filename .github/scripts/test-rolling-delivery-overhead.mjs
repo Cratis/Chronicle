@@ -206,7 +206,7 @@ test('workflow uploads immediately with always/continue-on-error; later diagnost
     assert.ok(!step.includes('${{'));
     assert.match(step, /--normal Integration\/SqlClustering\/bin\/Release/);
     assert.match(step, /--enabled "\$RUNNER_TEMP\/rolling-delivery-diagnostics/);
-    assert.match(upload, /if: always\(\)\n        continue-on-error: true\n        uses: actions\/upload-artifact@v4/);
+    assert.match(upload, /if: always\(\)\n        continue-on-error: true\n        uses: actions\/upload-artifact@v7/);
     assert.match(upload, /name: rolling-delivery-overhead\n/);
-    assert.match(workflow, /- name: Upload rolling delivery diagnostics evidence\n        if: always\(\) && matrix.provider == 'RollingUpgrade'\n        uses: actions\/upload-artifact@v4\n        with:\n          name: rolling-delivery-diagnostics/);
+    assert.match(workflow, /- name: Upload rolling delivery diagnostics evidence\n        if: always\(\) && matrix.provider == 'RollingUpgrade'\n        uses: actions\/upload-artifact@v7\n        with:\n          name: rolling-delivery-diagnostics/);
 });

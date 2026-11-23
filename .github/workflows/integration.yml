@@ -247,7 +247,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
           path: ./coverage-results/
@@ -256,7 +256,7 @@ jobs:
       # always(): the retry script can turn a crashed first attempt into a green job, and the dump is still wanted.
       - name: Upload crash dumps
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: crash-dumps-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
           path: ${{ runner.temp }}/crash-dumps/
@@ -272,7 +272,7 @@ jobs:
 
       - name: Upload failed integration logs
         if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/integration-logs/
@@ -364,7 +364,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-kernel-${{ matrix.namespace }}
           path: ./coverage-results/
@@ -373,7 +373,7 @@ jobs:
       # always(): the retry script can turn a crashed first attempt into a green job, and the dump is still wanted.
       - name: Upload crash dumps
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: crash-dumps-kernel-${{ matrix.namespace }}
           path: ${{ runner.temp }}/crash-dumps/
@@ -388,7 +388,7 @@ jobs:
 
       - name: Upload failed integration logs
         if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/integration-logs/
@@ -461,7 +461,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-clustering-${{ matrix.namespace }}
           path: ./coverage-results/
@@ -475,7 +475,7 @@ jobs:
 
       - name: Upload failed integration logs
         if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/integration-logs/
@@ -595,7 +595,7 @@ jobs:
       - name: Upload rolling delivery overhead evidence immediately
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rolling-delivery-overhead
           path: ${{ runner.temp }}/rolling-delivery-overhead/
@@ -645,7 +645,7 @@ jobs:
 
       - name: Upload rolling delivery diagnostics evidence
         if: always() && matrix.provider == 'RollingUpgrade'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rolling-delivery-diagnostics
           path: ${{ runner.temp }}/rolling-delivery-overhead/
@@ -653,7 +653,7 @@ jobs:
 
       - name: Upload SQL clustering results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sql-clustering-${{ matrix.provider }}-results
           path: coverage-results/
@@ -667,7 +667,7 @@ jobs:
 
       - name: Upload failed integration logs
         if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failed-integration-logs-${{ github.job }}-${{ matrix.provider }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/integration-logs/

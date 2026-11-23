@@ -148,7 +148,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload build output
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: python-contract-assets
           path: source/Source/Clients/Python/dist/
@@ -156,7 +156,7 @@ jobs:
           retention-days: 7
 
       - name: Keep the tooling for later jobs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: python-contract-tooling
           path: tooling/.github/scripts/python-contract-*.py
