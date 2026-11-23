@@ -10,8 +10,8 @@ public class two_roots_with_children : when_identifying_read_model_key_for_neste
 {
     protected const string FirstRoot = "root-a";
     protected const string SecondRoot = "root-b";
-    protected PreviewSink _rootSink;
     protected Key _result;
+    PreviewSink _rootSink;
 
     void Establish()
     {
@@ -19,11 +19,15 @@ public class two_roots_with_children : when_identifying_read_model_key_for_neste
         Storage.WithParentHistory(FeatureKey);
     }
 
-    protected void AddRoot(string root, string child) => _rootSink.Set(root, new
+    protected void AddRoot(string root, string child)
     {
-        id = root,
-        features = new[] { new { featureId = child } }
-    }.AsExpandoObject(), 1);
+        var document = new
+        {
+            id = root,
+            features = new[] { new { featureId = child } }
+        }.AsExpandoObject();
+        _rootSink.Set(root, document, 1);
+    }
 
     protected async Task<Key> Resolve(string root)
     {

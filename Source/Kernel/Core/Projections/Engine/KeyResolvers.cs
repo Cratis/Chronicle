@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine;
@@ -353,6 +354,15 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         return new PropertyPath(string.Join('.', segments));
     }
 
+    static async Task<Option<Key>> FindParentRootInSink(Storage.Sinks.ISink sink, PropertyPath childIdentifierPath, object childKey, AppendedEvent @event)
+    {
+        var rootKey = new Key(@event.Context.EventSourceId.Value, ArrayIndexers.NoIndexers);
+        var scoped = await sink.TryFindRootKeyByChildValueInRoot(childIdentifierPath, childKey, rootKey);
+
+        // A matching root and child establish the event's root. A miss may instead be an event on a separate child stream.
+        return scoped?.TryGetValue(out _) == true ? scoped : await sink.TryFindRootKeyByChildValue(childIdentifierPath, childKey);
+    }
+
     async Task<KeyResolverResult> ResolveParentKey(
         KeyResolver parentKeyResolver,
         Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
@@ -694,7 +704,7 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
         logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
-        var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, parentKey.Value!);
+        var optionalRootKey = await FindParentRootInSink(sink, childPropertyPath, parentKey.Value!, @event);
         if (optionalRootKey.TryGetValue(out var rootKey))
         {
             logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
