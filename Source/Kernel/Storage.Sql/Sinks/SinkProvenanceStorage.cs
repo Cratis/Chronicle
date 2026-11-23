@@ -57,6 +57,20 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
         await using var scope = await Open();
     }
 
+    static async Task<bool> ContainsMarker(ReadModelDbContext context)
+    {
+        var rows = await context.Entries.FromSqlRaw(SinkProvenanceSchema.Select(context.Database.GetDatabaseType())).AsNoTracking().Take(2).ToListAsync();
+        if (rows.Count == 0) return false;
+        if (rows.Count != 1 || !IsMarker(rows[0]))
+        {
+            throw new InvalidOperationException("Read-model storage is not available.");
+        }
+
+        return true;
+    }
+
+    static bool IsMarker(DynamicReadModelEntity row) => (row["Id"], row["Version"], row["Restricted"]) is (Marker, 1, true);
+
     async Task<DbContextScope<ReadModelDbContext>> Open()
     {
         if (containerName is not null) SinkProvenanceNames.EnsureNotReserved(containerName);
@@ -72,18 +86,4 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
             throw;
         }
     }
-
-    static async Task<bool> ContainsMarker(ReadModelDbContext context)
-    {
-        var rows = await context.Entries.FromSqlRaw(SinkProvenanceSchema.Select(context.Database.GetDatabaseType())).AsNoTracking().Take(2).ToListAsync();
-        if (rows.Count == 0) return false;
-        if (rows.Count != 1 || !IsMarker(rows[0]))
-        {
-            throw new InvalidOperationException("Read-model storage is not available.");
-        }
-
-        return true;
-    }
-
-    static bool IsMarker(DynamicReadModelEntity row) => (row["Id"], row["Version"], row["Restricted"]) is (Marker, 1, true);
 }

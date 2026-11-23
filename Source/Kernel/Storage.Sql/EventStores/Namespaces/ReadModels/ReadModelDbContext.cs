@@ -154,10 +154,6 @@ public class ReadModelDbContext(
         optionsBuilder.ReplaceService<IModelCacheKeyFactory, ReadModelCacheKeyFactory>();
     }
 
-    string? TableSchema(DatabaseType databaseType) => tableName == Storage.Sinks.SinkProvenanceNames.Metadata
-        ? Sinks.SinkProvenanceSchema.Schema(databaseType)
-        : null;
-
     /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -247,4 +243,8 @@ public class ReadModelDbContext(
         DatabaseType.SqlServer => "nvarchar(max)",
         _ => "TEXT"
     };
+
+    string? TableSchema(DatabaseType databaseType) => tableName == global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata
+        ? Sinks.SinkProvenanceSchema.Schema(databaseType)
+        : null;
 }

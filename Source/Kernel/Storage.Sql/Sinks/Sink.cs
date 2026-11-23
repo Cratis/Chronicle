@@ -421,6 +421,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     public async Task Remove(ReadModelContainerName containerName)
     {
         await EnsureDestinationAvailable(containerName);
+
         // Do not migrate the backup being removed: a truncated logical name may now address another
         // replay's backup. Resolve ownership through the marker table on the primary's connection.
         await using var scope = await OpenScope(_tableName);

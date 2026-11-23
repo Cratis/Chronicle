@@ -68,6 +68,7 @@ public partial class Sink
     async Task EnsureLayoutForRead()
     {
         await EnsureDestinationAvailable(_tableName);
+
         // Once resolved, a read costs only these field checks.
         if (!_needsLayout || Volatile.Read(ref _layoutResolvedForRead))
         {

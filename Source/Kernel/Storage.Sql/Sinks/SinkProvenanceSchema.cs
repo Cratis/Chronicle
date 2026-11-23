@@ -30,6 +30,7 @@ internal static class SinkProvenanceSchema
     /// </summary>
     /// <param name="databaseType">The physical provider.</param>
     /// <returns>The fixed metadata schema.</returns>
+    /// <exception cref="InvalidOperationException">The database provider does not support provenance metadata.</exception>
     internal static string Schema(DatabaseType databaseType) => databaseType switch
     {
         DatabaseType.PostgreSql => "public",
@@ -43,6 +44,7 @@ internal static class SinkProvenanceSchema
     /// </summary>
     /// <param name="databaseType">The physical provider.</param>
     /// <returns>The fixed metadata query.</returns>
+    /// <exception cref="InvalidOperationException">The database provider does not support provenance metadata.</exception>
     internal static string Select(DatabaseType databaseType) => databaseType switch
     {
         DatabaseType.PostgreSql => "SELECT \"Id\", \"Version\", \"Restricted\" FROM public.\"__cratis_sink_provenance\"",
@@ -112,7 +114,9 @@ internal static class SinkProvenanceSchema
         {
             // A concurrent creator is accepted only after the caller reads and validates the table.
         }
-        catch (PostgresException exception) when (exception.SqlState is PostgresErrorCodes.DuplicateTable or PostgresErrorCodes.UniqueViolation)
+        catch (PostgresException exception) when (
+            string.Equals(exception.SqlState, PostgresErrorCodes.DuplicateTable, StringComparison.Ordinal) ||
+            string.Equals(exception.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal))
         {
             // PostgreSQL can race on the table or its catalog type; the typed read must still succeed.
         }
