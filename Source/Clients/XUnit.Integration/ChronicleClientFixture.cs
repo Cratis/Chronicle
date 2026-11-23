@@ -511,9 +511,23 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         {
             _contextWebApplicationFactory ??= Timings.Measure("factory-create-per-context", CreateWebApplicationFactory);
         }
-        else
+        else if (_webApplicationFactory is null)
         {
-            _webApplicationFactory ??= Timings.Measure("factory-create-shared", CreateWebApplicationFactory);
+            var factory = Timings.Measure("factory-create-shared", CreateWebApplicationFactory);
+            _webApplicationFactory = factory;
+
+            // The shared silo is wired to the storage of the fixture it was created for, and is shared by every fixture of
+            // the same type. When that fixture goes, so does its storage: a silo left behind would be reused by the
+            // next fixture while it still talks to storage that no longer exists.
+            (ChronicleFixture as ChronicleFixture)?.RegisterDisposal(async () =>
+            {
+                if (ReferenceEquals(_webApplicationFactory, factory))
+                {
+                    _webApplicationFactory = null;
+                }
+
+                await factory.DisposeAsync();
+            });
         }
 
         if (_servicesProperty is not null)
