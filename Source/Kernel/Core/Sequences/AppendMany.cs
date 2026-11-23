@@ -27,6 +27,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope to validate the append against. Defaults to no check when not provided.</param>
 /// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
+/// <param name="ExpectedIncarnation">Optional captured namespace identity, enforced whenever supplied.</param>
 [StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
@@ -42,7 +43,8 @@ public record AppendMany(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
-    Occurrences.EffectReceipt? EffectReceipt = default)
+    Occurrences.EffectReceipt? EffectReceipt = default,
+    NamespaceIncarnationId? ExpectedIncarnation = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -98,11 +100,23 @@ public record AppendMany(
             });
 
         var correlationId = CorrelationId ?? Guid.NewGuid();
-        var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
+        var causationChain = ResolveCausation(causation);
         var identity = principalAccessor.Current.ResolveCausedBy(CausedBy);
+
+        if (ExpectedIncarnation is not null)
+        {
+            return (EffectReceipt is null
+                ? eventSequence.AppendManyToNamespace(ExpectedIncarnation, events, correlationId, causationChain, identity, concurrencyScopes)
+                : eventSequence.AppendManyWithEffectReceiptToNamespace(ExpectedIncarnation, events, correlationId, causationChain, identity, concurrencyScopes, EffectReceipt)).WithUnknownOutcome(correlationId);
+        }
 
         return (EffectReceipt is null
             ? eventSequence.AppendMany(events, correlationId, causationChain, identity, concurrencyScopes)
             : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, concurrencyScopes, EffectReceipt)).WithUnknownOutcome(correlationId);
     }
+
+    /// <summary>Uses explicit causation when supplied, otherwise the request chain.</summary>
+    /// <param name="causation">The request causation.</param>
+    /// <returns>The causation chain for the batch.</returns>
+    IEnumerable<Concepts.Auditing.Causation> ResolveCausation(RequestCausation causation) => Causation?.ToChronicle() ?? causation.GetCurrentChain();
 }

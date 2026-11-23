@@ -17,6 +17,20 @@ message AppendManyForEventSourcesRequest {
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
    EffectReceipt EffectReceipt = 10;
+   .bcl.Guid ExpectedIncarnation = 11;
+}
+message AppendManyForEventSourcesToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   repeated EventForEventSourceIdWithNamedTags Events = 5;
+   .bcl.Guid CorrelationId = 6;
+   repeated string Tags = 7;
+   repeated Causation Causation = 8;
+   Identity CausedBy = 9;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 10;
+   EffectReceipt EffectReceipt = 11;
 }
 message AppendManyForEventSourcesWithNamedTagsRequest {
    string EventStore = 1;
@@ -29,6 +43,7 @@ message AppendManyForEventSourcesWithNamedTagsRequest {
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
    EffectReceipt EffectReceipt = 10;
+   .bcl.Guid ExpectedIncarnation = 11;
 }
 message AppendManyOnceRequest {
    string EventStore = 1;
@@ -81,6 +96,7 @@ message AppendManyRequest {
    ConcurrencyScope ConcurrencyScope = 10;
    SerializableDateTimeOffset Occurred = 11;
    EffectReceipt EffectReceipt = 12;
+   .bcl.Guid ExpectedIncarnation = 13;
 }
 message AppendManyResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -98,6 +114,21 @@ message AppendManyResponse {
    bool IsRetryable = 13;
    .bcl.TimeSpan RetryAfter = 14;
 }
+message AppendManyToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   string EventSourceId = 5;
+   repeated EventToAppendWithNamedTags Events = 6;
+   .bcl.Guid CorrelationId = 7;
+   repeated string Tags = 8;
+   SerializableDateTimeOffset Occurred = 9;
+   repeated Causation Causation = 10;
+   Identity CausedBy = 11;
+   ConcurrencyScope ConcurrencyScope = 12;
+   EffectReceipt EffectReceipt = 13;
+}
 message AppendManyWithNamedTagsRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -111,6 +142,7 @@ message AppendManyWithNamedTagsRequest {
    Identity CausedBy = 10;
    ConcurrencyScope ConcurrencyScope = 11;
    EffectReceipt EffectReceipt = 12;
+   .bcl.Guid ExpectedIncarnation = 13;
 }
 message AppendOnceRequest {
    string EventStore = 1;
@@ -1016,9 +1048,11 @@ service EventSequences {
    rpc AppendedEvents (AppendedEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc AppendMany (AppendManyRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSources (AppendManyForEventSourcesRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendManyForEventSourcesToNamespace (AppendManyForEventSourcesToNamespaceRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSourcesWithNamedTags (AppendManyForEventSourcesWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyOnce (AppendManyOnceRequest) returns (CommandResult_AppendManyOnceResponse);
    rpc AppendManyOnceWithNamedTags (AppendManyOnceWithNamedTagsRequest) returns (CommandResult_AppendManyOnceResponse);
+   rpc AppendManyToNamespace (AppendManyToNamespaceRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyWithNamedTags (AppendManyWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendOnce (AppendOnceRequest) returns (CommandResult_AppendOnceResponse);
    rpc AppendOnceWithNamedTags (AppendOnceWithNamedTagsRequest) returns (CommandResult_AppendOnceResponse);

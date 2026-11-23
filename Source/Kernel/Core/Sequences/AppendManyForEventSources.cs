@@ -25,6 +25,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes to validate the append against, one per event source. An event source with no entry gets no check.</param>
 /// <param name="EffectReceipt">Optional occurrence effect to commit atomically with this batch.</param>
+/// <param name="ExpectedIncarnation">Optional captured namespace identity, enforced whenever supplied.</param>
 [StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
@@ -38,7 +39,8 @@ public record AppendManyForEventSources(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default,
-    Occurrences.EffectReceipt? EffectReceipt = default)
+    Occurrences.EffectReceipt? EffectReceipt = default,
+    NamespaceIncarnationId? ExpectedIncarnation = default)
 {
     /// <summary>
     /// Handles the command by appending every event in one transaction.
@@ -73,29 +75,10 @@ public record AppendManyForEventSources(
         var eventSequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
         var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
         var eventsList = Events.ToList();
-        var events = eventsList.Select((@event, index) =>
-        {
-            var route = AppendRoute.Resolve(@event.EventSourceType, @event.EventStreamType, @event.EventStreamId);
-
-            return new EventSequences.EventToAppend(
-                route.SourceType,
-                @event.EventSourceId,
-                route.StreamType,
-                route.StreamId,
-                @event.EventType.ToChronicle(),
-                (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
-                JsonNode.Parse(@event.Content)!.AsObject(),
-                @event.Occurred,
-                Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject))
-            {
-                NamedTags = namedTagsPerEvent is null ? [] : namedTagsPerEvent[index],
-                Causation = @event.Causation?.ToChronicle(),
-                EventSource = string.IsNullOrEmpty(@event.EventSource) ? null : new EventSourceName(@event.EventSource)
-            };
-        });
+        var events = CreateEvents(eventsList, globalTags, namedTagsPerEvent);
 
         var correlationId = CorrelationId ?? Guid.NewGuid();
-        var causationChain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
+        var causationChain = ResolveCausation(causation);
         var identity = principalAccessor.Current.ResolveCausedBy(CausedBy);
         var scopes = (ConcurrencyScopes ?? []).ToChronicle();
         if (scopes.TryGetError(out var error))
@@ -108,6 +91,13 @@ public record AppendManyForEventSources(
         }
 
         var conjunctions = scopes.AsT0;
+        if (ExpectedIncarnation is not null)
+        {
+            return (EffectReceipt is null
+                ? eventSequence.AppendManyWithConjunctionsToNamespace(ExpectedIncarnation, events, correlationId, causationChain, identity, conjunctions)
+                : eventSequence.AppendManyWithConjunctionsAndEffectReceiptToNamespace(ExpectedIncarnation, events, correlationId, causationChain, identity, conjunctions, EffectReceipt)).WithUnknownOutcome(correlationId);
+        }
+
         if (conjunctions.HasRepeatedIds)
         {
             return (EffectReceipt is null
@@ -120,6 +110,47 @@ public record AppendManyForEventSources(
             ? eventSequence.AppendMany(events, correlationId, causationChain, identity, legacyScopes)
             : eventSequence.AppendManyWithEffectReceipt(events, correlationId, causationChain, identity, legacyScopes, EffectReceipt);
         return WithScopePositions(append.WithUnknownOutcome(correlationId), conjunctions);
+    }
+
+    /// <summary>Uses explicit causation when supplied, otherwise the request chain.</summary>
+    /// <param name="causation">The request causation.</param>
+    /// <returns>The causation chain for the batch.</returns>
+    IEnumerable<Concepts.Auditing.Causation> ResolveCausation(RequestCausation causation) => Causation?.ToChronicle() ?? causation.GetCurrentChain();
+
+    /// <summary>Pairs each event with its optional named tags in input order.</summary>
+    /// <param name="events">The caller's materialized events.</param>
+    /// <param name="globalTags">The tags shared by the batch.</param>
+    /// <param name="namedTagsPerEvent">Optional named tags aligned with the events.</param>
+    /// <returns>The events ready for grain dispatch.</returns>
+    static IEnumerable<EventSequences.EventToAppend> CreateEvents(
+        IReadOnlyList<EventForEventSourceId> events,
+        Tag[] globalTags,
+        IReadOnlyList<IReadOnlyCollection<Concepts.Events.NamedTag>>? namedTagsPerEvent) =>
+        events.Select((@event, index) => CreateEvent(@event, globalTags, namedTagsPerEvent?[index] ?? []));
+
+    /// <summary>Converts one event while preserving its routing, tags, and audit metadata.</summary>
+    /// <param name="event">The event supplied by the caller.</param>
+    /// <param name="globalTags">The tags shared by the batch.</param>
+    /// <param name="namedTags">The named tags for this event.</param>
+    /// <returns>The event ready for grain dispatch.</returns>
+    static EventSequences.EventToAppend CreateEvent(EventForEventSourceId @event, Tag[] globalTags, IReadOnlyCollection<Concepts.Events.NamedTag> namedTags)
+    {
+        var route = AppendRoute.Resolve(@event.EventSourceType, @event.EventStreamType, @event.EventStreamId);
+        return new EventSequences.EventToAppend(
+            route.SourceType,
+            @event.EventSourceId,
+            route.StreamType,
+            route.StreamId,
+            @event.EventType.ToChronicle(),
+            (@event.Tags ?? []).Select(tag => (Tag)tag).Concat(globalTags).Distinct(),
+            JsonNode.Parse(@event.Content)!.AsObject(),
+            @event.Occurred,
+            Subject: string.IsNullOrWhiteSpace(@event.Subject) ? null : new Subject(@event.Subject))
+        {
+            NamedTags = namedTags,
+            Causation = @event.Causation?.ToChronicle(),
+            EventSource = string.IsNullOrEmpty(@event.EventSource) ? null : new EventSourceName(@event.EventSource)
+        };
     }
 
     static async Task<AppendManyResult> WithScopePositions(Task<AppendManyResult> append, Concepts.EventSequences.Concurrency.ConcurrencyScopeConjunctions scopes)
