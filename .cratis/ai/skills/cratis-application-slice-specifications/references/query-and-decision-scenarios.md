@@ -70,36 +70,80 @@ cover those pipeline hooks.
 
 ## Decision specifications
 
-Start with a direct decision call supplied with read-model state. Follow the
-[scenario rule](../../../rules/specs.scenarios.csharp.md): application authors do
-not select read-protection modes, call `UseDecisionReads`, seed events only to
-satisfy infrastructure, or prove the platform concurrency, conflict-refusal or
-isolation matrix. Arc/Chronicle specs own it. The application's only decision-read
-spec obligation is one cheap assembly-level check of its own model/projection
-shapes, not one scenario per decision:
+Start with a direct `Handle()` or validator call supplied with read-model state;
+validators own refusals. `Provide()` acquires data and only short-circuits
+(`ValidationResult`/`AuthorizationResult`) when acquisition yields nothing usable,
+not for ordinary validation rules. Follow the
+[scenario rule](../../../rules/specs.scenarios.csharp.md): ordinary application
+specs prove business decisions, not Arc/Chronicle's concurrency, conflict-refusal
+or isolation matrix. Add pipeline scenarios only for the wiring they prove.
+For that wiring, an admitted flat model pinned with `.ReadModel(instance)` can
+serve a plain `Handle` parameter under `On`; pins are not advisory-only. Use routed
+events for per-stream models and advanced `DecisionRead<T>` parameters, or when
+mapping/history is the proof. `Given` needs `Cratis.Arc.Chronicle.Testing`.
+
+### One assembly-level admission check
+
+Keep one cheap admission spec over the application's command assemblies, not one
+scenario per decision. This excerpt assumes `RegisterAuthor` is an application
+command; include each command assembly in a multi-assembly application:
 
 ```csharp
-DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly);
+using Cratis.Arc.Chronicle.Testing.Commands;
+
+public class when_checking_decision_read_admission
+{
+    [Fact]
+    public void should_admit_every_declared_protected_read() =>
+        DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(typeof(RegisterAuthor).Assembly);
+}
 ```
 
-This API is in `Cratis.Arc.Chronicle.Testing.Commands`; it discovers declared reads
-and checks admission without executing commands or running Chronicle. Keep the
-spec's discovered projections representative of production; spec-only competing
-definitions can make a model ambiguous. Explicit `IDecisionReads.Get` calls inside
-method bodies are not statically discovered. If the harness cannot accept
-required state for a business decision, report the upstream gap; never weaken
-production guards or invent guard doubles.
+The helper checks discovered declarations without executing commands or running
+Chronicle. It inspects protected `Handle`/`Provide` decision-read parameters and,
+under declared `On`, plain Chronicle-backed models and discoverable validator
+constructor parameters, excluding advisory reads. Stream parameters use stream
+admission; inherited methods are included and abstract commands are skipped in
+assembly scans. It honors command/assembly declarations and ignores the runtime
+cap. Keep discovered projections representative of production: a spec-local
+projection for a production model can make admission ambiguous.
 
-Do not add a scenario to prove a race. A rule such as "two callers reserving the last
-seat yield one reservation" is specified from state: supply a read model with no seats
-left and assert the rejection, then supply one seat and assert the reservation.
-Simulating competing appends is a framework concern a developer should not think
-about in tests; Arc and Chronicle prove it. `AppendConcurrently` stays a public but
-advanced framework-verification API (hidden from IntelliSense), outside application
-testing guidance; use it only for a specific, explicit need. Production expresses
-the guarantee with the read model as a `Handle` parameter under
-`[ReadProtection(On)]`. Direction, not a release claim: Arc will obsolete
-`UseDecisionReads`; do not adopt it.
+Explicit `IDecisionReads.Get<T>(key)` calls inside method bodies are not statically
+visible. Give those models their own `Admit<T>()` check or a focused command
+scenario. Do not treat the assembly check as coverage of those calls.
+
+### Business decisions, not the platform race matrix
+
+Do not add a scenario to prove a race already guaranteed by Arc/Chronicle. For
+"two callers reserving the last seat yield one reservation", supply no-seat state
+to the validator and assert rejection, then supply one-seat state and assert the
+allowed decision. Direct calls do not prove the guard itself.
+
+Typed `CommandScenario<TCommand>` selects decision reads from the command's
+declarations. Do not call `UseDecisionReads()`; it is obsolete. For an untyped
+`CommandScenario<object>` whose declarations cannot be selected at construction,
+`EnableDecisionReads()` must run before seeding or the first `Execute`/`Validate`.
+Do not change production protection for spec speed. If required state cannot be
+supplied, report the harness gap rather than inventing guard doubles.
+
+### Focused explicit-policy regression
+
+An unusual application-owned explicit guard policy can justify a focused
+regression that a plain call cannot prove. Examples are a revision captured during
+a read and returned in `EventsWithConcurrencyScopes`, application-owned `[Unprotected]`
+behavior on a command, model or parameter, or a deliberately non-atomic batch contract.
+Test that chosen contract, not the platform's generic conflict/isolation matrix.
+`EventsWithConcurrencyScopes` carries ordered events and supplied scopes into the
+same command transaction, so the policy regression must exercise that boundary.
+
+`AppendConcurrently` is an advanced framework-verification hook, hidden from normal
+editor completion, not a routine application-spec template. Use it only for a
+specific, explicit need: it works with or without decision mode and adds no guard
+to an unguarded command. Queue it before the first execution; it appends competing
+facts after response processing and before the owner's commit. Its route overload
+preserves routing; nested commands do not drain the outer queue. It refuses custom
+execution scopes whose ordering it cannot guarantee. Do not call `UseDecisionReads()`
+to make the hook work, or hand-build a race matrix around it.
 `ShouldHaveCompletedStream(ClosedStreamScope)` may assert that a decision completed a
 stream at the exact source and route (`Cratis.Arc.Chronicle.Testing.Commands`).
 Use event history only when it is part of the domain example.
@@ -114,4 +158,7 @@ Provider boundaries remain separate: state fixtures are not a MongoDB substitute
 - [Query scenarios](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/testing/query-scenario.md)
 - [Stream decisions and routed specs](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/commands/stream-decisions.md)
 - [Decision-mode extension](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle.Testing/Commands/CommandScenarioChronicleExtensions.cs)
+- [Admission helper](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle.Testing/Commands/DecisionReadAdmissions.cs)
+- [Explicit revision scopes](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/commands/concurrency.md)
+- [Advisory read declarations](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle/ReadModels/UnprotectedAttribute.cs)
 - [Application-shape admission assertion](https://github.com/Cratis/Arc/blob/main/Source/DotNET/Chronicle.Testing/Commands/DecisionReadAdmissions.cs)

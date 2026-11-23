@@ -85,6 +85,7 @@ can fail those appends. Verify a protected-value round trip, not only compilatio
 Mark only genuinely personal values. Business metadata, identifiers of
 non-persons, and amounts stay unmarked — every marked value costs an encryption
 round trip and becomes unreadable the moment the subject is erased.
+Attribution, not payload PII: [identity](../cratis-arc-authentication-authorization-and-identity/references/command-identity.md).
 
 ## Decide the subject
 
