@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Kernel.Integration.for_PatternCapture.given;
 /// A namespace of a kernel that releases a subscribed observer after two quiet seconds and persists mined patterns every two.
 /// </summary>
 /// <param name="fixture">The fixture that hosts the in-process kernel.</param>
-public class a_pattern_capturing_namespace(PatternCaptureFixture fixture) : a_dormant_reactor(fixture)
+public class a_pattern_capturing_namespace(PatternCaptureFixture fixture) : a_dormant_reactor<PatternCaptureFixture>(fixture)
 {
     protected override void ConfigureObserverSettings(Dictionary<string, string?> settings) =>
         settings["PatternDetection:PersistenceInterval"] = "2";

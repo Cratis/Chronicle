@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.when_an_event_
 [Collection(given.DormantObserverCollection.Name)]
 public class and_the_observer_has_been_released(context context) : Given<context>(context)
 {
-    public class context(given.DormantObserverFixture fixture) : given.a_dormant_reactor(fixture)
+    public class context(given.DormantObserverFixture fixture) : given.a_dormant_reactor<given.DormantObserverFixture>(fixture)
     {
         public EventSequenceNumber[] HandledAfterTheWake;
         public EventSequenceNumber[] HandledAfterTheSecondWake;
