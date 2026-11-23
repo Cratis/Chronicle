@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Sockets;
-using Aspire.Hosting;
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.Yarp;
 using Yarp.ReverseProxy.Configuration;
