@@ -37,7 +37,7 @@ jobs:
       # protoc too, which rejects some schemas that parser accepts (such as name collisions).
       # Keep its validation descriptor separate from the canonical chronicle.desc.
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
