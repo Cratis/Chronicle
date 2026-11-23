@@ -26,6 +26,7 @@ on:
       - .github/scripts/test-assert-image-push-permissions.py
       - .github/scripts/test-pr-prerelease-security.mjs
       - .github/scripts/test-action-upgrade-compatibility.mjs
+      - .github/scripts/test-download-artifact-handoff.mjs
 
 permissions:
   contents: read
@@ -55,6 +56,8 @@ jobs:
         run: node --test .github/scripts/test-pr-prerelease-security.mjs
       - name: Test action upgrade compatibility
         run: node --test .github/scripts/test-action-upgrade-compatibility.mjs
+      - name: Test download artifact handoff
+        run: node --test .github/scripts/test-download-artifact-handoff.mjs
       - name: Reject expired quarantine entries
         run: node .github/scripts/quarantine.mjs lint
       - name: Install workflow parser

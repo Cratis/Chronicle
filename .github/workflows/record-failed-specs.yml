@@ -48,6 +48,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
           pattern: "{coverage-results-*,sql-clustering-*-results}"
+          # v8 flattens one match here; the collector also accepts that layout.
           path: failed-spec-input
           merge-multiple: false
       - name: Record failed specs on the nightly tracker
