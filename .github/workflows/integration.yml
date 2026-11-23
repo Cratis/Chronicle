@@ -136,7 +136,7 @@ jobs:
       # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
@@ -298,7 +298,7 @@ jobs:
       # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
@@ -411,7 +411,7 @@ jobs:
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
@@ -522,7 +522,7 @@ jobs:
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
