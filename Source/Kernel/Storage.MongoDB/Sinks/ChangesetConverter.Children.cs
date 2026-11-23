@@ -54,25 +54,12 @@ public partial class ChangesetConverter
     {
         var bsonValue = ToChildBsonValue(childAdded.State, childAdded.ChildrenProperty);
 
-        var property = ToChildCollectionProperty(childAdded.ChildrenProperty, childAdded.ArrayIndexers);
+        var childrenProperty = childAdded.ChildrenProperty.GetChildrenProperty();
+        var arrayIndexers = new ArrayIndexers(childAdded.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childAdded.ChildrenProperty)));
+        var property = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         updates.AddArrayFilters(property);
 
         ApplyChildPush(updates, property.Property, bsonValue, childAdded.Ordering, childAdded.IdentifiedByProperty);
-    }
-
-    MongoDBProperty ToChildCollectionProperty(PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
-    {
-        var indexers = arrayIndexers.All.ToArray();
-        var childIndex = Array.FindLastIndex(indexers, _ => _.ArrayProperty == childrenProperty);
-        var parentIndexers = new ArrayIndexers(indexers.Where((_, index) => index != childIndex).ToArray());
-        if (!parentIndexers.HasFor(childrenProperty))
-        {
-            return converter.ToMongoDBProperty(childrenProperty.GetChildrenProperty(), parentIndexers);
-        }
-
-        // Recursive parents share the child's normalized path; retain their selectors before the target collection.
-        var parent = converter.ToMongoDBProperty(childrenProperty, parentIndexers);
-        return new($"{parent.Property}.{childrenProperty.LastSegment.Value.ToMongoDBPropertyName()}", parent.ArrayFilters);
     }
 
     void ApplyNestedCleared(UpdateAccumulator updates, NestedCleared nestedCleared)
@@ -84,7 +71,9 @@ public partial class ChangesetConverter
 
     void ApplyChildRemoved(Key key, UpdateAccumulator updates, ChildRemoved childRemoved)
     {
-        var property = ToChildCollectionProperty(childRemoved.ChildrenProperty, key.ArrayIndexers);
+        var childrenProperty = childRemoved.ChildrenProperty.GetChildrenProperty();
+        var arrayIndexers = new ArrayIndexers(key.ArrayIndexers.All.Where(_ => !_.ArrayProperty.Equals(childRemoved.ChildrenProperty)));
+        var property = converter.ToMongoDBProperty(childrenProperty, arrayIndexers);
         updates.AddArrayFilters(property);
 
         var isPrimitive = ChildStateTypes.IsPrimitive(childRemoved.State);
