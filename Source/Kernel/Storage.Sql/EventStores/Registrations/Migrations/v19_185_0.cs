@@ -11,8 +11,8 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Registrations.Migrations;
 /// Adds the durable registration intents the kernel accepts before it applies them.
 /// </summary>
 [DbContext(typeof(EventStoreDbContext))]
-[Migration("ES-RegistrationIntents-v19_184_0")]
-public class v19_184_0 : Migration
+[Migration("ES-RegistrationIntents-v19_185_0")]
+public class v19_185_0 : Migration
 {
     /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder) => migrationBuilder.CreateTable(
