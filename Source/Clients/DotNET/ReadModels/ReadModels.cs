@@ -292,7 +292,9 @@ public partial class ReadModels(
             var handler = reducers.GetHandlerForReadModelType(typeof(TReadModel));
             if (handler.IsObservedByKernel())
             {
-                return readModelWatcherManager.GetWatcher<TReadModel>().Observable;
+                var watcher = GetReducerWatcher<TReadModel>();
+                watcher.Subscribed.GetAwaiter().GetResult();
+                return watcher.Observable;
             }
 
             return reducerObservers.GetWatcher<TReadModel>().Observable
@@ -318,6 +320,11 @@ public partial class ReadModels(
     {
         ReadProtectionGuard.Read(nameof(GetWatcherFor));
         EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
+        if (reducers.HasFor<TReadModel>() && reducers.GetHandlerForReadModelType(typeof(TReadModel)).IsObservedByKernel())
+        {
+            return GetReducerWatcher<TReadModel>();
+        }
+
         if (!projections.HasFor<TReadModel>())
         {
             throw new UnknownReadModel(typeof(TReadModel));
@@ -575,6 +582,14 @@ public partial class ReadModels(
         return reducers.HasFor<TReadModel>()
             ? GetObserver(reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel)))
             : (ReadModelObserverType.Projection, string.Empty);
+    }
+
+    IReadModelWatcher<TReadModel> GetReducerWatcher<TReadModel>()
+    {
+        // Finish connecting before starting the watcher: connection registration can start reactors
+        // that watch this same model and must not wait on a stream still waiting for Connect to return.
+        _ = _chronicleServicesAccessor.Services;
+        return readModelWatcherManager.GetWatcher<TReadModel>();
     }
 
     bool ShouldReduceInProcess(Type readModelType, EventCount? eventCount) =>

@@ -33,7 +33,7 @@ public class a_watched_reducer(ChronicleFixture fixture) : Specification<Chronic
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         await Handler.WaitTillSubscribed().WaitAsync(timeout.Token);
-        await ReducerWatchReadiness.WaitFor(EventStore, WatchFrames, ReactorFrames, timeout.Token);
+        await ReducerWatchReadiness.WaitFor(EventStore, timeout.Token);
     }
 
     protected async Task<EventSequenceNumber> Append(string key, Reduction @event, ReadModelChangeType type, CancellationToken token)

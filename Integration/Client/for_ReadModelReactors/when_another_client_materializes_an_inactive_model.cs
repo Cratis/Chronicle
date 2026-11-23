@@ -57,7 +57,7 @@ public class when_another_client_materializes_an_inactive_model(context setup) :
             ActiveHandler = handler.IsActive;
             using var readiness = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             await handler.WaitTillSubscribed().WaitAsync(readiness.Token);
-            await ReducerWatchReadiness.WaitFor(store, ActiveWatch, ActiveReactor, readiness.Token);
+            await ReducerWatchReadiness.WaitFor(store, readiness.Token);
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             var token = timeout.Token;
             var result = await store.EventLog.Append("remote", new Reduction(7));

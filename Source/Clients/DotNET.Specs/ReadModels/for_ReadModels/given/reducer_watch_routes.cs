@@ -16,6 +16,7 @@ public class reducer_watch_routes : all_dependencies
     protected readonly EventContext _context = EventContext.EmptyWithEventSourceId("key");
     protected ReducerWatcher<Model> _local;
     protected IReducerHandler _handler;
+    protected IReadModelWatcher<Model> _watcher;
     protected IDisposable _subscription;
 
     void Establish()
@@ -25,9 +26,10 @@ public class reducer_watch_routes : all_dependencies
         _handler.IsActive.Returns(Active);
         _handler.EventTypes.Returns(HasEvents ? [EventType.Unknown] : []);
         _reducers.GetHandlerForReadModelType(typeof(Model)).Returns(_handler);
-        var watcher = Substitute.For<IReadModelWatcher<Model>>();
-        watcher.Observable.Returns(_server);
-        _readModelWatcherManager.GetWatcher<Model>().Returns(watcher);
+        _watcher = Substitute.For<IReadModelWatcher<Model>>();
+        _watcher.Observable.Returns(_server);
+        _watcher.Subscribed.Returns(Task.CompletedTask);
+        _readModelWatcherManager.GetWatcher<Model>().Returns(_watcher);
         _local = new ReducerWatcher<Model>();
         _reducerObservers.GetWatcher<Model>().Returns(_local);
     }

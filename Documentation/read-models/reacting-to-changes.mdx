@@ -69,6 +69,10 @@ Materialized comparison uses serialized values keyed by `id`, `_id`, or `Id`. It
 
 In .NET, active reducers with event types use the kernel change stream for both `Watch<T>()` and read model reactors. A removal carries a default read model value and the causing event context. Reducer watches use the handler's event sequence.
 
+For these kernel-observed reducers, `Watch<T>()` waits for the kernel to confirm the subscription before returning. Subscribe before appending the events you want to observe; no sentinel event or retry loop is needed to establish readiness. After a disconnect, await `ReadModels.GetWatcherFor<T>().Subscribed` before issuing writes that must be observed by the reconnected watch. This task is renewed on disconnect and completes when the kernel confirms the new subscription.
+
+A reducer reaching an event sequence number confirms reducer progress, not delivery to a watch or reactor. When testing a notification, await the matching watch frame or reactor invocation before inspecting it.
+
 Passive, inactive, and no-event-type reducers keep the local fold stream. Every non-removal is `Modified`, including the first observed fold; removals are `Removed`. These local changes never infer `Added` and carry the model key without the causing event's context. They do not observe another client's kernel writes.
 
 If ordered, replayable processing is a requirement, [react to the domain event](../reactors/) rather than the derived read model. That page explains event-reactor delivery and partition handling so you can choose the appropriate processing model.
