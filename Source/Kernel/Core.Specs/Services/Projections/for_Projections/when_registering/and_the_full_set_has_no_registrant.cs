@@ -55,8 +55,11 @@ public class and_the_full_set_has_no_registrant : Specification
 
     [Fact]
     void should_not_retire_anything() =>
-        _projectionsManager.Received(1).RegisterShared(Arg.Any<string>(),
+        _projectionsManager.Received(1).RegisterShared(
+            Arg.Any<string>(),
             Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(),
             null,
-            null, Arg.Any<string?>(), Arg.Any<GrainCancellationToken?>());
+            null,
+            Arg.Any<string?>(),
+            Arg.Any<GrainCancellationToken?>());
 }

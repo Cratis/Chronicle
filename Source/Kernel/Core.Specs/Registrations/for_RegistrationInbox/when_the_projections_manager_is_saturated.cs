@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Projections;
-using Cratis.Chronicle.Concepts.Projections.Definitions;
-using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage.Registrations;
 
 namespace Cratis.Chronicle.Registrations.for_RegistrationInbox;
@@ -22,7 +19,9 @@ public class when_the_projections_manager_is_saturated : given.an_inbox
     async Task Because()
     {
         var accepting = Accept([CreateDefinition("projection")], "studio");
-        _acceptedWhileManagerWasHeld = await Task.WhenAny(accepting, Task.Delay(TimeSpan.FromSeconds(1))) == accepting;
+        using var timeout = new CancellationTokenSource();
+        _acceptedWhileManagerWasHeld = await Task.WhenAny(accepting, Task.Delay(TimeSpan.FromSeconds(1), TimeProvider.System, timeout.Token)) == accepting;
+        await timeout.CancelAsync();
         _acceptance = await accepting;
         _savedBeforeRelease = _intents.Saves;
         _whileSaturated = await _grain.GetStatus(RegistrationKind.Projections, "studio");

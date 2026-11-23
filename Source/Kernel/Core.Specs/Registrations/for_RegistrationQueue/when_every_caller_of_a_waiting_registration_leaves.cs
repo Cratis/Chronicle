@@ -26,22 +26,20 @@ public class when_every_caller_of_a_waiting_registration_leaves : Specification
     async Task Because()
     {
         _blocker = _queue.Run("blocker", _ => _release.Task);
-        _firstCaller = _queue.Run("waiting", _ =>
-        {
-            _started = true;
-            return Task.CompletedTask;
-        }, _first.Token);
-        _secondCaller = _queue.Run("waiting", _ =>
-        {
-            _started = true;
-            return Task.CompletedTask;
-        }, _second.Token);
+        _firstCaller = _queue.Run("waiting", MarkStarted, _first.Token);
+        _secondCaller = _queue.Run("waiting", MarkStarted, _second.Token);
         _waitingBeforeLeaving = _queue.Waiting;
         await _first.CancelAsync();
         await _second.CancelAsync();
         _waitingAfterLeaving = _queue.Waiting;
         _release.SetResult();
         await _blocker;
+    }
+
+    Task MarkStarted(CancellationToken cancellationToken)
+    {
+        _started = true;
+        return Task.CompletedTask;
     }
 
     [Fact] void should_have_queued_the_registration_once() => _waitingBeforeLeaving.ShouldEqual(1);
