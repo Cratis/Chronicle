@@ -99,11 +99,11 @@ public class PIICompliancePropertyValueHandler(
 
             return await ReleaseKeys.Complete(() => new ReleasedProtectedValue(released, ProtectedValueReleaseStatus.Decrypted));
         }
-        catch (EncryptionKeyUnwrapFailed)
+        catch (EncryptionKeyUnwrapFailed failure)
         {
             if (await HasRecordedErasure(eventStore, eventStoreNamespace, identifier))
             {
-                logger.UnrecoverableValueAfterErasure(identifier);
+                logger.UnrecoverableValueAfterErasure(failure.InnerException?.GetType().Name ?? failure.GetType().Name);
                 return new(value, ProtectedValueReleaseStatus.Erased);
             }
 

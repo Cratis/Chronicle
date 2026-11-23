@@ -52,13 +52,21 @@ internal class GraphMemberMappings(INamingPolicy namingPolicy)
     string? ExpressionFor(IEventBoundAttribute attribute, string memberName) => attribute switch
     {
         ISetFromAttribute set => Source(set.EventPropertyName ?? memberName),
-        ISetFromContextAttribute context => $"{WellKnownExpressions.EventContext}({ProjectionPropertyPaths.RenderContextPath(context.ContextPropertyName ?? memberName, namingPolicy)})",
         IAddFromAttribute add => $"{WellKnownExpressions.Add}({Source(add.EventPropertyName ?? memberName)})",
         ISubtractFromAttribute subtract => $"{WellKnownExpressions.Subtract}({Source(subtract.EventPropertyName ?? memberName)})",
         IIncrementAttribute => WellKnownExpressions.Increment,
         IDecrementAttribute => WellKnownExpressions.Decrement,
         ICountAttribute => WellKnownExpressions.Count,
         ISetValueAttribute setValue => ValueExpression(setValue.Value),
+        _ => ContextExpressionFor(attribute, memberName)
+    };
+
+    string? ContextExpressionFor(IEventBoundAttribute attribute, string memberName) => attribute switch
+    {
+        ISetFromContextAttribute context => $"{WellKnownExpressions.EventContext}({ProjectionPropertyPaths.RenderContextPath(context.ContextPropertyName ?? memberName, namingPolicy)})",
+        ISetFromEventSourceIdAttribute sourceId => sourceId.SetOnce
+            ? $"{WellKnownExpressions.SetOnce}({WellKnownExpressions.EventSourceId})"
+            : WellKnownExpressions.EventSourceId,
         _ => null
     };
 }

@@ -22,13 +22,13 @@ public class and_a_subscription_is_already_active_with_the_current_event_types :
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
+        _silo.AddEventStoreStorage();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
 
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
         var eventType = new EventType("5db7cfa2-0fcb-4791-b174-83ff2806d654", EventTypeGeneration.First);

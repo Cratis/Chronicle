@@ -19,10 +19,10 @@ public class when_two_target_casings_map_to_one_source_namespace : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
-        var casing = silo.AddNamespaceCasing();
-        casing.Canonicalize("Source", Arg.Any<EventStoreNamespaceName>()).Returns((EventStoreNamespaceName)"Cratis");
+        silo.AddEventStoreStorage();
         silo.AddService(Substitute.For<ILocalSiloDetails>());
         var namespaces = Substitute.For<INamespaces>();
+        namespaces.GetCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(Task.FromResult<EventStoreNamespaceName?>("Cratis"));
         namespaces.GetAll().Returns([(EventStoreNamespaceName)"Cratis", (EventStoreNamespaceName)"cratis"]);
         silo.AddProbe(_ => namespaces);
         _observer = Substitute.For<IObserver>();

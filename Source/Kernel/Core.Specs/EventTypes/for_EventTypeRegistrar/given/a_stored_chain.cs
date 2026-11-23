@@ -36,6 +36,7 @@ public class a_stored_chain : all_dependencies
         _eventTypesStorage.GetAllDefinitions().Returns(_ => _memory.GetAllDefinitions());
         _eventTypesStorage.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => _memory.GetDefinition(call.Arg<EventTypeId>()));
         _eventTypesStorage.Register(Arg.Any<IEnumerable<EventTypeToRegister>>()).Returns(call => _memory.Register(call.Arg<IEnumerable<EventTypeToRegister>>()));
+        _eventTypesStorage.RegisterIfAbsent(Arg.Any<EventTypeToRegister>()).Returns(call => _memory.RegisterIfAbsent(call.Arg<EventTypeToRegister>()));
         _eventTypesStorage.RecordMigrationsVersion(Arg.Any<EventTypeId>(), Arg.Any<EventTypeMigrationsVersion>(), Arg.Any<IEnumerable<Concepts.Events.EventTypeMigrationDefinition>>()).Returns(call => _memory.RecordMigrationsVersion(call.Arg<EventTypeId>(), call.Arg<EventTypeMigrationsVersion>(), call.Arg<IEnumerable<Concepts.Events.EventTypeMigrationDefinition>>()));
         _eventTypesStorage.ClearReceivedCalls();
         _request = new()

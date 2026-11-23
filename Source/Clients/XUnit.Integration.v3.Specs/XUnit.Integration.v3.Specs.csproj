@@ -16,8 +16,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- The shared harness specs run once, in XUnit.Integration.Specs; only their test host context is reused here. -->
+        <!-- Most shared harness specs run once, in XUnit.Integration.Specs; the bootstrap gate also exercises the v3 lifetime adapter. -->
         <Compile Include="../XUnit.Integration.Specs/for_ChronicleClientFixture/given/*.cs" LinkBase="for_ChronicleClientFixture/given" />
+        <Compile Include="../XUnit.Integration.Specs/for_ChronicleClientFixture/when_bootstrap_is_disabled.cs" LinkBase="for_ChronicleClientFixture" />
+        <Compile Include="../XUnit.Integration.Specs/for_ChronicleClientFixture/when_bootstrap_is_not_overridden.cs" LinkBase="for_ChronicleClientFixture" />
+        <Compile Include="../XUnit.Integration.Specs/for_ChronicleClientFixture/when_inherited_fixture_variants_disable_bootstrap.cs" LinkBase="for_ChronicleClientFixture" />
         <!-- xunit.v3.mtp-off, Cratis.Specifications.XUnit.v3, Microsoft.NET.Test.Sdk, xunit.runner.visualstudio and NSubstitute come from Source/Directory.Build.props. -->
     </ItemGroup>
 

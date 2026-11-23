@@ -39,9 +39,6 @@ public class and_filtering_event_types(context context) : Given<context>(context
 
             EventsInSourceLog = await GetEventLogCount(SourceEventStoreName);
 
-            // Wait for forwarding
-            await Task.Delay(500);
-
             // Get subscription configuration
             var subscriptions = await GetStoredSubscriptions(TargetEventStoreName);
             Subscription = subscriptions.Single(_ => _.Id.Value == "filtered-subscription");

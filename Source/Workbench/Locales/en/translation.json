@@ -7,7 +7,12 @@
             "no": "No",
             "save": "Save"
         },
-        "loading": "Loading…"
+        "loading": "Loading…",
+        "headers": {
+            "valueSet": "Value set",
+            "notSet": "Not set",
+            "unavailable": "Value unavailable"
+        }
     },
     "layout": {
         "topBar": {
@@ -1055,6 +1060,7 @@
             "title": "Dashboard",
             "loading": "Loading…",
             "unavailable": "Unavailable right now",
+            "stale": "Stale — latest update failed",
             "serverHealth": "Server health",
             "connected": "Connected",
             "disconnected": "Disconnected",

@@ -77,12 +77,9 @@ public partial class ModelBoundCodeGenerator
 
     static AttributeSyntax CreateMappingAttribute(string attributeName, MappingSource mapping, PropertyPath target)
     {
-        var source = ProjectionExpressions.ReadValue(mapping.Expression);
-        if (attributeName == "SetFrom" && source.Kind is ProjectionValueKind.EventContextProperty or ProjectionValueKind.EventSourceId)
+        if (attributeName == "SetFrom" && CreateContextMappingAttribute(mapping) is { } contextAttribute)
         {
-            var contextProperty = source.Kind == ProjectionValueKind.EventSourceId ? "EventSourceId" : CSharpDefinitionSupport.ContextPath(source.Value);
-            return CreateSimpleAttribute("SetFromContext", mapping.EventType).WithArgumentList(AttributeArgumentList(
-                SingletonSeparatedList(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(contextProperty))))));
+            return contextAttribute;
         }
         var attribute = GenericName(attributeName).WithTypeArgumentList(
             TypeArgumentList(SingletonSeparatedList<TypeSyntax>(IdentifierName(mapping.EventType.Value))));
@@ -94,6 +91,18 @@ public partial class ModelBoundCodeGenerator
             return Attribute(attribute).WithArgumentList(AttributeArgumentList(SingletonSeparatedList(AttributeArgument(nameofExpression))));
         }
         return Attribute(attribute);
+    }
+
+    static AttributeSyntax? CreateContextMappingAttribute(MappingSource mapping)
+    {
+        var source = ProjectionExpressions.ReadValue(mapping.Expression);
+        return source.Kind switch
+        {
+            ProjectionValueKind.EventSourceId => CreateSimpleAttribute("SetFromEventSourceId", mapping.EventType),
+            ProjectionValueKind.EventContextProperty => CreateSimpleAttribute("SetFromContext", mapping.EventType).WithArgumentList(AttributeArgumentList(
+                SingletonSeparatedList(AttributeArgument(LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(CSharpDefinitionSupport.ContextPath(source.Value))))))),
+            _ => null
+        };
     }
 
     static AttributeSyntax CreateSimpleAttribute(string attributeName, EventTypeId eventType) => Attribute(

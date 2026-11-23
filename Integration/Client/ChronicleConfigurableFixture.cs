@@ -679,7 +679,7 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
             using var delay = IntegrationTimings.BeginCurrent("oop-reset-retry-delay");
             delay?.Failure();
 
-            // Infrastructure backoff between failed reset RPC attempts, bounded by the reset deadline.
+            // Task.Delay: infrastructure backoff between failed reset RPC attempts, bounded by the reset deadline.
             await Task.Delay(500);
             delay?.Success();
         });
@@ -715,26 +715,24 @@ public class ChronicleConfigurableFixture : XUnit.Integration.ChronicleFixture
     {
         using var timing = IntegrationTimings.BeginCurrent("mongo-primary-readiness");
         timing?.Failure();
-        var deadline = DateTime.UtcNow.AddSeconds(30);
-        while (DateTime.UtcNow < deadline)
-        {
-            try
+        await ReadinessWait.Until(
+            async () =>
             {
-                timing?.Poll();
-                var result = await container.ExecAsync(["/bin/sh", "-c", "mongosh --quiet --eval \"rs.status().members.filter(m=>m.stateStr==='PRIMARY').length\" 2>/dev/null"]);
-                if (result.ExitCode == 0 && result.Stdout.Trim() == "1")
+                try
                 {
-                    timing?.Success();
-                    return;
+                    timing?.Poll();
+                    var result = await container.ExecAsync(["/bin/sh", "-c", "mongosh --quiet --eval \"rs.status().members.filter(m=>m.stateStr==='PRIMARY').length\" 2>/dev/null"]);
+                    return new { ExitCode = result.ExitCode ?? -1L, PrimaryCount = result.Stdout.Trim() };
                 }
-            }
-            catch
-            {
-                // Container might not be fully ready yet — keep polling.
-            }
-
-            await Task.Delay(1000);
-        }
+                catch (Exception exception)
+                {
+                    return new { ExitCode = -1L, PrimaryCount = exception.Message };
+                }
+            },
+            state => state.ExitCode == 0 && state.PrimaryCount == "1",
+            TimeSpan.FromSeconds(30),
+            pollInterval: TimeSpan.FromSeconds(1));
+        timing?.Success();
     }
 
     sealed class ResetCancellationInterceptor(DateTime deadline, CancellationToken cancellationToken) : Interceptor

@@ -1110,7 +1110,10 @@ public class ProjectionFactory(
             MarkBasePropertyAsDynamic(projection, propertyPath, propertyPathString);
         }
 
-        return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty, expression);
+        return ResolvedCollectionPath.Mapper(
+            projection,
+            propertyPath,
+            path => propertyMapperExpressionResolvers.Resolve(path, schemaProperty, expression));
     }
 
     void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)

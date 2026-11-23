@@ -77,7 +77,14 @@ internal sealed class ReadModels(
         }
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinitions = request.ReadModels.Select(definition => definition.ToChronicle(request.Owner, request.Source)).ToArray();
-        await readModelsManager.Register(readModelDefinitions);
+        try
+        {
+            await readModelsManager.Register(readModelDefinitions);
+        }
+        catch (ReadModelContainerChangeRequiresExplicitUpdate exception)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, exception.Message));
+        }
     }
 
     /// <inheritdoc/>
@@ -87,7 +94,14 @@ internal sealed class ReadModels(
         SystemStoreGuard.EnsureNotSystem(new(request.EventStore, request.ReadModel.Type.Identifier, request.ReadModel.ObserverIdentifier));
         var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
         var readModelDefinition = request.ReadModel.ToChronicle(request.Owner, request.Source);
-        await readModelsManager.RegisterSingle(readModelDefinition);
+        try
+        {
+            await readModelsManager.RegisterSingle(readModelDefinition);
+        }
+        catch (ReadModelContainerChangeRequiresExplicitUpdate exception)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, exception.Message));
+        }
     }
 
     /// <inheritdoc/>
@@ -543,10 +557,10 @@ internal sealed class ReadModels(
                 localSiloDetails.SiloAddress.ToParsableString());
             var subscriber = grainFactory.GetGrain<IReadModelChangesetSubscriber>(subscriberKey);
             var notifier = grainFactory.GetGrain<IProjectionChangesetNotifier>(new ProjectionChangesetNotifierKey(definition.ObserverIdentifier.Value, request.EventStore, request.Namespace));
-            await notifier.Subscribe(subscriber);
-
             try
             {
+                await notifier.Subscribe(subscriber);
+
                 // Notify the client that the watch subscription is now active. Any changeset produced
                 // from this point on reaches the forwarder registered above.
                 observer.OnNext(new ReadModelChangeset { Subscribed = true });
@@ -555,8 +569,14 @@ internal sealed class ReadModels(
             }
             finally
             {
-                await notifier.Unsubscribe(subscriber).ConfigureAwait(false);
-                changesetMediator.Unsubscribe(subscriptionId);
+                try
+                {
+                    await notifier.Unsubscribe(subscriber).ConfigureAwait(false);
+                }
+                finally
+                {
+                    changesetMediator.Unsubscribe(subscriptionId);
+                }
             }
         });
     }

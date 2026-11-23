@@ -160,7 +160,7 @@ public partial class Database
     {
         var resolved = await _resolution.Resolve(identity, ConnectionPurpose.Runtime);
         var connectionString = SqlConnectionStrings.OwnsPlacement(resolved)
-            ? SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved)
+            ? options.Value.Storage.ConnectionDetails
             : new SqlDatabaseCatalog(options.Value.Storage.ConnectionDetails).ConnectionString(physicalName);
         return TargetFor(identity, ConnectionPurpose.Runtime, connectionString, resolved);
     }

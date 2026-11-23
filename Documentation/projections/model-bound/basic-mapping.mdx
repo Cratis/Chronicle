@@ -44,6 +44,14 @@ Choose [`FromEvery`](from-every) when a property should update for every event t
 
 <ChronicleClientTabs snippet="projections/model-bound/basic-mapping/context-vs-from-every" />
 
+### Map the event source identifier
+
+In .NET, use `[SetFromEventSourceId<TEvent>]` to copy the event's source identifier to a read model property. It emits `$eventSourceId`, just like the fluent `.Set(...).ToEventSourceId()` mapping, without a string expression.
+
+<ChronicleClientTabs snippet="projections/model-bound/basic-mapping/set-from-event-source-id" />
+
+The attribute works on properties and record parameters, including child records. Each mapping applies only to its declared event type. Use `SetOnce = true` to keep the first identifier. For other context metadata, keep using `SetFromContext`; existing `SetFromContext<TEvent>(nameof(EventContext.EventSourceId))` mappings continue to emit `$eventContext(EventSourceId)`.
+
 ### Derived Context Values
 
 To group events by week, derive the week number from their occurrence time. `Occurred.Week` and `Occurred.Week()` both select the ISO week number. Pair it with `Occurred.WeekYear`, the ISO week-numbering year, which can differ from the calendar year near New Year.

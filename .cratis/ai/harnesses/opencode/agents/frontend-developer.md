@@ -101,6 +101,8 @@ const handleSubmit = async () => {
 
 ---
 
+Before handling command failures, read `.cratis/ai/skills/cratis-arc-command/references/command-result.md` for the complete result decision table, protected-read recovery and safe feedback. The success-only example above is not a failure-handling policy.
+
 ## Query usage pattern (with paging)
 
 ```tsx

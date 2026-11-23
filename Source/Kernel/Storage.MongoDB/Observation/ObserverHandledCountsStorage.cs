@@ -32,16 +32,24 @@ public class ObserverHandledCountsStorage(IEventStoreNamespaceDatabase database)
     /// <inheritdoc/>
     public async Task Increment(ObserverId observerId, IReadOnlyCollection<KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>> countsPerPartition)
     {
-        var models = countsPerPartition
-            .Where(_ => _.Value.Count > 0)
-            .Select(_ => CreateIncrement(observerId, _.Key, _.Value))
+        var entries = countsPerPartition
+            .Select((entry, index) => (Entry: entry, Index: index))
+            .Where(_ => _.Entry.Value.Count > 0)
             .ToArray();
+        var models = entries.Select(_ => CreateIncrement(observerId, _.Entry.Key, _.Entry.Value)).ToArray();
         if (models.Length == 0)
         {
             return;
         }
 
-        await _collection.BulkWriteAsync(models, new BulkWriteOptions { IsOrdered = true }).ConfigureAwait(false);
+        try
+        {
+            await _collection.BulkWriteAsync(models, new BulkWriteOptions { IsOrdered = true }).ConfigureAwait(false);
+        }
+        catch (MongoBulkWriteException<ObserverPartitionCounts> exception) when (TryGetConfirmedFailureIndex(exception, models, out var failedIndex))
+        {
+            throw new ObserverHandledCountsPartiallyIncremented(entries[failedIndex].Index, exception);
+        }
     }
 
     /// <inheritdoc/>
@@ -83,6 +91,24 @@ public class ObserverHandledCountsStorage(IEventStoreNamespaceDatabase database)
     /// <inheritdoc/>
     public async Task RemoveAllFor(ObserverId observerId) =>
         await _collection.DeleteManyAsync(_ => _.Id.ObserverId == observerId).ConfigureAwait(false);
+
+    static bool TryGetConfirmedFailureIndex(
+        MongoBulkWriteException<ObserverPartitionCounts> exception,
+        UpdateOneModel<ObserverPartitionCounts>[] models,
+        out int failedIndex)
+    {
+        failedIndex = -1;
+        if (exception.WriteConcernError is not null || !exception.Result.IsAcknowledged || exception.WriteErrors.Count != 1)
+        {
+            return false;
+        }
+
+        failedIndex = exception.WriteErrors[0].Index;
+        return failedIndex >= 0 &&
+            failedIndex < models.Length &&
+            exception.Result.ProcessedRequests.SequenceEqual(models.Take(failedIndex + 1), ReferenceEqualityComparer.Instance) &&
+            exception.UnprocessedRequests.SequenceEqual(models.Skip(failedIndex + 1), ReferenceEqualityComparer.Instance);
+    }
 
     static UpdateOneModel<ObserverPartitionCounts> CreateIncrement(ObserverId observerId, Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType)
     {

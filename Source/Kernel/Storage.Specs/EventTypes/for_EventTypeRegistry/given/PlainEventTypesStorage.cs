@@ -119,6 +119,21 @@ public class PlainEventTypesStorage : IEventTypesStorage
         return Task.FromResult(changed);
     }
 
+    public async Task<EventTypeRegistrationResult> RegisterIfAbsent(EventTypeToRegister eventType)
+    {
+        var stored = _definitions.TryGetValue(eventType.Definition.Id, out var existing) ? existing.Generations : [];
+        var result = EventTypeRegistrationResult.Compare(eventType.Definition, stored);
+        if (result.Conflict is not null || result.AddedGenerations.Count == 0)
+        {
+            return result;
+        }
+
+        var added = eventType.Definition.Generations.Where(_ => result.AddedGenerations.Contains(_.Generation));
+        var merged = new EventTypeDefinition(eventType.Definition.Id, eventType.Definition.Owner, eventType.Definition.Tombstone, [.. stored, .. added], eventType.Definition.Migrations);
+        await Register(merged);
+        return result with { Changed = true };
+    }
+
     public Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema) => Task.FromResult(false);
 
     public ISubject<IEnumerable<EventTypeSchema>> ObserveLatestForAllEventTypes() => new Subject<IEnumerable<EventTypeSchema>>();

@@ -90,6 +90,13 @@ public class an_event_sequence : Specification
     protected virtual TimeSpan ConstraintsVersionCheckInterval => TimeSpan.Zero;
     protected virtual Configuration.ConstraintIndexRepairOptions ConstraintIndexRepairConfiguration => new();
 
+    static IEventTypesStorage EventTypesWithCachedDefinitions()
+    {
+        var storage = Substitute.For<IEventTypesStorage>();
+        storage.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
+        return storage;
+    }
+
     async Task Establish()
     {
         _eventSequenceKey = new EventSequenceKey(SequenceId, EventStore, EventStoreNamespace);
@@ -103,7 +110,7 @@ public class an_event_sequence : Specification
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
-        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventTypesStorage = EventTypesWithCachedDefinitions();
         _identityStorage = Substitute.For<IIdentityStorage>();
         _constraintValidationFactory = Substitute.For<IConstraintValidationFactory>();
         _constraintValidation = Substitute.For<IConstraintValidation>();

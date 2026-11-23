@@ -29,13 +29,13 @@ public class and_subscription_definition_arrives_while_waiting : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
+        _silo.AddEventStoreStorage();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
 
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
         var observer = Substitute.For<IObserver>();

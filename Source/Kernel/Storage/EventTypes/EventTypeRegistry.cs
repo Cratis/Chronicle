@@ -104,6 +104,14 @@ public sealed class EventTypeRegistry(IEventTypesStorage inner, TimeProvider tim
         InvalidateIfMutated(definition.Id, await inner.Register(definition).ConfigureAwait(false));
 
     /// <inheritdoc/>
+    public async Task<EventTypeRegistrationResult> RegisterIfAbsent(EventTypeToRegister eventType)
+    {
+        var result = await inner.RegisterIfAbsent(eventType).ConfigureAwait(false);
+        InvalidateIfMutated(eventType.Definition.Id, result.Changed);
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<EventTypeId>> Register(IEnumerable<EventTypeToRegister> eventTypes)
     {
         var mutated = (await inner.Register(eventTypes).ConfigureAwait(false)).ToList();

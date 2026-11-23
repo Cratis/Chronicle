@@ -30,6 +30,7 @@ public class and_the_kernel_accepts_the_registration : Specification
         _service = new Projections(
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
+            Cratis.Chronicle.Events.for_PublicEventContentRedactor.given.header_events.Options,
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),

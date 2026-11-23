@@ -11,7 +11,7 @@ import { v3Projects, shippingProjects, shippingRunners, ordinaryFilter, childCom
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
-import { ORDINARY_SHARDS, sourcePlan } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, ordinaryShardIds, sourcePlan } from './spec-shards.mjs';
 import { coreSpecFixture } from './core-spec-fixture.mjs';
 import { coreUnitId } from './core-spec-partition.mjs';
 import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
@@ -258,6 +258,16 @@ function producerFixture(attempts = Array(ORDINARY_SHARDS).fill(1)) {
     }));
     return [[{ jobs, total_count: jobs.length }], [{ artifacts, total_count: artifacts.length }]];
 }
+function producerEndpoints([jobs, pages]) {
+    const artifacts = pages.flatMap(page => page.artifacts);
+    const endpoints = { 'jobs?filter=latest&per_page=30': jobs };
+    for (const shard of ordinaryShardIds()) {
+        const name = `coverage-results-specs-other-${shard}`;
+        const matches = artifacts.filter(artifact => artifact.name === name);
+        endpoints[`artifacts?name=${name}&per_page=30`] = [{ artifacts: matches, total_count: matches.length }];
+    }
+    return endpoints;
+}
 test('API evidence selects retained and mixed successful producer attempts, not aggregate attempt', () => {
     for (const attempts of [[1, 1, 1, 1], [1, 2, 1, 2], [2, 1, 2, 1], [2, 2, 2, 2]]) {
         const pages = producerFixture(attempts);
@@ -352,34 +362,95 @@ test('API identity validation accepts failed-job re-run artifacts with distinct 
     // Identity validation passes; the later per-shard artifact rules still reject the extra same-name artifact.
     assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), error => !/identities/.test(error.message) && /producer artifact/i.test(error.message));
 });
-test('producer API acquisition paginates latest attempts and propagates unavailable/malformed evidence', async () => {
+test('producer API acquisition paginates latest attempts and exact names and propagates unavailable/malformed evidence', async () => {
     const context = { ...retryContext, runAttempt: '1' };
     const pages = producerFixture();
     const jobs = pages[0][0].jobs;
     pages[0] = [{ jobs: jobs.slice(0, 1), total_count: jobs.length }, { jobs: jobs.slice(1), total_count: jobs.length }];
-    let calls = 0;
-    const options = { env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
-        assert.equal(command, 'gh');
-        assert.deepEqual(args.slice(0, 3), ['api', '--paginate', '--slurp']);
-        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=latest&per_page=30'));
-        return { code: 0, stdout: JSON.stringify(pages[calls++]) };
-    } };
+    const endpoints = producerEndpoints(pages);
+    const options = carriedProducerOptions({ context, endpoints });
     assert.equal((await loadProducerEvidence(context, options)).producers[1].runAttempt, '1');
-    assert.equal(calls, 2);
+    assert.deepEqual(options.calls, Object.keys(endpoints));
     await assert.rejects(loadProducerEvidence(context, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
     await assert.rejects(loadProducerEvidence(context, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
 });
+test('producer API exact-name queries ignore unrelated artifacts shifting and repeating across run pages', async () => {
+    const [jobs, pages] = producerFixture();
+    const artifacts = pages[0].artifacts;
+    const unrelated = { id: 900, name: 'coverage-results-integration-mongo' };
+    const unfiltered = [
+        { artifacts: [unrelated, ...artifacts.slice(0, 2)], total_count: 6 },
+        { artifacts: [unrelated, ...artifacts.slice(2)], total_count: 6 }
+    ];
+    const fixture = { context: { ...retryContext, runAttempt: '1' }, endpoints: producerEndpoints([jobs, unfiltered]) };
+    fixture.endpoints['artifacts?per_page=30'] = unfiltered;
+    const options = carriedProducerOptions(fixture);
+    const execute = async (...args) => {
+        // Integration uploads keep shifting the unfiltered pages, including unrelated id collisions.
+        unfiltered[0].artifacts.unshift({ id: 100, name: `coverage-results-integration-${options.calls.length}` });
+        for (const page of unfiltered) page.total_count = unfiltered.reduce((count, entry) => count + entry.artifacts.length, 0);
+        return options.execute(...args);
+    };
+    const evidence = await loadProducerEvidence(fixture.context, { ...options, execute });
+    assert.deepEqual(evidence.producers.map(producer => producer.artifactId), [100, 101, 102, 103]);
+    assert.deepEqual(options.calls, Object.keys(fixture.endpoints).filter(endpoint => endpoint !== 'artifacts?per_page=30'));
+});
+test('producer API still rejects a missing exact-name artifact', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const endpoints = producerEndpoints(producerFixture());
+    endpoints['artifacts?name=coverage-results-specs-other-4&per_page=30'] = [{ artifacts: [], total_count: 0 }];
+    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), /Expected exactly 4 producer artifacts/);
+});
+test('producer API validates each exact-name pagination count before combining artifacts', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const endpoints = producerEndpoints(producerFixture());
+    endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'][0].total_count = 2;
+    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), /Incomplete producer API pagination: artifacts/);
+});
+test('producer API still names invalid producer artifact ids', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const endpoints = producerEndpoints(producerFixture());
+    endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'][0].artifacts[0].id = -5;
+    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })),
+        /Invalid\/duplicate producer API identities: artifacts .*invalid id -5 \(coverage-results-specs-other-1 attempt n\/a\)/);
+});
+test('producer API still names duplicate producer ids within and across exact-name listings', async () => {
+    for (const sameName of [true, false]) {
+        const context = { ...retryContext, runAttempt: '1' };
+        const endpoints = producerEndpoints(producerFixture());
+        const first = endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'][0];
+        if (sameName) {
+            first.total_count = 2;
+            endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'].push({
+                artifacts: [{ ...first.artifacts[0], run_attempt: 2 }], total_count: 2
+            });
+        } else endpoints['artifacts?name=coverage-results-specs-other-2&per_page=30'][0].artifacts[0].id = 100;
+        const pattern = sameName
+            ? /duplicate id 100 \(coverage-results-specs-other-1 attempt n\/a, coverage-results-specs-other-1 attempt 2\)/
+            : /duplicate id 100 \(coverage-results-specs-other-1 attempt n\/a, coverage-results-specs-other-2 attempt n\/a\)/;
+        await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), pattern);
+    }
+});
+test('producer API preserves rejection of older same-name rerun artifacts, including expired ones', async () => {
+    for (const expired of [false, true]) {
+        const fixture = carriedProducerFixture();
+        const page = fixture.endpoints['artifacts?name=coverage-results-specs-other-2&per_page=30'][0];
+        page.artifacts.push({ ...page.artifacts[0], id: 900, expired, created_at: '2026-11-18T12:59:00Z' });
+        page.total_count++;
+        await assert.rejects(loadProducerEvidence(fixture.context, carriedProducerOptions(fixture)), /Expected exactly 4 producer artifacts/);
+    }
+});
 test('producer API retries a server error on a page, then reports the captured response', async () => {
     const context = { ...retryContext, runAttempt: '1' };
-    const pages = producerFixture();
+    const options = carriedProducerOptions({ context, endpoints: producerEndpoints(producerFixture()) });
     const serverError = { code: 1, stdout: '', stderr: 'gh: Server Error (HTTP 502)' };
     const env = { GITHUB_REPOSITORY: 'Cratis/Chronicle' };
     let calls = 0;
     const waits = [];
     const wait = async milliseconds => { waits.push(milliseconds); };
-    const recovering = async () => (calls++ === 0 ? serverError : { code: 0, stdout: JSON.stringify(pages[calls - 2]) });
+    const recovering = async (...args) => calls++ === 0 ? serverError : options.execute(...args);
     assert.equal((await loadProducerEvidence(context, { env, wait, execute: recovering })).producers[1].runAttempt, '1');
-    assert.equal(calls, 3);
+    assert.equal(calls, ORDINARY_SHARDS + 2);
     assert.deepEqual(waits, [5000]);
 
     let failing = 0;
@@ -432,7 +503,7 @@ function carriedProducerFixture({ sqlOnly = false, allCarried = false } = {}) {
         workflow_run: { id: Number(context.runId), head_sha: context.sha }
     }));
     const endpoints = {
-        'jobs?filter=latest&per_page=30': page('jobs', latest), 'artifacts?per_page=30': page('artifacts', artifacts),
+        ...producerEndpoints([page('jobs', latest), page('artifacts', artifacts)]),
         'attempts/1/jobs?per_page=30': page('jobs', first), 'attempts/2/jobs?per_page=30': page('jobs', second)
     };
     return { context, endpoints };
@@ -441,6 +512,7 @@ function carriedProducerOptions(fixture) {
     const calls = [];
     return { calls, env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
         assert.equal(command, 'gh');
+        assert.deepEqual(args.slice(0, 3), ['api', '--paginate', '--slurp']);
         const endpoint = args[3].split(`/runs/${fixture.context.runId}/`)[1];
         calls.push(endpoint);
         assert.ok(fixture.endpoints[endpoint], `Unexpected endpoint: ${endpoint}`);
@@ -458,8 +530,9 @@ for (const [name, settings, expected] of [
         const evidence = await loadProducerEvidence(fixture.context, options);
         assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), expected);
         assert.deepEqual(evidence.producers.map(producer => producer.artifactId), [100, 101, 102, 103]);
-        assert.ok(options.calls.includes('artifacts?per_page=30'), 'artifacts are listed across the whole run, not just the retry');
-        assert.deepEqual(options.calls.slice(2), settings.allCarried
+        assert.deepEqual(options.calls.filter(endpoint => endpoint.startsWith('artifacts?')),
+            ordinaryShardIds().map(shard => `artifacts?name=coverage-results-specs-other-${shard}&per_page=30`));
+        assert.deepEqual(options.calls.slice(ORDINARY_SHARDS + 1), settings.allCarried
             ? ['attempts/2/jobs?per_page=30', 'attempts/1/jobs?per_page=30'] : ['attempts/1/jobs?per_page=30']);
         const plan = evidence.producers.map(({ shard }) => ({ shard, projects: [v3Projects[shard - 1]] }));
         const receipts = plan.map((shard, index) => receiptFor(shard, shard.projects, { ...fixture.context, runAttempt: expected[index] }));
@@ -481,7 +554,7 @@ test('producer acquisition accepts a rerun after an upstream build left the matr
     const options = carriedProducerOptions(fixture);
     const evidence = await loadProducerEvidence(fixture.context, options);
     assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
-    assert.deepEqual(options.calls.slice(2), ['attempts/2/jobs?per_page=30']);
+    assert.deepEqual(options.calls.slice(ORDINARY_SHARDS + 1), ['attempts/2/jobs?per_page=30']);
 });
 test('producer acquisition resolves an attempt-2 execution carried into 3 but absent from 1', async () => {
     const fixture = carriedProducerFixture({ allCarried: true });
@@ -500,7 +573,7 @@ test('producer acquisition stops fetching history once every shard has a differe
     const options = carriedProducerOptions(fixture);
     const evidence = await loadProducerEvidence(fixture.context, options);
     assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
-    assert.deepEqual(options.calls.slice(2), ['attempts/2/jobs?per_page=30']);
+    assert.deepEqual(options.calls.slice(ORDINARY_SHARDS + 1), ['attempts/2/jobs?per_page=30']);
 });
 test('producer acquisition does not inspect older records for an already resolved shard', async () => {
     const fixture = carriedProducerFixture({ allCarried: true });
@@ -536,11 +609,11 @@ test('producer history cannot run past the shared acquisition budget', async () 
     let clock = 0;
     const execute = async (...args) => {
         const result = await options.execute(...args);
-        clock += 75000;
+        clock += 150000 / (ORDINARY_SHARDS + 1);
         return result;
     };
     await assert.rejects(loadProducerEvidence(fixture.context, { ...options, execute, now: () => clock }), /budget exhausted/);
-    assert.equal(options.calls.length, 2);
+    assert.equal(options.calls.length, ORDINARY_SHARDS + 1);
 });
 
 async function ordinaryDispatch(mode) {

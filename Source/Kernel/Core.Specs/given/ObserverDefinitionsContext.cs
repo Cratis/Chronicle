@@ -15,14 +15,20 @@ public static class ObserverDefinitionsContext
     /// Adds storage whose observer definition registry knows no observer, which is the empty definition for every one.
     /// </summary>
     /// <param name="silo">The <see cref="TestKitSilo"/>.</param>
+    /// <param name="storage">The <see cref="IStorage"/> to add the registry to; a new one that knows no event stores when not given.</param>
     /// <returns>The <see cref="IObserverDefinitionsStorage"/> to give definitions to.</returns>
-    public static IObserverDefinitionsStorage AddObserverDefinitions(this TestKitSilo silo)
+    public static IObserverDefinitionsStorage AddObserverDefinitions(this TestKitSilo silo, IStorage? storage = null)
     {
         var definitions = Substitute.For<IObserverDefinitionsStorage>();
         definitions.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty);
         var eventStore = Substitute.For<IEventStoreStorage>();
         eventStore.Observers.Returns(definitions);
-        var storage = Substitute.For<IStorage>();
+        if (storage is null)
+        {
+            storage = Substitute.For<IStorage>();
+            storage.GetEventStores().Returns(_ => Task.FromResult<IEnumerable<EventStoreName>>([]));
+        }
+
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStore);
         silo.AddService(storage);
         return definitions;

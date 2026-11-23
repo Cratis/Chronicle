@@ -26,14 +26,13 @@ public class and_the_observer_holds_stale_event_types : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
         _definitions = _silo.AddObserverDefinitions();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
 
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
         _eventType = new EventType("5db7cfa2-0fcb-4791-b174-83ff2806d654", EventTypeGeneration.First);

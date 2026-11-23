@@ -26,6 +26,7 @@ public class and_one_definition_in_the_batch_fails : Specification
         _service = new Projections(
             grainFactory,
             Substitute.For<IExpandoObjectConverter>(),
+            new System.Text.Json.JsonSerializerOptions(),
             Substitute.For<ILanguageService>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),

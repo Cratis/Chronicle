@@ -174,6 +174,13 @@ public class an_observer : Specification
     /// <returns>The <see cref="ILogger{TCategoryName}"/> to register.</returns>
     protected virtual ILogger<Observer> CreateLogger() => NullLogger<Observer>.Instance;
 
+    static IEventTypesStorage EventTypesWithCachedDefinitions()
+    {
+        var storage = Substitute.For<IEventTypesStorage>();
+        storage.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
+        return storage;
+    }
+
     async Task Establish()
     {
         _observersConfig = CreateObserversConfig();
@@ -213,7 +220,7 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
-        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventTypesStorage = EventTypesWithCachedDefinitions();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _eventCompliance = Substitute.For<IEventCompliance>();
         _eventGenerationRelease = Substitute.For<IEventGenerationRelease>();

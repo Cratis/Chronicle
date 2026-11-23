@@ -41,7 +41,6 @@ public class a_manager_reading_durable_records : Specification
     protected async Task CreateManager()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
         _definitions = _silo.AddObserverDefinitions();
         _definitions.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty with { EventTypes = [EventType] });
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
@@ -56,6 +55,7 @@ public class a_manager_reading_durable_records : Specification
 
         var target = Substitute.For<INamespaces>();
         target.GetAll().Returns(Namespaces.Select(name => new EventStoreNamespaceName(name)).ToArray());
+        target.HasEveryNamespace();
         _silo.AddProbe<INamespaces>(_ => target);
         _silo.AddProbe<IObserver>(identity =>
         {

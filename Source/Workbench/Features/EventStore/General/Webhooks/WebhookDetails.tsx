@@ -5,6 +5,7 @@ import { IDetailsComponentProps } from '@cratis/components/DataPage';
 import { WebhookDetails as WebhookDetailsModel } from 'Features/Observation/Webhooks';
 import { getAuthorizationTypeString } from './getAuthorizationTypeString';
 import strings from 'Strings';
+import { HeaderSummary } from 'Components/Headers/HeaderSummary';
 
 export const WebhookDetails = (props: IDetailsComponentProps<WebhookDetailsModel>) => {
     const authTypeName = getAuthorizationTypeString(props.item.authorizationType);
@@ -50,11 +51,7 @@ export const WebhookDetails = (props: IDetailsComponentProps<WebhookDetailsModel
                 <div className="field mb-3">
                     <label className="font-bold block mb-2">Headers</label>
                     <div className="text-sm">
-                        <ul>
-                            {Object.entries(props.item.headers).map(([key, value]) => (
-                                <li key={key}><strong>{key}:</strong> {String(value)}</li>
-                            ))}
-                        </ul>
+                        <HeaderSummary headers={props.item.headers} headerValuesSet={props.item.headerValuesSet} />
                     </div>
                 </div>
             )}

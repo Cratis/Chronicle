@@ -57,6 +57,7 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
     /// <exception cref="MissingFirstGenerationForEventType">Thrown when the migration chain has no first generation.</exception>
     /// <exception cref="MissingMigrationForEventTypeGeneration">Thrown when a generation in the chain has no migration.</exception>
     /// <exception cref="EventTypeSchemaChanged">Thrown when a stored generation's schema changed under it.</exception>
+    /// <exception cref="AggregateException">Thrown after finalization when multiple conditional registrations conflict.</exception>
     public async Task Register(
         EventStoreName eventStore,
         IEnumerable<EventTypeRegistration> types,
@@ -104,7 +105,8 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
         // Evict the event type cache on every silo whenever a registration actually changed the stored
         // representation - a new generation, or a different owner, source, or tombstone. Idempotent
         // re-registrations report no change, so client reconnects do not trigger cluster-wide eviction.
-        var mutated = await eventTypesStorage.Register(eventTypesToRegister);
+        var conditional = await RegisterNewGenerations(eventTypesStorage, eventTypesToRegister, newGenerationsPerEventType);
+        var mutated = (await eventTypesStorage.Register(conditional.Remaining)).Concat(conditional.Mutated).Distinct().ToArray();
         LogAddedProtectionMetadata(registrationsWithSchemas, stored);
 
         foreach (var eventTypeId in mutated)
@@ -114,8 +116,9 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
             await eventTypesCacheClient.Invalidate(eventStore, eventTypeId);
         }
 
-        await AppendSystemEventsForNewGenerations(eventStore, newGenerationsPerEventType);
+        await AppendSystemEventsForNewGenerations(eventStore, conditional.Added);
         await CapturePatternsForNewEventTypes(patternCapture, eventStore, mutated);
+        ThrowConflicts(conditional.Conflicts);
     }
 
     /// <summary>
@@ -177,7 +180,10 @@ public sealed partial class EventTypeRegistrar(IGrainFactory grainFactory)
                 schemaProblem.Generation,
                 new EventTypeSchemaChanged(id, schemaProblem.Generation).Message,
                 schemaProblem.Difference.Keyword,
-                schemaProblem.Difference.Path) with { Classification = classification };
+                schemaProblem.Difference.Path) with
+            {
+                Classification = classification
+            };
         }
 
         try

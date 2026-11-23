@@ -23,13 +23,13 @@ public class and_subscription_is_not_subscribed : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
+        _silo.AddEventStoreStorage();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
 
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
         _observer = Substitute.For<IObserver>();

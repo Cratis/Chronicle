@@ -137,21 +137,19 @@ internal static class WebhookDefinitionConverters
     /// <returns>The definition as a read model.</returns>
     internal static WebhookDetails ToReadModel(this Concepts.Observation.Webhooks.WebhookDefinition definition)
     {
-        var contract = definition.ToContract();
         return new WebhookDetails(
-            contract.Identifier,
-            contract.Identifier,
-            contract.Target.Url,
-            contract.EventSequenceId,
-            contract.EventTypes,
+            definition.Identifier,
+            definition.Identifier,
+            definition.Target.Url,
+            definition.EventSequenceId,
+            definition.EventTypes.Select(type => type.ToContract()).ToList(),
             definition.Target.Authorization.ToAuthorizationType(),
-            contract.Target.Headers,
-            contract.IsReplayable,
-            contract.IsActive)
-        {
-            GenerationDelivery = definition.GenerationDelivery,
-            Signing = contract.Signing
-        };
+            definition.Target.Headers.ToDictionary(_ => _.Key, _ => string.Empty),
+            definition.IsReplayable,
+            definition.IsActive,
+            definition.GenerationDelivery,
+            definition.Signing.ToContract(),
+            definition.Target.Headers.ToDictionary(_ => _.Key, _ => !string.IsNullOrEmpty(_.Value)));
     }
 
     /// <summary>

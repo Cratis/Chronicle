@@ -32,11 +32,6 @@ public class ReactorSubscribedToEventRedacted : IReactor
 
     public async Task WaitTillEventRedactedHandledReaches(int count, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
-        while (HandledEventRedactedEvents < count)
-        {
-            await Task.Delay(50, cts.Token);
-        }
+        await ReadinessWait.Until(() => Task.FromResult(HandledEventRedactedEvents), handled => handled >= count, timeout);
     }
 }

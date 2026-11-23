@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Storage;
 using Orleans.BroadcastChannel;
 using Orleans.TestKit;
 
@@ -29,13 +30,28 @@ public class a_manager_over_several_namespaces : Specification
     protected bool _observersAreSubscribed;
     protected readonly HashSet<string> _sourceHas = new(StringComparer.OrdinalIgnoreCase) { "Default", "Tenant1", "Tenant2" };
     protected readonly Dictionary<string, int> _unsubscribeFailures = [];
+    protected readonly Dictionary<string, IEventStoreSubscriptionsManager> _otherManagers = [];
+    protected readonly List<EventStoreName> _eventStores = ["Target", "Source", "Other"];
     protected Func<NamespaceAdded, Task> _onNamespaceAdded;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
+        var storage = Substitute.For<IStorage>();
+        storage.GetEventStores().Returns(_ => Task.FromResult<IEnumerable<EventStoreName>>(_eventStores));
+        _silo.AddObserverDefinitions(storage);
+        _silo.AddProbe<IEventStoreSubscriptionsManager>(identity =>
+        {
+            var key = identity.ToString();
+            if (!_otherManagers.TryGetValue(key, out var manager))
+            {
+                manager = Substitute.For<IEventStoreSubscriptionsManager>();
+                _otherManagers[key] = manager;
+            }
+
+            return manager;
+        });
 
         var target = Substitute.For<INamespaces>();
         target.GetAll().Returns([EventStoreNamespaceName.Default, "Tenant1", "Tenant2", Malformed]);
@@ -71,16 +87,13 @@ public class a_manager_over_several_namespaces : Specification
 
             return observer;
         });
-        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
+        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
     }
 
     protected static string KeyFor(string @namespace) => new ObserverKey($"{SubscriptionName}->Target", "Source", @namespace, EventSequenceId.Outbox).ToString();
 
-    protected static EventStoreSubscriptionDefinition DefinitionFor(params string[] sourceNamespaces) =>
-        new(SubscriptionName, "Source", [new EventType("customer", 1)])
-        {
-            SourceNamespaces = sourceNamespaces.Select(_ => new EventStoreNamespaceName(_)).ToArray()
-        };
+    protected static EventStoreSubscriptionDefinition DefinitionFor() =>
+        new(SubscriptionName, "Source", [new EventType("customer", 1)]);
 
     protected IEnumerable<string> RequestedKeys => _requestedKeys.Distinct();
 

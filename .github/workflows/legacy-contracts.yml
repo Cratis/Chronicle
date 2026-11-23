@@ -73,13 +73,11 @@ jobs:
 
       # Keep artifacts in separate directories: projects and SQL shards reuse TRX filenames.
       - name: Download existing specs results
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-results-specs*
-          path: legacy-contract-inputs/trx
-          merge-multiple: false
-          run-id: ${{ inputs.run-id || github.run_id }}
-          github-token: ${{ github.token }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run-id || github.run_id }}
+        run: node .github/scripts/legacy-contract-artifacts.mjs
 
       - name: Evaluate the committed matrix
         env:
