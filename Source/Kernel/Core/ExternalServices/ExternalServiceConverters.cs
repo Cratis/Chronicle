@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.ExternalServices;
 using Cratis.Chronicle.Concepts.Security;
+using Cratis.Chronicle.Storage.ExternalServices;
 using AuthorizationType = Cratis.Chronicle.Contracts.Security.AuthorizationType;
 
 namespace Cratis.Chronicle.ExternalServices;
@@ -61,8 +62,41 @@ public static class ExternalServiceConverters
             definition.Endpoint.Database?.Port ?? 0,
             definition.Endpoint.Database?.Database ?? string.Empty,
             definition.Endpoint.Database?.Username ?? string.Empty,
-            definition.Endpoint.Database?.Options.ToDictionary(_ => _.Key, _ => _.Value) ?? new Dictionary<string, string>(),
+            definition.Endpoint.Database?.Options.ToDictionary(_ => _.Key, _ => string.Empty) ?? new Dictionary<string, string>(),
             HeaderValuesSetOf(definition.Endpoint.Http));
+
+    /// <summary>
+    /// Saves an external service definition while preserving existing database option values that were left blank.
+    /// </summary>
+    /// <param name="storage">The external service definitions storage.</param>
+    /// <param name="definition">The definition to save.</param>
+    /// <returns>The task representing the save operation.</returns>
+    internal static async Task SavePreservingOptions(this IExternalServiceDefinitionsStorage storage, ExternalServiceDefinition definition)
+    {
+        var previous = await OptionsToPreserve(storage, definition);
+        if (previous is not null)
+        {
+            var database = definition.Endpoint.Database!;
+            var options = database.Options.ToDictionary(_ => _.Key, _ => PreservedOptionValue(_, previous));
+            definition = definition with { Endpoint = definition.Endpoint with { Database = database with { Options = options } } };
+        }
+
+        await storage.Save(definition);
+    }
+
+    static async Task<DatabaseEndpointConfiguration?> OptionsToPreserve(IExternalServiceDefinitionsStorage storage, ExternalServiceDefinition definition)
+    {
+        if (definition.Endpoint.Database is not { } database) return null;
+        if (!database.Options.Any(_ => string.IsNullOrEmpty(_.Value))) return null;
+        if (!await storage.Has(definition.Id)) return null;
+        return (await storage.Get(definition.Id)).Endpoint.Database;
+    }
+
+    static string PreservedOptionValue(KeyValuePair<string, string> option, DatabaseEndpointConfiguration previous)
+    {
+        if (!string.IsNullOrEmpty(option.Value)) return option.Value;
+        return previous.Options.TryGetValue(option.Key, out var value) ? value : option.Value;
+    }
 
     static Dictionary<string, bool> HeaderValuesSetOf(HttpEndpointConfiguration? configuration) =>
         configuration?.Headers.ToDictionary(_ => _.Key, _ => !string.IsNullOrEmpty(_.Value)) ?? new Dictionary<string, bool>();
@@ -158,6 +192,6 @@ public static class ExternalServiceConverters
             Database = configuration.Database,
             Username = configuration.Username,
             Password = configuration.Password,
-            Options = configuration.Options.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+            Options = configuration.Options.ToDictionary(kvp => kvp.Key, kvp => string.Empty)
         };
 }

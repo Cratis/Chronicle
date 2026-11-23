@@ -15,7 +15,7 @@ public class and_header_events_are_read_with_an_inferred_model : given.a_header_
     {
         EventStore = EventStore,
         Namespace = EventStoreNamespace,
-        EventSequenceId = "system",
+        EventSequenceId = "event-log",
         Declaration = "projection PreviewHeaders"
     })).Value0.ReadModelEntries.ToArray();
 

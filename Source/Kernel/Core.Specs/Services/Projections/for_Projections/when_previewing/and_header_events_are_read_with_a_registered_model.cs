@@ -12,7 +12,7 @@ public class and_header_events_are_read_with_a_registered_model : given.a_header
     {
         EventStore = EventStore,
         Namespace = EventStoreNamespace,
-        EventSequenceId = "system",
+        EventSequenceId = "event-log",
         Declaration = "projection PreviewHeaders"
     })).Value0.ReadModelEntries.ToArray();
 
