@@ -131,6 +131,12 @@ public class SinkCollections(
         return database.GetCollection<BsonDocument>(collectionName);
     }
 
+    static SinkCollectionNames CollectionNamesFor(ReadModelDefinition definition)
+    {
+        SinkProvenanceNames.EnsureNotReserved(definition.ContainerName);
+        return SinkCollectionNames.For(definition.ContainerName);
+    }
+
     static bool IsNamespaceConflict(MongoCommandException exception) =>
         exception.Code is NamespaceNotFound or NamespaceExists;
 
@@ -188,12 +194,6 @@ public class SinkCollections(
     {
         var current = await CollectionUuid(PromotingCollectionName);
         Guard(SinkCollectionOperation.Rename, PromotingCollectionName, () => SinkCollectionGuards.ThrowIfPromotingCollectionChanged(_names, claimed, current));
-    }
-
-    static SinkCollectionNames CollectionNamesFor(ReadModelDefinition definition)
-    {
-        SinkProvenanceNames.EnsureNotReserved(definition.ContainerName);
-        return SinkCollectionNames.For(definition.ContainerName);
     }
 
     async Task Clear(IMongoCollection<BsonDocument> collection, bool isReplaying)
