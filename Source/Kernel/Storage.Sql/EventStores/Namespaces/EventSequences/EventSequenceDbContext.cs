@@ -68,6 +68,7 @@ public class EventSequenceDbContext(DbContextOptions<EventSequenceDbContext> opt
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        NamespaceMarkerRow.Configure(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.ConfigureReceipts(modelBuilder);
         if (Database.IsSqlServer())
         {

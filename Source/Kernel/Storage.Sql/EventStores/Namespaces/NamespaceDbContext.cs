@@ -136,6 +136,7 @@ public class NamespaceDbContext(DbContextOptions<NamespaceDbContext> options) : 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        NamespaceMarkerRow.Configure(modelBuilder);
         EventStores.Occurrences.OccurrenceModel.Configure(modelBuilder);
         if (Database.IsSqlServer())
         {
