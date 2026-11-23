@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
@@ -53,11 +54,13 @@ public interface IProjectionsManager : IGrainWithStringKey
     Task<ProjectionDefinition?> GetStoredProjectionDefinition(ProjectionId identifier);
 
     /// <summary>
-    /// Get all persisted projection definitions, including ones not yet part of the registered state.
+    /// Get registered, in-flight and persisted projections producing a read model, including its named projection.
     /// </summary>
-    /// <returns>The stored projection definitions.</returns>
+    /// <param name="readModel">The target read model.</param>
+    /// <param name="namedProjection">The named projection, if any.</param>
+    /// <returns>The matching projection definitions.</returns>
     [AlwaysInterleave]
-    Task<IEnumerable<ProjectionDefinition>> GetStoredProjectionDefinitions();
+    Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection);
 
     /// <summary>
     /// Get all the projections with their declaration representation.

@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelReadPolicy;
 
 public class when_the_identifier_is_empty_and_a_system_projection_targets_it : given.a_read_policy
 {
-    void Establish() => _manager.GetProjectionDefinitions().Returns([_unsupported]);
+    void Establish() => Producers(_unsupported);
 
     async Task Because() => _error = await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", _definition));
 

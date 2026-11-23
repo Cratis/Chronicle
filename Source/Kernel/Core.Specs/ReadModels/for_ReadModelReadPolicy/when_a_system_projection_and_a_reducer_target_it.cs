@@ -10,7 +10,7 @@ public class when_a_system_projection_and_a_reducer_target_it : given.a_read_pol
 {
     void Establish()
     {
-        _manager.GetProjectionDefinitions().Returns([_unsupported]);
+        Producers(_unsupported);
         _reducers.HasReducerForReadModel(_definition.Identifier).Returns(true);
     }
 

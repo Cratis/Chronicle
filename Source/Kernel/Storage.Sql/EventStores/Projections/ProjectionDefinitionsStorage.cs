@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Projections;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,16 @@ public class ProjectionDefinitionsStorage(EventStoreName eventStore, IDatabase d
     {
         await using var scope = await database.EventStore(eventStore);
         var projections = await scope.DbContext.Projections.ToListAsync();
+        return projections.Select(projection => projection.ToKernel()).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        var projections = await scope.DbContext.Projections
+            .Where(projection => projection.ReadModelName == readModel.Value || projection.Id == namedProjection)
+            .ToListAsync();
         return projections.Select(projection => projection.ToKernel()).ToArray();
     }
 

@@ -11,8 +11,7 @@ public class when_another_producer_is_only_stored : given.a_read_policy
     void Establish()
     {
         _definition = _definition with { ObserverIdentifier = _supported.Identifier.Value };
-        _manager.GetProjectionDefinitions().Returns([_supported]);
-        _manager.GetStoredProjectionDefinitions().Returns([_unsupported]);
+        Producers(_supported, _unsupported);
     }
 
     async Task Because() => _error = await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", _definition));

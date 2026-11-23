@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -22,8 +23,7 @@ public class when_the_producer_is_missing : Specification
     {
         _grains = Substitute.For<IGrainFactory>();
         _manager = Substitute.For<IProjectionsManager>();
-        _manager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
-        _manager.GetStoredProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
+        _manager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         _grains.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(_manager);
         _grains.GetGrain<IReducersManager>(Arg.Any<string>()).Returns(Substitute.For<IReducersManager>());
         var definition = Cratis.Chronicle.Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateReadModelDefinition("read-model") with { ObserverIdentifier = "missing-producer" };

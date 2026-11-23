@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients.for_ReducersManager;
 
 public class when_only_another_read_model_has_a_reducer : given.a_reducers_manager
 {
-    void Establish() => _eventStoreStorage.Reducers.GetAll().Returns([_definition with { ReadModel = "another-read-model" }]);
+    void Establish() => _eventStoreStorage.Reducers.HasForReadModel("another-read-model").Returns(true);
 
     async Task Because() => _result = await _grain.HasReducerForReadModel("read-model");
 

@@ -11,7 +11,7 @@ public class when_the_named_projection_targets_another_read_model : given.a_read
     void Establish()
     {
         _definition = _definition with { ObserverIdentifier = _unsupported.Identifier.Value };
-        _manager.GetProjectionDefinitions().Returns([_supported, _unsupported with { ReadModel = "another-read-model" }]);
+        Producers(_supported, _unsupported with { ReadModel = "another-read-model" });
     }
 
     async Task Because() => _error = await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", _definition));

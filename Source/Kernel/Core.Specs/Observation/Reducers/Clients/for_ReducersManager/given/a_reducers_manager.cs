@@ -15,6 +15,7 @@ public class a_reducers_manager : Specification
     protected ReducersManager _grain;
     protected IEventStoreStorage _eventStoreStorage;
     protected ReducerDefinition _definition;
+    protected ReducersManagerState _state;
     protected bool _result;
 
     async Task Establish()
@@ -23,7 +24,10 @@ public class a_reducers_manager : Specification
         silo.AddService(Substitute.For<ILogger<ReducersManager>>());
         var storage = Substitute.For<IStorage>();
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
-        _eventStoreStorage.Reducers.GetAll().Returns([]);
+        _state = new();
+        var stateStorage = Substitute.For<Orleans.Core.IStorage<ReducersManagerState>>();
+        stateStorage.State = _state;
+        silo.Options.StorageFactory = _ => stateStorage;
         storage.GetEventStore((EventStoreName)"store").Returns(_eventStoreStorage);
         silo.AddService(storage);
         _definition = new("reducer", EventSequenceId.Log, [], "read-model", true, []);

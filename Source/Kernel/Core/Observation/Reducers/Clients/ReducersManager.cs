@@ -42,7 +42,8 @@ public class ReducersManager(ILogger<ReducersManager> logger, IStorage storage) 
 
     /// <inheritdoc/>
     public async Task<bool> HasReducerForReadModel(ReadModelIdentifier readModel) =>
-        (await storage.GetEventStore(_eventStoreName).Reducers.GetAll()).Any(_ => _.ReadModel == readModel);
+        State.Reducers.Any(definition => definition.ReadModel == readModel) ||
+        await storage.GetEventStore(_eventStoreName).Reducers.HasForReadModel(readModel);
 
     async Task SetDefinitionForAllProjectionsInAllNamespaces(ConnectionId connectionId)
     {

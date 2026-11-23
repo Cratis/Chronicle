@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Observation.Reducers.Clients;
@@ -27,9 +28,9 @@ internal static class ReadModelReadPolicy
     internal static async Task EnsureReadable(IGrainFactory grainFactory, EventStoreName eventStore, ReadModelDefinition definition)
     {
         var manager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
-        var registered = await manager.GetProjectionDefinitions();
-        var stored = await manager.GetStoredProjectionDefinitions();
-        var projections = registered.Concat(stored)
+        var identifier = definition.ObserverIdentifier.Value;
+        ProjectionId? namedProjection = string.IsNullOrEmpty(identifier) ? null : new(identifier);
+        var projections = (await manager.GetProducersFor(definition.Identifier, namedProjection))
             .Where(_ => IsProducer(_, definition))
             .ToArray();
         var hasUnsupportedProducer = projections.Any(_ => _.UsesUnsupportedEventSequence());

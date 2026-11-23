@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Projections;
 
@@ -16,6 +17,14 @@ public interface IProjectionDefinitionsStorage
     /// </summary>
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
     Task<IEnumerable<ProjectionDefinition>> GetAll();
+
+    /// <summary>
+    /// Get definitions targeting a read model or matching its named projection.
+    /// </summary>
+    /// <param name="readModel">The target read model.</param>
+    /// <param name="namedProjection">The named projection, if any.</param>
+    /// <returns>The matching projection definitions.</returns>
+    Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection);
 
     /// <summary>
     /// Check if a <see cref="ProjectionDefinition"/> exists by its <see cref="ProjectionId"/>.
