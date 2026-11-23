@@ -1,7 +1,7 @@
 import com.google.protobuf.gradle.id
 
 plugins {
-    kotlin("jvm") version "2.1.0"
+    kotlin("jvm") version "2.4.21"
     id("com.google.protobuf") version "0.9.4"
     `java-library`
     id("com.vanniktech.maven.publish") version "0.30.0"
@@ -31,6 +31,9 @@ dependencies {
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        allWarningsAsErrors.set(true)
+    }
 }
 
 tasks.test {
