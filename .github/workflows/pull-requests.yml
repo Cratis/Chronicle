@@ -45,7 +45,7 @@ jobs:
       - name: Release
         id: release
         # This version's PR decision does not create a release in its post step.
-        uses: cratis/release-action@26976c4c37ac8c0454077c0f41abb31650e36405 # v1.5.1
+        uses: cratis/release-action@fefcf36b86e78ff5d4d116da7f472bacf2d3d3c1 # v1.5.2
 
   workbench:
     if: needs.release.outputs.publish == 'true'
