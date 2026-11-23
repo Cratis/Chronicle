@@ -8101,10 +8101,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"validator@npm:^10.0.0":
-  version: 10.11.0
-  resolution: "validator@npm:10.11.0"
-  checksum: 10/52843cd9e360a0b8c04e51d799632b533660e6633cf5d1a3e822cc07925a066be688d6f173398d6756e1732b09e98c0262375fe5335acb8a9a79c33b7283ec87
+"validator@npm:13.15.35":
+  version: 13.15.35
+  resolution: "validator@npm:13.15.35"
+  checksum: 10/62f25728064d5dedaabb10a53647cbb4f9aa762a2a53e16642469d4839ad235e467e9f18d0992c492ec1d35e1d5034956fdc680953fc7d8f764cc6d4c83cf2ae
   languageName: node
   linkType: hard
 
