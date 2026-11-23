@@ -1,12 +1,15 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Sequences;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
+using Cratis.Chronicle.Storage.Namespaces;
 using Orleans.Storage;
 
 namespace Cratis.Chronicle.EventSequences;
@@ -19,7 +22,8 @@ namespace Cratis.Chronicle.EventSequences;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage for the cluster.</param>
 /// <param name="reservedEventSequenceIds">The active provider's reserved sequence names.</param>
-public class EventSequencesStorageProvider(IStorage storage, IReservedEventSequenceIds reservedEventSequenceIds) : IGrainStorage
+/// <param name="namespaceIncarnations">The opt-in namespace lifecycle admission.</param>
+public class EventSequencesStorageProvider(IStorage storage, IReservedEventSequenceIds reservedEventSequenceIds, INamespaceIncarnations namespaceIncarnations) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -36,15 +40,17 @@ public class EventSequencesStorageProvider(IStorage storage, IReservedEventSeque
     {
         var actualGrainState = (grainState as IGrainState<EventSequenceState>)!;
         var key = EventSequenceKey.Parse(grainId.Key.ToString()!);
+        var activationIncarnation = await CaptureActivationIncarnation(key);
         if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, key.EventStore, key.Namespace, key.EventSequenceId))
         {
-            actualGrainState.State = new EventSequenceState();
+            actualGrainState.State = new EventSequenceState { ActivationIncarnation = activationIncarnation };
             return;
         }
 
         var eventTypesStorage = storage.GetEventStore(key.EventStore).EventTypes;
         var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(key.EventSequenceId);
         actualGrainState.State = await eventSequenceStorage.GetState();
+        actualGrainState.State.ActivationIncarnation = activationIncarnation;
         var persistedSequenceNumber = actualGrainState.State.SequenceNumber;
         await SetNextSequenceNumberFromActualTail(eventSequenceStorage, actualGrainState);
         await RebuildTailSequenceNumbersForEventTypesIfStale(eventTypesStorage, eventSequenceStorage, actualGrainState, persistedSequenceNumber);
@@ -57,6 +63,19 @@ public class EventSequencesStorageProvider(IStorage storage, IReservedEventSeque
         var eventSequenceState = (grainState.State as EventSequenceState)!;
         var eventSequenceStorage = storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).GetEventSequence(key.EventSequenceId);
         await eventSequenceStorage.SaveState(eventSequenceState);
+    }
+
+    async Task<NamespaceIncarnationId?> CaptureActivationIncarnation(EventSequenceKey key)
+    {
+        if (!namespaceIncarnations.Enabled) return null;
+        var lifecycle = await namespaceIncarnations.GetStorage(key.EventStore).NamespaceLifecycles.Get(key.Namespace);
+        return lifecycle?.Status switch
+        {
+            null => null,
+            NamespaceLifecycleStatus.Open => lifecycle.Incarnation,
+            NamespaceLifecycleStatus.RecoveryRequired => throw new NamespaceRecoveryRequired(key.Namespace),
+            _ => throw new NamespaceClosing(key.Namespace)
+        };
     }
 
     async Task RebuildTailSequenceNumbersForEventTypesIfStale(

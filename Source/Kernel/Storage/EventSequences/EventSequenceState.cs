@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 
@@ -11,6 +12,12 @@ namespace Cratis.Chronicle.Storage.EventSequences;
 /// </summary>
 public class EventSequenceState
 {
+    /// <summary>
+    /// Gets or sets the incarnation captured before hydrating this activation's caches, or null when unknown.
+    /// This is activation-local metadata, not a durable snapshot field or a caller's expected incarnation.
+    /// </summary>
+    public NamespaceIncarnationId? ActivationIncarnation { get; set; }
+
     /// <summary>
     /// Gets or sets the next event sequence number for the next event being appended.
     /// </summary>
