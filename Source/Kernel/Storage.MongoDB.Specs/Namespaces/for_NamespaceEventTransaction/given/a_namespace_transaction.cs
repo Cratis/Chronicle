@@ -80,7 +80,7 @@ public class a_namespace_transaction : Specification
             });
         client.StartSessionAsync(Arg.Any<ClientSessionOptions>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(StartSession()));
         _transaction = new(_database);
-        _context = new(_identity, _activation.Token);
+        _context = new(_identity, _activation.Token) { ActivationIncarnation = _identity };
     }
 
     protected async Task Execute() => _result = await _transaction.Execute(_context, Write);

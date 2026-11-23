@@ -21,6 +21,12 @@ internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase dat
         writeConcern: WriteConcern.WMajority);
 
     readonly IMongoCollection<BsonDocument> _markers = database.GetCollection<BsonDocument>(WellKnownCollectionNames.NamespaceMarker);
+    int _attempts;
+
+    /// <summary>
+    /// Gets whether this operation can start another transaction, including fenced collision recovery.
+    /// </summary>
+    public bool HasRemainingAttempts => _attempts < MaximumAttempts;
 
     /// <summary>
     /// Runs event/receipt work only after writing the exact open marker in the same transaction.
@@ -31,27 +37,36 @@ internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase dat
     /// <returns>The committed work's result.</returns>
     /// <exception cref="NamespaceCommitRejected">The expected marker is absent, closed, or replaced.</exception>
     /// <exception cref="NamespaceCommitNotSupported">The destination cannot run transactions.</exception>
+    /// <exception cref="NamespaceIncarnationRequiresReactivation">The calling activation has stale or unknown state.</exception>
     /// <exception cref="NamespaceCommitOutcomeUnknown">The commit was submitted without a definite outcome.</exception>
+    /// <exception cref="InvalidOperationException">The operation's transaction attempt budget is exhausted.</exception>
     public async Task<T> Execute<T>(NamespaceCommitContext context, Func<IClientSessionHandle, CancellationToken, Task<T>> write)
     {
         context.ActivationCancellation.ThrowIfCancellationRequested();
         if (context.Incarnation.Value == Guid.Empty) throw new NamespaceCommitRejected();
         await RequireTransactions(context.ActivationCancellation);
-        for (var attempt = 1; ; attempt++)
+        if (!HasRemainingAttempts) throw new InvalidOperationException("The namespace transaction attempt budget is exhausted.");
+        for (_attempts++; ; _attempts++)
         {
             context.ActivationCancellation.ThrowIfCancellationRequested();
             try
             {
                 return await Attempt(context, write);
             }
-            catch (MongoCommandException error) when (IsWriteConflict(error) && attempt < MaximumAttempts)
+            catch (MongoException error) when (IsWriteConflict(error) && HasRemainingAttempts)
             {
                 // Only a definite server-side write conflict can restart the transaction body.
             }
         }
     }
 
-    static bool IsWriteConflict(MongoCommandException error) => error.Code == 112 && !error.HasErrorLabel("UnknownTransactionCommitResult");
+    static bool IsWriteConflict(MongoException error) => !error.HasErrorLabel("UnknownTransactionCommitResult") && error switch
+    {
+        MongoCommandException command => command.Code == 112,
+        MongoWriteException write => write.WriteError.Code == 112 && write.WriteConcernError is null,
+        MongoBulkWriteException<Event> bulk => bulk.WriteErrors.Any(item => item.Code == 112) && bulk.WriteConcernError is null,
+        _ => false
+    };
 
     static async Task Commit(IClientSessionHandle session, CancellationToken cancellationToken)
     {
@@ -59,7 +74,7 @@ internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase dat
         {
             await session.CommitTransactionAsync(cancellationToken);
         }
-        catch (MongoCommandException error) when (IsWriteConflict(error))
+        catch (MongoException error) when (IsWriteConflict(error))
         {
             throw;
         }
@@ -103,6 +118,7 @@ internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase dat
         try
         {
             if (!await new NamespaceMarkerStorage(_markers).TryFence(session, context.Incarnation, cancellationToken)) throw new NamespaceCommitRejected();
+            if (context.ActivationIncarnation != context.Incarnation) throw new NamespaceIncarnationRequiresReactivation();
             cancellationToken.ThrowIfCancellationRequested();
             var result = await write(session, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();

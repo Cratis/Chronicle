@@ -7,7 +7,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Namespaces.for_NamespaceEventTransact
 
 public class when_the_marker_rejects_the_identity : given.a_namespace_transaction
 {
-    void Establish() => _matches = 0;
+    void Establish()
+    {
+        _matches = 0;
+        _context = _context with { ActivationIncarnation = null };
+    }
     Task Because() => ExecuteCatching();
 
     [Fact] void should_report_a_stale_or_closed_incarnation() => _failure.ShouldBeOfExactType<NamespaceCommitRejected>();
