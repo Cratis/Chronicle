@@ -150,6 +150,7 @@ message WebhookDetailsResponse {
    string Id = 9;
    EventGenerationDelivery GenerationDelivery = 10;
    WebhookSigningMode Signing = 11;
+   map<string,bool> HeaderValuesSet = 12;
 }
 enum WebhookSigningAlgorithm {
    WEBHOOK_SIGNING_ALGORITHM_Ed25519 = 0;

@@ -38,8 +38,8 @@ internal static class SystemStoreGuard
             return await access.IsAllowed(httpContext.User, httpContext.RequestServices);
         }
 
-        // A server call without its HTTP request remains fail-closed. Only direct in-process calls
-        // consult the server's services, with no identity (allowed only while authentication is disabled).
+        // A server call without its HTTP request remains fail-closed. Direct in-process calls without
+        // an ambient request consult the server's services with no identity (allowed only while authentication is disabled).
         if (callContext.ServerCallContext is not null || InProcessServices is not { } services) return false;
         await using var scope = services.CreateAsyncScope();
         return await scope.ServiceProvider.GetRequiredService<ISystemStoreAccess>().IsAllowed(null, scope.ServiceProvider);
@@ -154,22 +154,28 @@ internal static class SystemStoreGuard
     }
 
     /// <summary>
-    /// Gets the request of a call through the ASP.NET Core gRPC host's own GetHttpContext extension. The host does
-    /// not keep the request in the call user state, so reading the state directly finds nothing for a real call.
+    /// Gets the request through the ASP.NET Core gRPC host's GetHttpContext extension, or the ambient request
+    /// for a direct in-process call. A server call never falls back to an ambient request.
     /// </summary>
     /// <param name="callContext">The <see cref="CallContext"/> of the call.</param>
     /// <returns>The <see cref="HttpContext"/>, or null when the call is not served over HTTP, which callers treat as no identity.</returns>
     internal static HttpContext? HttpContextFor(CallContext callContext)
     {
-        if (callContext.ServerCallContext is not { } serverCallContext) return null;
-        try
+        if (callContext.ServerCallContext is { } serverCallContext)
         {
-            return serverCallContext.GetHttpContext();
+            try
+            {
+                return serverCallContext.GetHttpContext();
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
         }
-        catch (InvalidOperationException)
-        {
-            return null;
-        }
+
+        // Direct service calls within an HTTP query retain its validated principal and request services.
+        // Never substitute an ambient request for a server call that has lost its own HTTP context.
+        return InProcessServices?.GetService<IHttpContextAccessor>()?.HttpContext;
     }
 
     /// <summary>

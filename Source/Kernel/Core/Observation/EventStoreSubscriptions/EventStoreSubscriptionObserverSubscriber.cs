@@ -69,7 +69,7 @@ public class EventStoreSubscriptionObserverSubscriber(
         var inboxSequenceId = new EventSequenceId($"{EventSequenceId.InboxPrefix}{_key.EventStore}");
         var inboxSequence = grainFactory.GetEventSequence(inboxSequenceId, targetEventStore, targetNamespace);
 
-        var generation = new EventStoreSubscriptionTargetGeneration(storage.GetEventStore(_key.EventStore).EventTypes, storage.GetEventStore(targetEventStore).EventTypes, generationRelease, _key.EventStore, targetEventStore);
+        var generation = new EventStoreSubscriptionTargetGeneration(storage.GetEventStore(_key.EventStore).EventTypes, storage.GetEventStore(targetEventStore).EventTypes, generationRelease, _key.EventStore, targetEventStore, storage.GetEventStore(_key.EventStore).GetNamespace(_key.Namespace).GetEventSequence(_key.EventSequenceId));
         var state = new ForwardingState(inboxSequence, targetEventStore, targetNamespace, generation);
         try
         {
@@ -197,7 +197,7 @@ public class EventStoreSubscriptionObserverSubscriber(
     bool IsForSubscription(EventStoreSubscriptionDefinition? definition, AppendedEvent incoming)
     {
         // Not for this subscription: no committed definition (fail closed - a removed subscription whose observer could not
-        // be revoked must not keep forwarding unfiltered), a source namespace it does not list (defense in depth behind the
+        // be revoked must not keep forwarding unfiltered), a malformed source namespace (defense in depth behind the
         // manager revoking the observer) or a tag filter mismatch.
         if (definition is null)
         {
@@ -205,7 +205,7 @@ public class EventStoreSubscriptionObserverSubscriber(
             return false;
         }
 
-        return SubscriptionObservation.Observes(definition, _key.Namespace)
+        return SubscriptionObservation.Observes(_key.Namespace)
             && EventStoreSubscriptionTagFilter.Matches(definition.NamedTags, incoming.Context.NamedTags);
     }
 

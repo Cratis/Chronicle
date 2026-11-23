@@ -152,6 +152,7 @@ A claim is only as good as the signal behind it — a build result, a test run, 
 | Reading, citing and superseding a decision record | the **cratis-engineering-decision-record** skill |
 | Before any browser call: production permit, handoff, artifact paths, evidence | `browser.md` |
 | Whether you are allowed to do the thing you are able to do | `capability-is-not-authority.md` |
+| Exposing an endpoint, API or MCP to callers that present a token; AuthProxy anonymous paths, bearer routes | `authentication-boundary.md` |
 | Before running a command that could print a credential, or when a secret value appears in output | `secrets.md` |
 | Session notes, plans and handovers (`.ai-work/` only) | `local-work-artifacts.md` |
 | Command wrappers, exact output and exit codes | `rtk.md`, then **cratis-rtk** |

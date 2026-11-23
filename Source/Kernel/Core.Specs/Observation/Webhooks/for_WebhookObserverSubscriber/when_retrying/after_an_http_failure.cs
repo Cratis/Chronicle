@@ -13,9 +13,9 @@ public class after_an_http_failure : given.a_webhook_delivery
 
     async Task Because()
     {
-        _failedResult = await _subscriber.OnNext(_partition, _events, new(null));
+        _failedResult = await _subscriber.OnNext(_partition, _events, _context);
         _receiver.StatusCode = HttpStatusCode.OK;
-        _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+        _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
     }
 
     [Fact] void should_fail_without_acknowledging_the_first_attempt() => _failedResult.LastSuccessfulObservation.ShouldEqual(EventSequenceNumber.Unavailable);

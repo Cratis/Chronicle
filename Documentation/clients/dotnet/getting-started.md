@@ -17,6 +17,8 @@ using var client = new ChronicleClient(ChronicleConnectionString.Development);
 var eventStore = await client.GetEventStore("Quickstart");
 ```
 
+To append to another application's store or outbox without registering your application's artifacts there, use a [per-store registration mode](./foreign-event-stores.md).
+
 `Quickstart` names the event store this client will use. `ChronicleConnectionString.Development` connects to the default local kernel with development credentials.
 
 `ChronicleConnectionString.Default` also points at `localhost:35000` but names no credentials, so it falls back to the same development credentials. Use `auth=none` for an anonymous connection. For another environment, pass an explicit `new ChronicleConnectionString("chronicle://...")` with its host and credentials, and set `skipTlsValidation=false` when its certificate is verifiable. See [Client TLS](/chronicle/configuration/tls/).

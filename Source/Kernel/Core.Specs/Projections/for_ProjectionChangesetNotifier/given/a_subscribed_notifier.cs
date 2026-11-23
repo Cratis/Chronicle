@@ -33,7 +33,9 @@ public class a_subscribed_notifier : Specification
         _subscribers = [Substitute.For<IReadModelChangesetSubscriber>(), Substitute.For<IReadModelChangesetSubscriber>()];
         foreach (var subscriber in _subscribers)
         {
-            await _notifier.Subscribe(subscriber);
+            var subscription = _notifier.Subscribe(subscriber);
+            await _silo.TimerRegistry.FireAllAsync();
+            await subscription;
         }
 
         _notifications =

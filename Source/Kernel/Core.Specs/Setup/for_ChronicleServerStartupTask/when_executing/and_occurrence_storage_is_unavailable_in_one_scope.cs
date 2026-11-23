@@ -20,7 +20,7 @@ public class and_occurrence_storage_is_unavailable_in_one_scope : given.a_startu
         var occurrences = Substitute.For<IOccurrencesStorage>();
         _eventStoreStorage.Occurrences.Returns(_failed);
         _namespaceStorage.Occurrences.Returns(_failed);
-        _namespaceStorage.HasData().Returns(Task.FromResult(false));
+        _namespaceStorage.HasPersistedState().Returns(Task.FromResult(false));
         _failed.GetPendingTriggers().Returns(Task.FromException<IEnumerable<TriggerId>>(new IOException("Simulated scope failure")));
         _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([_namespace, healthyName]));
         _eventStoreStorage.GetNamespace(healthyName).Returns(healthy);

@@ -62,6 +62,7 @@ public class an_observer : Specification
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
     protected virtual ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo _silo = new();
+    protected Cratis.Chronicle.Namespaces.INamespaces _namespaces = CreateExistingNamespaces();
     protected IStorage<ObserverState> _stateStorage;
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
     protected IStorage<ObserverDefinition> _definitionStorage;
@@ -141,6 +142,7 @@ public class an_observer : Specification
         silo.AddProbe(_ => _jobsManager);
         silo.AddProbe(_ => _appendedEventsQueues);
         silo.AddProbe(_ => _eventSequence);
+        silo.AddProbe(_ => _namespaces);
         ConfigureProbes(silo);
     }
 
@@ -161,6 +163,13 @@ public class an_observer : Specification
     /// </summary>
     /// <returns>The <see cref="ILogger{TCategoryName}"/> to register.</returns>
     protected virtual ILogger<Observer> CreateLogger() => NullLogger<Observer>.Instance;
+
+    static IEventTypesStorage EventTypesWithCachedDefinitions()
+    {
+        var storage = Substitute.For<IEventTypesStorage>();
+        storage.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
+        return storage;
+    }
 
     async Task Establish()
     {
@@ -201,7 +210,7 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
-        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventTypesStorage = EventTypesWithCachedDefinitions();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _eventCompliance = Substitute.For<IEventCompliance>();
         _eventGenerationRelease = Substitute.For<IEventGenerationRelease>();
@@ -432,4 +441,12 @@ public class an_observer : Specification
     protected void EventSequenceDoesNotHaveNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
         .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber.Next(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
         .Returns(EventSequenceNumber.Unavailable);
+
+    static Cratis.Chronicle.Namespaces.INamespaces CreateExistingNamespaces()
+    {
+        var namespaces = Substitute.For<Cratis.Chronicle.Namespaces.INamespaces>();
+        namespaces.GetCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => (EventStoreNamespaceName?)_.Arg<EventStoreNamespaceName>());
+        namespaces.EnsureCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => _.Arg<EventStoreNamespaceName>());
+        return namespaces;
+    }
 }

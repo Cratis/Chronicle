@@ -93,7 +93,7 @@ internal sealed partial class ChronicleServerStartupTask
                     new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentDeferredNamespaces * 2, CancellationToken = budget.Token },
                     async (namespaceName, token) =>
                     {
-                        if (await storage.GetEventStore(eventStore).GetNamespace(namespaceName).HasData().WaitAsync(token))
+                        if (await storage.GetEventStore(eventStore).GetNamespace(namespaceName).HasPersistedState().WaitAsync(token))
                         {
                             await grainFactory.GetJobsManager(eventStore, namespaceName).Rehydrate().WaitAsync(token);
                         }

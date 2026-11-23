@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_watching.acro
 public class NotifierRouter
 {
     readonly SemaphoreSlim _gate = new(1, 1);
-    readonly Dictionary<string, ProjectionChangesetNotifier> _activations = [];
+    readonly Dictionary<string, (ProjectionChangesetNotifier Notifier, TestKitSilo Silo)> _activations = [];
     readonly List<string> _requestedKeys = [];
     TaskCompletionSource _subscribedSinceReplace = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -80,20 +80,20 @@ public class NotifierRouter
         }
     }
 
-    static Task<ProjectionChangesetNotifier> NewActivation(string key)
+    static async Task<(ProjectionChangesetNotifier Notifier, TestKitSilo Silo)> NewActivation(string key)
     {
         // Each activation lives in its own silo so a replacement never collides with the activation it replaces.
         var silo = new TestKitSilo();
         silo.AddService(Substitute.For<ILogger<ProjectionChangesetNotifier>>());
         silo.AddService(Substitute.For<IProjectionsServiceClient>());
         silo.AddService(TimeProvider.System);
-        return silo.CreateGrainAsync<ProjectionChangesetNotifier>(key);
+        return (await silo.CreateGrainAsync<ProjectionChangesetNotifier>(key), silo);
     }
 
     async Task Subscribe(string key, IReadModelChangesetSubscriber subscriber)
     {
         // Read the activation and its generation together so a registration with a replaced activation never counts.
-        ProjectionChangesetNotifier activation;
+        (ProjectionChangesetNotifier Notifier, TestKitSilo Silo) activation;
         TaskCompletionSource generation;
         await _gate.WaitAsync();
         try
@@ -106,11 +106,15 @@ public class NotifierRouter
             _gate.Release();
         }
 
-        await activation.Subscribe(subscriber);
+        var subscription = activation.Notifier.Subscribe(subscriber);
+
+        // TestKit records grain timers without running them; publish before awaiting the opening acknowledgement.
+        await activation.Silo.TimerRegistry.FireAllAsync();
+        await subscription;
         generation.TrySetResult();
     }
 
-    async Task<ProjectionChangesetNotifier> ActivationWithinGate(string key)
+    async Task<(ProjectionChangesetNotifier Notifier, TestKitSilo Silo)> ActivationWithinGate(string key)
     {
         if (!_activations.TryGetValue(key, out var activation))
         {
@@ -126,7 +130,7 @@ public class NotifierRouter
         await _gate.WaitAsync();
         try
         {
-            return await ActivationWithinGate(key);
+            return (await ActivationWithinGate(key)).Notifier;
         }
         finally
         {

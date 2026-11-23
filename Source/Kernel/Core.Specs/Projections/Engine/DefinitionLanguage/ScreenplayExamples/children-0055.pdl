@@ -1,0 +1,7 @@
+projection Model => ModelReadModel
+  children entries identified by entryId
+    sort by addedAt descending
+    from EntryAdded key entryId
+      parent modelId
+      title = title
+      addedAt = $eventContext.occurred

@@ -77,10 +77,7 @@ public partial class Observer
                 var countsStorage = GetObserverHandledCountsStorage();
                 foreach (var chunk in pending.Chunk(MaxPendingHandledCountPartitions))
                 {
-                    await countsStorage.Increment(_observerId, chunk
-                        .Select(_ => new KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(_.Key, _.Value))
-                        .ToArray());
-                    written.UnionWith(chunk.Select(_ => _.Key));
+                    await PersistHandledCountChunk(countsStorage, chunk, written, updateRunningTotals: false);
                 }
             }
             catch

@@ -211,9 +211,7 @@ public class Projections(
             .GroupBy(d => d.EventSequenceId[EventSequenceId.InboxPrefix.Length..])
             .Select(g => (
                 EventStoreName: g.Key,
-                EventTypeIds: g.SelectMany(d => d.From.Keys
-                    .Concat(d.Join.Keys)
-                    .Select(et => new EventTypeId(et.Id)))
+                EventTypeIds: g.SelectMany(ProjectionSubscriptionEventTypes.For)
                     .Distinct()
                     .AsEnumerable()))
             .ToList();

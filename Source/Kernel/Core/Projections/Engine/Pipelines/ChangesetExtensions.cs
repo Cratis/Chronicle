@@ -61,10 +61,7 @@ public static class ChangesetExtensions
             safeCopy = initialModelStateAsDictionary.ToList();
         }
 
-        existingProperties.AddRange(changeset.Changes
-            .OfType<PropertiesChanged<ExpandoObject>>()
-            .SelectMany(_ => _.Differences)
-            .Select(_ => _.PropertyPath));
+        existingProperties.AddRange(GetChangedProperties(changeset.Changes));
 
         existingProperties.AddRange(changeset.Changes
             .OfType<ChildAdded>()
@@ -97,4 +94,12 @@ public static class ChangesetExtensions
             changeset.Add(propertiesChanged);
         }
     }
+
+    static IEnumerable<PropertyPath> GetChangedProperties(IEnumerable<Change> changes) =>
+        changes.SelectMany(change => change switch
+        {
+            PropertiesChanged<ExpandoObject> propertiesChanged => propertiesChanged.Differences.Select(_ => _.PropertyPath),
+            ResolvedJoin resolvedJoin => GetChangedProperties(resolvedJoin.Changes),
+            _ => []
+        });
 }

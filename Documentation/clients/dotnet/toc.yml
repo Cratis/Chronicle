@@ -4,6 +4,8 @@
   href: getting-started.md
 - name: Short-lived processes
   href: short-lived-processes.md
+- name: Foreign event stores
+  href: foreign-event-stores.md
 - name: Serverless mode
   href: serverless-mode.md
 - name: Explicit artifact registration

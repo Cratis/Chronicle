@@ -39,7 +39,7 @@ internal sealed class LegacyCompositeKey
     /// <summary>
     /// Gets the order the part names are written in. Must never change, as it defines the stored id.
     /// </summary>
-    internal static IComparer<string> PartOrder => Comparer<string>.Default;
+    internal static IComparer<string> PartOrder => StringComparer.CurrentCulture;
 
     /// <summary>
     /// Creates the rebuilder for a read model, if its key is a composite (object-shaped) key.

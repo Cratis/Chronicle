@@ -160,6 +160,13 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
             }
         }
 
+        if (context.DbContext.Database.IsSqlServer())
+        {
+            // The trailing-space encoding preserves identity, not order. Decode before sorting and paging.
+            var rows = await query.ToArrayAsync();
+            return OrderAndPage(rows.Select(row => ToClosure(context.DbContext, row)), skip, take).ToArray();
+        }
+
         query = query.OrderBy(row => row.Owner).ThenBy(row => row.EventSourceId).ThenBy(row => row.EventSourceType)
             .ThenBy(row => row.StreamType).ThenBy(row => row.StreamId).Skip(skip);
         if (take is not null) query = query.Take(take.Value);
@@ -174,6 +181,24 @@ public class ClosedStreamsConstraintStorage(EventStoreName eventStore, EventStor
     /// <inheritdoc/>
     public Task CloseStream(EventStreamType streamType, EventStreamId streamId) =>
         Close(new(new(EventStreamType: streamType, EventStreamId: streamId), ClosedStreamOwner.Manual, EventSequenceNumber.Unavailable, null));
+
+    /// <summary>
+    /// Orders decoded closures ordinally before selecting a page.
+    /// </summary>
+    /// <param name="closures">The closures with decoded identifiers.</param>
+    /// <param name="skip">The number of ordered closures to skip.</param>
+    /// <param name="take">The maximum number of closures, or null for all remaining closures.</param>
+    /// <returns>The requested page in ordinal order.</returns>
+    internal static IEnumerable<ClosedStream> OrderAndPage(IEnumerable<ClosedStream> closures, int skip, int? take)
+    {
+        var ordered = closures.OrderBy(row => row.Owner.Value, StringComparer.Ordinal)
+            .ThenBy(row => row.Scope.EventSourceId?.Value, StringComparer.Ordinal)
+            .ThenBy(row => row.Scope.EventSourceType?.Value, StringComparer.Ordinal)
+            .ThenBy(row => row.Scope.EventStreamType?.Value, StringComparer.Ordinal)
+            .ThenBy(row => row.Scope.EventStreamId?.Value, StringComparer.Ordinal)
+            .Skip(skip);
+        return take is null ? ordered : ordered.Take(take.Value);
+    }
 
     static Expression<Func<ClosedStreamEntry, bool>> ExactScope(DbContext context, ClosedStreamScope scope)
     {

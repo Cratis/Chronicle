@@ -1,0 +1,6 @@
+projection Doc => DocReadModel
+  from SlotAssigned
+    slots.$eventContent.slot = series
+    count assignmentsByUser.$causedBy.userName
+  from SlotDropped
+    remove slots.$eventContent.slot

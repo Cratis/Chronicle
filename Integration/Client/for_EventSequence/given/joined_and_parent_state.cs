@@ -47,18 +47,11 @@ public class joined_and_parent_state(ChronicleFixture fixture) : content_mutatio
         var handler = EventStore.Projections.GetHandlerFor<JoinedProjection>();
         await handler.WaitTillActive(_joinTimeout);
         await handler.WaitTillReachesEventSequenceNumber(JoinedTail, _joinTimeout);
-        using var cancellation = new CancellationTokenSource(_joinTimeout);
-        while (true)
-        {
-            JoinedDocuments = (await EventStore.ReadModels.GetInstances<JoinedReadModel>()).ToArray();
-            if (JoinedDocuments.SingleOrDefault(model => model.Id == FirstJoinedDocument)?.Amount == expected &&
-                JoinedDocuments.SingleOrDefault(model => model.Id == SecondJoinedDocument)?.Amount == expected)
-            {
-                return;
-            }
-
-            await Task.Delay(50, cancellation.Token);
-        }
+        JoinedDocuments = await ReadinessWait.Until(
+            async () => (await EventStore.ReadModels.GetInstances<JoinedReadModel>()).ToArray(),
+            models => models.SingleOrDefault(model => model.Id == FirstJoinedDocument)?.Amount == expected &&
+                models.SingleOrDefault(model => model.Id == SecondJoinedDocument)?.Amount == expected,
+            _joinTimeout);
     }
 
     async Task<EventSequenceNumber> AppendAndWait(EventSourceId source, object @event)

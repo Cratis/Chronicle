@@ -150,6 +150,7 @@ public class all_dependencies : Observation.given.a_connection_held_on_another_s
         _service = new Projections(
             _grainFactory,
             _expandoObjectConverter,
+            Cratis.Chronicle.Events.for_PublicEventContentRedactor.given.header_events.Options,
             _languageService,
             services.BuildServiceProvider(),
             _readModelsCompliance,

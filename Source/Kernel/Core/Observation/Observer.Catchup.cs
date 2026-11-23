@@ -21,6 +21,12 @@ public partial class Observer
     static readonly TimeSpan[] _shortCatchUpRetryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5)];
 
     int _partitionHoldsVersion;
+    int _catchUpConclusionsInFlight;
+
+    /// <summary>
+    /// Completes when every concluded catch-up job reporting back has had its position applied; null while none is being applied.
+    /// </summary>
+    TaskCompletionSource? _catchUpConclusionsApplied;
 
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
 
@@ -40,6 +46,7 @@ public partial class Observer
             logger.SkippingCatchUpBecauseObserverIsReplaying();
             _isPreparingCatchup = false;
             NotePreparationEnded();
+            await RepairMissedDeliveries();
             return;
         }
 
@@ -166,6 +173,7 @@ public partial class Observer
         State.CatchingUpPartitions.Remove(partition);
         _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
+        CompleteHeldBackDelivery(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         EvaluateSuspectedSkips();
@@ -215,15 +223,48 @@ public partial class Observer
         // Only the job reporting back is excluded - any other catch-up job, such as one started after it was
         // finalized, is still live and still owns its work. Recorded before anything is awaited, so a catch-up
         // interleaving with this call already sees it.
+        // Until the job's position is applied, a catch-up that excludes it would start over what it already handled.
         RememberConcludedCatchUpJob(jobId);
+        BeginCatchUpConclusion();
+        bool? concluded;
+        try
+        {
+            concluded = await ApplyCatchUpConclusion(jobId, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+        }
+        finally
+        {
+            EndCatchUpConclusion();
+        }
 
+        if (concluded is not bool madeProgress) return;
+
+        Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        Skips.PreparationEnded();
+        QueueUnownedHeldBackDeliveries();
+        await EvaluateAndRepairMissedDeliveries();
+        Skips.ClearJobReported();
+        await WriteStateAsync();
+
+        _isPreparingCatchup = false;
+        await ContinueAfterCatchUpLap(await NoteCatchUpLap(madeProgress));
+    }
+
+    /// <summary>
+    /// Applies the position a concluded catch-up job reached.
+    /// </summary>
+    /// <param name="jobId">The <see cref="JobId"/> of the job that concluded.</param>
+    /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number the concluded job reports.</param>
+    /// <param name="lastScannedEventSequenceNumber">The last scanned event sequence number the concluded job reports.</param>
+    /// <returns>Whether the lap made progress; null if a newer catch-up owns what the job concluded.</returns>
+    async Task<bool?> ApplyCatchUpConclusion(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
+    {
         // The observer-wide job only owned the partitions it registered. A partition's own catch-up
         // keeps its hold until it reports PartitionCaughtUp (#5379).
         var releasable = await PartitionHoldsReleasableAfterCatchUp();
 
         // A job whose claim has passed to a newer catch-up concluded nothing the newer one owns: its holds, cursor,
         // preparation and routing all belong to the newer job, which reports back on its own.
-        if (!await ShadowHandOverCaughtUpObserverWide(jobId)) return;
+        if (!await ShadowHandOverCaughtUpObserverWide(jobId)) return null;
 
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
@@ -233,14 +274,7 @@ public partial class Observer
             State = State with { NextEventSequenceNumber = lastScannedEventSequenceNumber.Next() };
         }
 
-        Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        Skips.PreparationEnded();
-        EvaluateSuspectedSkips();
-        Skips.ClearJobReported();
-        await WriteStateAsync();
-
-        _isPreparingCatchup = false;
-        await ContinueAfterCatchUpLap(await NoteCatchUpLap(madeProgress));
+        return madeProgress;
     }
 
     async Task ContinueAfterCatchUpLap(bool settleInObserving)
@@ -452,7 +486,7 @@ public partial class Observer
         return await _jobsManager.StartOrResumeObserverJobReportingDrops<ICatchUpObserver, CatchUpObserverRequest>(
             logger,
 
-            // Created after the lookup: a job concluding while it is in flight is excluded and has moved the position on.
+            // Created after the lookup, and moved on before the start to where a job that concluded meanwhile reached.
             () => new(_observerKey, Definition.Type, State.NextEventSequenceNumber, subscription.EventTypes) { ReaderScope = ReaderScope },
             requestPredicate: null,
             () =>
@@ -481,13 +515,16 @@ public partial class Observer
                 logger.NoCatchUpJobTookOwnership();
                 _isPreparingCatchup = false;
                 NotePreparationEnded();
-                return Task.CompletedTask;
+                return RepairMissedDeliveries();
             },
             _concludedCatchUpJobs,
             0,
             null,
             async request =>
             {
+                // A job that concluded during the lookup was excluded before its position was applied (#6145).
+                await CatchUpConclusionsApplied();
+                request = request with { FromEventSequenceNumber = State.NextEventSequenceNumber };
                 var epoch = await GrantObserverWideBeforeStart(ClaimHolderKind.ObserverCatchUp, request.FromEventSequenceNumber);
                 onStamped(epoch);
                 return request with { OwnershipEpoch = epoch };
@@ -507,6 +544,9 @@ public partial class Observer
         {
             Skips.Release(partition, ownership);
         }
+
+        CompleteHeldBackDelivery(partition, lastHandledEventSequenceNumber);
+        await EvaluateAndRepairMissedDeliveries();
     }
 
     async Task ProbeAndStartCatchupJob(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead)
@@ -582,6 +622,40 @@ public partial class Observer
     {
         if (jobId == JobId.NotSet) return;
         _concludedCatchUpJobs.Add(jobId);
+    }
+
+    void BeginCatchUpConclusion()
+    {
+        _catchUpConclusionsInFlight++;
+        _catchUpConclusionsApplied ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    void EndCatchUpConclusion()
+    {
+        if (--_catchUpConclusionsInFlight == 0 && _catchUpConclusionsApplied is { } applied)
+        {
+            _catchUpConclusionsApplied = null;
+            applied.SetResult();
+        }
+    }
+
+    /// <summary>
+    /// Waits until every concluded catch-up job reporting back has had its position applied.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// A concluded job stops counting as an owner before its position is applied, as the handover awaits storage in
+    /// between. A catch-up that looked up the jobs in that window found no owner and started a new job from the old
+    /// position, delivering everything the concluded job had already handled a second time (#6145). Waiting after
+    /// the lookup and before the job is started, then taking the position afresh, closes the window: the handover routes only after it, and a
+    /// catch-up it routes into adopts the acquisition that is waiting.
+    /// </remarks>
+    async Task CatchUpConclusionsApplied()
+    {
+        while (_catchUpConclusionsApplied is { } applied)
+        {
+            await applied.Task;
+        }
     }
 
     /// <summary>

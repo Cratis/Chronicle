@@ -50,6 +50,17 @@ public interface IEventTypesStorage
     Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "");
 
     /// <summary>
+    /// Atomically registers generations expected to be absent, without replacing any existing schema.
+    /// </summary>
+    /// <param name="eventType">The registration containing only generations observed absent by the caller.</param>
+    /// <returns>The mutation, inserted generations, or conflicting generation. Equivalent existing schemas succeed.</returns>
+    /// <remarks>
+    /// A conflict does not change this event type. The absence check and write must be atomic across storage
+    /// instances. Metadata and migrations retain ordinary registration semantics; unrelated generations are preserved.
+    /// </remarks>
+    Task<EventTypeRegistrationResult> RegisterIfAbsent(EventTypeToRegister eventType);
+
+    /// <summary>
     /// Register a complete <see cref="EventTypeDefinition"/> with all generations and migrations.
     /// </summary>
     /// <param name="definition">The <see cref="EventTypeDefinition"/> to register.</param>

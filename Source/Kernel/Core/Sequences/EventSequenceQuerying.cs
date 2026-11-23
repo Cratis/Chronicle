@@ -295,8 +295,8 @@ internal static class EventSequenceQuerying
         Func<IEnumerable<Concepts.Events.AppendedEvent>, IDictionary<Concepts.Events.EventType, EventTypeSchema>, Task<Concepts.Events.AppendedEvent[]>> release)
     {
         var materialized = events as ICollection<Concepts.Events.AppendedEvent> ?? events.ToList();
-        var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(materialized.Select(e => e.Context.EventType).Distinct());
-        var schemasByEventType = eventTypeSchemas.ToDictionary(schema => schema.Type);
+        var schemasByEventType = new Dictionary<Concepts.Events.EventType, EventTypeSchema>();
+        await storage.GetEventStore(eventStore).EventTypes.EnsureSchemasFor(schemasByEventType, materialized);
         return await release(materialized, schemasByEventType);
     }
 }

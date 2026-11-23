@@ -73,7 +73,7 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var entry = await scope.DbContext.EventSequences.FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId.Value);
+        var entry = await EventSequenceStateQueries.Get(scope.DbContext, eventSequenceId.Value);
         if (entry is null)
         {
             return new Chronicle.Storage.EventSequences.EventSequenceState();
@@ -485,13 +485,14 @@ public partial class EventSequenceStorage(
             query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
-        var lastEvent = await query
+        var lastSequenceNumber = await query
             .OrderByDescending(e => e.SequenceNumber)
+            .Select(e => (ulong?)e.SequenceNumber)
             .FirstOrDefaultAsync();
 
-        return lastEvent?.SequenceNumber is null
+        return lastSequenceNumber is null
             ? EventSequenceNumber.Unavailable
-            : new EventSequenceNumber(lastEvent.SequenceNumber);
+            : new EventSequenceNumber(lastSequenceNumber.Value);
     }
 
     /// <inheritdoc/>
@@ -1007,8 +1008,7 @@ public partial class EventSequenceStorage(
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var fromSeqNumValue = sequenceNumber.Value;
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= fromSeqNumValue);
+        var query = scope.DbContext.Events.AsQueryable();
 
         if (eventSourceId?.IsSpecified == true)
         {
@@ -1039,15 +1039,14 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return CreateCursor(query, scope, includeHistory, cancellationToken);
+        return CreateCursor(query, scope, includeHistory, cancellationToken, sequenceNumber);
     }
 
     async Task<IEventCursor> ReadRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId, IEnumerable<EventType>? eventTypes, IEnumerable<Tag>? tags, EventSourceType? eventSourceType, EventStreamType? eventStreamType, bool includeHistory, CancellationToken cancellationToken)
     {
         var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
 
-        var startValue = start.Value;
-        var query = scope.DbContext.Events.Where(e => e.SequenceNumber >= startValue);
+        var query = scope.DbContext.Events.AsQueryable();
 
         // EventSequenceNumber.Max (ulong.MaxValue - 1) means "no upper bound". The SQL column
         // is BIGINT (signed int64) so the ulong value wraps to -2 when EF binds the parameter,
@@ -1083,13 +1082,13 @@ public partial class EventSequenceStorage(
 
         query = ApplyTagsFilter(query, tags);
 
-        return CreateCursor(query, scope, includeHistory, cancellationToken);
+        return CreateCursor(query, scope, includeHistory, cancellationToken, start);
     }
 
-    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, bool includeHistory, CancellationToken cancellationToken)
+    EventCursor CreateCursor(IQueryable<EventEntry> query, DbContextScope<EventSequenceDbContext> scope, bool includeHistory, CancellationToken cancellationToken, EventSequenceNumber? start = null)
     {
         var schemas = new EventSchemaResolver(eventTypesStorage);
-        return new(query, scope, eventStore, @namespace, identityStorage, 100, cancellationToken)
+        return new(query, scope, eventStore, @namespace, identityStorage, start, 100, cancellationToken)
         {
             IncludeHistory = includeHistory,
             ConvertEntry = (entry, tags) => EventEntryConverter.ToAppendedEvent(entry, eventStore, @namespace, identityStorage, tags, schemas.GetFor, converter)

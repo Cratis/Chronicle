@@ -9,7 +9,7 @@ using Microsoft.Win32.SafeHandles;
 namespace Cratis.Chronicle.Connections;
 
 /// <summary>
-/// Creates private token cache files and validates Unix cache permissions.
+/// Creates private token cache files and validates cache permissions and ownership.
 /// </summary>
 internal static class TokenCacheFileSecurity
 {
@@ -24,10 +24,12 @@ internal static class TokenCacheFileSecurity
     {
         if (OperatingSystem.IsWindows())
         {
+            using var identity = WindowsIdentity.GetCurrent();
             var security = new DirectorySecurity();
+            security.SetOwner(identity.User!);
             security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
             security.AddAccessRule(new FileSystemAccessRule(
-                WindowsIdentity.GetCurrent().User!,
+                identity.User!,
                 FileSystemRights.FullControl,
                 InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
                 PropagationFlags.None,
@@ -73,7 +75,7 @@ internal static class TokenCacheFileSecurity
     {
         if (OperatingSystem.IsWindows())
         {
-            return true;
+            return WindowsTokenCachePermissions.CanRead(handle);
         }
 
         const UnixFileMode shared = UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
@@ -84,10 +86,12 @@ internal static class TokenCacheFileSecurity
     [SupportedOSPlatform("windows")]
     static FileStream CreateWindowsFile(string path)
     {
+        using var identity = WindowsIdentity.GetCurrent();
         var security = new FileSecurity();
+        security.SetOwner(identity.User!);
         security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
         security.AddAccessRule(new FileSystemAccessRule(
-            WindowsIdentity.GetCurrent().User!, FileSystemRights.FullControl, AccessControlType.Allow));
+            identity.User!, FileSystemRights.FullControl, AccessControlType.Allow));
         return new FileInfo(path).Create(
             System.IO.FileMode.CreateNew,
             FileSystemRights.FullControl,

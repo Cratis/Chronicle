@@ -47,6 +47,7 @@ public class a_subscriber_with_signing : Specification
         storage.State = _definition with { Signing = WebhookSigningMode.None };
         silo.Options.StorageFactory = _ => storage;
         var definitions = Substitute.For<Storage.IStorage>();
+        definitions.GetEventStore("store").EventTypes.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
         _definitions = definitions.GetEventStore("store").Webhooks;
         _definitions.Get("webhook").Returns(_definition);
         silo.AddService(definitions);

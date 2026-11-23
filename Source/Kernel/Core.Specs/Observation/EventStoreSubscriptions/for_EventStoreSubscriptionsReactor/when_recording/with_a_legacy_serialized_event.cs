@@ -13,12 +13,12 @@ namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSub
 public class with_a_legacy_serialized_event : Specification
 {
     const string LegacyContent = """{"sourceEventStore":"source","eventTypes":[{"id":"customer","generation":1}],"generationDelivery":0,"namedTags":[]}""";
-    const string NullContent = """{"sourceEventStore":"source","eventTypes":[],"sourceNamespaces":null}""";
+    const string RestrictedContent = """{"sourceEventStore":"source","eventTypes":[],"sourceNamespaces":["customers"]}""";
 
     IEventStoreSubscriptionsManager _manager;
     EventStoreSubscriptionsReactor _reactor;
     EventStoreSubscriptionAdded _legacy;
-    EventStoreSubscriptionAdded _withNull;
+    EventStoreSubscriptionAdded _restricted;
 
     void Establish()
     {
@@ -28,14 +28,14 @@ public class with_a_legacy_serialized_event : Specification
         _reactor = new(factory, Substitute.For<IStorage>(), Substitute.For<ILogger<EventStoreSubscriptionsReactor>>());
         var options = new JsonSerializerOptions(Globals.JsonSerializerOptions);
         _legacy = JsonSerializer.Deserialize<EventStoreSubscriptionAdded>(LegacyContent, options)!;
-        _withNull = JsonSerializer.Deserialize<EventStoreSubscriptionAdded>(NullContent, options)!;
+        _restricted = JsonSerializer.Deserialize<EventStoreSubscriptionAdded>(RestrictedContent, options)!;
     }
 
     async Task Because()
     {
         await _reactor.Added(_legacy, EventContext.Empty with { EventStore = "target", EventSourceId = "subscription" });
-        await _reactor.Added(_withNull, EventContext.Empty with { EventStore = "target", EventSourceId = "subscription" });
+        await _reactor.Added(_restricted, EventContext.Empty with { EventStore = "target", EventSourceId = "subscription" });
     }
 
-    [Fact] void should_replay_both_events_as_observing_every_namespace() => _manager.Received(2).Add(Arg.Is<EventStoreSubscriptionDefinition>(definition => !definition.SourceNamespaces.Any()));
+    [Fact] void should_replay_both_events_ignoring_the_retired_source_namespaces() => _manager.Received(2).Add(Arg.Any<EventStoreSubscriptionDefinition>());
 }

@@ -11,8 +11,9 @@ internal interface IQueryPlanHost
 
     /// <summary>Explains a captured query on a fresh connection.</summary>
     /// <param name="query">The captured SELECT.</param>
+    /// <param name="rawPlanPath">Optional destination for the raw SQL Server showplan XML.</param>
     /// <returns>The plan, or a capture failure description.</returns>
-    Task<string> Explain(CapturedQuery query);
+    Task<string> Explain(CapturedQuery query, string? rawPlanPath = null);
 
     /// <summary>Reads index definitions for the table in a captured query.</summary>
     /// <param name="query">The captured SELECT.</param>

@@ -31,7 +31,7 @@ runs:
         done
 
     - name: Upload the Client build output
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.prefix }}-client
         path: ${{ inputs.prefix }}-client.tar.zst
@@ -40,7 +40,7 @@ runs:
         if-no-files-found: error
 
     - name: Upload the Kernel build output
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.prefix }}-kernel
         path: ${{ inputs.prefix }}-kernel.tar.zst
@@ -49,7 +49,7 @@ runs:
         if-no-files-found: error
 
     - name: Upload the Clustering build output
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.prefix }}-clustering
         path: ${{ inputs.prefix }}-clustering.tar.zst
@@ -58,7 +58,7 @@ runs:
         if-no-files-found: error
 
     - name: Upload the SqlClustering build output
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.prefix }}-sqlclustering
         path: ${{ inputs.prefix }}-sqlclustering.tar.zst

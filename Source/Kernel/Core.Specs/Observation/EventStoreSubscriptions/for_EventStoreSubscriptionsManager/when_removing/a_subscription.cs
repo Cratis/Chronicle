@@ -19,13 +19,13 @@ public class a_subscription : Specification
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
+        _silo.AddEventStoreStorage();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
 
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([Concepts.EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([Concepts.EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
         _observer = Substitute.For<IObserver>();

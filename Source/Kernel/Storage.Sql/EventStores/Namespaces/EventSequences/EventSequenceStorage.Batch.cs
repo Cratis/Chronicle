@@ -11,6 +11,21 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 
 public partial class EventSequenceStorage
 {
+    static async Task<bool> HasOccupiedSequenceNumber(EventSequenceDbContext context, EventToAppendToStorage[] events)
+    {
+        const int chunkSize = 1000;
+        foreach (var chunk in events.Chunk(chunkSize))
+        {
+            var sequenceNumbers = chunk.Select(@event => @event.SequenceNumber.Value).ToArray();
+            if (await context.Events.AnyAsync(@event => sequenceNumbers.Contains(@event.SequenceNumber)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     async Task<Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>> AppendBatch(IEnumerable<EventToAppendToStorage> events, bool persistIdentities)
     {
         EventToAppendToStorage[] eventsArray;
@@ -31,6 +46,16 @@ public partial class EventSequenceStorage
         try
         {
             await using var scope = await database.EventSequenceTable(eventStore, @namespace, eventSequenceId);
+            if (await HasOccupiedSequenceNumber(scope.DbContext, eventsArray))
+            {
+                // Keyed batches must settle identities before classifying an occupied slot.
+                if (persistIdentities && await ClassifyIdentityCollision(eventsArray) is { } collision)
+                {
+                    return Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Failed(collision);
+                }
+                return Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Failed(new DuplicateEventSequenceNumber(await GetNextAvailableSequenceNumber(scope)));
+            }
+
             var appendedEvents = new List<AppendedEvent>();
 
             foreach (var eventToAppend in eventsArray)
@@ -39,18 +64,6 @@ public partial class EventSequenceStorage
                 // projection observes equal to what GetForEventSourceIdAndEventTypes returns
                 // later. See the comment in Append for details.
                 var truncatedOccurred = TruncateToMicrosecond(eventToAppend.Occurred);
-
-                // Check if sequence number already exists. Existence only, as in Append: no projection on the per-event probe.
-                var appendManySeqNum = eventToAppend.SequenceNumber.Value;
-                if (await scope.DbContext.Events.AnyAsync(e => e.SequenceNumber == appendManySeqNum))
-                {
-                    // Keyed batches must settle identities before classifying an occupied slot.
-                    if (persistIdentities && await ClassifyIdentityCollision(eventsArray) is { } collision)
-                    {
-                        return Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Failed(collision);
-                    }
-                    return Result<IEnumerable<AppendedEvent>, AppendManyStorageFailure>.Failed(new DuplicateEventSequenceNumber(await GetNextAvailableSequenceNumber(scope)));
-                }
 
                 var eventEntry = EventEntryConverter.ToEventEntry(
                     eventToAppend.SequenceNumber,

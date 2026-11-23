@@ -47,12 +47,20 @@ public abstract class a_populated_store(string image, bool seedFloor, bool expec
 
     static async Task<long> WritesWithin(EventStoreWriteWitness witness, TimeSpan bound)
     {
-        var deadline = DateTimeOffset.UtcNow + bound;
-        long writes;
-        while ((writes = await witness.EventStoreWrites()) == 0 && DateTimeOffset.UtcNow < deadline)
+        if (bound == TimeSpan.Zero)
         {
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            return await witness.EventStoreWrites();
         }
-        return writes;
+
+        long writes = 0;
+        try
+        {
+            return await ReadinessWait.Until(async () => writes = await witness.EventStoreWrites(), count => count != 0, bound, pollInterval: TimeSpan.FromSeconds(2));
+        }
+        catch (TimeoutException)
+        {
+            // A missing write is matrix evidence, not a fixture failure that should hide the other outcomes.
+            return writes;
+        }
     }
 }

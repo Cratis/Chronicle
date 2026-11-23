@@ -35,8 +35,8 @@ public class and_the_skip_warning_cannot_be_logged : given.an_observer_with_skip
     }
 
     [Fact] void should_not_throw() => _exception.ShouldBeNull();
-    [Fact] void should_still_skip_the_queued_event() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-    [Fact] void should_still_advance_past_the_queued_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)104UL);
+    [Fact] void should_hold_the_queued_event_for_repair() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_keep_the_queued_event_pending_despite_the_logging_failure() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)102UL);
     [Fact] void should_still_clear_the_recovered_failure() => _failedPartitionsStorage.State.IsFailed((Key)"P").ShouldBeFalse();
     [Fact] void should_still_measure_the_suspected_skip() => _suspectedSkips.ShouldEqual(1);
     [Fact] void should_not_have_logged_the_warning() => _recordedLogs.SuspectedSkipWarnings.ShouldBeEmpty();

@@ -16,6 +16,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 JOBS = yaml.safe_load((ROOT / ".github/workflows/pull-requests.yml").read_text())["jobs"]
+SHARED_CACHE_ACTIONS = (
+    "Cratis/Workflows/.github/actions/dotnet-cache",
+    "Cratis/Workflows/.github/actions/yarn-cache",
+)
+YARN_CACHE = SHARED_CACHE_ACTIONS[1]
 SERVER_FILES = (
     "Cratis.Chronicle.Server",
     "Cratis.Chronicle.Server.dll",
@@ -26,6 +31,12 @@ SERVER_FILES = (
 
 def action_steps(job, action):
     return [step for step in JOBS[job]["steps"] if step.get("uses", "").startswith(action + "@")]
+
+
+def cache_steps(job):
+    return [step for step in JOBS[job]["steps"]
+            if step.get("uses", "").split("@", 1)[0].startswith("actions/cache")
+            or step.get("uses", "").split("@", 1)[0] in SHARED_CACHE_ACTIONS]
 
 
 class ArtifactHandoff(unittest.TestCase):
@@ -66,7 +77,7 @@ class ArtifactHandoff(unittest.TestCase):
         consumer.mkdir()
         # Stop before setup/build/publish actions; execute the same validation/preparation
         # snippets CI runs after downloads. No Docker, package registry or remote effects.
-        stop = "Set up Docker Buildx" if job == "publish-docker" else "Setup .Net"
+        stop = "Set up Docker Buildx" if job == "build-docker" else "Setup .Net"
         for step in JOBS[job]["steps"]:
             if step.get("name") == stop:
                 break
@@ -89,7 +100,7 @@ class ArtifactHandoff(unittest.TestCase):
         return None
 
     def test_consumers_depend_on_the_exact_artifact_producers(self):
-        for job in ("publish-docker", "publish-nuget-packages"):
+        for job in ("build-docker", "build-nuget-packages"):
             downloads = action_steps(job, "actions/download-artifact")
             self.assertTrue(downloads)
             for download in downloads:
@@ -104,29 +115,29 @@ class ArtifactHandoff(unittest.TestCase):
 
     def test_build_outputs_are_not_delivered_by_optional_caches(self):
         for job in JOBS:
-            for cache in action_steps(job, "actions/cache"):
-                path = cache["with"]["path"]
+            for cache in cache_steps(job):
+                path = cache["with"].get("path", "")
                 self.assertNotIn("Server/out", path)
                 self.assertNotIn("Workbench/wwwroot", path)
 
     def test_pull_request_jobs_only_restore_caches(self):
         restores = []
-        for job in JOBS.values():
-            for step in job["steps"]:
-                action = step.get("uses", "")
-                self.assertFalse(action.startswith(("actions/cache@", "actions/cache/save@")))
-                if action.startswith("actions/cache/restore@"):
-                    restores.append(step)
+        for job in JOBS:
+            for step in cache_steps(job):
+                action = step["uses"].split("@", 1)[0]
+                self.assertIn(action, ("actions/cache/restore", *SHARED_CACHE_ACTIONS))
+                if action == "actions/cache/restore":
+                    self.assertNotIn("restore-keys", step["with"])
+                    self.assertNotIn("yarn.lock", step["with"]["path"])
+                else:
+                    self.assertEqual("restore", step["with"].get("mode"))
+                restores.append(step)
         self.assertTrue(restores)
-        for restore in restores:
-            self.assertNotIn("restore-keys", restore["with"])
-            self.assertNotIn("**/yarn.lock", restore["with"]["path"].splitlines())
-        workbench_cache = action_steps("workbench", "actions/cache/restore")
+        workbench_cache = action_steps("workbench", YARN_CACHE)
         self.assertEqual(1, len(workbench_cache))
-        self.assertEqual("${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}", workbench_cache[0]["with"]["key"])
 
     def test_docker_receives_complete_development_and_workbench_outputs_without_caches(self):
-        consumer, failure = self.prepare("publish-docker")
+        consumer, failure = self.prepare("build-docker")
         self.assertIsNone(failure)
         for architecture in ("x64", "arm64"):
             for filename in SERVER_FILES:
@@ -135,14 +146,14 @@ class ArtifactHandoff(unittest.TestCase):
         self.assertIn("-p:DefineConstants=DEVELOPMENT", str(JOBS["kernel-development"]["steps"]))
 
     def test_nuget_receives_workbench_without_caches(self):
-        consumer, failure = self.prepare("publish-nuget-packages")
+        consumer, failure = self.prepare("build-nuget-packages")
         self.assertIsNone(failure)
         self.assertTrue((consumer / "Source/Workbench/wwwroot/index.html").is_file())
         self.assertTrue((consumer / "Source/Workbench/wwwroot/assets/app.js").is_file())
 
-    def test_both_publishers_reject_a_workbench_without_its_entry_point(self):
+    def test_both_builders_reject_a_workbench_without_its_entry_point(self):
         (self.artifacts["workbench-out"] / "index.html").unlink()
-        for job in ("publish-docker", "publish-nuget-packages"):
+        for job in ("build-docker", "build-nuget-packages"):
             with self.subTest(job=job):
                 _, failure = self.prepare(job)
                 self.assertIsNotNone(failure)
@@ -150,13 +161,13 @@ class ArtifactHandoff(unittest.TestCase):
 
     def test_docker_rejects_a_missing_development_binary(self):
         (self.artifacts["kernel-development-out"] / "x64/Cratis.Chronicle.Server.dll").unlink()
-        _, failure = self.prepare("publish-docker")
+        _, failure = self.prepare("build-docker")
         self.assertIsNotNone(failure)
         self.assertIn("Required prerelease output is missing or empty", failure.stdout)
 
     def test_docker_rejects_an_empty_runtime_configuration(self):
         (self.artifacts["kernel-development-out"] / "x64/Cratis.Chronicle.Server.runtimeconfig.json").write_text("")
-        _, failure = self.prepare("publish-docker")
+        _, failure = self.prepare("build-docker")
         self.assertIsNotNone(failure)
         self.assertIn("runtimeconfig.json", failure.stdout)
 
@@ -167,37 +178,40 @@ class WorkbenchYarnCacheOnMain(unittest.TestCase):
     def setUp(self):
         workflow = yaml.load((ROOT / ".github/workflows/workbench-yarn-cache.yml").read_text(), Loader=yaml.BaseLoader)
         self.trigger = workflow["on"]
-        self.steps = workflow["jobs"]["save-yarn-cache"]["steps"]
-        self.restore = action_steps("workbench", "actions/cache/restore")[0]
+        self.job = workflow["jobs"]["save-yarn-cache"]
+        self.steps = self.job["steps"]
+        restores = action_steps("workbench", YARN_CACHE)
+        self.assertEqual(1, len(restores))
+        self.restore = restores[0]
 
     def uses(self, action):
         return [step for step in self.steps if step.get("uses", "").startswith(action + "@")]
 
     def test_runs_on_pushes_to_main_only(self):
         self.assertEqual(["main"], self.trigger["push"]["branches"])
+        self.assertEqual({"push", "workflow_dispatch"}, set(self.trigger))
         self.assertNotIn("pull_request", self.trigger)
         self.assertNotIn("pull_request_target", self.trigger)
+        self.assertEqual("github.ref == 'refs/heads/main'", self.job["if"])
 
     def test_saves_exactly_the_paths_and_key_pull_requests_restore(self):
-        lookup, = self.uses("actions/cache/restore")
-        save, = self.uses("actions/cache/save")
-        self.assertEqual(self.restore["with"]["key"], lookup["with"]["key"])
-        self.assertEqual("${{ steps.%s.outputs.cache-primary-key }}" % lookup["id"], save["with"]["key"])
-        self.assertEqual(self.restore["with"]["path"], lookup["with"]["path"])
-        self.assertEqual(self.restore["with"]["path"], save["with"]["path"])
+        save, = self.uses(YARN_CACHE)
+        self.assertEqual("save", save["with"].get("mode"))
+        self.assertEqual("restore", self.restore["with"].get("mode"))
+        self.assertEqual(
+            {key: value for key, value in self.restore["with"].items() if key != "mode"},
+            {key: value for key, value in save["with"].items() if key != "mode"},
+        )
+        self.assertFalse(any(step.get("uses", "").startswith("actions/cache") for step in self.steps))
 
-    def test_resolves_the_yarn_cache_directory_the_same_way(self):
-        def directory_step(steps):
-            return next(step for step in steps if step.get("id") == "yarn-cache-dir-path")
-
-        def setup_node_index(steps):
-            return next(index for index, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
-
-        pull_request = JOBS["workbench"]["steps"]
-        self.assertEqual(directory_step(pull_request)["run"], directory_step(self.steps)["run"])
-        self.assertNotIn("working-directory", directory_step(self.steps))
-        self.assertLess(self.steps.index(directory_step(self.steps)), setup_node_index(self.steps))
-        self.assertLess(pull_request.index(directory_step(pull_request)), setup_node_index(pull_request))
+    def test_uses_the_shared_yarn_cache_after_node_setup(self):
+        for steps in (JOBS["workbench"]["steps"], self.steps):
+            self.assertFalse(any(step.get("id") == "yarn-cache-dir-path" for step in steps))
+            cache, = [step for step in steps if step.get("uses", "").startswith(YARN_CACHE + "@")]
+            setup = next(index for index, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
+            install = next(index for index, step in enumerate(steps) if step.get("name") == "Yarn install")
+            self.assertLess(setup, steps.index(cache))
+            self.assertLess(steps.index(cache), install)
 
 
 class NightlyFeedHandoff(unittest.TestCase):

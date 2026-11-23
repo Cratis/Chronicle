@@ -10,7 +10,7 @@ public class with_a_policy_read_failure_echoing_sensitive_content : given.a_comp
 {
     void Establish() => _webhookDefinitions.Get("webhook").Returns(Task.FromException<WebhookDefinition>(new IOException(SensitiveTarget.Reason)));
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
 
     [Fact] void should_fail_the_batch() => _deliveryResult.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_not_send() => _receiver.Payloads.ShouldBeEmpty();
