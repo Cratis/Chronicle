@@ -8,7 +8,7 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
 
-public class an_observer_with_controlled_persistence : an_observer
+public class an_observer_with_controlled_persistence : an_observer_in_grain_turns
 {
     protected readonly controlled_observer_state_storage _writes = new();
     protected readonly blockable_state_storage<ObserverDefinition> _definition = new();

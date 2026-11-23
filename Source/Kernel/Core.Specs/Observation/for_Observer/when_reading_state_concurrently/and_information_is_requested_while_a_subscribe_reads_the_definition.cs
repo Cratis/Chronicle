@@ -10,7 +10,9 @@ public class and_information_is_requested_while_a_subscribe_reads_the_definition
     const int Requests = 16;
     Exception? _error;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _guardedDefinition.HoldNextRead = true;
         var subscribing = _observer.SubscribeToAllEvents<NullObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero);

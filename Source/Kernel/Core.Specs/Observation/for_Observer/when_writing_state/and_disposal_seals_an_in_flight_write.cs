@@ -14,7 +14,9 @@ public class and_disposal_seals_an_in_flight_write : given.an_observer_with_cont
     bool _stillJoined;
     bool _queuedStillJoined;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _attemptsBefore = _writes.Attempts;
         _writes.BeforeWrite = _write.Invoke;

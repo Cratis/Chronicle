@@ -8,7 +8,9 @@ public class and_two_callbacks_relinquish_together : given.a_live_observer_with_
     Exception? _firstError;
     Exception? _secondError;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         await MoveDefinition();
         _guardedDefinition.HoldNextRead = true;

@@ -8,7 +8,9 @@ public class and_storage_is_reset_during_a_history_reload : given.an_observer_wi
     readonly given.held_storage_operation<DateTimeOffset?> _history = new();
     DateTimeOffset? _observedTimestamp;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(_observerId).Returns(_ => _history.Invoke());
         _definition.SuspendNextRead = true;

@@ -12,7 +12,9 @@ public class and_disposal_occurs_during_the_ownership_reread : given.an_observer
     ulong? _epoch;
     int _attemptsBefore;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _attemptsBefore = _writes.Attempts;
         _writes.BeforeWrite = () => Task.FromException(new ObserverKeyDoesNotMatchDefinition(_observerKey, EventSequenceId.Log));

@@ -8,7 +8,9 @@ public class and_a_current_timestamp_failure_is_retried : given.an_observer_with
     readonly InvalidOperationException _failure = new("Timestamp write failed");
     Exception? _error;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _eventStoreNamespaceStorage.Observers.SaveRunningStateChangedAt(_observerId, _now.AddHours(1), _observerKey.EventSequenceId)
             .Returns(Task.FromException<bool>(_failure), Task.FromResult(true));

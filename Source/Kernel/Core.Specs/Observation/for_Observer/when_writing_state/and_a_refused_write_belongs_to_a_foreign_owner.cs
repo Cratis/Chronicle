@@ -13,7 +13,9 @@ public class and_a_refused_write_belongs_to_a_foreign_owner : given.an_observer_
     ulong? _epoch;
     int _attemptsBefore;
 
-    async Task Because()
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario()
     {
         _attemptsBefore = _writes.Attempts;
         _writes.BeforeWrite = () =>

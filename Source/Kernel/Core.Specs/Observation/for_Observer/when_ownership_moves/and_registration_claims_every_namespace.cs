@@ -31,7 +31,9 @@ public class and_registration_claims_every_namespace : given.a_live_observer_wit
         ]);
     }
 
-    async Task Because() => await _observer.SubscribeToAllEvents<NullObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero);
+    Task Because() => InGrainTurn(PerformScenario);
+
+    async Task PerformScenario() => await _observer.SubscribeToAllEvents<NullObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero);
 
     [Fact] async Task should_claim_the_current_namespace() => (await _guarded.Get(_observerId)).Owner.ShouldEqual(EventSequenceId.Log);
     [Fact] async Task should_claim_the_other_namespace() => (await _other.Get(_observerId)).Owner.ShouldEqual(EventSequenceId.Log);
