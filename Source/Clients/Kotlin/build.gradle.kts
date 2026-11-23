@@ -23,6 +23,7 @@ val protobufVersion = "4.36.2"
 val coroutinesVersion = "1.11.0"
 
 dependencies {
+    api(kotlin("stdlib", "2.2.20"))
     api("io.grpc:grpc-kotlin-stub:$grpcKotlinVersion")
     api("io.grpc:grpc-protobuf:$grpcVersion")
     api("io.grpc:grpc-stub:$grpcVersion")
@@ -36,8 +37,8 @@ dependencies {
 kotlin {
     jvmToolchain(17)
     compilerOptions {
-        apiVersion.set(KotlinVersion.KOTLIN_2_1)
-        languageVersion.set(KotlinVersion.KOTLIN_2_1)
+        apiVersion.set(KotlinVersion.KOTLIN_2_2)
+        languageVersion.set(KotlinVersion.KOTLIN_2_2)
         allWarningsAsErrors.set(true)
     }
 }
