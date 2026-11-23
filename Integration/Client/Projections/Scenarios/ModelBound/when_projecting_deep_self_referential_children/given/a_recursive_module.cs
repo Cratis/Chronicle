@@ -16,7 +16,21 @@ public class a_recursive_module(ChronicleFixture fixture) : Specification(fixtur
 
     IProjectionHandler _handler;
 
-    public override IEnumerable<Type> EventTypes => [typeof(ModuleAdded), typeof(FeatureAddedToModule), typeof(SubFeatureAdded), typeof(SubFeatureRemoved), typeof(SliceAddedToFeature)];
+    public override IEnumerable<Type> EventTypes =>
+    [
+        typeof(ModuleAdded),
+        typeof(FeatureAddedToModule),
+        typeof(SubFeatureAdded),
+        typeof(SubFeatureRemoved),
+        typeof(SliceAddedToFeature),
+
+        // SliceItem's event children and nested command need their event types during discovery, even when not appended.
+        typeof(EventAddedToSlice),
+        typeof(CommandSetOnSlice),
+        typeof(CommandRenamedOnSlice),
+        typeof(CommandClearedFromSlice)
+    ];
+
     public override IEnumerable<Type> ModelBoundProjections => [typeof(RecursiveModule), typeof(RecursiveFeature)];
 
     async Task Establish()
