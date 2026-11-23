@@ -31,7 +31,7 @@ public class and_a_pass_fails_and_the_next_succeeds : given.an_event_sequence
 
     global::NSubstitute.Core.ICall[] Registrations() => [.. _supervisor.ReceivedCalls().Where(call => call.GetMethodInfo().Name == nameof(ISiloSupervisor.Register))];
 
-    [Fact] void should_ask_the_supervisor_to_retry_after_the_failure() => _intervalAfterFailure.ShouldEqual(TimeSpan.FromSeconds(new Configuration.Observers().WatchdogInterval));
+    [Fact] void should_ask_the_supervisor_to_retry_promptly_after_the_failure() => _intervalAfterFailure.ShouldEqual(TimeSpan.FromSeconds(2));
     [Fact] void should_have_registered_the_retry_beside_the_departure_duty() => _registrationsAfterFailure.ShouldEqual(2);
     [Fact] void should_stop_retrying_once_a_pass_succeeds() => Registrations()[^1].GetArguments()[1].ShouldBeNull();
 }

@@ -20,12 +20,14 @@ namespace Cratis.Chronicle.EventSequences;
 /// </para>
 /// <para>
 /// A pass that fails leaves the namespace unreconciled, so the log asks the silo's <see cref="ISiloSupervisor"/> to run
-/// it again every <see cref="Configuration.Observers.WatchdogInterval"/> until a pass finds nothing failing. A
+/// it again - after a couple of seconds at first, then backing off towards <see cref="Configuration.Observers.WatchdogInterval"/> - until a pass finds nothing failing. A
 /// healthy namespace costs nothing between departures.
 /// </para>
 /// </remarks>
 public partial class EventSequence
 {
+    static readonly TimeSpan _reconcileRetryStart = TimeSpan.FromSeconds(2);
+
     int _reconcilesInFlight;
     bool _reconcileFailed;
     bool _retryingReconcile;
@@ -107,14 +109,19 @@ public partial class EventSequence
         }
 
         var self = GrainFactory.GetGrain<IEventSequence>(this.GetPrimaryKeyString());
-        var retry = TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval));
+        var ceiling = TimeSpan.FromSeconds(Math.Max(1, options.Value.Observers.WatchdogInterval));
+        var retry = _retryingReconcile ? TimeSpan.FromTicks(Math.Min(_reconcileRetryStart.Ticks, ceiling.Ticks)) : ceiling;
+        var delay = retry;
         Func<Task<TimeSpan?>>? retryCheck = null;
         if (_retryingReconcile)
         {
+            // A namespace whose subscriptions are not reconciled has observers that are not subscribed, so the first
+            // retries are quick and back off towards the watchdog interval while the cluster is still struggling.
             retryCheck = async () =>
             {
                 await self.ReconcileSubscriptions();
-                return null;
+                delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, ceiling.Ticks));
+                return delay;
             };
         }
 

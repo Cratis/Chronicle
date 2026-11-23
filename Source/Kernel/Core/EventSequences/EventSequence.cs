@@ -740,10 +740,10 @@ public partial class EventSequence(
                 error => RenumberAppendMany(eventsToAppend, error),
                 () => ValidateAppendManyRetry(correlationId),
                 async () => await ReadBackAppend(eventsToAppend),
-                async () =>
+                () =>
                 {
-                    await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
-                    return new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] };
+                    MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
+                    return Task.FromResult(new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] });
                 })
             : await AppendEffectToStorage(eventsToAppend, effectReceipt, correlationId);
     }
@@ -769,7 +769,7 @@ public partial class EventSequence(
         var readBack = await ReadBackAppend(eventsToAppend);
         if (readBack is null)
         {
-            await MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
+            MarkAppendOutcomeUnknown(eventsToAppend[0].SequenceNumber);
             return (appendedEventsList, new AppendManyResult { CorrelationId = correlationId, Errors = [AppendError.AppendOutcomeUnknown] });
         }
 
@@ -969,10 +969,10 @@ public partial class EventSequence(
                 error => HandleFailedAppendResult((Result<AppendedEvent, DuplicateEventSequenceNumber>)error, eventType, eventSourceId, eventType.Id),
                 () => ValidateAppendRetry(correlationId),
                 async () => (await ReadBackAppend([attempted!]))?.Single(),
-                async () =>
+                () =>
                 {
-                    await MarkAppendOutcomeUnknown(attempted!.SequenceNumber);
-                    return AppendResult.Failed(correlationId, [AppendError.AppendOutcomeUnknown]);
+                    MarkAppendOutcomeUnknown(attempted!.SequenceNumber);
+                    return Task.FromResult(AppendResult.Failed(correlationId, [AppendError.AppendOutcomeUnknown]));
                 });
             if (appendResult.TryGetError(out var retryFailure)) return retryFailure;
 
@@ -1028,18 +1028,10 @@ public partial class EventSequence(
         List<AppendedEvent> appendedEvents,
         IEnumerable<(ConstraintValidationContext Context, EventSequenceNumber SequenceNumber)> constraintUpdates)
     {
-        try
-        {
-            // An import commit is never delivered live: each committed chunk hands the observers it is meant for to
-            // their catch-up path, which reads it and any interleaving appends in order (decision 0023).
-            if (_committingImport) await (_appendedEventsQueues?.SpillMatchingToCatchup(appendedEvents) ?? Task.CompletedTask);
-            else await (_appendedEventsQueues?.Enqueue(appendedEvents) ?? Task.CompletedTask);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedEnqueueingAppendedEvents(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedEvents.Count, ex);
-            await SpillAppendedEventsQueuesToCatchup();
-        }
+        // An import commit is never delivered live: each committed chunk hands the observers it is meant for to
+        // their catch-up path, which reads it and any interleaving appends in order (decision 0023). Neither call
+        // holds the append; see EventSequence.LiveDispatch.cs.
+        HandOverToLiveDelivery(appendedEvents, _committingImport);
 
         await UpdateConstraintIndexes(constraintUpdates);
         try

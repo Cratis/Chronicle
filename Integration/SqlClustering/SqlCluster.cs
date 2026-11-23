@@ -120,6 +120,12 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
         .WithEnvironment("Cratis__Chronicle__Clustering__Type", "Sql")
         .WithEnvironment("Cratis__Chronicle__Clustering__ClusterId", _id)
         .WithEnvironment("Cratis__Chronicle__Clustering__ServiceId", _id)
+
+        // A delivery that times out while its silo is being killed keeps its partition fenced until the abandoned
+        // delivery hold expires: the client may still be handling it and the kernel cannot ask a dead silo. The default
+        // hold is five minutes, longer than these specifications wait for the observer; a shorter one lets them verify
+        // what they are about - that stored events reach the observer promptly - instead of the fence's duration.
+        .WithEnvironment("Cratis__Chronicle__Observers__AbandonedDeliveryHold", "20")
         .WithWaitStrategy(Wait.ForUnixContainer().AddCustomWaitStrategy(
             new HttpsHealthWait(35000), options => options.WithRetries(300).WithInterval(TimeSpan.FromSeconds(1))))
         .Build();
