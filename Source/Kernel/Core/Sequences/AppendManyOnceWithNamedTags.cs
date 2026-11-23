@@ -21,6 +21,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional caller-supplied causation chain.</param>
 /// <param name="CausedBy">Optional caller-supplied identity.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes, checked for the new remainder only.</param>
+/// <param name="ExpectedIncarnation">Optional captured namespace identity, enforced when supplied.</param>
 [StoreAccess(StoreAccess.Append)]
 [Command]
 [BelongsTo(WellKnownServices.EventSequences)]
@@ -33,7 +34,8 @@ public record AppendManyOnceWithNamedTags(
     IEnumerable<string>? Tags = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
+    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default,
+    NamespaceIncarnationId? ExpectedIncarnation = default)
 {
     /// <summary>
     /// Handles the command by settling the batch.
@@ -68,7 +70,8 @@ public record AppendManyOnceWithNamedTags(
             Tags,
             Causation,
             CausedBy,
-            ConcurrencyScopes)
+            ConcurrencyScopes,
+            ExpectedIncarnation)
             .HandleWithNamedTags(grainFactory, causation, principalAccessor, namedTags);
     }
 }

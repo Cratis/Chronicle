@@ -55,6 +55,7 @@ message AppendManyOnceRequest {
    repeated Causation Causation = 7;
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+   .bcl.Guid ExpectedIncarnation = 10;
 }
 message AppendManyOnceResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -72,6 +73,18 @@ message AppendManyOnceResponse {
    bool IsRetryable = 13;
    .bcl.TimeSpan RetryAfter = 14;
 }
+message AppendManyOnceToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   repeated KeyedEventForEventSourceIdWithNamedTags Events = 5;
+   .bcl.Guid CorrelationId = 6;
+   repeated string Tags = 7;
+   repeated Causation Causation = 8;
+   Identity CausedBy = 9;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 10;
+}
 message AppendManyOnceWithNamedTagsRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -82,6 +95,7 @@ message AppendManyOnceWithNamedTagsRequest {
    repeated Causation Causation = 7;
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+   .bcl.Guid ExpectedIncarnation = 10;
 }
 message AppendManyRequest {
    string EventStore = 1;
@@ -163,6 +177,7 @@ message AppendOnceRequest {
    Identity CausedBy = 16;
    ConcurrencyScope ConcurrencyScope = 17;
    string EventSource = 18;
+   .bcl.Guid ExpectedIncarnation = 19;
 }
 message AppendOnceResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -179,6 +194,28 @@ message AppendOnceResponse {
    repeated IdempotencyKeyConflict IdempotencyConflicts = 12;
    bool IsRetryable = 13;
    .bcl.TimeSpan RetryAfter = 14;
+}
+message AppendOnceToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   string EventSourceId = 5;
+   string EventSourceType = 6;
+   string EventStreamType = 7;
+   string EventStreamId = 8;
+   EventType EventType = 9;
+   string Content = 10;
+   string IdempotencyKey = 11;
+   repeated NamedTag NamedTags = 12;
+   .bcl.Guid CorrelationId = 13;
+   repeated string Tags = 14;
+   SerializableDateTimeOffset Occurred = 15;
+   string Subject = 16;
+   repeated Causation Causation = 17;
+   Identity CausedBy = 18;
+   ConcurrencyScope ConcurrencyScope = 19;
+   string EventSource = 20;
 }
 message AppendOnceWithNamedTagsRequest {
    string EventStore = 1;
@@ -200,6 +237,7 @@ message AppendOnceWithNamedTagsRequest {
    Identity CausedBy = 17;
    ConcurrencyScope ConcurrencyScope = 18;
    string EventSource = 19;
+   .bcl.Guid ExpectedIncarnation = 20;
 }
 enum AppendOutcome {
    Committed = 0;
@@ -1051,10 +1089,12 @@ service EventSequences {
    rpc AppendManyForEventSourcesToNamespace (AppendManyForEventSourcesToNamespaceRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSourcesWithNamedTags (AppendManyForEventSourcesWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyOnce (AppendManyOnceRequest) returns (CommandResult_AppendManyOnceResponse);
+   rpc AppendManyOnceToNamespace (AppendManyOnceToNamespaceRequest) returns (CommandResult_AppendManyOnceResponse);
    rpc AppendManyOnceWithNamedTags (AppendManyOnceWithNamedTagsRequest) returns (CommandResult_AppendManyOnceResponse);
    rpc AppendManyToNamespace (AppendManyToNamespaceRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyWithNamedTags (AppendManyWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendOnce (AppendOnceRequest) returns (CommandResult_AppendOnceResponse);
+   rpc AppendOnceToNamespace (AppendOnceToNamespaceRequest) returns (CommandResult_AppendOnceResponse);
    rpc AppendOnceWithNamedTags (AppendOnceWithNamedTagsRequest) returns (CommandResult_AppendOnceResponse);
    rpc AppendToNamespace (AppendToNamespaceRequest) returns (CommandResult_AppendResponse);
    rpc AppendWithNamedTags (AppendWithNamedTagsRequest) returns (CommandResult_AppendResponse);

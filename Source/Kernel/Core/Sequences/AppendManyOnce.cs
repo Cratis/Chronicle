@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Causation">Optional caller-supplied causation chain. Defaults to the request causation when not provided.</param>
 /// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScopes">Optional concurrency scopes, checked for the new remainder only.</param>
+/// <param name="ExpectedIncarnation">Optional captured namespace identity, enforced when supplied.</param>
 /// <remarks>
 /// Like AppendManyForEventSources, the events carry their own event source, so one command serves both single-source
 /// and multi-source keyed batches. Keyed appends travel on their own RPC so a kernel that does not know them answers
@@ -41,7 +42,8 @@ public record AppendManyOnce(
     IEnumerable<string>? Tags = default,
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
-    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default)
+    IEnumerable<EventSourceConcurrencyScope>? ConcurrencyScopes = default,
+    NamespaceIncarnationId? ExpectedIncarnation = default)
 {
     /// <summary>
     /// Handles the command by settling the batch.
@@ -82,21 +84,16 @@ public record AppendManyOnce(
             return Failed(correlationId, new AppendError("Keyed appends do not support several concurrency scopes for the same event source. Nothing was written."));
         }
 
-        var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
         var keyed = Events.ToArray();
-        var events = keyed.Select((entry, index) => ToEventToAppend(entry.Event, globalTags, namedTagsPerEvent is null ? [] : namedTagsPerEvent[index])).ToArray();
-        var keys = keyed
-            .Select(entry => string.IsNullOrEmpty(entry.IdempotencyKey) ? null : new Concepts.EventSequences.IdempotencyKey(entry.IdempotencyKey))
-            .ToArray();
+        var events = ToEvents(keyed, namedTagsPerEvent);
+        var keys = ToKeys(keyed);
         var legacyScopes = new Concepts.EventSequences.Concurrency.ConcurrencyScopes(conjunctions.Entries.ToDictionary(_ => _.EventSourceId, _ => _.Scope));
-
-        var settlement = await grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace).AppendManyWithIdempotencyKeys(
-            events,
-            keys,
-            correlationId,
-            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            principalAccessor.Current.ResolveCausedBy(CausedBy),
-            legacyScopes);
+        var sequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
+        var chain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
+        var identity = principalAccessor.Current.ResolveCausedBy(CausedBy);
+        var settlement = ExpectedIncarnation is null
+            ? await sequence.AppendManyWithIdempotencyKeys(events, keys, correlationId, chain, identity, legacyScopes)
+            : await sequence.AppendManyWithIdempotencyKeysToNamespace(ExpectedIncarnation, events, keys, correlationId, chain, identity, legacyScopes);
 
         return AppendManyOnceResult.From(settlement);
     }
@@ -106,6 +103,16 @@ public record AppendManyOnce(
         CorrelationId = correlationId,
         Errors = [error]
     };
+
+    static Concepts.EventSequences.IdempotencyKey?[] ToKeys(KeyedEventForEventSourceId[] keyed) => keyed
+        .Select(entry => string.IsNullOrEmpty(entry.IdempotencyKey) ? null : new Concepts.EventSequences.IdempotencyKey(entry.IdempotencyKey))
+        .ToArray();
+
+    EventSequences.EventToAppend[] ToEvents(KeyedEventForEventSourceId[] keyed, IReadOnlyList<IReadOnlyCollection<Concepts.Events.NamedTag>>? namedTagsPerEvent)
+    {
+        var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
+        return keyed.Select((entry, index) => ToEventToAppend(entry.Event, globalTags, namedTagsPerEvent is null ? [] : namedTagsPerEvent[index])).ToArray();
+    }
 
     static EventSequences.EventToAppend ToEventToAppend(EventForEventSourceId @event, Tag[] globalTags, IReadOnlyCollection<Concepts.Events.NamedTag> namedTags)
     {

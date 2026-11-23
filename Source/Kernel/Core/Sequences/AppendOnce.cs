@@ -33,6 +33,7 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="CausedBy">Optional identity for application callers. Chronicle users are always recorded as the current principal.</param>
 /// <param name="ConcurrencyScope">Optional concurrency scope, checked only for a new append.</param>
 /// <param name="EventSource">Optional name of the registered event source definition the event is appended through.</param>
+/// <param name="ExpectedIncarnation">Optional captured namespace identity, enforced when supplied.</param>
 /// <remarks>
 /// Keyed appends travel on their own RPC so a kernel that does not know them answers Unimplemented instead of
 /// ignoring the key (decision 0012).
@@ -58,7 +59,8 @@ public record AppendOnce(
     IEnumerable<Causation>? Causation = default,
     Identity? CausedBy = default,
     ConcurrencyScope? ConcurrencyScope = default,
-    string? EventSource = default)
+    string? EventSource = default,
+    NamespaceIncarnationId? ExpectedIncarnation = default)
 {
     /// <summary>
     /// Handles the command by appending the event once for its key.
@@ -102,13 +104,15 @@ public record AppendOnce(
             EventSource = string.IsNullOrEmpty(EventSource) ? null : new EventSourceName(EventSource)
         };
 
-        var settlement = await grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace).AppendWithIdempotencyKey(
-            @event,
-            new Concepts.EventSequences.IdempotencyKey(IdempotencyKey),
-            CorrelationId ?? Guid.NewGuid(),
-            Causation?.ToChronicle() ?? causation.GetCurrentChain(),
-            principalAccessor.Current.ResolveCausedBy(CausedBy),
-            ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None);
+        var sequence = grainFactory.GetEventSequence(EventSequenceId, EventStore, Namespace);
+        var key = new Concepts.EventSequences.IdempotencyKey(IdempotencyKey);
+        var correlationId = CorrelationId ?? Guid.NewGuid();
+        var chain = Causation?.ToChronicle() ?? causation.GetCurrentChain();
+        var identity = principalAccessor.Current.ResolveCausedBy(CausedBy);
+        var scope = ConcurrencyScope?.ToChronicle() ?? Concepts.EventSequences.Concurrency.ConcurrencyScope.None;
+        var settlement = ExpectedIncarnation is null
+            ? await sequence.AppendWithIdempotencyKey(@event, key, correlationId, chain, identity, scope)
+            : await sequence.AppendWithIdempotencyKeyToNamespace(ExpectedIncarnation, @event, key, correlationId, chain, identity, scope);
 
         return AppendOnceResult.From(settlement);
     }
