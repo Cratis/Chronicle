@@ -4,8 +4,8 @@
 extern alias KernelCore;
 extern alias KernelConcepts;
 
-using KernelReactors = KernelCore::Cratis.Chronicle.Observation.Reactors.Clients;
-using ReactorDefinition = KernelConcepts::Cratis.Chronicle.Concepts.Observation.Reactors.ReactorDefinition;
+using KernelObservation = KernelCore::Cratis.Chronicle.Observation;
+using KernelObserverConcepts = KernelConcepts::Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Benchmarks.Clustering;
 
@@ -73,9 +73,10 @@ internal sealed class CatchUpShapeSubscriptionControl : IIncomingGrainCallFilter
 
     static bool IsBenchmarkKeeper(IIncomingGrainCallContext context)
     {
-        if (context.Grain is not KernelReactors.Reactor) return false;
-        if (context.MethodName != nameof(KernelReactors.IReactor.KeepSubscription)) return false;
-        return context.Request.GetArgument(0) is ReactorDefinition definition &&
-            string.Equals(definition.Identifier.Value, ReactorId, StringComparison.Ordinal);
+        // The keeper restores a lost client subscription through the observer; pausing that restore keeps the
+        // benchmark's own unsubscribe in place.
+        if (context.Grain is not KernelObservation.Observer) return false;
+        if (context.MethodName != nameof(KernelObservation.IObserver.RestoreClientSubscription)) return false;
+        return string.Equals(KernelObserverConcepts.ObserverKey.Parse(context.TargetId.Key.ToString()).ObserverId.Value, ReactorId, StringComparison.Ordinal);
     }
 }
