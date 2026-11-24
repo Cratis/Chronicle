@@ -98,7 +98,7 @@ public class MongoDBConverter(
             var id = new BsonDocument();
             foreach (var (part, value) in flat.Parts)
             {
-                id[part] = ToBsonValue(value!, new PropertyPath(part));
+                id[part] = ToBsonValue(value, new PropertyPath(part));
             }
 
             return id;
