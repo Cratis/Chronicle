@@ -266,6 +266,7 @@ public sealed partial class SinkProvenanceCache
                 if (acquired) owner._refreshSlots.Release();
                 lock (_gate) _refresh = null;
             }
+
             // Drainers may dispose the shared semaphore as soon as this completion is signaled.
             if (failure is null) completion.TrySetResult();
             else completion.TrySetException(failure);
