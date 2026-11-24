@@ -32,6 +32,12 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
     {
         await using var marker = await Open();
         var marked = await ContainsMarker(marker.DbContext);
+        if (!marked && await ContainsLegacyMarker(marker.DbContext))
+        {
+            if (SinkCycleReceiptSchema.IsVerify(marker.DbContext)) throw Unavailable();
+            await RecordMarker(marker.DbContext);
+            marked = true;
+        }
         await using var inventory = await OpenInventory();
         var context = inventory.DbContext;
         var state = await ReadInventory(context);
@@ -86,19 +92,7 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
     {
         await ReadState();
         await using var scope = await Open();
-        var context = scope.DbContext;
-        if (!await ContainsMarker(context))
-        {
-            context.Entries.Add(new DynamicReadModelEntity { ["Id"] = Marker, ["Version"] = 1, ["Restricted"] = true });
-            try
-            {
-                await context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                if (!await ContainsMarker(context)) throw;
-            }
-        }
+        await RecordMarker(scope.DbContext);
 
         await using var inventory = await OpenInventory();
         var stateContext = inventory.DbContext;
@@ -121,12 +115,64 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
         await using var scope = await Open();
     }
 
-    static async Task<bool> ContainsMarker(ReadModelDbContext context)
+    static Task<bool> ContainsMarker(ReadModelDbContext context) => ContainsMarker(context, SinkProvenanceSchema.Select(context));
+
+    static async Task<bool> ContainsMarker(ReadModelDbContext context, string sql)
     {
-        var rows = await context.Entries.FromSqlRaw(SinkProvenanceSchema.Select(context)).AsNoTracking().Take(2).ToListAsync();
+        var rows = await context.Entries.FromSqlRaw(sql).AsNoTracking().Take(2).ToListAsync();
         if (rows.Count == 0) return false;
-        if (rows.Count != 1 || !string.Equals(rows[0]["Id"] as string, Marker, StringComparison.Ordinal) || rows[0]["Version"] is not 1 || rows[0]["Restricted"] is not true) throw Unavailable();
+        if (rows.Count != 1) throw Unavailable();
+        ValidateIdentity(rows[0], Marker);
+        if (rows[0]["Restricted"] is not true) throw Unavailable();
         return true;
+    }
+
+    static async Task<bool> ContainsLegacyMarker(ReadModelDbContext context)
+    {
+        var type = context.Database.GetDatabaseType();
+        if (string.Equals(SinkProvenanceSchema.Schema(type, context.ProvenanceSchema), SinkProvenanceSchema.Schema(type), StringComparison.Ordinal)) return false;
+        if (type == DatabaseType.SqlServer && !await HasLegacyTable(context)) return false;
+        try
+        {
+            return await ContainsMarker(context, SinkProvenanceSchema.Select(type));
+        }
+        catch (Npgsql.PostgresException exception) when (exception.SqlState == Npgsql.PostgresErrorCodes.UndefinedTable)
+        {
+            return false;
+        }
+    }
+
+    static async Task<bool> HasLegacyTable(ReadModelDbContext context)
+    {
+        const DatabaseType type = DatabaseType.SqlServer;
+        var name = $"{SinkProvenanceSchema.Quote(type, SinkProvenanceSchema.Schema(type))}.{SinkProvenanceSchema.Quote(type, SinkProvenanceNames.Metadata)}";
+        var present = await context.Database.SqlQuery<int>($"SELECT CASE WHEN OBJECT_ID({name}, N'U') IS NOT NULL THEN 1 WHEN HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'VIEW DEFINITION') = 1 THEN 0 ELSE -1 END AS [Value]").SingleAsync();
+        return present switch
+        {
+            0 => false,
+            1 => true,
+            _ => throw Unavailable()
+        };
+    }
+
+    static async Task RecordMarker(ReadModelDbContext context)
+    {
+        if (await ContainsMarker(context)) return;
+        context.Entries.Add(new DynamicReadModelEntity { ["Id"] = Marker, ["Version"] = 1, ["Restricted"] = true });
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            if (!await ContainsMarker(context)) throw;
+        }
+    }
+
+    static void ValidateIdentity(DynamicReadModelEntity row, string id)
+    {
+        if (!string.Equals(row["Id"] as string, id, StringComparison.Ordinal)) throw Unavailable();
+        if (row["Version"] is not 1) throw Unavailable();
     }
 
     static async Task<SinkProvenanceState?> ReadInventory(ReadModelDbContext context)
@@ -139,12 +185,11 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
 
     static SinkProvenanceState ParseInventory(DynamicReadModelEntity row)
     {
-        if (!string.Equals(row["Id"] as string, "inventory", StringComparison.Ordinal) || row["Version"] is not 1 ||
-            row["Restricted"] is not bool restricted || row["InventoryVersion"] is not int version ||
-            row["DatabaseId"] is not string id || !Guid.TryParseExact(id, "D", out var databaseId))
-        {
-            throw Unavailable();
-        }
+        ValidateIdentity(row, "inventory");
+        if (row["Restricted"] is not bool restricted) throw Unavailable();
+        if (row["InventoryVersion"] is not int version) throw Unavailable();
+        if (row["DatabaseId"] is not string id) throw Unavailable();
+        if (!Guid.TryParseExact(id, "D", out var databaseId)) throw Unavailable();
 
         return new SinkProvenanceState(new(databaseId), version, restricted).Validate();
     }
