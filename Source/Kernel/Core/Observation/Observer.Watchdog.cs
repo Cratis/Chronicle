@@ -62,6 +62,7 @@ public partial class Observer
     async Task Watchdog()
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        KeepWhileOwed();
         if (ReleaseWhenIdle()) return;
         if (!_observerExists || _removed || IsRetired)
         {

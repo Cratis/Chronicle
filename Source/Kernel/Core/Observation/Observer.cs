@@ -56,7 +56,6 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="supervisor">The <see cref="ISiloSupervisor"/> running the watchdog and the checks after a silo departure for the observers resident on the silo.</param>
 /// <param name="catchUpAdmission">The <see cref="ICatchUpAdmission"/> limiting how many catch-up jobs run at once; without one they are not limited.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
-[KeepAlive]
 [ObserverPlacement]
 public partial class Observer(
     [PersistentState(nameof(ObserverDefinition), WellKnownGrainStorageProviders.ObserverDefinitions)]
@@ -241,6 +240,7 @@ public partial class Observer(
         var config = await configurationProvider.GetFor(_observerKey);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
+        _watchdogIntervalSeconds = config.WatchdogInterval;
         RegisterWithSupervisor(config.WatchdogInterval);
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         ConfigureDurableSubscriptions(config.DurableSubscriptions);
