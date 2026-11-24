@@ -1,0 +1,26 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Screenplay documentation: Documentation/screenplay/projections/children.mdx
+
+type OrderLine
+  lineNumber Int
+  sku String
+module Conformance
+  feature Cases
+    slice StateView Case
+      event LineAdded
+        orderId String
+        lineNumber Int
+        sku String
+      readmodel OrderView
+        orderId String
+        lines OrderLine[]
+      query OrderViewById => OrderView?
+        by orderId String
+      projection Orders => OrderView
+        no automap
+        children lines identified by lineNumber
+          sort by sku descending
+          from LineAdded key lineNumber
+            parent orderId
+            sku = sku

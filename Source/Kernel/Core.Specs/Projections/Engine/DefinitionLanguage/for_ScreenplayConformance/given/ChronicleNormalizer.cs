@@ -58,7 +58,8 @@ public static class ChronicleNormalizer
         var children = definition.Children.Select(_ => new NeutralChildren(
             _.Key.Path,
             _.Value.IdentifiedBy.Path,
-            Scope(_.Value, schemas, level?.Child(_.Key.Path), isChildContext: true))).ToArray();
+            Scope(_.Value, schemas, level?.Child(_.Key.Path), isChildContext: true),
+            Ordering(_.Value.Ordering))).ToArray();
         var nested = (definition.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>()).Select(_ => new NeutralNested(
             _.Key.Path,
             Scope(_.Value, schemas, level?.Child(_.Key.Path), isChildContext))).ToArray();
@@ -111,16 +112,37 @@ public static class ChronicleNormalizer
 
         if (TryUnwrap(expression, WellKnownExpressions.Add, out var added))
         {
-            return new(target, NeutralOperation.Add, Value(added));
+            return Arithmetic(target, NeutralOperation.Add, added);
         }
 
         if (TryUnwrap(expression, WellKnownExpressions.Subtract, out var subtracted))
         {
-            return new(target, NeutralOperation.Subtract, Value(subtracted));
+            return Arithmetic(target, NeutralOperation.Subtract, subtracted);
+        }
+
+        if (TryUnwrap(expression, WellKnownExpressions.SetOnce, out var initial))
+        {
+            return new(target, NeutralOperation.SetOnce, Value(initial));
         }
 
         return new(target, NeutralOperation.Set, Value(expression));
     }
+
+    static NeutralMapping Arithmetic(string target, NeutralOperation operation, string operand)
+    {
+        var parts = operand.Split('*', StringSplitOptions.TrimEntries);
+        return parts.Length == 2
+            ? new(target, operation, Value(parts[0]), Value(parts[1]))
+            : new(target, operation, Value(operand));
+    }
+
+    static string Ordering(Cratis.Chronicle.Changes.ChildrenOrdering? ordering) => ordering switch
+    {
+        null => string.Empty,
+        { Placement: Cratis.Chronicle.Changes.ChildrenPlacement.Append } => string.Empty,
+        { Placement: Cratis.Chronicle.Changes.ChildrenPlacement.Prepend } => "Prepend",
+        _ => $"Sorted {ordering.SortBy.Path} {ordering.Direction}"
+    };
 
     static NeutralKey Key(PropertyExpression expression)
     {
