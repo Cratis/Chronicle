@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
+using Cratis.Chronicle.Storage.Sql.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -17,10 +18,13 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// <param name="eventStore">The event store.</param>
 /// <param name="namespace">The namespace.</param>
 /// <param name="containerName">The ordinary destination, if any.</param>
-public partial class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelContainerName? containerName = null) : ISinkProvenanceStorage
+public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelContainerName? containerName = null) : ISinkProvenanceStorage
 {
     const string Marker = "protected";
 
+    /// <summary>
+    /// Gets the actual physical placement captured by cold metadata admission.
+    /// </summary>
     internal SinkProvenanceTarget? Target { get; private set; }
 
     /// <inheritdoc/>
@@ -36,13 +40,24 @@ public partial class SinkProvenanceStorage(IDatabase database, EventStoreName ev
             if (SinkCycleReceiptSchema.IsVerify(context)) throw Unavailable();
             context.Entries.Add(new DynamicReadModelEntity
             {
-                ["Id"] = "inventory", ["Version"] = 1, ["Restricted"] = marked,
-                ["DatabaseId"] = Guid.NewGuid().ToString("D"), ["InventoryVersion"] = 0
+                ["Id"] = "inventory",
+                ["Version"] = 1,
+                ["Restricted"] = marked,
+                ["DatabaseId"] = Guid.NewGuid().ToString("D"),
+                ["InventoryVersion"] = 0
             });
-            try { await context.SaveChangesAsync(); }
-            catch (DbUpdateException) { if (await ReadInventory(context) is null) throw; }
+            try
+            {
+                await context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                if (await ReadInventory(context) is null) throw;
+            }
+
             state = await ReadInventory(context) ?? throw Unavailable();
         }
+
         return (state with { Restricted = state.Restricted || marked }).Validate();
     }
 
@@ -75,17 +90,32 @@ public partial class SinkProvenanceStorage(IDatabase database, EventStoreName ev
         if (!await ContainsMarker(context))
         {
             context.Entries.Add(new DynamicReadModelEntity { ["Id"] = Marker, ["Version"] = 1, ["Restricted"] = true });
-            try { await context.SaveChangesAsync(); }
-            catch (DbUpdateException) { if (!await ContainsMarker(context)) throw; }
+            try
+            {
+                await context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                if (!await ContainsMarker(context)) throw;
+            }
         }
+
         await using var inventory = await OpenInventory();
         var stateContext = inventory.DbContext;
         var type = stateContext.Database.GetDatabaseType();
+#pragma warning disable EF1002 // Identifiers are provider-delimited by Qualified/Quote; every stored value remains parameterized.
         await stateContext.Database.ExecuteSqlRawAsync(
-            $"UPDATE {SinkProvenanceSchema.Qualified(stateContext, SinkProvenanceNames.Inventory)} SET {SinkProvenanceSchema.Quote(type, "Restricted")} = {{0}} WHERE {SinkProvenanceSchema.Quote(type, "Id")} = {{1}}", true, "inventory");
+            $"UPDATE {SinkProvenanceSchema.Qualified(stateContext, SinkProvenanceNames.Inventory)} SET {SinkProvenanceSchema.Quote(type, "Restricted")} = {{0}} WHERE {SinkProvenanceSchema.Quote(type, "Id")} = {{1}}",
+            true,
+            "inventory");
+#pragma warning restore EF1002
         if (!(await ReadState()).Restricted) throw Unavailable();
     }
 
+    /// <summary>
+    /// Validates destination reservation in the actual database collation.
+    /// </summary>
+    /// <returns>The destination validation task.</returns>
     internal async Task EnsureDestinationAvailable()
     {
         await using var scope = await Open();
@@ -95,7 +125,7 @@ public partial class SinkProvenanceStorage(IDatabase database, EventStoreName ev
     {
         var rows = await context.Entries.FromSqlRaw(SinkProvenanceSchema.Select(context)).AsNoTracking().Take(2).ToListAsync();
         if (rows.Count == 0) return false;
-        if (rows.Count != 1 || (rows[0]["Id"], rows[0]["Version"], rows[0]["Restricted"]) is not (Marker, 1, true)) throw Unavailable();
+        if (rows.Count != 1 || !string.Equals(rows[0]["Id"] as string, Marker, StringComparison.Ordinal) || rows[0]["Version"] is not 1 || rows[0]["Restricted"] is not true) throw Unavailable();
         return true;
     }
 
@@ -103,14 +133,30 @@ public partial class SinkProvenanceStorage(IDatabase database, EventStoreName ev
     {
         var rows = await context.Entries.FromSqlRaw(SinkProvenanceSchema.Select(context)).AsNoTracking().Take(2).ToListAsync();
         if (rows.Count == 0) return null;
-        if (rows.Count != 1 || (rows[0]["Id"], rows[0]["Version"]) is not ("inventory", 1) ||
-            rows[0]["Restricted"] is not bool restricted || rows[0]["InventoryVersion"] is not int version ||
-            rows[0]["DatabaseId"] is not string id || !Guid.TryParseExact(id, "D", out var databaseId)) throw Unavailable();
+        if (rows.Count != 1) throw Unavailable();
+        return ParseInventory(rows[0]);
+    }
+
+    static SinkProvenanceState ParseInventory(DynamicReadModelEntity row)
+    {
+        if (!string.Equals(row["Id"] as string, "inventory", StringComparison.Ordinal) || row["Version"] is not 1 ||
+            row["Restricted"] is not bool restricted || row["InventoryVersion"] is not int version ||
+            row["DatabaseId"] is not string id || !Guid.TryParseExact(id, "D", out var databaseId))
+        {
+            throw Unavailable();
+        }
+
         return new SinkProvenanceState(new(databaseId), version, restricted).Validate();
     }
 
-    Task<DbContextScope<ReadModelDbContext>> OpenInventory() => database.ReadModelTable(eventStore, @namespace,
-        SinkProvenanceNames.Inventory, SinkProvenanceSchema.InventoryColumns, admittedTarget: Target);
+    static InvalidOperationException Unavailable() => new("Read-model storage is not available.");
+
+    Task<DbContextScope<ReadModelDbContext>> OpenInventory() => database.ReadModelTable(
+        eventStore,
+        @namespace,
+        SinkProvenanceNames.Inventory,
+        SinkProvenanceSchema.InventoryColumns,
+        admittedTarget: Target);
 
     async Task<DbContextScope<ReadModelDbContext>> Open()
     {
@@ -124,8 +170,10 @@ public partial class SinkProvenanceStorage(IDatabase database, EventStoreName ev
             await SinkProvenanceSchema.EnsureDestinationAvailable(scope.DbContext, containerName);
             return scope;
         }
-        catch { await scope.DisposeAsync(); throw; }
+        catch
+        {
+            await scope.DisposeAsync();
+            throw;
+        }
     }
-
-    static InvalidOperationException Unavailable() => new("Read-model storage is not available.");
 }

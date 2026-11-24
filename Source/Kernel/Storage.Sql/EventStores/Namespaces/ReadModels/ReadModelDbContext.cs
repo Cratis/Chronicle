@@ -251,7 +251,7 @@ public class ReadModelDbContext(
         _ => "TEXT"
     };
 
-    string? TableSchema(DatabaseType databaseType) => tableName is global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata or global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Inventory
+    string? TableSchema(DatabaseType databaseType) => Sinks.SinkProvenanceSchema.IsMetadata(tableName)
         ? Sinks.SinkProvenanceSchema.Schema(databaseType, ProvenanceSchema)
         : null;
 }

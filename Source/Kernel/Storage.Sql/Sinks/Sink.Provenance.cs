@@ -24,6 +24,11 @@ public partial class Sink
         return SinkAcquisitionProvenance.Ensure(_provenance);
     }
 
+    /// <summary>
+    /// Binds the cached physical lease to the raw route used for actual-target checks.
+    /// </summary>
+    /// <param name="cached">The silo-wide cached provenance handle.</param>
+    /// <param name="raw">The cold-admitted route and its actual target.</param>
     internal void BindProvenance(ISinkProvenanceStorage cached, SinkProvenanceStorage raw)
     {
         _provenance = cached;
@@ -37,13 +42,21 @@ public partial class Sink
         if (string.Equals(containerName.Value, _tableName, StringComparison.Ordinal) && _rawProvenance?.Target is not null) return; // Validated on cold initialization.
         var validation = _availableDestinations.GetOrAdd(containerName, ValidateDestination);
         try { await validation; }
-        catch { _availableDestinations.TryRemove(new(containerName, validation)); throw; }
+        catch
+        {
+            _availableDestinations.TryRemove(new(containerName, validation));
+            throw;
+        }
     }
 
     async Task ValidateDestination(ReadModelContainerName containerName)
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, SinkProvenanceNames.Metadata,
-            SinkProvenanceSchema.MarkerColumns, admittedTarget: ProvenanceTarget);
+        await using var scope = await _database.ReadModelTable(
+            _eventStoreName,
+            _namespace,
+            SinkProvenanceNames.Metadata,
+            SinkProvenanceSchema.MarkerColumns,
+            admittedTarget: ProvenanceTarget);
         await SinkProvenanceSchema.EnsureDestinationAvailable(scope.DbContext, containerName);
     }
 }

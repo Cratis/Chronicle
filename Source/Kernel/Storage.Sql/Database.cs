@@ -282,7 +282,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             eventStore,
             @namespace,
             containerName,
-            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>(), _storageOptions.Schema),
+            (contextOptions, name) => new ReadModelDbContext(contextOptions, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>(), options.Value.Storage.Schema),
             purpose,
             admittedTarget);
 
@@ -292,7 +292,7 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             eventStore,
             @namespace,
             containerName,
-            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>(), _storageOptions.Schema),
+            (contextOptions, name) => new ReadModelDbContext(contextOptions, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>(), options.Value.Storage.Schema),
             admittedTarget);
 
     /// <inheritdoc/>

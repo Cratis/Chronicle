@@ -54,10 +54,12 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
     }
 
     (SinkProvenanceStorage Raw, ISinkProvenanceStorage Cached) Provenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? container) =>
-        _provenance.GetOrAdd((eventStore, @namespace, sink, container), key =>
-        {
-            var database = sink.IsDefault ? serviceProvider.GetRequiredService<IDatabase>() : _namedDatabases.Value.Get(sink).Database;
-            var raw = new SinkProvenanceStorage(database, eventStore, @namespace, container);
-            return (raw, _cache.Value.Bind((typeof(SinkFactory), key), () => raw));
-        });
+        _provenance.GetOrAdd((eventStore, @namespace, sink, container), static (key, factory) => factory.CreateProvenance(key), this);
+
+    (SinkProvenanceStorage Raw, ISinkProvenanceStorage Cached) CreateProvenance((EventStoreName Store, EventStoreNamespaceName Namespace, SinkName Sink, ReadModelContainerName? Container) key)
+    {
+        var database = key.Sink.IsDefault ? serviceProvider.GetRequiredService<IDatabase>() : _namedDatabases.Value.Get(key.Sink).Database;
+        var raw = new SinkProvenanceStorage(database, key.Store, key.Namespace, key.Container);
+        return (raw, _cache.Value.Bind((typeof(SinkFactory), key), () => raw));
+    }
 }

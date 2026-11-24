@@ -21,6 +21,7 @@ public sealed record SinkProvenanceTarget(string Provider, string Server, string
     /// </summary>
     /// <param name="context">The actual context.</param>
     /// <returns>The non-secret placement identity.</returns>
+    /// <exception cref="InvalidOperationException">The provider requires an explicit database to prove placement.</exception>
     public static SinkProvenanceTarget For(ReadModelDbContext context)
     {
         var connection = context.Database.GetDbConnection();
@@ -30,6 +31,16 @@ public sealed record SinkProvenanceTarget(string Provider, string Server, string
         return new(connection.GetType().FullName ?? string.Empty, server, connection.Database);
     }
 
+    /// <summary>
+    /// Refuses a changed physical target before any context preparation or payload work.
+    /// </summary>
+    /// <param name="context">The actual runtime or schema-preparation context.</param>
+    /// <exception cref="InvalidOperationException">The actual physical target differs from the admitted target.</exception>
+    public void Ensure(ReadModelDbContext context)
+    {
+        if (this != For(context)) throw new InvalidOperationException("Read-model storage is not available.");
+    }
+
     static string SqliteServer(SqliteConnection connection)
     {
         var builder = new SqliteConnectionStringBuilder(connection.ConnectionString);
@@ -37,14 +48,5 @@ public sealed record SinkProvenanceTarget(string Provider, string Server, string
         return builder.Cache == SqliteCacheMode.Shared
             ? $"memory:{builder.DataSource}"
             : $"memory:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(connection)}";
-    }
-
-    /// <summary>
-    /// Refuses a changed physical target before any context preparation or payload work.
-    /// </summary>
-    /// <param name="context">The actual runtime or schema-preparation context.</param>
-    public void Ensure(ReadModelDbContext context)
-    {
-        if (this != For(context)) throw new InvalidOperationException("Read-model storage is not available.");
     }
 }

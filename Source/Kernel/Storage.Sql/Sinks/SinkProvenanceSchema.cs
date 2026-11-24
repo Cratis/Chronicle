@@ -18,6 +18,9 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// </summary>
 internal static class SinkProvenanceSchema
 {
+    /// <summary>
+    /// The retained legacy marker representation.
+    /// </summary>
     internal static readonly ProjectedColumn[] MarkerColumns =
     [
         new("Id", typeof(string), true, false, false, false),
@@ -25,6 +28,9 @@ internal static class SinkProvenanceSchema
         new("Restricted", typeof(bool), false, false, false, false)
     ];
 
+    /// <summary>
+    /// The durable physical identity and inventory representation.
+    /// </summary>
     internal static readonly ProjectedColumn[] InventoryColumns =
     [
         .. MarkerColumns,
@@ -32,6 +38,13 @@ internal static class SinkProvenanceSchema
         new("InventoryVersion", typeof(int), false, false, false, false)
     ];
 
+    /// <summary>
+    /// Resolves the canonical metadata schema independently of the payload search path.
+    /// </summary>
+    /// <param name="databaseType">The provider.</param>
+    /// <param name="configured">The configured storage schema.</param>
+    /// <returns>The canonical metadata schema.</returns>
+    /// <exception cref="InvalidOperationException">The provider is unsupported.</exception>
     internal static string Schema(DatabaseType databaseType, string? configured = null) => databaseType switch
     {
         DatabaseType.PostgreSql => string.IsNullOrEmpty(configured) ? "public" : configured,
@@ -40,22 +53,59 @@ internal static class SinkProvenanceSchema
         _ => throw new InvalidOperationException("Read-model storage is not available.")
     };
 
+    /// <summary>
+    /// Delimits and escapes an identifier for the selected provider.
+    /// </summary>
+    /// <param name="type">The provider.</param>
+    /// <param name="name">The identifier.</param>
+    /// <returns>The delimited identifier.</returns>
     internal static string Quote(DatabaseType type, string name) => type == DatabaseType.PostgreSql
         ? $"\"{name.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
         : $"[{name.Replace("]", "]]", StringComparison.Ordinal)}]";
 
+    /// <summary>
+    /// Qualifies a metadata table with the configured, delimited storage schema.
+    /// </summary>
+    /// <param name="context">The actual context.</param>
+    /// <param name="table">The metadata table.</param>
+    /// <returns>The qualified identifier.</returns>
     internal static string Qualified(ReadModelDbContext context, string table) =>
         $"{Quote(context.Database.GetDatabaseType(), Schema(context.Database.GetDatabaseType(), context.ProvenanceSchema))}.{Quote(context.Database.GetDatabaseType(), table)}";
 
+    /// <summary>
+    /// Selects the legacy marker in the provider's default metadata schema.
+    /// </summary>
+    /// <param name="type">The provider.</param>
+    /// <returns>The metadata query.</returns>
     internal static string Select(DatabaseType type) =>
         $"SELECT {string.Join(", ", MarkerColumns.Select(_ => Quote(type, _.Name)))} FROM {Quote(type, Schema(type))}.{Quote(type, SinkProvenanceNames.Metadata)}";
 
+    /// <summary>
+    /// Selects the context's metadata shape from the configured storage schema.
+    /// </summary>
+    /// <param name="context">The actual metadata context.</param>
+    /// <returns>The metadata query.</returns>
     internal static string Select(ReadModelDbContext context) =>
         $"SELECT {string.Join(", ", context.Columns.Select(_ => Quote(context.Database.GetDatabaseType(), _.Name)))} FROM {Qualified(context, context.TableName)}";
 
+    /// <summary>
+    /// Opens legacy marker access on an optionally admitted physical target.
+    /// </summary>
+    /// <param name="database">The database acquisition service.</param>
+    /// <param name="eventStore">The store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="admittedTarget">The expected physical target.</param>
+    /// <returns>The metadata scope.</returns>
     internal static Task<DbContextScope<ReadModelDbContext>> Open(IDatabase database, EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkProvenanceTarget? admittedTarget = null) =>
         database.ReadModelTable(eventStore, @namespace, SinkProvenanceNames.Metadata, MarkerColumns, admittedTarget: admittedTarget);
 
+    /// <summary>
+    /// Refuses metadata collisions using the actual database collation.
+    /// </summary>
+    /// <param name="context">The metadata context.</param>
+    /// <param name="containerName">The ordinary sink destination.</param>
+    /// <returns>The validation task.</returns>
+    /// <exception cref="InvalidOperationException">The destination collides with metadata.</exception>
     internal static async Task EnsureDestinationAvailable(ReadModelDbContext context, ReadModelContainerName? containerName)
     {
         if (containerName is null) return;
@@ -75,6 +125,11 @@ internal static class SinkProvenanceSchema
         finally { await context.Database.CloseConnectionAsync(); }
     }
 
+    /// <summary>
+    /// Creates metadata schema only when schema application is permitted.
+    /// </summary>
+    /// <param name="context">The metadata context.</param>
+    /// <returns>The schema preparation task.</returns>
     internal static async Task Ensure(ReadModelDbContext context)
     {
         var type = context.Database.GetDatabaseType();
@@ -82,9 +137,15 @@ internal static class SinkProvenanceSchema
         if (SinkCycleReceiptSchema.IsVerify(context)) return;
         try { await context.Database.ExecuteSqlRawAsync(CreateTable(context)); }
         catch (SqlException exception) when (exception.Number == 2714) { /* Validate the concurrent winner on read. */ }
-        catch (PostgresException exception) when (exception.SqlState is PostgresErrorCodes.DuplicateTable or PostgresErrorCodes.UniqueViolation) { /* Validate the concurrent winner on read. */ }
+        catch (PostgresException exception) when (string.Equals(exception.SqlState, PostgresErrorCodes.DuplicateTable, StringComparison.Ordinal) || string.Equals(exception.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)) { /* Validate the concurrent winner on read. */ }
     }
 
+    /// <summary>
+    /// Adds a value parameter without interpolating it into SQL.
+    /// </summary>
+    /// <param name="command">The metadata command.</param>
+    /// <param name="name">The parameter name.</param>
+    /// <param name="value">The parameter value.</param>
     internal static void Add(System.Data.Common.DbCommand command, string name, object value)
     {
         var parameter = command.CreateParameter();
@@ -92,6 +153,15 @@ internal static class SinkProvenanceSchema
         parameter.Value = value;
         command.Parameters.Add(parameter);
     }
+
+    /// <summary>
+    /// Determines whether the table is Chronicle-owned database metadata.
+    /// </summary>
+    /// <param name="tableName">The table name.</param>
+    /// <returns>Whether the name denotes provenance metadata.</returns>
+    internal static bool IsMetadata(string tableName) =>
+        string.Equals(tableName, SinkProvenanceNames.Metadata, StringComparison.Ordinal) ||
+        string.Equals(tableName, SinkProvenanceNames.Inventory, StringComparison.Ordinal);
 
     static string CreateTable(ReadModelDbContext context)
     {
