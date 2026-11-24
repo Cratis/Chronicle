@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 public partial class AddExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
-    [GeneratedRegex($"^\\{WellKnownExpressions.Add}\\((?<expression>{EventValueProviderRegularExpressions.Expression})\\)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"^\\{WellKnownExpressions.Add}\\((?<expression>{ArithmeticOperand.Pattern})\\)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     static partial Regex AddRegEx { get; }
 
     /// <inheritdoc/>
@@ -31,6 +31,6 @@ public partial class AddExpressionResolver(IEventValueProviderExpressionResolver
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression)
     {
         var match = AddRegEx.Match(expression);
-        return PropertyMappers.AddWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
+        return PropertyMappers.AddWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, ArithmeticOperand.Resolve(eventValueProviderExpressionResolvers, targetPropertySchema, match.Groups["expression"].Value));
     }
 }

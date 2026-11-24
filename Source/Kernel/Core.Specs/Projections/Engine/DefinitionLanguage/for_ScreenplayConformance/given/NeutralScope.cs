@@ -41,7 +41,7 @@ public record NeutralScope(
     {
         foreach (var mapping in mappings.OrderBy(_ => _.Target, StringComparer.Ordinal))
         {
-            builder.AppendLine($"{Indent(depth)}{mapping.Target} {mapping.Operation}{(mapping.Source is null ? string.Empty : $" {mapping.Source}")}");
+            builder.AppendLine($"{Indent(depth)}{mapping.Target} {mapping.Operation}{(mapping.Source is null ? string.Empty : $" {mapping.Source}")}{(mapping.Factor is null ? string.Empty : $" * {mapping.Factor}")}");
         }
     }
 
@@ -77,7 +77,7 @@ public record NeutralScope(
 
         foreach (var children in Children.OrderBy(_ => _.Property, StringComparer.Ordinal))
         {
-            builder.AppendLine($"{Indent(depth)}children {children.Property} identified by {children.IdentifiedBy}");
+            builder.AppendLine($"{Indent(depth)}children {children.Property} identified by {children.IdentifiedBy}{(children.Ordering.Length == 0 ? string.Empty : $" {children.Ordering}")}");
             children.Scope.Render(builder, depth + 1);
         }
 
