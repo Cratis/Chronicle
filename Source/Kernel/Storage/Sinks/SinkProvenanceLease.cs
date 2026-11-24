@@ -10,7 +10,6 @@ public sealed class SinkProvenanceLease
 {
     readonly SinkProvenanceCache.Entry? _entry;
     readonly bool _exempt;
-    readonly CancellationToken _revoked;
 
     /// <summary>
     /// Initializes a lease and captures its token before the owning source can be disposed.
@@ -19,7 +18,7 @@ public sealed class SinkProvenanceLease
     internal SinkProvenanceLease(SinkProvenanceCache.Entry entry)
     {
         _entry = entry;
-        _revoked = entry.Revoked;
+        Revoked = entry.Revoked;
     }
 
     SinkProvenanceLease(bool exempt) => _exempt = exempt;
@@ -37,7 +36,7 @@ public sealed class SinkProvenanceLease
     /// <summary>
     /// Gets a token canceled when a restricted mark is observed, not merely on expiry.
     /// </summary>
-    public CancellationToken Revoked => _revoked;
+    public CancellationToken Revoked { get; }
 
     /// <summary>
     /// Refreshes expired authority before a one-shot operation.

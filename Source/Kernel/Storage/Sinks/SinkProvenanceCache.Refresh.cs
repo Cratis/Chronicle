@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.Extensions.Logging;
-
 namespace Cratis.Chronicle.Storage.Sinks;
 
 public sealed partial class SinkProvenanceCache
@@ -69,8 +67,6 @@ public sealed partial class SinkProvenanceCache
             }
         }
 
-        static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
-
         /// <inheritdoc/>
         public void Dispose()
         {
@@ -92,6 +88,7 @@ public sealed partial class SinkProvenanceCache
         /// Reads current facts, refreshing an expired observation.
         /// </summary>
         /// <returns>The validated database state.</returns>
+        /// <exception cref="InvalidOperationException">The metadata is not currently available.</exception>
         internal async Task<SinkProvenanceState> ReadState()
         {
             bool refresh;
@@ -108,6 +105,7 @@ public sealed partial class SinkProvenanceCache
         /// Obtains fresh authority for a one-shot read.
         /// </summary>
         /// <returns>The admission task.</returns>
+        /// <exception cref="InvalidOperationException">The lease cannot authorize a read.</exception>
         internal async Task Ensure()
         {
             bool refresh;
@@ -125,6 +123,7 @@ public sealed partial class SinkProvenanceCache
         /// </summary>
         /// <param name="cancellationToken">The reader cancellation.</param>
         /// <returns>The wait task.</returns>
+        /// <exception cref="InvalidOperationException">A mark was observed or the cache was disposed.</exception>
         internal async Task WaitUntilReadable(CancellationToken cancellationToken)
         {
             while (true)
@@ -146,6 +145,7 @@ public sealed partial class SinkProvenanceCache
         /// Serializes final delivery with permission checks.
         /// </summary>
         /// <param name="deliver">The synchronous delivery.</param>
+        /// <exception cref="InvalidOperationException">The lease cannot authorize delivery.</exception>
         internal void Deliver(Action deliver)
         {
             lock (_gate)
@@ -173,6 +173,7 @@ public sealed partial class SinkProvenanceCache
         /// </summary>
         /// <param name="state">The committed state.</param>
         /// <param name="started">The monotonic start of its metadata read.</param>
+        /// <exception cref="InvalidOperationException">The observation changed database identity or lost completion.</exception>
         internal void Observe(SinkProvenanceState state, long started)
         {
             state.Validate();
@@ -180,7 +181,7 @@ public sealed partial class SinkProvenanceCache
             lock (_gate)
             {
                 if (_disposed) return;
-                if (state.DatabaseId != _state.DatabaseId || (_state.IsComplete && !state.IsComplete))
+                if (!Accepts(state))
                 {
                     _valid = false;
                     Pulse();
@@ -204,10 +205,15 @@ public sealed partial class SinkProvenanceCache
         {
             lock (_gate)
             {
-                if (_disposed || _state.Restricted || _refresh is not null) return;
+                if (!CanRefresh()) return;
             }
             _ = ObserveRefresh();
         }
+
+        static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        bool Accepts(SinkProvenanceState state) => state.DatabaseId == _state.DatabaseId && (!_state.IsComplete || state.IsComplete);
+        bool CanRefresh() => !_disposed && !_state.Restricted && _refresh is null;
 
         async Task ObserveRefresh()
         {
@@ -217,7 +223,7 @@ public sealed partial class SinkProvenanceCache
             }
             catch (Exception exception)
             {
-                owner._logger.LogDebug(exception, "Read-model metadata refresh is unavailable.");
+                owner._logger.RefreshFailed(exception);
             }
         }
 
@@ -237,6 +243,7 @@ public sealed partial class SinkProvenanceCache
         async Task RefreshCore(TaskCompletionSource completion)
         {
             var acquired = false;
+            Exception? failure = null;
             try
             {
                 await owner._refreshSlots.WaitAsync().ConfigureAwait(false);
@@ -244,7 +251,6 @@ public sealed partial class SinkProvenanceCache
                 lock (_gate) ObjectDisposedException.ThrowIf(_disposed, this);
                 var started = owner._time.GetTimestamp();
                 Observe(await raw.ReadState().ConfigureAwait(false), started);
-                completion.TrySetResult();
             }
             catch (Exception exception)
             {
@@ -253,13 +259,16 @@ public sealed partial class SinkProvenanceCache
                     _valid = false;
                     Pulse();
                 }
-                completion.TrySetException(exception);
+                failure = exception;
             }
             finally
             {
                 if (acquired) owner._refreshSlots.Release();
                 lock (_gate) _refresh = null;
             }
+            // Drainers may dispose the shared semaphore as soon as this completion is signaled.
+            if (failure is null) completion.TrySetResult();
+            else completion.TrySetException(failure);
         }
 
         bool Readable() => !_disposed && _state.IsComplete && !_state.Restricted && Fresh();

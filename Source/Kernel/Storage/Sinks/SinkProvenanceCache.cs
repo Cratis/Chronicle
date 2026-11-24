@@ -68,7 +68,7 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "Read-model metadata work failed during shutdown.");
+            _logger.ShutdownReadFailed(exception);
         }
         finally
         {
