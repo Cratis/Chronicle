@@ -24,10 +24,13 @@ public static class DockerContainerEvidence
     {
         using var client = TestcontainersSettings.OS.DockerEndpointAuthConfig.GetDockerClientBuilder(Guid.NewGuid()).Build();
         var response = await client.Containers.InspectContainerAsync(container.Id, cancellationToken);
-        return response.State is { Running: false } state &&
-            (string.Equals(state.Status, "exited", StringComparison.Ordinal) || string.Equals(state.Status, "dead", StringComparison.Ordinal))
-            ? new(state.ExitCode, state.OOMKilled, state.Error)
-            : null;
+        if (response.State is { Running: false } state &&
+            (string.Equals(state.Status, "exited", StringComparison.Ordinal) || string.Equals(state.Status, "dead", StringComparison.Ordinal)))
+        {
+            return new(state.ExitCode, state.OOMKilled, state.Error);
+        }
+
+        return null;
     }
 
     /// <summary>

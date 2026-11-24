@@ -38,8 +38,7 @@ public class and_there_are_two_providers_out_of_three_that_can_provide : Specifi
 
         _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
-            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([firstProvider, _secondProvider, thirdProvider])
-        );
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([firstProvider, _secondProvider, thirdProvider]));
     }
 
     void Because() => _result = _resolver.GetMetadataFor(MyClass.SomethingProperty);

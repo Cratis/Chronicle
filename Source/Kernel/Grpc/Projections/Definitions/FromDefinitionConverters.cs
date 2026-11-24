@@ -37,7 +37,6 @@ internal static class FromDefinitionConverters
         return new(
             contract.Properties.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value),
             contract.Key,
-            contract.ParentKey ?? PropertyExpression.NotSet
-        );
+            contract.ParentKey ?? PropertyExpression.NotSet);
     }
 }

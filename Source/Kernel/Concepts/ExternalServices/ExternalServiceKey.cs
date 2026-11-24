@@ -16,13 +16,13 @@ public record ExternalServiceKey(ExternalServiceId ExternalServiceId, EventStore
     /// <param name="key"><see cref="ExternalServiceKey"/> to convert from.</param>
     public static implicit operator string(ExternalServiceKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ExternalServiceId, EventStore);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ExternalServiceKey"/> instance.</returns>
     public static ExternalServiceKey Parse(string key) => KeyHelper.Parse<ExternalServiceKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ExternalServiceId, EventStore);
 }

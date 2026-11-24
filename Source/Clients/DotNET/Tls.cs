@@ -43,7 +43,10 @@ public class Tls
     /// </remarks>
     public bool SkipCertificateValidation
     {
-        get => _skipCertificateValidation;
+        get
+        {
+            return _skipCertificateValidation;
+        }
         set
         {
             _skipCertificateValidation = value;

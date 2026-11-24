@@ -82,9 +82,12 @@ public static class ChronicleClientServiceCollectionExtensions
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
             var namingPolicy = chronicleBuilder?.NamingPolicy ?? new DefaultNamingPolicy();
 
-            return connection is null ?
-                new ChronicleClient(options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy) :
-                new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy);
+            if (connection is null)
+            {
+                return new ChronicleClient(options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy);
+            }
+
+            return new ChronicleClient(connection, options, artifactsProvider, sp, identityProvider, correlationIdAccessor, namespaceResolver, loggerFactory, namingPolicy);
         });
 
         services.AddSingleton<ChronicleUseMarker>();

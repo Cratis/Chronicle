@@ -38,10 +38,15 @@ internal static class WindowsTokenCachePermissions
             using var identity = WindowsIdentity.GetCurrent();
             var security = stream.GetAccessControl();
             var descriptor = new RawSecurityDescriptor(security.GetSecurityDescriptorBinaryForm(), 0);
-            var rules = descriptor.DiscretionaryAcl is null ? null : security
-                .GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
-                .Cast<FileSystemAccessRule>()
-                .Select(rule => (rule.IdentityReference.Value, (int)rule.FileSystemRights, rule.AccessControlType == AccessControlType.Allow));
+            IEnumerable<(string Sid, int Rights, bool Allow)>? rules = null;
+            if (descriptor.DiscretionaryAcl is not null)
+            {
+                rules = security
+                    .GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
+                    .Cast<FileSystemAccessRule>()
+                    .Select(rule => (rule.IdentityReference.Value, (int)rule.FileSystemRights, rule.AccessControlType == AccessControlType.Allow));
+            }
+
             return IsTrusted(identity.User?.Value, security.GetOwner(typeof(SecurityIdentifier))?.Value, rules);
         }
         catch (Exception)

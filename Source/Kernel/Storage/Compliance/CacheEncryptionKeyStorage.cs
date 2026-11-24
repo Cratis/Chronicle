@@ -332,8 +332,12 @@ public class CacheEncryptionKeyStorage(
             }
         }
 
-        return generation == GenerationForRead(scope) ? pair :
-            await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) ?? throw new MissingEncryptionKey(identifier);
+        if (generation == GenerationForRead(scope))
+        {
+            return pair;
+        }
+
+        return await TryGetLatestFor(eventStore, eventStoreNamespace, identifier) ?? throw new MissingEncryptionKey(identifier);
     }
 
     /// <inheritdoc/>

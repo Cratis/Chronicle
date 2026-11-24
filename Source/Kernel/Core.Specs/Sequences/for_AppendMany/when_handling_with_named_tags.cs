@@ -10,8 +10,10 @@ public class when_handling_with_named_tags : Sequences.given.an_append_endpoint
         "namespace",
         "event-log",
         "source",
-        [new EventToAppendWithNamedTags(new EventType("event", 1, false), "{}", [new NamedTag("account", "one")]),
-         new EventToAppendWithNamedTags(new EventType("event", 1, false), "{}", [new NamedTag("account", "two")])])
+        [
+            new EventToAppendWithNamedTags(new EventType("event", 1, false), "{}", [new NamedTag("account", "one")]),
+            new EventToAppendWithNamedTags(new EventType("event", 1, false), "{}", [new NamedTag("account", "two")])
+        ])
         .Handle(_grainFactory, _causation, _principal);
 
     [Fact] void should_keep_first_events_named_tag() => _appendedEvents[0].NamedTags.Single().Value.ShouldEqual("one");

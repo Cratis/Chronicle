@@ -10,10 +10,10 @@ using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// The suspected-skip reporting of the observer. Telemetry remains exception-safe; missed deliveries are
 /// repaired separately from reporting, through the observer's normal catch-up work.
-/// </summary>
+/// </content>
 public partial class Observer
 {
     readonly SuspectedSkipWarningLimiter _skipWarningLimiter = new();

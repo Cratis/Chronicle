@@ -70,19 +70,17 @@ public class FederationPolicies(IChronicleConnection connection) : IFederationPo
     {
         var service = await GetService(cancellationToken);
         var policies = await service.AllPolicies(CallContextFor(cancellationToken)).EnsureSuccess();
-        return
-        [
-            .. policies.Select(policy => new FederationPolicyInformation(
-                policy.Subject,
-                (FederationPolicyStatus)(int)policy.Status,
-                [.. policy.Entries.Select(entry => new FederationPolicyEntry(
-                    (FederationDirection)(int)entry.Direction,
-                    entry.EventStore,
-                    entry.Namespace,
-                    entry.AllPublic,
-                    [.. entry.EventTypes]))],
-                policy.ChangedBy))
-        ];
+        var information = policies.Select(policy =>
+        {
+            var entries = policy.Entries.Select(entry => new FederationPolicyEntry(
+                (FederationDirection)(int)entry.Direction,
+                entry.EventStore,
+                entry.Namespace,
+                entry.AllPublic,
+                [.. entry.EventTypes]));
+            return new FederationPolicyInformation(policy.Subject, (FederationPolicyStatus)(int)policy.Status, [.. entries], policy.ChangedBy);
+        });
+        return [.. information];
     }
 
     /// <inheritdoc/>

@@ -58,5 +58,5 @@ public class and_dimensions_are_compared : Specification
     [Fact] void should_be_keyed() => _otherKey.ShouldNotEqual(_tokens["all-dimensions"]);
     [Fact] void should_use_a_distinct_domain_from_value_hashing() => _tokens["all-dimensions"].ShouldNotEqual(_valueDigest[..32]);
     [Fact] void should_return_128_bits_of_hex() => _tokens["all-dimensions"].Length.ShouldEqual(32);
-    [Fact] void should_return_lowercase_hex() => _tokens["all-dimensions"].All(_ => _ is >= '0' and <= '9' or >= 'a' and <= 'f').ShouldBeTrue();
+    [Fact] void should_return_lowercase_hex() => _tokens["all-dimensions"].All(_ => _ is (>= '0' and <= '9') or (>= 'a' and <= 'f')).ShouldBeTrue();
 }

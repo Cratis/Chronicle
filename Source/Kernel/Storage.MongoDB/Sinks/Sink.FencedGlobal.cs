@@ -11,9 +11,9 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
-/// <summary>
+/// <content>
 /// The <see cref="SinkWriteMode.FencedGlobal"/> part of the <see cref="Sink"/>: optimistic revision checks for an instance several namespaces write.
-/// </summary>
+/// </content>
 public partial class Sink
 {
     const int MaxStampAttempts = 5;

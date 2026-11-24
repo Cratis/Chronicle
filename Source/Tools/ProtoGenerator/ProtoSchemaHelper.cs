@@ -223,10 +223,13 @@ internal static partial class ProtoSchemaHelper
     /// contracts assembly, so the caller needs to know which types to expect a reservation for before it can tell
     /// a package that legitimately has no message for a type from a reservation that got lost.
     /// </remarks>
-    public static IReadOnlyList<Type> WithReservedFields(IEnumerable<Type> types) =>
-        [.. types.Where(type => Array.Exists(
+    public static IReadOnlyList<Type> WithReservedFields(IEnumerable<Type> types)
+    {
+        var withReservations = types.Where(type => Array.Exists(
             type.GetCustomAttributes(inherit: false),
-            _ => string.Equals(_.GetType().Name, ReservedProtoFieldsAttributeName, StringComparison.Ordinal)))];
+            _ => string.Equals(_.GetType().Name, ReservedProtoFieldsAttributeName, StringComparison.Ordinal)));
+        return [.. withReservations];
+    }
 
     /// <summary>
     /// Determines whether a schema declares a message.

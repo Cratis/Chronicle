@@ -8,9 +8,9 @@ using Cratis.Chronicle.Supervision;
 
 namespace Cratis.Chronicle.EventSequences;
 
-/// <summary>
+/// <content>
 /// Reconciles the projection, capture and pattern-capture subscriptions of a namespace from its event log.
-/// </summary>
+/// </content>
 /// <remarks>
 /// <para>
 /// The event log of a namespace is the grain that is always there once the namespace has events, so it is where the

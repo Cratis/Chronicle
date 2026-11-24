@@ -19,8 +19,10 @@ public class when_a_later_child_event_resolves_a_rebased_creation_key : given.a_
         _parent.EventTypes.Returns([_parentEventType, _childEventType]);
         _parent.GetKeyResolverFor(_childEventType).Returns((_, _, _) => Task.FromResult<KeyResolverResult>(
             new ResolvedKey(new Key(OriginalRoot, new ArrayIndexers(
-                [new("features", "id", "feature"), new("features.subFeatures", "id", ParentSource),
-                 new("features.subFeatures.slices", "id", ChildSource)])))));
+                [
+                    new("features", "id", "feature"), new("features.subFeatures", "id", ParentSource),
+                    new("features.subFeatures.slices", "id", ChildSource)
+                ])))));
         _child.ChildrenPropertyPath.Returns((PropertyPath)"features.slices");
         _child.OwnEventTypes.Returns([_childEventType, _updatedEventType]);
         _child.EventTypes.Returns([_childEventType, _updatedEventType]);

@@ -300,7 +300,10 @@ public class ChronicleOptions(
     /// </summary>
     public ReactorOptions Reactors
     {
-        get => _reactors;
+        get
+        {
+            return _reactors;
+        }
         set
         {
             ArgumentNullException.ThrowIfNull(value);
@@ -313,7 +316,10 @@ public class ChronicleOptions(
     /// </summary>
     public ReducerOptions Reducers
     {
-        get => _reducers;
+        get
+        {
+            return _reducers;
+        }
         set
         {
             ArgumentNullException.ThrowIfNull(value);

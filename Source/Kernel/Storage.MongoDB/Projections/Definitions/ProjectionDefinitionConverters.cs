@@ -58,8 +58,7 @@ public static class ProjectionDefinitionConverters
             Nested: source.Nested?.ToDictionary(kv => (PropertyPath)kv.Key, kv => kv.Value.ToKernel()),
             SubscribesToAllEvents: source.SubscribesToAllEvents,
             NoAutoMapProperties: source.NoAutoMapProperties?.Select(_ => (PropertyPath)_).ToList(),
-            Scope: source.Scope
-        )
+            Scope: source.Scope)
         {
             GenerationDelivery = source.GenerationDelivery,
             Version = source.Version,

@@ -22,7 +22,8 @@ public partial class EventTypesStorage
             var updated = definition with
             {
                 Generations = definition.Generations.Select(item => item.Generation == generation
-                    ? item with { Schema = schema } : item).ToArray()
+                    ? item with { Schema = schema }
+                    : item).ToArray()
             };
             if (!_definitions.TryUpdate(eventTypeId, updated, definition))
             {

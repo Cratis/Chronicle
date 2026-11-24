@@ -8,9 +8,9 @@ using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Partial for delivering a page of events spanning partitions to a subscriber in one call and settling each partition on its own.
-/// </summary>
+/// </content>
 public partial class Observer
 {
     readonly Dictionary<Key, PrefetchedDelivery> _prefetchedPartitions = [];

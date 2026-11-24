@@ -10,9 +10,9 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
-/// <summary>
+/// <content>
 /// Partial for reading and writing a page of instances without the shared bulk window.
-/// </summary>
+/// </content>
 public partial class Sink : ISinkPages
 {
     /// <inheritdoc/>

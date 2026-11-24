@@ -19,13 +19,13 @@ public record ObserverSupervisorKey(EventStoreName EventStore, ObserverId Observ
     /// <param name="key"><see cref="ObserverSupervisorKey"/> to convert from.</param>
     public static implicit operator string(ObserverSupervisorKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, ObserverId);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ObserverSupervisorKey"/> instance.</returns>
     public static ObserverSupervisorKey Parse(string key) => KeyHelper.Parse<ObserverSupervisorKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, ObserverId);
 }

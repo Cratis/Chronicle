@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Storage.Events.Constraints.V2;
 /// <param name="Value">The encoded scope token.</param>
 public sealed record UniqueConstraintStorageScope(string Value) : ConceptAs<string>(Validate(Value))
 {
-    static string Validate(string value) => value.Length == 32 && value.All(_ => _ is >= '0' and <= '9' or >= 'a' and <= 'f')
+    static string Validate(string value) => value.Length == 32 && value.All(_ => _ is (>= '0' and <= '9') or (>= 'a' and <= 'f'))
         ? value
         : throw new InvalidUniqueConstraintV2Input(nameof(UniqueConstraintStorageScope));
 }

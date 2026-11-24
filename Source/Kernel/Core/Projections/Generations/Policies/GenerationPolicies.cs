@@ -48,14 +48,21 @@ public class GenerationPolicies(IOptions<ChronicleOptions> options, IGenerationP
         };
     }
 
-    static GenerationPromotionPolicy Apply(GenerationPromotionPolicy policy, GenerationPromotionPolicyOverride? policyOverride) =>
-        policyOverride is null ? policy : policy with
+    static GenerationPromotionPolicy Apply(GenerationPromotionPolicy policy, GenerationPromotionPolicyOverride? policyOverride)
+    {
+        if (policyOverride is null)
+        {
+            return policy;
+        }
+
+        return policy with
         {
             Mode = Stricter(policy.Mode, policyOverride.Mode),
             RollbackWindow = policyOverride.RollbackWindow ?? policy.RollbackWindow,
             MaxFollowingRetiredGenerations = policyOverride.MaxFollowingRetiredGenerations ?? policy.MaxFollowingRetiredGenerations,
             DeploymentConditionGracePeriod = policyOverride.DeploymentConditionGracePeriod ?? policy.DeploymentConditionGracePeriod
         };
+    }
 
     static PromotionGateMode Stricter(PromotionGateMode inherited, PromotionGateMode? requested) =>
         requested is { } mode && Strictness(mode) > Strictness(inherited) ? mode : inherited;

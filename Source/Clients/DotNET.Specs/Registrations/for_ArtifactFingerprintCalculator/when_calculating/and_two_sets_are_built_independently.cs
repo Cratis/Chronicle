@@ -21,5 +21,5 @@ public class and_two_sets_are_built_independently : given.a_complete_set_of_defi
     void should_have_a_sha256_length() => _first.Value.Length.ShouldEqual(64);
 
     [Fact]
-    void should_have_only_lowercase_hex_characters() => _first.Value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f').ShouldBeTrue();
+    void should_have_only_lowercase_hex_characters() => _first.Value.All(character => character is (>= '0' and <= '9') or (>= 'a' and <= 'f')).ShouldBeTrue();
 }

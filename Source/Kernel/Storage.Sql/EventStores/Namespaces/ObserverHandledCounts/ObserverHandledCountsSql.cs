@@ -29,7 +29,8 @@ internal static class ObserverHandledCountsSql
         if (schema is null && !context.Database.IsSqlite())
         {
             schema = await context.Database.SqlQueryRaw<string>(context.Database.IsNpgsql()
-                ? "SELECT current_schema() AS \"Value\"" : "SELECT SCHEMA_NAME() AS [Value]").SingleAsync();
+                ? "SELECT current_schema() AS \"Value\""
+                : "SELECT SCHEMA_NAME() AS [Value]").SingleAsync();
         }
         var helper = context.GetService<ISqlGenerationHelper>();
         var table = EscapeFormatIdentifier(helper.DelimitIdentifier(entity.GetTableName()!, schema));

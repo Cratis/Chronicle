@@ -57,7 +57,12 @@ public class and_observation_stream_completes : given.all_dependencies
                     _secondRegistration.TrySetResult(registration);
                 }
             }));
-            return attempt == 1 ? _firstStream : Observable.Create<ReduceOperationMessage>(observer =>
+            if (attempt == 1)
+            {
+                return _firstStream;
+            }
+
+            return Observable.Create<ReduceOperationMessage>(observer =>
             {
                 var subscription = _replacementStream.Subscribe(observer);
                 _replacementSubscribed.TrySetResult();

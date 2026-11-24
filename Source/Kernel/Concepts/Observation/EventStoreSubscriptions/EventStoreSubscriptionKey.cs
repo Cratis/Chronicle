@@ -16,13 +16,13 @@ public record EventStoreSubscriptionKey(EventStoreSubscriptionId SubscriptionId,
     /// <param name="key"><see cref="EventStoreSubscriptionKey"/> to convert from.</param>
     public static implicit operator string(EventStoreSubscriptionKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(SubscriptionId, TargetEventStore);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="EventStoreSubscriptionKey"/> instance.</returns>
     public static EventStoreSubscriptionKey Parse(string key) => KeyHelper.Parse<EventStoreSubscriptionKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(SubscriptionId, TargetEventStore);
 }

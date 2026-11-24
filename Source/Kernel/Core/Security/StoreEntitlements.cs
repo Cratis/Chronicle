@@ -36,8 +36,15 @@ public class StoreEntitlements(IStorage storage, IGrainFactory grains, IEventSer
     }
 
     /// <inheritdoc/>
-    public Task<bool> Revoke(EventStoreAccessGrant grant) => Mutate(() => _history.Grants.Any(candidate => StoreEntitlementsHistory.SameIdentity(candidate, grant))
-        ? [new EventStoreAccessRevoked(grant.Holder, EventStore: grant.EventStore, Namespace: grant.Namespace)] : []);
+    public Task<bool> Revoke(EventStoreAccessGrant grant) => Mutate(() =>
+    {
+        if (_history.Grants.Any(candidate => StoreEntitlementsHistory.SameIdentity(candidate, grant)))
+        {
+            return [new EventStoreAccessRevoked(grant.Holder, EventStore: grant.EventStore, Namespace: grant.Namespace)];
+        }
+
+        return [];
+    });
 
     /// <inheritdoc/>
     public async Task Reconcile(IEnumerable<ConfiguredGrant> grants)

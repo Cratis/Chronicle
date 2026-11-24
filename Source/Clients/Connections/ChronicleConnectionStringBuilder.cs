@@ -100,7 +100,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string Host
     {
-        get => ContainsKey(HostKey) ? (string)this[HostKey] : "localhost";
+        get
+        {
+            return ContainsKey(HostKey) ? (string)this[HostKey] : "localhost";
+        }
         set
         {
             Remove(ServersKey);
@@ -114,7 +117,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public int Port
     {
-        get => ContainsKey(PortKey) ? ConvertOption(PortKey, Convert.ToInt32) : DefaultPort;
+        get
+        {
+            return ContainsKey(PortKey) ? ConvertOption(PortKey, Convert.ToInt32) : DefaultPort;
+        }
         set
         {
             Remove(ServersKey);
@@ -157,7 +163,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string? Username
     {
-        get => ContainsKey(UsernameKey) ? (string)this[UsernameKey] : null;
+        get
+        {
+            return ContainsKey(UsernameKey) ? (string)this[UsernameKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))
@@ -176,7 +185,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string? Password
     {
-        get => ContainsKey(PasswordKey) ? (string)this[PasswordKey] : null;
+        get
+        {
+            return ContainsKey(PasswordKey) ? (string)this[PasswordKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))
@@ -259,7 +271,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool NoAuthentication
     {
-        get => ContainsKey(AuthKey) && string.Equals((string)this[AuthKey], NoAuthenticationValue, StringComparison.OrdinalIgnoreCase);
+        get
+        {
+            return ContainsKey(AuthKey) && string.Equals((string)this[AuthKey], NoAuthenticationValue, StringComparison.OrdinalIgnoreCase);
+        }
         set
         {
             if (value)
@@ -278,7 +293,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string? ApiKey
     {
-        get => ContainsKey(ApiKeyKey) ? (string)this[ApiKeyKey] : null;
+        get
+        {
+            return ContainsKey(ApiKeyKey) ? (string)this[ApiKeyKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))
@@ -321,7 +339,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public bool DisableTls
     {
-        get => ContainsKey(DisableTlsKey) && ConvertOption(DisableTlsKey, Convert.ToBoolean);
+        get
+        {
+            return ContainsKey(DisableTlsKey) && ConvertOption(DisableTlsKey, Convert.ToBoolean);
+        }
         set
         {
             if (value)
@@ -388,7 +409,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string? LoadBalancer
     {
-        get => ContainsKey(LoadBalancerKey) ? (string)this[LoadBalancerKey] : null;
+        get
+        {
+            return ContainsKey(LoadBalancerKey) ? (string)this[LoadBalancerKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))
@@ -408,7 +432,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string? SrvNameServer
     {
-        get => ContainsKey(SrvNameServerKey) ? (string)this[SrvNameServerKey] : null;
+        get
+        {
+            return ContainsKey(SrvNameServerKey) ? (string)this[SrvNameServerKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))
@@ -427,7 +454,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string? CertificatePath
     {
-        get => ContainsKey(CertificatePathKey) ? (string)this[CertificatePathKey] : null;
+        get
+        {
+            return ContainsKey(CertificatePathKey) ? (string)this[CertificatePathKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))
@@ -446,7 +476,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </summary>
     public string? CertificatePassword
     {
-        get => ContainsKey(CertificatePasswordKey) ? (string)this[CertificatePasswordKey] : null;
+        get
+        {
+            return ContainsKey(CertificatePasswordKey) ? (string)this[CertificatePasswordKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))
@@ -472,7 +505,10 @@ public class ChronicleConnectionStringBuilder : DbConnectionStringBuilder
     /// </remarks>
     public string? CaCertificatePath
     {
-        get => ContainsKey(CaCertificatePathKey) ? (string)this[CaCertificatePathKey] : null;
+        get
+        {
+            return ContainsKey(CaCertificatePathKey) ? (string)this[CaCertificatePathKey] : null;
+        }
         set
         {
             if (string.IsNullOrEmpty(value))

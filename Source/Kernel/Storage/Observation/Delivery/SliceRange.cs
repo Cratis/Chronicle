@@ -23,6 +23,11 @@ public sealed record SliceRange
     }
 
     /// <summary>
+    /// Gets the range covering all slices.
+    /// </summary>
+    public static SliceRange All => new(0, SequencingKeySlice.Count);
+
+    /// <summary>
     /// Gets the inclusive start.
     /// </summary>
     public ushort From { get; }
@@ -31,11 +36,6 @@ public sealed record SliceRange
     /// Gets the exclusive end.
     /// </summary>
     public ushort To { get; }
-
-    /// <summary>
-    /// Gets the range covering all slices.
-    /// </summary>
-    public static SliceRange All => new(0, SequencingKeySlice.Count);
 
     /// <summary>
     /// Tests membership using half-open interval semantics.

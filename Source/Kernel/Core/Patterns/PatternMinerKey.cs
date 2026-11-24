@@ -34,13 +34,13 @@ public record PatternMinerKey(EventStoreName EventStore, EventStoreNamespaceName
     /// <param name="key">String to convert from.</param>
     public static implicit operator PatternMinerKey(string key) => Parse(key);
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
-
     /// <summary>
     /// Parse a <see cref="PatternMinerKey"/> from a string.
     /// </summary>
     /// <param name="key">String to parse.</param>
     /// <returns>A parsed <see cref="PatternMinerKey"/>.</returns>
     public static PatternMinerKey Parse(string key) => KeyHelper.Parse<PatternMinerKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 }

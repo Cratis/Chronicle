@@ -17,13 +17,13 @@ using Cratis.Chronicle.Recommendations;
 
 namespace Cratis.Chronicle.Projections;
 
-/// <summary>
+/// <content>
 /// The retirement part of <see cref="ProjectionsManager"/>: when a full-set registration no longer contains a
 /// registered projection, the projection is retired - its observer stops consuming events, its jobs and failed
 /// partitions are cleared, and its definition is removed everywhere it lives. Its sink container is deliberately
 /// left untouched: data is never deleted implicitly. When another registered projection targets the same container,
 /// a replay recommendation is raised for it so the container can be rebuilt cleanly.
-/// </summary>
+/// </content>
 public partial class ProjectionsManager
 {
     /// <inheritdoc/>

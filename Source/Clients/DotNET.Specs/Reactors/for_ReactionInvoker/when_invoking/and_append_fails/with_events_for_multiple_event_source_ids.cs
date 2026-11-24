@@ -33,15 +33,14 @@ public class with_events_for_multiple_event_source_ids : Specification
         _eventStore.EventLog.Returns(_eventLog);
         _eventStore.EventTypes.Returns(eventTypes);
 
-        _failedAppendResult = AppendManyResult.Failed(
-            CorrelationId.New(),
-            [new ConstraintViolation(
-                new EventTypeId("MyOutboundEvent"),
-                EventSequenceNumber.Unavailable,
-                ConstraintType.Unique,
-                "TestConstraint",
-                "Constraint violated",
-                new ConstraintViolationDetails())]);
+        var violation = new ConstraintViolation(
+            new EventTypeId("MyOutboundEvent"),
+            EventSequenceNumber.Unavailable,
+            ConstraintType.Unique,
+            "TestConstraint",
+            "Constraint violated",
+            new ConstraintViolationDetails());
+        _failedAppendResult = AppendManyResult.Failed(CorrelationId.New(), [violation]);
 
         _eventLog.AppendMany(Arg.Any<IEnumerable<EventForEventSourceId>>())
             .ReturnsForAnyArgs(_failedAppendResult);

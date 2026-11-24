@@ -95,9 +95,9 @@ public class EventStoreNamespaceStorage : IEventStoreNamespaceStorage
         _jsonSerializerOptions = jsonSerializerOptions;
         _loggerFactory = loggerFactory;
 
-        Changesets = options.Value.Features.ChangesetStorage ?
-                        new ChangesetStorage(eventStoreNamespaceDatabase) :
-                        new NullChangesetStorage();
+        Changesets = options.Value.Features.ChangesetStorage
+                        ? new ChangesetStorage(eventStoreNamespaceDatabase)
+                        : new NullChangesetStorage();
         Identities = new IdentityStorage(eventStoreNamespaceDatabase, loggerFactory.CreateLogger<IdentityStorage>());
         Jobs = jobsStorage.GetFor(eventStore, @namespace).Jobs;
         JobSteps = jobsStorage.GetFor(eventStore, @namespace).JobSteps;

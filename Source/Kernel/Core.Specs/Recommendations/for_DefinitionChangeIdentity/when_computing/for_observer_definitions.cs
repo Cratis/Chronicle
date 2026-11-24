@@ -26,7 +26,7 @@ public class for_observer_definitions : Specification
         result.ShouldEqual(DefinitionChangeIdentity.For(definition));
         result.ShouldNotEqual(DefinitionChangeIdentity.For(changed));
         result.Length.ShouldEqual(64);
-        result.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f').ShouldBeTrue();
+        result.All(character => character is (>= '0' and <= '9') or (>= 'a' and <= 'f')).ShouldBeTrue();
     }
 
     static (object Definition, object Equal, object Changed) Definitions(string observerType) => observerType switch

@@ -17,14 +17,6 @@ namespace Cratis.Chronicle.EventSequences.Idempotency;
 internal record StoredAppendFingerprint(string Plain, EventType EventType, IReadOnlyList<ProtectedFingerprintPart> ProtectedParts)
 {
     /// <summary>
-    /// Formats the persistent v1 representation.
-    /// </summary>
-    /// <returns>The stored text.</returns>
-    internal string Format() => $"v1:{Plain};type={FingerprintEncoding.Fields([EventType.Id.Value, EventType.Generation.Value.ToString(CultureInfo.InvariantCulture)])}" +
-        string.Concat(ProtectedParts.OrderBy(part => part.Kind).Select(part =>
-            $";{FingerprintEncoding.Name(part.Kind)}:{part.KeyReference}@{part.Revision.Value.ToString(CultureInfo.InvariantCulture)}={part.Hash}"));
-
-    /// <summary>
     /// Parses v1 without interpreting delimiters embedded in length-prefixed type ids.
     /// </summary>
     /// <param name="text">The persistent text.</param>
@@ -75,6 +67,14 @@ internal record StoredAppendFingerprint(string Plain, EventType EventType, IRead
         return new StoredAppendFingerprint(text[3..67], new(typeId, generation), parts.ToArray());
     }
 
+    /// <summary>
+    /// Formats the persistent v1 representation.
+    /// </summary>
+    /// <returns>The stored text.</returns>
+    internal string Format() => $"v1:{Plain};type={FingerprintEncoding.Fields([EventType.Id.Value, EventType.Generation.Value.ToString(CultureInfo.InvariantCulture)])}" +
+        string.Concat(ProtectedParts.OrderBy(part => part.Kind).Select(part =>
+            $";{FingerprintEncoding.Name(part.Kind)}:{part.KeyReference}@{part.Revision.Value.ToString(CultureInfo.InvariantCulture)}={part.Hash}"));
+
     static ProtectedFingerprintPart? ParsePart(string text)
     {
         var colon = text.IndexOf(':', StringComparison.Ordinal);
@@ -88,10 +88,13 @@ internal record StoredAppendFingerprint(string Plain, EventType EventType, IRead
         var kind = Enum.GetValues<ProtectionKind>().Where(kind => FingerprintEncoding.Name(kind) == text[..colon]).Cast<ProtectionKind?>().FirstOrDefault();
         var reference = text[(colon + 1)..at];
         var hash = text[(equals + 1)..];
-        return kind.HasValue && FingerprintEncoding.IsDigest(reference) && FingerprintEncoding.IsDigest(hash) &&
-            TryReadNumber(text[(at + 1)..equals], out var revision) && revision > 0 && revision < uint.MaxValue
-            ? new(kind.Value, reference, revision, hash)
-            : null;
+        if (kind.HasValue && FingerprintEncoding.IsDigest(reference) && FingerprintEncoding.IsDigest(hash) &&
+            TryReadNumber(text[(at + 1)..equals], out var revision) && revision > 0 && revision < uint.MaxValue)
+        {
+            return new(kind.Value, reference, revision, hash);
+        }
+
+        return null;
     }
 
     static bool TryReadNumber(string text, out uint number) =>
