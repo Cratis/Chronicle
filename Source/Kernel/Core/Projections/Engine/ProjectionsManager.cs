@@ -8,7 +8,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -207,7 +206,7 @@ public partial class ProjectionsManager(
         var readModelFingerprint = ReadModelFingerprintFor(readModel);
         var revision = _evictionRevision;
         if (_registrations.TryGetValue((eventStore, definition.Identifier), out var previous) &&
-            previous.Fingerprint == fingerprint && previous.ReadModelFingerprint == readModelFingerprint)
+            previous.Matches(fingerprint, readModelFingerprint))
         {
             return;
         }
@@ -260,11 +259,15 @@ public partial class ProjectionsManager(
 
     bool SkipDefinition(EventStoreName eventStore, ProjectionDefinition definition)
     {
-        if (SystemStoreAccess.IsSystem(eventStore) || !definition.EventSequenceId.IsSystemSequence()) return false;
+        if (SystemStoreAccess.IsSystem(eventStore) || !definition.UsesUnsupportedEventSequence()) return false;
         UnsupportedEventSequence(logger, definition.Identifier);
         Evict(eventStore, definition.Identifier);
         return true;
     }
 
-    sealed record RegisteredProjection(ProjectionDefinition Definition, string Fingerprint, string ReadModelFingerprint);
+    sealed record RegisteredProjection(ProjectionDefinition Definition, string Fingerprint, string ReadModelFingerprint)
+    {
+        internal bool Matches(string fingerprint, string readModelFingerprint) =>
+            Fingerprint == fingerprint && ReadModelFingerprint == readModelFingerprint;
+    }
 }

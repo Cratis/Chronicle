@@ -15,9 +15,9 @@ public class when_a_cached_pipeline_targets_a_marked_database : given.a_pipeline
     {
         await _globalMarker.MarkQuarantined();
         _ordinaryError = await Catch.Exception(() => _manager.GetFor(_store, _namespace, _projection));
-        _independentGeneration = await _manager.GetFor(_store, _namespace, _projection, _generation);
+        _independentGeneration = await _manager.GetFor(_store, _namespace, _generationProjection, _generation);
         await _namespaceMarker.MarkQuarantined();
-        _generationError = await Catch.Exception(() => _manager.GetFor(_store, _namespace, _projection, _generation));
+        _generationError = await Catch.Exception(() => _manager.GetFor(_store, _namespace, _generationProjection, _generation));
     }
 
     [Fact] void should_recheck_the_global_database_before_returning_a_cached_live_pipeline() => ((RpcException)_ordinaryError!).StatusCode.ShouldEqual(StatusCode.PermissionDenied);

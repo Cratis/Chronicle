@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Storage.Projections;
 using Grpc.Core;
 
@@ -11,6 +12,9 @@ namespace Cratis.Chronicle.ReadModels.for_ReadModelSinkProvenance;
 
 public class when_inventory_finds_restricted_producers : given.a_provenance_inventory
 {
+    readonly SinkConfigurationId _historyConfiguration = Guid.NewGuid();
+    readonly SinkConfigurationId _missingConfiguration = Guid.NewGuid();
+    readonly SinkConfigurationId _kernelConfiguration = Guid.NewGuid();
     Exception? _error;
     bool _stored;
     bool _historical;
@@ -21,9 +25,9 @@ public class when_inventory_finds_restricted_producers : given.a_provenance_inve
     void Establish()
     {
         _projection = _projection with { EventSequenceId = "system", Scope = ProjectionScope.Global };
-        var historyModel = _model with { Identifier = "history", ObserverIdentifier = "historical", Sink = _model.Sink with { Configuration = "history" } };
-        var missingModel = _model with { Identifier = "missing", ObserverIdentifier = "deleted", Sink = _model.Sink with { Configuration = "missing" } };
-        var kernelModel = _model with { Identifier = "kernel", ObserverIdentifier = "kernel", Sink = _model.Sink with { Configuration = "kernel" } };
+        var historyModel = _model with { Identifier = "history", ObserverIdentifier = "historical", Sink = _model.Sink with { Configuration = _historyConfiguration } };
+        var missingModel = _model with { Identifier = "missing", ObserverIdentifier = "deleted", Sink = _model.Sink with { Configuration = _missingConfiguration } };
+        var kernelModel = _model with { Identifier = "kernel", ObserverIdentifier = "kernel", Sink = _model.Sink with { Configuration = _kernelConfiguration } };
         _models = [_model, historyModel, missingModel, kernelModel];
         _projections = [_projection, _projection with { Identifier = "historical", ReadModel = "history", EventSequenceId = "event-log" }, _projection with { Identifier = "kernel", ReadModel = "kernel", Owner = ProjectionOwner.Kernel }];
         _history = [new ProjectionDefinitionHistoryEntry("historical", "digest", "sha256", null, DateTimeOffset.UnixEpoch, _projection with { Identifier = "historical", ReadModel = "history" })];
@@ -33,10 +37,10 @@ public class when_inventory_finds_restricted_producers : given.a_provenance_inve
     {
         await _provenance.Preserve(Store);
         _stored = await Marker(EventStoreNamespaceName.Default).IsQuarantined();
-        _historical = await Marker(EventStoreNamespaceName.Default, "history").IsQuarantined();
-        _missing = await Marker(EventStoreNamespaceName.Default, "missing").IsQuarantined();
+        _historical = await Marker(EventStoreNamespaceName.Default, _historyConfiguration).IsQuarantined();
+        _missing = await Marker(EventStoreNamespaceName.Default, _missingConfiguration).IsQuarantined();
         _global = await Marker(EventStoreNamespaceName.NotSet).IsQuarantined();
-        _kernel = await Marker(EventStoreNamespaceName.Default, "kernel").IsQuarantined();
+        _kernel = await Marker(EventStoreNamespaceName.Default, _kernelConfiguration).IsQuarantined();
         _error = await Catch.Exception(() => _provenance.EnsureReadable(Store, EventStoreNamespaceName.Default, _model with { Identifier = "ordinary", ObserverType = ReadModelObserverType.NotSet, ObserverIdentifier = ReadModelObserverIdentifier.Unspecified }));
     }
 

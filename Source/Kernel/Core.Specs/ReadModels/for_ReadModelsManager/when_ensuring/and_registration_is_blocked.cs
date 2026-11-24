@@ -40,6 +40,7 @@ public class and_registration_is_blocked : Specification
                 services.AddSingleton(Substitute.For<IProjectionPipelineManager>());
                 services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
                 services.AddSingleton(Substitute.For<IStorage>());
+                services.AddSingleton(Substitute.For<IReadModelSinkProvenance>());
             });
         }).Build();
         await _host.StartAsync();

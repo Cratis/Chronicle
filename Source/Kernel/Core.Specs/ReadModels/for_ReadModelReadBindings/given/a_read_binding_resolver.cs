@@ -3,8 +3,10 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -53,6 +55,10 @@ public class a_read_binding_resolver : Specification
         _replayManager.GetOccurrences().Returns(
             [new ReadModelOccurrence(ObserverId.Unspecified, DateTimeOffset.UnixEpoch, new ReadModelType(_definition.Identifier, ReadModelGeneration.First), _definition.ContainerName, "historical-container")]);
         var grainFactory = Substitute.For<IGrainFactory>();
+        var projections = Substitute.For<IProjectionsManager>();
+        var projection = Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateDefinition("observer", "model");
+        grainFactory.GetGrain<IProjectionsManager>(EventStore).Returns(projections);
+        projections.GetProjectionDefinitions().Returns(new ProjectionDefinition[] { projection });
         grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_replayManager);
         _resolver = new(storage, grainFactory, _visibilities, Substitute.For<IReadModelSinkProvenance>());
     }

@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using ReactorsService = Cratis.Chronicle.Services.Observation.Reactors.Reactors;
@@ -30,6 +31,7 @@ public class and_chronicle_meters_are_registered : Specification
         services.AddSingleton(Substitute.For<IReactorMediator>());
         services.AddSingleton(Substitute.For<IReducerMediator>());
         services.AddSingleton(Substitute.For<IStorage>());
+        services.AddSingleton(Substitute.For<IReadModelSinkProvenance>());
         services.AddSingleton(Substitute.For<Cratis.Chronicle.Clients.IConnectionOwnership>());
         services.AddSingleton(Substitute.For<IExpandoObjectConverter>());
         services.AddSingleton(new JsonSerializerOptions());

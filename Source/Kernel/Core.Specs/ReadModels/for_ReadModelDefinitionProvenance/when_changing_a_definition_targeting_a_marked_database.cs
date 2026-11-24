@@ -3,12 +3,15 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Concepts.Sinks;
 using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelDefinitionProvenance;
 
 public class when_changing_a_definition_targeting_a_marked_database : for_ReadModelSinkProvenance.given.a_provenance_inventory
 {
+    readonly SinkConfigurationId _aliasConfiguration = Guid.NewGuid();
+    readonly SinkConfigurationId _cleanConfiguration = Guid.NewGuid();
     readonly List<Exception?> _errors = [];
     readonly List<ReadModelsManagerState> _failedStates = [];
     ReadModelsManagerStorageProvider _provider;
@@ -19,12 +22,12 @@ public class when_changing_a_definition_targeting_a_marked_database : for_ReadMo
     async Task Because()
     {
         await Marker(EventStoreNamespaceName.Default).MarkQuarantined();
-        _markers[(EventStoreNamespaceName.Default, "alias")] = Marker(EventStoreNamespaceName.Default);
+        _markers[(EventStoreNamespaceName.Default, _aliasConfiguration)] = Marker(EventStoreNamespaceName.Default);
         _provider = new(_storage, _provenance);
-        _ordinary = _model with { Identifier = "ordinary", Sink = _model.Sink with { Configuration = "clean" } };
+        _ordinary = _model with { Identifier = "ordinary", Sink = _model.Sink with { Configuration = _cleanConfiguration } };
         await Attempt(_model with { Owner = ReadModelOwner.Server, ObserverType = ReadModelObserverType.NotSet });
-        await Attempt(_model with { Identifier = "alias", Sink = _model.Sink with { Configuration = "alias" } });
-        await Attempt(_model with { Sink = _model.Sink with { Configuration = "clean" } });
+        await Attempt(_model with { Identifier = "alias", Sink = _model.Sink with { Configuration = _aliasConfiguration } });
+        await Attempt(_model with { Sink = _model.Sink with { Configuration = _cleanConfiguration } });
         await Attempt(_ordinary, _model);
         _savesBeforeSuccess = _eventStore.ReadModels.ReceivedCalls().Count(call => call.GetMethodInfo().Name == "Save");
         _successfulState = new() { ReadModels = [_ordinary], Modified = [_ordinary] };

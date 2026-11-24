@@ -16,6 +16,7 @@ public class a_pipeline_manager_with_provenance : a_materializing_pipeline_manag
     protected InMemorySinkProvenanceStorage _globalMarker;
     protected InMemorySinkProvenanceStorage _namespaceMarker;
     protected IProjectionPipeline _cached;
+    protected IProjection _generationProjection;
     protected IProjectionPipeline _generationPipeline;
     protected IProjectionPipeline _isolated;
     protected ISink _isolatedSink;
@@ -35,7 +36,8 @@ public class a_pipeline_manager_with_provenance : a_materializing_pipeline_manag
         _namespaceStorage.Sinks.GetFor(_readModel, _generation.Destination).Returns(_generationSink);
         _manager = CreateManager(new ReadModelSinkProvenance(_managerStorage));
         _cached = await _manager.GetFor(_store, _namespace, _projection);
-        _generationPipeline = await _manager.GetFor(_store, _namespace, _projection, _generation);
+        _generationProjection = await _factory.Create(_store, _namespace, _definition with { Scope = ProjectionScope.Namespaced }, _readModel, _schemas);
+        _generationPipeline = await _manager.GetFor(_store, _namespace, _generationProjection, _generation);
         _isolatedSink = Substitute.For<ISink>();
         _isolated = _manager.CreateIsolated(_store, _namespace, _projection, _isolatedSink);
         _manager.TryGetFor(_store, _namespace, _projection.Identifier, out var binding);
