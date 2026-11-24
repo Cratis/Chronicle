@@ -19,7 +19,7 @@ public class when_credentials_and_payload_schemas_differ : Specification
         using var rotated = Context("second", "two", "payload_two", "canonical");
         using var otherMetadataSchema = Context("second", "two", "payload_two", "other_canonical");
         _rotation = Catch.Exception(() => SinkProvenanceTarget.For(first).Ensure(rotated));
-        _schema = rotated.Model.FindEntityType(typeof(DynamicReadModelEntity))!.GetSchema();
+        _schema = rotated.Model.FindEntityType(SinkProvenanceNames.Inventory)!.GetSchema();
         _separateModels = !ReferenceEquals(rotated.Model, otherMetadataSchema.Model);
     }
 

@@ -24,15 +24,19 @@ public class and_a_read_model_target_changes_after_admission : given.a_database_
         await provenance.CompleteInventory(false);
         var target = provenance.Target!;
         Resolver.Answer = request => new ResolvedConnection(Database: request.Purpose == ConnectionPurpose.Runtime ? relocated : admitted);
+        InvalidateReadModelResolution();
         _runtime = await Catch.Exception(async () =>
         {
             await using var scope = await database.ReadModelTable("store", "namespace", "payload", _columns, admittedTarget: target);
         });
         Resolver.Answer = request => new ResolvedConnection(Database: request.Purpose == ConnectionPurpose.Schema ? relocated : admitted);
+        InvalidateReadModelResolution();
         _schema = await Catch.Exception(async () =>
         {
             await using var scope = await database.ReadModelTable("store", "namespace", "payload", _columns, admittedTarget: target);
         });
+        Resolver.Answer = request => new ResolvedConnection(Database: request.Purpose == ConnectionPurpose.Runtime ? relocated : admitted);
+        InvalidateReadModelResolution();
         _existing = await Catch.Exception(async () =>
         {
             await using var scope = await database.ExistingReadModelTable("store", "namespace", "payload", _columns, target);

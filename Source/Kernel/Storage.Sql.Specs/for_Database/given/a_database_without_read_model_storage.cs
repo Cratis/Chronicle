@@ -74,6 +74,18 @@ public class a_database_without_read_model_storage : a_sqlite_database
     }
 
     /// <summary>
+    /// Invalidates cached read-model placements so the next operation observes the changed resolver answer.
+    /// </summary>
+    protected void InvalidateReadModelResolution()
+    {
+        var resolver = _resolutionServices!.GetRequiredService<IStorageConnectionResolution>().Resolver;
+        foreach (var request in Resolver.Requests.Where(request => request.Scope[StorageConnectionRequests.Kind] == "readModels").Distinct())
+        {
+            resolver.Invalidate(request);
+        }
+    }
+
+    /// <summary>
     /// Gets everything a database file defines: its tables, columns and indexes.
     /// </summary>
     /// <param name="connectionString">The connection string of the database.</param>

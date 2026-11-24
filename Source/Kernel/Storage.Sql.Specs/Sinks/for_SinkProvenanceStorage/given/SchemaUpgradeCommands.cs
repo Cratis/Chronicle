@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Data.Common;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_SinkProvenanceStorage.given;
@@ -10,6 +11,9 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_SinkProvenanceStorage.given;
 public class SchemaUpgradeCommands : DbCommandInterceptor, IDbConnectionInterceptor
 {
     public bool Readable { get; set; } = true;
+    public bool Missing { get; set; }
+    public bool Corrupt { get; set; }
+    public List<string> Statements { get; } = [];
     public bool Legacy { get; set; } = true;
     public bool Imported { get; set; }
     public int Version { get; set; } = 1;
@@ -20,21 +24,11 @@ public class SchemaUpgradeCommands : DbCommandInterceptor, IDbConnectionIntercep
 
     public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
     {
-        var presence = command.CommandText.Contains("HAS_PERMS_BY_NAME", StringComparison.Ordinal);
-        var legacy = presence || command.CommandText.Contains("\"public\".", StringComparison.Ordinal) || command.CommandText.Contains("[dbo].", StringComparison.Ordinal);
-        if (legacy)
-        {
-            LegacyReads++;
-            if (!Readable) throw new InvalidOperationException("legacy metadata denied");
-        }
+        Statements.Add(command.CommandText);
+        var legacy = command.CommandText.Contains("\"public\".", StringComparison.Ordinal) || command.CommandText.Contains("[dbo].", StringComparison.Ordinal);
+        if (legacy) ReadLegacy(command.Connection is SqlConnection);
 
         var table = new DataTable();
-        if (presence)
-        {
-            table.Columns.Add("Value", typeof(int));
-            table.Rows.Add(Legacy ? 1 : 0);
-            return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
-        }
 
         var inventory = command.CommandText.Contains("__cratis_sink_inventory", StringComparison.Ordinal);
         table.Columns.Add("Id", typeof(string));
@@ -55,8 +49,19 @@ public class SchemaUpgradeCommands : DbCommandInterceptor, IDbConnectionIntercep
         return ValueTask.FromResult(InterceptionResult<DbDataReader>.SuppressWithResult(table.CreateDataReader()));
     }
 
-    public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default) =>
-        ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(1));
+    public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+    {
+        Statements.Add(command.CommandText);
+        return ValueTask.FromResult(InterceptionResult<int>.SuppressWithResult(1));
+    }
+
+    void ReadLegacy(bool sqlServer)
+    {
+        LegacyReads++;
+        if (!Readable) throw LegacyMetadataErrors.Denied(sqlServer);
+        if (Missing) throw LegacyMetadataErrors.Missing(sqlServer);
+        if (Corrupt) throw LegacyMetadataErrors.Corrupt(sqlServer);
+    }
 
     static void OrderColumns(DbCommand command, DataTable table)
     {

@@ -17,6 +17,13 @@ namespace Cratis.Chronicle.Storage.Sql.for_Database.when_reading_without_provisi
 public class and_a_registered_occurrence_is_resolved_on_a_cold_indexed_sink : given.a_database_without_read_model_storage
 {
     ISink _sink;
+    string _filesBefore;
+
+    async Task Establish()
+    {
+        await new SinkProvenanceStorage(_database, "store", "namespace").CompleteInventory(false);
+        _filesBefore = string.Join(',', FilesOnDisk);
+    }
 
     async Task Because()
     {
@@ -46,5 +53,5 @@ public class and_a_registered_occurrence_is_resolved_on_a_cold_indexed_sink : gi
     }
 
     [Fact] void should_resolve_the_sink() => _sink.ShouldNotBeNull();
-    [Fact] void should_not_create_any_database_file() => string.Join(',', FilesOnDisk).ShouldEqual("cluster.db");
+    [Fact] void should_not_create_any_database_file() => string.Join(',', FilesOnDisk).ShouldEqual(_filesBefore);
 }

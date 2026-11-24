@@ -64,13 +64,16 @@ public class when_named_sinks_share_a_database : Specification
 
     async Task Because()
     {
-        await _sinks.GetProvenance(_model).MarkQuarantined();
+        var primary = new SinkFactory(_services, new ExpandoObjectConverter(new TypeFormats()));
+        await primary.GetProvenance("store", "namespace", "Primary").MarkQuarantined();
         var aliasModel = _model with { Identifier = "alias", Sink = _model.Sink with { Type = WellKnownSinkTypes.SQL, Name = "Alias" } };
         _alias = await _sinks.GetProvenance(aliasModel).IsQuarantined();
         _errors.Add(await Catch.Exception(() => _sinks.GetFor(_model)));
         _errors.Add(await Catch.Exception(() => _sinks.GetFor(aliasModel)));
         _errors.Add(await Catch.Exception(() => _sinks.GetFor(aliasModel with { Owner = ReadModelOwner.Server, ContainerName = "renamed" })));
-        _independent = await _sinks.GetProvenance(_model with { Sink = _model.Sink with { Name = "Independent" } }).IsQuarantined();
+        var independent = _sinks.GetProvenance(_model with { Sink = _model.Sink with { Name = "Independent" } });
+        await independent.CompleteInventory(false);
+        _independent = await independent.IsQuarantined();
         var restarted = new SinkFactory(_services, new ExpandoObjectConverter(new TypeFormats()));
         _restarted = await restarted.GetProvenance("store", "namespace", "Alias").IsQuarantined();
     }

@@ -7,7 +7,9 @@ using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.Schema;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
@@ -131,28 +133,18 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
     {
         var type = context.Database.GetDatabaseType();
         if (string.Equals(SinkProvenanceSchema.Schema(type, context.ProvenanceSchema), SinkProvenanceSchema.Schema(type), StringComparison.Ordinal)) return false;
-        if (type == DatabaseType.SqlServer && !await HasLegacyTable(context)) return false;
         try
         {
             return await ContainsMarker(context, SinkProvenanceSchema.Select(type));
         }
-        catch (Npgsql.PostgresException exception) when (exception.SqlState == Npgsql.PostgresErrorCodes.UndefinedTable)
+        catch (SqlException exception) when (exception.Number == 208)
         {
             return false;
         }
-    }
-
-    static async Task<bool> HasLegacyTable(ReadModelDbContext context)
-    {
-        const DatabaseType type = DatabaseType.SqlServer;
-        var name = $"{SinkProvenanceSchema.Quote(type, SinkProvenanceSchema.Schema(type))}.{SinkProvenanceSchema.Quote(type, SinkProvenanceNames.Metadata)}";
-        var present = await context.Database.SqlQuery<int>($"SELECT CASE WHEN OBJECT_ID({name}, N'U') IS NOT NULL THEN 1 WHEN HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'VIEW DEFINITION') = 1 THEN 0 ELSE -1 END AS [Value]").SingleAsync();
-        return present switch
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UndefinedTable)
         {
-            0 => false,
-            1 => true,
-            _ => throw Unavailable()
-        };
+            return false;
+        }
     }
 
     static async Task RecordMarker(ReadModelDbContext context)
