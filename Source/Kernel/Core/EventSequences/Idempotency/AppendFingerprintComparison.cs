@@ -26,7 +26,7 @@ internal static class AppendFingerprintComparison
     /// <param name="store">The event store.</param>
     /// <param name="ns">The event store namespace.</param>
     /// <returns>The settlement, or an unsupported-boundary refusal.</returns>
-    internal static async Task<Result<FingerprintComparisonResult, FingerprintFailure>> Compare(
+    internal static Task<Result<FingerprintComparisonResult, FingerprintFailure>> Compare(
         StoredAppendFingerprint stored,
         AppendFingerprintInput input,
         IEncryptionKeyStorage keys,
@@ -34,16 +34,31 @@ internal static class AppendFingerprintComparison
         EventStoreName store,
         EventStoreNamespaceName ns)
     {
+        // The metadata-free retry settles synchronously. Keeping it out of the async method below means it never
+        // pays for that method's state machine, which holds every local of the protected-value comparison.
         if (!AppendFingerprint.Plain(input).TryGetResult(out var plain))
         {
-            return FingerprintFailure.FingerprintUnsupported;
+            return Task.FromResult<Result<FingerprintComparisonResult, FingerprintFailure>>(FingerprintFailure.FingerprintUnsupported);
         }
 
         if (IsPlainRetry(stored, input, plain))
         {
-            return new FingerprintComparisonResult(FingerprintComparisonStatus.Verified, stored.EventType);
+            return Task.FromResult<Result<FingerprintComparisonResult, FingerprintFailure>>(
+                new FingerprintComparisonResult(FingerprintComparisonStatus.Verified, stored.EventType));
         }
 
+        return ComparePlainMismatchOrProtected(stored, input, keys, cache, store, ns, plain);
+    }
+
+    static async Task<Result<FingerprintComparisonResult, FingerprintFailure>> ComparePlainMismatchOrProtected(
+        StoredAppendFingerprint stored,
+        AppendFingerprintInput input,
+        IEncryptionKeyStorage keys,
+        IEvictEncryptionKeyCache cache,
+        EventStoreName store,
+        EventStoreNamespaceName ns,
+        string plain)
+    {
         var groups = input.ProtectedValues.GroupBy(value => value.Kind).ToDictionary(group => group.Key, group => group.ToArray());
         if (plain != stored.Plain || !stored.ProtectedParts.Select(part => part.Kind).ToHashSet().SetEquals(groups.Keys))
         {

@@ -1,4 +1,4 @@
-// $causedBy, which Chronicle compiles and has no runtime resolver for
+// $causedBy.name resolves the same causing identity member as $eventContext.causedBy.name
 // Screenplay documentation: Documentation/screenplay/projections/expressions.mdx
 
 module Conformance

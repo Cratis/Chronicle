@@ -30,7 +30,7 @@ internal sealed partial class TestingServices
         new(new KernelObserversService(
             context.GrainFactory,
             context.Storage,
-            new KernelObserverRemover(context.GrainFactory, context.Storage, NullLogger<KernelObserverRemover>.Instance),
+            new KernelObserverRemover(context.GrainFactory, context.Storage, NullLogger<KernelObserverRemover>.Instance, new NoOpObserverDefinitionsCacheClient()),
             new KernelCore::Cratis.Chronicle.Clients.ConnectedClientsVisibility(context.KernelOptions, context.ConnectionOwnership, new Microsoft.AspNetCore.Http.HttpContextAccessor()),
             context.KernelOptions,
             context.NamespaceCasing));
@@ -41,6 +41,7 @@ internal sealed partial class TestingServices
     static KernelReactorsService CreateReactors(TestingServiceContext context) =>
         new(
             context.GrainFactory,
+            new TestingClientSubscriptions(),
             new KernelReactorMediator(),
             context.Storage,
             context.JsonSerializerOptions,
@@ -50,11 +51,12 @@ internal sealed partial class TestingServices
             NullLogger<KernelReactorsService>.Instance,
             context.RegistrationGate,
             context.NamespaceCasing,
-            KernelCore::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
+            KernelCore::Cratis.Chronicle.Supervision.NoSiloSupervisor.Instance);
 
     static KernelReducersService CreateReducers(TestingServiceContext context) =>
         new(
             context.GrainFactory,
+            new TestingClientSubscriptions(),
             new KernelReducerMediator(),
             new ExpandoObjectConverter(new TypeFormats()),
             context.JsonSerializerOptions,
@@ -64,12 +66,13 @@ internal sealed partial class TestingServices
             NullLogger<KernelReducersService>.Instance,
             context.RegistrationGate,
             context.NamespaceCasing,
-            KernelCore::Cratis.Chronicle.Services.Observation.NoSiloDepartures.Instance);
+            KernelCore::Cratis.Chronicle.Supervision.NoSiloSupervisor.Instance);
 
     static KernelProjectionsService CreateProjections(TestingServiceContext context) =>
         new(
             context.GrainFactory,
             new ExpandoObjectConverter(new TypeFormats()),
+            context.JsonSerializerOptions,
             null!,
             null!,
             null!,

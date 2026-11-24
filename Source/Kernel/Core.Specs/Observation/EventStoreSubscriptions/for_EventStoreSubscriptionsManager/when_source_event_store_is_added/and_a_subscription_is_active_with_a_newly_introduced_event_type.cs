@@ -32,13 +32,13 @@ public class and_a_subscription_is_active_with_a_newly_introduced_event_type : S
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
+        _silo.AddEventStoreStorage();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
 
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
         _existingEventType = new EventType("5db7cfa2-0fcb-4791-b174-83ff2806d654", EventTypeGeneration.First);
@@ -50,7 +50,7 @@ public class and_a_subscription_is_active_with_a_newly_introduced_event_type : S
         _observer.GetEventTypes().Returns([_existingEventType]);
         _silo.AddProbe(_ => _observer);
 
-        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
+        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
 
         await _manager.Add(
             new EventStoreSubscriptionDefinition(
@@ -67,7 +67,7 @@ public class and_a_subscription_is_active_with_a_newly_introduced_event_type : S
     void should_subscribe_again_with_the_full_event_type_list() =>
         _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             ObserverType.External,
-            Arg.Is<IEnumerable<EventType>>(types => types.SequenceEqual(_allEventTypes)),
+            Arg.Is<EventTypeSet>(types => types.SequenceEqual(_allEventTypes)),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),

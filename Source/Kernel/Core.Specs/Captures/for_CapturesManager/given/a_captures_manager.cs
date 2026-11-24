@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Captures;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Supervision;
 using Microsoft.Extensions.Logging;
 using Orleans.TestKit;
 
@@ -25,6 +26,7 @@ public class a_captures_manager : Specification
     protected ICaptureValidator _validator;
     protected ICaptureEventsSubscriptions _subscriptions;
     protected ICapturer _capturer;
+    protected ISiloSupervisor _supervisor;
     protected Observation.IObserver _observer;
     protected Capture _events;
     protected Capture _poll;
@@ -75,6 +77,8 @@ public class a_captures_manager : Specification
         _silo.AddService(_validator);
         _silo.AddService(_subscriptions);
         _silo.AddService(_logger);
+        _supervisor = Substitute.For<ISiloSupervisor>();
+        _silo.AddService(_supervisor);
         _silo.AddProbe(_ => _capturer);
         _silo.AddProbe(_ => _observer);
         _manager = await _silo.CreateGrainAsync<CapturesManager>(_eventStore.Value);

@@ -40,7 +40,7 @@ public class two_seeded_queues : Specification
             var queueGrain = Substitute.For<IAppendedEventsQueue>();
             queueGrain.GetSubscriptions().Returns(
             [
-                new AppendedEventsQueueObserverSubscription(ObserverKeyFor($"observer-{queueIndex}"), [subscribed_event_type.Id])
+                new AppendedEventsQueueObserverSubscription(ObserverKeyFor($"observer-{queueIndex}"), [subscribed_event_type])
             ]);
 
             _queueGrains[queueIndex] = queueGrain;

@@ -21,7 +21,7 @@ namespace Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 /// <param name="typeFormats"><see cref="ITypeFormats"/> to use for correct type conversion.</param>
 public partial class SubtractExpressionResolver(IEventValueProviderExpressionResolvers eventValueProviderExpressionResolvers, ITypeFormats typeFormats) : IReadModelPropertyExpressionResolver
 {
-    [GeneratedRegex($"^\\{WellKnownExpressions.Subtract}\\((?<expression>{EventValueProviderRegularExpressions.Expression})\\)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex($"^\\{WellKnownExpressions.Subtract}\\((?<expression>{ArithmeticOperand.Pattern})\\)$", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     static partial Regex SubtractRegEx { get; }
 
     /// <inheritdoc/>
@@ -31,6 +31,6 @@ public partial class SubtractExpressionResolver(IEventValueProviderExpressionRes
     public PropertyMapper<AppendedEvent, ExpandoObject> Resolve(PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, string expression)
     {
         var match = SubtractRegEx.Match(expression);
-        return PropertyMappers.SubtractWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, eventValueProviderExpressionResolvers.Resolve(targetPropertySchema, match.Groups["expression"].Value));
+        return PropertyMappers.SubtractWithEventValueProvider(typeFormats, targetProperty, targetPropertySchema, ArithmeticOperand.Resolve(eventValueProviderExpressionResolvers, targetPropertySchema, match.Groups["expression"].Value));
     }
 }

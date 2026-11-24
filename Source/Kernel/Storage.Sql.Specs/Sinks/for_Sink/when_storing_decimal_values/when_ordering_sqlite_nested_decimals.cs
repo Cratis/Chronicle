@@ -19,7 +19,7 @@ public class when_ordering_sqlite_nested_decimals : Specification
     async Task Because()
     {
         _harness = new SqlSinkHarness();
-        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).Options);
+        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).IgnoringManyServiceProviders().Options);
         await context.Database.ExecuteSqlRawAsync("CREATE TABLE nested(id TEXT PRIMARY KEY, details TEXT)");
         await context.Database.ExecuteSqlRawAsync("INSERT INTO nested VALUES('a', {0}),('b', {1}),('c', {2}),('d', {3}),('e', {4})", "{\"total\":100}", "{\"total\":10}", "{\"total\":2}", "{\"total\":-10}", "{\"total\":193.58}");
         _ordered = await context.Database.SqlQueryRaw<string>("SELECT id AS Value FROM nested ORDER BY json_extract(details, '$.total') DESC").ToArrayAsync();

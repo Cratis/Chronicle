@@ -99,7 +99,6 @@
         <PackageReference Include="Microsoft.Orleans.Sdk" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.Orleans.Server" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.Orleans.Reminders" PrivateAssets="all"/>
-        <PackageReference Include="Microsoft.Orleans.Streaming" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" PrivateAssets="all"/> -->
     </ItemGroup>
 

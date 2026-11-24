@@ -31,7 +31,7 @@ public class when_generating_and_recompiling_a_registered_projection : given.a_l
                 Occurred = $eventContext.Occurred
             """;
         _original = _languageService.Compile(declaration, ProjectionOwner.Client, _readModels, _eventTypes).Match(value => value, _ => null!);
-        _original.From[(EventType)"OrderPlaced"].Properties[new PropertyPath("IsActive")] = "$value(False)";
+        _original = _original.WithFromProperty((EventType)"OrderPlaced", new PropertyPath("IsActive"), "$value(False)");
     }
 
     void Because()

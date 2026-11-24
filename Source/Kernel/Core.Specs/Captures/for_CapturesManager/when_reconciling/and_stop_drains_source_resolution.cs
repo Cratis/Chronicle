@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Captures.for_CapturesManager.when_reconciling;
 
 public class and_stop_drains_source_resolution : given.a_manager_with_blocked_source_resolution
 {
-    Task Because() => StopDuring(_silo.TimerRegistry.FireAllAsync());
+    Task Because() => StopDuring(_manager.Reconcile());
 
     [Fact] void should_wait_for_the_admitted_timer_resolution() => _teardownWaited.ShouldBeTrue();
     [Fact] void should_finish_stopped() => _capture.Status.ShouldEqual(CaptureStatus.Stopped);

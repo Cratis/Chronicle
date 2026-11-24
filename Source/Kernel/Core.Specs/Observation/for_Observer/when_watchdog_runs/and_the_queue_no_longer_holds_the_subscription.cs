@@ -26,7 +26,7 @@ public class and_the_queue_no_longer_holds_the_subscription : given.an_observer_
     /// </summary>
     [Fact] void should_resubscribe_the_observer_to_its_queue() => _appendedEventsQueues
         .Received(1)
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 
     [Fact] void should_start_catching_up_from_where_the_observer_left_off() => _jobsManager
         .Received(1)

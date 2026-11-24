@@ -12,6 +12,7 @@ internal class AppendManyForEventSourcesToNamespaceValidator : CommandValidator<
     /// <summary>Initializes a new instance of the <see cref="AppendManyForEventSourcesToNamespaceValidator"/> class.</summary>
     public AppendManyForEventSourcesToNamespaceValidator()
     {
+        RuleFor(command => command.EventStore).NotSystemEventStore();
         RuleFor(command => command.ExpectedIncarnation).Must(value => value != Guid.Empty).WithMessage("A captured namespace identity is required.");
         RuleFor(command => command.ToAppend(command.Namespace)).SetValidator(new AppendManyForEventSourcesWithNamedTagsValidator());
     }

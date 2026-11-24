@@ -65,6 +65,9 @@ internal static partial class AppendedEventsQueueLogMessages
     [LoggerMessage(LogLevel.Warning, "Could not seed the dormant subscriptions of {EventSequence} from storage; the safety net tries again")]
     internal static partial void SeedingDormantSubscriptionsFailed(this ILogger<AppendedEventsQueue> logger, EventSequenceKey eventSequence, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Comparing the cursors of the dormant observers of {EventSequence} with its tail failed; they are woken instead")]
+    internal static partial void SafetyNetCheckFailed(this ILogger<AppendedEventsQueue> logger, EventSequenceKey eventSequence, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Waking dormant observer {ObserverKey} for its safety net failed; it is tried again at the next interval")]
     internal static partial void SafetyNetWakeFailed(this ILogger<AppendedEventsQueue> logger, ObserverKey observerKey, Exception exception);
 }

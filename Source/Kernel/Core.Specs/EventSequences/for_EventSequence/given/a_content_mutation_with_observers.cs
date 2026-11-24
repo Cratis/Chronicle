@@ -131,14 +131,14 @@ public class a_content_mutation_with_observers : an_event_sequence
     {
         await _observers[id].Received(1).ReplayPartition((Key)_eventSourceId);
         await _observers[id].DidNotReceive().Replay();
-        await _observers[id].DidNotReceive().ReplayPartition(Arg.Any<Key>(), Arg.Any<IEnumerable<EventType>>());
+        await _observers[id].DidNotReceive().ReplayPartition(Arg.Any<Key>(), Arg.Any<EventTypeSet>());
     }
 
     protected async Task ShouldReplayAll(string id)
     {
         await _observers[id].Received(1).Replay();
         await _observers[id].DidNotReceive().ReplayPartition(Arg.Any<Key>());
-        await _observers[id].DidNotReceive().ReplayPartition(Arg.Any<Key>(), Arg.Any<IEnumerable<EventType>>());
+        await _observers[id].DidNotReceive().ReplayPartition(Arg.Any<Key>(), Arg.Any<EventTypeSet>());
     }
 
     protected void ShouldLeaveUntouched(string id) => _observers[id].ReceivedCalls().ShouldBeEmpty();

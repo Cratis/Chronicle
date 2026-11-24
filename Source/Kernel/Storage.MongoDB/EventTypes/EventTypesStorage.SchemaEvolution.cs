@@ -19,6 +19,6 @@ public partial class EventTypesStorage
             Builders<EventType>.Filter.Eq(path, BsonDocument.Parse(expected.ToJson()));
         var update = Builders<EventType>.Update.Set(path, BsonDocument.Parse(schema.ToJson()));
         var result = await GetCollection().UpdateOneAsync(filter, update).ConfigureAwait(false);
-        return InvalidateIfMutated(eventTypeId, result.ModifiedCount > 0);
+        return result.ModifiedCount > 0;
     }
 }

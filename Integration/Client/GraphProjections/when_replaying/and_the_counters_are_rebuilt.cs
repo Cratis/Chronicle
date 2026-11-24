@@ -26,7 +26,7 @@ public class and_the_counters_are_rebuilt(context context) : Given<context>(cont
         {
             Before = Graph.Describe();
             var job = await EventStore.Projections.Replay(new ProjectionId("OrgModelBound"));
-            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job);
+            await EventStore.WaitTillReplayed(job);
             await ReadGraph();
         }
     }

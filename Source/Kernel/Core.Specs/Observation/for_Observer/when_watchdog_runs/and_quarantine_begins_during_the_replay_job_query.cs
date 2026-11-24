@@ -47,5 +47,5 @@ public class and_quarantine_begins_during_the_replay_job_query : for_Observer.gi
     [Fact] void should_not_start_replay() => _jobsManager.DidNotReceive().Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());
     [Fact] void should_not_start_catchup() => _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());
     [Fact] void should_not_resubscribe_to_the_queue() => _appendedEventsQueues.DidNotReceive()
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

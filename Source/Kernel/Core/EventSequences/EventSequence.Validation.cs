@@ -55,6 +55,7 @@ public partial class EventSequence
         span?.Activity?.Tag(eventType);
         try
         {
+            await EnsureNamespaceForAppend();
             var result = await AppendValidatedCore(eventSourceType, eventSourceId, eventStreamType, eventStreamId, eventType, content, correlationId, causation, causedBy, tags, concurrencyScope, occurred, subject, namedTags, eventSource, publication, compensationFor);
             span?.Activity?.RecordAppendOutcome(result);
             return result;

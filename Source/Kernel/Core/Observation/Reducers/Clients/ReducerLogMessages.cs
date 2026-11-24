@@ -13,23 +13,26 @@ namespace Cratis.Chronicle.Observation.Reducers.Clients;
 internal static partial class ReducerLogMessages
 {
     [LoggerMessage(LogLevel.Information, "Client subscription for reducer '{ReducerId}' is waiting for the webhook to leave")]
-    internal static partial void WaitingForWebhook(this ILogger<Reducer> logger, ReducerId reducerId);
+    internal static partial void WaitingForWebhook(this ILogger<ClientReducerSubscription> logger, ReducerId reducerId);
 
     [LoggerMessage(LogLevel.Warning, "Could not record reducer '{ObserverId}' for connection {ConnectionId}; takeover on disconnect falls back to the watchdog")]
-    internal static partial void FailedToRecordObserver(this ILogger<Reducer> logger, ObserverId observerId, ConnectionId connectionId, Exception exception);
+    internal static partial void FailedToRecordObserver(this ILogger<ClientReducerSubscription> logger, ObserverId observerId, ConnectionId connectionId, Exception exception);
 
     [LoggerMessage(LogLevel.Debug, "Starting client reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} for namespace {@namespace}")]
-    internal static partial void Starting(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+    internal static partial void Starting(this ILogger<ClientReducerSubscription> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Debug, "Client with connection id {connectionId} has disconnected - unsubscribing reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} for namespace {@namespace}")]
-    internal static partial void ClientDisconnected(this ILogger<Reducer> logger, ConnectionId connectionId, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+    internal static partial void ClientDisconnected(this ILogger<ClientReducerSubscription> logger, ConnectionId connectionId, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Information, "Full replay - reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} in namespace {@namespace} changed in a way that may affect existing read models")]
-    internal static partial void AutoReplayingReducer(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+    internal static partial void AutoReplayingReducer(this ILogger<ClientReducerSubscription> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Information, "Partial replay - reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} in namespace {@namespace} only affects {AffectedEventSourceCount} event sources")]
-    internal static partial void PartiallyReplayingReducer(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace, int affectedEventSourceCount);
+    internal static partial void PartiallyReplayingReducer(this ILogger<ClientReducerSubscription> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace, int affectedEventSourceCount);
 
     [LoggerMessage(LogLevel.Information, "No action - reducer {observerId} for event store {EventStore} on sequence {EventSequenceId} in namespace {@namespace} only consumes newly added event types with no historical events")]
-    internal static partial void ReducerEvolutionNeedsNoAction(this ILogger<Reducer> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+    internal static partial void ReducerEvolutionNeedsNoAction(this ILogger<ClientReducerSubscription> logger, EventStoreName eventStore, ObserverId observerId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Error, "Replaying reducer {ObserverId} after its definition changed failed")]
+    internal static partial void FailedToReplayAfterDefinitionChange(this ILogger<ClientReducerSubscription> logger, ObserverId observerId, Exception exception);
 }

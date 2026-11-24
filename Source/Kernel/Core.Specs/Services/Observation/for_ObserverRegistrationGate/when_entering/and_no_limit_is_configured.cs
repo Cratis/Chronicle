@@ -12,7 +12,7 @@ public class and_no_limit_is_configured : Specification
     ObserverRegistrationGate _gate;
     ValueTask<IDisposable>[] _entries;
 
-    void Establish() => _gate = new(Options.Create(new ChronicleOptions()));
+    void Establish() => _gate = new(Options.Create(new ChronicleOptions { Observers = new() { MaxConcurrentRegistrations = 0 } }));
 
     void Because() => _entries = Enumerable.Range(0, 100).Select(_ => _gate.Enter(CancellationToken.None)).ToArray();
 

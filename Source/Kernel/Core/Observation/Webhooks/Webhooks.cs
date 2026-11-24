@@ -270,7 +270,7 @@ public class Webhooks(
             return false;
         }
 
-        if (!await observer.NeedsSubscriptionRecovery(definition.EventTypes)) return true;
+        if (!await observer.NeedsSubscriptionRecovery(EventTypeSet.From(definition.EventTypes))) return true;
         var delay = retryDelay ?? TimeSpan.FromMinutes(1);
         await this.RegisterOrUpdateReminder($"{SubscriptionReminderPrefix}{definition.Identifier}", delay, delay);
         return false;

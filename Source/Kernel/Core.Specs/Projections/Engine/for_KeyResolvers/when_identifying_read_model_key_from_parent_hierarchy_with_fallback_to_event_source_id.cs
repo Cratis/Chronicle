@@ -94,6 +94,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_fallback
 
         _storage = Substitute.For<IEventSequenceStorage>();
         _sink = Substitute.For<ISink>();
+        _sink.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), Arg.Any<object>(), Arg.Any<Key>()).Returns(Option<Key>.None());
 
         // When looking up parent event by EventSourceId (ParentKey), return the root event
         _storage.WithParentHistory(ParentKey, _rootEvent);

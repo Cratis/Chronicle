@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using Orleans.TestKit;
@@ -90,6 +91,6 @@ public class when_two_event_stores_reconcile_after_a_silo_departure : given.two_
 
     [Fact] void should_bound_combined_repair_builds() => _peak.ShouldEqual(8);
     [Fact] async Task should_reconcile_the_first_store() => await _observerGrain.ReceivedWithAnyArgs(12).ReconcileSubscription<IProjectionObserverSubscriber>(default, default!, default!, default);
-    [Fact] async Task should_freshly_revive_the_pending_store() => await _secondObserver.Received(12).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), reactivateRetired: true);
+    [Fact] async Task should_freshly_revive_the_pending_store() => await _secondObserver.Received(12).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), reactivateRetired: true);
     [Fact] async Task should_not_reconcile_pending_revival() => await _secondObserver.DidNotReceiveWithAnyArgs().ReconcileSubscription<IProjectionObserverSubscriber>(default, default!, default!, default);
 }

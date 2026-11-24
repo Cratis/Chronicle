@@ -48,7 +48,7 @@ public class a_manager_with_blocked_source_resolution : for_CaptureEventsSubscri
         {
             _operations.Add("subscribe");
             _subscribed = true;
-            return Task.FromResult<IEnumerable<Concepts.Events.EventType>>([]);
+            return Task.FromResult(Concepts.Events.EventTypeSet.Empty);
         });
         observer.Unsubscribe().Returns(_ =>
         {
@@ -94,7 +94,7 @@ public class a_manager_with_blocked_source_resolution : for_CaptureEventsSubscri
         _release.TrySetResult();
         await Task.WhenAll(running, stop, blockedPass).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _manager.Ensure();
-        await _silo.TimerRegistry.FireAllAsync();
+        await _manager.Reconcile();
     }
 
     protected async Task DeleteDuring(Task running)
@@ -106,6 +106,6 @@ public class a_manager_with_blocked_source_resolution : for_CaptureEventsSubscri
         _release.TrySetResult();
         await Task.WhenAll(running, delete, blockedPass).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _manager.Ensure();
-        await _silo.TimerRegistry.FireAllAsync();
+        await _manager.Reconcile();
     }
 }

@@ -76,7 +76,8 @@ internal static class ReadModelSnapshotReader
             readModelKey,
             grainFactory,
             storage,
-            eventCompliance);
+            eventCompliance,
+            jsonSerializerOptions);
 
         IEnumerable<(CorrelationId CorrelationId, List<AppendedEvent> Events)> groups = grouping == ReadModelSnapshotGrouping.Event
             ? history.Events.Select(appendedEvent => (appendedEvent.Context.CorrelationId, new List<AppendedEvent> { appendedEvent }))
@@ -96,7 +97,7 @@ internal static class ReadModelSnapshotReader
                 events[0].Context.Occurred,
                 correlationId,
                 Serialize(state, history.ReadModelDefinition, expandoObjectConverter, jsonSerializerOptions),
-                displayedEvents.Select(appendedEvent => new Event(
+                displayedEvents.Select(appendedEvent => PublicEventContentRedactor.Redact(appendedEvent, jsonSerializerOptions)).Select(appendedEvent => new Event(
                     appendedEvent.Context.ToApi(),
                     JsonSerializer.Serialize(appendedEvent.Content, jsonSerializerOptions)))));
         }
@@ -115,6 +116,7 @@ internal static class ReadModelSnapshotReader
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to resolve the projection with.</param>
     /// <param name="storage">The <see cref="IStorage"/> to read events and definitions from.</param>
     /// <param name="eventCompliance">The <see cref="IEventCompliance"/> to release PII content with.</param>
+    /// <param name="jsonSerializerOptions">The content serialization options.</param>
     /// <returns>The events behind the instance, with what is needed to project them.</returns>
     /// <remarks>
     /// A read model's key is only the event source id when the projection does not say otherwise. Where it does -
@@ -130,7 +132,8 @@ internal static class ReadModelSnapshotReader
         string readModelKey,
         IGrainFactory grainFactory,
         IStorage storage,
-        IEventCompliance eventCompliance)
+        IEventCompliance eventCompliance,
+        JsonSerializerOptions jsonSerializerOptions)
     {
         var eventSequenceStorage = storage
             .GetEventStore(eventStore)
@@ -154,7 +157,7 @@ internal static class ReadModelSnapshotReader
         var allEvents = new List<AppendedEvent>();
         while (await cursor.MoveNext())
         {
-            allEvents.AddRange(cursor.Current);
+            allEvents.AddRange(cursor.Current.Select(@event => PublicEventContentRedactor.Redact(@event, jsonSerializerOptions)));
         }
         cursor.Dispose();
 
@@ -171,7 +174,7 @@ internal static class ReadModelSnapshotReader
         // decrypting it. Decrypt their stored-history display separately, never feeding it back to the projection.
         var projectionEvents = usesPinnedDelivery ? allEvents.ToArray() : await eventCompliance.Release(allEvents, schemas);
 
-        return new(projection, readModelDefinition, [.. projectionEvents.OrderBy(_ => _.Context.SequenceNumber)], usesPinnedDelivery, schemas);
+        return new(projection, readModelDefinition, [.. projectionEvents.Select(@event => PublicEventContentRedactor.Redact(@event, jsonSerializerOptions)).OrderBy(_ => _.Context.SequenceNumber)], usesPinnedDelivery, schemas);
     }
 
     /// <summary>

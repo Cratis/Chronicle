@@ -1,7 +1,7 @@
 {
-  "version": "6.0.0",
-  "tag": "v6.0.0",
-  "commit": "82da6db129802f47c3b1266db451d8d0eaf311ca",
+  "version": "6.38.0",
+  "tag": "v6.38.0",
+  "commit": "6ac19cf693b40e88d2be1dc30fe094e439c7f228",
   "examples": [
     {
       "path": "Documentation/screenplay/projections/arithmetic.md",
@@ -131,110 +131,116 @@
     },
     {
       "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 49,
-      "file": "children-0049.pdl",
-      "kind": "projection body"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 64,
-      "file": "children-0064.pdl",
-      "kind": "projection body"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 76,
-      "file": "children-0076.pdl",
-      "kind": "projection body"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 92,
-      "file": "children-0092.pdl",
-      "kind": "projection body"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 109,
-      "file": "children-0109.pdl",
-      "kind": "projection body"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 129,
-      "file": "children-0129.pdl",
-      "kind": "projection body"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 145,
-      "file": "children-0145.pdl",
-      "kind": "projection body"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 163,
-      "file": "children-0163.pdl",
+      "line": 55,
+      "file": "children-0055.pdl",
       "kind": "projection"
     },
     {
       "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 188,
-      "file": "children-0188.pdl",
-      "kind": "projection"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 218,
-      "file": "children-0218.pdl",
-      "kind": "projection"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 253,
-      "file": "children-0253.pdl",
-      "kind": "projection"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 276,
-      "file": "children-0276.pdl",
-      "kind": "projection"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 312,
-      "file": "children-0312.pdl",
-      "kind": "projection"
-    },
-    {
-      "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 338,
-      "file": "children-0338.pdl",
+      "line": 71,
+      "file": "children-0071.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 352,
-      "file": "children-0352.pdl",
+      "line": 86,
+      "file": "children-0086.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 381,
-      "file": "children-0381.pdl",
+      "line": 98,
+      "file": "children-0098.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 399,
-      "file": "children-0399.pdl",
+      "line": 114,
+      "file": "children-0114.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/children.mdx",
-      "line": 418,
-      "file": "children-0418.pdl",
+      "line": 131,
+      "file": "children-0131.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 151,
+      "file": "children-0151.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 167,
+      "file": "children-0167.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 185,
+      "file": "children-0185.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 210,
+      "file": "children-0210.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 240,
+      "file": "children-0240.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 275,
+      "file": "children-0275.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 298,
+      "file": "children-0298.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 334,
+      "file": "children-0334.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 360,
+      "file": "children-0360.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 374,
+      "file": "children-0374.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 403,
+      "file": "children-0403.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 421,
+      "file": "children-0421.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/children.mdx",
+      "line": 440,
+      "file": "children-0440.pdl",
       "kind": "projection body"
     },
     {
@@ -257,20 +263,26 @@
     },
     {
       "path": "Documentation/screenplay/projections/counters.mdx",
-      "line": 81,
-      "file": "counters-0081.pdl",
+      "line": 70,
+      "file": "counters-0070.pdl",
       "kind": "projection"
     },
     {
       "path": "Documentation/screenplay/projections/counters.mdx",
-      "line": 107,
-      "file": "counters-0107.pdl",
+      "line": 94,
+      "file": "counters-0094.pdl",
       "kind": "projection"
     },
     {
       "path": "Documentation/screenplay/projections/counters.mdx",
-      "line": 130,
-      "file": "counters-0130.pdl",
+      "line": 120,
+      "file": "counters-0120.pdl",
+      "kind": "projection"
+    },
+    {
+      "path": "Documentation/screenplay/projections/counters.mdx",
+      "line": 143,
+      "file": "counters-0143.pdl",
       "kind": "projection"
     },
     {
@@ -659,26 +671,26 @@
     },
     {
       "path": "Documentation/screenplay/projections/grammar.md",
-      "line": 244,
-      "file": "grammar-0244.pdl",
+      "line": 245,
+      "file": "grammar-0245.pdl",
       "kind": "projection"
     },
     {
       "path": "Documentation/screenplay/projections/grammar.md",
-      "line": 266,
-      "file": "grammar-0266.pdl",
+      "line": 267,
+      "file": "grammar-0267.pdl",
       "kind": "projection"
     },
     {
       "path": "Documentation/screenplay/projections/grammar.md",
-      "line": 502,
-      "file": "grammar-0502.pdl",
+      "line": 518,
+      "file": "grammar-0518.pdl",
       "kind": "projection"
     },
     {
       "path": "Documentation/screenplay/projections/grammar.md",
-      "line": 541,
-      "file": "grammar-0541.pdl",
+      "line": 557,
+      "file": "grammar-0557.pdl",
       "kind": "projection"
     },
     {
@@ -989,44 +1001,56 @@
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 93,
-      "file": "property-mapping-0093.pdl",
+      "line": 88,
+      "file": "property-mapping-0088.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 105,
-      "file": "property-mapping-0105.pdl",
+      "line": 104,
+      "file": "property-mapping-0104.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 119,
-      "file": "property-mapping-0119.pdl",
+      "line": 142,
+      "file": "property-mapping-0142.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 133,
-      "file": "property-mapping-0133.pdl",
+      "line": 154,
+      "file": "property-mapping-0154.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 146,
-      "file": "property-mapping-0146.pdl",
+      "line": 170,
+      "file": "property-mapping-0170.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 173,
-      "file": "property-mapping-0173.pdl",
+      "line": 184,
+      "file": "property-mapping-0184.pdl",
       "kind": "projection body"
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 186,
-      "file": "property-mapping-0186.pdl",
+      "line": 197,
+      "file": "property-mapping-0197.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 224,
+      "file": "property-mapping-0224.pdl",
+      "kind": "projection body"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 237,
+      "file": "property-mapping-0237.pdl",
       "kind": "projection body"
     },
     {
@@ -1316,7 +1340,12 @@
     },
     {
       "path": "Documentation/screenplay/projections/property-mapping.md",
-      "line": 159,
+      "line": 130,
+      "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
+    },
+    {
+      "path": "Documentation/screenplay/projections/property-mapping.md",
+      "line": 210,
       "reason": "Syntax template or elided example (upstream DocumentationExamples.Classify)"
     },
     {

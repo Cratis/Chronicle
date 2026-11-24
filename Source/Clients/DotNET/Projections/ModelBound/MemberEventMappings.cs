@@ -25,6 +25,7 @@ internal sealed class MemberEventMappings(Func<Type, EventType> getOrCreateEvent
         ApplyPropertyMappings(scope);
         ApplyConstantKeys(scope);
         ApplySetFromContext(scope);
+        ApplySetFromEventSourceId(scope);
         ApplySetValue(scope);
         ApplyClearWith(scope);
     }
@@ -108,6 +109,14 @@ internal sealed class MemberEventMappings(Func<Type, EventType> getOrCreateEvent
             var propertyToValidate = contextPropertyNameProperty?.GetValue(attr) as string ?? scope.Member.Name;
             var contextPath = PropertyValidator.ValidateContextPropertyPath<EventContext>(propertyToValidate);
             scope.From.AddContextPropertyMapping(getOrCreateEventType, namingPolicy, eventType, scope.PropertyName, contextPath, attr is ISetFromContextAttribute { SetOnce: true });
+        }
+    }
+
+    void ApplySetFromEventSourceId(MemberProcessingScope scope)
+    {
+        foreach (var (attr, eventType) in scope.Member.Provider.GetAttributesOfGenericType<SetFromEventSourceIdAttribute<object>>())
+        {
+            scope.From.AddEventSourceIdMapping(getOrCreateEventType(eventType), scope.PropertyName, attr is ISetFromEventSourceIdAttribute { SetOnce: true });
         }
     }
 

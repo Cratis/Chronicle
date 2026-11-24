@@ -20,9 +20,15 @@ public class when_round_tripping_pinned_delivery : Specification
 
     void Because()
     {
-        var definition = new ProjectionDefinition(ProjectionOwner.Server, EventSequenceId.Log, "projection", "model", true, true, new(), new Dictionary<EventType, FromDefinition> { [_pin] = new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null) }, new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), [], new(new Dictionary<PropertyPath, string>(), false), new Dictionary<EventType, RemovedWithDefinition>(), new Dictionary<EventType, RemovedWithJoinDefinition>()) { GenerationDelivery = EventGenerationDelivery.Pinned };
-        definition.From[_first] = definition.From[_pin];
-        definition.Children["items"] = new("id", new Dictionary<EventType, FromDefinition> { [_pin] = definition.From[_pin] }, new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), definition.FromEvery, definition.RemovedWith, definition.RemovedWithJoin);
+        var pinned = new ProjectionDefinition(ProjectionOwner.Server, EventSequenceId.Log, "projection", "model", true, true, new(), new Dictionary<EventType, FromDefinition> { [_pin] = new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null) }, new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), [], new(new Dictionary<PropertyPath, string>(), false), new Dictionary<EventType, RemovedWithDefinition>(), new Dictionary<EventType, RemovedWithJoinDefinition>()) { GenerationDelivery = EventGenerationDelivery.Pinned };
+        var definition = pinned with
+        {
+            From = new Dictionary<EventType, FromDefinition> { [_pin] = pinned.From[_pin], [_first] = pinned.From[_pin] },
+            Children = new Dictionary<PropertyPath, ChildrenDefinition>
+            {
+                ["items"] = new("id", new Dictionary<EventType, FromDefinition> { [_pin] = pinned.From[_pin] }, new Dictionary<EventType, JoinDefinition>(), new Dictionary<PropertyPath, ChildrenDefinition>(), pinned.FromEvery, pinned.RemovedWith, pinned.RemovedWithJoin)
+            }
+        };
         var sql = definition.ToSql();
         _legacyClauseCount = JsonNode.Parse(sql.Definitions[ProjectionGeneration.First])!["From"]!.AsObject().Count;
         _restored = sql.ToKernel();

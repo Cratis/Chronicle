@@ -70,5 +70,5 @@ public class and_a_concluded_catch_up_job_is_still_listed_after_its_replacement_
 
     [Fact] void should_re_route_the_observer_back_onto_its_queue() => _appendedEventsQueues
         .Received(1)
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

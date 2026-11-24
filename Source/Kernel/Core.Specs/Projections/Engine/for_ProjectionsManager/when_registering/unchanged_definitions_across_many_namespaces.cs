@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 
@@ -19,6 +18,6 @@ public class unchanged_definitions_across_many_namespaces : given.a_projections_
         }
     }
 
-    [Fact] void should_validate_each_definition_only_once() => _ = _projectionFactory.Received(2).Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>());
+    [Fact] void should_validate_each_definition_only_once() => _ = _projectionFactory.Received(2).Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>());
     [Fact] void should_retain_only_the_validation_graphs() => _manager.CachedGraphCount.ShouldEqual(2);
 }

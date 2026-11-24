@@ -6,6 +6,8 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Events;
@@ -32,6 +34,8 @@ public class all_dependencies : Specification
     protected IReadModelReadBindings _readBindings;
     protected ISink _sink;
     protected IReadModel _readModel;
+    protected IProjectionsManager _projectionsManager;
+    protected IEnumerable<ProjectionDefinition> _projectionDefinitions;
     protected ReadModelDefinition _readModelDefinition;
     protected IExpandoObjectConverter _expandoObjectConverter;
     protected IJsonSchemaMetadataManager _complianceManager;
@@ -76,6 +80,10 @@ public class all_dependencies : Specification
 
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
+        _projectionDefinitions = [Cratis.Chronicle.Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateDefinition("test-observer", "test-read-model")];
+        _projectionsManager = Substitute.For<IProjectionsManager>();
+        _projectionsManager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(_ => Task.FromResult(_projectionDefinitions));
+        _grainFactory.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(_projectionsManager);
 
         _expandoObjectConverter = Substitute.For<IExpandoObjectConverter>();
         _complianceManager = Substitute.For<IJsonSchemaMetadataManager>();

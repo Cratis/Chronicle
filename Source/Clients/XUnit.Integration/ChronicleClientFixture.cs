@@ -30,7 +30,9 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
 #pragma warning disable CA2213, SA1600, CA1051, MA0069
     protected static IAsyncDisposable? _webApplicationFactory;
 #pragma warning restore CA2213, SA1600, CA1051, MA0069
+    static readonly Lock _sharedArtifactsProviderLock = new();
     static readonly DefaultClientArtifactsProvider _defaultClientArtifactsProvider = DefaultClientArtifactsProvider.Default;
+    static DelegatingClientArtifactsProvider? _sharedArtifactsProvider;
     PropertyInfo? _servicesProperty;
     MethodInfo _createClientMethod = null!;
     MethodInfo _createClientWithOptionsMethod = null!;
@@ -182,6 +184,25 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <inheritdoc/>
     string IChronicleSetupFixture.DatabaseNamePrefix => DatabaseNamePrefix;
 
+    /// <inheritdoc/>
+#pragma warning disable CA1033 // The provider is internal, so there is no visible member to offer to derived fixtures instead.
+    DelegatingClientArtifactsProvider IChronicleSetupFixture.SharedArtifactsProvider => SharedArtifactsProvider;
+#pragma warning restore CA1033
+
+    /// <summary>
+    /// Gets the artifacts provider that the silo shared by every context of this fixture type serves its artifacts from.
+    /// </summary>
+    internal DelegatingClientArtifactsProvider SharedArtifactsProvider
+    {
+        get
+        {
+            lock (_sharedArtifactsProviderLock)
+            {
+                return _sharedArtifactsProvider ??= new(this);
+            }
+        }
+    }
+
     /// <summary>
     /// Gets the lifecycle timings recorder.
     /// </summary>
@@ -227,6 +248,16 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// Gets the content root of the tests.
     /// </summary>
     protected static ContentRoot? ContentRoot { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether to run context-owned bootstrap, reset, scenario initialization and cleanup.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to true. Override with a stable tier predicate to skip the context lifecycle when the tier is disabled.
+    /// This does not prevent construction of the supplied backing fixture: <see cref="ChronicleFixture"/> starts its
+    /// container eagerly. To avoid containers in a disabled tier, do not register or construct that backing fixture.
+    /// </remarks>
+    protected virtual bool ShouldBootstrap => true;
 
     static bool IsBackupEnabled => string.Equals(
         Environment.GetEnvironmentVariable("CHRONICLE_BACKUP_ENABLED"),
@@ -298,6 +329,11 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <inheritdoc/>
     public virtual void Dispose()
     {
+        if (!ShouldBootstrap)
+        {
+            return;
+        }
+
         DisposeServicesScope();
     }
 
@@ -307,6 +343,11 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <returns>Awaitable task.</returns>
     public async Task InitializeAsync()
     {
+        if (!ShouldBootstrap)
+        {
+            return;
+        }
+
         try
         {
             await Timings.Run("initialize", async () =>
@@ -328,6 +369,11 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
     /// <returns>Awaitable task.</returns>
     public virtual async Task DisposeAsync()
     {
+        if (!ShouldBootstrap)
+        {
+            return;
+        }
+
         try
         {
             await Timings.Run("cleanup", DisposeFixture);
@@ -579,13 +625,13 @@ public abstract partial class ChronicleClientFixture<TChronicleFixture> : IDispo
         }
     }
 
-    IEnumerable<Type> GetArtifactTypes(Func<DefaultClientArtifactsProvider, IEnumerable<Type>> getTypes)
+    Type[] GetArtifactTypes(Func<DefaultClientArtifactsProvider, IEnumerable<Type>> getTypes)
     {
         if (!AutoDiscoverArtifacts)
         {
             return [];
         }
-        return getTypes(_defaultClientArtifactsProvider);
+        return getTypes(_defaultClientArtifactsProvider).Where(_ => !_.IsDefined(typeof(ExcludeFromFixtureDiscoveryAttribute), false)).ToArray();
     }
 }
 

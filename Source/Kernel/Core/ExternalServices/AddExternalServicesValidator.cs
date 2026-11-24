@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
@@ -21,6 +22,10 @@ internal class AddExternalServicesValidator : CommandValidator<AddExternalServic
         RuleFor(_ => _.EventStore).NotSystemEventStore();
         RuleFor(_ => _.ExternalServices).NotEmpty().WithMessage("At least one external service is required.");
         RuleForEach(_ => _.ExternalServices).ChildRules(service =>
-            service.RuleFor(_ => _.Name).NotEmpty().WithMessage("External service name is required."));
+        {
+            service.RuleFor(_ => _.Name).NotEmpty().WithMessage("External service name is required.");
+            service.RuleFor(_ => _.Endpoint.Http!.Headers).SetValidator(new CustomHttpHeadersValidator())
+                .When(_ => _.Endpoint.Type == Contracts.ExternalServices.ExternalServiceEndpointType.Http && _.Endpoint.Http is not null);
+        });
     }
 }

@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_Screenplay
 /// <param name="Target">The dotted target path.</param>
 /// <param name="Operation">The operation.</param>
 /// <param name="Source">The value read, or null for operations without one.</param>
-public record NeutralMapping(string Target, NeutralOperation Operation, NeutralValue? Source);
+/// <param name="Factor">The optional second arithmetic operand.</param>
+public record NeutralMapping(string Target, NeutralOperation Operation, NeutralValue? Source, NeutralValue? Factor = null);

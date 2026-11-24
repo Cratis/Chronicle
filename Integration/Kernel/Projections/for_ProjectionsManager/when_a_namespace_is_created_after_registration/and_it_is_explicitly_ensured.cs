@@ -22,7 +22,7 @@ public class and_it_is_explicitly_ensured(context context) : Given<context>(cont
         {
             await new EnsureNamespace(_storeName, _newTenant).Handle(_grains);
             SubscribedOnReturn = await _grains.GetGrain<IObserver>(_observerKey).IsSubscribed();
-            var store = await ChronicleClient.GetEventStore(_storeName.Value, _newTenant.Value);
+            var store = await GetNewTenantStore();
             var append = await store.EventLog.Append("customer", new CustomerNamed("Explicit tenant"));
             append.IsSuccess.ShouldBeTrue();
             HandledFirstEvent = await _observerStorage.WaitForHandled(_observerKey, (KernelEventSequenceNumber)append.SequenceNumber.Value) == append.SequenceNumber.Value;

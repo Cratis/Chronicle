@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Concepts.Security;
 /// </summary>
 /// <param name="ClientId">The client identifier, or empty for the system-assigned identity.</param>
 /// <param name="Scope">The scope requested for the receiver.</param>
-public record ManagedIdentityAuthorization(ManagedIdentityClientId ClientId, OAuthScope Scope);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Security.ManagedIdentityAuthorization")]
+public record ManagedIdentityAuthorization([Id(0)] ManagedIdentityClientId ClientId, [Id(1)] OAuthScope Scope);

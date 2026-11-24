@@ -12,7 +12,7 @@ public class and_the_root_has_its_own_from : given.a_visibility_resolver
 {
     void Establish()
     {
-        _projection.From[new EventType("RootCreated", EventTypeGeneration.First)] = new FromDefinition(new Dictionary<Properties.PropertyPath, string>(), "$eventSourceId", null);
+        _projection = _projection.WithFrom(new EventType("RootCreated", EventTypeGeneration.First), new FromDefinition(new Dictionary<Properties.PropertyPath, string>(), "$eventSourceId", null));
         ProjectionIsRegistered(_projection);
     }
 

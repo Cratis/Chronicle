@@ -134,6 +134,11 @@ for (const verdict of ['PASS', 'FAIL', 'INCONCLUSIVE', 'exception', 'unavailable
             import { main } from './.github/scripts/measure-rolling-delivery-overhead.mjs';
             const paths = ${JSON.stringify(paths)}, mode = ${JSON.stringify(verdict)};
             const measurement = ${measurement.toString()};
+            function delaySample(sample, enabled, count) {
+                if (!enabled) return;
+                if (mode === 'FAIL') sample.steady.elapsedMilliseconds = 100;
+                if (mode === 'INCONCLUSIVE' && count === 10) sample.steady.elapsedMilliseconds = 30;
+            }
             const arms = [];
             const result = await main(${JSON.stringify(argumentsFor(paths))}, { summaryPath: paths.summaryPath, execute: async (command, args, options) => {
                 assert.equal(command, 'dotnet');
@@ -145,8 +150,7 @@ for (const verdict of ['PASS', 'FAIL', 'INCONCLUSIVE', 'exception', 'unavailable
                 const enabled = args[0] === paths.enabled;
                 arms.push(enabled ? 'B' : 'A');
                 const sample = measurement(enabled);
-                if (mode === 'FAIL' && enabled) sample.steady.elapsedMilliseconds = 100;
-                if (mode === 'INCONCLUSIVE' && enabled && arms.length === 10) sample.steady.elapsedMilliseconds = 30;
+                delaySample(sample, enabled, arms.length);
                 if (mode !== 'unavailable') await writeFile(process.env.CRATIS_ROLLING_OVERHEAD_SAMPLE, JSON.stringify(sample));
                 await writeFile(args.at(-1), ${JSON.stringify(trx)});
                 return { code: 0 };
@@ -206,7 +210,7 @@ test('workflow uploads immediately with always/continue-on-error; later diagnost
     assert.ok(!step.includes('${{'));
     assert.match(step, /--normal Integration\/SqlClustering\/bin\/Release/);
     assert.match(step, /--enabled "\$RUNNER_TEMP\/rolling-delivery-diagnostics/);
-    assert.match(upload, /if: always\(\)\n        continue-on-error: true\n        uses: actions\/upload-artifact@v4/);
+    assert.match(upload, /if: always\(\)\n        continue-on-error: true\n        uses: actions\/upload-artifact@v7/);
     assert.match(upload, /name: rolling-delivery-overhead\n/);
-    assert.match(workflow, /- name: Upload rolling delivery diagnostics evidence\n        if: always\(\) && matrix.provider == 'RollingUpgrade'\n        uses: actions\/upload-artifact@v4\n        with:\n          name: rolling-delivery-diagnostics/);
+    assert.match(workflow, /- name: Upload rolling delivery diagnostics evidence\n        if: always\(\) && matrix.provider == 'RollingUpgrade'\n        uses: actions\/upload-artifact@v7\n        with:\n          name: rolling-delivery-diagnostics/);
 });

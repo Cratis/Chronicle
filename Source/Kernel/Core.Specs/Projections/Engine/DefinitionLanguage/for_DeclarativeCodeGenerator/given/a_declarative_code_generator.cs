@@ -60,9 +60,9 @@ public class a_declarative_code_generator : Specification
     protected ProjectionDefinition CreateProjectionDefinition(
         string projectionName,
         ReadModelIdentifier readModel,
-        IDictionary<EventType, FromDefinition>? from = null,
-        IDictionary<EventType, JoinDefinition>? join = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? children = null) =>
+        IReadOnlyDictionary<EventType, FromDefinition>? from = null,
+        IReadOnlyDictionary<EventType, JoinDefinition>? join = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? children = null) =>
         new(
             ProjectionOwner.Client,
             EventSequenceId.Log,

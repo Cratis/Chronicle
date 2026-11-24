@@ -52,6 +52,8 @@ jobs:
       # The nested legacy-contracts job reads owner issue states and the run's TRX artifacts.
       issues: read
       actions: read
+    # dotnet-build.yml calls integration.yml: its failure/timeout, secret-screened kernel/server
+    # log artifacts are uploaded in each executing matrix job, not in this reusable-workflow caller.
     uses: ./.github/workflows/dotnet-build.yml
     secrets: inherit
     with:
@@ -77,7 +79,7 @@ jobs:
       config_fingerprint: ${{ steps.select.outputs.config_fingerprint }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false

@@ -59,7 +59,7 @@ public class a_connected_client : Specification
 
         AllowingConnectionOwnership.WithActiveSilos(grainFactory, silo);
         var ownership = AllowingConnectionOwnership.Create();
-        var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1 } });
+        var options = Options.Create(new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 1, GraceSeconds = 1 } });
         _connectionService = new KernelConnectionService(
             grainFactory,
             localSiloDetails,

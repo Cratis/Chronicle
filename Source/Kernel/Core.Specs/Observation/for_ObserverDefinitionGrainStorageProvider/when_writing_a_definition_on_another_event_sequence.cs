@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider;
@@ -15,4 +17,5 @@ public class when_writing_a_definition_on_another_event_sequence : given.the_pro
 
     [Fact] void should_refuse_the_write() => _error.ShouldBeOfExactType<ObserverKeyDoesNotMatchDefinition>();
     [Fact] async Task should_not_save_the_definition() => await _definitionsStorage.DidNotReceive().Save(Arg.Any<ObserverDefinition>());
+    [Fact] async Task should_not_announce_anything() => await _cacheClient.DidNotReceive().Invalidate(Arg.Any<EventStoreName>(), Arg.Any<ObserverId>());
 }

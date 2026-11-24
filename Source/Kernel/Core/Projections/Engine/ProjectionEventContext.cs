@@ -42,6 +42,18 @@ public record ProjectionEventContext(
     public bool IsNewInstance { get; set; }
 
     /// <summary>
+    /// Gets or sets the read model document as the protection step handed it to the sink: protected values encrypted
+    /// (or emptied for an erased subject) and the subject lineage attached.
+    /// </summary>
+    /// <remarks>
+    /// Notification-only. Change notifications publish this document so Watch releases it exactly once, instead of
+    /// releasing the plaintext <see cref="IChangeset{TSource, TTarget}.CurrentState"/> a second time. It is never fed
+    /// back into the changeset: the plaintext current state stays the starting point for the next event. Null when
+    /// the read model declares no protected values or the protection step did not run for this event.
+    /// </remarks>
+    public ExpandoObject? ProtectedState { get; set; }
+
+    /// <summary>
     /// Gets the generation policy used to distinguish deferred clause identities.
     /// </summary>
     public Concepts.Observation.EventGenerationDelivery GenerationDelivery { get; init; }

@@ -77,6 +77,10 @@ message GetAllDeclarationsRequest {
 message GetAllDefinitionsRequest {
    string EventStore = 1;
 }
+message GetRegistrationStatusRequest {
+   string EventStore = 1;
+   string Registrant = 2;
+}
 message GraphEdgeFromDefinition {
    string SourceKey = 1;
    string TargetKey = 2;
@@ -248,6 +252,17 @@ message RegisterRequest {
    string Version = 6;
    string ConnectionId = 7;
 }
+enum RegistrationState {
+   Pending = 0;
+   Applied = 1;
+   Failed = 2;
+}
+message RegistrationStatus {
+   RegistrationState State = 1;
+   int64 Revision = 2;
+   int64 AppliedRevision = 3;
+   string Failure = 4;
+}
 message RemovedWithDefinition {
    string Key = 1;
    string ParentKey = 2;
@@ -283,6 +298,7 @@ enum SortDirection {
 service Projections {
    rpc GetAllDeclarations (GetAllDeclarationsRequest) returns (IEnumerable_ProjectionWithDeclaration);
    rpc GetAllDefinitions (GetAllDefinitionsRequest) returns (IEnumerable_ProjectionDefinition);
+   rpc GetRegistrationStatus (GetRegistrationStatusRequest) returns (RegistrationStatus);
    rpc Preview (PreviewProjectionRequest) returns (OneOf_ProjectionPreview_ProjectionDeclarationParsingErrors);
    rpc Register (RegisterRequest) returns (.google.protobuf.Empty);
    rpc Save (SaveProjectionRequest) returns (SaveProjectionResult);

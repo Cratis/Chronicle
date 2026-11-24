@@ -46,7 +46,7 @@ public class a_projection_with_every_event_mappings_and_children : a_child_colle
                 },
                 true)
         };
-        _definition.Children["notes"].From[_noteUpdated] = new(new Dictionary<PropertyPath, string>(), "noteId", "parentId");
+        _definition = _definition.WithChild("notes", c1 => c1.WithFrom(_noteUpdated, new(new Dictionary<PropertyPath, string>(), "noteId", "parentId")));
     }
 
     protected async Task ProjectChildEvent(bool nested = false)

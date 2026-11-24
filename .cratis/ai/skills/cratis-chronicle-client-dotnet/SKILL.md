@@ -33,6 +33,7 @@ Read references/occurrences.md when recording durable triggers, implementing
 occurrence handlers, or choosing startup/shutdown activation and retry semantics.
 Read references/immediate-append-refusal.md when a unit must prevent immediate
 appends from escaping its atomic receipt boundary before transport.
+For caller versus `CausedBy` attribution: [command identity](../cratis-arc-authentication-authorization-and-identity/references/command-identity.md).
 
 ## Lifecycle
 

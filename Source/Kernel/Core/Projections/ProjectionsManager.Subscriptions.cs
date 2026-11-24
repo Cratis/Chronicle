@@ -175,7 +175,6 @@ public partial class ProjectionsManager
     {
         var readModels = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
             .ToDictionary(readModel => readModel.Identifier);
-        var schemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
         await Task.WhenAll(definitions.Select(async definition =>
         {
             try
@@ -191,7 +190,7 @@ public partial class ProjectionsManager
 
                 // Reviving takes a fresh subscription: a reconciling one cannot end a retirement.
                 var revive = _pendingRevival.ContainsKey((definition.Identifier, @namespace));
-                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: revive, reconcile: reconcile && !revive);
+                await SubscribeIfNotSubscribed(definition, readModel, @namespace, reactivateRetired: revive, reconcile: reconcile && !revive);
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
                 if (!await observer.IsSubscriptionEstablished())
                 {
@@ -272,7 +271,7 @@ public partial class ProjectionsManager
     }
 
     bool IsCurrentActiveDefinition(ProjectionDefinition definition) =>
-        !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
+        !definition.UsesUnsupportedEventSequence() && !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
 
     bool IsBeingReplaced(ProjectionDefinition definition)
     {

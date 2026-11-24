@@ -13,4 +13,6 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="Since">When the deferral began, in UTC.</param>
 /// <param name="Until">The earliest next delivery time, in UTC.</param>
 /// <param name="ResumeFrom">The first event not yet handled, inclusive.</param>
-public record PartitionDeferral(Guid Id, PartitionDeferralReason Reason, DateTimeOffset Since, DateTimeOffset Until, EventSequenceNumber ResumeFrom);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.PartitionDeferral")]
+public record PartitionDeferral([Id(0)] Guid Id, [Id(1)] PartitionDeferralReason Reason, [Id(2)] DateTimeOffset Since, [Id(3)] DateTimeOffset Until, [Id(4)] EventSequenceNumber ResumeFrom);

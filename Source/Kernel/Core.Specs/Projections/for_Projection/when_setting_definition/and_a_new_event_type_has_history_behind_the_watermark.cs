@@ -25,5 +25,5 @@ public class and_a_new_event_type_has_history_behind_the_watermark : given.a_pro
     [Fact] async Task should_notify_subscribers_of_the_new_definition() => await _subscriber.Received(1).OnProjectionDefinitionsChanged(_candidate);
     [Fact] void should_schedule_one_full_replay() => _replayTimers.ShouldEqual(1);
     [Fact] async Task should_replay_the_entire_projection() => await _observer.Received(1).Replay();
-    [Fact] async Task should_not_replay_any_partition_into_the_live_container() => await _observer.DidNotReceive().ReplayPartition(Arg.Any<Key>(), Arg.Any<IEnumerable<EventType>>());
+    [Fact] async Task should_not_replay_any_partition_into_the_live_container() => await _observer.DidNotReceive().ReplayPartition(Arg.Any<Key>(), Arg.Any<EventTypeSet>());
 }

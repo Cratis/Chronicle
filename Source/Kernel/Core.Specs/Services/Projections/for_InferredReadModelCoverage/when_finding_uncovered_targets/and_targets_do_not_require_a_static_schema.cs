@@ -9,7 +9,7 @@ namespace Cratis.Chronicle.Services.Projections.for_InferredReadModelCoverage.wh
 
 public class and_targets_do_not_require_a_static_schema : given.a_projection_definition
 {
-    void Establish() => _definition.From[EventType] = new(new Dictionary<PropertyPath, string>
+    void Establish() => _definition = _definition.WithFrom(EventType, new(new Dictionary<PropertyPath, string>
     {
         [PropertyPath.NotSet] = "Name",
         [PropertyPath.Root] = "Name",
@@ -17,7 +17,7 @@ public class and_targets_do_not_require_a_static_schema : given.a_projection_def
         ["Values.$key"] = "Name"
     },
     WellKnownExpressions.EventSourceId,
-    null);
+    null));
 
     void Because() => _uncovered = InferredReadModelCoverage.FindUncoveredTargets(_definition, JsonSchema.FromJson("""{ "type": "object" }"""));
 

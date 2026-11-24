@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="ObserverKey"><see cref="ObserverKey"/> to observer which is subscribing.</param>
 /// <param name="Queue">Queue to subscribe to.</param>
-public record AppendedEventsQueueSubscription(ObserverKey ObserverKey, int Queue);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription")]
+public record AppendedEventsQueueSubscription([Id(0)] ObserverKey ObserverKey, [Id(1)] int Queue);

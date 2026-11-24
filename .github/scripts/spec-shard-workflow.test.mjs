@@ -59,7 +59,7 @@ test('Release artifact is uploaded immediately after the build integrity checks'
     assert.match(step(build, 'Upload Release build output'), /if-no-files-found: error/);
     assert.match(step(packages, 'Download Release build output'), /name: build-output-release/);
     assert.match(step(packages, 'Extract Release build output'), /tar -I 'zstd -d --long=30' -xf build-output-release\.tar\.zst/);
-    assert.match(step(packages, 'Restore obj cache'), /uses: actions\/cache\/restore@v4/);
+    assert.match(step(packages, 'Restore obj cache'), /uses: actions\/cache\/restore@v6/);
     assert.ok(!packages.includes('derive-build-version'), 'package verification must reuse the build version, not derive it again');
 });
 
@@ -78,15 +78,15 @@ test('dotnet-build restores the obj cache on PRs and saves only non-PR misses un
     const job = jobs.get('dotnet-build');
     const restore = step(job, 'Restore obj cache');
     assert.match(restore, /id: restore-obj/);
-    assert.match(restore, /uses: actions\/cache\/restore@v4/);
+    assert.match(restore, /uses: actions\/cache\/restore@v6/);
     assert.ok(restore.includes(`key: dotnet-obj-cache-\u0024{{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-\u0024{{ github.sha }}`));
     const save = step(job, 'Save obj cache');
     assert.match(save, /if: github\.event_name != 'pull_request' && steps\.restore-obj\.outputs\.cache-hit != 'true'/);
-    assert.match(save, /uses: actions\/cache\/save@v4/);
+    assert.match(save, /uses: actions\/cache\/save@v6/);
     assert.match(save, /path: \.\/\*\*\/obj/);
     assert.match(save, /key: \u0024\{\{ steps\.restore-obj\.outputs\.cache-primary-key \}\}/);
     for (const name of ['dotnet-build-development', 'dotnet-build-development-requested']) {
-        assert.match(step(jobs.get(name), 'Restore obj cache'), /uses: actions\/cache@v4/);
+        assert.match(step(jobs.get(name), 'Restore obj cache'), /uses: actions\/cache@v6/);
         assert.ok(!jobs.get(name).includes('actions/cache/save@'));
     }
 });

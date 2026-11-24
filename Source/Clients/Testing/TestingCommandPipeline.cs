@@ -50,6 +50,7 @@ internal static class TestingCommandPipeline
         services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(compliance.CreateEventCompliance(storage));
         services.AddSingleton<KernelCore::Cratis.Chronicle.Schemas.IJsonSchemaMetadataManager>(compliance.Manager);
         services.AddSingleton<KernelCore::Cratis.Chronicle.EventTypes.IEventTypesCacheClient>(new EventSequences.NoOpEventTypesCacheClient());
+        services.AddSingleton<KernelCore::Cratis.Chronicle.Observation.IObserverDefinitionsCacheClient>(new NoOpObserverDefinitionsCacheClient());
         services.AddSingleton(new KernelEventTypeRegistrar(grainFactory));
         services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.DeclarationLanguage.ILanguageService>(new KernelCaptureLanguageService());
         services.AddSingleton<KernelCore::Cratis.Chronicle.Captures.Engine.ICaptureValidator>(new KernelCaptureValidator(storage));

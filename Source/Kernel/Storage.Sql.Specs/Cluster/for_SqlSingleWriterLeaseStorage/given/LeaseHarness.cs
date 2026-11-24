@@ -27,7 +27,7 @@ public sealed class LeaseHarness(MembershipHarness? server = null) : IAsyncDispo
     }
 
     public ClusterDbContext CreateContext() => server?.CreateContext() ?? new ClusterDbContext(
-        new DbContextOptionsBuilder<ClusterDbContext>().UseSqlite(_anchor!.ConnectionString).AddConceptAsSupport().Options);
+        new DbContextOptionsBuilder<ClusterDbContext>().UseSqlite(_anchor!.ConnectionString).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
 
     public async Task Expire()
     {

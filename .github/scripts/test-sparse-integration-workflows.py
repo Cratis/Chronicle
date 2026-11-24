@@ -709,7 +709,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
                 steps = jobs[job_id]["steps"]
                 self.assertFalse(any(step.get("name") == "Cache NuGet packages" for step in steps))
                 cache = next(step for step in steps if step.get("name") == "Restore obj cache")
-                self.assertEqual("actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual("actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9", cache["uses"])
                 self.assertEqual(build_cache["with"], cache["with"])
                 restore = next(step for step in steps if step.get("run") == command)
                 self.assertNotIn("if", restore)
@@ -725,7 +725,7 @@ class SparseIntegrationWorkflows(unittest.TestCase):
             with self.subTest(job=job_id):
                 steps = self.build["jobs"][job_id]["steps"]
                 cache = next(step for step in steps if step.get("name") == "Cache pinned coverage tool")
-                self.assertEqual("actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830", cache["uses"])
+                self.assertEqual("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9", cache["uses"])
                 self.assertEqual(expected, cache["with"])
                 restore = next(step for step in steps if step.get("name") == "Restore pinned coverage tool")
                 self.assertEqual("dotnet tool restore", restore["run"])
@@ -993,7 +993,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         for lane in lanes:
             with self.subTest(lane=lane):
                 steps = jobs[f"{lane}-integration-specs"]["steps"]
-                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v4")
+                download = next(step for step in steps if step.get("uses") == "actions/download-artifact@v8")
                 # Every lane downloads only its own project's artifact; the SQL clustering one also carries the
                 # stamped client output that the RollingUpgrade provider reads.
                 suffix = "-sqlclustering" if lane == "sql-clustering" else f"-{lane}"
@@ -1070,7 +1070,7 @@ class IntegrationSingleBuildContracts(unittest.TestCase):
         stamp = next(step for step in steps if step["name"] == "Read the stamped build version")
         self.assertIn("Source/Clients/DotNET/bin/Release/net11.0/Cratis.Chronicle.dll", stamp["run"])
         for step in steps:
-            if step.get("uses") == "actions/download-artifact@v4":
+            if step.get("uses") == "actions/download-artifact@v8":
                 self.assertEqual("${{ inputs.build-output-artifact }}-sqlclustering", step["with"]["name"])
             self.assertNotRegex(step.get("run", ""), r'BUILD_OUTPUT_ARTIFACT\}\.tar')
 
@@ -1250,6 +1250,7 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
             with self.subTest(declarations=declarations), tempfile.TemporaryDirectory() as directory:
                 summary, output = Path(directory) / "summary", Path(directory) / "output"
                 with patch.dict(exclusions.EXCLUDED_LANES, declarations, clear=True), \
+                        patch.object(exclusions, "waived_previous_release", return_value=None), \
                         patch.dict(os.environ, GITHUB_STEP_SUMMARY=str(summary), GITHUB_OUTPUT=str(output)):
                     exclusions.main()
                 self.assertEqual(f"rolling-upgrade-enabled={str('RollingUpgrade' not in declarations).lower()}\n",
@@ -1259,6 +1260,21 @@ sys.exit(1 if 'Failed' in outcomes.values() else 0)
                                   summary.read_text())
                     for issue in (5300, 5350):
                         self.assertIn(f"https://github.com/Cratis/Chronicle/issues/{issue}", reason)
+
+    def test_waived_previous_release_skips_the_lane_with_a_log_line_and_others_still_run(self):
+        tags = ["v19.114.4", "v19.115.0", "v19.116.0"]
+        waivers = "# comment\nv19.116.0 Grain contracts changed. Requires a stop-start deploy.\n"
+        for waivers_text, unusable, expected in ((waivers, "", "v19.116.0"), ("# none\n", "", None),
+                                                 (waivers, "v19.116.0 # broken (#1)\n", None)):
+            with self.subTest(waivers=waivers_text, unusable=unusable):
+                self.assertEqual(expected, exclusions.waived_release(tags, unusable, waivers_text))
+        with tempfile.TemporaryDirectory() as directory:
+            summary, output = Path(directory) / "summary", Path(directory) / "output"
+            with patch.object(exclusions, "waived_previous_release", return_value="v19.116.0"), \
+                    patch.dict(os.environ, GITHUB_STEP_SUMMARY=str(summary), GITHUB_OUTPUT=str(output)):
+                exclusions.main()
+            self.assertEqual("rolling-upgrade-enabled=false\n", output.read_text())
+            self.assertIn("Skipped integration lane RollingUpgrade (stop-start release): v19.116.0", summary.read_text())
 
     def test_declaration_must_be_removed_when_its_specs_are_reenabled(self):
         self.assertLessEqual(set(exclusions.EXCLUDED_LANES), {"RollingUpgrade"})

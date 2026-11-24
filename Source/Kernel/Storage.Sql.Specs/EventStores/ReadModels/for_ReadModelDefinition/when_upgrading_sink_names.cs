@@ -26,7 +26,7 @@ public class when_upgrading_sink_names : Specification
     {
         _connection = new SqliteConnection("Data Source=:memory:");
         await _connection.OpenAsync();
-        _context = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().Options);
+        _context = new EventStoreDbContext(new DbContextOptionsBuilder<EventStoreDbContext>().UseSqlite(_connection).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
         _definition = new KernelDefinition(
             "reporting-model",
             "reporting",

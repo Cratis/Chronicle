@@ -86,9 +86,9 @@ or target tests; name engine, version and expected/discovered selection.
   not only `then error`. `then no events` is acceptance and cannot accompany an error. Earlier
   accepted batches/invoked commands remain; legacy absence retains per-fact appends.
   Read [atomic boundaries](../cratis-screenplay-captures-and-reactions/references/atomic-batches-and-source-mappings.md).
-- A described handler binds v23, but reaching its body returns Unsupported
-  ImplementationBody, naming command/RequirementId and emitting no events. Denial and
-  validation cases still run; an all-Unsupported run is never green. Read
+- A pending described handler binds v23 but remains Unsupported ImplementationBody.
+  An attached handler (v1 or `may produce` v2) executes only with a host provider; standalone
+  has none. Denial/validation cases still run; an all-Unsupported run is never green. Read
   [described handlers](../cratis-screenplay-command-surface/references/described-handlers.md).
 - Protected command reads opt into v25. Test present/absent state and rule refusal;
   matching decide/commit changes are Conflict / DecisionStateChanged, not validation
@@ -99,8 +99,9 @@ or target tests; name engine, version and expected/discovered selection.
   UnsupportedValidation, not a successful check. Read
   [text and match rules](../cratis-screenplay-command-surface/references/text-and-match-rules.md)
   for boundary values and PLAY0699/0787. Reference success is not Stage admission.
-- Opaque rule, validation and reducer bodies run only when a host supplies a body execution
-  provider; the standalone tool never does. Read
+- Opaque rule, validation, policy, handler and reducer bodies need a host provider; standalone
+  has none. Policy denial, Unsupported admission and typed handler faults are distinct; validate
+  a whole v2 result before appending anything. Read
   [host body execution](references/host-body-execution.md).
 
 ## Chronological command date comparisons

@@ -189,6 +189,11 @@ public static class WellKnownTypes
     public const string SetFromContextAttributeName = "Cratis.Chronicle.Projections.ModelBound.SetFromContextAttribute<TEvent>";
 
     /// <summary>
+    /// The full name of the open generic SetFromEventSourceId attribute.
+    /// </summary>
+    public const string SetFromEventSourceIdAttributeName = "Cratis.Chronicle.Projections.ModelBound.SetFromEventSourceIdAttribute<TEvent>";
+
+    /// <summary>
     /// The full name of the open generic SetValue attribute.
     /// </summary>
     public const string SetValueAttributeName = "Cratis.Chronicle.Projections.ModelBound.SetValueAttribute<TEvent>";

@@ -1,0 +1,8 @@
+projection Doc => DocReadModel
+  from ModelDefined
+    name = name
+    set once createdBy = $causedBy.subject
+    set once createdAt = $eventContext.occurred
+  from ModelRenamed
+    name = name
+    set once createdAt = $eventContext.occurred

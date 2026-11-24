@@ -11,11 +11,13 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// <param name="EventSourceType">The event source type, or null.</param>
 /// <param name="EventStreamType">The stream type, or null.</param>
 /// <param name="EventStreamId">The stream identifier, or null.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.ClosedStreamScope")]
 public record ClosedStreamScope(
-    EventSourceId? EventSourceId = default,
-    EventSourceType? EventSourceType = default,
-    EventStreamType? EventStreamType = default,
-    EventStreamId? EventStreamId = default)
+    [Id(0)] EventSourceId? EventSourceId = default,
+    [Id(1)] EventSourceType? EventSourceType = default,
+    [Id(2)] EventStreamType? EventStreamType = default,
+    [Id(3)] EventStreamId? EventStreamId = default)
 {
     /// <summary>
     /// Gets the participating dimensions after normalization.

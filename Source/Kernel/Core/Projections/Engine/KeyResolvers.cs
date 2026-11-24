@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
@@ -8,6 +9,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections.Engine;
@@ -192,14 +194,13 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         // scan and no rejection guard on every subsequent event of the stream. The parent key must confirm
         // the located root: the same child key can exist under multiple roots, so the child key alone never
         // decides the placement. On any miss or mismatch — including when the current event IS the child's
-        // creation event — fall through to the event-sequence strategies.
+        // creation event — fall through to the event-sequence strategies. A root-only sink hit cannot
+        // identify a child's recursive depth, so recursive parents must use the event-sequence strategies.
         var childKeyValue = key.Value;
-        if (!parentProjection.HasParent &&
-            childKeyValue is not null and not ExpandoObject &&
-            childKeyValue.ToString() != @event.Context.EventSourceId.Value)
+        if (CanResolveExistingChildBySink(parentProjection, childKeyValue, @event))
         {
             var childLocationPath = BuildFullParentChildPropertyPath(projection, identifiedByProperty);
-            var existingChildRoot = await sink.TryFindRootKeyByChildValue(childLocationPath, childKeyValue);
+            var existingChildRoot = await sink.TryFindRootKeyByChildValueInRoot(childLocationPath, childKeyValue, parentKey);
             if (existingChildRoot.TryGetValue(out var existingChildRootKey) &&
                 Equals(existingChildRootKey.Value?.ToString(), parentKey.Value!.ToString()))
             {
@@ -246,7 +247,8 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         var resolvedParentKey = (resolvedParentKeyResult as ResolvedKey)!.Key;
         parentKey = resolvedParentKey;
 
-        var arrayIndexers = BuildArrayIndexers(resolvedParentKey, projection.ChildrenPropertyPath, identifiedByProperty, key.Value);
+        var childrenPath = ResolvedCollectionPath.ForParent(projection, resolvedParentKey);
+        var arrayIndexers = BuildArrayIndexers(resolvedParentKey, childrenPath, identifiedByProperty, key.Value);
 
         logger.FromParentHierarchyResult(parentKey.Value, arrayIndexers.Count);
 
@@ -267,6 +269,12 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         return null;
     }
+
+    static bool CanResolveExistingChildBySink(IProjection parentProjection, [NotNullWhen(true)] object? childKeyValue, AppendedEvent @event) =>
+        !parentProjection.HasParent &&
+        !RecursiveChildProjections.Of(parentProjection).Any() &&
+        childKeyValue is not null and not ExpandoObject &&
+        childKeyValue.ToString() != @event.Context.EventSourceId.Value;
 
     static List<ArrayIndexer> BuildArrayIndexers(Key resolvedParentKey, PropertyPath childrenPropertyPath, PropertyPath identifiedByProperty, object? keyValue)
     {
@@ -344,6 +352,15 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
 
         segments.Add(identifiedByProperty.Path);
         return new PropertyPath(string.Join('.', segments));
+    }
+
+    static async Task<Option<Key>> FindParentRootInSink(Storage.Sinks.ISink sink, PropertyPath childIdentifierPath, object childKey, AppendedEvent @event)
+    {
+        var rootKey = new Key(@event.Context.EventSourceId.Value, ArrayIndexers.NoIndexers);
+        var scoped = await sink.TryFindRootKeyByChildValueInRoot(childIdentifierPath, childKey, rootKey);
+
+        // A matching root and child establish the event's root. A miss may instead be an event on a separate child stream.
+        return scoped?.TryGetValue(out _) == true ? scoped : await sink.TryFindRootKeyByChildValue(childIdentifierPath, childKey);
     }
 
     async Task<KeyResolverResult> ResolveParentKey(
@@ -484,12 +501,14 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         if (childCreationResult?.KeyResolverResult is ResolvedKey resolvedCreationKey)
         {
             var resolvedKey = resolvedCreationKey.Key;
-            if (resolvedKey.ArrayIndexers.HasFor(projection.ChildrenPropertyPath))
+            var childrenPath = ResolvedCollectionPath.ForChild(
+                ResolvedCollectionPath.ForParent(projection, resolvedKey), resolvedKey.ArrayIndexers);
+            if (resolvedKey.ArrayIndexers.HasFor(childrenPath))
             {
                 return childCreationResult;
             }
 
-            var childArrayIndexers = new ArrayIndexers(BuildArrayIndexers(resolvedKey, projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value));
+            var childArrayIndexers = new ArrayIndexers(BuildArrayIndexers(resolvedKey, childrenPath, identifiedByProperty, childKey.Value));
 
             return new ParentEventResult(null, KeyResolverResult.Resolved(resolvedKey with { ArrayIndexers = childArrayIndexers }));
         }
@@ -529,7 +548,9 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             return null;
         }
 
-        var arrayIndexers = BuildArrayIndexers(resolvedProjectionKey.Key, projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value);
+        var resolvedChildrenPath = ResolvedCollectionPath.ForChild(
+            ResolvedCollectionPath.ForParent(projection, resolvedProjectionKey.Key), resolvedProjectionKey.Key.ArrayIndexers);
+        var arrayIndexers = BuildArrayIndexers(resolvedProjectionKey.Key, resolvedChildrenPath, identifiedByProperty, childKey.Value);
         return new ParentEventResult(
             null,
             KeyResolverResult.Resolved(resolvedProjectionKey.Key with { ArrayIndexers = new ArrayIndexers(arrayIndexers) }));
@@ -683,7 +704,7 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         logger.FromParentHierarchyLookupBySink(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
 
         logger.FromParentHierarchySinkQuery(childPropertyPath.Path, parentKey.Value?.ToString() ?? "null");
-        var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, parentKey.Value!);
+        var optionalRootKey = await FindParentRootInSink(sink, childPropertyPath, parentKey.Value!, @event);
         if (optionalRootKey.TryGetValue(out var rootKey))
         {
             logger.FromParentHierarchyFoundRootKeyBySink(rootKey.Value?.ToString() ?? "null");
@@ -745,11 +766,12 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
     }
 
     async Task<KeyResolverResult> ResolveParentKeyFromEvent(
-        IProjection parentProjection,
+        IProjection projection,
         AppendedEvent parentEvent,
         Storage.EventSequences.IEventSequenceStorage eventSequenceStorage,
         Storage.Sinks.ISink sink)
     {
+        var parentProjection = RecursiveChildProjections.OwnerOf(projection, parentEvent.Context.EventType.Id);
         var eventType = parentProjection.EventTypes.First(eventType => eventType.Id == parentEvent.Context.EventType.Id);
         var keyResolverForEventType = parentProjection.GetKeyResolverFor(eventType);
         if (parentProjection.GenerationDelivery == EventGenerationDelivery.Pinned)

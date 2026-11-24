@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 
 namespace Cratis.Chronicle.Storage.InMemory.Observation.Reducers;
@@ -17,6 +18,10 @@ public sealed class ReducerDefinitionsStorage : IReducerDefinitionsStorage
     /// <inheritdoc/>
     public Task<IEnumerable<ReducerDefinition>> GetAll() =>
         Task.FromResult<IEnumerable<ReducerDefinition>>(_definitions.Values.ToArray());
+
+    /// <inheritdoc/>
+    public Task<bool> HasForReadModel(ReadModelIdentifier readModel) =>
+        Task.FromResult(_definitions.Values.Any(definition => definition.ReadModel == readModel));
 
     /// <inheritdoc/>
     public Task<bool> Has(ReducerId id) =>

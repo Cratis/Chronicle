@@ -55,9 +55,10 @@ public class GraphProjectionPlanFactory(
         return new(graph, byEventType);
     }
 
-    static bool ReadsCurrentState(IDictionary<string, string> properties) => properties.Values.Any(expression =>
+    static bool ReadsCurrentState(IReadOnlyDictionary<string, string> properties) => properties.Values.Any(expression =>
         expression.StartsWith(WellKnownExpressions.Add, StringComparison.Ordinal) ||
         expression.StartsWith(WellKnownExpressions.Subtract, StringComparison.Ordinal) ||
+        expression.StartsWith(WellKnownExpressions.SetOnce, StringComparison.Ordinal) ||
         expression == WellKnownExpressions.Count ||
         expression == WellKnownExpressions.Increment ||
         expression == WellKnownExpressions.Decrement);
@@ -131,7 +132,7 @@ public class GraphProjectionPlanFactory(
         string element,
         JsonSchema schema,
         string? reservedProperty,
-        IDictionary<string, string> properties)
+        IReadOnlyDictionary<string, string> properties)
     {
         var names = new List<string>();
         var mappers = new List<PropertyMapper<AppendedEvent, ExpandoObject>>();

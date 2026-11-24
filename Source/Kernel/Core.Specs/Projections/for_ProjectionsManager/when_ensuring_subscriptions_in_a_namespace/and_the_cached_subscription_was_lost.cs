@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -25,7 +26,7 @@ public class and_the_cached_subscription_was_lost : given.a_projections_manager_
         await _grain.Register([definition]);
         await _observerGrain.Received(1).SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<SiloAddress>(), reactivateRetired: true);
         _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscribed);
-        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true)
+        _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), true)
             .Returns(_ =>
             {
                 _subscribed = true;
@@ -40,7 +41,7 @@ public class and_the_cached_subscription_was_lost : given.a_projections_manager_
     [Fact] async Task should_repair_the_subscription_despite_the_managers_successful_subscription_cache() =>
         await _observerGrain.Received(1).ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             true);
 }

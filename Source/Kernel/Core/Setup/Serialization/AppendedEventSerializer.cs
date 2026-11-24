@@ -10,11 +10,9 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Schemas;
-using Cratis.Strings;
 using Orleans.Serialization;
 using Orleans.Serialization.Buffers;
 using Orleans.Serialization.Cloning;
-using Orleans.Serialization.Codecs;
 using Orleans.Serialization.Serializers;
 using Orleans.Serialization.WireProtocol;
 
@@ -32,10 +30,12 @@ namespace Cratis.Chronicle.Setup.Serialization;
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="expandoObjectConverter">The <see cref="IExpandoObjectConverter"/>.</param>
 /// <param name="schemaCache">The <see cref="IEventTypeSchemaCache"/> to resolve event type schemas from.</param>
+/// <param name="codecProvider">The <see cref="ICodecProvider"/> that writes the event's context and bookkeeping.</param>
 internal sealed class AppendedEventSerializer(
     JsonSerializerOptions jsonSerializerOptions,
     IExpandoObjectConverter expandoObjectConverter,
-    IEventTypeSchemaCache schemaCache) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
+    IEventTypeSchemaCache schemaCache,
+    ICodecProvider codecProvider) : IGeneralizedCodec, IGeneralizedCopier, ITypeFilter
 {
     readonly ConcurrentDictionary<string, JsonSchema> _schemasBySchemaJson = new();
 
@@ -58,15 +58,18 @@ internal sealed class AppendedEventSerializer(
     /// <inheritdoc/>
     public object ReadValue<TInput>(ref Reader<TInput> reader, Field field)
     {
-        var json = StringCodec.ReadValue(ref reader, field)!;
-        var jsonObject = JsonNode.Parse(json)!;
-        var appendedEventWithSchema = JsonSerializer.Deserialize<AppendedEventWithSchema>(json, jsonSerializerOptions)!;
-        var appendedEventJson = jsonObject[nameof(AppendedEventWithSchema.AppendedEvent).ToCamelCase()]!;
-        var content = appendedEventJson[nameof(AppendedEvent.Content).ToCamelCase()];
-        var contentAsJson = (JsonObject)content!;
-        var schema = _schemasBySchemaJson.GetOrAdd(appendedEventWithSchema.Schema, JsonSchema.FromJson);
+        var envelope = codecProvider.GetCodec<AppendedEventEnvelope>().ReadValue(ref reader, field)!;
+        var contentAsJson = (JsonObject)JsonNode.Parse(envelope.Content)!;
+        var schema = _schemasBySchemaJson.GetOrAdd(envelope.Schema, JsonSchema.FromJson);
         var contentAsExpando = expandoObjectConverter.ToExpandoObject(contentAsJson, schema);
-        return appendedEventWithSchema.AppendedEvent with { Content = contentAsExpando };
+        return new AppendedEvent(envelope.Context, contentAsExpando)
+        {
+            OriginalContent = envelope.OriginalContent,
+            Revisions = envelope.Revisions,
+            GenerationalContent = envelope.GenerationalContent,
+            GenerationalHashes = envelope.GenerationalHashes,
+            RevisedGeneration = envelope.RevisedGeneration
+        };
     }
 
     /// <inheritdoc/>
@@ -78,11 +81,16 @@ internal sealed class AppendedEventSerializer(
             appendedEvent.Context.EventStore,
             appendedEvent.Context.EventType.Id,
             appendedEvent.Context.EventType.Generation);
-        var appendedEventWithSchema = new AppendedEventWithSchema(appendedEvent, schemaJson);
 
-        var json = JsonSerializer.Serialize(appendedEventWithSchema, jsonSerializerOptions);
-        StringCodec.WriteField(ref writer, fieldIdDelta, json);
+        var envelope = new AppendedEventEnvelope(
+            appendedEvent.Context,
+            JsonSerializer.Serialize(appendedEvent.Content, jsonSerializerOptions),
+            schemaJson,
+            appendedEvent.OriginalContent,
+            [.. appendedEvent.Revisions],
+            new Dictionary<int, string>(appendedEvent.GenerationalContent),
+            new Dictionary<int, EventHash>(appendedEvent.GenerationalHashes),
+            appendedEvent.RevisedGeneration);
+        codecProvider.GetCodec<AppendedEventEnvelope>().WriteField(ref writer, fieldIdDelta, typeof(AppendedEventEnvelope), envelope);
     }
-
-    sealed record AppendedEventWithSchema(AppendedEvent AppendedEvent, string Schema);
 }

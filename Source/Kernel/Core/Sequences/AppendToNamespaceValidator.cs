@@ -12,6 +12,7 @@ internal class AppendToNamespaceValidator : CommandValidator<AppendToNamespace>
     /// <summary>Initializes a new instance of the <see cref="AppendToNamespaceValidator"/> class.</summary>
     public AppendToNamespaceValidator()
     {
+        RuleFor(command => command.EventStore).NotSystemEventStore();
         RuleFor(command => command.ExpectedIncarnation).Must(value => value != Guid.Empty).WithMessage("A captured namespace identity is required.");
         RuleFor(command => command.ToAppend(command.Namespace)).SetValidator(new AppendValidator());
         RuleForEach(command => command.NamedTags).ValidNamedTag();

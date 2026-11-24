@@ -21,9 +21,9 @@ when the question is which mechanism to use, or before writing code that reads
 state and then appends. It carries the routing by rule shape, the matrix with what
 not to use, the refusals, rollout with Measure, testing and the traps.
 
-In an Arc application new code sets read protection `On`
-(`<CratisReadProtection>On</CratisReadProtection>`); `Off` is the default when
-nothing is set. Under `On` the read model is a parameter of `Handle()` or of the
+In an Arc application using `Cratis.Arc.Chronicle`, read protection `On` is the default from Arc 23: leave `<CratisReadProtection>` unset and opt out
+only where needed, with a reason (see choosing-how-a-rule-holds, *Reads under Off, Measure and On*).
+(Legacy: on Arc 22, `Off` was the default; set `<CratisReadProtection>On</CratisReadProtection>`.) Under `On` the read model is a parameter of `Handle()` or of the
 `CommandValidator<T>` constructor, and the read guards the append; under `Off` and
 `Measure` a validator over a plain read is a hint that guards nothing. A plain read under
 `Off`, `Result<,>` and `concurrency: true` are never the guard.
@@ -184,21 +184,26 @@ deciding writer is guarded or the rule is a constraint.
 - The unit commits in the ASP.NET Core middleware: it commits after the response
   and reports no concurrency violation. Call
   `IUnitOfWorkCompletionFeature.CommitAsync()` before responding.
-- Arc under `Off` (the default when nothing is set): a command with a read model
-  is unguarded unless it carries `[ProtectedDecision]`. Set `On` for new code.
+- Arc under `Off` (set explicitly, or the Arc 22 behavior): a command with a read model
+  is unguarded unless it carries `[ProtectedDecision]`. `On` is the default from Arc 23.
 
 ## Verify
 
 - Review production enrollment in the intended store, namespace and stream;
   surface refusal and never replace it with an unprotected read. One owner completes.
 - Application specs call `Handle()` or the validator directly with supplied state.
-  Their only decision-read spec obligation is one cheap assembly-level
-  `DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)` check of the
-  application's own model/projection shapes; see the
-  [scenario rule](../../rules/specs.scenarios.csharp.md).
+  Keep one assembly-level `DecisionReadAdmissions.ShouldAdmitDecisionReadsIn(assembly)`
+  check of discoverable application shapes; explicit body reads need their own
+  admission check or focused scenario. See the
+  [scenario rule](../../rules/specs.scenarios.csharp.md) and
+  [decision guidance](../cratis-application-slice-specifications/references/query-and-decision-scenarios.md)
+  for the example, admission limits and advanced hook boundary.
 - Arc/Chronicle specs alone prove platform conflict refusal, relevant/irrelevant
   changes, absence guards, empty checked appends, isolation and commit lifecycle.
   Their real-client/kernel integration proves the boundary; a default
   `EventScenario` scope strategy returning `None` is not concurrency evidence.
-- Application specs never simulate competing appends or repeat that matrix.
-  Never weaken production guards for spec speed.
+- Ordinary application specs do not repeat that matrix. An unusual
+  application-owned explicit guard policy may need a focused regression a plain
+  call cannot prove, not a routine race template. Typed scenarios select decision
+  reads automatically; `UseDecisionReads()` is obsolete. Never weaken production
+  guards for spec speed.

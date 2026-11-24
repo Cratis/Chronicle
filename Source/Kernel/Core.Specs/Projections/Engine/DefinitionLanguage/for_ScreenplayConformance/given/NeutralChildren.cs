@@ -9,4 +9,5 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_Screenplay
 /// <param name="Property">The collection property.</param>
 /// <param name="IdentifiedBy">The element property identifying a child.</param>
 /// <param name="Scope">The level of the children.</param>
-public record NeutralChildren(string Property, string IdentifiedBy, NeutralScope Scope);
+/// <param name="Ordering">The canonical non-default ordering, or empty for append.</param>
+public record NeutralChildren(string Property, string IdentifiedBy, NeutralScope Scope, string Ordering = "");

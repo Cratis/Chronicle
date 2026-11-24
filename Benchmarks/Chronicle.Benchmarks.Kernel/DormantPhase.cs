@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Cratis.Chronicle.Observation;
 
 namespace Cratis.Chronicle.Benchmarks.Kernel;
 
@@ -56,6 +57,10 @@ public sealed class DormantPhase
         await ObserverFootprint.ReportResident(grainFactory, "released", baseline, count);
         await Window(count, windowSeconds);
 
+        // Grain calls are counted over both wake steps, so the cost of waking is reported per woken observer.
+        _calls.Clear();
+        Interlocked.Exchange(ref _counting, 1);
+
         // One observer at a time first: the latency a dormant observer adds to the first event after it was released.
         var latencies = new List<double>();
         for (var index = 0; index < Math.Min(wakeSamples, count); index++)
@@ -75,9 +80,44 @@ public sealed class DormantPhase
         var stopwatch = Stopwatch.StartNew();
         var subscribed = await ObserverFootprint.CountSubscribed(grainFactory, prefix, count);
         stopwatch.Stop();
+        Interlocked.Exchange(ref _counting, 0);
+        ReportWakeCalls(Math.Min(wakeSamples, count) + count);
         Console.WriteLine($"  wake, all {count} observers in batches of 100: {stopwatch.Elapsed.TotalMilliseconds:F0} ms in total, {stopwatch.Elapsed.TotalMilliseconds / count:F2} ms per observer; {subscribed} of {count} still subscribed");
         await ObserverFootprint.ReportResident(grainFactory, "woken", baseline, count);
         await Window(count, windowSeconds);
+    }
+
+    /// <summary>
+    /// Activates the observers that were released again, and reports the grain calls and companion activations that cost.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/>.</param>
+    /// <param name="prefix">The prefix of the observer identifiers.</param>
+    /// <param name="count">The number of observers.</param>
+    /// <param name="residentBefore">The observer activations resident before the wake.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task WakeReleased(IGrainFactory grainFactory, string prefix, int count, int residentBefore)
+    {
+        _calls.Clear();
+        Interlocked.Exchange(ref _counting, 1);
+        await ObserverFootprint.CountSubscribed(grainFactory, prefix, count);
+        Interlocked.Exchange(ref _counting, 0);
+        var statistics = await grainFactory.GetGrain<IManagementGrain>(0).GetSimpleGrainStatistics();
+        var residentAfter = statistics.Where(_ => _.GrainType.StartsWith($"{typeof(Observer).FullName},", StringComparison.Ordinal)).Sum(_ => _.ActivationCount);
+        var activated = Math.Max(1, residentAfter - residentBefore);
+        Console.WriteLine($"  wake of released observers: {residentAfter - residentBefore} observers were activated by the wake");
+        ReportWakeCalls(activated);
+        await ObserverFootprint.ReportResident(grainFactory, "after the wake of released observers", 0, count);
+    }
+
+    void ReportWakeCalls(int wakes)
+    {
+        var total = _calls.Values.Sum();
+        var alerts = _calls.Where(call => call.Key.StartsWith("IObserverAlerts.", StringComparison.Ordinal)).Sum(call => call.Value);
+        Console.WriteLine($"  wake calls: {total} grain calls over {wakes} wakes, {total / (double)wakes:F2} per wake; {alerts} to ObserverAlerts, {alerts / (double)wakes:F3} per wake");
+        foreach (var call in _calls.OrderByDescending(call => call.Value).Take(8))
+        {
+            Console.WriteLine($"    {call.Key}: {call.Value / (double)wakes:F2} per wake");
+        }
     }
 
     async Task Window(int count, int seconds)

@@ -19,10 +19,10 @@ public class when_two_target_casings_map_to_one_source_namespace : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
-        var casing = silo.AddNamespaceCasing();
-        casing.Canonicalize("Source", Arg.Any<EventStoreNamespaceName>()).Returns((EventStoreNamespaceName)"Cratis");
+        silo.AddEventStoreStorage();
         silo.AddService(Substitute.For<ILocalSiloDetails>());
         var namespaces = Substitute.For<INamespaces>();
+        namespaces.GetCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(Task.FromResult<EventStoreNamespaceName?>("Cratis"));
         namespaces.GetAll().Returns([(EventStoreNamespaceName)"Cratis", (EventStoreNamespaceName)"cratis"]);
         silo.AddProbe(_ => namespaces);
         _observer = Substitute.For<IObserver>();
@@ -31,7 +31,7 @@ public class when_two_target_casings_map_to_one_source_namespace : Specification
             _keys.Add(identity.ToString());
             return _observer;
         });
-        _manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
+        _manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
     }
 
     async Task Because()
@@ -43,5 +43,5 @@ public class when_two_target_casings_map_to_one_source_namespace : Specification
     [Fact] void should_request_only_the_canonical_observer_key() => _keys.Distinct().ShouldContainOnly(new ObserverKey("Source->Target", "Source", "Cratis", Concepts.EventSequences.EventSequenceId.Outbox).ToString());
     [Fact]
     void should_subscribe_exactly_once() => _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
-        ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
+        ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
 }

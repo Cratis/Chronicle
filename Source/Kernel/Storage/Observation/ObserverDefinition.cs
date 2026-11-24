@@ -16,13 +16,16 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Type">The <see cref="ObserverType"/> representing the type of the observer.</param>
 /// <param name="Owner">The <see cref="ObserverOwner"/> representing the owner of the observer.</param>
 /// <param name="IsReplayable">A boolean indicating whether the observer is replayable.</param>
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverDefinition")]
 public record ObserverDefinition(
-    ObserverId Identifier,
-    IEnumerable<EventType> EventTypes,
-    EventSequenceId EventSequenceId,
-    ObserverType Type,
-    ObserverOwner Owner,
-    bool IsReplayable)
+    [Id(0)] ObserverId Identifier,
+    [Id(1)] IEnumerable<EventType> EventTypes,
+    [Id(2)] EventSequenceId EventSequenceId,
+    [Id(3)] ObserverType Type,
+    [Id(4)] ObserverOwner Owner,
+    [Id(5)] bool IsReplayable)
 {
     /// <summary>
     /// Represents an empty observer definition.
@@ -40,5 +43,6 @@ public record ObserverDefinition(
     /// <summary>
     /// Gets the event generation delivery policy.
     /// </summary>
+    [Id(6)]
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
 }

@@ -59,9 +59,9 @@ public class a_model_bound_code_generator : Specification
     protected EventType CreateEventType(string name) => new(new EventTypeId(name), new EventTypeGeneration(1), false);
 
     protected ProjectionDefinition CreateProjectionDefinition(
-        IDictionary<EventType, FromDefinition>? from = null,
-        IDictionary<EventType, JoinDefinition>? join = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? children = null) =>
+        IReadOnlyDictionary<EventType, FromDefinition>? from = null,
+        IReadOnlyDictionary<EventType, JoinDefinition>? join = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? children = null) =>
         new(
             ProjectionOwner.Client,
             EventSequenceId.Log,

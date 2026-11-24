@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// </summary>
 /// <param name="OperationId">The idempotency identity of the operation.</param>
 /// <param name="EventTypeId">The member to retire.</param>
-public record ObserverEventTypeRetirement(Guid OperationId, EventTypeId EventTypeId);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverEventTypeRetirement")]
+public record ObserverEventTypeRetirement([Id(0)] Guid OperationId, [Id(1)] EventTypeId EventTypeId);

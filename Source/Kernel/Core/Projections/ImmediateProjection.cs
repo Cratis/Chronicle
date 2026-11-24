@@ -246,7 +246,7 @@ public class ImmediateProjection(
     {
         // Preserve the definition's eager seed and presence decision for a never-created instance.
         var model = State.InitialModelState is not null
-            ? expandoObjectConverter.ToExpandoObject(State.InitialModelState, _readModelDefinition!.GetSchemaForLatestGeneration())
+            ? expandoObjectConverter.ToExpandoObject(State.InitialModelState.ToJsonObject(), _readModelDefinition!.GetSchemaForLatestGeneration())
             : new ExpandoObject();
         var exists = ((IDictionary<string, object?>)model).Count > 0;
         return new(model, exists, exists);

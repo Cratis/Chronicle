@@ -5,4 +5,6 @@ using Cratis.Choreography.Jobs;
 
 namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 
-public record JobWithSingleStepRequest(bool KeepAfterCompleted = false, bool ShouldFail = false, TimeSpan? WaitTime = null, int WaitCount = 0) : IJobRequest;
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Integration.Specifications.for_JobsManager.given.JobWithSingleStepRequest")]
+public record JobWithSingleStepRequest([Id(0)] bool KeepAfterCompleted = false, [Id(1)] bool ShouldFail = false, [Id(2)] TimeSpan? WaitTime = null, [Id(3)] int WaitCount = 0) : IJobRequest;

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 
@@ -34,7 +35,7 @@ public class and_more_definitions_than_the_concurrency_limit_are_new : given.a_p
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
 
         _observerGrain
-            .Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>())
+            .Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>())
             .Returns(async _ =>
             {
                 lock (_lock)
@@ -62,7 +63,7 @@ public class and_more_definitions_than_the_concurrency_limit_are_new : given.a_p
 
     [Fact] void should_have_subscribed_every_definition() => _observerGrain
         .Received(DefinitionCount)
-        .Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>());
+        .Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>());
 
     [Fact] void should_never_exceed_the_concurrency_bound() => (_maxObservedConcurrency <= 8).ShouldBeTrue();
 

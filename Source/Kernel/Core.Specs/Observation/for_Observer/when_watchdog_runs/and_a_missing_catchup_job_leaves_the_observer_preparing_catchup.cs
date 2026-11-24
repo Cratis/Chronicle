@@ -27,7 +27,7 @@ public class and_a_missing_catchup_job_leaves_the_observer_preparing_catchup : g
 
     [Fact] void should_re_subscribe_the_observer_to_its_queue_once() => _appendedEventsQueues
         .Received(1)
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 
     [Fact] void should_leave_the_observer_active() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
 }

@@ -61,6 +61,6 @@ public class ReplayEvaluator(
         context.TailEventSequenceNumber.IsActualValue && context.TailEventSequenceNumberForEventTypes.IsActualValue;
 
     static bool HasDefinitionChanged(ReplayEvaluationContext context) =>
-            context.Definition.EventTypes.Count() != context.Subscription.EventTypes.Count() ||
+            context.Definition.EventTypes.Count() != context.Subscription.EventTypes.Count ||
             !context.Subscription.EventTypes.OrderBy(_ => _.Id.Value).SequenceEqual(context.Definition.EventTypes.OrderBy(_ => _.Id.Value));
 }

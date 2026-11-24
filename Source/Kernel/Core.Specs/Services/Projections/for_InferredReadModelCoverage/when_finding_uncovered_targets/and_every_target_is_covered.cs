@@ -12,19 +12,20 @@ public class and_every_target_is_covered : given.a_projection_definition
 {
     void Establish()
     {
-        _definition.FromEvery.Properties["LastUpdated"] = "$eventContext.occurred";
-        _definition.From[EventType] = new(new Dictionary<PropertyPath, string>
-        {
-            ["CustomerName"] = "CustomerName",
-            ["ItemCount"] = WellKnownExpressions.Increment,
-            ["Details.Quantity"] = "Quantity",
-            ["Lines.Quantity"] = "Quantity",
-            ["Source.ProductName"] = "Name"
-        },
-        WellKnownExpressions.EventSourceId,
-        null);
-        _definition.Join[EventType] = new("ProductId", new Dictionary<PropertyPath, string> { ["ProductName"] = "Name" }, "ProductId");
-        _definition.Children["Lines"] = Child();
+        _definition = _definition
+            .WithEveryProperty("LastUpdated", "$eventContext.occurred")
+            .WithFrom(EventType, new(new Dictionary<PropertyPath, string>
+            {
+                ["CustomerName"] = "CustomerName",
+                ["ItemCount"] = WellKnownExpressions.Increment,
+                ["Details.Quantity"] = "Quantity",
+                ["Lines.Quantity"] = "Quantity",
+                ["Source.ProductName"] = "Name"
+            },
+            WellKnownExpressions.EventSourceId,
+            null))
+            .WithJoin(EventType, new("ProductId", new Dictionary<PropertyPath, string> { ["ProductName"] = "Name" }, "ProductId"))
+            .WithChild("Lines", Child());
         _definition = _definition with
         {
             Nested = new Dictionary<PropertyPath, ChildrenDefinition> { ["Details"] = Child() }

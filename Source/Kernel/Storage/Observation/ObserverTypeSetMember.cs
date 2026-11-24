@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// </summary>
 /// <param name="Incarnation">The revision at which the identifier joined.</param>
 /// <param name="JoinFence">The first sequence number eligible for non-replay delivery, or null for an unfenced member.</param>
-public record ObserverTypeSetMember(ObserverTypeSetRevision Incarnation, EventSequenceNumber? JoinFence);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverTypeSetMember")]
+public record ObserverTypeSetMember([Id(0)] ObserverTypeSetRevision Incarnation, [Id(1)] EventSequenceNumber? JoinFence);

@@ -24,6 +24,7 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
 
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantReleases = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantReleases, WellKnownMetricNames.ObserverDormantReleasesUnit, "Number of observers released while dormant");
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantWakes = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantWakes, WellKnownMetricNames.ObserverDormantWakesUnit, "Number of dormant observers woken, by what woke them", WellKnownTelemetryAttributes.ObserverWakeCause);
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantSafetyNetChecks = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantSafetyNetChecks, WellKnownMetricNames.ObserverDormantSafetyNetChecksUnit, "Number of dormant observers the safety net looked at, by what it found", WellKnownTelemetryAttributes.ObserverSafetyNetOutcome);
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantWakesDelayed = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantWakesDelayed, WellKnownMetricNames.ObserverDormantWakesDelayedUnit, "Number of dormant observer wakes that waited for a place under the wake admission of the silo");
 
     public void Dispose()
@@ -43,5 +44,13 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
 
     internal void ObserverReleasedWhileDormant() => _dormantReleases.Record(1);
     internal void DormantObserverWoken(string cause) => _dormantWakes.Record(1, cause);
+    internal void DormantSafetyNetChecked(string outcome, int count)
+    {
+        if (count > 0)
+        {
+            _dormantSafetyNetChecks.Record(count, outcome);
+        }
+    }
+
     internal void DormantWakeDelayed() => _dormantWakesDelayed.Record(1);
 }

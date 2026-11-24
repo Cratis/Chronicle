@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Observation.Alerts;
 /// <param name="Revision">The reported revision.</param>
 /// <param name="Outcome">The application outcome.</param>
 /// <param name="QuarantineEpisodeId">A one-time legacy adoption proposal; persist it before ordinary reporting.</param>
-public record ObserverAlertReceipt(Guid LifecycleId, long Revision, ObserverAlertReconciliation Outcome, Guid? QuarantineEpisodeId = null);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.Alerts.ObserverAlertReceipt")]
+public record ObserverAlertReceipt([Id(0)] Guid LifecycleId, [Id(1)] long Revision, [Id(2)] ObserverAlertReconciliation Outcome, [Id(3)] Guid? QuarantineEpisodeId = null);

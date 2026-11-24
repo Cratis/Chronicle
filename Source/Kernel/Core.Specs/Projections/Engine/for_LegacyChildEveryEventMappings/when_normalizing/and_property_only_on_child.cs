@@ -7,9 +7,10 @@ public class and_property_only_on_child : given.a_legacy_definition
 {
     void Establish()
     {
-        _definition.FromEvery.Properties["unknown"] = "value";
-        _definition.FromEvery.Properties["children.lastValue"] = "value";
-        _definition.Children["children"].All.Properties["existing"] = "$value(preserved)";
+        _definition = _definition
+            .WithEveryProperty("unknown", "value")
+            .WithEveryProperty("children.lastValue", "value")
+            .WithChild("children", c1 => c1.WithAllProperty("existing", "$value(preserved)"));
     }
 
     void Because() => _result = LegacyChildEveryEventMappings.Normalize(_definition, _schema);

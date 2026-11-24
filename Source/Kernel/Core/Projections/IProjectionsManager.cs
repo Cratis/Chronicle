@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
@@ -13,7 +14,7 @@ namespace Cratis.Chronicle.Projections;
 /// <summary>
 /// Defines a system that is responsible for supervises projections in the system.
 /// </summary>
-[Version(1)]
+[Version(2)]
 public interface IProjectionsManager : IGrainWithStringKey
 {
     /// <summary>
@@ -43,6 +44,23 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// <returns>A collection of <see cref="ProjectionDefinition"/>.</returns>
     [AlwaysInterleave]
     Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions();
+
+    /// <summary>
+    /// Get a persisted <see cref="ProjectionDefinition"/>, including one that is not (yet) part of the registered state.
+    /// </summary>
+    /// <param name="identifier">The <see cref="ProjectionId"/> of the projection.</param>
+    /// <returns>The stored <see cref="ProjectionDefinition"/>, or null when none is stored.</returns>
+    [AlwaysInterleave]
+    Task<ProjectionDefinition?> GetStoredProjectionDefinition(ProjectionId identifier);
+
+    /// <summary>
+    /// Get registered, in-flight and persisted projections producing a read model, including its named projection.
+    /// </summary>
+    /// <param name="readModel">The target read model.</param>
+    /// <param name="namedProjection">The named projection, if any.</param>
+    /// <returns>The matching projection definitions.</returns>
+    [AlwaysInterleave]
+    Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection);
 
     /// <summary>
     /// Get all the projections with their declaration representation.
@@ -85,14 +103,20 @@ public interface IProjectionsManager : IGrainWithStringKey
     /// <param name="fullSetOwner">The owner whose full set this is, if any; as for <see cref="Register"/>.</param>
     /// <param name="registrant">The application registering, if it identified itself; as for <see cref="Register"/>.</param>
     /// <param name="version">The registering application's version, if known; as for <see cref="Register"/>.</param>
+    /// <param name="cancellation">
+    /// Cancelled when the caller has stopped waiting. The registration is abandoned when every caller sharing it has: it
+    /// leaves the queue, and is skipped if it is still waiting for the grain's turn.
+    /// </param>
     /// <returns>Awaitable task, completing when the shared registration has.</returns>
+    /// <exception cref="Registrations.RegistrationBusyException">The registration waited for a place for longer than the configured queue age; the caller should retry later.</exception>
     /// <remarks>
     /// After a kernel restart every replica of a client, and each of its retries, registers the same set. Queueing each
     /// behind the last made the queue outlast the callers' timeout, and the callers' retries then lengthened it. A
     /// registration whose signature matches one already in flight waits for that one instead, and gets its outcome.
+    /// How many distinct registrations are applied at once is bounded, and the rest wait in arrival order.
     /// </remarks>
     [AlwaysInterleave]
-    Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null);
+    Task RegisterShared(string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null, GrainCancellationToken? cancellation = null);
 
     /// <summary>
     /// Removes an orphaned projection and its observer in every namespace, serialized with registration.

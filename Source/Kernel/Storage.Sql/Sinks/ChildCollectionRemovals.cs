@@ -53,15 +53,9 @@ internal static class ChildCollectionRemovals
     /// <param name="key">The identifier value of the child to remove.</param>
     /// <param name="keyAsString">The key in string form.</param>
     /// <returns>True if it is the removed child, false if not.</returns>
-    internal static bool IsRemovedChild(object? item, PropertyPath identifier, object? key, string? keyAsString)
-    {
-        if (!ChildIdentity.TryGetValue(item, identifier, out var value))
-        {
-            return false;
-        }
-
-        return Equals(value, key) || (value is not null && value.ToString() == keyAsString);
-    }
+    internal static bool IsRemovedChild(object? item, PropertyPath identifier, object? key, string? keyAsString) =>
+        ChildIdentity.TryGetValue(item, identifier, out var value) &&
+        ChildRemovalMatching.Matches(value, key, keyAsString);
 
     /// <summary>
     /// Removes the child described by <paramref name="removal"/> from its collection, selecting every ancestor array element through <paramref name="indexers"/>.
@@ -199,12 +193,13 @@ internal static class ChildCollectionRemovals
             ? PropertyPath.CreateFrom(identifierSegments.Skip(1).ToArray())
             : indexer.IdentifierProperty;
 
-        // Normalize identifiers to string form. JSON round-trips turn Guid identifiers into
+        // Normalize scalar identifiers to string form. JSON round-trips turn Guid identifiers into
         // strings and strip ConceptAs<T> wrappers, so the inside-EnsurePath comparison of the
         // stored value (string) against the original Identifier (concept/Guid) never matches
         // and manufactures a duplicate entry instead of finding the existing one. Comparing
-        // the two as strings makes the lookup deterministic across types.
-        var normalizedIdentifier = JsonColumnDocuments.UnwrapConceptValue(indexer.Identifier)?.ToString();
+        // the two as strings makes the lookup deterministic across types. Composite identifiers
+        // must keep their materialized properties instead of collapsing to a type name.
+        var normalizedIdentifier = ChildKeyComparison.NormalizeIndexerValue(indexer.Identifier);
         return new ArrayIndexer(trimmedArray, trimmedIdentifier, normalizedIdentifier!);
     }
 }

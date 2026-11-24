@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
@@ -301,6 +302,15 @@ public class ProjectionValidator(
             return;
         }
 
+        try
+        {
+            ChildrenOrderingValidation.Validate(new ProjectionId("declaration"), collectionPath, ConvertOrdering(children.Ordering), itemSchema);
+        }
+        catch (InvalidChildrenOrdering error)
+        {
+            errors.Add(error.Message, children.Location.Line, children.Location.Column);
+        }
+
         foreach (var block in children.Blocks)
         {
             switch (block)
@@ -335,19 +345,24 @@ public class ProjectionValidator(
     {
         foreach (var mapping in mappings)
         {
+            ValidateDynamicKey(mapping, eventSchema, errors);
             switch (mapping)
             {
-                case SetMappingSyntax set:
-                    ValidateSetMapping(set, targetSchema, eventSchema, errors);
+                case SetMappingSyntax:
+                case SetOnceMappingSyntax:
+                    ValidateSetMapping(mapping, targetSchema, eventSchema, errors);
                     break;
                 case AddMappingSyntax add:
                     ValidatePropertyExists(add.Property, targetSchema, errors, add);
                     ValidateEventPropertyExists(add.Value, eventSchema, errors);
+                    ValidateFactor(add.Value, add.Factor, eventSchema, errors);
                     break;
                 case SubtractMappingSyntax subtract:
                     ValidatePropertyExists(subtract.Property, targetSchema, errors, subtract);
                     ValidateEventPropertyExists(subtract.Value, eventSchema, errors);
+                    ValidateFactor(subtract.Value, subtract.Factor, eventSchema, errors);
                     break;
+                case RemoveKeyMappingSyntax:
                 case ClearMappingSyntax:
                 case CountMappingSyntax:
                 case IncrementMappingSyntax:
@@ -374,6 +389,51 @@ public class ProjectionValidator(
         }
     }
 
+    Cratis.Chronicle.Changes.ChildrenOrdering? ConvertOrdering(ChildrenOrderingSyntax? ordering) => ordering is { Placement: ChildrenPlacement.Sorted }
+        ? new(Cratis.Chronicle.Changes.ChildrenPlacement.Sorted, new PropertyPath(ordering.SortBy!), ordering.Direction == ChildrenSortDirection.Descending ? Cratis.Chronicle.Changes.SortDirection.Descending : Cratis.Chronicle.Changes.SortDirection.Ascending)
+        : null;
+
+    bool TryResolveDictionaryValue(JsonSchema schema, string path, out JsonSchemaProperty property)
+    {
+        property = null!;
+        if (!DynamicMappingTarget.TryRead(path, out var container, out _, out _)) return false;
+        if (!TryResolveProperty(schema, container, out var dictionary)) return false;
+        if (dictionary.ActualSchema.AdditionalPropertiesSchema is not { } valueSchema) return false;
+
+        property = valueSchema as JsonSchemaProperty ?? new JsonSchemaProperty { Type = valueSchema.ActualSchema.Type, Format = valueSchema.ActualSchema.Format };
+        return true;
+    }
+
+    void ValidateDynamicKey(MappingSyntax mapping, JsonSchema eventSchema, CompilerErrors errors)
+    {
+        if (!DynamicMappingTarget.TryRead(mapping.Property, out _, out var source, out var key)) return;
+        if (source != "$eventContent") return;
+        if (!TryResolveProperty(eventSchema, key, out _))
+        {
+            errors.Add($"Event property '{key}' not found", mapping.Location.Line, mapping.Location.Column);
+        }
+    }
+
+    void ValidateFactor(ExpressionSyntax value, ExpressionSyntax? factor, JsonSchema eventSchema, CompilerErrors errors)
+    {
+        if (factor is null) return;
+        ValidateNumericOperand(value, eventSchema, errors);
+        ValidateNumericOperand(factor, eventSchema, errors);
+    }
+
+    void ValidateNumericOperand(ExpressionSyntax value, JsonSchema eventSchema, CompilerErrors errors)
+    {
+        ValidateEventPropertyExists(value, eventSchema, errors);
+        var isNumeric = value switch
+        {
+            PathExpressionSyntax path => TryResolveProperty(eventSchema, path.Path, out var property) &&
+                (property.ActualSchema.Type & (JsonObjectType.Integer | JsonObjectType.Number)) != JsonObjectType.None,
+            LiteralExpressionSyntax literal => literal.Value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal,
+            _ => true
+        };
+        if (!isNumeric) errors.Add("Arithmetic factors require numeric operands", value.Location.Line, value.Location.Column);
+    }
+
     void ValidateEventPropertyExists(ExpressionSyntax value, JsonSchema eventSchema, CompilerErrors errors)
     {
         if (value is PathExpressionSyntax path && !TryResolveProperty(eventSchema, path.Path, out _))
@@ -382,8 +442,14 @@ public class ProjectionValidator(
         }
     }
 
-    void ValidateSetMapping(SetMappingSyntax set, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
+    void ValidateSetMapping(MappingSyntax set, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
     {
+        var source = set switch
+        {
+            SetMappingSyntax mapping => mapping.Source,
+            SetOnceMappingSyntax mapping => mapping.Source,
+            _ => throw new UnsupportedProjectionSyntax(set)
+        };
         var targetPath = set.Property;
 
         if (!TryResolveProperty(targetSchema, targetPath, out var targetProperty))
@@ -393,7 +459,7 @@ public class ProjectionValidator(
         }
 
         // Validate the source expression and type compatibility
-        if (set.Source is PathExpressionSyntax path)
+        if (source is PathExpressionSyntax path)
         {
             var sourcePath = path.Path;
 
@@ -403,7 +469,7 @@ public class ProjectionValidator(
                 return;
             }
 
-            if (!AreTypesCompatible(targetProperty.Type, sourceProperty.Type))
+            if (!AreTypesCompatible(targetProperty.ActualSchema.Type, sourceProperty.ActualSchema.Type))
             {
                 errors.Add($"Type mismatch: Cannot assign '{sourcePath}' of type '{sourceProperty.Type}' to '{targetPath}' of type '{targetProperty.Type}'", set.Location.Line, set.Location.Column);
             }
@@ -413,6 +479,11 @@ public class ProjectionValidator(
     bool TryResolveProperty(JsonSchema schema, string path, out JsonSchemaProperty property)
     {
         property = null!;
+        if (path.Contains(".$", StringComparison.Ordinal))
+        {
+            return TryResolveDictionaryValue(schema, path, out property);
+        }
+
         var parts = path.Split('.');
         var currentSchema = schema;
 

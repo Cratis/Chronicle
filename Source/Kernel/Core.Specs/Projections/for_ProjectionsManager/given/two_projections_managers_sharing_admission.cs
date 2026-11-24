@@ -99,8 +99,8 @@ public class two_projections_managers_sharing_admission : a_projections_manager_
     protected void HoldBuilds(bool holdSubscriptions = false)
     {
         _holdSubscriptions = holdSubscriptions;
-        _projectionFactory.Create(default!, default!, default!, default!, default!).ReturnsForAnyArgs(_ => Build());
-        _secondFactory.Create(default!, default!, default!, default!, default!).ReturnsForAnyArgs(_ => Build());
+        _projectionFactory.Create(default!, default!, default!, default!).ReturnsForAnyArgs(_ => Build());
+        _secondFactory.Create(default!, default!, default!, default!).ReturnsForAnyArgs(_ => Build());
         if (!holdSubscriptions) return;
         _observerGrain.Subscribe<IProjectionObserverSubscriber>(default, default!, default!).ReturnsForAnyArgs(_ => Subscribe());
         _secondObserver.Subscribe<IProjectionObserverSubscriber>(default, default!, default!).ReturnsForAnyArgs(_ => Subscribe());

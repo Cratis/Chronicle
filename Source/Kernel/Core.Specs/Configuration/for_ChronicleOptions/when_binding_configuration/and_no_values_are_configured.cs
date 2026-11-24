@@ -35,6 +35,12 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_stale_threshold() => _options.ConnectedClients.StaleThresholdSeconds.ShouldEqual(5);
     [Fact] void should_default_the_observe_interval() => _options.ConnectedClients.ObserveIntervalSeconds.ShouldEqual(1);
     [Fact] void should_default_the_keep_alive_interval() => _options.ConnectedClients.KeepAliveIntervalSeconds.ShouldEqual(1);
+    [Fact] void should_default_the_grace() => _options.ConnectedClients.GraceSeconds.ShouldEqual(2);
+    [Fact] void should_evaluate_overload_by_default() => _options.Overload.Enabled.ShouldBeTrue();
+    [Fact] void should_default_the_oldest_pending_call_age() => _options.Overload.MaxOldestPendingCallAgeSeconds.ShouldEqual(15);
+    [Fact] void should_default_the_pending_calls() => _options.Overload.MaxPendingCalls.ShouldEqual(2000);
+    [Fact] void should_default_the_running_calls() => _options.Overload.MaxRunningCalls.ShouldEqual(2000);
+    [Fact] void should_default_the_recovery() => _options.Overload.RecoverySeconds.ShouldEqual(30);
     [Fact] void should_default_the_retry_delay() => _options.Webhooks.RetryDelaySeconds.ShouldEqual(2);
     [Fact] void should_default_the_circuit_breaker_sampling_duration() => _options.Webhooks.CircuitBreakerSamplingDurationSeconds.ShouldEqual(30);
     [Fact] void should_default_the_circuit_breaker_break_duration() => _options.Webhooks.CircuitBreakerBreakDurationSeconds.ShouldEqual(15);
@@ -47,7 +53,7 @@ public class and_no_values_are_configured : Specification
     [Fact] void should_default_the_postgresql_connection_pruning_interval() => _options.Storage.PostgreSqlPooling.ConnectionPruningIntervalSeconds.ShouldEqual(5);
     [Fact] void should_default_the_live_query_poll_interval() => _options.Sql.LiveQueryPollIntervalSeconds.ShouldEqual(2);
     [Fact] void should_default_the_subscription_ready_timeout() => _options.Observers.SubscriptionReadyTimeout.ShouldEqual(5);
-    [Fact] void should_default_the_max_concurrent_registrations() => _options.Observers.MaxConcurrentRegistrations.ShouldEqual(0);
+    [Fact] void should_default_the_max_concurrent_registrations() => _options.Observers.MaxConcurrentRegistrations.ShouldEqual(16);
     [Fact] void should_default_the_max_concurrent_subscriptions_to_automatic() => _options.Observers.MaxConcurrentSubscriptions.ShouldEqual(0);
     [Fact] void should_default_the_queue_depletion_wait_timeout() => _options.Events.QueueDepletionWaitTimeoutMilliseconds.ShouldEqual(500);
     [Fact] void should_default_causation_property_retention() => _options.Events.CausationPropertyRetention.ShouldEqual(CausationPropertyRetention.Retain);

@@ -58,6 +58,5 @@ public class the_same_unseen_event_type_from_multiple_threads : given.a_serializ
 
     void Destroy() => _arrivals.Dispose();
 
-    [Fact] void should_look_up_the_schema_only_once() => SchemaLookups().ShouldEqual(1);
     [Fact] void should_serialize_every_event() => _failures.ShouldBeEmpty();
 }

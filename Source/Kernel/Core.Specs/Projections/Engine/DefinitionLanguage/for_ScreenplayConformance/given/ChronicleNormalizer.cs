@@ -22,6 +22,7 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_Screenplay
 /// level, or in a nested object that is not inside a child collection, there is no parent.</item>
 /// <item><c language="csharp">$count</c> is <c language="csharp">$increment</c>, and <c language="csharp">$null</c> is a clear.</item>
 /// <item><c language="csharp">$eventContext(eventSourceId)</c> is the event source id.</item>
+/// <item><c language="csharp">$causedBy(member)</c> is <c language="csharp">$eventContext(causedBy.member)</c>.</item>
 /// <item>An empty <c language="csharp">every</c> that neither includes children nor subscribes to all events is no <c language="csharp">every</c>.</item>
 /// <item>AutoMap is expanded with the engine's own merge (<see cref="ProjectionFactory"/>) against the case's schemas, because the
 /// definition keeps AutoMap as a flag that the engine resolves at runtime while the semantic model expands it at bind time.</item>
@@ -39,9 +40,9 @@ public static class ChronicleNormalizer
     /// <param name="schemas">The case's schemas.</param>
     /// <returns>The neutral projection level.</returns>
     public static NeutralScope Normalize(ProjectionDefinition definition, ConformanceSchemas schemas) =>
-        Scope(definition, schemas, schemas.Root, isChildContext: false, isRoot: true);
+        Scope(definition, schemas, schemas.Root, isChildContext: false);
 
-    static NeutralScope Scope(ProjectionDefinition definition, ConformanceSchemas schemas, ConformanceLevel? level, bool isChildContext, bool isRoot)
+    static NeutralScope Scope(ProjectionDefinition definition, ConformanceSchemas schemas, ConformanceLevel? level, bool isChildContext)
     {
         var autoMap = definition.AutoMap;
         var from = definition.From.Select(_ => new NeutralFrom(
@@ -57,17 +58,19 @@ public static class ChronicleNormalizer
         var children = definition.Children.Select(_ => new NeutralChildren(
             _.Key.Path,
             _.Value.IdentifiedBy.Path,
-            Scope(_.Value, schemas, level?.Child(_.Key.Path), isChildContext: true, isRoot: false))).ToArray();
+            Scope(_.Value, schemas, level?.Child(_.Key.Path), isChildContext: true),
+            Ordering(_.Value.Ordering))).ToArray();
         var nested = (definition.Nested ?? new Dictionary<PropertyPath, ChildrenDefinition>()).Select(_ => new NeutralNested(
             _.Key.Path,
-            Scope(_.Value, schemas, level?.Child(_.Key.Path), isChildContext, isRoot: false))).ToArray();
+            Scope(_.Value, schemas, level?.Child(_.Key.Path), isChildContext))).ToArray();
         var removals = definition.RemovedWith.Select(_ => new NeutralRemoval(
             _.Key.Id.Value,
             Key(_.Value.Key),
             ParentKey(_.Value.ParentKey, isChildContext))).ToArray();
         var joinRemovals = definition.RemovedWithJoin.Select(_ => new NeutralJoinRemoval(_.Key.Id.Value, Key(_.Value.Key))).ToArray();
 
-        var subscribesToAllEvents = isRoot && definition.SubscribesToAllEvents;
+        // ChildrenDefinition always sets SubscribesToAllEvents to false.
+        var subscribesToAllEvents = definition.SubscribesToAllEvents;
         var every = definition.FromEvery;
         var everyMappings = Mappings(every.Properties);
         var neutralEvery = everyMappings.Count == 0 && !every.IncludeChildren && !subscribesToAllEvents
@@ -109,16 +112,37 @@ public static class ChronicleNormalizer
 
         if (TryUnwrap(expression, WellKnownExpressions.Add, out var added))
         {
-            return new(target, NeutralOperation.Add, Value(added));
+            return Arithmetic(target, NeutralOperation.Add, added);
         }
 
         if (TryUnwrap(expression, WellKnownExpressions.Subtract, out var subtracted))
         {
-            return new(target, NeutralOperation.Subtract, Value(subtracted));
+            return Arithmetic(target, NeutralOperation.Subtract, subtracted);
+        }
+
+        if (TryUnwrap(expression, WellKnownExpressions.SetOnce, out var initial))
+        {
+            return new(target, NeutralOperation.SetOnce, Value(initial));
         }
 
         return new(target, NeutralOperation.Set, Value(expression));
     }
+
+    static NeutralMapping Arithmetic(string target, NeutralOperation operation, string operand)
+    {
+        var parts = operand.Split('*', StringSplitOptions.TrimEntries);
+        return parts.Length == 2
+            ? new(target, operation, Value(parts[0]), Value(parts[1]))
+            : new(target, operation, Value(operand));
+    }
+
+    static string Ordering(Cratis.Chronicle.Changes.ChildrenOrdering? ordering) => ordering switch
+    {
+        null => string.Empty,
+        { Placement: Cratis.Chronicle.Changes.ChildrenPlacement.Append } => string.Empty,
+        { Placement: Cratis.Chronicle.Changes.ChildrenPlacement.Prepend } => "Prepend",
+        _ => $"Sorted {ordering.SortBy.Path} {ordering.Direction}"
+    };
 
     static NeutralKey Key(PropertyExpression expression)
     {
@@ -167,6 +191,16 @@ public static class ChronicleNormalizer
             return context == "eventSourceId" ? NeutralValue.EventSourceId : new(NeutralValueKind.EventContext, context);
         }
 
+        if (TryUnwrap(expression, WellKnownExpressions.CausedBy, out var member))
+        {
+            return new(NeutralValueKind.EventContext, $"causedBy.{member}");
+        }
+
+        return LiteralOrProperty(expression);
+    }
+
+    static NeutralValue LiteralOrProperty(string expression)
+    {
         if (expression.StartsWith('$') || expression.StartsWith('`'))
         {
             return new(NeutralValueKind.Unsupported, expression);
