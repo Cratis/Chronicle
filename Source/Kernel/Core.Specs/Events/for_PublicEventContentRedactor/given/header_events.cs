@@ -48,9 +48,14 @@ public static class header_events
     public static bool HasEmptyHeaders(string content)
     {
         var json = JsonElement.Parse(content);
-        return json.TryGetProperty("content", out var nested)
-            ? HasEmptyHeaders(nested.GetString()!)
-            : json.GetProperty("targetHeaders").EnumerateObject().All(property => property.Value.GetString() is { Length: 0 });
+        if (json.TryGetProperty("content", out var nested))
+        {
+            return HasEmptyHeaders(nested.GetString()!);
+        }
+
+        var headers = json.GetProperty("targetHeaders").EnumerateObject().ToArray();
+        return headers.Select(property => property.Name).Order(StringComparer.Ordinal).SequenceEqual(["X-First", "X-Second"])
+            && headers.All(property => property.Value.GetString() is { Length: 0 });
     }
 
     static EventRevision Revision(uint generation, string value) => new(generation, CorrelationId.NotSet, [], Concepts.Identities.Identity.System, DateTimeOffset.UnixEpoch, Json(value));

@@ -1,0 +1,24 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Screenplay documentation: Documentation/screenplay/projections/arithmetic.md
+
+module Conformance
+  feature Cases
+    slice StateView Case
+      event ItemAdded
+        amount Decimal
+        count Int
+      event ItemRemoved
+        amount Decimal
+        count Int
+      readmodel Summary
+        summaryId String
+        total Decimal
+      query SummaryById => Summary?
+        by summaryId String
+      projection Summaries => Summary
+        no automap
+        from ItemAdded
+          add total by amount * count
+        from ItemRemoved
+          subtract total by amount * -0.1

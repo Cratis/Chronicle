@@ -19,23 +19,34 @@ public static class KeyValueEquality
     /// <returns>Whether the keys represent the same value.</returns>
     public static bool AreEqual(object? storedKey, object? key)
     {
+        if (StructuralKeyEquality.IsStructured(storedKey) || StructuralKeyEquality.IsStructured(key))
+        {
+            return StructuralKeyEquality.AreEqual(storedKey, key);
+        }
+
         if (Equals(storedKey, key)) return true;
         if (storedKey is null || key is null) return false;
 
-        if (storedKey.GetType() != key.GetType())
-        {
-            try
-            {
-                if (storedKey.Equals(DecimalValues.ConvertTo(storedKey.GetType(), key))) return true;
-            }
-            catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException or ArgumentException)
-            {
-                // Composite and incompatible scalar keys are compared by their materialized values below.
-            }
-        }
-
+        if (storedKey.GetType() != key.GetType() && HaveSameConvertedValue(storedKey, key)) return true;
         if (IsScalar(storedKey) && IsScalar(key)) return false;
+        return HaveSameJsonValue(storedKey, key);
+    }
 
+    static bool HaveSameConvertedValue(object storedKey, object key)
+    {
+        try
+        {
+            return storedKey.Equals(DecimalValues.ConvertTo(storedKey.GetType(), key));
+        }
+        catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException or ArgumentException)
+        {
+            // Composite and incompatible scalar keys are compared by their materialized values below.
+            return false;
+        }
+    }
+
+    static bool HaveSameJsonValue(object storedKey, object key)
+    {
         try
         {
             // SQL can materialize a composite key as JSON text; other stores use an object.

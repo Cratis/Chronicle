@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Projections.for_CachingProjectionDefinitionsStorage.given;
 
@@ -48,6 +49,9 @@ public class HeldListingStorage(SharedProjectionDefinitionsStorage shared) : IPr
 
         return snapshot;
     }
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection) => shared.GetProducersFor(readModel, namedProjection);
 
     /// <inheritdoc/>
     public Task<bool> Has(ProjectionId id) => shared.Has(id);

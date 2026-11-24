@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Projections;
 
 namespace Cratis.Chronicle.Storage.InMemory.Projections;
@@ -18,6 +19,11 @@ public sealed class ProjectionDefinitionsStorage : IProjectionDefinitionsStorage
     /// <inheritdoc/>
     public Task<IEnumerable<ProjectionDefinition>> GetAll() =>
         Task.FromResult<IEnumerable<ProjectionDefinition>>(_definitions.Values.ToArray());
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection) =>
+        Task.FromResult<IEnumerable<ProjectionDefinition>>(_definitions.Values.Where(definition =>
+            definition.ReadModel == readModel || definition.Identifier == namedProjection).ToArray());
 
     /// <inheritdoc/>
     public Task<bool> Has(ProjectionId id) =>

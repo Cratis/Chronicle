@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,13 @@ public class ReducerDefinitionsStorage(EventStoreName eventStore, IDatabase data
         await using var scope = await database.EventStore(eventStore);
         var reducers = await scope.DbContext.Reducers.ToListAsync();
         return reducers.Select(reducer => reducer.ToKernel()).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasForReadModel(ReadModelIdentifier readModel)
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.Reducers.AnyAsync(reducer => reducer.ReadModel == readModel.Value);
     }
 
     /// <inheritdoc/>

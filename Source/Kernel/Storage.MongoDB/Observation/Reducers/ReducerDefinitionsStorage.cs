@@ -3,6 +3,7 @@
 
 using Cratis.Arc.MongoDB;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage.Observation.Reducers;
 using MongoDB.Driver;
 
@@ -27,6 +28,10 @@ public class ReducerDefinitionsStorage(
         var definitions = await result.ToListAsync();
         return definitions.Select(definition => definition.ToKernel()).ToArray();
     }
+
+    /// <inheritdoc/>
+    public Task<bool> HasForReadModel(ReadModelIdentifier readModel) =>
+        Collection.Find(definition => definition.ReadModel == readModel).AnyAsync();
 
     /// <inheritdoc/>
     public Task<bool> Has(ReducerId id) =>

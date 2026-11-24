@@ -730,6 +730,10 @@
             "weight": 0.0004203817974577469
         },
         {
+            "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReadPolicy.",
+            "weight": 0.0004
+        },
+        {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReplayManager.",
             "weight": 0.0004203817974577469
         },
@@ -743,7 +747,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelsManager.",
-            "weight": 0.002505475512848173
+            "weight": 0.002105475512848173
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelsManagerStorageProvider.",
