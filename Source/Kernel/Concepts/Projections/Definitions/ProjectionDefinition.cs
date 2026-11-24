@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
@@ -36,33 +35,91 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="SubscribesToAllEvents">Whether the projection subscribes to all event types in the system.</param>
 /// <param name="NoAutoMapProperties">Read model properties excluded from auto-mapping even when <paramref name="AutoMap"/> is enabled.</param>
 /// <param name="Scope">The <see cref="ProjectionScope"/> the projection materializes its read model in.</param>
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition")]
 public record ProjectionDefinition(
-    ProjectionOwner Owner,
-    EventSequenceId EventSequenceId,
-    ProjectionId Identifier,
-    ReadModelIdentifier ReadModel,
-    bool IsActive,
-    bool IsRewindable,
-    JsonObject InitialModelState,
-    IDictionary<EventType, FromDefinition> From,
-    IDictionary<EventType, JoinDefinition> Join,
-    IDictionary<PropertyPath, ChildrenDefinition> Children,
+    [Id(0)] ProjectionOwner Owner,
+    [Id(1)] EventSequenceId EventSequenceId,
+    [Id(2)] ProjectionId Identifier,
+    [Id(3)] ReadModelIdentifier ReadModel,
+    [Id(4)] bool IsActive,
+    [Id(5)] bool IsRewindable,
+    [Id(6)] ImmutableJsonObject InitialModelState,
+    IReadOnlyDictionary<EventType, FromDefinition> From,
+    IReadOnlyDictionary<EventType, JoinDefinition> Join,
+    IReadOnlyDictionary<PropertyPath, ChildrenDefinition> Children,
     IEnumerable<FromDerivatives> FromDerivatives,
-    FromEveryDefinition FromEvery,
-    IDictionary<EventType, RemovedWithDefinition> RemovedWith,
-    IDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
-    FromEventPropertyDefinition? FromEventProperty = default,
-    DateTimeOffset? LastUpdated = default,
+    [Id(11)] FromEveryDefinition FromEvery,
+    IReadOnlyDictionary<EventType, RemovedWithDefinition> RemovedWith,
+    IReadOnlyDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin,
+    [Id(14)] FromEventPropertyDefinition? FromEventProperty = default,
+    [Id(15)] DateTimeOffset? LastUpdated = default,
     IEnumerable<string>? Tags = default,
-    AutoMap AutoMap = AutoMap.Enabled,
-    IDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
-    bool SubscribesToAllEvents = false,
+    [Id(17)] AutoMap AutoMap = AutoMap.Enabled,
+    IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? Nested = default,
+    [Id(19)] bool SubscribesToAllEvents = false,
     IEnumerable<PropertyPath>? NoAutoMapProperties = default,
-    ProjectionScope Scope = ProjectionScope.Namespaced)
+    [Id(21)] ProjectionScope Scope = ProjectionScope.Namespaced)
 {
+    /// <summary>
+    /// Gets all the <see cref="FromDefinition"/> for <see cref="EventType">event types</see>.
+    /// </summary>
+    [Id(7)]
+    public IReadOnlyDictionary<EventType, FromDefinition> From { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(From);
+
+    /// <summary>
+    /// Gets all the <see cref="JoinDefinition"/> for <see cref="EventType">event types</see>.
+    /// </summary>
+    [Id(8)]
+    public IReadOnlyDictionary<EventType, JoinDefinition> Join { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(Join);
+
+    /// <summary>
+    /// Gets all the <see cref="ChildrenDefinition"/> for properties on model.
+    /// </summary>
+    [Id(9)]
+    public IReadOnlyDictionary<PropertyPath, ChildrenDefinition> Children { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(Children);
+
+    /// <summary>
+    /// Gets all the <see cref="RemovedWithDefinition"/> for <see cref="EventType">event types</see>.
+    /// </summary>
+    [Id(12)]
+    public IReadOnlyDictionary<EventType, RemovedWithDefinition> RemovedWith { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(RemovedWith);
+
+    /// <summary>
+    /// Gets all the <see cref="RemovedWithJoinDefinition"/> for <see cref="EventType">event types</see>.
+    /// </summary>
+    [Id(13)]
+    public IReadOnlyDictionary<EventType, RemovedWithJoinDefinition> RemovedWithJoin { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(RemovedWithJoin);
+
+    /// <summary>
+    /// Gets all the <see cref="ChildrenDefinition"/> for nested single-object properties on the model.
+    /// </summary>
+    [Id(18)]
+    public IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? Nested { get; init => field = ImmutableDefinitions.SnapshotOrNull(value); } = ImmutableDefinitions.SnapshotOrNull(Nested);
+
+    /// <summary>
+    /// Gets all the <see cref="Definitions.FromDerivatives"/> for an event type used as a base type in a From statement.
+    /// </summary>
+    [Id(10)]
+    public IEnumerable<FromDerivatives> FromDerivatives { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(FromDerivatives);
+
+    /// <summary>
+    /// Gets collection of tags the projection belongs to.
+    /// </summary>
+    [Id(16)]
+    public IEnumerable<string>? Tags { get; init => field = ImmutableDefinitions.SnapshotOrNull(value); } = ImmutableDefinitions.SnapshotOrNull(Tags);
+
+    /// <summary>
+    /// Gets read model properties excluded from auto-mapping even when <see cref="AutoMap"/> is enabled.
+    /// </summary>
+    [Id(20)]
+    public IEnumerable<PropertyPath>? NoAutoMapProperties { get; init => field = ImmutableDefinitions.SnapshotOrNull(value); } = ImmutableDefinitions.SnapshotOrNull(NoAutoMapProperties);
+
     /// <summary>
     /// Gets the event generation delivery policy. Compatibility preserves identifier-only dispatch.
     /// </summary>
+    [Id(22)]
     public EventGenerationDelivery GenerationDelivery { get; init; }
 
     /// <summary>
@@ -72,6 +129,7 @@ public record ProjectionDefinition(
     /// Additive: a definition without graph mappings behaves exactly as before.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Id(23)]
     public Graphs.GraphProjectionDefinition? Graph { get; init; }
 
     /// <summary>
@@ -81,6 +139,7 @@ public record ProjectionDefinition(
     /// Metadata, not structure: it is ignored when comparing definitions, so a version change alone never evolves
     /// the projection. It exists so a registration from an older version can be told apart from a newer one.
     /// </remarks>
+    [Id(24)]
     public string? Version { get; init; }
 
     /// <summary>
@@ -91,6 +150,7 @@ public record ProjectionDefinition(
     /// including every-event settings in children and nested projections. A fresh registration supplies them
     /// without evolution; the next lossless save removes this uncertainty.
     /// </remarks>
+    [Id(25)]
     public bool HasLegacyStorageFields { get; init; }
 
     /// <summary>

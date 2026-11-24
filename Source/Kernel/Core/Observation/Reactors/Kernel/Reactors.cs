@@ -146,7 +146,7 @@ public class Reactors(
             observer,
             () => observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
                 ObserverType.Reactor,
-                reactorType.GetEventTypes(),
+                EventTypeSet.From(reactorType.GetEventTypes()),
                 localSiloDetails.SiloAddress,
                 null,
                 false),

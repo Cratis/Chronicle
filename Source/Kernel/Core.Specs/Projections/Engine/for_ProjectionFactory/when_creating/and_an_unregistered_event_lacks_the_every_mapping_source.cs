@@ -9,8 +9,9 @@ public class and_an_unregistered_event_lacks_the_every_mapping_source : given.a_
 {
     void Establish()
     {
-        _definition.From.Clear();
-        _definition.Children.Clear();
+        _definition = _definition
+            .WithoutFrom()
+            .WithoutChildren();
         _definition = _definition with { SubscribesToAllEvents = true };
     }
 

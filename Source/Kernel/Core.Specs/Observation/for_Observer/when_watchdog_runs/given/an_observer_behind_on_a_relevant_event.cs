@@ -32,7 +32,7 @@ public class an_observer_behind_on_a_relevant_event : an_observer_with_client_ow
 
     protected void ShouldNotHaveResubscribed() => _appendedEventsQueues
         .DidNotReceive()
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 
     protected void ShouldNotHaveStartedCatchup() => _jobsManager
         .DidNotReceive()

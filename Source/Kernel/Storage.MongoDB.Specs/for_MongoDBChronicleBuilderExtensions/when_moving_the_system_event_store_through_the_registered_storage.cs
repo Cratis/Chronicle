@@ -38,11 +38,13 @@ public class when_moving_the_system_event_store_through_the_registered_storage(M
 
         _host = Host.CreateDefaultBuilder()
             .AddCratisArc()
-            .AddCratisMongoDB(options =>
-            {
-                options.Server = fixture.ConnectionString;
-                options.Database = $"{_prefix}chronicle";
-            })
+            .AddCratisMongoDB(
+                options =>
+                {
+                    options.Server = fixture.ConnectionString;
+                    options.Database = $"{_prefix}chronicle";
+                },
+                SpecSerializationSetup.ConfigureLikeTheServer)
             .UseDefaultServiceProvider(options => options.ValidateOnBuild = false)
             .UseOrleans(silo =>
             {

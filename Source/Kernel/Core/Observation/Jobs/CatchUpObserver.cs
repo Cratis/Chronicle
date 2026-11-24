@@ -7,6 +7,7 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -62,8 +63,16 @@ public class CatchUpObserver(
     }
 
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "catch_up");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "catch_up", State.Progress);
         _gauge.Release();
         using var scope = logger.BeginJobScope(JobId, JobKey);
 

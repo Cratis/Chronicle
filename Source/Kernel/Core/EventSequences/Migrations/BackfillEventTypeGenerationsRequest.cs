@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.EventSequences.Migrations;
 /// Requests an add-only generation backfill on an upgraded worker.
 /// </summary>
 /// <param name="EventTypeId">The event type to backfill.</param>
-public record BackfillEventTypeGenerationsRequest(EventTypeId EventTypeId) : IJobRequest;
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.Migrations.BackfillEventTypeGenerationsRequest")]
+public record BackfillEventTypeGenerationsRequest([Id(0)] EventTypeId EventTypeId) : IJobRequest;

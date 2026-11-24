@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation;
@@ -40,7 +41,7 @@ public class a_single_subscriber_with_queue_telemetry : a_single_subscriber_with
 
         var eventSequenceKey = new EventSequenceKey(EventSequenceId.Log, "Some event store", "Some namespace");
         _queue = await _silo.CreateGrainAsync<AppendedEventsQueue>(0L, eventSequenceKey.ToString());
-        await _queue.Subscribe(_observerKey, EventTypes, Filters);
+        await _queue.Subscribe(_observerKey, EventTypeSet.From(EventTypes), Filters);
     }
 
     void Destroy() => _recordedMeasurements.Dispose();

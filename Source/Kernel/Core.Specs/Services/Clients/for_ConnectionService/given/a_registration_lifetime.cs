@@ -18,6 +18,7 @@ namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.given;
 public class a_registration_lifetime : Specification
 {
     protected static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(47);
+    protected static readonly TimeSpan Grace = TimeSpan.FromSeconds(3);
     protected readonly TaskCompletionSource _registration = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected readonly TaskCompletionSource _terminal = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -69,7 +70,7 @@ public class a_registration_lifetime : Specification
         grainFactory.GetGrain<IConnectedClients>(silo.ToParsableString(), Arg.Any<string>()).Returns(_connectedClients);
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(silo);
-        var configuration = new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 30 } };
+        var configuration = new ChronicleOptions { ConnectedClients = new() { KeepAliveIntervalSeconds = 30, GraceSeconds = 3 } };
         configuration.Clustering.ResponseTimeout = ResponseTimeout;
         var options = Options.Create(configuration);
         AllowingConnectionOwnership.WithActiveSilos(grainFactory, silo);

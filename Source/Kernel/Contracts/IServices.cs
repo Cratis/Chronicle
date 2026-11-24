@@ -185,6 +185,12 @@ public interface IServices
     Occurrences.IOccurrences Occurrences => throw new NotSupportedException("Occurrences are not supported by this service container.");
 
     /// <summary>
+    /// Gets the service that carries the observation of every reactor and reducer of a connection over one stream, when supported by this service container.
+    /// </summary>
+    /// <exception cref="NotSupportedException">This container predates multiplexed observation.</exception>
+    Observation.Multiplexed.IMultiplexedObservation MultiplexedObservation => throw new NotSupportedException("Multiplexed observation is not supported by this service container.");
+
+    /// <summary>
     /// Gets the administrator management service when supported by this service container.
     /// </summary>
     /// <exception cref="NotSupportedException">This container predates administrator management.</exception>

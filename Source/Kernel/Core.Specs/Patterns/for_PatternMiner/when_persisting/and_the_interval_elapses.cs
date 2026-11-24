@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Patterns;
-using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Patterns.for_PatternMiner.when_persisting;
 
@@ -25,7 +24,7 @@ public class and_the_interval_elapses : given.a_pattern_miner
         await _patterns.DidNotReceiveWithAnyArgs().Save(default!);
     }
 
-    async Task Because() => await _silo.FireAllTimersAsync();
+    async Task Because() => await RunSupervisorCheck();
 
     [Fact] async Task should_save_the_surviving_patterns_once_for_the_touched_scope() =>
         await _patterns.Received(1).Save(Arg.Is<IEnumerable<BehaviorPattern>>(patterns => patterns.Any() && patterns.All(pattern => pattern.GroupingKey == _scope)));

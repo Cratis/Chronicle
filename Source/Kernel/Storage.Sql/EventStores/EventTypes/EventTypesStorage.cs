@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -27,10 +26,6 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     const int MaxMigrationVersionAttempts = 5;
     static readonly JsonSerializerOptions _migrationJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     readonly ILogger<EventTypesStorage> _logger = logger ?? NullLogger<EventTypesStorage>.Instance;
-    readonly ConcurrentDictionary<EventTypeId, EventTypeDefinition> _definitionsByType = new();
-    readonly object _definitionInvalidation = new();
-    long _definitionRevision;
-    ConcurrentBag<EventType> _eventTypes = new();
 
     /// <inheritdoc/>
     public async Task<bool> Register(Concepts.Events.EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
@@ -102,42 +97,19 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     /// <inheritdoc/>
     public async Task<EventTypeDefinition> GetDefinition(EventTypeId eventTypeId)
     {
-        if (_definitionsByType.TryGetValue(eventTypeId, out var cached))
+        var eventType = await GetSpecificEventType(eventTypeId);
+        if (eventType is null)
         {
-            return cached;
+            var schema = await GetFor(eventTypeId);
+            return new EventTypeDefinition(
+                eventTypeId,
+                EventTypeOwner.None,
+                false,
+                [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
+                []);
         }
 
-        while (true)
-        {
-            long revision;
-            lock (_definitionInvalidation)
-            {
-                revision = _definitionRevision;
-            }
-
-            var eventType = await GetSpecificEventType(eventTypeId);
-            if (eventType is null)
-            {
-                var schema = await GetFor(eventTypeId);
-                return new EventTypeDefinition(
-                    eventTypeId,
-                    EventTypeOwner.None,
-                    false,
-                    [new EventTypeGenerationDefinition(schema.Type.Generation, schema.Schema)],
-                    []);
-            }
-
-            lock (_definitionInvalidation)
-            {
-                // A read started before invalidation cannot repopulate the definition cache.
-                if (revision != _definitionRevision)
-                {
-                    continue;
-                }
-
-                return _definitionsByType.GetOrAdd(eventTypeId, static (_, document) => document.ToDefinition(), eventType);
-            }
-        }
+        return eventType.ToDefinition();
     }
 
     /// <inheritdoc/>
@@ -157,7 +129,6 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
 
         stored.Schemas = new Dictionary<uint, string>(stored.Schemas) { [generation.Value] = schema.ToJson() };
         await scope.DbContext.SaveChangesAsync();
-        Invalidate(eventTypeId);
         return true;
     }
 
@@ -210,10 +181,6 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     public async Task<EventTypeSchema> GetFor(EventTypeId type, EventTypeGeneration? generation = null)
     {
         generation ??= EventTypeGeneration.First;
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
-        {
-            return _eventTypes.First(_ => _.Id == type && _.Schemas.ContainsKey(generation)).ToKernel(generation);
-        }
         var eventType = await GetSpecificEventType(type) ?? throw new UnknownEventType(eventStore, type);
         if (!eventType.Schemas.ContainsKey(generation))
         {
@@ -230,34 +197,8 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
     public async Task<bool> HasFor(EventTypeId type, EventTypeGeneration? generation = null)
     {
         generation ??= EventTypeGeneration.First;
-        if (_eventTypes.Any(_ => _.Id == type && _.Schemas.ContainsKey(generation)))
-        {
-            // Verify the cache is consistent with the database. After an external database
-            // reset (e.g. between integration test classes), the cache may still hold entries
-            // for event types that no longer exist in the backing store.
-            var dbEventType = await GetSpecificEventType(type);
-            if (dbEventType?.Schemas.ContainsKey(generation) != true)
-            {
-                _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != type));
-                return false;
-            }
-
-            return true;
-        }
-
         var eventType = await GetSpecificEventType(type);
         return eventType?.Schemas.ContainsKey(generation) ?? false;
-    }
-
-    /// <inheritdoc/>
-    public void Invalidate(EventTypeId eventTypeId)
-    {
-        InvalidateDefinition(eventTypeId);
-        _latestSchemasByType.TryRemove(eventTypeId, out _);
-        if (_eventTypes.Any(_ => _.Id == eventTypeId))
-        {
-            _eventTypes = new ConcurrentBag<EventType>(_eventTypes.Where(_ => _.Id != eventTypeId));
-        }
     }
 
     static EventType PreserveStoredContent(EventType? existing, EventType incoming)
@@ -318,15 +259,6 @@ public partial class EventTypesStorage(EventStoreName eventStore, IDatabase data
         var byEndpoint = stored.ToDictionary(_ => (_.FromGeneration, _.ToGeneration));
         return incoming.TrueForAll(migration => byEndpoint.TryGetValue((migration.FromGeneration, migration.ToGeneration), out var previous) &&
             JsonNode.DeepEquals(JsonSerializer.SerializeToNode(previous, _migrationJsonOptions), JsonSerializer.SerializeToNode(migration, _migrationJsonOptions)));
-    }
-
-    void InvalidateDefinition(EventTypeId eventTypeId)
-    {
-        lock (_definitionInvalidation)
-        {
-            _definitionRevision++;
-            _definitionsByType.TryRemove(eventTypeId, out _);
-        }
     }
 
     async Task<EventType?> GetSpecificEventType(EventTypeId eventTypeId)

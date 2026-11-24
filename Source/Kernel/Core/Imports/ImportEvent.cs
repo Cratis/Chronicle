@@ -24,20 +24,22 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="IdempotencyKey">The idempotency key, typically the source system's event identifier.</param>
 /// <param name="EventSource">The registered event source definition the event is appended through.</param>
 /// <param name="SourceSequenceNumber">The sequence number the event had in its source.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportEvent")]
 public record ImportEvent(
-    string EventSourceId,
-    string EventSourceType,
-    string EventStreamType,
-    string EventStreamId,
-    EventType EventType,
-    string Content,
-    IEnumerable<string>? Tags = default,
-    IEnumerable<NamedTag>? NamedTags = default,
-    DateTimeOffset? Occurred = default,
-    string? Subject = default,
-    Guid? CorrelationId = default,
-    IEnumerable<Causation>? Causation = default,
-    Identity? CausedBy = default,
-    string? IdempotencyKey = default,
-    string? EventSource = default,
-    ulong? SourceSequenceNumber = default);
+    [Id(0)] string EventSourceId,
+    [Id(1)] string EventSourceType,
+    [Id(2)] string EventStreamType,
+    [Id(3)] string EventStreamId,
+    [Id(4)] EventType EventType,
+    [Id(5)] string Content,
+    [Id(6)] IEnumerable<string>? Tags = default,
+    [Id(7)] IEnumerable<NamedTag>? NamedTags = default,
+    [Id(8)] DateTimeOffset? Occurred = default,
+    [Id(9)] string? Subject = default,
+    [Id(10)] Guid? CorrelationId = default,
+    [Id(11)] IEnumerable<Causation>? Causation = default,
+    [Id(12)] Identity? CausedBy = default,
+    [Id(13)] string? IdempotencyKey = default,
+    [Id(14)] string? EventSource = default,
+    [Id(15)] ulong? SourceSequenceNumber = default);

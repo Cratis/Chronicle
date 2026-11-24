@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_classif
 
 public class and_the_source_keyed_projection_has_a_join : given.a_projection_with_source_keys
 {
-    void Establish() => _definition.Join[_second] = new("Id", new Dictionary<PropertyPath, string>(), WellKnownExpressions.EventSourceId);
+    void Establish() => _definition = _definition.WithJoin(_second, new("Id", new Dictionary<PropertyPath, string>(), WellKnownExpressions.EventSourceId));
 
     async Task Because() => _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, _schemas);
 

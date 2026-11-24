@@ -19,8 +19,11 @@ public class a_failed_spill : for_EventSequence.given.an_event_sequence
 
     protected virtual int FailingSpillAttempts => 1;
 
-    void Establish()
+    async Task Establish()
     {
+        // The log reconciles its subscriptions once, in a timer of its own armed on activation. Let that finish so the
+        // timers counted below are the ones this specification is about.
+        await _silo.TimerRegistry.FireAllAsync();
         _appendedEventsQueues
             .Enqueue(Arg.Any<IEnumerable<AppendedEvent>>())
             .Returns(_ => Task.FromException(new for_EventSequence.given.SimulatedEnqueueError()));

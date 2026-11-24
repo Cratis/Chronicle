@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Services.Observation.for_SubscriptionCheckSchedule;
 
 public class when_nothing_has_been_checked : given.a_schedule
 {
-    void Because() => _next = _schedule.NextCheckAfter(Now);
+    void Because() => _next = _schedule.NextCheckAfter();
 
     [Fact] void should_check_after_the_revise_interval() => _next.ShouldEqual(Revise);
 }

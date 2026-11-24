@@ -8,27 +8,25 @@ using Orleans.Runtime.Services;
 namespace Cratis.Chronicle.EventTypes;
 
 /// <summary>
-/// Represents an implementation of <see cref="IEventTypesCacheClient"/> that fans out to the
-/// <see cref="IEventTypesCacheGrainService"/> on every silo, so each silo evicts its own event type caches.
+/// Represents an implementation of <see cref="IEventTypesCacheClient"/> that tells the event type registry of every
+/// active silo in the cluster that an event type changed.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="EventTypesCacheClient"/> class.
+/// The silos are read from the local cluster membership snapshot, so announcing a change makes no grain call to find
+/// them. The registry of a silo that misses the announcement catches up on its next lookup miss or at the end of the
+/// safety-net lifetime of its snapshot.
 /// </remarks>
-/// <param name="grainFactory"><see cref="IGrainFactory"/> to use for getting grains.</param>
-/// <param name="serviceProvider"><see cref="IServiceProvider"/> for getting services.</param>
-public class EventTypesCacheClient(IGrainFactory grainFactory, IServiceProvider serviceProvider)
+/// <param name="membership">The <see cref="IClusterMembershipService"/> that knows the active silos.</param>
+/// <param name="serviceProvider">The <see cref="IServiceProvider"/> used to reach the grain service of a silo.</param>
+public class EventTypesCacheClient(IClusterMembershipService membership, IServiceProvider serviceProvider)
     : GrainServiceClient<IEventTypesCacheGrainService>(serviceProvider), IEventTypesCacheClient
 {
-    readonly IManagementGrain _managementGrain = grainFactory.GetGrain<IManagementGrain>(1);
-
     /// <inheritdoc/>
-    public async Task Invalidate(EventStoreName eventStore, EventTypeId eventTypeId) =>
-        await ForEachGrainService(service => service.Invalidate(eventStore, eventTypeId));
-
-    async Task ForEachGrainService(Func<IEventTypesCacheGrainService, Task> callback)
+    public async Task Invalidate(EventStoreName eventStore, EventTypeId eventTypeId)
     {
-        var hosts = await _managementGrain.GetHosts(true);
-        var tasks = hosts.Keys.Select(host => callback(GetGrainService(host)));
-        await Task.WhenAll(tasks);
+        var silos = membership.CurrentSnapshot.Members.Values
+            .Where(_ => _.Status == SiloStatus.Active)
+            .Select(_ => _.SiloAddress);
+        await Task.WhenAll(silos.Select(silo => GetGrainService(silo).Invalidate(eventStore, eventTypeId)));
     }
 }

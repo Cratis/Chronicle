@@ -26,5 +26,10 @@ public enum ReactorPartitionQuarantineClearOutcome
     /// <summary>
     /// The partition is failed but not quarantined.
     /// </summary>
-    NotQuarantined = 3
+    NotQuarantined = 3,
+
+    /// <summary>
+    /// The clearing was accepted as a job and is carried out when the observer can serve it; the job reports what became of it.
+    /// </summary>
+    Accepted = 4
 }

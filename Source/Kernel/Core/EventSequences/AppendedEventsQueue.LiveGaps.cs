@@ -21,7 +21,7 @@ public partial class AppendedEventsQueue
 
     static EventType[]? LiveGapEventTypes(AppendedEventsQueueObserverSubscription subscription) => subscription.AllEventTypes
         ? null
-        : [.. subscription.EventTypeIds.Append(GlobalEventTypes.Redaction).Distinct().Select(id => new EventType(id, EventTypeGeneration.First))];
+        : [.. subscription.EventTypeIdSet.Append(GlobalEventTypes.Redaction).Distinct().Select(id => new EventType(id, EventTypeGeneration.First))];
 
     void RegisterLiveSubscription(AppendedEventsQueueObserverSubscription subscription)
     {

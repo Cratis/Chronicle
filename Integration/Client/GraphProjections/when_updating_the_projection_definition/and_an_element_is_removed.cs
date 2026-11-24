@@ -39,7 +39,7 @@ public class and_an_element_is_removed(context context) : Given<context>(context
             await EventStore.Projections.Discover();
             await EventStore.Projections.Register();
             var job = await EventStore.Projections.Replay(new ProjectionId("OrgModelBound"));
-            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job);
+            await EventStore.WaitTillReplayed(job);
             await ReadGraph();
         }
     }

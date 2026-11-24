@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Patterns;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Patterns;
+using Cratis.Chronicle.Supervision;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
@@ -18,6 +19,10 @@ public class a_pattern_miner : Specification
 
     protected TestKitSilo _silo;
     protected PatternMiner _miner;
+    protected ISiloSupervisor _supervisor;
+    protected ManualTimeProvider _clock;
+    protected Func<Task<TimeSpan?>>? _check;
+    protected TimeSpan? _checkInterval;
     protected IBehaviorPatternStorage _patterns;
     protected EventStoreName _eventStore;
     protected EventStoreNamespaceName _namespace;
@@ -29,13 +34,30 @@ public class a_pattern_miner : Specification
 
         _patterns = Substitute.For<IBehaviorPatternStorage>();
         _patterns.GetForScope(Arg.Any<PatternGroupingKey>()).Returns([]);
-        (_silo, _miner) = await CreateMiner(_eventStore, _namespace, _patterns);
+        _clock = new ManualTimeProvider(Occurred);
+        _supervisor = Substitute.For<ISiloSupervisor>();
+        _supervisor
+            .When(supervisor => supervisor.Register(Arg.Any<string>(), Arg.Any<TimeSpan?>(), Arg.Any<Func<Task<TimeSpan?>>?>(), Arg.Any<Func<Task>?>()))
+            .Do(call =>
+            {
+                _checkInterval = call.ArgAt<TimeSpan?>(1);
+                _check = call.ArgAt<Func<Task<TimeSpan?>>?>(2);
+            });
+        (_silo, _miner) = await CreateMiner(_eventStore, _namespace, _patterns, _supervisor, _clock);
     }
+
+    /// <summary>
+    /// Runs the persistence check the miner registered with the supervisor, as the supervisor would when it is due.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected async Task RunSupervisorCheck() => await _check!();
 
     protected static async Task<(TestKitSilo Silo, PatternMiner Miner)> CreateMiner(
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
-        IBehaviorPatternStorage patterns)
+        IBehaviorPatternStorage patterns,
+        ISiloSupervisor? supervisor = null,
+        TimeProvider? clock = null)
     {
         var options = Options.Create(new ChronicleOptions
         {
@@ -61,9 +83,30 @@ public class a_pattern_miner : Specification
         silo.AddService(storage);
         silo.AddService(options);
         silo.AddService(Substitute.For<ILogger<PatternMiner>>());
+        silo.AddService(supervisor ?? Substitute.For<ISiloSupervisor>());
+        silo.AddService(clock ?? TimeProvider.System);
 
         var miner = await silo.CreateGrainAsync<PatternMiner>(new PatternMinerKey(eventStore, @namespace).ToString());
+        silo.AddProbe<IPatternMiner>(_ => miner);
         return (silo, miner);
+    }
+
+    /// <summary>
+    /// Represents a <see cref="TimeProvider"/> whose time only moves when told to.
+    /// </summary>
+    /// <param name="start">The time it starts at.</param>
+    protected class ManualTimeProvider(DateTimeOffset start) : TimeProvider
+    {
+        DateTimeOffset _now = start;
+
+        /// <summary>
+        /// Moves the time forward.
+        /// </summary>
+        /// <param name="by">How far.</param>
+        public void Advance(TimeSpan by) => _now += by;
+
+        /// <inheritdoc/>
+        public override DateTimeOffset GetUtcNow() => _now;
     }
 
     protected static EventFeatures Features(

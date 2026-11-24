@@ -26,5 +26,10 @@ public enum FastForwardOutcome
     /// <summary>
     /// The observer is retired or removed, so nothing was changed.
     /// </summary>
-    NotAvailable = 3
+    NotAvailable = 3,
+
+    /// <summary>
+    /// The fast forward was accepted as a job and is carried out when the observer can serve it; the job reports what became of it.
+    /// </summary>
+    Accepted = 4
 }

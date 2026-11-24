@@ -25,23 +25,25 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="Hash">The <see cref="EventHash"/> of the event content.</param>
 /// <param name="ObservationState">Holds the state relevant for the observer observing.</param>
 /// <param name="Subject">The <see cref="Subject"/> identifying the compliance target for this event. Always set — defaults to the <see cref="EventSourceId"/> value when no explicit subject is provided.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.EventContext")]
 public record EventContext(
-    EventType EventType,
-    EventSourceType EventSourceType,
-    EventSourceId EventSourceId,
-    EventStreamType EventStreamType,
-    EventStreamId EventStreamId,
-    EventSequenceNumber SequenceNumber,
-    DateTimeOffset Occurred,
-    EventStoreName EventStore,
-    EventStoreNamespaceName Namespace,
-    CorrelationId CorrelationId,
-    IEnumerable<Causation> Causation,
-    Identity CausedBy,
-    IEnumerable<Tag> Tags,
-    EventHash Hash,
-    EventObservationState ObservationState = EventObservationState.Initial,
-    Subject Subject = default!)
+    [Id(0)] EventType EventType,
+    [Id(1)] EventSourceType EventSourceType,
+    [Id(2)] EventSourceId EventSourceId,
+    [Id(3)] EventStreamType EventStreamType,
+    [Id(4)] EventStreamId EventStreamId,
+    [Id(5)] EventSequenceNumber SequenceNumber,
+    [Id(6)] DateTimeOffset Occurred,
+    [Id(7)] EventStoreName EventStore,
+    [Id(8)] EventStoreNamespaceName Namespace,
+    [Id(9)] CorrelationId CorrelationId,
+    [Id(10)] IEnumerable<Causation> Causation,
+    [Id(11)] Identity CausedBy,
+    [Id(12)] IEnumerable<Tag> Tags,
+    [Id(13)] EventHash Hash,
+    [Id(14)] EventObservationState ObservationState = EventObservationState.Initial,
+    [Id(15)] Subject Subject = default!)
 {
     /// <summary>
     /// Creates an 'empty' <see cref="EventContext"/> with the event source id set to empty and all properties default.
@@ -62,6 +64,7 @@ public record EventContext(
     /// Gets the name of the registered event source definition the event was appended through.
     /// <see cref="EventSourceName.NotSet"/> when it was not appended through a definition, including events stored before event sources existed.
     /// </summary>
+    [Id(18)]
     public EventSourceName EventSource
     {
         get;
@@ -71,17 +74,20 @@ public record EventContext(
     /// <summary>
     /// Gets the <see cref="EventSequenceNumber"/> of the event this event compensates for, or null when it is not a compensation.
     /// </summary>
+    [Id(16)]
     public EventSequenceNumber? CompensationFor { get; init; }
 
     /// <summary>
     /// Gets the generation the event was appended in, or null for legacy events.
     /// </summary>
+    [Id(17)]
     public EventTypeGeneration? AppendedGeneration { get; init; }
 
     /// <summary>
     /// Gets the structured named tags associated with the event.
     /// </summary>
     /// <exception cref="InvalidNamedTag">The supplied collection contains a null named tag.</exception>
+    [Id(19)]
     public IEnumerable<NamedTag> NamedTags
     {
         get;

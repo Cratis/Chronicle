@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 
@@ -17,7 +16,7 @@ public class when_registration_races_with_compilation_and_namespace_discovery : 
     {
         _initial = Substitute.For<IProjection>();
         _initial.DefinitionFingerprint.Returns(ProjectionFactory.DefinitionFingerprintFor(_firstDefinition));
-        _projectionFactory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<ProjectionDefinition>(definition => definition == _firstDefinition), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(_initialCompilation.Task);
+        _projectionFactory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<ProjectionDefinition>(definition => definition == _firstDefinition), Arg.Any<ReadModelDefinition>()).Returns(_initialCompilation.Task);
     }
 
     async Task Because()

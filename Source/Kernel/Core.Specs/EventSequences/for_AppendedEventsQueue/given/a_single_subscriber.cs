@@ -45,7 +45,7 @@ public abstract class a_single_subscriber : all_dependencies
             Substitute.For<IMeter<AppendedEventsQueue>>(),
             Options.Create(new ChronicleOptions()),
             Substitute.For<ILogger<AppendedEventsQueue>>());
-        await _queue.Subscribe(_observerKey, EventTypes, Filters);
+        await _queue.Subscribe(_observerKey, EventTypeSet.From(EventTypes), Filters);
     }
 
     protected abstract IEnumerable<EventType> EventTypes { get; }

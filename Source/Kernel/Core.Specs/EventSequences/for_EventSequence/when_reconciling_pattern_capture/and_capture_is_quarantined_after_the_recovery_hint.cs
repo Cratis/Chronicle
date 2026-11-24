@@ -20,9 +20,9 @@ public class and_capture_is_quarantined_after_the_recovery_hint : given.an_event
         _registeredTypes = [_eventType, new EventType("new-event", EventTypeGeneration.First)];
         var observer = Substitute.For<IObserver>();
         _captureGrainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(observer);
-        observer.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>()).Returns(async call =>
+        observer.NeedsSubscriptionRecovery(Arg.Any<EventTypeSet>()).Returns(async call =>
         {
-            _passedHint = await _captureObserver.NeedsSubscriptionRecovery(call.Arg<IEnumerable<EventType>>());
+            _passedHint = await _captureObserver.NeedsSubscriptionRecovery(call.Arg<EventTypeSet>());
 
             // Quarantine wins the next observer turn after the caller receives a positive hint.
             await _captureObserver.TransitionTo<QuarantinedObserver>();
@@ -31,8 +31,8 @@ public class and_capture_is_quarantined_after_the_recovery_hint : given.an_event
 
             return _passedHint;
         });
-        observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), SiloAddress.Zero, isReplayable: false)
-            .Returns(call => _captureObserver.RecoverStalledSubscription<IPatternCaptureSubscriber>(ObserverType.Reactor, call.Arg<IEnumerable<EventType>>(), SiloAddress.Zero, isReplayable: false));
+        observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<EventTypeSet>(), SiloAddress.Zero, isReplayable: false)
+            .Returns(call => _captureObserver.RecoverStalledSubscription<IPatternCaptureSubscriber>(ObserverType.Reactor, call.Arg<EventTypeSet>(), SiloAddress.Zero, isReplayable: false));
     }
 
     Task Because() => _silo.TimerRegistry.FireAllAsync();
@@ -42,5 +42,5 @@ public class and_capture_is_quarantined_after_the_recovery_hint : given.an_event
     [Fact] async Task should_keep_the_quarantine() => (await _captureObserver.GetCurrentState()).ShouldBeOfExactType<QuarantinedObserver>();
     [Fact] async Task should_not_update_the_subscription() => (await _captureObserver.GetSubscription()).EventTypes.ShouldContainOnly(_eventType);
     [Fact] async Task should_not_write_recovery_state() => await _captureState.DidNotReceive().WriteStateAsync();
-    [Fact] async Task should_not_resubscribe_to_the_queue() => await _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_not_resubscribe_to_the_queue() => await _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

@@ -18,6 +18,8 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleFixture chronicleFixtur
     protected IReducerHandler _reducer;
 
     long _netCount;
+    readonly TaskCompletionSource _added = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _removed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 #pragma warning disable CA2213
     IDisposable _subscription;
 #pragma warning restore CA2213
@@ -30,10 +32,12 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleFixture chronicleFixtur
                 if (cs.Removed)
                 {
                     Interlocked.Decrement(ref _netCount);
+                    _removed.TrySetResult();
                 }
                 else
                 {
                     Interlocked.Increment(ref _netCount);
+                    _added.TrySetResult();
                 }
             });
 
@@ -46,12 +50,17 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleFixture chronicleFixtur
     async Task Because()
     {
         const string eventSourceId = "some source";
-        var result = await EventStore.EventLog.Append(eventSourceId, new SomeEvent(42));
-        await _reducer.WaitTillReachesEventSequenceNumber(result.SequenceNumber);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (_reducer.IsActive)
+        {
+            await EventStore.ReadModels.GetWatcherFor<SomeReadModel>().Subscribed.WaitAsync(timeout.Token);
+        }
+        await EventStore.EventLog.Append(eventSourceId, new SomeEvent(42));
+        await _added.Task.WaitAsync(timeout.Token);
         CountAfterFirstEvent = Interlocked.Read(ref _netCount);
 
-        result = await EventStore.EventLog.Append(eventSourceId, new SomeDeleteEvent());
-        await _reducer.WaitTillReachesEventSequenceNumber(result.SequenceNumber);
+        await EventStore.EventLog.Append(eventSourceId, new SomeDeleteEvent());
+        await _removed.Task.WaitAsync(timeout.Token);
 
         CountAfterSecondEvent = Interlocked.Read(ref _netCount);
     }

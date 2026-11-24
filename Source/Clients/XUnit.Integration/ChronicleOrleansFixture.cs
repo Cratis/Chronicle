@@ -43,7 +43,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
         // The silo is reused across tests. Point the artifacts provider at the current
         // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
-        DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
+        SharedArtifactsProvider.SetCurrent(this);
 
         // Bootstrap before the first client registration as well as after every storage reset.
         if (CurrentWebApplicationFactory is null)

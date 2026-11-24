@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Captures.Engine;
 /// <param name="Message">The message describing the problem.</param>
 /// <param name="Line">The one-based line the problem relates to - 1 when the problem has no specific location.</param>
 /// <param name="Column">The one-based column the problem relates to - 1 when the problem has no specific location.</param>
-public record CaptureValidationMessage(string Message, int Line = 1, int Column = 1);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Captures.Engine.CaptureValidationMessage")]
+public record CaptureValidationMessage([Id(0)] string Message, [Id(1)] int Line = 1, [Id(2)] int Column = 1);

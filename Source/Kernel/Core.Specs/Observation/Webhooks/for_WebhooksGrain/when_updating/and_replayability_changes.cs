@@ -26,6 +26,6 @@ public class and_replayability_changes : given.a_webhooks_manager_grain
 
     Task Because() => _grain.Update(_definition with { IsReplayable = false });
 
-    [Fact] async Task should_resubscribe_without_replayability() => await _observer.Received(1).Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), isReplayable: false, reactivateRetired: true, automatic: false);
+    [Fact] async Task should_resubscribe_without_replayability() => await _observer.Received(1).Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), isReplayable: false, reactivateRetired: true, automatic: false);
     [Fact] void should_persist_the_changed_replayability() => _stateStorage.State.Webhooks.Single().IsReplayable.ShouldBeFalse();
 }

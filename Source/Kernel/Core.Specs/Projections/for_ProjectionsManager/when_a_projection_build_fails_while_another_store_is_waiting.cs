@@ -15,7 +15,7 @@ public class when_a_projection_build_fails_while_another_store_is_waiting : give
     void Establish()
     {
         HoldBuilds();
-        _secondFactory.Create(default!, default!, default!, default!, default!).ReturnsForAnyArgs(async _ =>
+        _secondFactory.Create(default!, default!, default!, default!).ReturnsForAnyArgs(async _ =>
         {
             _failedBuildEntered.TrySetResult();
             await _release.Task;

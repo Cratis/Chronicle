@@ -7,5 +7,5 @@ public class when_a_client_reactor_is_stored : given.a_queue_with_a_stored_durab
 {
     [Fact] async Task should_keep_the_subscription() => (await _queue.GetSubscriptions()).Single().ObserverKey.ShouldEqual(_observerKey);
     [Fact] void should_hold_it_as_dormant() => _queue.DormantCount.ShouldEqual(1);
-    [Fact] async Task should_take_the_event_types_from_the_definition() => (await _queue.GetSubscriptions()).Single().EventTypeIds.ShouldContainOnly(_eventType.Id);
+    [Fact] async Task should_take_the_event_types_from_the_definition() => (await _queue.GetSubscriptions()).Single().EventTypes.Select(_ => _.Id).ShouldContainOnly(_eventType.Id);
 }

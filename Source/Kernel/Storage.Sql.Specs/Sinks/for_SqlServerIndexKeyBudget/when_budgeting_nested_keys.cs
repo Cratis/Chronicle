@@ -20,7 +20,7 @@ public class when_budgeting_nested_keys : Specification
     {
         _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"details":{"type":"object","properties":{"count":{"type":"integer"},"total":{"type":"number"},"active":{"type":"boolean"}}}}}""");
         _columns = ProjectedColumns.ForSchema(_schema);
-        _context = new(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlServer("Server=localhost;Database=indexes").Options, "indexes", _columns, Substitute.For<IReadModelMigrator>());
+        _context = new(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlServer("Server=localhost;Database=indexes").WithoutServiceProviderCaching().Options, "indexes", _columns, Substitute.For<IReadModelMigrator>());
     }
 
     [Fact] async Task should_allow_one_nested_number_key() => (await Rejection(new("details.total"))).ShouldBeNull();

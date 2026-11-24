@@ -13,6 +13,9 @@ internal static partial class LogMessages
     [LoggerMessage(LogLevel.Warning, "Failed to create projection definition from the model-bound attributes on read model {ReadModelType} - it will not be registered, and its read model will never update")]
     internal static partial void FailedToCreateModelBoundProjectionDefinition(this ILogger<Projections> logger, Type readModelType, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "The kernel accepted the projections registered by '{Registrant}' but has not finished applying them after {Waited}; carrying on, the kernel keeps applying them")]
+    internal static partial void RegistrationStillBeingApplied(this ILogger<Projections> logger, string registrant, TimeSpan waited);
+
     [LoggerMessage(LogLevel.Warning, "Failed to create the explicitly registered projection for read model {ReadModelType} - it will not be registered, and its read model will never update")]
     internal static partial void FailedToCreateExplicitProjectionDefinition(this ILogger<Projections> logger, Type readModelType, Exception exception);
 

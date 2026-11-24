@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.Jobs;
+using Cratis.Chronicle.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences.Copy;
@@ -28,8 +29,16 @@ public class CopyEventSourceEvents(ILogger<CopyEventSourceEvents> logger) : Job<
     protected override JobDetails GetJobDetails() => $"Copy events from {Request.SourceId} to {Request.TargetId}";
 
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "copy_event_source_events");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "copy_event_source_events", State.Progress);
         if (AllStepsCompletedSuccessfully)
         {
             logger.CopyCompleted(Request.SourceId, Request.TargetId, Request.EventSequenceId);

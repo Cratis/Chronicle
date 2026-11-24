@@ -10,7 +10,7 @@ public class and_round_tripping_a_dotted_path_dictionary : given.a_dictionary_pr
 {
     NestedDictionaryReadModel _result;
 
-    void Establish() => _definition.From[_payloadReceived] = new(new Dictionary<PropertyPath, string> { ["details.payload"] = "nested.data" }, "$eventSourceId", null);
+    void Establish() => _definition = _definition.WithFrom(_payloadReceived, new(new Dictionary<PropertyPath, string> { ["details.payload"] = "nested.data" }, "$eventSourceId", null));
 
     async Task Because()
     {

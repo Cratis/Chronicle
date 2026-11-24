@@ -11,7 +11,9 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// The namespace whose observer blocked the removal, when the outcome is a refusal. The guard runs across every
 /// namespace, so a refusal that does not name one leaves the operator with nowhere to look.
 /// </param>
-public record ObserverRemovalResult(ObserverRemovalOutcome Outcome, EventStoreNamespaceName BlockingNamespace)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.ObserverRemovalResult")]
+public record ObserverRemovalResult([Id(0)] ObserverRemovalOutcome Outcome, [Id(1)] EventStoreNamespaceName BlockingNamespace)
 {
     /// <summary>
     /// Gets a result representing a successful removal.

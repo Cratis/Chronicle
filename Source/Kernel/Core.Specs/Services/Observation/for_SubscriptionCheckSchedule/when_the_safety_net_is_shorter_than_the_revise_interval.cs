@@ -7,11 +7,11 @@ public class when_the_safety_net_is_shorter_than_the_revise_interval : given.a_s
 {
     void Establish()
     {
-        _schedule = new(Revise, TimeSpan.FromSeconds(1), Settle);
+        _schedule = new(Revise, TimeSpan.FromSeconds(1));
         _schedule.Checked(true);
     }
 
-    void Because() => _next = _schedule.NextCheckAfter(Now);
+    void Because() => _next = _schedule.NextCheckAfter();
 
     [Fact] void should_check_after_the_revise_interval() => _next.ShouldEqual(Revise);
 }

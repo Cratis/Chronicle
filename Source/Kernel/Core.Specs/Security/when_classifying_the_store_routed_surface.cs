@@ -30,6 +30,7 @@ public class when_classifying_the_store_routed_surface : Specification
         ["Federation.FederationEnrollmentStatus"] = "reports the enrollment of this kernel; has no store",
         ["Servers.ServerInstanceDetails"] = "lists server instances; has no store",
         ["Diagnostics.StorageAuthorizationDiagnostic"] = "lists cluster-wide storage authorization failures; has no store",
+        ["Diagnostics.KernelBusiness"] = "reports on the silo that answers; has no store",
         ["Occurrences.LifecycleOccurrenceResult"] = "a result record; it has no query of its own",
         ["EventStores.EventStoreNames"] = "lists names only",
         ["Security.AdminPasswordStatus"] = "anonymous bootstrap status",

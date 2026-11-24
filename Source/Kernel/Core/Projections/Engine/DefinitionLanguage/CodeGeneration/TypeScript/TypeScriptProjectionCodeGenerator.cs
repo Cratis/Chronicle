@@ -203,7 +203,7 @@ public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator
             _ => null
         };
 
-    static void AppendFromBlocks(IDictionary<Concepts.Events.EventType, FromDefinition> fromBlocks, List<string> blocks)
+    static void AppendFromBlocks(IReadOnlyDictionary<Concepts.Events.EventType, FromDefinition> fromBlocks, List<string> blocks)
     {
         foreach (var (eventType, from) in fromBlocks)
         {
@@ -227,7 +227,7 @@ public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator
         }
     }
 
-    static void AppendJoinBlocks(IDictionary<Concepts.Events.EventType, JoinDefinition> joinBlocks, List<string> blocks)
+    static void AppendJoinBlocks(IReadOnlyDictionary<Concepts.Events.EventType, JoinDefinition> joinBlocks, List<string> blocks)
     {
         foreach (var (eventType, join) in joinBlocks)
         {
@@ -271,7 +271,7 @@ public class TypeScriptProjectionCodeGenerator : IProjectionCodeGenerator
         }
     }
 
-    static void AppendRemovedWithBlocks(IDictionary<Concepts.Events.EventType, RemovedWithDefinition> removedWithBlocks, List<string> blocks)
+    static void AppendRemovedWithBlocks(IReadOnlyDictionary<Concepts.Events.EventType, RemovedWithDefinition> removedWithBlocks, List<string> blocks)
     {
         foreach (var (eventType, _) in removedWithBlocks)
         {

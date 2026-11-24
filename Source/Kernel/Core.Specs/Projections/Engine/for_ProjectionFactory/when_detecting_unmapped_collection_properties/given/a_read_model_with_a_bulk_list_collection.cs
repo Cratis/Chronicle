@@ -50,7 +50,7 @@ public class a_read_model_with_a_bulk_list_collection : Specification
                 """))
     ];
 
-    protected static ProjectionDefinition ProjectionFrom(IDictionary<PropertyPath, string>? properties = default) =>
+    protected static ProjectionDefinition ProjectionFrom(IReadOnlyDictionary<PropertyPath, string>? properties = default) =>
         new(
             ProjectionOwner.Client,
             EventSequenceId.Log,

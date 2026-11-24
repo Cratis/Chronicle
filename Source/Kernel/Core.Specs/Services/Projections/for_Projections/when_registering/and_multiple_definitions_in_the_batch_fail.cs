@@ -20,7 +20,7 @@ public class and_multiple_definitions_in_the_batch_fail : Specification
         var grainFactory = Substitute.For<IGrainFactory>();
         var projectionsManager = Substitute.For<Chronicle.Projections.IProjectionsManager>();
         grainFactory.GetGrain<Chronicle.Projections.IProjectionsManager>(Arg.Any<string>()).Returns(projectionsManager);
-        projectionsManager.RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>())
+        projectionsManager.RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), Arg.Any<Concepts.Projections.ProjectionOwner?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<GrainCancellationToken?>())
             .Returns(Task.FromException(new SomeProjectionDefinitionsFailedToRegister(
                 (EventStoreName)"event-store",
                 new Dictionary<Concepts.Projections.ProjectionId, Exception>
@@ -38,7 +38,7 @@ public class and_multiple_definitions_in_the_batch_fail : Specification
             Substitute.For<Chronicle.ReadModels.IReadModelsCompliance>(),
             Substitute.For<ILocalSiloDetails>(),
             AllowingConnectionOwnership.Create(),
-            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()),
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions { Registration = new() { AcceptAsynchronously = false } }),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
             NamespaceCasingContext.Create());
     }

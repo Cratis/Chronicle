@@ -27,7 +27,7 @@ public class when_generating_sqlite_virtual_columns : Specification
 
     void Because()
     {
-        using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_connection).Options);
+        using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_connection).IgnoringManyServiceProviders().Options);
         var generator = context.GetService<IMigrationsSqlGenerator>();
         var create = new CreateTableOperation { Name = "decimals" };
         create.Columns.Add(new AddColumnOperation { Table = "decimals", Name = "amount", ClrType = typeof(string), ColumnType = "TEXT" });

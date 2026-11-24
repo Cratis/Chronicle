@@ -590,11 +590,9 @@ public class Projection(
             var readModelKey = new ReadModelGrainKey(State.ReadModel, key.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             var readModelDefinition = await readModel.GetDefinition();
-            var eventStoreStorage = storage.GetEventStore(key.EventStore);
-            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            // Reads use the projection's own generation delivery, just like its observer.
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition, eventTypeSchemas);
+            // Reads use the projection's own generation delivery, just like its observer. The compiled plan is shared with every namespace.
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 
@@ -709,7 +707,7 @@ public class Projection(
         // Compared by id: the observer is subscribed with the delivery-specific generations of the registered
         // definition, while this grain's projection always resolves compatibility generations.
         var expected = (await GetOrCreateProjectionForNamespace(@namespace)).EventTypes.Select(_ => _.Id).ToHashSet();
-        var subscribed = (await observer.GetDefinition()).EventTypes.Select(_ => _.Id).ToHashSet();
+        var subscribed = (await observer.GetEventTypes()).Select(_ => _.Id).ToHashSet();
         return expected.SetEquals(subscribed);
     }
 

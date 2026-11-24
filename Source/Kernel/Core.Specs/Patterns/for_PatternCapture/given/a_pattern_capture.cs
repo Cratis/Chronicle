@@ -12,12 +12,14 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Patterns.for_PatternCapture.given;
 
 public class a_pattern_capture : Specification
 {
     protected PatternCapture _capture;
+    protected Cratis.Chronicle.Configuration.ChronicleOptions _options;
     protected IStorage _storage;
     protected IGrainFactory _grainFactory;
     protected IEventTypesStorage _eventTypes;
@@ -37,10 +39,10 @@ public class a_pattern_capture : Specification
         _reactors = Substitute.For<IReactorDefinitionsStorage>();
         _observer = Substitute.For<IObserver>();
         _observer.GetSubscription().Returns(ObserverSubscription.Unsubscribed);
-        _observer.SubscribeAdditively<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
-            .Returns(call => call.Arg<IEnumerable<EventType>>());
-        _observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
-            .Returns(call => call.Arg<IEnumerable<EventType>>());
+        _observer.SubscribeAdditively<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<EventTypeSet>());
+        _observer.RecoverStalledSubscription<IPatternCaptureSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>())
+            .Returns(call => call.Arg<EventTypeSet>());
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _namespaceStorage.HasData().Returns(Task.FromResult(true));
 
@@ -60,7 +62,8 @@ public class a_pattern_capture : Specification
         _grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
         _grainFactory.GetGrain<INamespaces>(Arg.Any<string>(), Arg.Any<string>()).Returns(_namespaces);
 
-        _capture = new(_storage, localSiloDetails, _grainFactory, NullLogger<PatternCapture>.Instance);
+        _options = new Cratis.Chronicle.Configuration.ChronicleOptions();
+        _capture = new(_storage, localSiloDetails, _grainFactory, Options.Create(_options), NullLogger<PatternCapture>.Instance);
     }
 
     protected void EventTypesAre(params string[] identifiers) =>

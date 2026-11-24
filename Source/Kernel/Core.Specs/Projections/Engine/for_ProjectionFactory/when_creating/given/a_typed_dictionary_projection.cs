@@ -30,7 +30,7 @@ public class a_typed_dictionary_projection : a_child_collection_projection
               }
             }
             """);
-        _definition.Children.Clear();
+        _definition = _definition.WithoutChildren();
         _incoming = new(
             EventContext.EmptyWithEventSourceId("stream") with { EventType = _amountRecorded },
             new { slot = "first", amount = 5 }.AsExpandoObject());
@@ -40,7 +40,7 @@ public class a_typed_dictionary_projection : a_child_collection_projection
 
     protected async Task<object?> Project(string propertyPath, string expression, string key = "first")
     {
-        _definition.From[_amountRecorded] = new(new Dictionary<PropertyPath, string> { [new(propertyPath)] = expression }, "$eventSourceId", null);
+        _definition = _definition.WithFrom(_amountRecorded, new(new Dictionary<PropertyPath, string> { [new(propertyPath)] = expression }, "$eventSourceId", null));
         var projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, []);
         projection.OnNext(new ProjectionEventContext(_key, _incoming, _changeset, projection.GetOperationTypeFor(_amountRecorded), false));
         var dictionary = (IDictionary<string, object?>)((IDictionary<string, object?>)_changeset.CurrentState)[propertyPath[..propertyPath.IndexOf('.')]]!;

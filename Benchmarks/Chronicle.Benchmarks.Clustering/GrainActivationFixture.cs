@@ -175,7 +175,7 @@ public sealed class GrainActivationFixture(GrainActivationMode mode, bool sequen
     {
         ValidateState(_lastState);
         ValidateState(await NamespaceStorage().Observers.Get(_observerId));
-        var definition = await _observer.GetDefinition();
+        var definition = await _storage.GetEventStore(ClusterBenchmarkFixture.EventStore).Observers.Get(_observerId);
         Require(definition.Identifier.Value == _observerId, "Loaded the wrong observer definition.");
         Require(definition.EventSequenceId.Value == _sequenceId, "Observer definition lost its sequence.");
         Require(!definition.EventTypes.Any(), "Seed observer must remain unsubscribed.");

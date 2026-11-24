@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Properties;
@@ -27,5 +26,5 @@ public class when_reading_visibility_before_registration : given.a_manager_with_
 
     [Fact] void should_include_uninitialized_child_only_roots() => _visibility.ShouldEqual(ReadModelInstanceVisibility.IncludeUninitialized);
     [Fact] void should_not_retain_a_compiled_graph() => _manager.CachedGraphCount.ShouldEqual(0);
-    [Fact] void should_not_invoke_the_factory() => _ = _projectionFactory.DidNotReceive().Create(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>());
+    [Fact] void should_not_invoke_the_factory() => _ = _projectionFactory.DidNotReceive().Create(Arg.Any<Concepts.EventStoreName>(), Arg.Any<Concepts.EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>());
 }

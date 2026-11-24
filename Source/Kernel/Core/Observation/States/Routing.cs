@@ -200,7 +200,7 @@ public class Routing(
         // An observer subscribed to all events has no fixed event type list on its subscription by design -
         // the whole point is that it also covers event types that do not exist yet - so an empty list there is
         // not a reason to disconnect it the way it would be for an ordinary, explicitly-typed subscription.
-        if (!_subscription.EventTypes.Any() && !state.SubscribesToAllEvents)
+        if (_subscription.EventTypes.Count == 0 && !state.SubscribesToAllEvents)
         {
             logger.NoEventTypes();
             await StateMachine.TransitionTo<Disconnected>();

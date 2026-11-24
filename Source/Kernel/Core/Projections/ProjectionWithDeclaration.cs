@@ -12,4 +12,6 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="Identifier">The projection identifier.</param>
 /// <param name="ContainerName">The container name of the read model the projection projects to.</param>
 /// <param name="Declaration">The projection definition as projection declaration language.</param>
-public record ProjectionWithDeclaration(ProjectionId Identifier, ReadModelContainerName ContainerName, ProjectionDeclaration Declaration);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Projections.ProjectionWithDeclaration")]
+public record ProjectionWithDeclaration([Id(0)] ProjectionId Identifier, [Id(1)] ReadModelContainerName ContainerName, [Id(2)] ProjectionDeclaration Declaration);

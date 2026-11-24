@@ -86,5 +86,8 @@ public class and_a_catch_up_handover_starts_during_the_job_lookup : given.an_obs
 
     [Fact] void should_preserve_catch_up_preparation() => _isPreparingCatchupAfterWatchdog.ShouldBeTrue();
     [Fact] void should_not_count_a_recovery_towards_quarantine() => _recoveryAttemptsAfterWatchdog.ShouldEqual(0);
-    [Fact] void should_not_route_again() => _routingLookupsAfterWatchdog.ShouldEqual(1);
+
+    /// <summary>Routing reads the tail once, and admitting the successor catch-up reads it once more to order observers by how far
+    /// behind they are; a second routing would make it three.</summary>
+    [Fact] void should_not_route_again() => _routingLookupsAfterWatchdog.ShouldEqual(2);
 }

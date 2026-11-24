@@ -15,6 +15,8 @@ namespace Cratis.Chronicle.Memory;
 /// </remarks>
 public static class ProcessMemoryMetrics
 {
+    static readonly string[] _generations = ["gen0", "gen1", "gen2", "loh", "poh"];
+
     /// <summary>
     /// Register the process memory instruments on a meter.
     /// </summary>
@@ -30,5 +32,32 @@ public static class ProcessMemoryMetrics
         meter.CreateObservableGauge("cratis.chronicle.memory.working_set", () => Environment.WorkingSet, "By", "Physical memory of the process, managed and not");
         meter.CreateObservableCounter("cratis.chronicle.memory.allocated", () => GC.GetTotalAllocatedBytes(), "By", "Total bytes allocated on the managed heap");
         meter.CreateObservableCounter("cratis.chronicle.memory.gen2_collections", () => GC.CollectionCount(2), "{collection}", "Full garbage collections");
+        meter.CreateObservableGauge("cratis.chronicle.memory.generation_size", () => ObserveGenerations(info => info.SizeAfterBytes), "By", "Bytes a heap generation holds after the last collection, by generation: gen0, gen1, gen2, loh or poh. Gen 2 is what survived; compare it with the committed memory");
+        meter.CreateObservableGauge("cratis.chronicle.memory.generation_fragmentation", () => ObserveGenerations(info => info.FragmentationAfterBytes), "By", "Bytes of a heap generation lost to fragmentation after the last collection, by generation");
+        meter.CreateObservableCounter("cratis.chronicle.memory.pause_duration", () => GC.GetTotalPauseDuration().TotalSeconds, "s", "Total time the process has spent paused for garbage collection");
+        meter.CreateObservableCounter("cratis.chronicle.memory.collections", ObserveCollections, "{collection}", "Garbage collections, by generation: gen0, gen1 or gen2");
+    }
+
+    static Measurement<long>[] ObserveGenerations(Func<GCGenerationInfo, long> select)
+    {
+        var info = GC.GetGCMemoryInfo().GenerationInfo;
+        var measurements = new Measurement<long>[Math.Min(info.Length, _generations.Length)];
+        for (var index = 0; index < measurements.Length; index++)
+        {
+            measurements[index] = new(select(info[index]), new KeyValuePair<string, object?>("generation", _generations[index]));
+        }
+
+        return measurements;
+    }
+
+    static Measurement<long>[] ObserveCollections()
+    {
+        var measurements = new Measurement<long>[3];
+        for (var generation = 0; generation < measurements.Length; generation++)
+        {
+            measurements[generation] = new(GC.CollectionCount(generation), new KeyValuePair<string, object?>("generation", _generations[generation]));
+        }
+
+        return measurements;
     }
 }

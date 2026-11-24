@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 
@@ -123,6 +124,19 @@ public interface IObserverStateStorage
     /// periodically for every namespace. An observer whose state has no owner is not returned.
     /// </remarks>
     Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner);
+
+    /// <summary>
+    /// Gets the persisted cursor - the next <see cref="EventSequenceNumber"/> the observer expects to handle - of every observer
+    /// owned by an event sequence that has recorded a durable subscription.
+    /// </summary>
+    /// <param name="owner">The <see cref="EventSequenceId"/> that owns the observers.</param>
+    /// <returns>The cursors by observer; an observer without a recorded subscription is not returned.</returns>
+    /// <remarks>
+    /// Reads nothing but the cursors, so the dormant safety net (decision 0034) can compare every observer of an event
+    /// sequence with the tail in one read instead of activating each of them. The persisted cursor can lag behind the
+    /// observer's own, never run ahead of it, so a comparison made with it errs toward waking.
+    /// </remarks>
+    Task<IReadOnlyDictionary<ObserverId, EventSequenceNumber>> GetNextEventSequenceNumbers(EventSequenceId owner);
 
     /// <summary>
     /// Delete the state of an observer.

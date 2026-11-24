@@ -32,5 +32,10 @@ public enum PartitionRecoveryOutcome
     /// <summary>
     /// The partition has exceeded its retry attempts and been quarantined individually, so it will not be retried until explicitly cleared.
     /// </summary>
-    PartitionQuarantined = 3
+    PartitionQuarantined = 3,
+
+    /// <summary>
+    /// The recovery was accepted as a job and is carried out when the observer can serve it; the job reports what became of it.
+    /// </summary>
+    Accepted = 4
 }

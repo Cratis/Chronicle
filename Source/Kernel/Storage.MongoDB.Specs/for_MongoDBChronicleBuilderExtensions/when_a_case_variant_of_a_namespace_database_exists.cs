@@ -45,7 +45,7 @@ public class when_a_case_variant_of_a_namespace_database_exists : Specification
                     options.Server = "mongodb://localhost:27017";
                     options.Database = "run_chronicle+main";
                 },
-                _ => { })
+                SpecSerializationSetup.ConfigureLikeTheServer)
             .UseOrleans(silo =>
             {
                 silo.Services.AddTypeDiscovery();

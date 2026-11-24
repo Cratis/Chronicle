@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Clients;
-using Grpc.Core;
 
 namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.with_cluster_reservation;
 
@@ -15,13 +14,15 @@ public class the_reservation_answers_after_the_timeout : given.a_two_silo_cluste
 
     async Task Because()
     {
-        _result = await Open(_serviceA, AuthenticatedCalls.As("alice"));
+        using var cancellation = new CancellationTokenSource();
+        _result = await Open(_serviceA, AuthenticatedCalls.As("alice", cancellationToken: cancellation.Token));
+        await cancellation.CancelAsync();
         await Released();
         _clock.Advance(ConnectionOwnership.ReleasedClaimRetention);
         _other = await _grain.Claim(AuthenticatedCalls.OwnerOf("bob"), _siloB, Guid.NewGuid(), TimeSpan.FromMinutes(1));
     }
 
-    [Fact] void should_report_that_the_connection_could_not_be_verified() => ((RpcException)_result).StatusCode.ShouldEqual(StatusCode.Unavailable);
+    [Fact] void should_serve_the_client_without_waiting_for_the_reservation() => _result.ShouldBeNull();
     [Fact] void should_end_with_the_claim_released() => _other.ShouldBeTrue();
 
     sealed class AnsweringLate(IConnectionReservation inner) : IConnectionReservation

@@ -33,7 +33,6 @@ public partial class EventTypesStorage
 
             if (await TryInsertOrUpdate(collection, existing, effective))
             {
-                Invalidate(effective.Id);
                 return result with { Changed = true };
             }
         }

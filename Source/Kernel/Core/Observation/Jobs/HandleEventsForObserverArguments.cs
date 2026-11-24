@@ -15,21 +15,26 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="EndEventSequenceNumber">The event sequence number the job step should go to.</param>
 /// <param name="EventObservationState">The event observation state to set for the events.</param>
 /// <param name="EventTypes">The event types that are to replay.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverArguments")]
 public record HandleEventsForObserverArguments(
-    ObserverKey ObserverKey,
-    ObserverType ObserverType,
-    EventSequenceNumber StartEventSequenceNumber,
-    EventSequenceNumber EndEventSequenceNumber,
-    EventObservationState EventObservationState,
-    IEnumerable<EventType> EventTypes) : IObserverJobRequest
+    [Id(0)] ObserverKey ObserverKey,
+    [Id(1)] ObserverType ObserverType,
+    [Id(2)] EventSequenceNumber StartEventSequenceNumber,
+    [Id(3)] EventSequenceNumber EndEventSequenceNumber,
+    [Id(4)] EventObservationState EventObservationState,
+    [Id(5)] IEnumerable<EventType> EventTypes) : IObserverJobRequest
 {
     /// <inheritdoc/>
+    [Id(6)]
     public ObserverReaderScope? ReaderScope { get; init; }
 
     /// <inheritdoc/>
+    [Id(7)]
     public ulong? Revision { get; init; }
 
     /// <inheritdoc/>
+    [Id(8)]
     public ulong? OwnershipEpoch { get; init; }
 
     /// <summary>
@@ -41,5 +46,6 @@ public record HandleEventsForObserverArguments(
     /// well would hand the same events to the subscriber twice at once. Catch-up sets this because it is the path
     /// that runs alongside retries; a replay does not, because it deliberately re-delivers everything.
     /// </remarks>
+    [Id(9)]
     public bool SkipFailedPartitions { get; init; }
 }

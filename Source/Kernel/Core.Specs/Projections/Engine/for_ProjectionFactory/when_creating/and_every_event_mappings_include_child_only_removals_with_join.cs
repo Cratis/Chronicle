@@ -10,9 +10,9 @@ public class and_every_event_mappings_include_child_only_removals_with_join : gi
 {
     void Establish()
     {
-        var notes = _definition.Children["notes"];
-        notes.From.Clear();
-        notes.RemovedWithJoin[_noteUpdated] = new("noteId");
+        _definition = _definition.WithChild("notes", notes => notes
+            .WithoutFrom()
+            .WithRemovedWithJoin(_noteUpdated, new("noteId")));
     }
 
     Task Because() => ProjectChildEvent();

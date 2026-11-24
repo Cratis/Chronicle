@@ -17,8 +17,10 @@ namespace Cratis.Chronicle.Storage.ReadModels;
 /// prevent any changes to the target while replaying and keeping a system operational, at least from a read perspective.
 /// Once replay is done it should keep the "old" target around by renaming it a the <see cref="RevertContainerName"/>.
 /// </remarks>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.ReadModels.ReplayContext")]
 public record ReplayContext(
-    ReadModelType Type,
-    ReadModelContainerName ContainerName,
-    ReadModelContainerName RevertContainerName,
-    DateTimeOffset Started);
+    [Id(0)] ReadModelType Type,
+    [Id(1)] ReadModelContainerName ContainerName,
+    [Id(2)] ReadModelContainerName RevertContainerName,
+    [Id(3)] DateTimeOffset Started);

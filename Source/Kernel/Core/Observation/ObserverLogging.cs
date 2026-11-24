@@ -263,12 +263,6 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "A silo left the cluster and the appended-events queue no longer holds the live subscription of the observer at {NextEventSequenceNumber}. Re-routing observer.")]
     internal static partial void RestoringLiveSubscriptionAfterSiloDeparture(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
 
-    [LoggerMessage(LogLevel.Debug, "Verifying the live subscription after a silo left the cluster failed; checking again on the next tick")]
-    internal static partial void VerifyingLiveSubscriptionFailed(this ILogger<Observer> logger, Exception exception);
-
-    [LoggerMessage(LogLevel.Warning, "Scheduling live subscription checks after a silo left the cluster failed")]
-    internal static partial void OpeningDepartureChecksFailed(this ILogger<Observer> logger, Exception exception);
-
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);
 

@@ -39,5 +39,5 @@ public class and_a_reconciling_pass_is_pending : given.a_manager_with_a_quaranti
     }
 
     [Fact] async Task should_end_quarantine() => (await _observer.IsObserverQuarantined()).ShouldBeFalse();
-    [Fact] async Task should_subscribe_the_quarantined_observer() => await _managedObserver.Received(1).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: false);
+    [Fact] async Task should_subscribe_the_quarantined_observer() => await _managedObserver.Received(1).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), reactivateRetired: false);
 }

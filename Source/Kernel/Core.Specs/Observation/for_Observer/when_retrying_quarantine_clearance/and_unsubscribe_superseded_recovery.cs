@@ -24,5 +24,5 @@ public class and_unsubscribe_superseded_recovery : given.an_observer_with_failed
     [Fact] void should_not_resume_jobs() => _jobsManager.DidNotReceive().Resume(Arg.Any<JobId>());
     [Fact] void should_not_retry_failed_partitions() => _jobsManager.DidNotReceive().Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());
     [Fact] void should_not_start_in_flight_catchup() => CheckDidNotStartCatchupJob();
-    [Fact] void should_not_subscribe_to_the_queue() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_not_subscribe_to_the_queue() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

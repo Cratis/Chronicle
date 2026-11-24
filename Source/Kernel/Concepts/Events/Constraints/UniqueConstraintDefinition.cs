@@ -26,10 +26,15 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </para>
 /// </remarks>
 [method: JsonConstructor]
-public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, IEnumerable<EventTypeId> RemovedWith = null!, bool IgnoreCasing = false, ConstraintScope? Scope = default) : IConstraintDefinition
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.UniqueConstraintDefinition")]
+public record UniqueConstraintDefinition([Id(0)] ConstraintName Name, [Id(1)] IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, [Id(2)] IEnumerable<EventTypeId> RemovedWith = null!, [Id(3)] bool IgnoreCasing = false, [Id(4)] ConstraintScope? Scope = default) : IConstraintDefinition
 {
+    [NonSerialized]
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+    [Id(7)]
     readonly IEnumerable<EventSequenceId>? _eventSequences;
+    [Id(6)]
     readonly IEnumerable<UniqueConstraintEventDefinition>? _removalEventDefinitions;
 
     /// <summary>
@@ -59,6 +64,7 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
     /// <summary>
     /// Gets how claimed values are retained. The default keeps one value per event source.
     /// </summary>
+    [Id(5)]
     public UniqueConstraintMode Mode { get; init; }
 
     /// <summary>
