@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -86,17 +85,13 @@ public partial class EventSequence(
     readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
     readonly ILogger<EventSequence> _logger = (concurrencyScopeStrategies as ConcurrencyScopeStrategies)?.Logger ?? NullLogger<EventSequence>.Instance;
 
-    IObservable<IEnumerable<AppendedEventWithResult>>? _appendOperations;
-    event Action<IEnumerable<AppendedEventWithResult>>? _appendedEventsRaised;
+    EventSequenceAppendNotifications _appendNotifications = new();
 
     /// <inheritdoc/>
     public EventSequenceId Id => eventSequenceId;
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations =>
-        _appendOperations ??= Observable.FromEvent<IEnumerable<AppendedEventWithResult>>(
-            h => _appendedEventsRaised += h,
-            h => _appendedEventsRaised -= h);
+    public IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations => _appendNotifications.Operations;
 
     /// <inheritdoc/>
     public ITransactionalEventSequence Transactional => new TransactionalEventSequence(this, unitOfWorkManager);
@@ -1136,7 +1131,7 @@ public partial class EventSequence(
             };
 
             // A key that was already appended did not write this attempt's event, so it is never notified as an append.
-            var handler = result.WasAlreadyAppended ? null : _appendedEventsRaised;
+            var handler = result.WasAlreadyAppended ? null : _appendNotifications.Handler;
             if (handler is not null)
             {
                 var context = EventContext.From(
@@ -1606,7 +1601,7 @@ public partial class EventSequence(
         // Its result therefore reports no event types appended in this turn.
         if (response?.EffectAlreadyRecorded == true) return result with { EventTypes = [], AppendedEventTypes = [] };
 
-        var handler = result.AllAlreadyAppended ? null : _appendedEventsRaised;
+        var handler = result.AllAlreadyAppended ? null : _appendNotifications.Handler;
         if (eventsList.Count > 0 && handler is not null)
         {
             var sequenceNumbers = result.SequenceNumbers.ToList();
@@ -1825,7 +1820,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred,
         List<IReadOnlyList<NamedTag>> namedTags)
     {
-        var handler = _appendedEventsRaised;
+        var handler = _appendNotifications.Handler;
         if (events.Count == 0 || handler is null) return;
 
         var sequenceNumbers = result.SequenceNumbers.ToList();

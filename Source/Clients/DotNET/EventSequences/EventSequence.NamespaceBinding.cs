@@ -20,9 +20,29 @@ public partial class EventSequence
     {
         binding.RequireFor(eventStoreName, @namespace);
         if (_namespaceBinding is not null && _namespaceBinding != binding) throw new NamespaceBindingNotValid();
-        var writer = (EventSequence)MemberwiseClone();
-        writer._namespaceBinding = binding;
-        return writer;
+        return new(
+            eventStoreName,
+            @namespace,
+            eventSequenceId,
+            connection,
+            eventTypes,
+            constraints,
+            eventSerializer,
+            correlationIdAccessor,
+            concurrencyScopeStrategies,
+            causationManager,
+            unitOfWorkManager,
+            identityProvider,
+            jsonSerializerOptions,
+            activitySource,
+            sideEffectHandlers,
+            eventSources,
+            telemetry,
+            tagResolver)
+        {
+            _namespaceBinding = binding,
+            _appendNotifications = _appendNotifications
+        };
     }
 
     /// <summary>Pins a transactional append to this writer's captured namespace identity.</summary>
