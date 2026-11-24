@@ -39,6 +39,9 @@ internal sealed class TestingServiceContext
     /// <summary>Gets the namespace casing shared by the services.</summary>
     internal InProcessNamespaceCasing NamespaceCasing { get; private set; } = default!;
 
+    /// <summary>Gets the namespace service using the scenario's default-disabled kernel options.</summary>
+    internal KernelCore::Cratis.Chronicle.Namespaces.INamespaceIncarnations NamespaceIncarnations { get; private set; } = default!;
+
     /// <summary>Gets the one command pipeline serving every command-dispatching service.</summary>
     internal Lazy<Arc.Commands.ICommandPipeline> CommandPipeline { get; private set; } = default!;
 
@@ -64,6 +67,7 @@ internal sealed class TestingServiceContext
         CommandPipeline = new(() => TestingCommandPipeline.Create(this));
         ConnectionOwnership = new InProcessConnectionOwnership();
         KernelOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
+        NamespaceIncarnations = new KernelCore::Cratis.Chronicle.Namespaces.NamespaceIncarnations(Storage, GrainFactory, KernelOptions);
         RegistrationGate = new UnboundedObserverRegistrationGate();
         ReadBindings = CreateReadBindings();
         return this;

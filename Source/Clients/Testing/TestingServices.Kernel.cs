@@ -79,7 +79,7 @@ internal sealed partial class TestingServices
             context.Replies ?? new());
 
     static KernelNamespacesService CreateNamespaces(TestingServiceContext context) =>
-        new(context.CommandPipeline.Value, context.Storage, NullLogger<KernelNamespacesService>.Instance);
+        new(context.CommandPipeline.Value, context.NamespaceIncarnations, context.Storage, context.NamespaceCasing, NullLogger<KernelNamespacesService>.Instance);
 
     static KernelIdentitiesService CreateIdentities(TestingServiceContext context) =>
         new(context.CommandPipeline.Value, context.Storage, context.NamespaceCasing, NullLogger<KernelIdentitiesService>.Instance);
