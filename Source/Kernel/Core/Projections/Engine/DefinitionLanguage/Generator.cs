@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
+using Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 
@@ -286,6 +287,14 @@ public partial class Generator : IGenerator
             sb.AppendLine($"{Indent(indent + 1)}automap");
         }
 
+        if (!isNested && children.Ordering is { } ordering && !ordering.IsAppend())
+        {
+            var instruction = ordering.Placement == Cratis.Chronicle.Changes.ChildrenPlacement.Prepend
+                ? "insert first"
+                : $"sort by {ordering.SortBy.Path} {(ordering.Direction == Cratis.Chronicle.Changes.SortDirection.Descending ? "descending" : "ascending")}";
+            sb.AppendLine($"{Indent(indent + 1)}{instruction}");
+        }
+
         // FromEvery for children
         if (children.All.Properties.Count > 0)
         {
@@ -394,14 +403,27 @@ public partial class Generator : IGenerator
         if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
             var innerExpression = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
-            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
+            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ArithmeticOperand.Format(innerExpression, ConvertExpressionForOutput)}");
             return;
         }
 
         if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
             var innerExpression = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
-            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
+            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ArithmeticOperand.Format(innerExpression, ConvertExpressionForOutput)}");
+            return;
+        }
+
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.SetOnce}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+        {
+            var source = normalizedExpression[(WellKnownExpressions.SetOnce.Length + 1)..^1];
+            sb.AppendLine($"{Indent(indent)}set once {propertyName} = {(source == WellKnownExpressions.Null ? "null" : ConvertExpressionForOutput(source))}");
+            return;
+        }
+
+        if (normalizedExpression == WellKnownExpressions.Remove)
+        {
+            sb.AppendLine($"{Indent(indent)}remove {propertyName}");
             return;
         }
 
