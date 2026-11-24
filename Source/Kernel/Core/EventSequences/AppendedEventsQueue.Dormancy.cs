@@ -281,12 +281,6 @@ public partial class AppendedEventsQueue
         await Task.WhenAll(toWake.Select(WakeForSafetyNet));
     }
 
-    static async Task<Dictionary<EventTypeId, EventSequenceNumber>> ReadTailPerEventType(IEventSequence eventSequence, EventTypeId[] typeIds)
-    {
-        var tails = await Task.WhenAll(typeIds.Select(typeId => eventSequence.GetTailSequenceNumberForEventTypes([new EventType(typeId, EventTypeGeneration.First)])));
-        return typeIds.Zip(tails).ToDictionary(pair => pair.First, pair => pair.Second);
-    }
-
     void ConfigureDormantSafetyNet()
     {
         if (_storage is null || _observers.DurableSubscriptions != DurableSubscriptionMode.Release || _observers.DormantAfter <= 0)
@@ -358,80 +352,31 @@ public partial class AppendedEventsQueue
     /// <param name="observers">The dormant observers that are due.</param>
     /// <returns>The observers with an event waiting, the ones that could not be compared, and how many are up to date.</returns>
     /// <remarks>
-    /// The cursors are read before the tails. An event appended in between is then part of the tail but not of the cursor, so
-    /// the observer is found behind and woken once more than it needed to be; the other order could miss it until the next
-    /// interval. An event appended after the tail was read rings the observer's doorbell, as it always does.
+    /// The comparison is the shared <see cref="IObserverBehindCheck"/>. A check that cannot read errs toward delivery and
+    /// reports every observer as unverified. An event appended after the tail was read rings the observer's doorbell, as it
+    /// always does.
     /// </remarks>
     async Task<(List<ObserverKey> Behind, List<ObserverKey> Unverified, int UpToDate)> FindObserversThatAreBehind(List<ObserverKey> observers)
     {
-        AppendedEventsQueueObserverSubscription[] subscriptions;
+        ObserverBehindCheckCandidate[] candidates;
         lock (_subscriptionsLock)
         {
-            subscriptions = [.. observers
+            candidates = [.. observers
                 .Select(key => _subscriptions.Find(subscription => subscription.ObserverKey == key))
-                .OfType<AppendedEventsQueueObserverSubscription>()];
+                .OfType<AppendedEventsQueueObserverSubscription>()
+                .Select(subscription => new ObserverBehindCheckCandidate(subscription.ObserverKey, subscription.EventTypes, subscription.AllEventTypes))];
         }
 
-        var behind = new List<ObserverKey>();
-        var unverified = new List<ObserverKey>();
-        var upToDate = 0;
-
-        IReadOnlyDictionary<ObserverId, EventSequenceNumber> cursors;
-        DormantTails tails;
         try
         {
-            cursors = await _storage!
-                .GetEventStore(_eventSequenceKey.EventStore)
-                .GetNamespace(_eventSequenceKey.Namespace)
-                .Observers
-                .GetNextEventSequenceNumbers(_eventSequenceKey.EventSequenceId);
-            tails = await ReadTails(subscriptions.Where(subscription => cursors.TryGetValue(subscription.ObserverKey.ObserverId, out var cursor) && cursor.IsActualValue));
+            var result = await new ObserverBehindCheck(_storage!, _grainFactory).Check(_eventSequenceKey, candidates);
+            return ([.. result.Behind], [.. result.Unverified], result.UpToDate);
         }
         catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
         {
             _logger.SafetyNetCheckFailed(_eventSequenceKey, exception);
-            return (behind, [.. subscriptions.Select(subscription => subscription.ObserverKey)], 0);
+            return ([], [.. candidates.Select(candidate => candidate.ObserverKey)], 0);
         }
-
-        foreach (var subscription in subscriptions)
-        {
-            if (!cursors.TryGetValue(subscription.ObserverKey.ObserverId, out var cursor) || !cursor.IsActualValue)
-            {
-                unverified.Add(subscription.ObserverKey);
-            }
-            else if (tails.HasEventsFrom(subscription, cursor))
-            {
-                behind.Add(subscription.ObserverKey);
-            }
-            else
-            {
-                upToDate++;
-            }
-        }
-
-        return (behind, unverified, upToDate);
-    }
-
-    async Task<DormantTails> ReadTails(IEnumerable<AppendedEventsQueueObserverSubscription> subscriptions)
-    {
-        var comparable = subscriptions.ToArray();
-        var eventSequence = _grainFactory.GetGrain<IEventSequence>(_eventSequenceKey);
-
-        // A redaction stands in for the event type it redacted, so it is part of what every observer of types looks at.
-        var typeIds = comparable
-            .Where(subscription => !subscription.AllEventTypes)
-            .SelectMany(subscription => subscription.EventTypeIdSet)
-            .Append(GlobalEventTypes.Redaction)
-            .Distinct()
-            .ToArray();
-
-        var perType = typeIds.Length == 0 || comparable.All(subscription => subscription.AllEventTypes)
-            ? []
-            : await ReadTailPerEventType(eventSequence, typeIds);
-        var tail = comparable.Any(subscription => subscription.AllEventTypes)
-            ? await eventSequence.GetTailSequenceNumber()
-            : EventSequenceNumber.Unavailable;
-        return new(perType, tail);
     }
 
     async Task WakeForSafetyNet(ObserverKey observerKey)
@@ -528,29 +473,4 @@ public partial class AppendedEventsQueue
     /// <param name="FullWakeDue">When the safety net wakes the observer whatever the comparison says.</param>
     [StructLayout(LayoutKind.Auto)]
     readonly record struct DormantEntry(DateTimeOffset CheckDue, DateTimeOffset FullWakeDue);
-
-    /// <summary>
-    /// The tails of an event sequence that a pass of the safety net compares the cursors with.
-    /// </summary>
-    /// <param name="PerEventType">The sequence number of the last event of each event type that was looked up.</param>
-    /// <param name="Tail">The sequence number of the last event of the sequence, or unavailable when it was not looked up.</param>
-    sealed record DormantTails(IReadOnlyDictionary<EventTypeId, EventSequenceNumber> PerEventType, EventSequenceNumber Tail)
-    {
-        /// <summary>
-        /// Gets whether an event the subscription observes was appended at or after a cursor.
-        /// </summary>
-        /// <param name="subscription">The <see cref="AppendedEventsQueueObserverSubscription"/> of the observer.</param>
-        /// <param name="cursor">The next sequence number the observer expects.</param>
-        /// <returns>True when it was; otherwise false.</returns>
-        public bool HasEventsFrom(AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber cursor)
-        {
-            if (subscription.AllEventTypes)
-            {
-                return Tail.IsActualValue && Tail >= cursor;
-            }
-
-            return subscription.EventTypeIdSet.Append(GlobalEventTypes.Redaction).Any(typeId =>
-                PerEventType.TryGetValue(typeId, out var tail) && tail.IsActualValue && tail >= cursor);
-        }
-    }
 }
