@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Namespaces;
 /// this coordinator. Creation effects must not call back into an INamespaces grain awaiting Ensure. A lost effect reply
 /// leaves Preparing intact, allowing the same reserved identity to be recovered, never replaced by a new identity.
 /// </remarks>
-public sealed class NamespaceIncarnationCoordinator(
+public sealed partial class NamespaceIncarnationCoordinator(
     EventStoreNamespaceName name,
     INamespaceLifecycleStorage lifecycle,
     INamespaceMarkerStorage marker,

@@ -40,6 +40,9 @@ public record NamespaceLifecycle(EventStoreNamespaceName Namespace, NamespaceInc
     /// <summary>Gets the total attempts consumed by this operation.</summary>
     public int TotalAttempts { get; init; }
 
+    /// <summary>Gets the historical attempt count at the start of the latest operator-authorized budget.</summary>
+    public int BudgetStartAttempts { get; init; }
+
     /// <summary>Gets whether an attempt was recorded without an acknowledged completion.</summary>
     public bool AttemptInProgress { get; init; }
 
@@ -100,7 +103,7 @@ public record NamespaceLifecycle(EventStoreNamespaceName Namespace, NamespaceInc
         {
             throw new InvalidOperationException("An attempt requires an idle closing operation.");
         }
-        if (TotalAttempts >= MaximumAttempts)
+        if (TotalAttempts - BudgetStartAttempts >= MaximumAttempts)
         {
             return RequireRecovery("NamespaceRemovalBudgetExhausted");
         }
@@ -173,7 +176,7 @@ public record NamespaceLifecycle(EventStoreNamespaceName Namespace, NamespaceInc
             RetryAt = now.AddMinutes(1),
             LastFailure = code
         };
-        return TotalAttempts >= MaximumAttempts
+        return TotalAttempts - BudgetStartAttempts >= MaximumAttempts
             ? failed with { Status = NamespaceLifecycleStatus.RecoveryRequired }
             : failed;
     }

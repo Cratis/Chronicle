@@ -89,6 +89,28 @@ public sealed class NamespaceIncarnation(
     }
 
     /// <inheritdoc/>
+    /// <exception cref="NamespaceIncarnationUnavailable">No lifecycle exists.</exception>
+    /// <exception cref="NamespaceRecoveryRequired">The resumed operation still requires reconciliation.</exception>
+    public async Task Resume(Guid operation, long revision)
+    {
+        GuardDefaultNamespace();
+        var current = await _capability.NamespaceLifecycles.Get(_name) ?? throw new NamespaceIncarnationUnavailable(_eventStore);
+        await Coordinator(current.Namespace).Resume(operation, revision);
+        await Wake();
+        if ((await _capability.NamespaceLifecycles.Get(_name))?.Status == NamespaceLifecycleStatus.RecoveryRequired) throw new NamespaceRecoveryRequired(_name);
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="NamespaceIncarnationUnavailable">No lifecycle exists.</exception>
+    public async Task Abort(Guid operation, long revision)
+    {
+        GuardDefaultNamespace();
+        var current = await _capability.NamespaceLifecycles.Get(_name) ?? throw new NamespaceIncarnationUnavailable(_eventStore);
+        await Coordinator(current.Namespace).Abort(operation, revision);
+        await Ensure(current.Namespace);
+    }
+
+    /// <inheritdoc/>
     public async Task Wake()
     {
         var state = await _capability.NamespaceLifecycles.Get(_name);

@@ -2,6 +2,12 @@ syntax = "proto3";
 package Cratis.Chronicle.Contracts.Namespaces;
 import "protobuf-net/bcl.proto"; // schema for protobuf-net's handling of core .NET types
 
+message AbortNamespaceRemovalRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid OperationId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   int64 ExpectedRevision = 4;
+}
 message AllNamespacesRequest {
    string EventStore = 1;
 }
@@ -14,6 +20,10 @@ message CommandResult {
    string AuthorizationFailureReason = 6;
 }
 message EnsureNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+}
+message GetNamespaceRemovalStatusRequest {
    string EventStore = 1;
    string Namespace = 2;
 }
@@ -38,6 +48,20 @@ message NamespaceNamesResponse {
    string Name = 1;
    string Id = 2;
 }
+message NamespaceRemovalStatusResponse {
+   string Namespace = 1;
+   string Status = 2;
+   .bcl.Guid OperationId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   int64 Revision = 4;
+   string Stage = 5;
+   int32 StageAttempts = 6;
+   int32 TotalAttempts = 7;
+   int32 BudgetStartAttempts = 8;
+   bool AttemptInProgress = 9;
+   bool DestructiveAttemptOutstanding = 10;
+   bool DestructiveActionIssued = 11;
+   string LastFailure = 12;
+}
 message ObserveNamespacesRequest {
    string EventStore = 1;
 }
@@ -57,9 +81,23 @@ message QueryResult_NamespaceBindingResponse {
    string ExceptionStackTrace = 5;
    NamespaceBindingResponse Data = 6;
 }
+message QueryResult_NamespaceRemovalStatusResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   NamespaceRemovalStatusResponse Data = 6;
+}
 message RemoveNamespaceRequest {
    string EventStore = 1;
    string Namespace = 2;
+}
+message ResumeNamespaceRemovalRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid OperationId = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   int64 ExpectedRevision = 4;
 }
 message ValidationResult {
    ValidationResultSeverity Severity = 1; // default value could not be applied: Error
@@ -73,9 +111,12 @@ enum ValidationResultSeverity {
    Error = 3;
 }
 service Namespaces {
+   rpc AbortNamespaceRemoval (AbortNamespaceRemovalRequest) returns (CommandResult);
    rpc AllNamespaces (AllNamespacesRequest) returns (QueryResult_IEnumerable_NamespaceNamesResponse);
    rpc EnsureNamespace (EnsureNamespaceRequest) returns (CommandResult);
+   rpc GetNamespaceRemovalStatus (GetNamespaceRemovalStatusRequest) returns (QueryResult_NamespaceRemovalStatusResponse);
    rpc LookupNamespaceBinding (LookupNamespaceBindingRequest) returns (QueryResult_NamespaceBindingResponse);
    rpc ObserveNamespaces (ObserveNamespacesRequest) returns (stream QueryResult_IEnumerable_NamespaceNamesResponse);
    rpc RemoveNamespace (RemoveNamespaceRequest) returns (CommandResult);
+   rpc ResumeNamespaceRemoval (ResumeNamespaceRemovalRequest) returns (CommandResult);
 }

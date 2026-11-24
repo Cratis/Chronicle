@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Discovery;
 
 namespace Cratis.Chronicle.Registrations;
@@ -53,7 +54,7 @@ internal sealed class RegistrationBackoff(TimeSpan? initialDelay = null, TimeSpa
 
     static bool RequiresNamespaceRecovery(Exception exception) => exception switch
     {
-        CommandFailed { Result: { } result } when result.ExceptionMessages.Contains("NamespaceRecoveryRequired", StringComparer.Ordinal) => true,
+        CommandFailed { Result: { } result } when result.ExceptionMessages.Contains(NamespaceErrorCodes.RecoveryRequired, StringComparer.Ordinal) => true,
         AggregateException aggregate => aggregate.InnerExceptions.Any(RequiresNamespaceRecovery),
         { InnerException: { } inner } => RequiresNamespaceRecovery(inner),
         _ => false

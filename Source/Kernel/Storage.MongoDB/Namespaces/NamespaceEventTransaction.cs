@@ -117,7 +117,8 @@ internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase dat
         session.StartTransaction(_options);
         try
         {
-            if (!await new NamespaceMarkerStorage(_markers).TryFence(session, context.Incarnation, cancellationToken)) throw new NamespaceCommitRejected();
+            var marker = new NamespaceMarkerStorage(_markers);
+            if (!await marker.TryFence(session, context.Incarnation, cancellationToken)) throw await marker.GetRejection(session, context.Incarnation, cancellationToken);
             if (context.ActivationIncarnation != context.Incarnation) throw new NamespaceIncarnationRequiresReactivation();
             cancellationToken.ThrowIfCancellationRequested();
             var result = await write(session, cancellationToken);

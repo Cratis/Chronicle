@@ -62,6 +62,21 @@ public sealed class NamespaceMarkerStorage(IMongoCollection<BsonDocument> collec
         return Changed(result);
     }
 
+    /// <summary>Reads a refusal diagnostic from the same transaction snapshot as the failed fence.</summary>
+    /// <param name="session">The refusing event transaction.</param>
+    /// <param name="expected">The supplied identity, never replaced by this read.</param>
+    /// <param name="cancellationToken">The activation cancellation.</param>
+    /// <returns>A typed diagnostic without changing the marker or admitting a write.</returns>
+    public async Task<NamespaceCommitRejected> GetRejection(IClientSessionHandle session, NamespaceIncarnationId expected, CancellationToken cancellationToken)
+    {
+        var document = await _collection.Find(session, _id).FirstOrDefaultAsync(cancellationToken);
+        NamespaceMarker? marker = document is null ? null : new(
+            new(document["incarnation"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)),
+            document["isOpen"].AsBoolean,
+            document["revision"].AsInt64);
+        return NamespaceCommitRejected.ForMarker(marker, expected);
+    }
+
     static BsonBinaryData Uuid(NamespaceIncarnationId value) => new(value.Value, GuidRepresentation.Standard);
 
     static FilterDefinition<BsonDocument> Identity(NamespaceIncarnationId value) => _id & Builders<BsonDocument>.Filter.Eq("incarnation", Uuid(value));

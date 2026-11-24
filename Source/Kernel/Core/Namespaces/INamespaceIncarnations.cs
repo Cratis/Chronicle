@@ -29,6 +29,22 @@ public interface INamespaceIncarnations
     /// <returns>Acknowledged deletion, never merely pending work.</returns>
     Task Remove(EventStoreName eventStore, EventStoreNamespaceName @namespace);
 
+    /// <summary>Resumes the exact observed removal without refreshing its identity or revision.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="operation">The observed operation.</param>
+    /// <param name="revision">The observed revision.</param>
+    /// <returns>The owner's acknowledgement.</returns>
+    Task Resume(EventStoreName eventStore, EventStoreNamespaceName @namespace, Guid operation, long revision);
+
+    /// <summary>Aborts the exact observed removal only when it is safe to replace its lifetime.</summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="operation">The observed operation.</param>
+    /// <param name="revision">The observed revision.</param>
+    /// <returns>The new lifetime's open acknowledgement.</returns>
+    Task Abort(EventStoreName eventStore, EventStoreNamespaceName @namespace, Guid operation, long revision);
+
     /// <summary>Resolves stored casing without creating or admitting a namespace.</summary>
     /// <param name="eventStore">The event store.</param>
     /// <param name="namespace">The requested namespace.</param>

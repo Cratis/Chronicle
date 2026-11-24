@@ -84,6 +84,20 @@ public sealed class NamespaceIncarnations(IStorage storage, IGrainFactory grains
         }
     }
 
+    /// <inheritdoc/>
+    public Task Resume(EventStoreName eventStore, EventStoreNamespaceName @namespace, Guid operation, long revision)
+    {
+        GetStorage(eventStore);
+        return Owner(eventStore, @namespace).Resume(operation, revision);
+    }
+
+    /// <inheritdoc/>
+    public Task Abort(EventStoreName eventStore, EventStoreNamespaceName @namespace, Guid operation, long revision)
+    {
+        GetStorage(eventStore);
+        return Owner(eventStore, @namespace).Abort(operation, revision);
+    }
+
     INamespaceIncarnation Owner(EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
         grains.GetGrain<INamespaceIncarnation>(new NamespaceIncarnationKey(eventStore.Value, @namespace.Value).ToString());
 }

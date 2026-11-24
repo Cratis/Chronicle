@@ -22,4 +22,16 @@ public interface INamespaceIncarnation : IGrainWithStringKey
     /// <summary>Reconciles persisted pending work on activation, timer, or durable reminder delivery.</summary>
     /// <returns>The bounded recovery turn.</returns>
     Task Wake();
+
+    /// <summary>Resumes the exact observed removal with a fresh bounded budget.</summary>
+    /// <param name="operation">The observed removal operation.</param>
+    /// <param name="revision">The observed revision.</param>
+    /// <returns>The acknowledged recovery request.</returns>
+    Task Resume(Guid operation, long revision);
+
+    /// <summary>Aborts the exact observed removal before any destructive or unknown effect.</summary>
+    /// <param name="operation">The observed removal operation.</param>
+    /// <param name="revision">The observed revision.</param>
+    /// <returns>The replacement incarnation's open acknowledgement.</returns>
+    Task Abort(Guid operation, long revision);
 }

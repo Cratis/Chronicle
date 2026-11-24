@@ -58,20 +58,32 @@ public sealed class NamespaceMarkerStorage(Func<Task<DbContextScope<NamespaceDbC
     /// <param name="cancellationToken">The activation cancellation.</param>
     /// <returns>Whether exactly one matching open marker was changed.</returns>
     /// <exception cref="InvalidOperationException">No transaction is active on this context.</exception>
-    internal static async Task<bool> TryFence(DbContext database, NamespaceIncarnationId expected, CancellationToken cancellationToken)
+    internal static async Task<bool> TryFence(DbContext database, NamespaceIncarnationId expected, CancellationToken cancellationToken) =>
+        await GetFenceRejection(database, expected, cancellationToken) is null;
+
+    /// <summary>Attempts the fence and diagnoses refusal in the same transaction, without re-admitting it.</summary>
+    /// <param name="database">The protected transaction context.</param>
+    /// <param name="expected">The supplied identity.</param>
+    /// <param name="cancellationToken">The activation cancellation.</param>
+    /// <returns>Null on admission; otherwise the typed refusal.</returns>
+    /// <exception cref="InvalidOperationException">No transaction is active.</exception>
+    internal static async Task<NamespaceCommitRejected?> GetFenceRejection(DbContext database, NamespaceIncarnationId expected, CancellationToken cancellationToken)
     {
-        if (expected.Value == Guid.Empty) return false;
+        if (expected.Value == Guid.Empty) return new();
         if (database.Database.CurrentTransaction is null) throw new InvalidOperationException("A namespace fence requires an active event transaction.");
         try
         {
-            return await database.Set<NamespaceMarkerRow>()
+            var admitted = await database.Set<NamespaceMarkerRow>()
                 .Where(row => row.Id == 1 && row.Incarnation == expected.Value && row.IsOpen)
                 .ExecuteUpdateAsync(set => set.SetProperty(row => row.Touch, row => row.Touch + 1), cancellationToken) == 1;
+            if (admitted) return null;
+            var row = await database.Set<NamespaceMarkerRow>().AsNoTracking().SingleOrDefaultAsync(row => row.Id == 1, cancellationToken);
+            return NamespaceCommitRejected.ForMarker(row is null ? null : new(new(row.Incarnation), row.IsOpen, row.Touch), expected);
         }
         catch (Exception error) when (MissingMarkerTable(error))
         {
             // An unmigrated or removed namespace cannot admit a commit. Do not recreate its marker.
-            return false;
+            return new();
         }
     }
 

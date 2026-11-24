@@ -88,7 +88,8 @@ internal sealed class NamespaceEventTransaction<TContext>(Func<Task<DbContextSco
     {
         var cancellationToken = context.ActivationCancellation;
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
-        if (!await NamespaceMarkerStorage.TryFence(database, context.Incarnation, cancellationToken)) throw new NamespaceCommitRejected();
+        var rejection = await NamespaceMarkerStorage.GetFenceRejection(database, context.Incarnation, cancellationToken);
+        if (rejection is not null) throw rejection;
         if (context.ActivationIncarnation != context.Incarnation) throw new NamespaceIncarnationRequiresReactivation();
         cancellationToken.ThrowIfCancellationRequested();
         var result = await write(database, cancellationToken);

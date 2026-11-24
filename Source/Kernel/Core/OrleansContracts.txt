@@ -277,8 +277,10 @@ class [GrainType("importeventsstep")] Cratis.Chronicle.Imports.ImportEventsStep
 class [GrainType("chronicle-import-stager")] Cratis.Chronicle.Imports.ImportStager
 
 interface [GrainInterfaceType("Cratis.Chronicle.Namespaces.INamespaceIncarnation")] Cratis.Chronicle.Namespaces.INamespaceIncarnation [Version(1)]
+  4A758564: Abort(System.Guid, long) -> Task
   7C95DF2C: Ensure(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task<Cratis.Chronicle.Concepts.EventStoreNamespaceName>
   99EC79DA: Remove() -> Task
+  4CA83A66: Resume(System.Guid, long) -> Task
   F4E180BB: Wake() -> Task
 
 interface [GrainInterfaceType("Cratis.Chronicle.Namespaces.INamespaces")] Cratis.Chronicle.Namespaces.INamespaces [Version(2)]

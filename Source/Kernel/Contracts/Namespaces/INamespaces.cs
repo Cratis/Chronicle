@@ -20,6 +20,14 @@ namespace Cratis.Chronicle.Contracts.Namespaces;
 public interface INamespaces
 {
     /// <summary>
+    /// Executes the AbortNamespaceRemoval command.
+    /// </summary>
+    /// <param name = "request">The AbortNamespaceRemoval request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> AbortNamespaceRemoval(AbortNamespaceRemovalRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the EnsureNamespace command.
     /// </summary>
     /// <param name = "request">The EnsureNamespace request.</param>
@@ -35,6 +43,14 @@ public interface INamespaces
     /// <returns>The command result.</returns>
     [Operation]
     Task<CommandResult> RemoveNamespace(RemoveNamespaceRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the ResumeNamespaceRemoval command.
+    /// </summary>
+    /// <param name = "request">The ResumeNamespaceRemoval request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> ResumeNamespaceRemoval(ResumeNamespaceRemovalRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the LookupNamespaceBinding query.
     /// </summary>
@@ -59,6 +75,45 @@ public interface INamespaces
     /// <returns>The query result.</returns>
     [Operation]
     IObservable<QueryResult<IEnumerable<NamespaceNamesResponse>>> ObserveNamespaces(ObserveNamespacesRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the GetNamespaceRemovalStatus query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<NamespaceRemovalStatusResponse>> GetNamespaceRemovalStatus(GetNamespaceRemovalStatusRequest request, CallContext callContext = default);
+}
+
+/// <summary>
+/// Represents the AbortNamespaceRemovalRequest message.
+/// </summary>
+[ProtoContract]
+public class AbortNamespaceRemovalRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the OperationId.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid OperationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ExpectedRevision.
+    /// </summary>
+    [ProtoMember(4)]
+    public long ExpectedRevision { get; set; }
 }
 
 /// <summary>
@@ -97,6 +152,37 @@ public class RemoveNamespaceRequest
     /// </summary>
     [ProtoMember(2)]
     public string Namespace { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the ResumeNamespaceRemovalRequest message.
+/// </summary>
+[ProtoContract]
+public class ResumeNamespaceRemovalRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the OperationId.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid OperationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ExpectedRevision.
+    /// </summary>
+    [ProtoMember(4)]
+    public long ExpectedRevision { get; set; }
 }
 
 /// <summary>
@@ -192,4 +278,102 @@ public class ObserveNamespacesRequest
     /// </summary>
     [ProtoMember(1)]
     public string EventStore { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the NamespaceRemovalStatusResponse message.
+/// </summary>
+[ProtoContract]
+public class NamespaceRemovalStatusResponse
+{
+    /// <summary>
+    /// Gets or sets the Namespace.
+    /// </summary>
+    [ProtoMember(1)]
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Status { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the OperationId.
+    /// </summary>
+    [ProtoMember(3)]
+    public Guid OperationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Revision.
+    /// </summary>
+    [ProtoMember(4)]
+    public long Revision { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Stage.
+    /// </summary>
+    [ProtoMember(5)]
+    public string Stage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the StageAttempts.
+    /// </summary>
+    [ProtoMember(6)]
+    public int StageAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the TotalAttempts.
+    /// </summary>
+    [ProtoMember(7)]
+    public int TotalAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the BudgetStartAttempts.
+    /// </summary>
+    [ProtoMember(8)]
+    public int BudgetStartAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AttemptInProgress.
+    /// </summary>
+    [ProtoMember(9)]
+    public bool AttemptInProgress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the DestructiveAttemptOutstanding.
+    /// </summary>
+    [ProtoMember(10)]
+    public bool DestructiveAttemptOutstanding { get; set; }
+
+    /// <summary>
+    /// Gets or sets the DestructiveActionIssued.
+    /// </summary>
+    [ProtoMember(11)]
+    public bool DestructiveActionIssued { get; set; }
+
+    /// <summary>
+    /// Gets or sets the LastFailure.
+    /// </summary>
+    [ProtoMember(12)]
+    public string LastFailure { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the GetNamespaceRemovalStatusRequest message.
+/// </summary>
+[ProtoContract]
+public class GetNamespaceRemovalStatusRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace.
+    /// </summary>
+    [ProtoMember(2)]
+    public string Namespace { get; set; } = string.Empty;
 }
