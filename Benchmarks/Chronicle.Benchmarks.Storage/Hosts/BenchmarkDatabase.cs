@@ -10,16 +10,19 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
+using Cratis.Chronicle.Storage.Sql.Sinks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Benchmarks.Storage.Hosts;
 
 /// <summary>Non-recording benchmark adapter; scopes own fresh contexts over cached options.</summary>
 /// <param name="options">The immutable context options for the host.</param>
-internal sealed class BenchmarkDatabase(SqlBenchmarkOptions options) : IDatabase
+internal sealed class BenchmarkDatabase(SqlBenchmarkOptions options) : IDatabase, IDisposable
 {
     static readonly Action _onDispose = () => { };
+    readonly Lazy<ServiceProvider> _readModelServices = new(options.CreateReadModelServices);
     readonly HashSet<string> _ensuredTables = [];
     readonly EventSequenceMigrator _events = new(
         new TableMigrator<EventSequenceDbContext>(NullLogger<TableMigrator<EventSequenceDbContext>>.Instance),
@@ -82,10 +85,12 @@ internal sealed class BenchmarkDatabase(SqlBenchmarkOptions options) : IDatabase
     public DbContextOptions<Cratis.Choreography.Storage.Sql.Jobs.JobsDbContext> GetJobsDbContextOptions(string eventStore, string @namespace) => throw new NotSupportedException();
 
     /// <inheritdoc/>
-    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime) => throw new NotSupportedException();
+    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime, SinkProvenanceTarget? admittedTarget = null) =>
+        _readModelServices.Value.GetRequiredService<IDatabase>().ReadModelTable(eventStore, @namespace, containerName, columns, purpose, admittedTarget);
 
     /// <inheritdoc/>
-    public Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns) => throw new NotSupportedException();
+    public Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, SinkProvenanceTarget? admittedTarget = null) =>
+        _readModelServices.Value.GetRequiredService<IDatabase>().ExistingReadModelTable(eventStore, @namespace, containerName, columns, admittedTarget);
 
     /// <inheritdoc/>
     public Task<bool> NamespaceHasEvents(EventStoreName eventStore, EventStoreNamespaceName @namespace) => throw new NotSupportedException();
@@ -93,6 +98,15 @@ internal sealed class BenchmarkDatabase(SqlBenchmarkOptions options) : IDatabase
     /// <inheritdoc/>
     public Task Wipe() => throw new NotSupportedException();
 #endif
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (_readModelServices.IsValueCreated)
+        {
+            _readModelServices.Value.Dispose();
+        }
+    }
 
     /// <summary>Creates an owned context scope without a Task wrapper for synchronous host setup.</summary>
     /// <param name="eventSequenceName">The event-sequence table name.</param>

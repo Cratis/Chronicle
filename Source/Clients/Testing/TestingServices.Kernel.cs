@@ -145,7 +145,8 @@ internal sealed partial class TestingServices
             context.Compliance.CreateReadModelsCompliance(),
             new KernelMaterializedReadModelStore(context.ReadBindings, context.Compliance.CreateReadModelsCompliance()),
             context.JsonSerializerOptions,
-            context.NamespaceCasing);
+            context.NamespaceCasing,
+            context.Provenance);
 
     static KernelComplianceService CreateCompliance(TestingServiceContext context) =>
         new(
