@@ -11,22 +11,26 @@ namespace Cratis.Chronicle.Storage.MongoDB.Namespaces;
 /// Commits a namespace conflict write and event/receipt work on the namespace destination's own client.
 /// </summary>
 /// <param name="database">The resolved namespace event database.</param>
-internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase database)
+/// <param name="retries">The shared cancellable attempt budget.</param>
+internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase database, NamespaceCommitRetries retries)
 {
-    const int MaximumAttempts = 3;
-
     static readonly TransactionOptions _options = new(
         readConcern: ReadConcern.Snapshot,
         readPreference: ReadPreference.Primary,
         writeConcern: WriteConcern.WMajority);
 
     readonly IMongoCollection<BsonDocument> _markers = database.GetCollection<BsonDocument>(WellKnownCollectionNames.NamespaceMarker);
-    int _attempts;
+
+    /// <summary>Initializes a protected transaction with bounded, cancellable production backoff.</summary>
+    /// <param name="database">The resolved namespace event database.</param>
+    public NamespaceEventTransaction(IEventStoreNamespaceDatabase database) : this(database, new NamespaceCommitRetries())
+    {
+    }
 
     /// <summary>
     /// Gets whether this operation can start another transaction, including fenced collision recovery.
     /// </summary>
-    public bool HasRemainingAttempts => _attempts < MaximumAttempts;
+    public bool HasRemainingAttempts => retries.HasRemainingAttempts;
 
     /// <summary>
     /// Runs event/receipt work only after writing the exact open marker in the same transaction.
@@ -42,16 +46,16 @@ internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase dat
     /// <exception cref="InvalidOperationException">The operation's transaction attempt budget is exhausted.</exception>
     public async Task<T> Execute<T>(NamespaceCommitContext context, Func<IClientSessionHandle, CancellationToken, Task<T>> write)
     {
-        context.ActivationCancellation.ThrowIfCancellationRequested();
+        using var lifetime = retries.Bind(context);
+        lifetime.ThrowIfCancellationRequested();
         if (context.Incarnation.Value == Guid.Empty) throw new NamespaceCommitRejected();
-        await RequireTransactions(context.ActivationCancellation);
-        if (!HasRemainingAttempts) throw new InvalidOperationException("The namespace transaction attempt budget is exhausted.");
-        for (_attempts++; ; _attempts++)
+        await RequireTransactions(lifetime.Token);
+        while (true)
         {
-            context.ActivationCancellation.ThrowIfCancellationRequested();
+            await retries.BeginAttempt(lifetime);
             try
             {
-                return await Attempt(context, write);
+                return await Attempt(lifetime, write);
             }
             catch (MongoException error) when (IsWriteConflict(error) && HasRemainingAttempts)
             {
@@ -110,19 +114,21 @@ internal sealed class NamespaceEventTransaction(IEventStoreNamespaceDatabase dat
         }
     }
 
-    async Task<T> Attempt<T>(NamespaceCommitContext context, Func<IClientSessionHandle, CancellationToken, Task<T>> write)
+    async Task<T> Attempt<T>(NamespaceCommitCancellation lifetime, Func<IClientSessionHandle, CancellationToken, Task<T>> write)
     {
-        var cancellationToken = context.ActivationCancellation;
+        var context = lifetime.Context;
+        var cancellationToken = lifetime.Token;
         using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
+        lifetime.ThrowIfCancellationRequested();
         session.StartTransaction(_options);
         try
         {
             var marker = new NamespaceMarkerStorage(_markers);
             if (!await marker.TryFence(session, context.Incarnation, cancellationToken)) throw await marker.GetRejection(session, context.Incarnation, cancellationToken);
             if (context.ActivationIncarnation != context.Incarnation) throw new NamespaceIncarnationRequiresReactivation();
-            cancellationToken.ThrowIfCancellationRequested();
+            lifetime.ThrowIfCancellationRequested();
             var result = await write(session, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            lifetime.ThrowIfCancellationRequested();
             await Commit(session, cancellationToken);
             return result;
         }

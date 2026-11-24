@@ -17,4 +17,10 @@ public sealed record NamespaceCommitContext(NamespaceIncarnationId Incarnation, 
     /// Providers compare this only after acquiring the expected incarnation's marker fence.
     /// </summary>
     public NamespaceIncarnationId? ActivationIncarnation { get; init; }
+
+    /// <summary>
+    /// Gets the caller's absolute deadline, when supplied. It is shared by all transaction and collision attempts,
+    /// never renewed by a retry, and does not turn an unacknowledged submitted commit into a definite abort.
+    /// </summary>
+    public DateTimeOffset? Deadline { get; init; }
 }

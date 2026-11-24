@@ -15,14 +15,18 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 /// </summary>
 /// <typeparam name="TContext">The namespace-local event or receipt context.</typeparam>
 /// <param name="open">Opens an already-provisioned destination; no migration may run in the transaction.</param>
-internal sealed class NamespaceEventTransaction<TContext>(Func<Task<DbContextScope<TContext>>> open)
+/// <param name="retries">The shared cancellable attempt budget.</param>
+internal sealed class NamespaceEventTransaction<TContext>(Func<Task<DbContextScope<TContext>>> open, NamespaceCommitRetries retries)
     where TContext : DbContext
 {
-    const int MaximumAttempts = 3;
-    int _attempts;
+    /// <summary>Initializes a protected transaction with bounded, cancellable production backoff.</summary>
+    /// <param name="open">Opens an already-provisioned namespace context.</param>
+    public NamespaceEventTransaction(Func<Task<DbContextScope<TContext>>> open) : this(open, new NamespaceCommitRetries())
+    {
+    }
 
     /// <summary>Gets whether another transaction, including collision recovery, may start.</summary>
-    public bool HasRemainingAttempts => _attempts < MaximumAttempts;
+    public bool HasRemainingAttempts => retries.HasRemainingAttempts;
 
     /// <summary>Runs work only after the exact marker write and activation comparison.</summary>
     /// <typeparam name="T">The value returned only after a definite commit.</typeparam>
@@ -35,15 +39,15 @@ internal sealed class NamespaceEventTransaction<TContext>(Func<Task<DbContextSco
     /// <exception cref="InvalidOperationException">The transaction attempt budget is exhausted.</exception>
     public async Task<T> Execute<T>(NamespaceCommitContext context, Func<TContext, CancellationToken, Task<T>> write)
     {
-        context.ActivationCancellation.ThrowIfCancellationRequested();
+        using var lifetime = retries.Bind(context);
+        lifetime.ThrowIfCancellationRequested();
         if (context.Incarnation.Value == Guid.Empty) throw new NamespaceCommitRejected();
-        if (!HasRemainingAttempts) throw new InvalidOperationException("The namespace transaction attempt budget is exhausted.");
-        for (_attempts++; ; _attempts++)
+        while (true)
         {
-            context.ActivationCancellation.ThrowIfCancellationRequested();
+            await retries.BeginAttempt(lifetime);
             try
             {
-                return await Attempt(context, write);
+                return await Attempt(lifetime, write);
             }
             catch (Exception error) when (StorageWriteConflicts.IsTransactionConflict(error) && HasRemainingAttempts)
             {
@@ -84,23 +88,26 @@ internal sealed class NamespaceEventTransaction<TContext>(Func<Task<DbContextSco
         return outcome.Result;
     }
 
-    static async Task<T> CommitWork<T>(NamespaceCommitContext context, TContext database, Func<TContext, CancellationToken, Task<T>> write)
+    static async Task<T> CommitWork<T>(NamespaceCommitCancellation lifetime, TContext database, Func<TContext, CancellationToken, Task<T>> write)
     {
-        var cancellationToken = context.ActivationCancellation;
+        var context = lifetime.Context;
+        var cancellationToken = lifetime.Token;
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+        lifetime.ThrowIfCancellationRequested();
         var rejection = await NamespaceMarkerStorage.GetFenceRejection(database, context.Incarnation, cancellationToken);
         if (rejection is not null) throw rejection;
         if (context.ActivationIncarnation != context.Incarnation) throw new NamespaceIncarnationRequiresReactivation();
-        cancellationToken.ThrowIfCancellationRequested();
+        lifetime.ThrowIfCancellationRequested();
         var result = await write(database, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
+        lifetime.ThrowIfCancellationRequested();
         await Commit(transaction, cancellationToken);
         return result;
     }
 
-    async Task<T> Attempt<T>(NamespaceCommitContext context, Func<TContext, CancellationToken, Task<T>> write)
+    async Task<T> Attempt<T>(NamespaceCommitCancellation lifetime, Func<TContext, CancellationToken, Task<T>> write)
     {
         await using var scope = await open();
-        return await ExecuteOnce(scope.DbContext, () => CommitWork(context, scope.DbContext, write));
+        lifetime.ThrowIfCancellationRequested();
+        return await ExecuteOnce(scope.DbContext, () => CommitWork(lifetime, scope.DbContext, write));
     }
 }

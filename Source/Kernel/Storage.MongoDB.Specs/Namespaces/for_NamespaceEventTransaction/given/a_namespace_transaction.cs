@@ -4,6 +4,7 @@
 using System.Net;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Namespaces;
+using Cratis.Chronicle.Storage.Namespaces.for_NamespaceCommitRetries.given;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Clusters;
@@ -19,6 +20,7 @@ public class a_namespace_transaction : Specification
     protected readonly List<IClientSessionHandle> _sessions = [];
     protected readonly List<IClientSessionHandle> _writeSessions = [];
     protected readonly List<string> _steps = [];
+    protected readonly List<TimeSpan> _delays = [];
     protected IEventStoreNamespaceDatabase _database;
     protected IMongoDatabase _destination;
     protected IMongoCollection<BsonDocument> _markers;
@@ -31,6 +33,10 @@ public class a_namespace_transaction : Specification
     protected Exception _writeFailure;
     protected Exception _commitFailure;
     protected Exception _failure;
+    protected RetryClock _clock;
+    protected NamespaceCommitRetries _retries;
+    protected Action _duringDelay;
+    protected Action _duringCommit;
     protected Action _duringWrite;
     protected Action _onFenceFailure;
     protected int _fenceFailures;
@@ -40,7 +46,7 @@ public class a_namespace_transaction : Specification
     protected int _aborts;
     protected int _result;
     protected long _matches = 1;
-    NamespaceEventTransaction _transaction;
+    private protected NamespaceEventTransaction _transaction;
 
     protected static MongoCommandException CommandFailure(int code, string? label = null)
     {
@@ -79,7 +85,17 @@ public class a_namespace_transaction : Specification
                 return Task.FromResult<UpdateResult>(new UpdateResult.Acknowledged(_matches, _matches, null));
             });
         client.StartSessionAsync(Arg.Any<ClientSessionOptions>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(StartSession()));
-        _transaction = new(_database);
+        _clock = new();
+        _retries = new(
+            _clock,
+            (duration, _) =>
+            {
+                _delays.Add(duration);
+                _duringDelay?.Invoke();
+                return Task.CompletedTask;
+            },
+            () => 25);
+        _transaction = new(_database, _retries);
         _context = new(_identity, _activation.Token) { ActivationIncarnation = _identity };
     }
 
@@ -99,6 +115,7 @@ public class a_namespace_transaction : Specification
             _steps.Add("commit");
             _commits++;
             _commitCancellation = call.Arg<CancellationToken>();
+            _duringCommit?.Invoke();
             if (_commits <= _commitFailures) throw _commitFailure;
             return Task.CompletedTask;
         });
