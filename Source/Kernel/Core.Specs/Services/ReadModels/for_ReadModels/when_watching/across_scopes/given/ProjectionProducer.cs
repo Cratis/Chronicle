@@ -102,7 +102,7 @@ public class ProjectionProducer
             ReadModelOwner.Client,
             ReadModelSource.Code,
             ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified,
+            definition.Identifier.Value,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() },
             []);

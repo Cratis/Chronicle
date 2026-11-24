@@ -577,6 +577,7 @@ public class Projection(
 
     async Task<EngineProjection> GetOrCreateProjectionForNamespace(EventStoreNamespaceName eventStoreNamespace)
     {
+        EnsureSupportedDefinition();
         if (!_projectionsByNamespace.TryGetValue(eventStoreNamespace, out var projection))
         {
             var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
@@ -600,12 +601,19 @@ public class Projection(
 
     async Task<EngineProjection> GetOrCreateProjectionForNamespaceWithReadModel(EventStoreNamespaceName eventStoreNamespace, ReadModelDefinition readModelDefinition)
     {
+        EnsureSupportedDefinition();
+
         // For preview with provided read model, always create a fresh projection (don't cache)
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventStoreStorage = storage.GetEventStore(key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
         return await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition, eventTypeSchemas);
+    }
+
+    void EnsureSupportedDefinition()
+    {
+        if (State.UsesUnsupportedEventSequence()) throw new InvalidOperationException("Projection does not accept the system event sequence.");
     }
 
     ProjectionDefinition DefinitionForReads() => State.SubscribesToAllEvents

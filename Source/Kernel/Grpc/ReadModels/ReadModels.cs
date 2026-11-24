@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
@@ -167,7 +168,7 @@ internal sealed class ReadModels(
         var readModel = grainFactory.GetReadModel(request.ReadModel, request.EventStore);
         var definition = await readModel.GetKnownDefinition(request.ReadModel);
         var occurrence = string.IsNullOrEmpty(request.Occurrence) ? null : (ReadModelContainerName)request.Occurrence;
-        var binding = await readBindings.ResolveOrReject(request.EventStore, request.Namespace, definition, occurrence);
+        var binding = await readBindings.ResolveOrReject(grainFactory, request.EventStore, request.Namespace, definition, occurrence);
         var skip = Math.Max(0, request.Page * request.PageSize);
 
         var (instances, totalCount) = await binding.GetInstances(skip, request.PageSize);
@@ -192,10 +193,11 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetInstanceByKeyResponse> GetInstanceByKey(GetInstanceByKeyRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
 
         var streamScoped = !string.IsNullOrEmpty(request.EventStreamType) || !string.IsNullOrEmpty(request.EventStreamId);
         if (streamScoped && (string.IsNullOrEmpty(request.EventStreamType) || ((EventStreamType)request.EventStreamType).IsAll))
@@ -322,10 +324,11 @@ internal sealed class ReadModels(
     /// <inheritdoc/>
     public async Task<GetAllInstancesResponse> GetAllInstances(GetAllInstancesRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
 
         // Every instance of a materialized read model is already in the sink, so read them from there. An
         // explicit event count is a request to re-apply exactly that many events from the beginning, which
@@ -460,15 +463,18 @@ internal sealed class ReadModels(
 
     /// <inheritdoc/>
     public IObservable<ReadModelChangeset> Watch(WatchRequest request, CallContext context = default) =>
-        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read, () => WatchGuarded(request, context));
+        EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)
+            ? Observable.Throw<ReadModelChangeset>(SystemStoreGuard.RefusedException())
+            : SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId), StoreAccess.Read, () => WatchGuarded(request, context));
 
     /// <inheritdoc/>
     public async Task DehydrateSession(DehydrateSessionRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ReadModelIdentifier, request.EventSequenceId, request.SessionId), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
-        var definition = await readModel.GetKnownDefinition(request.ReadModelIdentifier);
+        var definition = await GetSupportedDefinition(request.EventStore, readModel, request.ReadModelIdentifier);
 
         if (definition.ObserverType == Concepts.ReadModels.ReadModelObserverType.Projection)
         {
@@ -505,6 +511,7 @@ internal sealed class ReadModels(
         {
             request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
+            await ReadModelReadPolicy.EnsureReadable(grainFactory, request.EventStore, definition);
 
             var schema = definition.GetSchemaForLatestGeneration();
             var subscriptionId = Guid.NewGuid();
@@ -607,6 +614,13 @@ internal sealed class ReadModels(
                 }
             }
         }
+    }
+
+    async Task<Concepts.ReadModels.ReadModelDefinition> GetSupportedDefinition(EventStoreName eventStore, IReadModel readModel, ReadModelIdentifier identifier)
+    {
+        var definition = await readModel.GetKnownDefinition(identifier);
+        await ReadModelReadPolicy.EnsureReadable(grainFactory, eventStore, definition);
+        return definition;
     }
 
     async Task<GetInstanceByKeyResponse> GetMaterializedInstanceByKey(GetInstanceByKeyRequest request, Concepts.ReadModels.ReadModelDefinition definition)

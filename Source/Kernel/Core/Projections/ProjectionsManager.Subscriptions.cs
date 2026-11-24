@@ -271,7 +271,7 @@ public partial class ProjectionsManager
     }
 
     bool IsCurrentActiveDefinition(ProjectionDefinition definition) =>
-        !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
+        !definition.UsesUnsupportedEventSequence() && !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
 
     bool IsBeingReplaced(ProjectionDefinition definition)
     {
