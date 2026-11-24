@@ -3,6 +3,7 @@
 
 using Cratis.Arc.EntityFrameworkCore.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sql;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences;

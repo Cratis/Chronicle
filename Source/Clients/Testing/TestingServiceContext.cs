@@ -6,7 +6,6 @@ extern alias KernelCore;
 using System.Text.Json;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Testing.Compliance;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using KernelProjectionsManager = KernelCore::Cratis.Chronicle.Projections.Engine.ProjectionsManager;
 using KernelReadModelInstanceVisibilities = KernelCore::Cratis.Chronicle.ReadModels.ReadModelInstanceVisibilities;
