@@ -3,6 +3,7 @@
 
 using System.Dynamic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
@@ -518,7 +519,20 @@ public static class EventEntryConverter
         {
             return result;
         }
-        return result with { Content = converter.ToExpandoObject(System.Text.Json.Nodes.JsonNode.Parse(element.GetRawText())!.AsObject(), schema) };
+        return result with { Content = converter.ToExpandoObject(ToJsonObject(element), schema) };
+    }
+
+    static JsonObject ToJsonObject(JsonElement element)
+    {
+        JsonNode? node = element.ValueKind switch
+        {
+            JsonValueKind.Object => JsonObject.Create(element),
+            JsonValueKind.Array => JsonArray.Create(element),
+            _ => JsonValue.Create(element)
+        };
+
+        // Keep the same AsObject() failures for non-object stored content.
+        return node!.AsObject();
     }
 
     static ExpandoObject GetContentForGeneration(Dictionary<string, JsonElement>? contentDict, EventTypeGeneration generation)

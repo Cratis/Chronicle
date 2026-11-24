@@ -18,7 +18,10 @@ using ProtoBuf.Grpc;
 // share their names with the contract types this file is built around, starting with RemoveObserver.
 using IDormantObservers = Cratis.Chronicle.Observation.IDormantObservers;
 using IObserverRemover = Cratis.Chronicle.Observation.IObserverRemover;
+using JobId = Cratis.Choreography.Jobs.JobId;
 using ObserverKey = Cratis.Chronicle.Concepts.Observation.ObserverKey;
+using ObserverOperatorCommand = Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand;
+using ObserverOperatorCommandJobs = Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandJobs;
 
 namespace Cratis.Chronicle.Services.Observation;
 
@@ -53,19 +56,19 @@ internal sealed class Observers(
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var outcome = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).TryStartRecoverJobForFailedPartition(command.Partition);
-        return new RetryPartitionResponse { Outcome = (PartitionRecoveryOutcome)(int)outcome };
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.RetryPartition, command.Partition);
+        return new RetryPartitionResponse { Outcome = PartitionRecoveryOutcome.Accepted };
     }
 
     /// <inheritdoc/>
     public async Task<ClearPartitionQuarantineResponse> ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var result = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ClearPartitionQuarantine(command.Partition, command.RetryImmediately);
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.ClearPartitionQuarantine, command.Partition, command.RetryImmediately);
         return new ClearPartitionQuarantineResponse
         {
-            Outcome = (ClearPartitionQuarantineOutcome)(int)result.Outcome,
-            RetryOutcome = (PartitionRecoveryOutcome)(int)result.RetryOutcome
+            Outcome = ClearPartitionQuarantineOutcome.Accepted,
+            RetryOutcome = PartitionRecoveryOutcome.Accepted
         };
     }
 
@@ -73,12 +76,12 @@ internal sealed class Observers(
     public async Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var result = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).FastForward();
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.FastForward);
         return new FastForwardResponse
         {
-            Outcome = (FastForwardOutcome)(int)result.Outcome,
-            PreviousNextEventSequenceNumber = result.PreviousNextEventSequenceNumber.Value,
-            NextEventSequenceNumber = result.NextEventSequenceNumber.Value
+            Outcome = FastForwardOutcome.Accepted,
+            PreviousNextEventSequenceNumber = EventSequenceNumber.Unavailable.Value,
+            NextEventSequenceNumber = EventSequenceNumber.Unavailable.Value
         };
     }
 
@@ -87,8 +90,11 @@ internal sealed class Observers(
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
 
-        // Clients read an empty job id as JobId.NotSet (not replayable, disconnected or quarantined), so keep reporting it rather than throwing.
-        var jobId = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).Replay();
+        // The replay is accepted as a job and the job id returned at once: the observer grain also serves its client's
+        // subscriptions, so asking it directly can queue behind them for longer than a call may take. Clients read an empty
+        // job id as JobId.NotSet (not replayable), so keep reporting it rather than throwing.
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        var jobId = await ObserverOperatorCommandJobs.AcceptReplay(grainFactory, storage, key);
         return new ReplayResponse { JobId = jobId.Value.ToString() };
     }
 
@@ -96,7 +102,7 @@ internal sealed class Observers(
     public async Task ReplayPartition(ReplayPartition command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ReplayPartition(command.Partition);
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.ReplayPartition, command.Partition);
     }
 
     /// <inheritdoc/>
@@ -250,7 +256,7 @@ internal sealed class Observers(
     public async Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ClearObserverQuarantine();
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.ClearObserverQuarantine);
     }
 
     /// <inheritdoc/>
@@ -264,10 +270,9 @@ internal sealed class Observers(
     public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var observer = await grainFactory.GetObserver(command, storage, namespaceCasing);
-        var failedPartitions = (await observer.GetFailedPartitionKeys()).ToArray();
-        await Chronicle.Observation.RetryFailedPartitions.Start(observer, failedPartitions);
-        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions.Length };
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        var (failedPartitions, _) = await Chronicle.Observation.RetryFailedPartitions.Accept(grainFactory, storage, key);
+        return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions };
     }
 
     /// <inheritdoc/>
@@ -492,6 +497,24 @@ internal sealed class Observers(
         };
     }
 
+    /// <summary>
+    /// Accepts an operator command as a job, so it is answered at once however busy the observer is.
+    /// </summary>
+    /// <param name="command">The <see cref="IObserverCommand"/> that identifies the observer.</param>
+    /// <param name="operatorCommand">The <see cref="ObserverOperatorCommand"/> to carry out.</param>
+    /// <param name="partition">The partition the command is for, for the commands that are for one partition.</param>
+    /// <param name="retryImmediately">Whether clearing the quarantine of a partition also retries it.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="Chronicle.Observation.ObserverOperatorCommandNotAccepted">The jobs manager did not accept the command.</exception>
+    async Task AcceptOperatorCommand(IObserverCommand command, ObserverOperatorCommand operatorCommand, string? partition = null, bool retryImmediately = false)
+    {
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        if (await ObserverOperatorCommandJobs.Accept(grainFactory, key, operatorCommand, partition, retryImmediately) == JobId.NotSet)
+        {
+            throw new Chronicle.Observation.ObserverOperatorCommandNotAccepted(operatorCommand, key);
+        }
+    }
+
     IObservable<IEnumerable<ObserverInformation>> ObserveGuardedObservers(AllObserversRequest request, CallContext context)
     {
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
@@ -546,7 +569,7 @@ internal sealed class Observers(
             return null;
         }
 
-        var eventTypes = subscription.EventTypes.Any() ? subscription.EventTypes.ToArray() : null;
+        var eventTypes = subscription.EventTypes.Count > 0 ? subscription.EventTypes.ToArray() : null;
         var tags = filters.Tags.Any() ? filters.Tags.Select(_ => (Tag)_).ToArray() : null;
         var eventSequence = storage.GetEventStore(request.EventStore)
             .GetNamespace(request.Namespace)

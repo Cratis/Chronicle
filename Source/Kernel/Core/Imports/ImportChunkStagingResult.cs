@@ -14,13 +14,15 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="EventsStaged">How many of them were staged.</param>
 /// <param name="Rejections">The events that were rejected, by their index in the import.</param>
 /// <param name="Error">Why the chunk was refused as a whole, when it was; nothing of it was staged then.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportChunkStagingResult")]
 public record ImportChunkStagingResult(
-    int ChunkIndex,
-    bool AlreadyStaged,
-    int EventsReceived,
-    int EventsStaged,
-    IEnumerable<ImportRejection> Rejections,
-    string? Error = default)
+    [Id(0)] int ChunkIndex,
+    [Id(1)] bool AlreadyStaged,
+    [Id(2)] int EventsReceived,
+    [Id(3)] int EventsStaged,
+    [Id(4)] IEnumerable<ImportRejection> Rejections,
+    [Id(5)] string? Error = default)
 {
     /// <summary>
     /// Creates the result for a chunk refused as a whole.

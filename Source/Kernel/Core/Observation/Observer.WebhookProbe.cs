@@ -60,7 +60,7 @@ public partial class Observer
     {
         var subscription = IsWebhookSubscription
             ? _subscription
-            : new ObserverSubscription(_observerId, _observerKey, Definition.EventTypes, typeof(IWebhookObserverSubscriber), SiloAddress.Zero, null);
+            : new ObserverSubscription(_observerId, _observerKey, EventTypeSet.From(Definition.EventTypes), typeof(IWebhookObserverSubscriber), SiloAddress.Zero, null);
         return (IWebhookObserverSubscriber)GrainFactory.GetGrain(typeof(IWebhookObserverSubscriber), subscription.GetSubscriberKeyFor(partition, SiloAddress.Zero));
     }
 

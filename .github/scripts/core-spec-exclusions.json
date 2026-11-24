@@ -3,5 +3,8 @@
     { "fqn": "Cratis.Chronicle.ConcurrentCallGate", "reason": "Concurrency synchronization helper; no test methods or test base." },
     { "fqn": "Cratis.Chronicle.ModuleInitialization", "reason": "Assembly initialization helper; no test methods or test base." },
     { "fqn": "Cratis.Chronicle.NamespaceCasingContext", "reason": "Namespace service setup helper; no test methods or test base." },
-    { "fqn": "Cratis.Chronicle.OwnGenerationSchemaCache", "reason": "Schema cache fixture implementation; no test methods or test base." }
+    { "fqn": "Cratis.Chronicle.Observation.ClientSubscriptions.ClientSubscriptionFakes", "reason": "Static factory of subscription collaborators; no test methods or test base." },
+    { "fqn": "Cratis.Chronicle.ObserverDefinitionsContext", "reason": "Observer definition storage fixture; no test methods or test base." },
+    { "fqn": "Cratis.Chronicle.OwnGenerationSchemaCache", "reason": "Schema cache fixture implementation; no test methods or test base." },
+    { "fqn": "Cratis.Chronicle.ProjectionDefinitionEditing", "reason": "Projection definition editing helper; no test methods or test base." }
 ]

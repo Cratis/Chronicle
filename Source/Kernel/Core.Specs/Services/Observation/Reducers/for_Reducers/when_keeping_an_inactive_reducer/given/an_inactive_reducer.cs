@@ -12,13 +12,13 @@ namespace Cratis.Chronicle.Services.Observation.Reducers.for_Reducers.when_keepi
 /// </summary>
 public class an_inactive_reducer : Specification
 {
-    protected IReducer _reducer;
+    protected IClientReducerSubscription _reducer;
     protected ReducerDefinition _definition;
     protected bool _intact;
 
     void Establish()
     {
-        _reducer = Substitute.For<IReducer>();
+        _reducer = Substitute.For<IClientReducerSubscription>();
         _definition = new ReducerDefinition("the-reducer", EventSequenceId.Log, [], "the-read-model", false, []);
     }
 

@@ -49,5 +49,10 @@ public enum ObserverSubscriptionKind
     /// <summary>
     /// A projection served by the kernel that can collapse several event sources onto one read model document.
     /// </summary>
-    CollapsingProjection = 7
+    CollapsingProjection = 7,
+
+    /// <summary>
+    /// The kernel's behavior pattern capture of a namespace.
+    /// </summary>
+    PatternCapture = 8
 }

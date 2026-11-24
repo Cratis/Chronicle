@@ -54,7 +54,7 @@ public static class ReportRenderer
                     $"{breaks.Count} payload change(s) mean silos of {baselineName} and of this build cannot run in one cluster:",
                     .. breaks.Select(_ => $"  {_.Kind} in {_.Subject}: {_.Description}"),
                     string.Empty,
-                    "Payload contracts only grow within a major: keep existing members and types; add new ones instead.",
+                    "To stay rolling-compatible, keep existing members and types and add new ones; otherwise ship the release as a stop-start deploy (waiver entry and release-note sentence).",
                     "See Documentation/contributing/kernel/grain-interfaces.mdx."
                 ]
         ];
@@ -85,7 +85,7 @@ public static class ReportRenderer
         $"{breaks.Count} change(s) mean silos of {baselineName} and of this build cannot run in one cluster:",
         .. breaks.Select(_ => $"  {_.Kind} in {_.Subject}: {_.Description}"),
         string.Empty,
-        "Grain interfaces only grow within a major: keep every method, add new ones, and raise [Version] when you do.",
+        "To stay rolling-compatible, keep every method, add new ones and raise [Version]; otherwise ship the release as a stop-start deploy (waiver entry and release-note sentence).",
         "See Documentation/contributing/kernel/grain-interfaces.mdx."
     ];
 

@@ -166,9 +166,17 @@ These instruments are new, so they have no legacy name. They are published under
 | `cratis.chronicle.job.running` | Gauge `{job}` | event store, namespace, `cratis.chronicle.job.type` | Running catch-up and replay jobs. |
 | `cratis.chronicle.observer.job.handled_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Completed steps, successful or failed, of the observer's running jobs of that type. |
 | `cratis.chronicle.observer.job.total_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Steps of the observer's running jobs of that type. |
+| `cratis.chronicle.grain.calls.running` | Gauge `{call}` | `cratis.chronicle.grain.type`, event store | Calls running on the grains of this silo, interleaved or not. The event store is left out for a grain whose key does not carry one. |
+| `cratis.chronicle.grain.calls.pending` | Gauge `{call}` | `cratis.chronicle.grain.type`, event store | Calls this silo has made to grains that have not been answered: running or queued at the grain. |
+| `cratis.chronicle.grain.calls.oldest_pending_age` | Gauge `s` | `cratis.chronicle.grain.type`, event store | How long the oldest unanswered call this silo made to a grain has been waiting. |
+| `cratis.chronicle.kernel.load_status` | Gauge `1` | none | `0` accepting, `1` degraded, `2` recovering. See [Kernel overload](health-endpoint.md#kernel-overload). |
+| `cratis.chronicle.grpc.streams.open` | Gauge `{stream}` | none | gRPC streaming calls this silo is serving. |
+| `cratis.chronicle.registration.pending` | Gauge `{registration}` | event store | Registrations the kernel has accepted and not applied yet, as seen by the silo that holds the event store's registration inbox. Reports `0` once it has drained. |
+| `cratis.chronicle.registration.oldest_pending_age` | Gauge `s` | event store | How long the oldest accepted registration that has not been applied has been waiting. A value that keeps growing means registrations are accepted faster than the kernel applies them, or one cannot be applied and is being retried. |
+| `cratis.chronicle.job.failed` | Counter `{job}` | `cratis.chronicle.job.type` | Jobs that ended with failed steps or could not prepare their steps, by job type. Counted by the silo that ran the job, when the job completes. |
 | `cratis.chronicle.event_sequence.append.duration` | Histogram `s` | event store, namespace, event sequence | Duration of an append or append-many call, from validation to its outcome, rejected appends included. |
 
-The tags use the shared keys `cratis.event_store.name`, `cratis.event_store.namespace`, `cratis.event_sequence.id` and `cratis.observer.id`. No partition, event source or job id is ever a tag. `cratis.observer.type` is `reactor`, `reducer`, `projection`, `external` or `unknown`; `cratis.chronicle.observer.state` uses the lowercase state names, such as `active`, `quarantined` and `changing_definition`; `cratis.chronicle.job.type` is `catch_up` or `replay`.
+The tags use the shared keys `cratis.event_store.name`, `cratis.event_store.namespace`, `cratis.event_sequence.id` and `cratis.observer.id`. No partition, event source or job id is ever a tag. `cratis.observer.type` is `reactor`, `reducer`, `projection`, `external` or `unknown`; `cratis.chronicle.observer.state` uses the lowercase state names, such as `active`, `quarantined` and `changing_definition`; `cratis.chronicle.job.type` is `catch_up` or `replay` on the gauges, and on `cratis.chronicle.job.failed` also `catch_up_partition`, `replay_partition`, `retry_failed_partition`, `operator_command`, `import_events`, `copy_event_source_events`, `backfill_event_type_generations`, `migrate_existing_events_for_type` or `reindex_constraints`.
 
 #### When the per-observer gauges report
 
@@ -180,7 +188,7 @@ The three per-observer gauges report an observer only while it needs attention, 
 
 `cratis.chronicle.observer.resident` and `cratis.chronicle.job.running` report `0` for a combination of event store, namespace, type and state they have reported before, rather than leaving it out once it empties.
 
-The dormant observer counters are published under their `Telemetry:MetricNames` names (see [Telemetry names](telemetry-names.md)): `observer.dormant_releases`, `observer.dormant_wakes` with `cratis.chronicle.observer.wake_cause` (`event` or `safety_net`), `observer.dormant_wakes_delayed` and `observer.dormant_resumes` with `cratis.chronicle.observer.resume_outcome` (`cursor`, `catch_up` or `stale_record`). [Releasing dormant observers](observers.md#releasing-dormant-observers) says what to read from them.
+The dormant observer counters are published under their `Telemetry:MetricNames` names (see [Telemetry names](telemetry-names.md)): `observer.dormant_releases`, `observer.dormant_wakes` with `cratis.chronicle.observer.wake_cause` (`event` or `safety_net`), `observer.dormant_wakes_delayed`, `observer.dormant_safety_net_checks` with `cratis.chronicle.observer.safety_net_outcome` (`up_to_date`, `behind`, `unverified` or `full_wake`) and `observer.dormant_resumes` with `cratis.chronicle.observer.resume_outcome` (`cursor`, `catch_up` or `stale_record`). [Releasing dormant observers](observers.md#releasing-dormant-observers) says what to read from them.
 
 #### How many series to expect
 
@@ -193,6 +201,8 @@ With cumulative temporality, the OpenTelemetry SDK keeps a series' slot until th
 | `observer.job.handled_steps`, `observer.job.total_steps` | Observers that ran a catch-up or replay since the process started, once per job type. |
 | `observer.successful_observations` | Observers that delivered at least one event since the process started, twice in `Convention` mode when they also replayed (`cratis.replay` `true` and `false`). |
 | `observer.resident`, `job.running` | Event stores × namespaces × types × states. Small whatever the number of observers. |
+| `registration.pending`, `registration.oldest_pending_age` | Event stores whose registration inbox this silo has held since the process started. |
+| `job.failed` | Job types, a fixed list. |
 
 Each instrument is limited to `Telemetry:MetricSeriesLimit` series, 500 by default. Beyond the limit, the SDK folds the excess into one series whose only attribute is `otel.metric.overflow=true`, which can no longer be attributed to an observer. A process with thousands of observers that deliver events needs a higher limit for `observer.successful_observations` and the job-progress gauges. A process where hundreds of observers fail at once needs a higher limit for the failure instruments. Raise the limit with `Cratis:Chronicle:Telemetry:MetricSeriesLimit`, or the environment variable `Cratis__Chronicle__Telemetry__MetricSeriesLimit`. The SDK reserves memory for the full limit on every instrument, so raise it only as far as needed. `cratis.chronicle.observer.resident` stays small whatever the number of observers, and is the one to use for memory planning.
 

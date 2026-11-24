@@ -15,16 +15,18 @@ namespace Cratis.Chronicle.Concepts.Observation.Webhooks;
 /// <param name="CreatedAt">When the key was created.</param>
 /// <param name="OverlapEndsAt">When the overlap window of a superseded key ends.</param>
 /// <param name="RetiredAt">When the key was retired.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookSigningKey")]
 public record WebhookSigningKey(
-    WebhookSigningKeyId KeyId,
-    WebhookSigningAlgorithm Algorithm,
-    WebhookSigningKeyStatus Status,
-    string PublicKey,
-    EncryptedWebhookSigningSecret EncryptedSecret,
-    WebhookId? Webhook,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset? OverlapEndsAt,
-    DateTimeOffset? RetiredAt)
+    [Id(0)] WebhookSigningKeyId KeyId,
+    [Id(1)] WebhookSigningAlgorithm Algorithm,
+    [Id(2)] WebhookSigningKeyStatus Status,
+    [Id(3)] string PublicKey,
+    [Id(4)] EncryptedWebhookSigningSecret EncryptedSecret,
+    [Id(5)] WebhookId? Webhook,
+    [Id(6)] DateTimeOffset CreatedAt,
+    [Id(7)] DateTimeOffset? OverlapEndsAt,
+    [Id(8)] DateTimeOffset? RetiredAt)
 {
     /// <inheritdoc/>
     public override string ToString() =>

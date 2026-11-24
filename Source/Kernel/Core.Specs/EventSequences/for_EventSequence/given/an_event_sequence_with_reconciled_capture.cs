@@ -11,6 +11,7 @@ using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Observation.Reactors;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.EventSequences.for_EventSequence.given;
@@ -33,7 +34,7 @@ public class an_event_sequence_with_reconciled_capture : an_event_sequence_with_
         _captureGrainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_captureObserver);
         var siloDetails = Substitute.For<ILocalSiloDetails>();
         siloDetails.SiloAddress.Returns(SiloAddress.Zero);
-        var capture = new PatternCapture(_storage, siloDetails, _captureGrainFactory, NullLogger<PatternCapture>.Instance);
+        var capture = new PatternCapture(_storage, siloDetails, _captureGrainFactory, Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()), NullLogger<PatternCapture>.Instance);
         _patternCapture.Configure().RecoverSubscription(EventStore, EventStoreNamespace)
             .Returns(_ => capture.RecoverSubscription(EventStore, EventStoreNamespace));
     }

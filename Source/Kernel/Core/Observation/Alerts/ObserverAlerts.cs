@@ -27,7 +27,9 @@ namespace Cratis.Chronicle.Observation.Alerts;
 /// There is no transition queue or tracker-owned retry work. The observer's durable reminder retries uncertain
 /// application and revisits grace deadlines. History is fully folded on first use and refreshed from its tail
 /// thereafter; an ambiguous append invalidates the fold. Every report drains preceding sequence appends before
-/// reading history, including on a fresh activation that cannot know whether an earlier append timed out.
+/// reading history, including on a fresh activation that cannot know whether an earlier append timed out, except a
+/// healthy report on an activation that holds the folded history with no open incident. The grain leaves memory once
+/// such a report is applied, so it is resident only while it has work.
 /// Source authority is read from storage, never by calling the observer (which may be awaiting this grain).
 /// </remarks>
 /// <param name="storage">The source state and history storage.</param>
@@ -84,8 +86,15 @@ public class ObserverAlerts(
             // that is still executing. Drain on every report, not just after a locally observed timeout:
             // a previous tracker activation may have left an append running too. Never acknowledge or
             // authorize removal unless this non-interleaved barrier and the subsequent history read succeed.
-            await GrainFactory.GetSystemEventSequence().DrainAppends();
-            await RefreshHistory();
+            // A healthy report from an activation that already folded the history and knows no open incident has
+            // nothing to close, so the barrier and the history read are skipped (#6113).
+            var quiet = snapshot.FailedPartitions.Count == 0 && !snapshot.IsQuarantined;
+            if (!(quiet && _historyLoaded && _openIncidents.Count == 0))
+            {
+                await GrainFactory.GetSystemEventSequence().DrainAppends();
+                await RefreshHistory();
+            }
+
             if (snapshot.IsQuarantined && snapshot.QuarantineEpisodeId is null && snapshot.Disposition == AlertDisposition.Active)
             {
                 // Legacy handshake only. No transitions are applied until the source persists the proposed identity.
@@ -132,7 +141,14 @@ public class ObserverAlerts(
                 applied++;
             }
 
-            return Receipt(await IsAuthoritative(snapshot) ? ObserverAlertReconciliation.Applied : ObserverAlertReconciliation.Superseded);
+            var authoritative = await IsAuthoritative(snapshot);
+            if (authoritative && quiet && _openIncidents.Count == 0)
+            {
+                // Nothing is open and nothing is failing: there is no reason to stay resident until the collector comes.
+                DeactivateOnIdle();
+            }
+
+            return Receipt(authoritative ? ObserverAlertReconciliation.Applied : ObserverAlertReconciliation.Superseded);
         }
         catch (Exception exception)
         {

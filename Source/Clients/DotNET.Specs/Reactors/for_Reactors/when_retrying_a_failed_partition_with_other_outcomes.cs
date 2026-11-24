@@ -16,6 +16,7 @@ public class when_retrying_a_failed_partition_with_other_outcomes : given.all_de
         ContractOutcome.PartitionNotFound,
         ContractOutcome.ObserverQuarantined,
         ContractOutcome.PartitionQuarantined,
+        ContractOutcome.Accepted,
         (ContractOutcome)999
     ];
     ClientOutcome[] _results;
@@ -43,7 +44,8 @@ public class when_retrying_a_failed_partition_with_other_outcomes : given.all_de
     [Fact] void should_return_partition_not_found() => _results[0].ShouldEqual(ClientOutcome.PartitionNotFound);
     [Fact] void should_return_observer_quarantined() => _results[1].ShouldEqual(ClientOutcome.ObserverQuarantined);
     [Fact] void should_return_partition_quarantined() => _results[2].ShouldEqual(ClientOutcome.PartitionQuarantined);
-    [Fact] void should_return_unknown_for_an_unrecognized_outcome() => _results[3].ShouldEqual(ClientOutcome.Unknown);
+    [Fact] void should_return_accepted() => _results[3].ShouldEqual(ClientOutcome.Accepted);
+    [Fact] void should_return_unknown_for_an_unrecognized_outcome() => _results[4].ShouldEqual(ClientOutcome.Unknown);
 
     [Reactor("73c0c8ed-f2cd-49a2-b5b9-f2f4e1b7b5d4")]
     [EventSequence("non-log-sequence")]

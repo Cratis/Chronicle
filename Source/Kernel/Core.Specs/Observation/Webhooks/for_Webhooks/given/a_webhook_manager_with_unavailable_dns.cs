@@ -41,9 +41,9 @@ public class a_webhook_manager_with_unavailable_dns : for_Observer.given.a_store
     {
         var proxy = Substitute.For<IObserver>();
         proxy.IsSubscribed().Returns(_ => _observer.IsSubscribed());
-        proxy.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>()).Returns(_ => _observer.NeedsSubscriptionRecovery(definition.EventTypes));
-        proxy.Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), false, true)
-            .Returns(_ => _observer.Subscribe<IWebhookObserverSubscriber>(ObserverType.External, definition.EventTypes, SiloAddress.Zero, reactivateRetired: false, automatic: true));
+        proxy.NeedsSubscriptionRecovery(Arg.Any<EventTypeSet>()).Returns(_ => _observer.NeedsSubscriptionRecovery(EventTypeSet.From(definition.EventTypes)));
+        proxy.Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), false, true)
+            .Returns(_ => _observer.Subscribe<IWebhookObserverSubscriber>(ObserverType.External, EventTypeSet.From(definition.EventTypes), SiloAddress.Zero, reactivateRetired: false, automatic: true));
         return proxy;
     }
 }

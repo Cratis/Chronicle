@@ -12,7 +12,9 @@ namespace Cratis.Chronicle.Projections;
 /// <param name="ReadModel">The Json representation of the read model.</param>
 /// <param name="ProjectedEventsCount">Number of events that caused projection.</param>
 /// <param name="LastHandledEventSequenceNumber">The last handled event sequence number.</param>
-public record ProjectionResult(JsonObject ReadModel, int ProjectedEventsCount, EventSequenceNumber LastHandledEventSequenceNumber)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Projections.ProjectionResult")]
+public record ProjectionResult([Id(0)] JsonObject ReadModel, [Id(1)] int ProjectedEventsCount, [Id(2)] EventSequenceNumber LastHandledEventSequenceNumber)
 {
     /// <summary>
     /// Represents an empty <see cref="ProjectionResult"/>.
@@ -22,5 +24,6 @@ public record ProjectionResult(JsonObject ReadModel, int ProjectedEventsCount, E
     /// <summary>
     /// Gets a value indicating whether the projection produced a read model.
     /// </summary>
+    [Id(3)]
     public bool HasReadModel { get; init; } = true;
 }

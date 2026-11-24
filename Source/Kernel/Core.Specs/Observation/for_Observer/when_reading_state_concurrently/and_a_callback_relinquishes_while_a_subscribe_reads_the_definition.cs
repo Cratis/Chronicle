@@ -10,18 +10,26 @@ public class and_a_callback_relinquishes_while_a_subscribe_reads_the_definition 
     Exception? _callbackError;
     Exception? _subscribeError;
 
+    /// <summary>
+    /// Orleans runs one turn of a grain at a time and interleaves only at awaits; the calls share this exclusive
+    /// scheduler so they interleave the same way, instead of running on two threads at once.
+    /// </summary>
+    readonly TaskScheduler _grainScheduler = new ConcurrentExclusiveSchedulerPair().ExclusiveScheduler;
+
     async Task Because()
     {
         _guardedDefinition.HoldNextRead = true;
-        var subscribing = _observer.SubscribeToAllEvents<NullObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero);
+        var subscribing = OnGrainScheduler(() => _observer.SubscribeToAllEvents<NullObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero));
         await WaitFor(_guardedDefinition.ReadStarted);
         await MoveDefinition();
 
-        var callback = _observer.SetHandledStats(99);
+        var callback = OnGrainScheduler(() => _observer.SetHandledStats(99));
         _guardedDefinition.ReleaseRead.TrySetResult();
         _subscribeError = await Capture(subscribing);
         _callbackError = await Capture(callback);
     }
+
+    Task OnGrainScheduler(Func<Task> call) => Task.Factory.StartNew(call, CancellationToken.None, TaskCreationOptions.None, _grainScheduler).Unwrap();
 
     static async Task<Exception?> Capture(Task task)
     {

@@ -32,5 +32,5 @@ public class with_existing_definitions : given.a_projections_manager
 
     [Fact] void should_not_create_first_projection_in_second_namespace() => _manager.TryGet(_eventStore, _secondNamespace, _firstDefinition.Identifier, out _firstProjectionInSecondNamespace).ShouldBeFalse();
     [Fact] void should_not_create_second_projection_in_second_namespace() => _manager.TryGet(_eventStore, _secondNamespace, _secondDefinition.Identifier, out _secondProjectionInSecondNamespace).ShouldBeFalse();
-    [Fact] void should_not_compile_for_namespace_registration() => _projectionFactory.DidNotReceive().Create(_eventStore, _secondNamespace, Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>(), Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>());
+    [Fact] void should_not_compile_for_namespace_registration() => _projectionFactory.DidNotReceive().Create(_eventStore, _secondNamespace, Arg.Any<Concepts.Projections.Definitions.ProjectionDefinition>(), Arg.Any<Concepts.ReadModels.ReadModelDefinition>());
 }

@@ -23,7 +23,7 @@ public static class FencedGlobalEligibility
         Reason(definition.Join.Count, definition.Children.Count, definition.RemovedWith.Count, definition.RemovedWithJoin.Count, definition.Nested)
         ?? (definition.Graph is null ? null : "it targets a graph");
 
-    static string? Reason(int joins, int children, int removals, int removalJoins, IDictionary<Properties.PropertyPath, ChildrenDefinition>? nested)
+    static string? Reason(int joins, int children, int removals, int removalJoins, IReadOnlyDictionary<Properties.PropertyPath, ChildrenDefinition>? nested)
     {
         if (joins > 0 || removalJoins > 0)
         {

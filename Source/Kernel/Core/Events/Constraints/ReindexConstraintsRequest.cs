@@ -11,6 +11,8 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 /// <param name="EventSequenceId">The event sequence identifier to reindex for.</param>
 /// <param name="Changes">The constraint changes to reindex.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Events.Constraints.ReindexConstraintsRequest")]
 public record ReindexConstraintsRequest(
-    EventSequenceId EventSequenceId,
-    IReadOnlyCollection<ConstraintDefinitionChange> Changes) : IJobRequest;
+    [Id(0)] EventSequenceId EventSequenceId,
+    [Id(1)] IReadOnlyCollection<ConstraintDefinitionChange> Changes) : IJobRequest;

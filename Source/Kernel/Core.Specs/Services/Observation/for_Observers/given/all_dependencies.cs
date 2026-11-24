@@ -1,8 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Monads;
 
 using IObserverRemover = Cratis.Chronicle.Observation.IObserverRemover;
 
@@ -18,6 +23,8 @@ public class all_dependencies : Services.for_QueryExecutor.given.a_routed_query
     protected IFailedPartitionsStorage _failedPartitionsStorage;
     protected IGrainFactory _grainFactory;
     protected IObserverRemover _observerRemover;
+    protected IJobsManager _jobsManager;
+    protected JobId _acceptedJob = JobId.New();
     protected Contracts.Observation.IObservers _observers;
 
     void Establish()
@@ -30,6 +37,13 @@ public class all_dependencies : Services.for_QueryExecutor.given.a_routed_query
         _failedPartitionsStorage = Substitute.For<IFailedPartitionsStorage>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _observerRemover = Substitute.For<IObserverRemover>();
+
+        // Operator commands are accepted as jobs by the jobs manager of the namespace; nothing is outstanding by default.
+        _jobsManager = Substitute.For<IJobsManager>();
+        _grainFactory.GetGrain<IJobsManager>(Arg.Any<long>(), Arg.Any<string>()).Returns(_jobsManager);
+        _jobsManager.GetJobs(Arg.Any<JobQuery>()).Returns(Task.FromResult<IImmutableList<JobState>>(ImmutableList<JobState>.Empty));
+        _jobsManager.Start<IObserverOperatorCommandJob, ObserverOperatorCommandRequest>(Arg.Any<ObserverOperatorCommandRequest>())
+            .Returns(_ => Task.FromResult(Result<JobId, StartJobError>.Success(_acceptedJob)));
 
         _storage.GetEventStore(Arg.Any<Concepts.EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.Observers.Returns(_observerDefinitionsStorage);

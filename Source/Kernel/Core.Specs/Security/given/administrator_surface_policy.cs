@@ -15,6 +15,7 @@ public static class administrator_surface_policy
         ["Cratis.Chronicle.Security.EventStoreAccessGrants"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.EventStoreAccessPreflight"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.Administrator"] = WellKnownAuthorizationPolicies.Administrator,
+        ["Cratis.Chronicle.Diagnostics.KernelBusiness"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.User"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Security.Application"] = WellKnownAuthorizationPolicies.Administrator,
         ["Cratis.Chronicle.Federation.FederationBinding"] = WellKnownAuthorizationPolicies.Administrator,

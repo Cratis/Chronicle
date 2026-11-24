@@ -181,6 +181,16 @@ public class ChronicleOptions : IValidatableObject
     public Clients ConnectedClients { get; init; } = new Clients();
 
     /// <summary>
+    /// Gets the configuration for how the kernel takes in registrations from clients.
+    /// </summary>
+    public Registration Registration { get; init; } = new();
+
+    /// <summary>
+    /// Gets the limits that decide when a silo reports itself as overloaded.
+    /// </summary>
+    public Overload Overload { get; init; } = new Overload();
+
+    /// <summary>
     /// Gets the server instance diagnostics configuration.
     /// </summary>
     public Servers Servers { get; init; } = new Servers();

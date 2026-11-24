@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.ReadModels;
 
@@ -36,5 +35,5 @@ public class when_event_stores_share_projection_and_namespace_names : given.a_ma
 
     [Fact] void should_bound_the_total_across_stores() => _manager.CachedGraphCount.ShouldEqual(ProjectionsManager.CacheCapacity);
     [Fact] void should_not_share_graphs_across_stores() => _first.ShouldNotEqual(_other);
-    [Fact] void should_compile_with_the_other_stores_read_model() => _ = _projectionFactory.Received(1).Create(_otherStore, new EventStoreNamespaceName("tenant-149"), _firstDefinition, _otherReadModel, Arg.Any<IEnumerable<EventTypeSchema>>());
+    [Fact] void should_compile_with_the_other_stores_read_model() => _ = _projectionFactory.Received(1).Create(_otherStore, new EventStoreNamespaceName("tenant-149"), _firstDefinition, _otherReadModel);
 }

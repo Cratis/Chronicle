@@ -15,7 +15,7 @@ public class when_generating_a_composite_key_without_a_schema_type : given.a_lan
         var compiled = _languageService.Compile("projection Order => Model\n  from UserAdded", Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(value => value, errors => throw new InvalidOperationException(string.Join(", ", errors.Errors)));
         var eventType = compiled.From.Keys.Single();
-        compiled.From[eventType] = compiled.From[eventType] with { Key = "$composite(first=userId,second=name)" };
+        compiled = compiled.WithFrom(eventType, compiled.From[eventType] with { Key = "$composite(first=userId,second=name)" });
         _generated = _languageService.Generate(compiled, _readModelDefinition);
         _errors = _languageService.Compile(_generated, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(_ => CompilerErrors.Empty, errors => errors);

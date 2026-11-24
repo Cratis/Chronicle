@@ -13,7 +13,7 @@ public class and_zero_work_settles_while_already_queued : given.an_observer_sett
 
     [Fact] void should_keep_the_physical_subscription() => _queued.ShouldBeTrue();
     [Fact] async Task should_not_subscribe_again() =>
-        await _appendedEventsQueues.DidNotReceive().Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        await _appendedEventsQueues.DidNotReceive().Subscribe(_observerKey, Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
     [Fact] async Task should_preserve_backoff() => (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
     [Fact] async Task should_not_start_another_catch_up() =>
         await _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());

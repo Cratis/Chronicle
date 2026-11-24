@@ -293,7 +293,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     }
 
     /// <inheritdoc/>
-    public Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
+    public Task Subscribe(ObserverKey observerKey, EventTypeSet eventTypes, ObserverFilters? filters = null)
     {
         lock (_subscriptionsLock)
         {
@@ -309,7 +309,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             // observer.Handle to be invoked multiple times for the same event.
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             _dormant.Remove(observerKey);
-            _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
+            _subscriptions.Add(new(observerKey, eventTypes, filters));
         }
 
         return Task.CompletedTask;

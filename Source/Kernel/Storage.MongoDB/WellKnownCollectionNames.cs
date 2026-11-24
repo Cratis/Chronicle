@@ -361,6 +361,11 @@ public static class WellKnownCollectionNames
     public const string GenerationInitialization = "generation-initialization";
 
     /// <summary>
+    /// The collection that holds the registrations the kernel has accepted and applies in the background.
+    /// </summary>
+    public const string RegistrationIntents = "registration-intents";
+
+    /// <summary>
     /// The collection that holds trigger definitions.
     /// </summary>
     public const string TriggerDefinitions = "trigger-definitions";

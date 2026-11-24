@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
@@ -35,7 +37,7 @@ namespace Cratis.Chronicle.Observation;
 public record RetryFailedPartitions(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {
     /// <summary>
-    /// Handles the command by asking the target observer grain to recover its failed partitions.
+    /// Handles the command by accepting it as a job that asks the target observer grain to recover its failed partitions.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
     /// <param name="storage">The storage containing observer definitions.</param>
@@ -45,16 +47,38 @@ public record RetryFailedPartitions(string EventStore, string Namespace, string 
     {
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
-        var observer = grainFactory.GetGrain<IObserver>(key);
-        var failedPartitions = (await observer.GetFailedPartitionKeys()).ToArray();
-        var started = await Start(observer, failedPartitions);
-        if (started == 0)
+        var (failedPartitions, jobId) = await Accept(grainFactory, storage, key);
+        if (jobId == JobId.NotSet)
         {
             throw new FailedPartitionsRecoveryCouldNotStart(key);
         }
 
-        return new RetryFailedPartitionsResult(failedPartitions.Length);
+        return new RetryFailedPartitionsResult(failedPartitions);
     }
+
+    /// <summary>
+    /// Accepts the retry of every failed partition of an observer as a job.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the jobs manager with.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
+    /// <param name="key">The <see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>How many partitions are failed, and the <see cref="JobId"/> of the job retrying them; <see cref="JobId.NotSet"/> if none is failed or no job could be started.</returns>
+    public static async Task<(int FailedPartitions, JobId JobId)> Accept(IGrainFactory grainFactory, IStorage storage, ObserverKey key)
+    {
+        var failedPartitions = await FailedPartitionCount(storage, key);
+        return (failedPartitions, failedPartitions == 0
+            ? JobId.NotSet
+            : await ObserverOperatorCommandJobs.Accept(grainFactory, key, ObserverOperatorCommand.RetryFailedPartitions));
+    }
+
+    /// <summary>
+    /// Gets how many partitions of an observer are failed, from storage so the observer grain is not asked.
+    /// </summary>
+    /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
+    /// <param name="key">The <see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>The number of failed partitions.</returns>
+    internal static async Task<int> FailedPartitionCount(IStorage storage, ObserverKey key) =>
+        (await storage.GetEventStore(key.EventStore).GetNamespace(key.Namespace).FailedPartitions.GetFor(key.ObserverId)).Partitions.Count();
 
     /// <summary>
     /// Requests operator recovery for every partition, continuing past partitions that cannot start.

@@ -27,5 +27,5 @@ public class and_capture_is_missing_a_type_but_already_has_newer_types : given.a
 
     [Fact] async Task should_merge_the_subscription_types() => (await _captureObserver.GetSubscription()).EventTypes.ShouldContainOnly(_mergedTypes);
     [Fact] async Task should_save_the_merged_reactor_definition() => await _captureDefinitions.Received(1).Save(Arg.Is<ReactorDefinition>(definition => definition.EventTypes.Select(type => type.EventType).ToHashSet().SetEquals(_mergedTypes)));
-    [Fact] async Task should_subscribe_the_queue_to_the_merged_types() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<IEnumerable<EventType>>(types => types.ToHashSet().SetEquals(_mergedTypes)), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_subscribe_the_queue_to_the_merged_types() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<EventTypeSet>(types => types.ToHashSet().SetEquals(_mergedTypes)), Arg.Any<ObserverFilters?>());
 }

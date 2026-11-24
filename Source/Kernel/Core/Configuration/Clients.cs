@@ -70,12 +70,19 @@ public class Clients
     public int KeepAliveIntervalSeconds { get; init; } = 1;
 
     /// <summary>
+    /// Gets how long in seconds a connect or a keep-alive waits for the kernel's own bookkeeping, which is done by grains,
+    /// before it answers anyway. The bookkeeping carries on in the background and is retried; it is never a reason to
+    /// leave a client without an answer. Defaults to 2.
+    /// </summary>
+    public int GraceSeconds { get; init; } = 2;
+
+    /// <summary>
     /// Gets how the open stream of a client keeps its subscriptions in place.
     /// </summary>
     /// <remarks>
     /// <see cref="ClientKeeperMode.SiloLocal"/> (the default) confirms a subscription from its durable subscription, a storage
-    /// read shared by every stream of a namespace, instead of calling the client's grains, so an observer released while
-    /// dormant is not woken by it and the client grains are not kept warm for it. It applies only while dormant release
+    /// read shared by every stream of a namespace, instead of asking the observer, so an observer released while
+    /// dormant is not woken by it. It applies only while dormant release
     /// applies (see <c language="json">observers.durableSubscriptions</c>); <see cref="ClientKeeperMode.Legacy"/> restores the call per check.
     /// </remarks>
     public ClientKeeperMode KeeperMode { get; init; } = ClientKeeperMode.SiloLocal;

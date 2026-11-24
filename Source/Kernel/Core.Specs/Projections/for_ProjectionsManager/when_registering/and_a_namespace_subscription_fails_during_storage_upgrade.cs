@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -20,9 +21,9 @@ public class and_a_namespace_subscription_fails_during_storage_upgrade : given.a
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
         _definitionComparer.Compare(Arg.Any<ProjectionKey>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ProjectionDefinition>())
             .Returns(ProjectionDefinitionCompareResult.Same);
-        _observerGrain.Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>())
+        _observerGrain.Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>())
             .Returns(Task.FromException(new InvalidOperationException("Subscription unavailable")));
-        _observerGrain.Subscribe<ICollapsingProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>())
+        _observerGrain.Subscribe<ICollapsingProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>())
             .Returns(Task.FromException(new InvalidOperationException("Subscription unavailable")));
     }
 

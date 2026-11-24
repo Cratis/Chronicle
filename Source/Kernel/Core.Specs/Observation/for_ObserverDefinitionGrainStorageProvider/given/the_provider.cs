@@ -15,6 +15,7 @@ public class the_provider : Specification
     protected static readonly EventSequenceId _otherEventSequenceId = "inbox-another-store";
     protected ObserverDefinitionGrainStorageProvider _provider;
     protected IStorage _storage;
+    protected IObserverDefinitionsCacheClient _cacheClient;
     protected IEventStoreStorage _eventStoreStorage;
     protected IObserverDefinitionsStorage _definitionsStorage;
     protected ObserverKey _observerKey;
@@ -29,7 +30,8 @@ public class the_provider : Specification
         _storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(_eventStoreStorage);
         _eventStoreStorage.Observers.Returns(_definitionsStorage);
         _definitionsStorage.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty);
-        _provider = new(_storage);
+        _cacheClient = Substitute.For<IObserverDefinitionsCacheClient>();
+        _provider = new(_storage, _cacheClient);
 
         _observerKey = new(_observerId, "an-event-store", "a-namespace", EventSequenceId.Log);
         _grainId = GrainId.Create("type", _observerKey.ToString());

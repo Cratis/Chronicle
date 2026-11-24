@@ -20,9 +20,21 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeyedBy<EventSequenceKey>]
 [BelongsTo(WellKnownServices.EventSequenceQueries)]
-[Version(2)]
+[Version(3)]
 public interface IEventSequence : IGrainWithStringKey
 {
+    /// <summary>
+    /// Reconciles the projection, capture and pattern-capture subscriptions of the namespace of the event log.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Run by the log when it activates and by the <see cref="Supervision.ISiloSupervisor"/> of the silo after a silo has left
+    /// the cluster. It does nothing on a sequence other than the event log. Interleaved because subscribing an observer
+    /// reads the tail of this sequence.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task ReconcileSubscriptions();
+
     /// <summary>
     /// Appends a compensating event for an event that is already in the event sequence.
     /// </summary>

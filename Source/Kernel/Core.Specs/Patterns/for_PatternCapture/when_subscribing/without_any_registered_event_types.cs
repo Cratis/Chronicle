@@ -21,7 +21,7 @@ public class without_any_registered_event_types : given.a_pattern_capture
     [Fact] async Task should_not_subscribe_an_observer() =>
         await _observer.DidNotReceive().SubscribeAdditively<IPatternCaptureSubscriber>(
             Arg.Any<ObserverType>(),
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),

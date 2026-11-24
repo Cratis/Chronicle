@@ -12,7 +12,7 @@ public class and_the_subscription_lists_no_event_types : given.a_performing_job_
     void Establish()
     {
         _eventType = new(new EventTypeId("some-event-type"), EventTypeGeneration.First);
-        _observer.GetEventTypes().Returns(Task.FromResult<IEnumerable<EventType>>([_eventType]));
+        _observer.GetEventTypes().Returns(Task.FromResult(EventTypeSet.From([_eventType])));
     }
 
     async Task Because() => await _jobStep.InvokePerformStep(_performState);

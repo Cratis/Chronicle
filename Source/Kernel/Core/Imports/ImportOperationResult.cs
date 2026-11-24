@@ -10,7 +10,9 @@ namespace Cratis.Chronicle.Imports;
 /// </summary>
 /// <param name="Record">The <see cref="ImportRecord"/> after the operation, when the import exists.</param>
 /// <param name="Error">Why the operation was refused, when it was.</param>
-public record ImportOperationResult(ImportRecord? Record, string? Error = default)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportOperationResult")]
+public record ImportOperationResult([Id(0)] ImportRecord? Record, [Id(1)] string? Error = default)
 {
     /// <summary>
     /// Gets a value indicating whether the operation was carried out.

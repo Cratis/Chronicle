@@ -32,7 +32,7 @@ public class a_live_observer_with_guarded_state : an_observer
         });
         _eventStoreNamespaceStorage.Observers.Returns(_guarded);
         var grainId = GrainId.Create("observer", _observerKey.ToString());
-        var definitions = new provider_backed_storage<ObserverDefinition>(new ObserverDefinitionGrainStorageProvider(_storage), grainId);
+        var definitions = new provider_backed_storage<ObserverDefinition>(new ObserverDefinitionGrainStorageProvider(_storage, Substitute.For<IObserverDefinitionsCacheClient>()), grainId);
         var state = new provider_backed_storage<ObserverState>(new ObserverStateGrainStorageProvider(_storage, Microsoft.Extensions.Logging.Abstractions.NullLogger<ObserverStateGrainStorageProvider>.Instance), grainId);
         silo.Options.StorageFactory = type =>
         {

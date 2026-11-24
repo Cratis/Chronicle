@@ -32,7 +32,7 @@ public class when_the_shadow_ddl_deadline_expires : for_ReadModelMigrator.given.
         });
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"object","properties":{"part":{"type":"string"}}}}}""");
         await using var plain = CreateContext("ddl_deadline", ProjectedColumns.ForSchema(schema));
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).IgnoringManyServiceProviders().Options;
         var configuration = Options.Create(new ChronicleOptions { Sql = new() { ShadowIndexDdlTimeoutSeconds = 1 } });
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()), _logger, configuration, _clock);
         await using var context = new ReadModelDbContext(options, plain.TableName, plain.Columns, migrator);

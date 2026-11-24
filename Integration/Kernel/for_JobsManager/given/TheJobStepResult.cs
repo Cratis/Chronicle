@@ -3,4 +3,6 @@
 
 namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Integration.Specifications.for_JobsManager.given.TheJobStepResult")]
 public record TheJobStepResult;

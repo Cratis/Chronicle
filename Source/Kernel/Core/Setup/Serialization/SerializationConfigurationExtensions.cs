@@ -57,7 +57,7 @@ public static class SerializationConfigurationExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder ConfigureSerialization(this ISiloBuilder siloBuilder)
     {
-        siloBuilder.ConfigureServices(Configure);
+        siloBuilder.ConfigureServices(ConfigureKernelSerialization);
 
         return siloBuilder;
     }
@@ -139,7 +139,12 @@ public static class SerializationConfigurationExtensions
         return services;
     }
 
-    static void Configure(this IServiceCollection services)
+    /// <summary>
+    /// Registers everything the silo serializes with: the concept, appended event and OneOf serializers, the surrogates for types
+    /// Orleans cannot generate a serializer for, and the JSON codec for the few types that cannot have one.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
+    internal static void ConfigureKernelSerialization(IServiceCollection services)
     {
         // Pre-warm the global JsonSerializerOptions on this single configuration thread. Its lazy
         // initializer publishes the options instance before it has finished adding the derived-type

@@ -17,6 +17,7 @@ public class a_page_job_step : a_performing_job_step
     void Establish()
     {
         var subscription = new ObserverSubscription("observer-id", _performState.ObserverKey, [], typeof(IPageObserverType), SiloAddress.Zero);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(subscription);
         _pageSubscriber = Substitute.For<IPageObserverType>();
         _silo.AddProbe<IPageObserverType>(key =>

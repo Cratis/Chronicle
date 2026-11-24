@@ -133,7 +133,7 @@ internal static partial class LegacyEventSourceIdKeys
             !schema.Schema.ActualSchema.ActualProperties.Keys.Any(name => string.Equals(name, property, StringComparison.Ordinal)));
     }
 
-    static IDictionary<TKey, TValue> NormalizeDictionary<TKey, TValue>(IDictionary<TKey, TValue> definitions, Func<TKey, TValue, TValue> normalize)
+    static IReadOnlyDictionary<TKey, TValue> NormalizeDictionary<TKey, TValue>(IReadOnlyDictionary<TKey, TValue> definitions, Func<TKey, TValue, TValue> normalize)
         where TKey : notnull
         where TValue : class
     {

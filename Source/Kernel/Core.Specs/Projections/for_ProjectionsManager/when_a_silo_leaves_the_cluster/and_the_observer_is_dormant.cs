@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -48,7 +49,7 @@ public class and_the_observer_is_dormant : given.a_projections_manager_grain
     async Task should_not_subscribe_it_again() =>
         await _observerGrain.DidNotReceive().ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<bool>(),
             Arg.Any<EventGenerationDelivery>());

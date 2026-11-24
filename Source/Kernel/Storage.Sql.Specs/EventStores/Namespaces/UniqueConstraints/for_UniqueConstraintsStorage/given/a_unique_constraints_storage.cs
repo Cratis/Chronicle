@@ -55,7 +55,7 @@ public class a_unique_constraints_storage : Specification
     void Destroy() => _connection.Dispose();
 
     NamespaceDbContext CreateNamespaceContext() =>
-        new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options);
+        new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
 
     UniqueConstraintDbContext CreateContext()
     {

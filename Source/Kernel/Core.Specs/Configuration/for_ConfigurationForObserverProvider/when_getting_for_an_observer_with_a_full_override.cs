@@ -26,6 +26,7 @@ public class when_getting_for_an_observer_with_a_full_override : given.a_provide
     [Fact] void should_keep_the_global_dormant_period() => _result.DormantAfter.ShouldEqual(601);
     [Fact] void should_keep_the_global_dormant_safety_net() => _result.DormantSafetyNet.ShouldEqual(1203);
     [Fact] void should_keep_the_global_wake_limit() => _result.MaxConcurrentWakes.ShouldEqual(6);
+    [Fact] void should_keep_the_global_catch_up_limit() => _result.MaxConcurrentCatchUpJobs.ShouldEqual(7);
     [Fact] void should_keep_the_global_resume_bound() => _result.DormantResumeMaxEvents.ShouldEqual(77);
     [Fact] void should_keep_the_global_durable_subscription_check_interval() => _result.DurableSubscriptionCheckInterval.ShouldEqual(TimeSpan.FromMinutes(31));
     [Fact] void should_keep_the_global_unseen_removal_switch() => _result.UnseenRemovalEnabled.ShouldBeTrue();

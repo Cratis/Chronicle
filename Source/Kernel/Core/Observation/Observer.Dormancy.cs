@@ -5,12 +5,14 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Releases;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
     TimeSpan _dormantAfter;
+    IReadOnlyList<ObserverSubscriptionKind> _dormantKinds = [];
     DateTimeOffset? _dormantSince;
     bool _releasedWhenDormant;
     bool _safetyNetWake;
@@ -54,7 +56,8 @@ public partial class Observer
     /// reducer or projection, with at least one client when a client serves it. On top of that the observer must be observing
     /// with nothing delivered, held, claimed, fenced, failing, replaying or catching up, and no lane of the queue holding events
     /// for it, which the queue checks when the observer asks it to keep the subscription (see <see cref="IsReleasedAsDormant"/>).
-    /// Every one of these keeps the observer resident while it holds.
+    /// Every one of these keeps the observer resident while it holds. The standbys of the subscription do not: the record names
+    /// them with the targets (see <see cref="IsDurableSubscriptionPersisted"/>), and the observer has them again when it wakes.
     /// </remarks>
     bool IsDormantApartFromTheRecord =>
         !_removed &&
@@ -77,7 +80,6 @@ public partial class Observer
         !_retryRecoveryAfterQuarantine &&
         _pageFloor is null &&
         _prefetchedPartitions.Count == 0 &&
-        _supersededRegistrations.Count == 0 &&
         !_deliveryFences.Active(_clock.GetUtcNow()).Any() &&
         HasNoClaims;
 
@@ -90,7 +92,7 @@ public partial class Observer
     /// </summary>
     bool InScopeForDormancy =>
         _subscription.SubscriberType.GetSubscriptionKind() is { } kind &&
-        kind.CanBeReleasedWhenDormant() &&
+        kind.IsReleasedWhenDormant(_dormantKinds) &&
         _subscription.GenerationDelivery == EventGenerationDelivery.Compatibility &&
         (!kind.IsServedByClient() || _subscription.Targets.Count > 0);
 
@@ -109,7 +111,7 @@ public partial class Observer
         _safetyNetWake = true;
         try
         {
-            await Watchdog(CancellationToken.None);
+            await Watchdog();
         }
         finally
         {
@@ -117,8 +119,11 @@ public partial class Observer
         }
     }
 
-    void ConfigureDormancy(Observers config) =>
+    void ConfigureDormancy(Observers config)
+    {
         _dormantAfter = TimeSpan.FromSeconds(Math.Max(config.DormantAfter, 0));
+        _dormantKinds = config.EffectiveDormantKinds;
+    }
 
     /// <summary>
     /// Releases the observer when it has been dormant for the dormancy period.

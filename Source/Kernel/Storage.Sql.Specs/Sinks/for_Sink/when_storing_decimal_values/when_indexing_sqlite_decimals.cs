@@ -54,7 +54,7 @@ public class when_indexing_sqlite_decimals : Specification
         await Write("negative", -10m);
         await Write("other", 2m);
         await Write("null", null);
-        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).Options);
+        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).IgnoringManyServiceProviders().Options);
         var legacy = ReadModelIndexNames.For(DatabaseType.Sqlite, "decimal_indexes", "amount");
         await context.Database.ExecuteSqlRawAsync($"CREATE INDEX \"{legacy}\" ON decimal_indexes(amount)");
         await context.Database.ExecuteSqlRawAsync("CREATE INDEX manual_amount ON decimal_indexes(amount); CREATE UNIQUE INDEX chronicle_idx_unique_name ON decimal_indexes(id)");

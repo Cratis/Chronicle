@@ -35,10 +35,15 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </para>
 /// </remarks>
 [method: JsonConstructor]
-public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, IEnumerable<EventTypeId> RemovedWith = null!, ConstraintScope? Scope = default) : IConstraintDefinition
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.UniqueEventTypeConstraintDefinition")]
+public record UniqueEventTypeConstraintDefinition([Id(0)] ConstraintName Name, [Id(1)] IEnumerable<EventTypeId> EventTypeIds, [Id(2)] IEnumerable<EventTypeId> RemovedWith = null!, [Id(3)] ConstraintScope? Scope = default) : IConstraintDefinition
 {
+    [NonSerialized]
     readonly IEnumerable<EventTypeId>? _eventTypeIds = EventTypeIds;
+    [NonSerialized]
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+    [Id(4)]
     readonly IEnumerable<EventSequenceId>? _eventSequences;
 
     /// <summary>

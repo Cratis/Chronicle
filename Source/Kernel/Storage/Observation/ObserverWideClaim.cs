@@ -14,4 +14,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Epoch">The epoch allocated at grant.</param>
 /// <param name="ResumePosition">The position from which work resumes.</param>
 /// <param name="PendingWork">The pending partition work.</param>
-public record ObserverWideClaim(ClaimHolderKind Holder, JobId? Job, ClaimEpoch Epoch, EventSequenceNumber ResumePosition, IReadOnlyList<PendingPartitionWork> PendingWork);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverWideClaim")]
+public record ObserverWideClaim([Id(0)] ClaimHolderKind Holder, [Id(1)] JobId? Job, [Id(2)] ClaimEpoch Epoch, [Id(3)] EventSequenceNumber ResumePosition, [Id(4)] IReadOnlyList<PendingPartitionWork> PendingWork);

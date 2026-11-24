@@ -25,5 +25,5 @@ public class and_a_compatibility_definition_is_not_replayable : given.a_webhooks
 
     Task Because() => _grain.OnActivateAsync(CancellationToken.None);
 
-    [Fact] async Task should_subscribe_automatically_without_replayability() => await _observer.Received(1).Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), isReplayable: false, reactivateRetired: false, automatic: true);
+    [Fact] async Task should_subscribe_automatically_without_replayability() => await _observer.Received(1).Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), isReplayable: false, reactivateRetired: false, automatic: true);
 }

@@ -40,26 +40,28 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
     /// <inheritdoc/>
     public Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "")
     {
+        bool changed;
         lock (_publishing)
         {
-            var changed = RegisterSimple(type, schema, owner, source, visibility, origin);
+            changed = RegisterSimple(type, schema, owner, source, visibility, origin);
             PublishIfChanged(changed);
         }
 
-        // There is no cache anywhere to evict for an in-memory single-node store, so a registration never asks
-        // anyone to invalidate.
-        return Task.FromResult(false);
+        // Reported so the silo's event type registry is told to reload; a registration that changed nothing is not.
+        return Task.FromResult(changed);
     }
 
     /// <inheritdoc/>
     public Task<bool> Register(EventTypeDefinition definition)
     {
+        bool changed;
         lock (_publishing)
         {
-            PublishIfChanged(ApplyDefinition(definition, false));
+            changed = ApplyDefinition(definition, false);
+            PublishIfChanged(changed);
         }
 
-        return Task.FromResult(false);
+        return Task.FromResult(changed);
     }
 
     /// <inheritdoc/>
@@ -203,11 +205,6 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
         // content as-is rather than coerce it.
         var eventType = new EventType(type, generation ?? EventTypeGeneration.First);
         return Task.FromResult(new EventTypeSchema(eventType, EventTypeOwner.Client, EventTypeSource.Code, new JsonSchema()));
-    }
-
-    /// <inheritdoc/>
-    public void Invalidate(EventTypeId eventTypeId)
-    {
     }
 
     /// <inheritdoc/>

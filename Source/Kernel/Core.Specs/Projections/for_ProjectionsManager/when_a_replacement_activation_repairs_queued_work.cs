@@ -53,7 +53,7 @@ public class when_a_replacement_activation_repairs_queued_work : given.two_proje
         stateStorage.State = _state;
         replacementSilo.Options.StorageFactory = _ => stateStorage;
         _replacementFactory = Substitute.For<IProjectionFactory>();
-        _replacementFactory.Create(default!, default!, default!, default!, default!).ReturnsForAnyArgs(_engineProjection);
+        _replacementFactory.Create(default!, default!, default!, default!).ReturnsForAnyArgs(_engineProjection);
         _replacement = await CreateManager(replacementSilo, EventStore, _replacementFactory, key => observers.GetValueOrDefault(key) ?? _observerGrain);
         await replacementSilo.TimerRegistry.FireAllAsync();
         _startupBuilds = _replacementFactory.ReceivedCalls().Count();

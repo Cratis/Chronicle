@@ -29,7 +29,7 @@ public class when_a_mixed_release_observer_fails_once : given.registrations
             }
             return Task.CompletedTask;
         });
-        _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), null, false)
+        _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), null, false)
             .Returns(_ => ++_calls == 1 ? Task.FromException(new TypeLoadException("old observer")) : Task.CompletedTask);
     }
 

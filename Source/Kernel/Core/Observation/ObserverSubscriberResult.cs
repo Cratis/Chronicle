@@ -14,26 +14,32 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="LastSuccessfulObservation">The <see cref="EventSequenceNumber"/> of the last successful observation.</param>
 /// <param name="ExceptionMessages">Any exception messages associated with the call.</param>
 /// <param name="ExceptionStackTrace">Any exception stack trace associated with the call.</param>
-public record ObserverSubscriberResult(ObserverSubscriberState State, EventSequenceNumber LastSuccessfulObservation, IEnumerable<string> ExceptionMessages, string ExceptionStackTrace)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverSubscriberResult")]
+public record ObserverSubscriberResult([Id(0)] ObserverSubscriberState State, [Id(1)] EventSequenceNumber LastSuccessfulObservation, [Id(2)] IEnumerable<string> ExceptionMessages, [Id(3)] string ExceptionStackTrace)
 {
     /// <summary>
     /// Gets the partition containing the first failing event in a page.
     /// </summary>
+    [Id(4)]
     public Key? FailedPartition { get; init; }
 
     /// <summary>
     /// Gets the sequence number of the first failing event in a page.
     /// </summary>
+    [Id(5)]
     public EventSequenceNumber FailedAt { get; init; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
     /// Gets the durable deadline when delivery is deferred.
     /// </summary>
+    [Id(6)]
     public PartitionDeferral? Deferral { get; init; }
 
     /// <summary>
     /// Gets the kernel delivery recovery policy, independently of the persisted failure classification.
     /// </summary>
+    [Id(7)]
     public WebhookDeliveryFailurePolicy FailurePolicy { get; init; } = WebhookDeliveryFailurePolicy.Retry;
 
     /// <summary>

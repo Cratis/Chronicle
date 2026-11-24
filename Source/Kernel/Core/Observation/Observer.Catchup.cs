@@ -50,6 +50,9 @@ public partial class Observer
             return;
         }
 
+        using var admission = await AdmitCatchUpOrDefer();
+        if (admission is null) return;
+
         // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
         var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingCatchUpAcquisition = acquisition.Task;
@@ -598,6 +601,12 @@ public partial class Observer
     async Task StartCatchupJob(Key partition, EventSequenceNumber nextEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
+        if (IsWithoutClient)
+        {
+            DeferringPartitionCatchUpWithoutClient(logger, partition);
+            return;
+        }
+
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         Skips.JobStarted(partition);
 

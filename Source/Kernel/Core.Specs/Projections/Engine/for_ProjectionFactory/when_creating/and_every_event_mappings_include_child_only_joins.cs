@@ -11,9 +11,9 @@ public class and_every_event_mappings_include_child_only_joins : given.a_project
 {
     void Establish()
     {
-        var notes = _definition.Children["notes"];
-        notes.From.Clear();
-        notes.Join[_noteUpdated] = new("id", new Dictionary<PropertyPath, string>(), "noteId");
+        _definition = _definition.WithChild("notes", notes => notes
+            .WithoutFrom()
+            .WithJoin(_noteUpdated, new("id", new Dictionary<PropertyPath, string>(), "noteId")));
     }
 
     Task Because() => ProjectChildEvent();

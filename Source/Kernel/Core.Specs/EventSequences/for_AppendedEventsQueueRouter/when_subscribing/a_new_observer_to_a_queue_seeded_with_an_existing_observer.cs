@@ -26,7 +26,7 @@ public class a_new_observer_to_a_queue_seeded_with_an_existing_observer : given.
         _newObserver = ObserverKeyFor("new-observer");
         _existingEventType = "Existing event type";
         _newEventType = "New event type";
-        _router.Seed(0, [new AppendedEventsQueueObserverSubscription(_existingObserver, [_existingEventType])]);
+        _router.Seed(0, [new AppendedEventsQueueObserverSubscription(_existingObserver, [new EventType(_existingEventType, EventTypeGeneration.First)])]);
     }
 
     void Because()

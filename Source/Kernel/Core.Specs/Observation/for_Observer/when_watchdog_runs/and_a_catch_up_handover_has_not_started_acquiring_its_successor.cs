@@ -88,6 +88,6 @@ public class and_a_catch_up_handover_has_not_started_acquiring_its_successor : g
 
     [Fact] void should_preserve_catch_up_preparation() => _isPreparingCatchupAfterWatchdog.ShouldBeTrue();
     [Fact] void should_not_count_a_recovery_towards_quarantine() => _recoveryAttemptsAfterWatchdog.ShouldEqual(0);
-    [Fact] void should_route_only_for_the_handover() => _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_route_only_for_the_handover() => _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
     [Fact] void should_not_acquire_a_successor_job() => _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());
 }

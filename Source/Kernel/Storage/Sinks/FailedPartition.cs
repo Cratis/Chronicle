@@ -11,7 +11,9 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// </summary>
 /// <param name="EventSourceId">The event source identifier for the failed partition.</param>
 /// <param name="EventSequenceNumber">The sequence number of the first event that failed.</param>
-public record FailedPartition(Key EventSourceId, EventSequenceNumber EventSequenceNumber)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Sinks.FailedPartition")]
+public record FailedPartition([Id(0)] Key EventSourceId, [Id(1)] EventSequenceNumber EventSequenceNumber)
 {
     /// <summary>
     /// Gets why the partition failed, as reported by the underlying store, or empty when the store gave no reason.
@@ -20,6 +22,7 @@ public record FailedPartition(Key EventSourceId, EventSequenceNumber EventSequen
     /// Carries error codes and the store's own error message only - never the content of the document being written,
     /// which can hold personal data.
     /// </remarks>
+    [Id(2)]
     public string Reason { get; init; } = string.Empty;
 
     /// <summary>
@@ -31,5 +34,6 @@ public record FailedPartition(Key EventSourceId, EventSequenceNumber EventSequen
     /// short - some of the partition's writes may have been applied and others lost, so progress past them cannot be
     /// trusted.
     /// </remarks>
+    [Id(3)]
     public bool OutcomeUnknown { get; init; }
 }

@@ -21,5 +21,5 @@ public class and_dns_is_temporarily_unavailable_in_warn_mode : given.a_stored_we
 
     [Fact] async Task should_subscribe_despite_the_dns_warning() => (await _observer.IsSubscriptionEstablished()).ShouldBeTrue();
     [Fact] void should_log_the_temporary_dns_warning_once() => _recordedLogs.Warnings.Count(message => message.Contains("Webhook target host resolution is temporarily unavailable.", StringComparison.Ordinal)).ShouldEqual(1);
-    [Fact] void should_continue_live_delivery() => _appendedEventsQueues.Received().Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_continue_live_delivery() => _appendedEventsQueues.Received().Subscribe(_observerKey, Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

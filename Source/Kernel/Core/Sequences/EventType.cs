@@ -9,7 +9,9 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Id">The unique identifier of the event type.</param>
 /// <param name="Generation">The generation of the event type.</param>
 /// <param name="Tombstone">Whether or not the event is a tombstone event.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Sequences.EventType")]
 public record EventType(
-    string Id,
-    uint Generation,
-    bool Tombstone);
+    [Id(0)] string Id,
+    [Id(1)] uint Generation,
+    [Id(2)] bool Tombstone);

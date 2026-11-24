@@ -40,7 +40,7 @@ public class and_an_element_is_added(context context) : Given<context>(context)
             await EventStore.DiscoverAll();
             await EventStore.RegisterAll();
             var job = await EventStore.Projections.Replay(new ProjectionId("OrgModelBound"));
-            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job);
+            await EventStore.WaitTillReplayed(job);
             await ReadGraph();
         }
     }

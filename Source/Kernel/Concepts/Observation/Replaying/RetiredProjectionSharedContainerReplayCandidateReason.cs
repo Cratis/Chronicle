@@ -6,5 +6,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Replaying;
 /// <summary>
 /// Represents a reason for a replay candidate when a retired projection wrote to the same read model container.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.Replaying.RetiredProjectionSharedContainerReplayCandidateReason")]
 public record RetiredProjectionSharedContainerReplayCandidateReason()
     : ReplayCandidateReason(ReplayCandidateReasonType.RetiredProjectionSharedContainer);

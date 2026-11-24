@@ -10,8 +10,10 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Name">The name of the identity.</param>
 /// <param name="UserName">The username of the identity.</param>
 /// <param name="OnBehalfOf">The identity on behalf of which the event was created.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Sequences.Identity")]
 public record Identity(
-    string Subject,
-    string Name,
-    string UserName,
-    Identity? OnBehalfOf);
+    [Id(0)] string Subject,
+    [Id(1)] string Name,
+    [Id(2)] string UserName,
+    [Id(3)] Identity? OnBehalfOf);
