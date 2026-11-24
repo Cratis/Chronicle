@@ -27,5 +27,5 @@ public class when_a_mark_arrives_while_a_page_is_held : for_SinkProvenanceCache.
     }
 
     [Fact] void should_discard_the_held_payload() => _delivered.ShouldEqual(0);
-    [Fact] void should_end_only_after_observing_the_mark() => _error.ShouldBeOfExactType<ReadModelIsNotAvailable>();
+    [Fact] void should_end_only_after_observing_the_mark() => _error.ShouldBeOfExactType<Grpc.Core.RpcException>();
 }

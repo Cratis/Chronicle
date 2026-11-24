@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Disposables;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage.Sinks;
+using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels;
 
@@ -10,6 +12,8 @@ namespace Cratis.Chronicle.ReadModels;
 /// Holds at most one pending final response while database authority is stale.
 /// </summary>
 /// <typeparam name="T">The serialized response type.</typeparam>
+/// <param name="lease">The physical database authority.</param>
+/// <param name="observer">The final response observer.</param>
 internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IObserver<T> observer) : IObserver<T>, IDisposable
 {
     readonly Lock _gate = new();
@@ -24,16 +28,7 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
     bool _completed;
     bool _stopped;
 
-    internal void Start(IObservable<T> source)
-    {
-        _revocation = lease.Revoked.Register(() => OnError(new ReadModelIsNotAvailable()));
-        lock (_gate)
-        {
-            if (_stopped) return;
-        }
-        _source.Disposable = source.Subscribe(this);
-    }
-
+    /// <inheritdoc/>
     public void OnNext(T value)
     {
         lock (_gate)
@@ -45,9 +40,11 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
             if (_working) return;
             _working = true;
         }
+
         _ = Pump();
     }
 
+    /// <inheritdoc/>
     public void OnCompleted()
     {
         lock (_gate)
@@ -56,11 +53,14 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
             _completed = true;
             if (_working) return;
         }
+
         Finish(null);
     }
 
+    /// <inheritdoc/>
     public void OnError(Exception error) => Finish(error);
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         lock (_gate)
@@ -70,10 +70,29 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
             _latest = default;
             _pending = false;
         }
+
         _stop.Cancel();
         _source.Dispose();
         _revocation.Dispose();
+        _stop.Dispose();
     }
+
+    /// <summary>
+    /// Subscribes to responses and observes revocation even when the source is quiet.
+    /// </summary>
+    /// <param name="source">The fully processed response source.</param>
+    internal void Start(IObservable<T> source)
+    {
+        _revocation = lease.Revoked.Register(() => OnError(Unavailable()));
+        lock (_gate)
+        {
+            if (_stopped) return;
+        }
+
+        _source.Disposable = source.Subscribe(this);
+    }
+
+    static RpcException Unavailable() => new(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
 
     async Task Pump()
     {
@@ -82,7 +101,10 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
             while (await DeliverPending()) { }
         }
         catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
-        catch (Exception) { Finish(new ReadModelIsNotAvailable()); }
+        catch (Exception)
+        {
+            Finish(Unavailable());
+        }
     }
 
     async Task<bool> DeliverPending()
@@ -103,6 +125,7 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
                 }
             }
         }
+
         if (complete) Finish(null);
         return !complete;
     }
@@ -117,6 +140,7 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
             _pending = false;
             _latest = default;
         }
+
         return true;
     }
 
@@ -128,6 +152,7 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
             {
                 if (_stopped) return;
             }
+
             Dispose();
             if (error is null) observer.OnCompleted();
             else observer.OnError(error);

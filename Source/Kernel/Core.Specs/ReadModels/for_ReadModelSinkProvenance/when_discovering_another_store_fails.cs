@@ -22,6 +22,6 @@ public class when_discovering_another_store_fails : given.a_provenance_inventory
         _completed = (await Marker(EventStoreNamespaceName.Default).ReadState()).IsComplete;
     }
 
-    [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<ReadModelIsNotAvailable>();
+    [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<Grpc.Core.RpcException>();
     [Fact] void should_not_complete_a_partially_discovered_inventory() => _completed.ShouldBeFalse();
 }

@@ -17,10 +17,16 @@ internal sealed class ReadModelProvenance(IStorage storage)
     readonly Dictionary<SinkProvenanceDatabaseId, Destination> _destinations = [];
     readonly List<Source> _sources = [];
 
+    /// <summary>
+    /// Discovers all scopes and commits each incomplete database only after evidence collection succeeds.
+    /// </summary>
+    /// <param name="requestedStore">The store requiring admission, including a newly registered store.</param>
+    /// <param name="requestedNamespace">The requested destination namespace, if any.</param>
+    /// <param name="requestedModel">The requested definition, if not yet retained.</param>
+    /// <returns>The inventory task.</returns>
     internal async Task Inventory(EventStoreName requestedStore, EventStoreNamespaceName? requestedNamespace, ReadModelDefinition? requestedModel)
     {
-        var stores = (await storage.GetEventStores()).Append(requestedStore).Distinct(CaseInsensitiveEventStoreNameComparer.Instance).ToArray();
-        foreach (var store in stores)
+        foreach (var store in (await storage.GetEventStores()).Append(requestedStore).Distinct(CaseInsensitiveEventStoreNameComparer.Instance).ToArray())
         {
             await Discover(store);
         }
@@ -74,7 +80,7 @@ internal sealed class ReadModelProvenance(IStorage storage)
 
     async Task<Destination?> AddDestination(IEventStoreStorage store, EventStoreNamespaceName @namespace, ReadModelDefinition model)
     {
-        if (SinkProvenanceExemptions.IsNonDatabase(model.Sink.TypeId)) return null;
+        if (SinkProvenanceExemptions.IsNonDatabase(model.Sink.Type)) return null;
         var provenance = store.GetNamespace(@namespace).Sinks.GetProvenance(model);
         var state = (await provenance.ReadState()).Validate();
         if (!_destinations.TryGetValue(state.DatabaseId, out var destination))
@@ -88,8 +94,19 @@ internal sealed class ReadModelProvenance(IStorage storage)
 
     sealed class Source(IEventStoreStorage storage)
     {
+        /// <summary>
+        /// Gets the authoritative producer storage.
+        /// </summary>
         internal IEventStoreStorage Storage { get; } = storage;
+
+        /// <summary>
+        /// Gets the discovered read-model destination bindings.
+        /// </summary>
         internal List<Binding> Bindings { get; } = [];
+
+        /// <summary>
+        /// Gets the physical destinations used by this source.
+        /// </summary>
         internal IEnumerable<Destination> Destinations => Bindings.Select(_ => _.Destination);
     }
 
@@ -97,8 +114,19 @@ internal sealed class ReadModelProvenance(IStorage storage)
 
     sealed class Destination(ISinkProvenanceStorage storage, SinkProvenanceState state)
     {
+        /// <summary>
+        /// Gets durable metadata access for the physical destination.
+        /// </summary>
         internal ISinkProvenanceStorage Storage { get; } = storage;
+
+        /// <summary>
+        /// Gets the state observed before evidence collection.
+        /// </summary>
         internal SinkProvenanceState State { get; } = state;
+
+        /// <summary>
+        /// Gets or sets whether incomplete inventory discovered restricted evidence.
+        /// </summary>
         internal bool RestrictedEvidence { get; set; }
     }
 }

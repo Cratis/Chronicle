@@ -29,5 +29,5 @@ public class when_another_store_has_a_restricted_producer_in_the_same_database :
 
     async Task Because() => _error = await Catch.Exception(() => _provenance.EnsureReadable(Store, EventStoreNamespaceName.Default, _model));
 
-    [Fact] void should_refuse_the_first_normal_read_before_any_payload_work() => _error.ShouldBeOfExactType<ReadModelIsNotAvailable>();
+    [Fact] void should_refuse_the_first_normal_read_before_any_payload_work() => _error.ShouldBeOfExactType<Grpc.Core.RpcException>();
 }

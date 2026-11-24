@@ -25,7 +25,7 @@ public class when_a_quiet_source_is_revoked : for_SinkProvenanceCache.given.a_ca
         source.OnNext(42);
     }
 
-    [Fact] void should_end_neutrally_without_waiting_for_a_payload_event() => _error.ShouldBeOfExactType<ReadModelIsNotAvailable>();
+    [Fact] void should_end_neutrally_without_waiting_for_a_payload_event() => _error.ShouldBeOfExactType<Grpc.Core.RpcException>();
     [Fact] void should_dispose_the_source_subscription() => _subscribed.ShouldBeFalse();
     [Fact] void should_not_emit_after_revocation() => _delivered.ShouldEqual(0);
 }
