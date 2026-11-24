@@ -19,7 +19,7 @@ public class and_child_is_not_yet_in_sink : given.a_flat_child_projection_with_k
 
     void Establish()
     {
-        Sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey)
+        Sink.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), ChildKey, Arg.Any<Key>())
             .Returns(Option<Key>.None());
 
         Storage.WithParentHistory(BoardKey, RootCreatedEvent);
