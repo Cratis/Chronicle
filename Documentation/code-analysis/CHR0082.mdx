@@ -1,0 +1,34 @@
+---
+title: "CHR0082: Scenario terminal task is discarded"
+description: "CHR0082 warns when a Cratis Chronicle testing scenario operation returns a task that is discarded instead of awaited or returned."
+---
+
+## Rule description
+
+Scenario setup and delivery operations return tasks. Discarding one can let a test continue before setup or delivery completes, and leave failures unobserved. CHR0082 reports discarded calls to these declared methods:
+
+| Type | Method |
+| --- | --- |
+| `Cratis.Chronicle.Testing.Reactors.ReactorSourceGivenBuilder<TReactor>` | `Events(params object[] events)` |
+| `Cratis.Chronicle.Testing.Reactors.ReactorScenario<TReactor>` | `Redeliver(RecordedOccurrence occurrence)` |
+| `Cratis.Chronicle.Testing.EventSequences.EventSourceGivenBuilder` | `Events(params object[] events)` |
+| `Cratis.Chronicle.Testing.EventSequences.EventSourceWhenBuilder` | `Events(object @event, params object[] additionalEvents)` |
+
+The rule matches the resolved method and its parameter signature, not just its name. Other overloads and unrelated methods named `Events` or `Redeliver` are not covered. The return type must be a framework `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`.
+
+## Severity
+
+Warning
+
+## How to fix
+
+Await the call in an `async Task` member, or return its task to a caller that awaits it. Merely adding `async` to the containing member does not observe a discarded task; the warning also applies inside async members.
+
+The rule covers standalone calls, real discard assignments such as `_ = scenario.Redeliver(occurrence);`, and expression bodies of void methods and local functions. Parentheses do not hide a discarded result. Assigning to a declared variable named `_` is an ordinary assignment, not a discard.
+
+Awaiting, returning, storing in a named variable or field, and passing the task onward count as consuming it. This rule does not prove that a stored or passed task is eventually awaited. There is no automatic code fix because changing the containing member's async contract can affect its callers.
+
+## Related rules
+
+- [CHR0039](CHR0039): Discarded Chronicle assertion results remain errors.
+- [CHR0083](CHR0083): Async reactor handlers must return a task Chronicle can await.
