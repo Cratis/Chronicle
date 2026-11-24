@@ -17,6 +17,7 @@ public sealed partial class SinkProvenanceCache
         readonly CancellationTokenSource _revoked = new();
         readonly Lock _revocationGate = new();
         bool _revocationDisposed;
+        Task? _notification;
         TaskCompletionSource _changed = NewSignal();
         SinkProvenanceState _state = initial;
         Task? _refresh;
@@ -41,13 +42,15 @@ public sealed partial class SinkProvenanceCache
         }
 
         /// <summary>
-        /// Gets the refresh work to drain before disposing the shared semaphore.
+        /// Gets refresh and subscriber notification work to drain before disposal.
         /// </summary>
         internal Task InFlight
         {
             get
             {
-                lock (_gate) return _refresh ?? Task.CompletedTask;
+                Task refresh;
+                lock (_gate) refresh = _refresh ?? Task.CompletedTask;
+                lock (_revocationGate) return Task.WhenAll(refresh, _notification ?? Task.CompletedTask);
             }
         }
 
@@ -80,7 +83,7 @@ public sealed partial class SinkProvenanceCache
             lock (_revocationGate)
             {
                 _revocationDisposed = true;
-                _revoked.Dispose();
+                _notification = DisposeRevocation(_notification ?? Task.CompletedTask);
             }
         }
 
@@ -279,8 +282,30 @@ public sealed partial class SinkProvenanceCache
         {
             lock (_revocationGate)
             {
-                if (!_revocationDisposed) _revoked.Cancel();
+                if (!_revocationDisposed) _notification ??= NotifyRevocation();
             }
+        }
+
+        async Task NotifyRevocation()
+        {
+            try
+            {
+                await _revoked.CancelAsync().ConfigureAwait(false);
+            }
+            catch (AggregateException exception)
+            {
+                foreach (var failure in exception.Flatten().InnerExceptions) owner._logger.RevocationFailed(failure);
+            }
+            catch (Exception exception)
+            {
+                owner._logger.RevocationFailed(exception);
+            }
+        }
+
+        async Task DisposeRevocation(Task notification)
+        {
+            await notification.ConfigureAwait(false);
+            _revoked.Dispose();
         }
 
         void Pulse()

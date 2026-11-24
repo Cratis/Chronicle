@@ -73,7 +73,7 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
 
         _stop.Cancel();
         _source.Dispose();
-        _revocation.Dispose();
+        _revocation.Unregister();
         _stop.Dispose();
     }
 
@@ -153,6 +153,7 @@ internal sealed class ReadModelLeaseObservation<T>(SinkProvenanceLease lease, IO
                 if (_stopped) return;
             }
 
+            if (lease.Revoked.IsCancellationRequested) error = Unavailable();
             Dispose();
             if (error is null) observer.OnCompleted();
             else observer.OnError(error);
