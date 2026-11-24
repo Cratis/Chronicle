@@ -510,12 +510,17 @@ internal sealed class ReadModels(
     {
         var readModel = grainFactory.GetReadModel(request.ReadModelIdentifier, request.EventStore);
 
-        return Observable.Create<ReadModelChangeset>(async observer =>
+        return Observable.FromAsync(async () =>
         {
             request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
             var definition = await WaitForReadModelDefinition(readModel, request.ReadModelIdentifier, context.CancellationToken);
             await ReadModelPublicReadGuard.Ensure(provenance, grainFactory, request.EventStore, request.Namespace, definition);
-
+            var binding = await readBindings.ResolveOrReject(grainFactory, request.EventStore, request.Namespace, definition, null);
+            return (definition, binding);
+        }).SelectMany(admission => admission.binding.Guard(Observable.Create<ReadModelChangeset>(async (observer, cancellationToken) =>
+        {
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, cancellationToken);
+            var definition = admission.definition;
             var schema = definition.GetSchemaForLatestGeneration();
             var subscriptionId = Guid.NewGuid();
 
@@ -536,6 +541,7 @@ internal sealed class ReadModels(
 
                 // Decrypt through the shared release path so observable queries resolve the compliance
                 // subject exactly like one-shot queries (explicit __subject, else inferred from _id/id).
+                await admission.binding.Lease.WaitUntilReadable(cancellation.Token);
                 var decrypted = await ReleaseJsonForReadModel(request.EventStore, namespaceName, schema, readModelInstance, change: change);
                 observer.OnNext(new ReadModelChangeset
                 {
@@ -575,7 +581,7 @@ internal sealed class ReadModels(
                 // from this point on reaches the forwarder registered above.
                 observer.OnNext(new ReadModelChangeset { Subscribed = true });
 
-                await RefreshWatchRegistration(notifier, subscriber, context.CancellationToken);
+                await RefreshWatchRegistration(notifier, subscriber, cancellation.Token);
             }
             finally
             {
@@ -588,7 +594,7 @@ internal sealed class ReadModels(
                     changesetMediator.Unsubscribe(subscriptionId);
                 }
             }
-        });
+        })));
     }
 
     async Task RefreshWatchRegistration(IProjectionChangesetNotifier notifier, IReadModelChangesetSubscriber subscriber, CancellationToken cancellationToken)
