@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Integration.GraphProjections.Organization;
-using Cratis.Chronicle.Jobs;
 using context = Cratis.Chronicle.Integration.GraphProjections.when_replaying.and_the_counters_are_rebuilt.context;
 
 namespace Cratis.Chronicle.Integration.GraphProjections.when_replaying;
