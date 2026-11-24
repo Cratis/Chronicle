@@ -49,6 +49,7 @@ public partial class AppendedEventsQueue
     static readonly TimeSpan _minSafetyNetTick = TimeSpan.FromSeconds(1);
 
     readonly Dictionary<ObserverId, RingBackoff> _rings = [];
+    readonly HashSet<ObserverId> _releasedWhileDormant = [];
     readonly IWakeAdmission? _wakeAdmission;
     readonly IDormantObserverGauge? _dormantObserverGauge;
     IDisposable? _dormantGaugeRegistration;
@@ -125,6 +126,7 @@ public partial class AppendedEventsQueue
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             CloseLane(observerKey);
             _pageObservers.TryRemove(observerKey, out _);
+            _releasedWhileDormant.Add(observerKey.ObserverId);
         }
 
         Observe(() => _metrics?.ObserverReleasedWhileDormant());
@@ -132,13 +134,17 @@ public partial class AppendedEventsQueue
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Only an observer this queue released while it was subscribed is dormant. One that unsubscribed, or that this
+    /// activation of the queue never released, is not: it is asked directly, which activates it if it has to.
+    /// </remarks>
     public Task<bool> IsDormant(ObserverKey observerKey)
     {
         lock (_subscriptionsLock)
         {
             return Task.FromResult(
                 !_isResetting &&
-                _instances.ContainsKey(observerKey.ObserverId) &&
+                _releasedWhileDormant.Contains(observerKey.ObserverId) &&
                 !_subscriptions.Exists(subscription => subscription.ObserverKey == observerKey));
         }
     }
@@ -346,6 +352,7 @@ public partial class AppendedEventsQueue
     void NoteSubscribed(ObserverKey observerKey)
     {
         _rings.Remove(observerKey.ObserverId);
+        _releasedWhileDormant.Remove(observerKey.ObserverId);
         if (!_instances.ContainsKey(observerKey.ObserverId))
         {
             _instances = new Dictionary<ObserverId, EventSequenceNumber>(_instances) { [observerKey.ObserverId] = EventSequenceNumber.Unavailable };

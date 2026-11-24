@@ -267,6 +267,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         lock (_subscriptionsLock)
         {
             _subscriptions.Clear();
+            _releasedWhileDormant.Clear();
             catchupTriggers = [.. _catchupTriggers];
         }
 
@@ -349,6 +350,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             CloseLane(observerKey);
             _pageObservers.TryRemove(observerKey, out _);
+            _releasedWhileDormant.Remove(observerKey.ObserverId);
         }
 
         return Task.CompletedTask;
