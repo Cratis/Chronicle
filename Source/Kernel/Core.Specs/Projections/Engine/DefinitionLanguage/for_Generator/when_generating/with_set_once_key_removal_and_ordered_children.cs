@@ -11,7 +11,7 @@ using Cratis.Chronicle.Properties;
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_Generator.when_generating;
 
 /// <summary>
-/// The declaration language has no syntax for these constructs yet - generating must still succeed rather than fail.
+/// Generation preserves set-once mappings, dictionary removal and child ordering.
 /// </summary>
 public class with_set_once_key_removal_and_ordered_children : given.a_generator
 {
@@ -61,4 +61,8 @@ public class with_set_once_key_removal_and_ordered_children : given.a_generator
     [Fact] void should_keep_the_event_the_new_constructs_are_declared_on() => _result.ShouldContain("from SlotAssigned");
     [Fact] void should_keep_the_ordered_children() => _result.ShouldContain("children entries identified by entryId");
     [Fact] void should_keep_the_mappings_of_the_ordered_children() => _result.ShouldContain("from EntryAdded");
+    [Fact] void should_keep_dictionary_removal() => _result.ShouldContain("remove dropped.$eventContent.slot");
+    [Fact] void should_keep_set_once_identity() => _result.ShouldContain("set once createdBy = $causedBy.subject");
+    [Fact] void should_keep_set_once_context() => _result.ShouldContain("set once createdAt = $eventContext.occurred");
+    [Fact] void should_keep_descending_order() => _result.ShouldContain("sort by name descending");
 }
