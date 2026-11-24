@@ -26,7 +26,15 @@ public class TransactionalEventSequence(IEventSequence eventSequence, IUnitOfWor
     public static readonly CausationType CausationType = "TransactionalEventSequence";
 
     /// <inheritdoc/>
-    public IUnitOfWork UnitOfWork => unitOfWorkManager.Current;
+    public IUnitOfWork UnitOfWork
+    {
+        get
+        {
+            var unitOfWork = unitOfWorkManager.Current;
+            if (eventSequence is EventSequence native) native.BindNamespaceTo(unitOfWork);
+            return unitOfWork;
+        }
+    }
 
     /// <inheritdoc/>
     public Task Append(

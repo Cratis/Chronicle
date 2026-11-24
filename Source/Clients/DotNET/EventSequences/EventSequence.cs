@@ -1172,6 +1172,8 @@ public partial class EventSequence(
 
     async Task<AppendResult> AppendUnkeyed(Contracts.Sequences.AppendRequest request, IReadOnlyList<NamedTag> resolvedNamedTags)
     {
+        if (_namespaceBinding is not null) return (await AppendToBoundNamespace(request, resolvedNamedTags)).ToClient();
+
         var response = resolvedNamedTags.Count == 0
             ? await _servicesAccessor.Services.Sequences.Append(request).EnsureSuccess()
             : await _servicesAccessor.Services.Sequences.AppendWithNamedTags(new Contracts.Sequences.AppendWithNamedTagsRequest
@@ -1201,6 +1203,8 @@ public partial class EventSequence(
 
     async Task<AppendResult> AppendKeyed(Contracts.Sequences.AppendRequest request, IdempotencyKey idempotencyKey, IReadOnlyList<NamedTag> resolvedNamedTags)
     {
+        if (_namespaceBinding is not null) return (await AppendOnceToBoundNamespace(request, idempotencyKey, resolvedNamedTags)).ToClient();
+
         var response = resolvedNamedTags.Count == 0
             ? await _servicesAccessor.Services.Sequences.AppendOnce(new Contracts.Sequences.AppendOnceRequest
             {
@@ -1290,7 +1294,7 @@ public partial class EventSequence(
 
             // The legacy single-source batch contract cannot carry routing metadata. Use the existing
             // multi-source contract for explicit routes, retaining the batch-wide union of tags and scope.
-            if (idempotencyKey is not null || routing is not null || resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
+            if (_namespaceBinding is not null || idempotencyKey is not null || routing is not null || resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
             {
                 return await AppendManyForEventSources(
                     eventsList.Select((@event, index) => new EventForEventSourceId(eventSourceId, @event)
@@ -1653,6 +1657,8 @@ public partial class EventSequence(
         List<Contracts.Sequences.EventForEventSourceId> eventsToAppend,
         IReadOnlyList<NamedTag>[] effectiveNamedTags)
     {
+        if (_namespaceBinding is not null) return await AppendManyToBoundNamespace(request, eventsToAppend, effectiveNamedTags);
+
         return effectiveNamedTags.All(_ => _.Count == 0)
             ? await _servicesAccessor.Services.Sequences.AppendManyForEventSources(request).EnsureSuccess()
             : await _servicesAccessor.Services.Sequences.AppendManyForEventSourcesWithNamedTags(new Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest
@@ -1690,6 +1696,8 @@ public partial class EventSequence(
         IReadOnlyList<NamedTag>[] effectiveNamedTags,
         IdempotencyKey?[] keys)
     {
+        if (_namespaceBinding is not null) return await AppendManyOnceToBoundNamespace(request, eventsToAppend, effectiveNamedTags, keys);
+
         var response = effectiveNamedTags.All(_ => _.Count == 0)
             ? await _servicesAccessor.Services.Sequences.AppendManyOnce(new Contracts.Sequences.AppendManyOnceRequest
             {

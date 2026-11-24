@@ -15,4 +15,17 @@ public record NamespaceBinding(
     EventStoreNamespaceName Namespace,
     NamespaceIncarnationId? Incarnation,
     NamespaceBindingStatus Status,
-    int ProtocolVersion);
+    int ProtocolVersion)
+{
+    /// <summary>Requires an open, supported snapshot for the specified target.</summary>
+    /// <param name="eventStore">The target event store.</param>
+    /// <param name="namespace">The target namespace.</param>
+    /// <exception cref="NamespaceBindingNotValid">The snapshot is not open, lacks an identity, or belongs to another target.</exception>
+    /// <exception cref="NamespaceBindingsNotSupported">The snapshot uses an unsupported protocol version.</exception>
+    internal void RequireFor(EventStoreName eventStore, EventStoreNamespaceName @namespace)
+    {
+        if (EventStore != eventStore || Namespace != @namespace) throw new NamespaceBindingNotValid();
+        if (Status != NamespaceBindingStatus.Open || Incarnation is null || Incarnation.Value == Guid.Empty) throw new NamespaceBindingNotValid();
+        if (ProtocolVersion != 1) throw new NamespaceBindingsNotSupported();
+    }
+}
