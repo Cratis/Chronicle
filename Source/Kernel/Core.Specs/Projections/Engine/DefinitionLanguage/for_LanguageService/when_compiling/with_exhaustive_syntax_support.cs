@@ -106,14 +106,16 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
     }
 
     [Theory]
-    [InlineData("from DocEvent\n  key\n    id = id", "Untyped composite projection keys")]
-    [InlineData("remove with DocEvent\n  key\n    id = id", "Untyped composite removal keys")]
-    void should_report_options_without_definition_lowering(string snippet, string diagnostic)
+    [InlineData("from DocEvent\n  key\n    name = name\n    age = age")]
+    [InlineData("remove with DocEvent\n  key\n    name = name\n    age = age")]
+    void should_lower_untyped_composite_keys_without_schemas(string snippet)
     {
         var source = "projection Doc => DocReadModel\n" + string.Join('\n', snippet.Split('\n').Select(line => "  " + line));
         var result = _languageService.Compile(source, ProjectionOwner.Client, [], []);
-        var errors = result.Match(_ => CompilerErrors.Empty, _ => _);
-        Assert.Contains(errors.Errors, error => error.Message.Contains(diagnostic, StringComparison.Ordinal));
+        var key = result.Match(
+            definition => definition.From.Values.Select(from => from.Key).Concat(definition.RemovedWith.Values.Select(removed => removed.Key)).Single().ToString(),
+            errors => string.Join("; ", errors.Errors.Select(error => error.Message)));
+        key.ShouldEqual("$flatComposite(age=age, name=name)");
     }
 
     [Fact]
