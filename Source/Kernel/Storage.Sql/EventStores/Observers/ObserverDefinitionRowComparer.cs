@@ -26,7 +26,8 @@ public sealed class ObserverDefinitionRowComparer : IEqualityComparer<ObserverDe
             x.Type == y.Type &&
             x.Owner == y.Owner &&
             x.IsReplayable == y.IsReplayable &&
-            x.GenerationDelivery == y.GenerationDelivery;
+            x.GenerationDelivery == y.GenerationDelivery &&
+            x.Revision == y.Revision;
     }
 
     /// <inheritdoc/>

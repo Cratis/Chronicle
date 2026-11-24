@@ -21,6 +21,7 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _observersSpilled = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueObserverSpills, WellKnownMetricNames.AppendedEventsQueueObserverSpillsUnit, "Number of times an observer was moved from live delivery to catch-up, by reason", WellKnownTelemetryAttributes.ObserverId, WellKnownTelemetryAttributes.ObserverSpillReason);
 
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _durableSubscriptionDisagreements = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueDurableSubscriptionDisagreements, WellKnownMetricNames.AppendedEventsQueueDurableSubscriptionDisagreementsUnit, "Number of durable subscriptions that disagreed with the live subscriptions of the queue, by kind of disagreement", WellKnownTelemetryAttributes.DurableSubscriptionDisagreement);
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _shadowRoutingDisagreements = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueShadowRoutingDisagreements, WellKnownMetricNames.AppendedEventsQueueShadowRoutingDisagreementsUnit, "Number of observers the silo-local routing table and the subscriptions of the queue disagreed on for a dispatched batch, by kind of disagreement", WellKnownTelemetryAttributes.ShadowRoutingDisagreement);
 
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantReleases = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantReleases, WellKnownMetricNames.ObserverDormantReleasesUnit, "Number of observers released while dormant");
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantWakes = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantWakes, WellKnownMetricNames.ObserverDormantWakesUnit, "Number of dormant observers woken, by what woke them", WellKnownTelemetryAttributes.ObserverWakeCause);
@@ -40,6 +41,14 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
 
     internal void EventsSuspectedUndelivered(int numberOfEvents, ObserverId observerId) => _undelivered.Record(numberOfEvents, observerId);
     internal void DurableSubscriptionsDisagreed(string kind, int count) => _durableSubscriptionDisagreements.Record(count, kind);
+    internal void ShadowRoutingDisagreed(string kind, int count)
+    {
+        if (count > 0)
+        {
+            _shadowRoutingDisagreements.Record(count, kind);
+        }
+    }
+
     internal void ObserverSpilledToCatchup(ObserverId observerId, string reason) => _observersSpilled.Record(1, observerId, reason);
 
     internal void ObserverReleasedWhileDormant() => _dormantReleases.Record(1);

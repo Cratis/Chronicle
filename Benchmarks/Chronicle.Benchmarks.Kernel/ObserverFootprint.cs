@@ -369,6 +369,7 @@ public static class ObserverFootprint
         var alerts = await ActivationsOf<Observation.Alerts.ObserverAlerts>(grainFactory);
         Console.WriteLine($"{phase}: live heap {measured / 1024.0 / 1024.0:F1} MiB, {delta / 1024.0 / 1024.0:+0.0;-0.0} MiB over baseline");
         Console.WriteLine($"  observer activations resident: {observers} (baseline {baselineActivations}), companion observer alert activations: {alerts}");
+        Console.WriteLine($"  queue activations resident: {await ActivationsOf<EventSequences.AppendedEventsQueue>(grainFactory)}, queue routers: {await ActivationsOf<EventSequences.AppendedEventsQueues>(grainFactory)}, observer supervisors: {await ActivationsOf<Observation.Supervisors.ObserverSupervisor>(grainFactory)}");
         Console.WriteLine($"  retained per measured observer: {delta / (double)count / 1024.0:F1} KiB");
     }
 

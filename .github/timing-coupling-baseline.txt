@@ -115,8 +115,6 @@
 1 Source/Kernel/Core.Specs/Supervision/for_SiloSupervisor/when_a_silo_leaves/and_there_are_many_grains.cs  # interleave: Task.Yield lets the checks overlap so the most in flight can be measured
 1 Source/Kernel/Core.Specs/Clients/for_ClientDepartureNotifier/when_notifying_observers.cs  # interleave
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
-1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_reporting_dormancy_metrics/and_the_admission_is_full.cs  # a test double that is slow on purpose, so the wake admission is full
-1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_waking_dormant_observers/when_more_observers_wake_than_the_admission_allows.cs  # a test double that is slow on purpose, so wakes overlap
 1 Source/Kernel/Core.Specs/Observation/Reactors/Kernel/for_Reactors/when_registering/and_many_tenants_start_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/given/a_striped_pipeline_over_a_shared_read_model.cs  # interleave

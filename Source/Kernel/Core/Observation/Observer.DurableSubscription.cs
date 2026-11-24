@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Observation.Supervisors;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
@@ -14,6 +16,7 @@ public partial class Observer
     ObserverDurableSubscription? _durableSubscriptionRecorded;
     int _durableSubscriptionRecordedVersion;
     bool _forgottenDurableSubscriptionIsPending;
+    ObserverDurableSubscription? _sharedBinding;
 
     /// <summary>
     /// What the next state write does with the durable subscription of the observer's state.
@@ -70,6 +73,52 @@ public partial class Observer
     }
 
     void ConfigureDurableSubscriptions(DurableSubscriptionMode mode) => _durableSubscriptionMode = mode;
+
+    /// <summary>
+    /// Tells the supervisor of the observer which connection serves it in this namespace, once the record of it changed.
+    /// </summary>
+    /// <remarks>
+    /// The binding is a hint the supervisor holds in memory, so the call is not awaited and a failure costs nothing: an
+    /// instance without a binding resumes from its own record, or waits for its client to register again.
+    /// </remarks>
+    void ShareBindingWithSupervisor()
+    {
+        var binding = State.DurableSubscription;
+        if (ReferenceEquals(binding, _sharedBinding))
+        {
+            return;
+        }
+
+        _sharedBinding = binding;
+        try
+        {
+            var observerSupervisor = GrainFactory.GetGrain<IObserverSupervisor>(new ObserverSupervisorKey(_observerKey.EventStore, _observerKey.ObserverId).ToString());
+            var call = binding is null ? observerSupervisor.Unbind(_observerKey.Namespace) : observerSupervisor.Bind(_observerKey.Namespace, binding);
+            call?.Ignore();
+        }
+        catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
+        {
+            logger.SharingBindingFailed(exception);
+        }
+    }
+
+    /// <summary>
+    /// Gets the binding the supervisor holds for this namespace, when the observer has no record of its own.
+    /// </summary>
+    /// <returns>The binding, or null when there is none or the supervisor cannot be asked.</returns>
+    async Task<ObserverDurableSubscription?> BindingFromSupervisor()
+    {
+        try
+        {
+            var observerSupervisor = GrainFactory.GetGrain<IObserverSupervisor>(new ObserverSupervisorKey(_observerKey.EventStore, _observerKey.ObserverId).ToString());
+            return await (observerSupervisor.GetBinding(_observerKey.Namespace) ?? Task.FromResult<ObserverDurableSubscription?>(null));
+        }
+        catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
+        {
+            logger.SharingBindingFailed(exception);
+            return null;
+        }
+    }
 
     /// <summary>
     /// Makes the next state writes record the subscription the activation holds.

@@ -123,7 +123,6 @@ public partial class ProjectionsManager(
     readonly HashSet<EventStoreNamespaceName> _namespaceReruns = [];
     readonly HashSet<Task> _subscriptionPasses = [];
     readonly HashSet<ProjectionId> _removingProjections = [];
-    readonly HashSet<EventStoreNamespaceName> _failedNamespaceSetups = new();
     readonly ConcurrentDictionary<ProjectionId, Lazy<Task>> _projectionDefinitions = new();
     readonly Dictionary<ProjectionId, ProjectionDefinition> _registeringDefinitions = new();
     readonly RegistrationQueue _registrationQueue = CreateRegistrationQueue(options?.Value?.Registration ?? new(), timeProvider ?? TimeProvider.System);
