@@ -48,7 +48,11 @@ public class a_database_without_read_model_storage : a_sqlite_database
     {
         var resolution = new ConnectionResolutionOptions();
         resolution.Identity.UseCustom<RecordingConnectionResolver>();
-        _resolutionServices = new ServiceCollection().AddSingleton(_readModelMigrator).AddSingleton(Resolver).BuildServiceProvider();
+        _resolutionServices = new ServiceCollection()
+            .AddSingleton(_readModelMigrator)
+            .AddSingleton(Resolver)
+            .AddStorageConnectionResolution(WellKnownConnectionStorage.Sqlite, resolution)
+            .BuildServiceProvider();
         return new(
             _resolutionServices,
             Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.Sqlite, ConnectionDetails = _connectionString, ConnectionResolution = resolution } }),
