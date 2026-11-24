@@ -48,7 +48,7 @@ internal static class ObserverHandledCountsSql
             var sql = context.Database.IsSqlServer()
                 ? Merge(table, columns, tuples)
                 : Upsert(table, columns, tuples);
-            await context.Database.ExecuteSqlInterpolatedAsync(FormattableStringFactory.Create(sql, values));
+            await context.Database.ExecuteSqlAsync(FormattableStringFactory.Create(sql, values));
         }
         await transaction.CommitAsync();
     }
