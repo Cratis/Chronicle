@@ -8,6 +8,8 @@ description: Isolate tenant data in Cratis Chronicle with namespaces, authorize 
 
 Cratis Chronicle separates tenant data through namespaces: logical partitions within an event store. Use one namespace per tenant when several customers share a Chronicle installation. Your application must authorize access to each tenant; database placement determines where that tenant's events and read models are stored.
 
+See [Organization, workspace and namespace](https://cratis.io/concepts/organization-workspace-namespace/) for the cross-product vocabulary. Chronicle's namespace remains an event-store-local data partition, not a user identity, membership record or authorization grant. Mapping your application's tenant to that partition is an application choice, not a universal identifier shared by every product.
+
 ```mermaid
 flowchart LR
     Request --> Selection["1. Selection: which tenant is this?"]
