@@ -11,6 +11,10 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks;
 /// Binds an admitted physical database to the actual contexts used for preparation and payload work.
 /// Credentials and payload search paths are deliberately not authorization identities.
 /// </summary>
+/// <remarks>
+/// Connection DataSource values must match exactly. Equivalent server aliases, host casing,
+/// and default-port spellings are not normalized and must remain consistent between admission and use.
+/// </remarks>
 /// <param name="Provider">The connection provider.</param>
 /// <param name="Server">The server or canonical SQLite path.</param>
 /// <param name="Database">The database within the server.</param>
