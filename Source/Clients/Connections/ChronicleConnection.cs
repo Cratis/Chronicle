@@ -72,6 +72,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     IServices _services;
+    bool _servicesMatchCurrentChannel;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
     ChronicleServerAddress? _lastDroppedAddress;
@@ -290,6 +291,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!Lifecycle.IsConnected)
         {
             await Connect().WaitAsync(cancellationToken);
+            EnsureServicesMatchCurrentChannel();
         }
 
         return _services;
@@ -533,14 +535,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
-        // Re-arm the staleness clock right before the watchdog starts evaluating it. The clock was last set
-        // when the keep-alive stream was subscribed - potentially a full connect timeout ago if the wait timed
-        // out. Starting the watchdog on that stale a timestamp let it declare the session dropped on its very
-        // first tick, against a connection that never finished establishing (or, on a kernel slow to answer
-        // during its own restart, one still legitimately coming up) - tearing the channel down and immediately
-        // reconnecting on top of an attempt that might still have succeeded.
-        _watchDog.NotifyKeepAlive();
-        await ExecutionContextDetached.Start(() => Task.Run(_watchDog.Start));
+        await StartMonitoring();
 
         if (!connected)
         {
@@ -627,8 +622,21 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
+    async Task StartMonitoring()
+    {
+        // Re-arm the staleness clock right before the watchdog starts evaluating it. The clock was last set
+        // when the keep-alive stream was subscribed - potentially a full connect timeout ago if the wait timed
+        // out. Starting the watchdog on that stale a timestamp let it declare the session dropped on its very
+        // first tick, against a connection that never finished establishing (or, on a kernel slow to answer
+        // during its own restart, one still legitimately coming up) - tearing the channel down and immediately
+        // reconnecting on top of an attempt that might still have succeeded.
+        _watchDog.NotifyKeepAlive();
+        await ExecutionContextDetached.Start(() => Task.Run(_watchDog.Start));
+    }
+
     void DisposeCurrentAttempt()
     {
+        _servicesMatchCurrentChannel = false;
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
     }
@@ -697,6 +705,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
 
         _services = CreateServices(callInvoker, clientFactory);
+        _servicesMatchCurrentChannel = true;
 
         if (_skipKeepAlive)
         {
@@ -778,16 +787,35 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         try
         {
             await handshake.Task.WaitAsync(budget, _timeProvider);
-            _logger.Connected();
-            _hasEverConnected = true;
-            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
-            return true;
         }
         catch (Exception ex) when (ex is TimeoutException or ConnectionUnavailable or RpcException)
         {
             _logger.EndpointHandshakeFailed(DescribeEndpoint(address), ex is RpcException rpc ? rpc.StatusCode.ToString() : ex.Message);
             return false;
         }
+
+        _logger.Connected();
+        _hasEverConnected = true;
+        try
+        {
+            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
+        }
+        catch
+        {
+            if (!_cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await StartMonitoring();
+                }
+                catch
+                {
+                    // Monitor startup must not replace the connected handler's original failure.
+                }
+            }
+            throw;
+        }
+        return true;
     }
 
     /// <summary>
@@ -847,6 +875,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!Lifecycle.IsConnected)
         {
             Connect().GetAwaiter().GetResult();
+            EnsureServicesMatchCurrentChannel();
+        }
+    }
+
+    void EnsureServicesMatchCurrentChannel()
+    {
+        if (!Lifecycle.IsConnected && !_servicesMatchCurrentChannel)
+        {
+            throw new ConnectionTimedOut(DescribeCurrentEndpoint(), _connectTimeout);
         }
     }
 
