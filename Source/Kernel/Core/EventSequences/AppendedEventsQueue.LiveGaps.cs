@@ -31,6 +31,9 @@ public partial class AppendedEventsQueue
         if (_lanes.TryGetValue(subscription.ObserverKey, out var lane)) lane.Subscription = subscription;
     }
 
+    async Task<bool> ReadyForDelivery(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events) =>
+        await WakeDormantObserver(lane, events) && await VerifyLiveStart(lane, events);
+
     async Task<bool> VerifyLiveStart(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
         if (_storage is null) return true;

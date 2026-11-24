@@ -852,7 +852,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <returns>Awaitable task.</returns>
     async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
-        if (!await WakeDormantObserver(lane, events) || !await VerifyLiveStart(lane, events))
+        if (!await ReadyForDelivery(lane, events))
         {
             return;
         }
