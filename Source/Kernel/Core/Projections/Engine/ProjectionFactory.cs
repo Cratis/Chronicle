@@ -97,6 +97,16 @@ public class ProjectionFactory(
         }
 
         readModelDefinition.Sink.EnsureReadModelSupported();
+        if (FlatCompositeKeyDefinition.HasFlatKey(definition))
+        {
+            FlatCompositeKeyDefinition.Validate(definition, readModelDefinition);
+            var sinkNamespace = definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace;
+            if (!storage.GetEventStore(eventStore).GetNamespace(sinkNamespace).Sinks.SupportsFlatCompositeKeys(readModelDefinition))
+            {
+                throw new FlatCompositeKeyNotSupported("The configured sink does not support flat composite keys.");
+            }
+        }
+
         if (definition.Graph is not null)
         {
             if (definition.GenerationDelivery == EventGenerationDelivery.Pinned || graphProjectionFactory is null)

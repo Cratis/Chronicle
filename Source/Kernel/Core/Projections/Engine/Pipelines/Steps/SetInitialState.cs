@@ -51,6 +51,7 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
         var initialState = projection.SupportsFencedGlobalWrites
             ? await sink.FindOrDefault(context.Key, SinkWriteMode.FencedGlobal)
             : await sink.FindOrDefault(context.Key);
+        if (context.Key is FlatCompositeKey && initialState is not null) initialState = initialState.Clone();
 
         // When the sink has no instance for the key yet, this event creates the read model instance.
         context.IsNewInstance = initialState is null;

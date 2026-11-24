@@ -96,6 +96,17 @@ public class ProjectionValidator(
             schema.Properties[name] = new JsonSchemaProperty { Type = type, Format = format };
         }
 
+        ValidateFlatCompositeKeys(projection, errors);
+        foreach (var key in RootFlatKeys(projection))
+        {
+            ValidateFlatCompositeKey(key, schema, errors);
+        }
+
+        if (projection.Key is CompositeKeySyntax { Type.Length: 0 } flatKey)
+        {
+            ValidateFlatCompositeKey(flatKey, schema, errors);
+        }
+
         return schema;
     }
 
@@ -588,7 +599,7 @@ public class ProjectionValidator(
                 case RemoveWithSyntax { PartsKey: null } removeWith:
                     errors.Add("A projection identified by a flat composite key needs the key parts in every root remove with", removeWith.Location.Line, removeWith.Location.Column);
                     break;
-                case RemoveViaJoinSyntax or ClearWithSyntax or JoinSyntax or ChildrenSyntax or NestedSyntax:
+                case RemoveViaJoinSyntax or ClearWithSyntax or JoinSyntax or ChildrenSyntax or NestedSyntax or EverySyntax or AllSyntax:
                     errors.Add($"'{block.GetType().Name}' is not supported in a projection identified by a flat composite key", block.Location.Line, block.Location.Column);
                     break;
             }

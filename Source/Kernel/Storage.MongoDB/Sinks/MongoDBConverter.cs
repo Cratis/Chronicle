@@ -96,7 +96,7 @@ public class MongoDBConverter(
         if (key is FlatCompositeKey flat)
         {
             var id = new BsonDocument();
-            foreach (var (part, value) in flat.Parts)
+            foreach (var (part, value) in flat.Parts.OrderBy(part => part.Key, StringComparer.Ordinal))
             {
                 id[part] = ToBsonValue(value, new PropertyPath(part));
             }

@@ -502,6 +502,7 @@ public class Projection(
         var key = resolvedKey.Key;
         var keyValue = FlatCompositeKeyState.Text(key);
         var initialState = sink.GetInitialState(key);
+        if (key is FlatCompositeKey) initialState = initialState.Clone();
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false, resolvedKey.JoinKey);
 
