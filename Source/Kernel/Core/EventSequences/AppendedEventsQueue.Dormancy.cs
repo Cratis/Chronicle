@@ -506,6 +506,9 @@ public partial class AppendedEventsQueue
 
         try
         {
+            // A resident grain's Ensure is a no-op. Re-arm the same filtered boundary check used by a new
+            // subscription, before either single-partition or page delivery can reach the subscriber.
+            _verifiedLiveStarts.Remove(CurrentSubscriptionOf(lane));
             await WithWakeAdmission(lane.Observer.Ensure, WakeCauses.Event);
             return true;
         }

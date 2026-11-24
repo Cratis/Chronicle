@@ -309,7 +309,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             // observer.Handle to be invoked multiple times for the same event.
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             _dormant.Remove(observerKey);
-            _subscriptions.Add(new(observerKey, eventTypes, filters));
+            RegisterLiveSubscription(new(observerKey, eventTypes, filters));
         }
 
         return Task.CompletedTask;
@@ -327,7 +327,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
 
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             _dormant.Remove(observerKey);
-            _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
+            RegisterLiveSubscription(new(observerKey, [], filters, AllEventTypes: true));
         }
 
         return Task.CompletedTask;
@@ -852,7 +852,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <returns>Awaitable task.</returns>
     async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
-        if (!await WakeDormantObserver(lane, events))
+        if (!await ReadyForDelivery(lane, events))
         {
             return;
         }
@@ -1050,7 +1050,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// queue are not affected. Must be called holding the subscriptions lock.
     /// </summary>
     /// <param name="subscription">The lagging <see cref="AppendedEventsQueueObserverSubscription"/>.</param>
-    void SpillLaggingSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription)
+    /// <param name="reason">Why the observer needs catch-up.</param>
+    void SpillLaggingSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription, string reason = AppendedEventsQueueSpillReasons.LaggingBacklog)
     {
         if (_subscriptions.RemoveAll(candidate => ReferenceEquals(candidate, subscription)) == 0)
         {
@@ -1060,7 +1061,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         CloseLane(subscription.ObserverKey);
         StartCatchupTrigger(subscription.ObserverKey);
         Observe(() => _logger.SpillingLaggingObserverToCatchup(subscription.ObserverKey));
-        ReportSpill(subscription.ObserverKey, AppendedEventsQueueSpillReasons.LaggingBacklog);
+        ReportSpill(subscription.ObserverKey, reason);
     }
 
     /// <summary>
