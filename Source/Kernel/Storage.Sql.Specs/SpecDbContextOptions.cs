@@ -18,10 +18,6 @@ public static class SpecDbContextOptions
     /// <summary>
     /// Builds options with the kernel's EF services and internal service provider caching enabled.
     /// </summary>
-    /// <remarks>
-    /// The kernel configures a distinct option set per context type and provider, which together exceed the twenty internal
-    /// service providers EF Core tolerates in one process, so the warning about that is ignored; see <see cref="IgnoringManyServiceProviders{TBuilder}"/>.
-    /// </remarks>
     /// <typeparam name="TContext">The context type.</typeparam>
     /// <param name="connectionString">The connection string for the isolated specification database.</param>
     /// <returns>The kernel-shaped options for the context.</returns>
@@ -47,7 +43,7 @@ public static class SpecDbContextOptions
     /// <remarks>
     /// The specs build far more than twenty distinct option sets in one process, and EF Core throws
     /// <see cref="Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.ManyServiceProvidersCreatedWarning"/> for any created after the twentieth, which makes the
-    /// failing spec depend on test order. Every spec harness goes through this helper, which also ignores that warning
+    /// failing spec depend on test order. Every spec harness goes through this helper, which logs that warning instead
     /// (see <see cref="IgnoringManyServiceProviders{TBuilder}"/>) because it counts the providers cached by other specs.
     /// </remarks>
     /// <typeparam name="TBuilder">The type of options builder.</typeparam>
@@ -61,7 +57,7 @@ public static class SpecDbContextOptions
     }
 
     /// <summary>
-    /// Stops EF Core from failing a context because the process already holds more than twenty internal service providers.
+    /// Logs, rather than fails on, EF Core's warning that the process already holds more than twenty internal service providers.
     /// </summary>
     /// <remarks>
     /// EF Core raises <see cref="CoreEventId.ManyServiceProvidersCreatedWarning"/> whenever it builds a provider while its cache
@@ -74,7 +70,7 @@ public static class SpecDbContextOptions
     public static TBuilder IgnoringManyServiceProviders<TBuilder>(this TBuilder builder)
         where TBuilder : DbContextOptionsBuilder
     {
-        builder.ConfigureWarnings(warnings => warnings.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
+        builder.ConfigureWarnings(warnings => warnings.Log(CoreEventId.ManyServiceProvidersCreatedWarning));
         return builder;
     }
 }
