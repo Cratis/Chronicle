@@ -93,6 +93,26 @@ public partial class ReducerPipeline(
         return notification;
     }
 
+    static ExpandoObject? CreateComparisonSnapshot(ExpandoObject? initial, object? subject, JsonSchema schema)
+    {
+        if (initial is null) return null;
+
+        // Reducer results do not carry sink bookkeeping or MongoDB's undeclared primary key.
+        // Compare a copy so removing those fields cannot mutate a sink's cached instance.
+        var snapshot = new ExpandoObject();
+        var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+        foreach (var (name, value) in initial.Where(property =>
+            (property.Key != "_id" && !WellKnownProperties.All.Contains(property.Key)) || declaredProperties.Contains(property.Key)))
+        {
+            ((IDictionary<string, object?>)snapshot)[name] = value;
+        }
+        if (subject is not null)
+        {
+            ((IDictionary<string, object?>)snapshot)[WellKnownProperties.Subject] = subject;
+        }
+        return snapshot;
+    }
+
     /// <summary>
     /// Releases the state a partition's read model holds for the reducer.
     /// </summary>
@@ -175,22 +195,7 @@ public partial class ReducerPipeline(
 
             storedState = encryptedState;
 
-            // Reducer results are rebuilt from the schema and do not carry sink bookkeeping.
-            // Compare a copy so removing those fields cannot mutate a sink's cached instance.
-            ExpandoObject? initialForComparison = null;
-            if (initial is not null)
-            {
-                initialForComparison = new ExpandoObject();
-                var declaredProperties = schema.GetFlattenedProperties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
-                foreach (var (name, value) in initial.Where(property => !WellKnownProperties.All.Contains(property.Key) || declaredProperties.Contains(property.Key)))
-                {
-                    ((IDictionary<string, object?>)initialForComparison)[name] = value;
-                }
-                if (stored.Subject is not null)
-                {
-                    ((IDictionary<string, object?>)initialForComparison)[WellKnownProperties.Subject] = stored.Subject;
-                }
-            }
+            var initialForComparison = CreateComparisonSnapshot(initial, stored.Subject, schema);
 
             if (!objectComparer.Compare(initialForComparison, encryptedState, out var differences))
             {
