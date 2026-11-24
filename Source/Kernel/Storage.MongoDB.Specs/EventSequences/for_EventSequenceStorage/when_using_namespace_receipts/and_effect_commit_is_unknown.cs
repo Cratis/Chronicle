@@ -7,7 +7,12 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.for_EventSequenceStora
 
 public class and_effect_commit_is_unknown : given.a_fenced_receipt_storage
 {
-    void Establish() => _commitFailure = new InvalidOperationException("response lost");
+    void Establish()
+    {
+        _commitFailure = new InvalidOperationException("response lost");
+        _commitFailures = 1;
+    }
+
     async Task Because() => _failure = await Catch.Exception(() => _storage.AppendManyWithEffectReceipt(_context, [_event], _receipt));
 
     [Fact] void should_preserve_unknown_commit() => _failure.ShouldBeOfExactType<NamespaceCommitOutcomeUnknown>();
