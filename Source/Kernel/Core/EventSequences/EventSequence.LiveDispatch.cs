@@ -107,6 +107,38 @@ public partial class EventSequence
         }
     }
 
+    /// <summary>
+    /// Settles what the pump still owes before the grain goes away, so a deactivation never drops an acknowledged event.
+    /// </summary>
+    /// <remarks>
+    /// Batches waiting for the pump, an in-flight hand-over and an outstanding spill exist only in this activation. Once
+    /// it is gone nothing would tell the observers about those events, and an observer that is then handed a later event
+    /// moves its position past them for good. So the pump is allowed to finish, bounded, and when anything is still owed
+    /// after that one last spill covers every durable event from each observer's persisted cursor.
+    /// </remarks>
+    /// <returns>An awaitable task.</returns>
+    async Task SettleLiveDispatchBeforeDeactivation()
+    {
+        if (_appendedEventsQueues is null) return;
+
+        try
+        {
+            await _dispatchPump.WaitAsync(LiveDispatchTimeout, _timeProvider);
+        }
+        catch (Exception)
+        {
+            // The pump did not settle in time; what it still owed is covered by the spill below.
+            _spillRequested = true;
+        }
+
+        if (_spillRequested || _spillRetryTimer is not null || _pendingLiveDispatches.Count > 0)
+        {
+            _spillRequested = false;
+            _pendingLiveDispatches.Clear();
+            await SpillAppendedEventsQueuesToCatchup();
+        }
+    }
+
     void StopDispatchPump()
     {
         _dispatchStopped = true;

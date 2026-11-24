@@ -205,6 +205,7 @@ public partial class EventSequence(
         if (!_mayWriteSequence) return;
         _constraintIndexRepairTimer?.Dispose();
         _constraintIndexRepairTimer = null;
+        await SettleLiveDispatchBeforeDeactivation();
         DisposeSpillRetry();
         CatchUpSlots.Complete(this);
         _catchUpTracking = false;
