@@ -12,7 +12,7 @@ public sealed class a_completed_batch_delete : DbCommandInterceptor
 
     public override ValueTask<int> NonQueryExecutedAsync(DbCommand command, CommandExecutedEventData eventData, int result, CancellationToken cancellationToken = default)
     {
-        if (command.CommandText.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase)) DeletedRows += result;
+        if (SqlCommandText.StartsWithStatement(command.CommandText, "DELETE")) DeletedRows += result;
         return ValueTask.FromResult(result);
     }
 }
