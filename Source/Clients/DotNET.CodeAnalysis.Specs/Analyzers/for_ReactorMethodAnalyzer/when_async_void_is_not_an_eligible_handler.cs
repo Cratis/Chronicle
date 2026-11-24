@@ -49,7 +49,8 @@ public class when_async_void_is_not_an_eligible_handler : given.a_reactor_method
                 [Cratis.Chronicle.Reactors.OnceOnly]
                 public async void On({|#0:Unknown @event|}) { await Task.Yield(); }
             }
-            """), new ExpectedDiagnostic(DiagnosticIds.ReactorEventParameterMustHaveAttribute, DiagnosticSeverity.Error));
+            """),
+        new ExpectedDiagnostic(DiagnosticIds.ReactorEventParameterMustHaveAttribute, DiagnosticSeverity.Error));
 
     [Fact]
     public Task should_preserve_the_invalid_dependency_diagnostic() =>
@@ -59,5 +60,6 @@ public class when_async_void_is_not_an_eligible_handler : given.a_reactor_method
             {
                 public async void {|#0:On|}(Happened @event, int count) { await Task.Yield(); }
             }
-            """), new ExpectedDiagnostic(DiagnosticIds.ReactorMethodSignatureMustMatchAllowed, DiagnosticSeverity.Warning));
+            """),
+        new ExpectedDiagnostic(DiagnosticIds.ReactorMethodSignatureMustMatchAllowed, DiagnosticSeverity.Warning));
 }
