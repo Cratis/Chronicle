@@ -1,10 +1,11 @@
 import com.google.protobuf.gradle.id
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    kotlin("jvm") version "2.1.0"
-    id("com.google.protobuf") version "0.9.4"
+    kotlin("jvm") version "2.4.21"
+    id("com.google.protobuf") version "0.10.1"
     `java-library`
-    id("com.vanniktech.maven.publish") version "0.30.0"
+    id("com.vanniktech.maven.publish") version "0.37.0"
 }
 
 group = "io.cratis"
@@ -14,12 +15,15 @@ repositories {
     mavenCentral()
 }
 
-val grpcVersion = "1.70.0"
-val grpcKotlinVersion = "1.4.1"
-val protobufVersion = "4.29.3"
-val coroutinesVersion = "1.9.0"
+val grpcVersion = "1.85.1"
+// Preserve the published BlockingV2Stub unary exception contract while upgrading the runtime.
+val grpcJavaGeneratorVersion = "1.70.0"
+val grpcKotlinVersion = "1.5.0"
+val protobufVersion = "4.36.2"
+val coroutinesVersion = "1.11.0"
 
 dependencies {
+    api(kotlin("stdlib", "2.2.20"))
     api("io.grpc:grpc-kotlin-stub:$grpcKotlinVersion")
     api("io.grpc:grpc-protobuf:$grpcVersion")
     api("io.grpc:grpc-stub:$grpcVersion")
@@ -27,10 +31,16 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     compileOnly("javax.annotation:javax.annotation-api:1.3.2")
     testImplementation(kotlin("test"))
+    testImplementation("io.grpc:grpc-inprocess:$grpcVersion")
 }
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        apiVersion.set(KotlinVersion.KOTLIN_2_2)
+        languageVersion.set(KotlinVersion.KOTLIN_2_2)
+        allWarningsAsErrors.set(true)
+    }
 }
 
 tasks.test {
@@ -40,7 +50,7 @@ tasks.test {
 // The canonical descriptor set travels with the package so a client can hand the kernel exactly the contracts it
 // was built against, and the kernel can own the one compatibility check instead of every language reimplementing
 // it. See Source/Kernel/Compatibility.
-val embedDescriptorSet by tasks.registering(Copy::class) {
+val embedDescriptorSet = tasks.register<Copy>("embedDescriptorSet") {
     from(file("../../Kernel/Protobuf/chronicle.desc"))
     into(layout.buildDirectory.dir("generated/resources/chronicle"))
 }
@@ -66,7 +76,7 @@ protobuf {
     }
     plugins {
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:$grpcVersion"
+            artifact = "io.grpc:protoc-gen-grpc-java:$grpcJavaGeneratorVersion"
         }
         create("grpckt") {
             artifact = "io.grpc:protoc-gen-grpc-kotlin:$grpcKotlinVersion:jdk8@jar"
@@ -86,7 +96,7 @@ protobuf {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
 
     coordinates("io.cratis", "chronicle-contracts", version.toString())

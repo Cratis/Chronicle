@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -59,7 +60,7 @@ public class a_composite_key_read : Specification
         _grains.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
         _projections = [Cratis.Chronicle.Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateDefinition("observer", "model")];
         var projectionsManager = Substitute.For<IProjectionsManager>();
-        projectionsManager.GetProjectionDefinitions().Returns(_ => Task.FromResult(_projections));
+        projectionsManager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(_ => Task.FromResult(_projections));
         _grains.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(projectionsManager);
         _store = Substitute.For<IMaterializedReadModelStore>();
         _store.IsMaterialized(Arg.Any<ReadModelDefinition>()).Returns(_ => _.Arg<ReadModelDefinition>().Sink.Type != SinkTypeId.None);

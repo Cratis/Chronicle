@@ -475,7 +475,8 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IRe
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber")] Cratis.Chronicle.Observation.Reducers.Clients.IReducerPageObserverSubscriber [Version(0)]
 
-interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager")] Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager [Version(0)]
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager")] Cratis.Chronicle.Observation.Reducers.Clients.IReducersManager [Version(1)]
+  11956C77: HasReducerForReadModel(Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier) -> Task<bool>
   0E9E79CB: Register(Cratis.Chronicle.Concepts.Clients.ConnectionId, System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.Reducers.ReducerDefinition>) -> Task
 
 class [GrainType("reducer")] Cratis.Chronicle.Observation.Reducers.Clients.Reducer
@@ -609,10 +610,11 @@ interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionFutures")
 
 interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionObserverSubscriber")] Cratis.Chronicle.Projections.IProjectionObserverSubscriber [Version(1)]
 
-interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager")] Cratis.Chronicle.Projections.IProjectionsManager [Version(1)]
+interface [GrainInterfaceType("Cratis.Chronicle.Projections.IProjectionsManager")] Cratis.Chronicle.Projections.IProjectionsManager [Version(2)]
   E36EB1EC: Ensure() -> Task
   B3BC1EEA: EnsureSubscribedIn(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
   9A52F44E: Forget(Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task
+  678B3671: GetProducersFor(Cratis.Chronicle.Concepts.ReadModels.ReadModelIdentifier, Cratis.Chronicle.Concepts.Projections.ProjectionId?) -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>>
   A9B07C4C: GetProjectionDeclarations() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Projections.ProjectionWithDeclaration>>
   7C666A08: GetProjectionDefinitions() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition>>
   093D2C13: GetStoredProjectionDefinition(Cratis.Chronicle.Concepts.Projections.ProjectionId) -> Task<Cratis.Chronicle.Concepts.Projections.Definitions.ProjectionDefinition?>

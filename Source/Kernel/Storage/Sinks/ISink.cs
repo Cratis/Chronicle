@@ -103,6 +103,16 @@ public interface ISink
     Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue);
 
     /// <summary>
+    /// Find a root containing the child only within the specified read model instance.
+    /// </summary>
+    /// <param name="childPropertyPath">The property path to the child's identifier.</param>
+    /// <param name="childValue">The child identifier to match.</param>
+    /// <param name="rootKey">The root instance to search.</param>
+    /// <returns>The matching root key, or None when the root does not hold the child or scoped lookup is unsupported.</returns>
+    Task<Option<Key>> TryFindRootKeyByChildValueInRoot(PropertyPath childPropertyPath, object childValue, Key rootKey) =>
+        Task.FromResult(Option<Key>.None());
+
+    /// <summary>
     /// Find the keys of the read models that hold the child a <see cref="ChildRemovedFromAll"/> change would remove.
     /// </summary>
     /// <param name="childRemoved">The <see cref="ChildRemovedFromAll"/> change.</param>

@@ -4,6 +4,7 @@
 using Cratis.Arc.Commands;
 using Cratis.Chronicle.Contracts.ExternalServices;
 using Cratis.Chronicle.Contracts.Security;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Sequences;
 using FluentValidation;
 
@@ -32,7 +33,10 @@ internal class AddExternalServiceValidator : CommandValidator<AddExternalService
         RuleFor(_ => _.Name).NotEmpty().WithMessage("External service name is required.");
 
         When(_ => _.EndpointType == ExternalServiceEndpointType.Http, () =>
-            RuleFor(_ => _.Url).NotEmpty().WithMessage("Url is required for an HTTP endpoint."));
+        {
+            RuleFor(_ => _.Url).NotEmpty().WithMessage("Url is required for an HTTP endpoint.");
+            RuleFor(_ => _.Headers).SetValidator(new CustomHttpHeadersValidator());
+        });
 
         When(_ => _.EndpointType != ExternalServiceEndpointType.Http, () =>
         {

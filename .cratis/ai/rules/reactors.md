@@ -179,17 +179,21 @@ public class RenewalBilling : IReactor
 
 - **A reactor runs with no principal.** It is not an HTTP request, so a returned command gated by `[Roles]`/`[Authorize]` is denied. Opt in on the reactor **class** with `[ExecuteCommandsAsSystem("<role>", …)]` (`Cratis.Arc.Chronicle.Reactors`), naming only the roles its returned commands need. The attribute covers **returned** commands only.
 - Mark the handler `[OnceOnly]` — a replay would otherwise execute the command again. Replay exclusion is not exactly-once: recovery re-delivers, so the command itself must be safe to repeat.
-- A reactor retry can execute the command's operations again; inline operations are not a substitute for reactor/outbox durability — see **cratis-arc-command-operation** (verified at Arc v22.48.1).
-- The imperative alternative — inject `ICommandPipeline` and call `Execute(command)` — remains supported (see the **cratis-arc-command-execution** skill). It needs `[OnceOnly]` (`ARCCHR0006` warns otherwise), its `CommandResult` must be inspected (a denied or invalid result is otherwise discarded), and it needs its own execution context: `[ExecuteCommandsAsSystem]` does not apply to it.
+- A reactor retry can execute the command's operations again; inline operations are not a substitute for reactor durability (see the durable side-effect recipe below) — see **cratis-arc-command-operation** (verified at Arc v22.48.1).
+- Prefer returning the command. A manual `ICommandPipeline.Execute(command)` needs `[OnceOnly]` (`ARCCHR0006`) and its own identity: `[ExecuteCommandsAsSystem]` only wraps **returned** commands in Arc's `CommandSideEffectExecutor`. Without a principal, `[Roles]`/`[Authorize]` denies the manual call. Set it deliberately with `Cratis.Arc.Authorization.ISystemExecution`: `using (systemExecution.AsSystem("<role>")) { var result = await pipeline.Execute(command); }` (`As(ClaimsPrincipal)` for an explicit principal). Roles come only from trusted server-side configuration, never event/request input; do not borrow a request principal. Await inside the scope and inspect `CommandResult` so refusals are not discarded. See **cratis-arc-command-execution**.
 
 ## External event stores (outbox / inbox)
 
-Cross-service events route through Chronicle's outbox/inbox rather than a shared log:
+Cross-service events route through Chronicle's outbox/inbox — between event stores, not a job outbox — rather than a shared log:
 
 - The producing service appends its **public contract event** to `EventSequenceId.Outbox`.
 - The consuming observer listens to the implicit inbox sequence for the source store (`inbox-<source-store>`).
 - Chronicle creates/reuses the outbox→inbox subscription from the observer's `[EventStore]` metadata, or from `[EventStore]` on the event type/assembly. Put `[assembly: EventStore("<source-store>")]` in the contracts project when every event there originates from one service; use observer-level `[EventStore("<source-store>")]` to override.
 - An observer-level `[EventStore]` **cannot** be combined with `[EventSequence]`, `[EventLog]`, or `Reactor(eventSequence: ...)`.
+
+## Durable provider side effects
+
+**[convention]** After a command commits: reactor + stable delivery identity + idempotent provider call + returned sent-fact event + a `ReactorScenario` retry spec. Operations are inline/non-durable; Chronicle outbox/inbox is cross-event-store, not a provider job queue. Read **cratis-chronicle-reactor** [references/durable-side-effects.md](../skills/cratis-chronicle-reactor/references/durable-side-effects.md) for the recipe and its failure window; never promise exactly-once.
 
 ## Storage lookup failures are not absence
 

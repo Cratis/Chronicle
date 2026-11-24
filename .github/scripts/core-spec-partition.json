@@ -491,11 +491,19 @@
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_KeyResolvers.",
-            "weight": 0.0016478966460343684
+            "weight": 0.0006478966460343684
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_LegacyChildEveryEventMappings.",
             "weight": 0.0004371970693560568
+        },
+        {
+            "prefix": "Cratis.Chronicle.Projections.Engine.for_RecursiveChildProjections.",
+            "weight": 0.0006
+        },
+        {
+            "prefix": "Cratis.Chronicle.Projections.Engine.for_ResolvedCollectionPath.",
+            "weight": 0.0004
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_LegacyEventSourceIdKeys.",
@@ -722,6 +730,10 @@
             "weight": 0.0004203817974577469
         },
         {
+            "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReadPolicy.",
+            "weight": 0.0004
+        },
+        {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReplayManager.",
             "weight": 0.0004203817974577469
         },
@@ -735,7 +747,7 @@
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelsManager.",
-            "weight": 0.002505475512848173
+            "weight": 0.002105475512848173
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelsManagerStorageProvider.",

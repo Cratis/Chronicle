@@ -37,6 +37,36 @@ test('first failure, last attempt, SQL and missing TRX are retained by lane', as
     assert.doesNotMatch(body, /Passed/);
 });
 
+for (const directory of ['coverage-results-Projections', '']) test(`one matching artifact retains both attempts when extracted ${directory ? 'in its own directory' : 'directly into the destination'}`, async t => {
+    await mkdir('.ai-work/r1', { recursive: true });
+    const root = await mkdtemp(path.resolve('.ai-work/r1/failed-spec-single-'));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    for (const attempt of [1, 2]) {
+        const output = path.join(root, directory, `attempt-${attempt}`);
+        await mkdir(output, { recursive: true });
+        await writeFile(path.join(output, 'results.trx'), `<UnitTestResult testName="Attempt${attempt}.Spec" outcome="Failed"/>`);
+        await writeFile(path.join(output, 'quarantined-failures.log'), 'Quarantined Recorded.Spec\n');
+    }
+    const lanes = await collect(root);
+    assert.equal(lanes.length, 1);
+    assert.equal(lanes[0].files, 2);
+    const body = render(lanes, { repo: 'example/chronicle', runId: 12, attempt: 1 });
+    assert.match(body, /failed on attempt 1:\n- Attempt1\.Spec/);
+    assert.match(body, /still failing after the last attempt:\n- Attempt2\.Spec/);
+    assert.match(body, /Quarantined Recorded\.Spec/);
+    assert.doesNotMatch(body, /no TRX found/);
+});
+
+test('a flattened single SQL artifact retains TRX directly at the download destination', async t => {
+    const root = await tree(t);
+    const input = path.join(root, 'single-sql-artifact');
+    await mkdir(input);
+    await writeFile(path.join(input, 'sql.trx'), '<UnitTestResult testName="Sql.Spec" outcome="Failed"/>');
+    const lanes = await collect(input);
+    assert.equal(lanes.length, 1);
+    assert.deepEqual(lanes[0].attempts.get(1), ['Sql.Spec']);
+});
+
 test('per-lane and total caps leave artifact pointers and omitted counts', () => {
     const names = Array.from({ length: 450 }, (_, i) => `Spec.${i}.${'long'.repeat(50)}`);
     const lanes = Array.from({ length: 20 }, (_, i) => ({ name: `coverage-results-${i}`, attempts: new Map([[1, names], [2, names]]), files: 1 }));

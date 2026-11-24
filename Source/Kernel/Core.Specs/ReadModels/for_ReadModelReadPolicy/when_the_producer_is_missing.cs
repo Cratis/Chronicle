@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Security;
 using Grpc.Core;
@@ -21,8 +23,9 @@ public class when_the_producer_is_missing : Specification
     {
         _grains = Substitute.For<IGrainFactory>();
         _manager = Substitute.For<IProjectionsManager>();
-        _manager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
+        _manager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         _grains.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(_manager);
+        _grains.GetGrain<IReducersManager>(Arg.Any<string>()).Returns(Substitute.For<IReducersManager>());
         var definition = Cratis.Chronicle.Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateReadModelDefinition("read-model") with { ObserverIdentifier = "missing-producer" };
         _definitions = Enum.GetValues<ReadModelOwner>().SelectMany(owner =>
             Enum.GetValues<ReadModelSource>().Select(source => definition with { Owner = owner, Source = source })).ToArray();
@@ -35,8 +38,6 @@ public class when_the_producer_is_missing : Specification
             _projectionErrors.Add(await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", definition)));
         }
 
-        _grains.ClearReceivedCalls();
-        _manager.ClearReceivedCalls();
         foreach (var definition in _definitions)
         {
             await ReadWithoutProjection(definition, ReadModelObserverType.Reducer);
@@ -52,6 +53,4 @@ public class when_the_producer_is_missing : Specification
     [Fact] void should_use_the_neutral_refusal() => _projectionErrors.Cast<RpcException>().All(_ => _.Status.Detail == SystemStoreAccess.Refused).ShouldBeTrue();
     [Fact] void should_allow_reducer_and_unset_reads() => _nonProjectionErrors.TrueForAll(_ => _ is null).ShouldBeTrue();
     [Fact] void should_check_both_non_projection_types_for_every_owner_and_source() => _nonProjectionErrors.Count.ShouldEqual(_definitions.Length * 2);
-    [Fact] void should_not_resolve_a_manager_for_non_projection_reads() => _grains.ReceivedCalls().Any().ShouldBeFalse();
-    [Fact] void should_not_query_definitions_for_non_projection_reads() => _manager.ReceivedCalls().Any().ShouldBeFalse();
 }

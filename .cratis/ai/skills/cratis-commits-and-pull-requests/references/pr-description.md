@@ -4,6 +4,16 @@
 
 # The pull request description
 
+## Contents
+
+- Allowed shape
+- Describe the product, not the author
+- Issue references
+- Forbidden anywhere outside code
+- Keep the note true to the diff
+- Bad to good
+- Before you create or edit a PR
+
 The contract (the description is the release note, the issue-reference rules, the reviewer-note rule) stays always-on in [pull-requests.md](../../../rules/pull-requests.md). This reference holds the detailed shape, the forbidden list and a worked example.
 
 **The PR description is published verbatim as the GitHub release. In repositories released by `cratis/release-action`, it also closes every issue written as `(#n)`; elsewhere, follow the repository's own release and issue-closing process.** Write the note the person upgrading should read, not a development write-up. The same contract applies to release notes typed into a manual workflow run or written straight into a release. Where it is installed, the `policy / verify` check enforces it on release-bound PRs into the default branch carrying `major`/`minor`/`patch` (it re-runs when the label is added); its release-note step warns on `no-release` and unlabelled PRs, which must still be written this way because any of them may become releasable. `release-action` does not run for a `no-release` PR, so `(#n)` closes nothing there. Editing the description re-runs the check. HTML comments are not shown on the release page and the check ignores them for headings, keywords and placeholders, and `release-action` removes them before publishing, so a `(#n)` only inside a comment closes nothing; the check fails it, so never put an issue reference in a comment. The template's own comment can stay: its example issue references are inline code, and the comment is not published.
@@ -19,6 +29,19 @@ The contract (the description is the release note, the issue-reference rules, th
 - Bullets are short, self-contained and user-facing: what a consumer compiles against, runs or observes. A user-visible fix may add one sentence of root cause or regression guard, stated as observable behavior. Credit an external contributor by name or handle, unless they asked not to be named.
 - Breaking changes and upgrade actions are bullets in `## Changed` or `## Removed` that state the action. A longer migration story goes in the docs, linked by absolute URL.
 - Do not list internal plumbing (storage, converters, gRPC internals, specs, file lists, refactor narration).
+
+## Describe the product, not the author
+
+Flag and rewrite author-as-subject narration throughout the description, including an unheaded lead, `## Summary` and allowed-section bullets. Use product-focused imperative or declarative wording, not "I added", "we chose not to", "I deliberately" or a third-person work log such as "the author added". The subject is the feature or behavior, not the person or agent who produced it.
+
+| Location | Wrong | Right |
+| --- | --- | --- |
+| Lead paragraph | I added resumable uploads. | Uploads resume after a connection interruption. |
+| `## Summary` | We chose not to retry invalid commands because retries hide input errors; configurable retry delays are deferred. | Invalid commands fail without retries. |
+| `## Fixed` bullet | - I deliberately kept failed uploads out of the history. | - Exclude failed uploads from history. |
+| `## Added` bullet | - I added an "I agree" button to the consent dialog. | - Add an "I agree" button to the consent dialog. |
+
+Quoted UI language such as a button labeled "I agree" is not author narration; preserve the actual UI text. Reviewer rationale, rejected alternatives and deferred implementation discussion go in the **PR comment**, not the description. For the Summary example, put why retries were rejected and the deferred delay work in that comment; publish only the delivered behavior.
 
 ## Issue references
 

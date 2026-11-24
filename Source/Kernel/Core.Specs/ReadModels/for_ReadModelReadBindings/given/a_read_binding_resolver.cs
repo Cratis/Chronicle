@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
@@ -58,7 +59,7 @@ public class a_read_binding_resolver : Specification
         var projections = Substitute.For<IProjectionsManager>();
         var projection = Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateDefinition("observer", "model");
         grainFactory.GetGrain<IProjectionsManager>(EventStore).Returns(projections);
-        projections.GetProjectionDefinitions().Returns(new ProjectionDefinition[] { projection });
+        projections.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([projection]));
         grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_replayManager);
         _resolver = new(storage, grainFactory, _visibilities, Substitute.For<IReadModelSinkProvenance>());
     }

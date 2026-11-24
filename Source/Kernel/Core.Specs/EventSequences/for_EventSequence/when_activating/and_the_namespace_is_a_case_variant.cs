@@ -12,7 +12,7 @@ public class and_the_namespace_is_a_case_variant : given.an_event_sequence
 
     protected override async Task<EventSequence> CreateEventSequence()
     {
-        _namespaces.EnsureCanonical(EventStoreNamespace).Returns((EventStoreNamespaceName)"Test-Namespace");
+        _namespaces.GetCanonical(EventStoreNamespace).Returns((EventStoreNamespaceName?)(EventStoreNamespaceName)"Test-Namespace");
         _exception = await Catch.Exception(base.CreateEventSequence);
         return null!;
     }

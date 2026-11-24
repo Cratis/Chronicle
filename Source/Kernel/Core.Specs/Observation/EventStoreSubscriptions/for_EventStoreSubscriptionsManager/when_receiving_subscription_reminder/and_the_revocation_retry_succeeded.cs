@@ -7,10 +7,10 @@ public class and_the_revocation_retry_succeeded : given.a_manager_over_several_n
 {
     async Task Establish()
     {
+        _sourceHas.Add(Malformed);
         _observersAreSubscribed = true;
+        _unsubscribeFailures[KeyFor(Malformed)] = 1;
         await _manager.Add(DefinitionFor());
-        _unsubscribeFailures[KeyFor("Tenant2")] = 1;
-        await _manager.Add(DefinitionFor("Default"));
         await _manager.ReceiveReminder($"event-store-subscription-subscribe:{SubscriptionName}", default);
         _requestedKeys.Clear();
         _sourceNamespacesRequested.Clear();
@@ -18,7 +18,7 @@ public class and_the_revocation_retry_succeeded : given.a_manager_over_several_n
 
     async Task Because() => await _manager.ReceiveReminder($"event-store-subscription-subscribe:{SubscriptionName}", default);
 
-    [Fact] void should_not_repeat_the_successful_revocation() => _observers[KeyFor("Tenant2")].Received(2).Unsubscribe();
-    [Fact] void should_not_resolve_the_revoked_observer_again() => RequestedKeys.ShouldNotContain(KeyFor("Tenant2"));
-    [Fact] void should_not_look_up_excluded_source_namespaces() => _sourceNamespacesRequested.ShouldBeEmpty();
+    [Fact] void should_not_repeat_the_successful_revocation() => _observers[KeyFor(Malformed)].Received(2).Unsubscribe();
+    [Fact] void should_not_resolve_the_revoked_observer_again() => RequestedKeys.ShouldNotContain(KeyFor(Malformed));
+    [Fact] void should_not_look_up_the_malformed_source_namespace() => _sourceNamespacesRequested.ShouldNotContain(Malformed);
 }

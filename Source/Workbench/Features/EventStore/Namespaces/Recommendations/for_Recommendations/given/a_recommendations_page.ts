@@ -81,12 +81,12 @@ export class a_recommendations_page {
     }
 
     async toggle() {
-        await act(async () => { this.actions[3].command!(); });
+        await act(async () => { this.executeAction(3); });
     }
 
     async startPerform() {
         vi.spyOn(PerformRecommendation.prototype, 'execute').mockReturnValue(new Promise(resolve => { this.complete = resolve; }));
-        await act(async () => { this.operation = this.actions[0].command!(); });
+        await act(async () => { this.operation = this.executeAction(0); });
     }
 
     async finishPerform() {
@@ -96,7 +96,14 @@ export class a_recommendations_page {
     async restore() {
         mocks.confirm.mockResolvedValue(DialogResult.Yes);
         vi.spyOn(UnignoreRecommendation.prototype, 'execute').mockResolvedValue(CommandResult.empty);
-        await act(async () => { await this.actions[2].command!(); });
+        await act(async () => { await this.executeAction(2); });
+    }
+
+    private executeAction(index: number) {
+        return this.actions[index].command!({
+            selectionMode: 'multiple',
+            selectedItems: Object.freeze([...(this.table.selectedItems ?? [])])
+        });
     }
 
     private async mount() {

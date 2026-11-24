@@ -73,7 +73,7 @@ public partial class EventSequenceStorage(
     {
         await using var scope = await database.Namespace(eventStore, @namespace);
 
-        var entry = await scope.DbContext.EventSequences.FirstOrDefaultAsync(s => s.EventSequenceId == eventSequenceId.Value);
+        var entry = await EventSequenceStateQueries.Get(scope.DbContext, eventSequenceId.Value);
         if (entry is null)
         {
             return new Chronicle.Storage.EventSequences.EventSequenceState();
@@ -485,13 +485,14 @@ public partial class EventSequenceStorage(
             query = query.WhereStreamType(scope.DbContext, eventStreamType);
         }
 
-        var lastEvent = await query
+        var lastSequenceNumber = await query
             .OrderByDescending(e => e.SequenceNumber)
+            .Select(e => (ulong?)e.SequenceNumber)
             .FirstOrDefaultAsync();
 
-        return lastEvent?.SequenceNumber is null
+        return lastSequenceNumber is null
             ? EventSequenceNumber.Unavailable
-            : new EventSequenceNumber(lastEvent.SequenceNumber);
+            : new EventSequenceNumber(lastSequenceNumber.Value);
     }
 
     /// <inheritdoc/>

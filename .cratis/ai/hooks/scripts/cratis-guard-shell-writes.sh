@@ -50,21 +50,28 @@ if [[ "$command_text" =~ ^[[:space:]]*(cratis|ln)[[:space:]] ]] && command -v no
 fi
 
 IFS= read -r -d '' program <<'AWK' || true
-function candidate(s) {
+# `origin` is empty for a real candidate and the original spelling for its lowercase alias. In targets mode
+# an alias is printed as \001origin\001alias so the shell can drop it where it provably names no path.
+# A real candidate is never hidden by an earlier alias with the same text (seen: 1 alias, 2 real).
+function candidate(s, origin,    prior, marker) {
     if (checking_marker) return
     if (s == "" || s ~ /[\n\r\t]/) return
+    marker = ENVIRON["GSW_MODE"] == "targets"
     if (collecting) {
         if (s in collected) return
         if (++collected_count > 256 || length(s) > 4096) exit 2
         collected[s] = 1
     } else {
-        if (s in seen) return
+        if (origin == "" && marker && index(s, "\001")) exit 2
+        prior = (s in seen) ? seen[s] : 0
+        if (prior && (origin != "" || prior == 2)) return
         if (++candidates > 256 || length(s) > 4096) exit 2
-        seen[s] = 1; print s
+        seen[s] = (origin == "") ? 2 : 1
+        if (origin != "" && marker) print "\001" origin "\001" s; else print s
     }
-    if (s != tolower(s)) candidate(tolower(s))
+    if (s != tolower(s)) candidate(tolower(s), s)
     # A generic attached option prefix must not hide a path spelling (-t.pi/...).
-    if (s ~ /^-/ && match(s, /[.\/]/) && RSTART > 1) candidate(substr(s, RSTART))
+    if (s ~ /^-/ && match(s, /[.\/]/) && RSTART > 1) candidate(substr(s, RSTART), (origin == "") ? "" : substr(origin, RSTART))
 }
 # An extended-glob group (`@(a|b)`, `*(x)`) is also read as one star, so `.e@(n)v` meets `.env`.
 # A word with a brace span and quoting or expansion syntax is also kept whole, so the classifier sees it unsplit.
@@ -269,11 +276,16 @@ function short_flags(w, flags,    k) {
     return 1
 }
 function number(s) { return s ~ /^[+-]?[0-9]+$/ }
-function options_allowed(verb, first,    i, w, filters, patterns) {
+function options_allowed(verb, first,    i, w, filters, patterns, ended, rg_new, no_config) {
     for (i = first; i <= argc; i++) {
         w = W[i]
-        if (w == "--") return 1
-        if (w !~ /^-/ || w == "-") { patterns++; continue }
+        if (!ended && w == "--") { if (verb !~ /^(sort|uniq)$/) return !rg_new || no_config; ended = 1; continue }
+        if (ended || w !~ /^-/ || w == "-") {
+            # Admit sort/uniq only as stdin filters. File operands, including after
+            # --, retain whole-command classification and every existing refusal.
+            if (verb ~ /^(sort|uniq)$/) return 0
+            patterns++; continue
+        }
         if ((verb, w) in long_options) continue
         if (verb == "head" || verb == "tail" || verb == "git log") {
             if (w == "-n" || (verb != "git log" && w == "-c")) {
@@ -295,6 +307,20 @@ function options_allowed(verb, first,    i, w, filters, patterns) {
             }
         }
         if (verb == "git diff" && w ~ /^-U[0-9]+$/) continue
+        # New rg display/filter flags require an actual option, never a pattern or option value,
+        # disabling config-supplied helpers. Hidden/ignored-file expansion stays refused.
+        if (verb == "rg") {
+            if (w == "--no-config") { no_config = 1; continue }
+            if (w == "-A" || w == "-B" || w == "-C" || w == "-m") {
+                if (++i > argc || W[i] !~ /^[0-9]+$/) return 0
+                rg_new = 1; continue
+            }
+            if (w == "-t" || w == "-T") {
+                if (++i > argc || globbed[i] || W[i] !~ /^[A-Za-z0-9]+$/) return 0
+                rg_new = 1; continue
+            }
+            if (short_flags(w, "nliSosIN") && !short_flags(w, short_options[verb])) { rg_new = 1; continue }
+        }
         if (verb == "shellcheck" && w ~ /^--severity=(error|warning|info|style)$/) continue
         if ((verb == "git log" && w ~ /^--(format|pretty)=/) || (verb == "git show" && w ~ /^--format=/)) {
             if (index(w, "%(")) return 0
@@ -316,7 +342,7 @@ function options_allowed(verb, first,    i, w, filters, patterns) {
         }
         if (!short_flags(w, short_options[verb])) return 0
     }
-    return !filters || patterns > 0
+    return (!filters || patterns > 0) && (!rg_new || no_config)
 }
 # awk is read-only only for the shape awk [-F sep] 'program' operands. Every other option (-f, -v, -e, -i,
 # --include, --, ...) is refused. awk output, execution and file reads need one of > | system getline close
@@ -710,11 +736,48 @@ function readonly(s,    i, c, c2, sq, dq) {
         (directory_only && (nonconditional_separator || (has_pipeline && changed_index)))) fail()
     return !bad
 }
+# Only a complete, top-level literal cat heredoc is data. A quote, substitution,
+# comment, backslash or previous heredoc before its opening leaves the whole text
+# unclassified: the apparent cat might otherwise be inside another shell construct.
+# Reference extraction always uses the original text, including every body. Only
+# the read-only check reduces a proven heredoc to cat and its output redirection.
+# Protected bodies may be printed but never materialized to a file. Never execute text.
+function strip_data_heredocs(text,    lines, count, i, j, line, before, after, delimiter, quoted, body, prefix, out) {
+    count = split(text, lines, "\n")
+    for (i = 1; i <= count; i++) {
+        line = lines[i]
+        if (prefix !~ /[\047"\\$`#<>]/ &&
+            line ~ /^[ \t]*cat[ \t]+((>|>>)[ \t]*[-.\/A-Za-z0-9_]+[ \t]+)?<<[ \t]*(\047[A-Za-z_][A-Za-z0-9_]*\047|"[A-Za-z_][A-Za-z0-9_]*"|[A-Za-z_][A-Za-z0-9_]*)[ \t]*((>|>>)[ \t]*[-.\/A-Za-z0-9_]+)?[ \t]*$/) {
+            before = substr(line, 1, index(line, "<<") - 1)
+            after = substr(line, index(line, "<<") + 2)
+            if (!(index(before, ">") && index(after, ">"))) {
+                sub(/^[ \t]+/, "", after); sub(/[ \t]*(>|>>).*$/, "", after); sub(/[ \t]+$/, "", after)
+                quoted = after ~ /^[\047"]/
+                delimiter = after; gsub(/[\047"]/, "", delimiter)
+                body = ""
+                for (j = i + 1; j <= count && lines[j] != delimiter; j++) body = body lines[j] "\n"
+                if (j <= count && (quoted || body !~ /[$`\\]/)) {
+                    if (index(before, ">") || index(line, ">")) heredoc_writes = 1
+                    sub(/<<[ \t]*(\047[A-Za-z_][A-Za-z0-9_]*\047|"[A-Za-z_][A-Za-z0-9_]*"|[A-Za-z_][A-Za-z0-9_]*)/, "", line)
+                    out = out (i > 1 ? "\n" : "") line
+                    for (; i < j; i++) prefix = prefix lines[i] "\n"
+                    prefix = prefix lines[i] "\n"
+                    continue
+                }
+            }
+        }
+        out = out (i > 1 ? "\n" : "") line
+        prefix = prefix line "\n"
+    }
+    return out
+}
 BEGIN {
     policy("cat", "nAvetsb", "")
     policy("head", "", ""); policy("tail", "", "")
     policy("wc", "lwcm", ""); policy("ls", "laA1hdRtrF", "")
     policy("rg", "nli", "--files")
+    policy("sort", "nrufb", "--numeric-sort --reverse --unique --ignore-case --ignore-leading-blanks")
+    policy("uniq", "cdui", "--count --repeated --unique --ignore-case")
     policy("grep", "nirRlLcvwxFEHhoqs", "")
     policy("egrep", "nirRlLcvwxFEHhoqs", ""); policy("fgrep", "nirRlLcvwxFEHhoqs", "")
     policy("echo", "neE", "")
@@ -744,21 +807,811 @@ BEGIN {
     match_rewrite_safe = !index(text, MATCH_MARKER) && !index(decoded, MATCH_MARKER)
     if (ENVIRON["GSW_MODE"] == "references") { emit_text(text); exit 0 }
     if (ENVIRON["GSW_MODE"] == "targets") {
-        readonly(text)
-        if (unparsed) emit_text(text)
+        reduced = strip_data_heredocs(text)
+        readonly(reduced)
+        # Reducing data must never erase a protected reference and skip the final
+        # read-only check, even when the reduced command itself has no targets.
+        if (unparsed || reduced != text) emit_text(text)
         else for (i = 1; i <= emitted_count; i++) emit_text(emitted[i])
         exit 0
     }
     n = split(ENVIRON["GSW_PROTECTED"], a, "\n"); for (i = 1; i <= n; i++) protected_paths[a[i]] = 1
-    exit readonly(text) ? 0 : 1
+    reduced = strip_data_heredocs(text)
+    exit (readonly(reduced) && !heredoc_writes) ? 0 : 1
 }
 AWK
+# This stage is independent of the readonly/reference grammar above. Prefix syntax is
+# never a reason to refuse a reader: only a discovered destructive operation has operands.
+IFS= read -r -d '' destructive_program <<'AWK' || true
+function base(word) { sub(/^.*\//, "", word); return word }
+function member(list, word) { return index(" " list " ", " " word " ") > 0 }
+function destructive(word) { return member("rm rmdir unlink shred mv", base(word)) }
+function shell(word) { return member("sh bash dash zsh ksh ash", base(word)) }
+# Command-head recognition is shared by dispatch and directory tracking. time retains
+# its option-aware wrapper handling below; grouping delimiters also split segments.
+function command_prefix(word) {
+    return word ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || member("then do else elif ! if while until { ( coproc", word)
+}
+# Only these established execution prefixes expose another command position.
+function wrapper(word) {
+    return member("sudo doas env command builtin exec nohup nice ionice timeout time stdbuf xargs setsid chroot nsenter busybox", base(word))
+}
+function emit(path) { if (path != "" && !seen[path]++) print path }
+# Every unclassified execution boundary uses the same fail-closed evidence rule.
+# Callers pass only the remaining uncertain region, never known heredoc data.
+function unclassified(text) {
+    gsub(/["\047\\]/, "", text)
+    if (text ~ /(^|[[:space:];|&()`\/])(rm|rmdir|unlink|shred|mv)([[:space:];|&()`]|$)/ ||
+        (text ~ /(^|[[:space:];|&()`\/])git[[:space:]]/ && text ~ /(^|[[:space:]])clean([[:space:]]|$)/) ||
+        (text ~ /(^|[[:space:];|&()`\/])find[[:space:]]/ && text ~ /(^|[[:space:]])-delete([[:space:]]|$)/)) emit("!")
+}
+function remaining(d, start, end,    i, j, text) {
+    for (i = start; i <= end; i++) {
+        text = text " " W[d, i]
+        for (j = 1; j <= BC[d, i]; j++) text = text " " B[d, i, j]
+    }
+    return text
+}
+# Arithmetic shifts are not redirections. Consume balanced arithmetic as one word;
+# its contents are otherwise uncertain, including any nested executable substitution.
+function arithmetic(text, start, bracket,    i, c, quote, level, parens) {
+    level = bracket ? 1 : 2; quote = ""; arithmetic_complete = 0
+    for (i = start; i <= length(text); i++) {
+        c = substr(text, i, 1)
+        if (c == "\\") { i++; continue }
+        if (quote != "") { if (c == quote) quote = ""; continue }
+        if (c == "\047" || c == "\"") { quote = c; continue }
+        if (bracket) {
+            if (c == "(") parens++
+            else if (c == ")" && parens) parens--
+            else if (!parens && c == "[") level++
+            else if (!parens && c == "]") level--
+        } else {
+            if (c == "(") level++
+            else if (c == ")") level--
+        }
+        if (!level) { arithmetic_complete = 1; break }
+    }
+    arithmetic_end = i
+    return substr(text, start, i - start)
+}
+function arithmetic_prefix(text, i, quoted) {
+    arithmetic_bracket = substr(text, i, 2) == "$["
+    if (arithmetic_bracket) return i + 2
+    if (substr(text, i, 3) == "$((") return i + 3
+    if (!quoted && substr(text, i, 2) == "((") return i + 2
+    return 0
+}
+# Exceptions need a whole-tool simple command, not a guess about earlier mutations.
+# Quoted parentheses and parameter braces remain word data in the lexer.
+function simple_command(text, d, n,    i, head) {
+    head = base(W[d, 1])
+    if (!destructive(head) && head != "git" && head != "find") return 0
+    if (text ~ /`|\$\(/) return 0
+    for (i = 1; i <= n; i++) {
+        if (BC[d, i] || (K[d, i] != "word" && K[d, i] !~ /^(>|>>|>&|&>|&>>|<|<&)$/)) return 0
+    }
+    return 1
+}
+function unquoted_expansion(raw,    i, c, quote) {
+    for (i = 1; i <= length(raw); i++) {
+        c = substr(raw, i, 1)
+        if (c == "\\" && quote != "\047") { i++; continue }
+        if (quote != "") { if (c == quote) quote = ""; continue }
+        if (c == "\047" || c == "\"") { quote = c; continue }
+        if (c == "*" || c == "?" || c == "[" || c == "$" || c == "`") return 1
+    }
+    return 0
+}
+# Raw-source proof excludes splitting and mixed unquoted globs. A value of 2
+# marks quoted predicate data, not an eligible environment path prefix.
+function quoted_prefix(raw) {
+    if (raw ~ /^~/) return !unquoted_expansion(raw)
+    if (raw ~ /^"\$(\{(PWD|HOME|TMPDIR)\}|PWD|HOME|TMPDIR)(\/|")/ && !unquoted_expansion(raw)) return 1
+    return (raw ~ /^"[^"]*"$/ || raw ~ /^\047[^\047]*\047$/) ? 2 : 0
+}
+# Only raw, unquoted ~+ with a literal suffix can establish the initial cwd.
+function literal_current_directory(raw, word) {
+    return raw == word && word ~ /^~\+(\/|$)/ && substr(word, 3) !~ /[$`~*?\[{}]/
+}
+# A destructive expansion exception must name only real descendant components.
+function descendant_suffix(suffix,    parts, count, i) {
+    if (suffix !~ /^\// || suffix ~ /[$`*?\[{}~]/ || index(suffix, "]") || index(suffix, "\\")) return 0
+    gsub(/\/+/, "/", suffix)
+    sub(/\/$/, "", suffix)
+    count = split(substr(suffix, 2), parts, "/")
+    if (!count) return 0
+    for (i = 1; i <= count; i++) {
+        if (parts[i] == "" || parts[i] == "." || parts[i] == "..") return 0
+    }
+    return 1
+}
+function environment_prefix(word, require_descendant,    name, suffix, end) {
+    if (word ~ /^\$\{(PWD|HOME|TMPDIR)\}(\/|$)/) {
+        end = index(word, "}"); name = substr(word, 3, end - 3); suffix = substr(word, end + 1)
+    } else if (word ~ /^\$(PWD|HOME|TMPDIR)(\/|$)/) {
+        name = substr(word, 2); sub(/\/.*/, "", name); suffix = substr(word, length(name) + 2)
+    } else return "!"
+    if (require_descendant && !descendant_suffix(suffix)) return "!"
+    return (name == "PWD" ? ENVIRON["GSW_CWD"] : ENVIRON[name]) suffix
+}
+function resolved(word, quoted, cwd, uncertain, double_quoted, ordinary,    expanded, suffix) {
+    expanded = word ~ /^\$/ || (!quoted && word ~ /^~/)
+    if (expanded && !ordinary && (!exception_allowed || double_quoted != 1)) return "!"
+    if (word ~ /^\$/) word = double_quoted == 1 ? environment_prefix(word, !ordinary) : "!"
+    else if (!quoted && word ~ /^~(\/|$)/) {
+        suffix = substr(word, 2)
+        word = ordinary || descendant_suffix(suffix) ? ENVIRON["HOME"] suffix : "!"
+    } else if (!quoted && word ~ /^~\+(\/|$)/) {
+        suffix = substr(word, 3)
+        word = ordinary || descendant_suffix(suffix) ? ENVIRON["GSW_CWD"] suffix : "!"
+    } else if (!quoted && word ~ /^~/) return "!"
+    if (word == "!" || word ~ /[$`]/ || (expanded && word ~ /^-/)) return "!"
+    if (word ~ /^\//) return word
+    if (uncertain) return "!"
+    return cwd "/" word
+}
+function operand(word, quoted, cwd, uncertain, double_quoted) {
+    if (word != "" && word != "{}") emit(resolved(word, quoted, cwd, uncertain, double_quoted))
+}
+# Heredoc delimiters are quote-removed, never expanded or executed.
+function heredoc_word(text, start,    i, c, quote, word, active) {
+    hd_quoted = 0; quote = ""; active = 0
+    for (i = start; substr(text, i, 1) ~ /[ \t]/; i++) {}
+    for (; i <= length(text); i++) {
+        c = substr(text, i, 1)
+        if (quote != "") { if (c == quote) quote = ""; else word = word c; continue }
+        if (c == "\047" || c == "\"") { quote = c; hd_quoted = active = 1; continue }
+        if (c == "\\") { word = word substr(text, ++i, 1); hd_quoted = active = 1; continue }
+        if (c ~ /[ \t\r\n;&|()<>]/ || (c == "#" && !active)) break
+        word = word c; active = 1
+    }
+    hd_valid = active && quote == "" && i <= length(text) + 1
+    hd_end = i - 1
+    return word
+}
+function heredoc_body(text, start, delimiter, strip,    i, size, line, body) {
+    i = start; hd_complete = 0
+    while (i <= length(text)) {
+        size = index(substr(text, i), "\n")
+        if (!size) size = length(text) - i + 2
+        line = substr(text, i, size - 1)
+        if (strip) sub(/^\t+/, "", line)
+        if (line == delimiter) { hd_complete = 1; hd_end = i + size - 1; return body }
+        body = body line "\n"; i += size
+    }
+    hd_end = length(text)
+    return body
+}
+# Return a substitution body without executing it. Ignore parentheses in data/comments.
+function substitution(text, start, tick,    i, c, quote, nesting, body, id, count, j, delimiter, strip, end, k) {
+    nesting = 1; quote = ""; id = ++sub_id; count = 0
+    for (i = start; i <= length(text); i++) {
+        c = substr(text, i, 1)
+        if (c == "\\") { body = body c substr(text, ++i, 1); continue }
+        if (tick) { if (c == "`") break }
+        else if (quote != "") { if (c == quote) quote = "" }
+        else if (c == "\047" || c == "\"") quote = c
+        else if (c == "#" && (i == start || substr(text, i - 1, 1) ~ /[ \t\n;&|()]/)) {
+            while (i <= length(text) && substr(text, i, 1) != "\n") body = body substr(text, i++, 1)
+            i--; continue
+        } else if ((k = arithmetic_prefix(text, i, 0))) {
+            arithmetic(text, k, arithmetic_bracket)
+            body = body substr(text, i, arithmetic_end - i + 1); i = arithmetic_end; continue
+        } else if (c == "<" && substr(text, i, 2) == "<<" && substr(text, i, 3) != "<<<") {
+            strip = substr(text, i + 2, 1) == "-"
+            delimiter = heredoc_word(text, i + 2 + strip)
+            if (!hd_valid) { unclassified(substr(text, i)); sub_end = length(text); return body }
+            SD[id, ++count] = delimiter; SS[id, count] = strip
+            body = body substr(text, i, hd_end - i + 1); i = hd_end; continue
+        } else if (c == "(") nesting++
+        else if (c == ")" && !--nesting) break
+        body = body c
+        if (c == "\n" && quote == "" && count) {
+            for (j = 1; j <= count; j++) {
+                end = i
+                delimiter = heredoc_body(text, i + 1, SD[id, j], SS[id, j])
+                if (!hd_complete) unclassified(delimiter)
+                i = hd_end; body = body substr(text, end + 1, i - end)
+            }
+            count = 0
+        }
+    }
+    if (i > length(text) || count) unclassified(body)
+    sub_end = i
+    return body
+}
+function data_substitutions(text, d, word,    i, c, body, k) {
+    for (i = 1; i <= length(text); i++) {
+        c = substr(text, i, 1)
+        if (c == "\\") { i++; continue }
+        if ((k = arithmetic_prefix(text, i, 1))) {
+            body = arithmetic(text, k, arithmetic_bracket); unclassified(body); i = arithmetic_end; continue
+        }
+        if (c == "`" || substr(text, i, 2) == "$(") {
+            body = substitution(text, i + (c == "`" ? 1 : 2), c == "`")
+            B[d, word, ++BC[d, word]] = body; i = sub_end
+        }
+    }
+}
+function lex(text, d,    i, c, nextc, quote, word, quoted, active, n, body, k, pending, delimiter, strip, hd_index, end, word_start) {
+    n = 0; quote = ""; word = ""; active = 0; quoted = 0; pending = 0
+    for (i = 1; i <= length(text); i++) {
+        c = substr(text, i, 1); nextc = substr(text, i + 1, 1)
+        if (!active) word_start = i
+        if (quote != "\047" && (k = arithmetic_prefix(text, i, quote != ""))) {
+            body = arithmetic(text, k, arithmetic_bracket); unclassified(body)
+            i = arithmetic_end; word = word "$__arithmetic"; active = 1; continue
+        }
+        if (quote != "\047" && (c == "`" || (c == "$" && nextc == "("))) {
+            body = substitution(text, i + (c == "`" ? 1 : 2), c == "`")
+            B[d, n + 1, ++BC[d, n + 1]] = body
+            i = sub_end; word = word "$__sub"; active = 1; continue
+        }
+        if (quote != "") {
+            if (c == quote) { quote = ""; continue }
+            if (c == "\\" && quote != "\047" && nextc ~ /[$`"\\]/) c = substr(text, ++i, 1)
+            word = word c; continue
+        }
+        if (c == "\047" || c == "\"" || (c == "$" && nextc == "\047")) {
+            if (c == "$") c = substr(text, ++i, 1)
+            quote = c; if (!active) quoted = 1; active = 1; continue
+        }
+        if (c == "\\") { if (!active) quoted = 1; word = word substr(text, ++i, 1); active = 1; continue }
+        if (c == "#" && !active) {
+            while (i <= length(text) && substr(text, i, 1) != "\n") i++
+            i--; continue
+        }
+        # Parameter expansion braces and find placeholders are words, not groups.
+        if (c == "$" && nextc == "{") {
+            k = i + 2
+            while (k <= length(text) && substr(text, k, 1) != "}") k++
+            word = word substr(text, i, k - i + 1); i = k; active = 1; continue
+        }
+        if (c == "{" && nextc == "}") { word = word "{}"; i++; active = 1; continue }
+        if (c ~ /[ \t\r\n;&|(){}<>]/) {
+            if (active) { W[d, ++n] = word; Q[d, n] = quoted; DQ[d, n] = quoted_prefix(substr(text, word_start, i - word_start)); CT[d, n] = literal_current_directory(substr(text, word_start, i - word_start), word); K[d, n] = "word"; T[d, n] = i - 1; F[d, n] = !quoted && word ~ /^[0-9]+$/ && substr(text, i - length(word), length(word)) == word; word = ""; active = quoted = 0 }
+            if (c ~ /[ \t\r]/) continue
+            if (c == "<" && nextc == "<") {
+                if (substr(text, i, 3) == "<<<") { W[d, ++n] = "<<<"; K[d, n] = "<<<"; T[d, n] = i; i += 2; continue }
+                strip = substr(text, i + 2, 1) == "-"
+                delimiter = heredoc_word(text, i + 2 + strip)
+                if (!hd_valid) { unclassified(substr(text, i)); return n }
+                W[d, ++n] = "<<"; K[d, n] = "<<"; T[d, n] = i
+                W[d, ++n] = delimiter; K[d, n] = "word"; Q[d, n] = hd_quoted
+                HS[d, n] = strip; HP[d, ++pending] = n
+                i = hd_end; continue
+            }
+            end = i
+            if (c == "&" && nextc == ">") {
+                c = "&>"; i++
+                if (substr(text, i + 1, 1) == ">") { c = "&>>"; i++ }
+            } else if (c == ">") {
+                if (nextc == ">" || nextc == "&") { c = c nextc; i++ }
+                else if (nextc == "|") i++
+            } else if (c == "<" && nextc == "&") { c = "<&"; i++ }
+            else if ((c == "&" || c == "|") && (nextc == c || (c == "|" && nextc == "&"))) { i++; c = c nextc }
+            W[d, ++n] = c; K[d, n] = c; T[d, n] = end
+            if (c == "\n" && pending) {
+                for (k = 1; k <= pending; k++) {
+                    hd_index = HP[d, k]
+                    H[d, hd_index] = heredoc_body(text, i + 1, W[d, hd_index], HS[d, hd_index]); i = hd_end
+                    if (!hd_complete) unclassified(H[d, hd_index])
+                    if (!Q[d, hd_index]) data_substitutions(H[d, hd_index], d, hd_index)
+                }
+                pending = 0
+            }
+            continue
+        }
+        word = word c; active = 1
+    }
+    if (active) { W[d, ++n] = word; Q[d, n] = quoted; DQ[d, n] = quoted_prefix(substr(text, word_start)); CT[d, n] = literal_current_directory(substr(text, word_start), word); K[d, n] = "word" }
+    if (quote != "" || pending) unclassified(remaining(d, 1, n))
+    return n
+}
+function wrapper_value(program, option) {
+    if (program == "env") return member("-u --unset -C --chdir -a --argv0", option)
+    if (program == "sudo") return member("-u -g -h -p -C -T -r -t -D -R -U -a -c --user --group --host --prompt --close-from --command-timeout --role --type --chdir --chroot", option)
+    if (program == "doas") return member("-u -C", option)
+    if (program == "exec") return option == "-a"
+    if (program == "nice") return member("-n --adjustment", option)
+    if (program == "ionice") return member("-c -n -p -P -u --class --classdata --pid --pgid --uid", option)
+    if (program == "timeout") return member("-s -k --signal --kill-after", option)
+    if (program == "time") return member("-f -o --format --output", option)
+    if (program == "stdbuf") return member("-i -o -e --input --output --error", option)
+    if (program == "xargs") return member("-I -J -E -d -L -n -P -s -a -R -S --eof --delimiter --max-lines --max-args --max-procs --max-chars --arg-file", option)
+    if (program == "chroot") return member("--userspec --groups", option)
+    if (program == "nsenter") return member("-t -S -G --target --setuid --setgid --root --wd --wdns", option)
+    return 0
+}
+function wrapper_flag(program, option) {
+    if (program == "env") return option ~ /^-[i0v]+$/ || member("--ignore-environment --null --debug --list-signal-handling --default-signal --ignore-signal --block-signal", option)
+    if (program == "sudo") return option ~ /^-[nEHKSbklvVeis]+$/ || member("--non-interactive --preserve-env --set-home --reset-timestamp --remove-timestamp --stdin --background --validate --list --edit --login --shell", option)
+    if (program == "doas") return member("-n -s -L", option)
+    if (program == "command") return option == "-p"
+    if (program == "exec") return member("-c -l", option)
+    if (program == "time") return member("-p -v -q --portability --verbose --quiet", option)
+    if (program == "xargs") return member("-0 -r -t -p -x -i --null --no-run-if-empty --verbose --interactive --exit --show-limits --replace", option)
+    if (program == "setsid") return member("-c -f -w --ctty --fork --wait", option)
+    if (program == "chroot") return option == "--skip-chdir"
+    if (program == "nsenter") return member("-a -m -u -i -n -p -U -C -T --all --mount --uts --ipc --net --pid --user --cgroup --time --preserve-credentials --no-fork --follow-context", option)
+    return 0
+}
+# Dispatch uses an argv copy, never shell source. Every prefix shares the same
+# redirection tail and inherited pipe input; splitting env argv cannot discard either.
+function copy_token(source, from, dest, to,    j) {
+    W[dest, to] = W[source, from]; Q[dest, to] = Q[source, from]; DQ[dest, to] = DQ[source, from]; K[dest, to] = K[source, from]
+    H[dest, to] = H[source, from]; T[dest, to] = T[source, from]; F[dest, to] = F[source, from]
+    BC[dest, to] = BC[source, from]
+    for (j = 1; j <= BC[source, from]; j++) B[dest, to, j] = B[source, from, j]
+}
+function redirection(d, i) { return K[d, i] ~ /^[<>]/ || K[d, i] ~ /^&>/ }
+function dispatch(d, start, end,    slot, redirects, i, n, r) {
+    slot = --dispatch_id; redirects = --dispatch_id
+    for (i = start; i <= end; i++) {
+        if (F[d, i] && redirection(d, i + 1) && T[d, i] + 1 == T[d, i + 1]) {
+            copy_token(d, i++, redirects, ++r)
+        }
+        if (redirection(d, i)) {
+            copy_token(d, i, redirects, ++r)
+            if (i < end) copy_token(d, ++i, redirects, ++r)
+        } else copy_token(d, i, slot, ++n)
+    }
+    for (i = 1; i <= r; i++) copy_token(redirects, i, slot, ++n)
+    dispatch_head = executable(slot, 1, n)
+    return slot
+}
+# env -S recognizes whitespace, quotes and escapes, not shell operators or substitutions.
+# Unsupported expansion/escape shapes use the shared destructive-evidence fallback.
+function env_words(text, slot,    i, c, nextc, quote, word, active, n) {
+    for (i = 1; i <= length(text) + 1; i++) {
+        c = substr(text, i, 1); nextc = substr(text, i + 1, 1)
+        if (c == "" || (quote == "" && c ~ /[[:space:]]/)) {
+            if (active) { W[slot, ++n] = word; Q[slot, n] = 1; K[slot, n] = "word"; word = ""; active = 0 }
+            continue
+        }
+        if (quote == "" && c == "#" && !active) break
+        if (c == "\\" && quote != "\047") {
+            i++
+            if (nextc == "c") break
+            if (nextc == "_") {
+                if (quote == "") {
+                    if (active) { W[slot, ++n] = word; Q[slot, n] = 1; K[slot, n] = "word"; word = ""; active = 0 }
+                    continue
+                }
+                c = " "
+            } else if (nextc == "n") c = "\n"
+            else if (nextc == "r") c = "\r"
+            else if (nextc == "t") c = "\t"
+            else if (nextc == "v") c = "\v"
+            else if (nextc == "f") c = "\f"
+            else if (nextc ~ /[\\#\$"\047]/) c = nextc
+            else { unclassified(text); return -1 }
+        } else if (c == "\047" || c == "\"") {
+            if (quote == "") { quote = c; active = 1; continue }
+            if (quote == c) { quote = ""; continue }
+        } else if (c == "$" && quote != "\047") { unclassified(text); return -1 }
+        word = word c; active = 1
+    }
+    if (quote != "") { unclassified(text); return -1 }
+    if (active) { W[slot, ++n] = word; Q[slot, n] = 1; K[slot, n] = "word" }
+    return n
+}
+function executable(d, start, end,    i, j, program, option, split_at, text, slot, count, first, expansions) {
+    prefix_uncertain = 0; prefix_fed = 0; dispatch_end = end; i = start
+    while (i <= end) {
+        if (command_prefix(W[d, i])) { i++; continue }
+        program = base(W[d, i])
+        if (!wrapper(program)) return redirection(d, i) ? 0 : i
+        if (member("chroot nsenter", program)) prefix_uncertain = 1
+        if (program == "xargs") prefix_fed = 1
+        i++
+        while (i <= end && W[d, i] ~ /^-/) {
+            option = W[d, i++]
+            if (option == "--") break
+            if (member("--help --version", option) || (program == "command" && member("-v -V", option)) || (program == "busybox" && member("--list --list-full", option))) return 0
+            if ((program == "env" && (option ~ /^-C/ || option ~ /^--chdir(=|$)/)) || (program == "sudo" && (option ~ /^-[DR]/ || option ~ /^--(chdir|chroot)(=|$)/))) prefix_uncertain = 1
+            if (program == "env" && (option ~ /^-[i0v]*S/ || option ~ /^--split-string(=|$)/)) {
+                first = i - 1
+                if (option == "--split-string" || option ~ /^-[i0v]*S$/) text = W[d, i++]
+                else if (option ~ /^--/) text = substr(option, 16)
+                else { split_at = index(option, "S"); text = substr(option, split_at + 1) }
+                if (++expansions > 64) { unclassified(text " " remaining(d, i, end)); return 0 }
+                slot = --dispatch_id; count = env_words(text, slot)
+                if (count < 0) { unclassified(remaining(d, i, end)); return 0 }
+                # Stage the suffix before replacing tokens, including all original redirects.
+                for (j = i; j <= end; j++) copy_token(d, j, slot, count + j - i + 1)
+                for (j = 1; j <= count + end - i + 1; j++) copy_token(slot, j, d, first + j - 1)
+                end += count - (i - first); dispatch_end = end; i = first
+                continue
+            }
+            if (wrapper_value(program, option)) { i++; continue }
+            if (wrapper_flag(program, option) || option ~ /^--[^=]+=/ || (length(option) > 2 && wrapper_value(program, substr(option, 1, 2)))) continue
+            unclassified(remaining(d, i - 1, end)); return 0
+        }
+        if (program == "timeout" || program == "chroot") i++
+    }
+    return 0
+}
+function removal(d, verb, end, cwd, uncertain, findpaths,    i, w, count, options, target, j, sources) {
+    count = 0; options = 1; target = 0; sources = 0
+    for (i = verb + 1; i <= end; i++) {
+        w = W[d, i]
+        if (redirection(d, i)) break
+        if (options && w == "--") { options = 0; continue }
+        if (options && base(W[d, verb]) == "mv") {
+            if (w == "-t" || w == "--target-directory") { target = 1; i++; continue }
+            if (w ~ /^--target-directory=/ || w ~ /^-t./) { target = 1; continue }
+        }
+        if (options && w ~ /^-/) continue
+        O[d, ++count] = w; OQ[d, count] = Q[d, i]; ODQ[d, count] = DQ[d, i]
+    }
+    if (base(W[d, verb]) == "mv" && !target) count--
+    for (j = 1; j <= count; j++) {
+        w = O[d, j]
+        if (w == "{}") {
+            if (findpaths != "") emit(findpaths)
+            else emit("!")
+        } else operand(w, OQ[d, j], cwd, uncertain, ODQ[d, j])
+        sources++
+    }
+}
+function git_clean(d, verb, end, cwd, uncertain, findpaths, depth, fed,    i, j, w, subcommand, dry, paths, skip, alias, name, call, script, option) {
+    subcommand = 0; call = ++git_call
+    for (i = verb + 1; i <= end; i++) {
+        w = W[d, i]
+        if (w == "-C") {
+            cwd = resolved(W[d, ++i], Q[d, i], cwd, uncertain, DQ[d, i])
+            if (cwd == "!") uncertain = 1
+        } else if (w == "-c") {
+            alias = W[d, ++i]
+            if (alias ~ /^alias\.[^=]+=/) {
+                name = alias; sub(/^alias\./, "", name); sub(/=.*/, "", name)
+                sub(/^[^=]*=/, "", alias); A[call, name] = alias
+            }
+        } else if (w ~ /[$`]/) { emit("!"); return }
+        # Git 2.50.1 git.c handle_options(), plus legacy --super-prefix.
+        else if (member("--git-dir --work-tree --namespace --config-env --attr-source --super-prefix --shallow-file", w)) i++
+        else if (w ~ /^--(git-dir|work-tree|namespace|config-env|attr-source|super-prefix|exec-path)=/) continue
+        else if (member("-h --help -v --version --html-path --man-path --info-path --exec-path", w) || w ~ /^--list-cmds=/) return
+        else if (member("-p --paginate -P --no-pager --no-replace-objects --no-lazy-fetch --no-optional-locks --no-advice --bare --literal-pathspecs --no-literal-pathspecs --glob-pathspecs --noglob-pathspecs --icase-pathspecs", w)) continue
+        else if (w ~ /^-/) { unclassified("git " remaining(d, i, end)); return }
+        else { subcommand = i; break }
+    }
+    if (!subcommand) return
+    if (A[call, W[d, subcommand]] != "") {
+        script = A[call, W[d, subcommand]]
+        if (substr(script, 1, 1) == "!") script = substr(script, 2)
+        else script = "git " script
+        for (i = subcommand + 1; i <= end; i++) script = script " " quote_path(W[d, i])
+        parse(script, cwd, uncertain, depth + 1, fed)
+        return
+    }
+    # Once a subcommand is established, later words are its data, never another subcommand.
+    if (W[d, subcommand] != "clean") return
+    dry = 0; paths = 0; skip = 0
+    for (i = subcommand + 1; i <= end; i++) {
+        w = W[d, i]
+        if (K[d, i] ~ /^[<>]/) break
+        # An expansion may supply Git options, even when shell-quoted. Only an
+        # eligible, fully double-quoted environment path has a proven argv shape.
+        if (w ~ /[$`]/ && (!DQ[d, i] || resolved(w, Q[d, i], cwd, uncertain, DQ[d, i]) == "!")) { emit("!"); return }
+        if (!skip && w == "--") { skip = 1; continue }
+        if (!skip && w == "--exclude") { i++; continue }
+        if (!skip && w ~ /^--exclude=/) continue
+        if (!skip && w == "--dry-run") { dry = 1; continue }
+        if (!skip && w ~ /^-[^-]/) {
+            for (j = 2; j <= length(w); j++) {
+                option = substr(w, j, 1)
+                if (option == "e") { if (j == length(w)) i++; break }
+                if (option == "n") dry = 1
+            }
+            continue
+        }
+        if (!skip && w ~ /^-/) continue
+        GP[call, ++paths] = i
+    }
+    if (dry) return
+    if (fed) { emit("!"); return }
+    for (j = 1; j <= paths; j++) {
+        i = GP[call, j]; w = W[d, i]
+        if (w ~ /^:\// || w ~ /^:\(top/) emit(ENVIRON["GSW_ROOT"])
+        else if (w ~ /^:\(/) emit("!")
+        else if (w == "{}" && findpaths != "") emit(findpaths)
+        else operand(w, Q[d, i], cwd, uncertain, DQ[d, i])
+    }
+    if (!paths) operand(".", 0, cwd, uncertain)
+}
+function find_command(d, verb, end, cwd, uncertain, depth, fed,    i, j, start, paths, w, action, have, deleted, p) {
+    paths = ""; have = 0; deleted = 0
+    for (i = verb + 1; i <= end; i++) {
+        w = W[d, i]
+        if (member("-H -L -P", w)) continue
+        # A bare expanded word may be a predicate rather than a starting path;
+        # an unquoted expansion can additionally supply several argument words.
+        if (w ~ /[$`]/ && (!Q[d, i] || (w !~ /\// && environment_prefix(w) == "!"))) { emit("!"); return }
+        if (w ~ /^-/ || w == "!" || w == "(") break
+        p = resolved(w, Q[d, i], cwd, uncertain, DQ[d, i])
+        FP[depth, ++have] = p
+    }
+    if (!have) FP[depth, ++have] = resolved(".", 0, cwd, uncertain)
+    for (j = 1; j <= have; j++) paths = paths (j == 1 ? "" : "\n") FP[depth, j]
+    for (; i <= end; i++) {
+        w = W[d, i]
+        # Arguments to known predicates are data, not possible injected actions.
+        if (member("-name -iname -path -ipath -wholename -iwholename -regex -iregex -lname -ilname -type -xtype -size -user -group -uid -gid -perm -mtime -atime -ctime -mmin -amin -cmin -newer -newermt -maxdepth -mindepth -printf -fprint -fprint0 -samefile -links -inum -fstype -used -context", w)) {
+            i++
+            if (W[d, i] ~ /[$`]/ && !DQ[d, i]) { emit("!"); return }
+            continue
+        }
+        if (w ~ /[$`]/) { emit("!"); return }
+        if (w == "-delete") deleted = 1
+        if (member("-exec -execdir -ok -okdir", w)) {
+            start = i + 1
+            while (++i <= end && W[d, i] != ";" && W[d, i] != "+") {}
+            segment(d, start, i - 1, cwd, uncertain, depth, paths, "", fed)
+        }
+    }
+    if (deleted) {
+        if (fed) emit("!")
+        else for (j = 1; j <= have; j++) emit(FP[depth, j])
+    }
+}
+function stdin_data(d, start, end, pipe,    i, data, kind, fd, target) {
+    data = pipe
+    for (i = start; i <= end; i++) {
+        kind = K[d, i]
+        if (kind !~ /^</) continue
+        fd = descriptor(d, i - 1) ? W[d, i - 1] : 0
+        target = W[d, ++i]
+        if (fd != 0) continue
+        if (kind == "<<<") data = target
+        else if (kind == "<<") data = H[d, i]
+        # Unknown files stay opaque, exactly as for an unwrapped shell. fd-0 aliases
+        # preserve the inherited input, and later redirects replace earlier ones.
+        else if (kind == "<" && member("/dev/stdin /dev/fd/0 /proc/self/fd/0", target)) continue
+        else if (kind == "<&" && target == "0") continue
+        else data = ""
+    }
+    return data
+}
+function descriptor(d, i) { return F[d, i] && T[d, i] + 1 == T[d, i + 1] && (K[d, i + 1] ~ /^[<>]/ || K[d, i + 1] ~ /^&>/) }
+function stdout_pipe(d, head, end, outgoing,    i, fd, target, kind, call) {
+    # |& can feed either descriptor to the consumer; conservatively retain both
+    # routes when explicit descriptor duplication precedes the implicit merge.
+    call = ++redirect_call; RD[call, 1] = 1; RD[call, 2] = outgoing == "|&"
+    for (i = head + 1; i <= end; i++) {
+        kind = K[d, i]
+        if (kind !~ /^>/ && kind !~ /^&>/) continue
+        fd = descriptor(d, i - 1) ? W[d, i - 1] : 1
+        target = W[d, ++i]
+        if (kind ~ /^&>/) { RD[call, 1] = RD[call, 2] = 0; continue }
+        if (kind == ">&") {
+            if (target == "-") RD[call, fd] = 0
+            else if (target ~ /^[0-9]+$/) RD[call, fd] = ((call SUBSEP target) in RD) ? RD[call, target] : -1
+            else RD[call, fd] = -1
+        } else RD[call, fd] = 0
+    }
+    if (RD[call, 1] < 0) unclassified(remaining(d, head, end))
+    return RD[call, 1] == 1
+}
+function reader_data(d, head, end, pipe, outgoing,    program, i, word, data, format) {
+    program = base(W[d, head])
+    if (!member("cat echo printf", program) || !stdout_pipe(d, head, end, outgoing)) return ""
+    if (program == "cat") {
+        for (i = head + 1; i <= end; i++) {
+            if (descriptor(d, i)) continue
+            if (K[d, i] ~ /^[<>]/ || K[d, i] ~ /^&>/) { i++; continue }
+            if (W[d, i] !~ /^-/) return ""
+        }
+        return stdin_data(d, head + 1, end, pipe)
+    }
+    if (program != "echo" && program != "printf") return ""
+    i = head + 1
+    if (program == "printf") {
+        format = W[d, i++]
+        if (format ~ /%/ && format != "%s" && format != "%s\\n") return ""
+        if (format !~ /%/) { gsub(/\\n/, "\n", format); return format }
+    } else while (i <= end && W[d, i] ~ /^-[neE]+$/) i++
+    for (; i <= end; i++) {
+        if (descriptor(d, i)) continue
+        if (K[d, i] ~ /^[<>]/ || K[d, i] ~ /^&>/) { i++; continue }
+        word = W[d, i]
+        if (program == "printf") data = data word (format == "%s\\n" ? "\n" : "")
+        else data = data (data == "" ? "" : " ") word
+    }
+    return data
+}
+function shell_command(d, head, end, cwd, uncertain, depth, pipe, fed,    i, j, word, option, value, enabled, command, stdin, noexec, interactive, script) {
+    command = stdin = noexec = interactive = 0; i = head + 1
+    while (i <= end) {
+        word = W[d, i]
+        if (K[d, i] ~ /^[<>]/ || K[d, i] ~ /^&>/) { i += 2; continue }
+        if (descriptor(d, i)) { i++; continue }
+        if (word == "--" || word == "-") { if (word == "-") stdin = 1; i++; break }
+        if (member("--help --version", word)) return
+        if (member("--rcfile --init-file", word)) { i += 2; continue }
+        if (member("--noprofile --norc --posix --restricted --verbose --debugger --login --noediting --dump-strings --dump-po-strings --pretty-print", word)) { i++; continue }
+        if (word ~ /^[-+][A-Za-z]+$/) {
+            enabled = substr(word, 1, 1) == "-"
+            i++
+            for (j = 2; j <= length(word); j++) {
+                option = substr(word, j, 1)
+                if (option == "c" && enabled) command = 1
+                else if (option == "s") stdin = enabled
+                else if (option == "n") noexec = enabled
+                else if (option == "i") interactive = enabled
+                else if (option == "o" || option == "O") {
+                    value = W[d, i++]
+                    if (option == "o" && value == "noexec") noexec = enabled
+                } else if (option !~ /^[abefhkmptuvxBCEHPTirl]$/) { unclassified(remaining(d, head, end)); return }
+            }
+            continue
+        }
+        if (word ~ /^[-+]/) { unclassified(remaining(d, head, end)); return }
+        break
+    }
+    if (noexec && !interactive) return
+    if (command) { if (i <= end) parse(W[d, i], cwd, uncertain, depth + 1, fed); return }
+    # Standard fd-0 aliases select stdin; ordinary script files remain opaque.
+    if (member("- /dev/stdin /dev/fd/0 /proc/self/fd/0", W[d, i])) stdin = 1
+    if (i <= end && !stdin) return
+    script = stdin_data(d, head + 1, end, pipe)
+    if (script != "") parse(script, cwd, uncertain, depth + 1, fed)
+}
+function segment(d, start, end, cwd, uncertain, depth, findpaths, pipe, fed, outgoing,    head, i, j, k, w, script, context, target) {
+    if (start > end) return ""
+    exception_allowed = simple_tool && d == 0 && start == 1 && end == N[0]
+    # Substitutions/redirections execute in the calling shell, even for unknown programs.
+    if (depth > 4) unclassified(remaining(d, start, end))
+    for (i = start; depth <= 4 && i <= end; i++) {
+        for (k = 1; k <= BC[d, i]; k++) parse(B[d, i, k], cwd, uncertain, depth + 1, 0)
+        if ((K[d, i] == ">" || K[d, i] == "&>") && i < end && W[d, i + 1] !~ /[$`]/ && W[d, i + 1] != "/dev/null") {
+            target = resolved(W[d, i + 1], Q[d, i + 1], cwd, uncertain, DQ[d, i + 1], 1)
+            emit(target)
+        }
+    }
+    d = dispatch(d, start, end); head = dispatch_head; end = dispatch_end
+    context = uncertain || prefix_uncertain; fed = fed || prefix_fed
+    if (!head) return ""
+    if (depth > 4) {
+        unclassified(remaining(d, head, end))
+        if (shell(base(W[d, head]))) unclassified(stdin_data(d, head + 1, end, pipe))
+        return ""
+    }
+    w = base(W[d, head])
+    if (w == "git") git_clean(d, head, end, cwd, context, findpaths, depth, fed)
+    else if (w == "find") find_command(d, head, end, cwd, context, depth + 1, fed)
+    else if (destructive(w)) {
+        # xargs always adds/replaces operands from stdin, even with safe literal operands.
+        if (fed) emit("!")
+        else removal(d, head, end, cwd, context, findpaths)
+    } else if (w == "eval") {
+        script = ""
+        for (j = head + 1; j <= end; j++) script = script (j == head + 1 ? "" : " ") W[d, j]
+        parse(script, cwd, context, depth + 1, fed)
+    } else if (shell(w)) shell_command(d, head, end, cwd, context, depth, pipe, fed)
+    else if (!fed) return reader_data(d, head, end, pipe, outgoing)
+    return ""
+}
+function parse(text, cwd, uncertain, depth, fed,    n, i, start, kind, level, head, path, old, j, pipe, data) {
+    # Lex before the depth fallback so properly terminated heredoc bodies stay data.
+    # A depth slot may be reused by several script words.
+    for (i = 1; i <= N[depth]; i++) { delete W[depth, i]; delete Q[depth, i]; delete DQ[depth, i]; delete CT[depth, i]; delete K[depth, i]; delete H[depth, i]; delete T[depth, i]; delete F[depth, i]; BC[depth, i] = 0 }
+    n = lex(text, depth); N[depth] = n; start = 1; level = 0
+    if (depth == 0) simple_tool = simple_command(text, depth, n)
+    for (i = 1; i <= n + 1; i++) {
+        kind = K[depth, i]
+        if (i <= n && kind != ";" && kind != "\n" && kind != "&" && kind != "&&" && kind != "|" && kind != "|&" && kind != "||" && kind != "(" && kind != ")" && kind != "{" && kind != "}") continue
+        data = segment(depth, start, i - 1, cwd, uncertain, depth, "", pipe, fed, kind)
+        pipe = (kind == "|" || kind == "|&" ? data : "")
+        head = start
+        while (head < i && command_prefix(W[depth, head])) head++
+        if (kind != "|" && kind != "|&" && member("cd pushd popd", W[depth, head])) {
+            old = ""
+            for (j = head + 1; j < i; j++) {
+                if (K[depth, j] == "word" && W[depth, j] ~ /^-/) { old = "!"; break }
+            }
+            j = head + 1
+            path = W[depth, j]
+            if (old == "!" || W[depth, head] == "popd" || path == "") uncertain = 1
+            else {
+                # The sole expansion proof is an initial, top-level cd ~+/literal.
+                # Nested/later destinations never consult an environment prefix.
+                if (depth == 0 && level == 0 && start == 1 && head == 1 && W[depth, head] == "cd" && CT[depth, j] && !uncertain) old = ENVIRON["GSW_CWD"] substr(path, 3)
+                else if (path ~ /[$`~*?\[{}]/) old = "!"
+                else if (path ~ /^\//) old = path
+                else old = uncertain ? "!" : cwd "/" path
+                if (old == "!") uncertain = 1
+                else { cwd = old; uncertain = 0 }
+            }
+        }
+        if (kind == "(") { CWD[depth, ++level] = cwd; UNC[depth, level] = uncertain }
+        if (kind == ")" && level > 0) { cwd = CWD[depth, level]; uncertain = UNC[depth, level--] }
+        start = i + 1
+    }
+}
+function quote_path(path,    q) { q = "\047"; gsub(/\047/, "\047\\\047\047", path); return q path q }
+BEGIN { parse(ENVIRON["GSW_COMMAND"], ENVIRON["GSW_CWD"], 0, 0) }
+AWK
+classifier="$script_directory/cratis-guard-writes.sh"
+repository_root="$cwd"
+while [ ! -e "$repository_root/.git" ]; do
+    if [ "$repository_root" = / ]; then repository_root=''; break; fi
+    repository_root="${repository_root%/*}"
+    [ -n "$repository_root" ] || repository_root=/
+done
+destructive_text="$(GSW_COMMAND="$command_text" GSW_CWD="$cwd" GSW_ROOT="$repository_root" LC_ALL=C awk "$destructive_program" </dev/null)" || parser_failed
+if [ -n "$destructive_text" ]; then
+    destructive_candidates=()
+    while IFS= read -r candidate; do
+        if [ "$candidate" = '!' ]; then
+            printf '%s\n' 'BLOCKED by cratis-guard-shell-writes: a destructive command targets an operand that could not be resolved; use explicit paths or report the intended change.' >&2
+            exit 2
+        fi
+        destructive_candidates[${#destructive_candidates[@]}]="$candidate"
+    done <<<"$destructive_text"
+    destructive_input="$(jq -nc --arg cwd "$cwd" --args '{cwd:$cwd,tool_input:{file_paths:$ARGS.positional}}' -- "${destructive_candidates[@]}")" || parser_failed
+    destructive_references="$("$BASH" "$classifier" --destructive-references <<<"$destructive_input")" || {
+        printf '%s\n' 'BLOCKED by cratis-guard-shell-writes: could not check references (write guard failed).' >&2
+        exit 2
+    }
+    if [ -n "$destructive_references" ]; then
+        destructive_reference="${destructive_references%%$'\n'*}"
+        destructive_reference="${destructive_reference#"$cwd"/}"
+        destructive_reference="${destructive_reference#./}"
+        printf "BLOCKED by cratis-guard-shell-writes: protected reference '%s' (cratis-guard-writes). Use the edit/write tools, or report the intended change; for a read, name literal paths or use the Read/Grep tools.\n" "$destructive_reference" >&2
+        exit 2
+    fi
+fi
 glob_shell_safe=1
 if [[ -n "${BASH_ENV+x}" || -n "${ENV+x}" || -n "${GLOBIGNORE+x}" ]]; then glob_shell_safe=0; fi
 candidates_text="$(GSW_COMMAND="$command_text" GSW_CWD="$cwd" GSW_GLOB_SAFE="$glob_shell_safe" GSW_MODE=targets LC_ALL=C awk "$program" </dev/null)" || parser_failed
 [ -n "$candidates_text" ] || exit 0
+# The lowercase alias of a mixed-case path serves case-insensitive file systems. Drop it only where the
+# longest existing prefix of the original spelling exists and its lowercase spelling provably does not
+# (a case-sensitive lookup that names nothing). Any doubt keeps the alias (return 0).
+alias_needed() {
+    local original="$1" base="" prefix lower parent
+    case "$original" in *[A-Z]*) ;; *) return 0 ;; esac
+    [ -d "$cwd" ] || return 0
+    case "$original" in /*) ;; *) base="$cwd/" ;; esac
+    # A `..` component (also in the working directory) is resolved by the classifier lexically before symlinks.
+    case "/$base$original/" in */../*) return 0 ;; esac
+    prefix="$original"
+    while :; do
+        while [ "${#prefix}" -gt 1 ] && [ "${prefix%/}" != "$prefix" ]; do prefix="${prefix%/}"; done
+        case "$prefix" in "" | /) return 0 ;; esac
+        if [ -e "$base$prefix" ] || [ -L "$base$prefix" ]; then break; fi
+        case "$prefix" in */*) prefix="${prefix%/*}" ;; *) return 0 ;; esac
+    done
+    case "$prefix" in *[A-Z]*) ;; *) return 0 ;; esac
+    lower="${2:0:${#prefix}}"
+    [ "${#lower}" -eq "${#prefix}" ] || return 0
+    if [ -e "$base$lower" ] || [ -L "$base$lower" ]; then return 0; fi
+    # Absence only counts when the nearest existing ancestor of that spelling is a searchable directory
+    # (the lookup then ends in "no such entry", not in a permission or other lookup error).
+    parent="$lower"
+    while :; do
+        case "$parent" in */*) parent="${parent%/*}" ;; *) parent="" ;; esac
+        [ -n "$parent" ] || [ "${lower#/}" = "$lower" ] || parent="/"
+        if [ -z "$parent" ]; then parent="${base:-/}"; break; fi
+        if [ -e "$base$parent" ] || [ -L "$base$parent" ]; then parent="$base$parent"; break; fi
+    done
+    [ -d "$parent" ] && [ -x "$parent" ] || return 0
+    return 1
+}
 candidates=()
-while IFS= read -r candidate; do candidates[${#candidates[@]}]="$candidate"; done <<<"$candidates_text"
+while IFS= read -r candidate; do
+    case "$candidate" in
+        $'\001'*)
+            alias_rest="${candidate#?}"
+            if alias_needed "${alias_rest%%$'\001'*}" "${alias_rest#*$'\001'}"; then candidates[${#candidates[@]}]="${alias_rest#*$'\001'}"; fi
+            ;;
+        *) candidates[${#candidates[@]}]="$candidate" ;;
+    esac
+done <<<"$candidates_text"
+[ "${#candidates[@]}" -gt 0 ] || exit 0
 classifier="$script_directory/cratis-guard-writes.sh"
 [ -f "$classifier" ] || {
     printf '%s\n' 'BLOCKED by cratis-guard-shell-writes: could not check references (write guard is missing).' >&2

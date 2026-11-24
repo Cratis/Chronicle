@@ -20,8 +20,7 @@ public static class EventStoreSubscriptionDefinitionConverters
             SourceEventStore = definition.SourceEventStore,
             EventTypes = [.. definition.EventTypes],
             GenerationDelivery = definition.GenerationDelivery,
-            NamedTags = [.. definition.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value))],
-            SourceNamespaces = [.. definition.SourceNamespaces.Select(_ => _.Value)]
+            NamedTags = [.. definition.NamedTags.Select(tag => new NamedTagDocument(tag.Name.Value, tag.Value))]
         };
 
     /// <summary>
@@ -36,7 +35,6 @@ public static class EventStoreSubscriptionDefinitionConverters
             definition.EventTypes)
         {
             GenerationDelivery = definition.GenerationDelivery,
-            NamedTags = (definition.NamedTags ?? []).Select(tag => new Concepts.Events.NamedTag(new Concepts.Events.TagName(tag.Name), tag.Value)).ToArray(),
-            SourceNamespaces = (definition.SourceNamespaces ?? []).Select(_ => new Concepts.EventStoreNamespaceName(_)).ToArray()
+            NamedTags = (definition.NamedTags ?? []).Select(tag => new Concepts.Events.NamedTag(new Concepts.Events.TagName(tag.Name), tag.Value)).ToArray()
         };
 }

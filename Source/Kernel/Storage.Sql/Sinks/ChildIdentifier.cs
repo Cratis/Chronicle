@@ -60,6 +60,11 @@ internal sealed class ChildIdentifier
     /// <returns>True if it matches, false if not.</returns>
     internal bool Matches(object? stored, bool eagerStoredConversion)
     {
+        if (ChildKeyComparison.RequiresStructuralComparison(stored, Value))
+        {
+            return ChildKeyComparison.AreEqual(stored, Value);
+        }
+
         if (eagerStoredConversion)
         {
             var storedAsString = stored?.ToString();

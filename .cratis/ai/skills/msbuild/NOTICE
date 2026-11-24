@@ -22,11 +22,13 @@ references/binlog-failure-analysis.md:
 - Render unimported binlog-failure-analysis routing reference as plain topic text.
 
 references/build-perf-baseline.md:
+- Add a labelled Cratis note on analyzer ownership, local incremental measurement and gate scripts.
 - Render unimported build-perf-baseline routing reference as plain topic text.
 - Qualify analyzer/warning suppression as timing-only; require the real gate restored.
 - Add or normalize the top Contents list from existing headings; preserve section content.
 
 references/build-perf-diagnostics.md:
+- Add a labelled Cratis note on analyzer ownership per build tuple and keeping generators running.
 - Render unimported build-perf-diagnostics routing reference as plain topic text.
 - Qualify analyzer/warning suppression as timing-only; require the real gate restored.
 - Add or normalize the top Contents list from existing headings; preserve section content.

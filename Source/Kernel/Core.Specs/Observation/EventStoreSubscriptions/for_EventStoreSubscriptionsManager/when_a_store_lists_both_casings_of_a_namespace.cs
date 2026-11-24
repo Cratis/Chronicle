@@ -9,7 +9,6 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionObserverSubscriber.given;
-using Microsoft.Extensions.Logging.Abstractions;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager;
@@ -38,7 +37,7 @@ public class when_a_store_lists_both_casings_of_a_namespace : a_subscriber_with_
         namespaces.GetAll().Returns([(EventStoreNamespaceName)"cratis", (EventStoreNamespaceName)"Cratis"]);
         namespaces.GetCanonical(Arg.Any<EventStoreNamespaceName>()).Returns((EventStoreNamespaceName)"Cratis");
         _managerSilo.AddProbe(_ => namespaces);
-        _managerSilo.AddService<INamespaceCasing>(new NamespaceCasing(_managerSilo.GrainFactory, NullLogger<NamespaceCasing>.Instance));
+        _managerSilo.AddEventStoreStorage();
 
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(_ => _subscribed);

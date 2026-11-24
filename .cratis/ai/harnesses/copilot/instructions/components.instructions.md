@@ -41,8 +41,8 @@ The package root exports **only** setup (`CratisComponentsProvider`, configurati
 | CSS foundation / area sheets | layer order / structural CSS | `@cratis/components/styles/base`, `<subpath>/styles` |
 | Shared types | `JsonSchema`, `Json`, … | `@cratis/components/types` |
 
-At Components 4.26.4, React and React DOM are `^19.0.0`, Arc and Arc React are
-`>=20.3.1 <23`, Fundamentals is `^7.10.3`, and `reflect-metadata` `0.2.2` is required
+The declared peers for React and React DOM are `^19.0.0`, Arc and Arc React are
+`>=20.3.1 <24`, Fundamentals is `^7.10.3`, and `reflect-metadata` `0.2.2` is required
 (import it at the entry point). `tsyringe` `4.10.0` is optional for Components;
 Arc React installs it. `Canvas` and `PivotViewer` need the optional `pixi.js ^8.20.0`
 peer; ordinary pages do not. No `motion-dom` or `motion-utils` resolution pin is needed.
@@ -127,8 +127,8 @@ import { DataPage, MenuItem, Column } from '@cratis/components/DataPage';
 
 `MenuItem` is a declarative Components element read by `DataPage.MenuItems` (use `command`, not
 `onClick`); `disableOnUnselected` greys it out until a row is selected; its `icon` is a **React
-component type** (e.g. a `react-icons` icon), not an `Icon`. See the **cratis-arc-react-page** skill
-for the full page workflow.
+component type** (e.g. a `react-icons` icon), not an `Icon`.
+Read the **cratis-arc-react-page** skill's `references/data-page.md` for typed menu selection, reconciliation, search/server mapping and `landmark`.
 
 ## Composition over Monoliths
 

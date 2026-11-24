@@ -48,7 +48,7 @@ import { styles as organizationchartStyles } from '@primereact/styles/organizati
 import { styles as overlaybadgeStyles } from '@primereact/styles/overlaybadge';
 import { styles as paginatorStyles } from '@primereact/styles/paginator';
 import { styles as panelStyles } from '@primereact/styles/panel';
-import { styles as passwordStyles } from '@primereact/styles/password';
+import { styles as inputpasswordStyles } from '@primereact/styles/inputpassword';
 import { styles as popoverStyles } from '@primereact/styles/popover';
 import { styles as progressbarStyles } from '@primereact/styles/progressbar';
 import { styles as progressspinnerStyles } from '@primereact/styles/progressspinner';
@@ -151,7 +151,7 @@ export const primeReactStyles: ComponentDefaults = {
     'InputGroup.Root': styled(inputgroupStyles),
     'InputNumber.Root': styled(inputnumberStyles),
     'InputOtp.Root': styled(inputotpStyles),
-    'InputPassword': styled(passwordStyles),
+    'InputPassword': styled(inputpasswordStyles),
     'InputTags.Root': styled(inputtagsStyles),
     'InputText': styled(inputtextStyles),
     'Knob.Root': styled(knobStyles),

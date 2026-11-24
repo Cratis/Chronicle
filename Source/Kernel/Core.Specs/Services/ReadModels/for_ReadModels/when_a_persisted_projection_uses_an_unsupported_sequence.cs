@@ -33,7 +33,7 @@ public class when_a_persisted_projection_uses_an_unsupported_sequence : given.al
             Sink = new SinkDefinition(SinkConfigurationId.None, WellKnownSinkTypes.InMemory)
         };
         _readModel.GetDefinition().Returns(_readModelDefinition);
-        _projectionsManager.GetProjectionDefinitions().Returns(_ => Task.FromResult<IEnumerable<ProjectionDefinition>>([_projection]));
+        _projectionsManager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(_ => Task.FromResult<IEnumerable<ProjectionDefinition>>([_projection]));
         _materializedService = new MaterializedReadModels(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance, NamespaceCasingContext.Create());
         _readBindings.Resolve(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelDefinition>(), Arg.Any<ReadModelContainerName?>())
             .Returns(_ => Task.FromException<ReadModelReadBinding>(new BindingReached()));
@@ -51,18 +51,18 @@ public class when_a_persisted_projection_uses_an_unsupported_sequence : given.al
             }
         }
 
-        _projectionsManager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
+        _projectionsManager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         await ReadEveryWay(_missingProjectionErrors);
         _bindingsBeforeSupportedReads = _readBindings.ReceivedCalls().Count();
 
-        _projectionsManager.GetProjectionDefinitions().Returns(_ => Task.FromResult<IEnumerable<ProjectionDefinition>>([_projection]));
+        _projectionsManager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(_ => Task.FromResult<IEnumerable<ProjectionDefinition>>([_projection]));
         _projection = _projection with { Owner = ProjectionOwner.Kernel };
         await ReadPages(_supportedErrors);
         _projection = _projection with { Owner = ProjectionOwner.Client, EventSequenceId = "log" };
         await ReadPages(_supportedErrors);
         _readModelDefinition = _readModelDefinition with { ObserverType = ReadModelObserverType.Reducer };
         _readModel.GetDefinition().Returns(_readModelDefinition);
-        _projectionsManager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
+        _projectionsManager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         await ReadPages(_supportedErrors);
     }
 

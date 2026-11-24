@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Contracts.ReadModels;
@@ -47,7 +48,7 @@ public class a_never_created_projection : an_immediate_projection
             .Returns(_ => CreateCursor());
 
         var projectionsManager = Substitute.For<IProjectionsManager>();
-        projectionsManager.GetProjectionDefinitions().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([CreateProjectionDefinition()]));
+        projectionsManager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([CreateProjectionDefinition()]));
         var grainFactory = Substitute.For<IGrainFactory>();
         grainFactory.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(projectionsManager);
         grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
