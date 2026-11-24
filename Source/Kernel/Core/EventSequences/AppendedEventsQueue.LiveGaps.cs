@@ -19,13 +19,40 @@ public partial class AppendedEventsQueue
     /// </summary>
     readonly ConditionalWeakTable<AppendedEventsQueueObserverSubscription, VerifiedLiveStart> _verifiedLiveStarts = new();
 
+    static EventType[]? LiveGapEventTypes(AppendedEventsQueueObserverSubscription subscription) => subscription.AllEventTypes
+        ? null
+        : [.. subscription.EventTypeIds.Append(GlobalEventTypes.Redaction).Distinct().Select(id => new EventType(id, EventTypeGeneration.First))];
+
+    void RegisterLiveSubscription(AppendedEventsQueueObserverSubscription subscription)
+    {
+        // Subscribe holds the subscriptions lock. Retarget an existing lane immediately, not only when the
+        // next batch is routed, so an in-flight read cannot certify the replaced subscription's filters.
+        _subscriptions.Add(subscription);
+        if (_lanes.TryGetValue(subscription.ObserverKey, out var lane)) lane.Subscription = subscription;
+    }
+
     async Task<bool> VerifyLiveStart(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
-        var subscription = CurrentSubscriptionOf(lane);
-        if (_storage is null || _verifiedLiveStarts.TryGetValue(subscription, out _)) return true;
+        if (_storage is null) return true;
+        while (!lane.IsClosed && !_catchupCancellationToken.IsCancellationRequested)
+        {
+            var subscription = CurrentSubscriptionOf(lane);
+            var result = await TryVerifySubscriptionStart(lane, events, subscription);
+            if (result.HasValue) return result.Value;
+        }
 
+        return false;
+    }
+
+    async Task<bool?> TryVerifySubscriptionStart(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events, AppendedEventsQueueObserverSubscription subscription)
+    {
         try
         {
+            lock (_subscriptionsLock)
+            {
+                if (ReferenceEquals(subscription, lane.Subscription) && _verifiedLiveStarts.TryGetValue(subscription, out _)) return true;
+            }
+
             return await VerifySubscriptionStart(lane, events, subscription);
         }
         catch (OperationCanceledException) when (_catchupCancellationToken.IsCancellationRequested)
@@ -34,45 +61,75 @@ public partial class AppendedEventsQueue
         }
         catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
         {
-            SpillFailedSubscriptionToCatchup(subscription, [.. events]);
+            lock (_subscriptionsLock)
+            {
+                if (!ReferenceEquals(subscription, lane.Subscription)) return null;
+                SpillFailedSubscriptionToCatchup(subscription, [.. events]);
+            }
+
             LaneFailed(exception);
             return false;
         }
     }
 
-    async Task<bool> VerifySubscriptionStart(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events, AppendedEventsQueueObserverSubscription subscription)
+    async Task<bool?> VerifySubscriptionStart(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events, AppendedEventsQueueObserverSubscription subscription)
     {
-        var first = events[0].Context.SequenceNumber;
         var state = await lane.Observer.GetState();
-        var hasGap = state is { RunningState: ObserverRunningState.Active, NextEventSequenceNumber.IsActualValue: true } &&
-            await HasMatchingEventBefore(subscription, state.NextEventSequenceNumber, first);
-        if (!ReferenceEquals(subscription, CurrentSubscriptionOf(lane))) return await VerifyLiveStart(lane, events);
-        if (hasGap)
+        if (state is not { RunningState: ObserverRunningState.Active, NextEventSequenceNumber.IsActualValue: true })
         {
-            // Stop all delivery, including pages, before asking the normal catch-up path to acquire/adopt
-            // job ownership. A job already running cannot make this later live batch safe to dispatch.
-            lock (_subscriptionsLock) SpillLaggingSubscriptionToCatchup(subscription);
-            return false;
+            return CompleteLiveStart(lane, subscription, null, false);
         }
 
-        // A stale batch below the cursor says nothing about the subscription's first new live event.
-        if (state is not null && first < state.NextEventSequenceNumber) return true;
-        _verifiedLiveStarts.GetValue(subscription, _ => new(first));
-        return true;
+        var eligible = events.Where(@event => @event.Context.SequenceNumber >= state.NextEventSequenceNumber && MatchesSubscription(subscription, @event)).ToArray();
+        if (eligible.Length == 0) return CompleteLiveStart(lane, subscription, null, false);
+
+        var hasGap = await HasMissingMatchingEvent(subscription, state.NextEventSequenceNumber, eligible);
+        return CompleteLiveStart(lane, subscription, eligible[^1].Context.SequenceNumber, hasGap);
     }
 
-    async Task<bool> HasMatchingEventBefore(AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber from, EventSequenceNumber first)
+    bool? CompleteLiveStart(AppendedEventsQueueObserverLane lane, AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber? through, bool hasGap)
     {
-        if (from >= first) return false;
+        lock (_subscriptionsLock)
+        {
+            if (lane.IsClosed) return false;
+            if (!ReferenceEquals(subscription, lane.Subscription)) return null;
+            if (hasGap)
+            {
+                // Partition recovery does not prove every matching hole belongs to that partition. Conservatively
+                // stop live delivery; normal catch-up acquires/adopts ownership without trusting the later batch.
+                SpillLaggingSubscriptionToCatchup(subscription, AppendedEventsQueueSpillReasons.LiveDeliveryGap);
+                return false;
+            }
+
+            // A stale-only batch (or an inactive observer) proves no new boundary and must not consume the check.
+            if (through is not null) _verifiedLiveStarts.GetValue(subscription, _ => new(through));
+            return true;
+        }
+    }
+
+    async Task<bool> HasMissingMatchingEvent(AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber from, AppendedEvent[] eligible)
+    {
+        var last = eligible[^1].Context.SequenceNumber;
+        if (from >= last) return false;
+        var delivered = eligible.Select(@event => @event.Context.SequenceNumber).ToHashSet();
         var storage = _storage!.GetEventStore(_eventSequenceKey.EventStore)
             .GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceKey.EventSequenceId);
-        using var cursor = await storage.GetFromSequenceNumber(from, cancellationToken: _catchupCancellationToken);
+        using var cursor = await storage.GetRange(
+            from,
+            last - 1,
+            eventSourceId: null,
+            eventTypes: LiveGapEventTypes(subscription),
+            tags: subscription.Filters?.Tags.Select(tag => new Tag(tag)),
+            eventSourceType: subscription.Filters?.EventSourceType,
+            eventStreamType: subscription.Filters?.EventStreamType,
+            cancellationToken: _catchupCancellationToken);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
             {
-                if (@event.Context.SequenceNumber >= first) return false;
-                if (MatchesSubscription(subscription, @event)) return true;
+                // Coalescing can also hide a hole between two new events in the same batch. Already-present
+                // live events are not holes, but every other stored match must be recovered before dispatch.
+                if (MatchesSubscription(subscription, @event) && !delivered.Contains(@event.Context.SequenceNumber)) return true;
             }
         }
 
@@ -83,6 +140,6 @@ public partial class AppendedEventsQueue
     /// Cache the proven no-gap boundary for this subscription epoch. Subsequent batches need no storage/state
     /// or namespace-wide job lookup: the lane is serial, and a spill closes it before a hole can be crossed.
     /// </summary>
-    /// <param name="Through">The first live sequence number verified against the observer's cursor.</param>
+    /// <param name="Through">The last cursor-eligible live sequence number verified against the observer's cursor.</param>
     sealed record VerifiedLiveStart(EventSequenceNumber Through);
 }
