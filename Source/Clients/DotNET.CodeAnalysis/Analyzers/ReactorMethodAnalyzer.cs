@@ -42,8 +42,17 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "Chronicle uses the [EventType] attribute to route incoming events to the correct reactor method. Without it, the event cannot be matched and the handler will never be called. Add [EventType(\"<guid>\")] to the class used as the event parameter in this method.");
 
+    static readonly DiagnosticDescriptor AsyncVoidRule = new(
+        id: DiagnosticIds.ReactorMethodMustNotBeAsyncVoid,
+        title: "Reactor handler must not be async void",
+        messageFormat: "Reactor handler '{0}' is async void; return Task so Chronicle can await completion and observe failures",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "An async void reactor handler returns before its asynchronous work completes and prevents Chronicle from observing completion and exceptions.");
+
     /// <inheritdoc/>
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(SignatureRule, ReturnTypeRule, EventTypeRule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(SignatureRule, ReturnTypeRule, EventTypeRule, AsyncVoidRule);
 
     /// <inheritdoc/>
     public override void Initialize(AnalysisContext context)
@@ -87,17 +96,39 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // What makes a method a handler is that its first parameter is an event type - that is what Chronicle's
-        // own discovery keys on, over public and non-public instance methods alike. Deciding it on the return
-        // type instead meant every private `async Task` helper on a reactor, the commonest shape there is, was
-        // analyzed as a handler: its first parameter was demanded to be an event type and its ordinary value-type
-        // arguments were reported as unresolvable dependencies. A helper returning a string or a domain record
-        // escaped, purely because its return type fell outside the supported set.
-        var isHandler = evidence.IsEventType(firstParamType, context.Compilation);
+        AnalyzeHandler(context, methodSymbol, evidence);
+    }
 
-        // A method whose return type is not a supported reactor return shape is only a handler mistake when
-        // its first parameter is unambiguously an event type. Chronicle silently skips such methods at
-        // discovery, so flag them here.
+    static void AnalyzeHandler(SymbolAnalysisContext context, IMethodSymbol methodSymbol, ExplicitRegistrationEvidence evidence)
+    {
+        // An event first parameter, not a Task return type, distinguishes handlers from ordinary helpers.
+        var isHandler = evidence.IsEventType(methodSymbol.Parameters[0].Type, context.Compilation);
+        if (!ValidateReturnType(context, methodSymbol, evidence, isHandler))
+        {
+            return;
+        }
+
+        if (!ValidateEventParameter(context, methodSymbol, isHandler))
+        {
+            return;
+        }
+
+        if (!ValidateDependencies(context, methodSymbol))
+        {
+            return;
+        }
+
+        if (IsPublicInstanceAsyncVoid(methodSymbol))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(AsyncVoidRule, methodSymbol.Locations.FirstOrDefault(), methodSymbol.Name));
+        }
+    }
+
+    static bool IsPublicInstanceAsyncVoid(IMethodSymbol method) =>
+        method.DeclaredAccessibility == Accessibility.Public && !method.IsStatic && method.IsAsync && method.ReturnsVoid;
+
+    static bool ValidateReturnType(SymbolAnalysisContext context, IMethodSymbol methodSymbol, ExplicitRegistrationEvidence evidence, bool isHandler)
+    {
         if (!IsSupportedReturnType(methodSymbol, context.Compilation, evidence))
         {
             if (isHandler)
@@ -109,29 +140,36 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
                     methodSymbol.ReturnType.ToDisplayString()));
             }
 
-            return;
+            return false;
         }
 
+        return true;
+    }
+
+    static bool ValidateEventParameter(SymbolAnalysisContext context, IMethodSymbol methodSymbol, bool isHandler)
+    {
         if (!isHandler)
         {
-            // The first parameter is not an event, so Chronicle will never dispatch to this method and its
-            // parameters are nobody's dependencies. It is only worth reporting where the author has said
-            // otherwise: a marker that has no meaning anywhere but on a handler.
+            // A handler-only marker says this was intended as a handler, rather than an ordinary helper.
             if (HasHandlerOnlyMarker(methodSymbol))
             {
                 context.ReportDiagnostic(Diagnostic.Create(
                     EventTypeRule,
-                    firstParam.Locations.FirstOrDefault(),
-                    firstParamType.Name,
+                    methodSymbol.Parameters[0].Locations.FirstOrDefault(),
+                    methodSymbol.Parameters[0].Type.Name,
                     methodSymbol.Name));
             }
 
-            return;
+            return false;
         }
 
-        // Parameters after the event are dependencies: the EventContext, a read model, or a service.
-        // A primitive, value type, or string can never be a read model and is almost never a service, so it
-        // is reported as an unresolvable parameter.
+        return true;
+    }
+
+    static bool ValidateDependencies(SymbolAnalysisContext context, IMethodSymbol methodSymbol)
+    {
+        // Reference types may come from DI or be read models; primitives and strings cannot be resolved.
+        var parameters = methodSymbol.Parameters;
         var eventContextType = context.Compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName);
         for (var index = 1; index < parameters.Length; index++)
         {
@@ -148,9 +186,11 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
                     methodSymbol.Locations.FirstOrDefault(),
                     methodSymbol.Name);
                 context.ReportDiagnostic(diagnostic);
-                break;
+                return false;
             }
         }
+
+        return true;
     }
 
     /// <summary>
@@ -194,25 +234,19 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         return IsSupportedSyncSideEffectReturnType(returnType, compilation, evidence);
     }
 
-    static bool IsSupportedSyncSideEffectReturnType(ITypeSymbol returnType, Compilation compilation, ExplicitRegistrationEvidence evidence)
+    static bool IsSupportedSyncSideEffectReturnType(ITypeSymbol returnType, Compilation compilation, ExplicitRegistrationEvidence evidence) =>
+        evidence.IsEventType(returnType, compilation) ||
+        WellKnownTypes.HasReactorSideEffectAttribute(returnType) ||
+        IsKnownType(returnType, WellKnownTypes.EventForEventSourceIdName, compilation) ||
+        IsKnownType(returnType, WellKnownTypes.EventsWithConcurrencyScopesName, compilation) ||
+        IsSupportedSideEffectSequence(returnType, compilation, evidence);
+
+    static bool IsKnownType(ITypeSymbol type, string metadataName, Compilation compilation) =>
+        SymbolEqualityComparer.Default.Equals(type, compilation.GetTypeByMetadataName(metadataName));
+
+    static bool IsSupportedSideEffectSequence(ITypeSymbol returnType, Compilation compilation, ExplicitRegistrationEvidence evidence)
     {
-        if (evidence.IsEventType(returnType, compilation) || WellKnownTypes.HasReactorSideEffectAttribute(returnType))
-        {
-            return true;
-        }
-
         var eventForEventSourceId = compilation.GetTypeByMetadataName(WellKnownTypes.EventForEventSourceIdName);
-        if (eventForEventSourceId != null && SymbolEqualityComparer.Default.Equals(returnType, eventForEventSourceId))
-        {
-            return true;
-        }
-
-        var eventsWithConcurrencyScopes = compilation.GetTypeByMetadataName(WellKnownTypes.EventsWithConcurrencyScopesName);
-        if (eventsWithConcurrencyScopes != null && SymbolEqualityComparer.Default.Equals(returnType, eventsWithConcurrencyScopes))
-        {
-            return true;
-        }
-
         if (returnType is IArrayTypeSymbol array)
         {
             return array.IsSZArray && IsSupportedSequenceElement(array.ElementType, eventForEventSourceId, compilation, evidence);

@@ -92,6 +92,7 @@ Rule IDs are not a continuous sequence. The table includes the retired CHR0047 r
 | [CHR0080](CHR0080) | A relation of a graph view must lead to a view | Error | A relation member's type, or the item type of its collection, is not a view |
 | [CHR0081](CHR0081) | A graph view cannot be a node or an edge | Error | A type is both a view and a node or an edge |
 | [CHR0082](CHR0082) | Scenario terminal task is discarded | Warning | A known scenario setup or delivery task is discarded rather than observed |
+| [CHR0083](CHR0083) | Reactor handler must not be async void | Warning | An eligible public instance reactor handler is async void, so Chronicle cannot await its work |
 
 ## Explicit registration evidence
 
@@ -112,6 +113,7 @@ These rules offer code fixes:
 - [CHR0028](CHR0028) removes the redundant `.AutoMap()` call.
 - [CHR0029](CHR0029) removes the redundant `.Set(...).To(...)` mapping.
 - [CHR0062](CHR0062) adds `EventSourceId` to the concurrency dimensions. Use this fix when the condition should apply to one event source rather than across sources.
+- [CHR0083](CHR0083) changes an async-void reactor handler's return type to `global::System.Threading.Tasks.Task`, preserving its body. Fix All is supported.
 
 ## Installation
 

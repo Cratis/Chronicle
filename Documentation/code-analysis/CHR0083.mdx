@@ -1,0 +1,27 @@
+---
+title: "CHR0083: Reactor handler must not be async void"
+description: "CHR0083 warns when an eligible Cratis Chronicle reactor handler is async void, preventing Chronicle from awaiting completion and observing failures."
+---
+
+## Rule description
+
+An `async void` handler returns to Chronicle before its asynchronous work completes. Chronicle cannot await that work or observe its exceptions through the handler's return value. CHR0083 reports public, non-static async-void reactor methods whose first parameter is a known event type and whose remaining parameters satisfy the reactor dependency checks.
+
+The rule uses the same event-type and explicit-registration evidence as the existing reactor method checks. A reactor can implement `IReactor` or be explicitly registered; its event parameter can have `[EventType]` or be explicitly registered.
+
+## Severity
+
+Warning
+
+## How to fix
+
+Change the handler from `async void` to `async Task`. Keep its body and await its asynchronous operations. The **Return Task from async reactor handler** code fix replaces only the return type with `global::System.Threading.Tasks.Task`, preserving the body, attributes, parameters and comments. The fully qualified name also works when another type named `Task` is in scope. Fix All is supported.
+
+Synchronous `void`, `Task` and `Task<T>` handlers are unaffected. The rule does not diagnose private helpers, static methods, unrelated classes, or methods without a known event first parameter. Existing missing-event and invalid-dependency diagnostics remain separate; a method rejected by those checks does not also receive CHR0083.
+
+## Related rules
+
+- [CHR0004](CHR0004): Reactor method has a parameter that cannot be resolved.
+- [CHR0005](CHR0005): Reactor event parameter must have `[EventType]` attribute.
+- [CHR0054](CHR0054): Reactor method has an unsupported return type.
+- [CHR0082](CHR0082): Scenario terminal tasks must not be discarded.

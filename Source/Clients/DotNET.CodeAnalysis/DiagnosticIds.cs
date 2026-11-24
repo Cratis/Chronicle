@@ -413,4 +413,9 @@ public static class DiagnosticIds
     /// A scenario terminal task is discarded.
     /// </summary>
     public const string NonAwaitedScenarioTerminal = "CHR0082";
+
+    /// <summary>
+    /// An otherwise eligible reactor handler returns async void.
+    /// </summary>
+    public const string ReactorMethodMustNotBeAsyncVoid = "CHR0083";
 }
