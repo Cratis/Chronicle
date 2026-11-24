@@ -31,6 +31,7 @@ public class when_sending_the_state_and_job_step_types_between_silos : given.the
     }
 
     [Fact] void should_find_the_types() => JobAndStatePayloads.All.Count.ShouldBeGreaterThan(20);
+    [Fact] void should_find_the_state_of_a_grain_with_typed_state() => JobAndStatePayloads.All.ShouldContain(typeof(Storage.EventSequences.EventSequenceState));
     [Fact] void should_have_a_serializer_for_every_type() => _without_serializer.ShouldBeEmpty();
     [Fact] void should_keep_the_last_handled_event_of_a_step_result() => _result.LastHandledEventSequenceNumber.ShouldEqual(new EventSequenceNumber(42));
     [Fact] void should_keep_the_last_scanned_event_of_a_step_result() => _result.LastScannedEventSequenceNumber.ShouldEqual(new EventSequenceNumber(44));

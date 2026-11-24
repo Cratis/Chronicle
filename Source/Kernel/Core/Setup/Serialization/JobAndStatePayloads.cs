@@ -6,7 +6,7 @@ using System.Reflection;
 namespace Cratis.Chronicle.Setup.Serialization;
 
 /// <summary>
-/// Finds the types a grain persists as its state and the types a job step is declared with, which cross silos or storage
+/// Finds the types a grain persists as its state, through <see cref="Grain{TGrainState}"/> or an injected persistent state, and the types a job step is declared with, which cross silos or storage
 /// without being the parameter or return type of a grain method.
 /// </summary>
 /// <remarks>
@@ -50,6 +50,12 @@ internal static class JobAndStatePayloads
 
             for (var current = type.BaseType; current is not null; current = current.BaseType)
             {
+                if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(Grain<>))
+                {
+                    Add(types, current.GetGenericArguments()[0]);
+                    continue;
+                }
+
                 if (current.IsGenericType && current.GetGenericTypeDefinition().Name.StartsWith("JobStep`3", StringComparison.Ordinal))
                 {
                     foreach (var argument in current.GetGenericArguments())
