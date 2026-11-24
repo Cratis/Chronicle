@@ -272,28 +272,25 @@ public class Observers
     public IReadOnlyList<ObserverSubscriptionKind> EffectiveDormantKinds => DormantKinds.Count > 0 ? DormantKinds : _defaultDormantKinds;
 
     /// <summary>
-    /// Gets how many seconds pass at most before a dormant observer is woken, whether or not an event arrived.
+    /// Gets how many seconds pass at most before the safety net of an appended events queue looks for observers it holds no
+    /// live subscription for that have an event waiting.
     /// </summary>
     /// <remarks>
-    /// Defaults to 900 seconds (15 minutes). Each observer's interval is jittered so wake-ups do not line up. It bounds
-    /// how long a lost wake-up can delay delivery to a dormant observer. At each interval the queue compares the
-    /// persisted cursor of the observer with the tail of the event types it observes and wakes it only when an event is
-    /// waiting, or when the cursor cannot be compared; <see cref="DormantSafetyNetFullWake"/> sets how often it is woken
-    /// regardless. The checks are driven by the appended events queue, so no timer or activation is held for a dormant
-    /// observer. Values below 1 select the default. A server-level setting (decision 0034).
+    /// Defaults to 900 seconds (15 minutes). Each queue's interval is jittered so passes do not line up. It bounds how long
+    /// a lost wake-up can delay delivery to an observer without an activation. A pass compares the persisted cursor of each
+    /// such observer with the tail of the event types it observes and wakes it only when an event is waiting, or when the
+    /// tail cannot be read. The passes are driven by the queue, so no timer or activation is held for a dormant observer.
+    /// Values below 1 select the default. A server-level setting.
     /// </remarks>
     public int DormantSafetyNet { get; init; } = 900;
 
     /// <summary>
-    /// Gets how many seconds pass at most before a dormant observer is woken whether or not an event is waiting for it.
+    /// Gets the most seconds between two wake-ups of an observer that stays without a live subscription after it was woken.
     /// </summary>
     /// <remarks>
-    /// The comparison made every <see cref="DormantSafetyNet"/> interval finds a lost wake-up, but it cannot see what
-    /// only a running observer can: a client that left without notice, a definition that another registration took
-    /// over, a record that no longer matches the observer. This unconditional wake finds those. Defaults to 3600
-    /// seconds (60 minutes). Values below 1 select the default; a value below <see cref="DormantSafetyNet"/> is raised
-    /// to it, which wakes every dormant observer at every interval as before the comparison existed. A server-level
-    /// setting (decision 0034).
+    /// An observer whose client is gone cannot take its subscription again, so it is not woken for every event: the first
+    /// repeat waits a minute and each one after it twice as long, up to this value. Defaults to 3600 seconds (60 minutes).
+    /// Values below 1 select the default. A server-level setting.
     /// </remarks>
     public int DormantSafetyNetFullWake { get; init; } = 3600;
 
@@ -331,13 +328,11 @@ public class Observers
     public int DormantResumeMaxEvents { get; init; } = 1000;
 
     /// <summary>
-    /// Gets how often each appended events queue compares its live subscriptions with the stored durable ones.
+    /// Gets how often each appended events queue compared its live subscriptions with the stored durable ones.
     /// </summary>
     /// <remarks>
-    /// Defaults to 15 minutes. The comparison reads the observer states of the queue's event store and namespace once
-    /// per interval and only counts disagreements; it never changes a subscription. It runs only while
-    /// <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Shadow"/>. A zero or negative value
-    /// falls back to the default.
+    /// No longer used: the queues no longer compare recorded subscriptions with their live ones. Kept so existing
+    /// configuration still loads.
     /// </remarks>
     public TimeSpan DurableSubscriptionCheckInterval { get; init; } = TimeSpan.FromMinutes(15);
 

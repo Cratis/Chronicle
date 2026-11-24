@@ -19,6 +19,17 @@ public partial class AppendedEventsQueue
 {
     readonly IObservers? _routing;
 
+    /// <summary>
+    /// Sets which queue of which event sequence this is. Done on activation, and by specifications that construct the queue directly.
+    /// </summary>
+    /// <param name="eventSequenceKey">The key of the event sequence the queue belongs to.</param>
+    /// <param name="queueId">The index of the queue within the event sequence.</param>
+    internal void Identify(Concepts.EventSequences.EventSequenceKey eventSequenceKey, int queueId)
+    {
+        _eventSequenceKey = eventSequenceKey;
+        _queueId = queueId;
+    }
+
     async Task<ObserverRoutingTable?> GetShadowRoutingTable()
     {
         if (_routing is null || _eventSequenceKey == Concepts.EventSequences.EventSequenceKey.NotSet)
