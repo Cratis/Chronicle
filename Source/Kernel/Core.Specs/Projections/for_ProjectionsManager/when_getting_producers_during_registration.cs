@@ -11,6 +11,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionsManager;
 public class when_getting_producers_during_registration : given.a_projections_manager_grain
 {
     TaskCompletionSource<IEnumerable<EventStoreNamespaceName>> _namespacesReady;
+    TaskCompletionSource _registrationIsWaitingForNamespaces;
     ProjectionDefinition _incoming;
     IEnumerable<ProjectionDefinition> _result;
 
@@ -19,7 +20,14 @@ public class when_getting_producers_during_registration : given.a_projections_ma
         _incoming = CreateDefinition("in-flight", "read-model") with { EventSequenceId = "system" };
         _readModelDefinitions = [CreateReadModelDefinition(_incoming.ReadModel)];
         _namespacesReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _namespaces.GetAll().Returns(Task.FromResult<IEnumerable<EventStoreNamespaceName>>([]), _namespacesReady.Task);
+        _registrationIsWaitingForNamespaces = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _namespaces.GetAll().Returns(
+            _ => Task.FromResult<IEnumerable<EventStoreNamespaceName>>([]),
+            _ =>
+            {
+                _registrationIsWaitingForNamespaces.TrySetResult();
+                return _namespacesReady.Task;
+            });
         _eventStoreStorage.Projections.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns([]);
     }
 
@@ -28,7 +36,7 @@ public class when_getting_producers_during_registration : given.a_projections_ma
         var registration = _grain.Register([_incoming]);
         try
         {
-            while (_namespaces.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(_namespaces.GetAll)) < 2) await Task.Yield();
+            await _registrationIsWaitingForNamespaces.Task;
             _result = await _grain.GetProducersFor("read-model", null);
         }
         finally
