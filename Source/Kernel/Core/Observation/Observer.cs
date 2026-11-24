@@ -285,12 +285,6 @@ public partial class Observer(
         PublishFailedPartitionsGauge();
     }
 
-    void ActivationCheckpoint(string completedStep, CancellationToken cancellationToken)
-    {
-        _activationStep = completedStep;
-        cancellationToken.ThrowIfCancellationRequested();
-    }
-
     /// <inheritdoc/>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
@@ -873,6 +867,12 @@ public partial class Observer(
         _subscription.IsSubscribed &&
         !_subscription.EventTypes.Any() &&
         !State.SubscribesToAllEvents;
+
+    void ActivationCheckpoint(string completedStep, CancellationToken cancellationToken)
+    {
+        _activationStep = completedStep;
+        cancellationToken.ThrowIfCancellationRequested();
+    }
 
     async Task Deactivate(DeactivationReason reason, CancellationToken cancellationToken)
     {
