@@ -34,6 +34,16 @@ namespace Cratis.Chronicle.Services.Observation;
 internal static class ClientSubscriptionKeeper
 {
     /// <summary>
+    /// The longest a single check may run before it is given up as failed.
+    /// </summary>
+    /// <remarks>
+    /// A check asks an observer, and the observer can be on a silo that is going down: the call then waits for the response
+    /// timeout. A check still running makes a departure ask for nothing, so one hung call would leave the subscription it
+    /// was meant to restore unrestored for as long as the call hangs, and nothing is delivered to the client meanwhile.
+    /// </remarks>
+    internal static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// Keep the subscription until the stream closes.
     /// </summary>
     /// <param name="keep">Keeps the subscription in place, restoring it if it was lost. Returns whether it was found intact.</param>
@@ -42,6 +52,7 @@ internal static class ClientSubscriptionKeeper
     /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
     /// <param name="logger">The <see cref="ILogger"/> to log with.</param>
     /// <param name="cancellationToken">Cancelled when the stream closes.</param>
+    /// <param name="checkTimeout">The longest a single check may run; <see cref="CheckTimeout"/> when not given.</param>
     /// <returns>A task that completes when the stream has closed.</returns>
     public static async Task KeepWhileConnected(
         Func<Task<bool>> keep,
@@ -49,8 +60,10 @@ internal static class ClientSubscriptionKeeper
         ISiloSupervisor supervisor,
         ConnectionId connectionId,
         ILogger logger,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? checkTimeout = default)
     {
+        var timeout = checkTimeout ?? CheckTimeout;
         var key = $"client-subscription:{connectionId}:{Guid.NewGuid()}";
         var checking = 0;
 
@@ -65,7 +78,7 @@ internal static class ClientSubscriptionKeeper
 
             try
             {
-                var intact = await Keep(keep, connectionId, logger, cancellationToken);
+                var intact = await Keep(keep, connectionId, logger, timeout, cancellationToken);
                 schedule.Checked(intact);
                 return true;
             }
@@ -206,11 +219,11 @@ internal static class ClientSubscriptionKeeper
             return await isIntact();
         };
 
-    static async Task<bool> Keep(Func<Task<bool>> keep, ConnectionId connectionId, ILogger logger, CancellationToken cancellationToken)
+    static async Task<bool> Keep(Func<Task<bool>> keep, ConnectionId connectionId, ILogger logger, TimeSpan timeout, CancellationToken cancellationToken)
     {
         try
         {
-            return await keep();
+            return await keep().WaitAsync(timeout, TimeProvider.System);
         }
         catch (Exception ex)
         {

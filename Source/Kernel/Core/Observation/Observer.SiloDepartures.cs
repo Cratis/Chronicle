@@ -37,6 +37,11 @@ public partial class Observer
             return;
         }
 
+        if (await RecoverCatchUpLostWithSilo())
+        {
+            return;
+        }
+
         if (!await QueueLostSubscription())
         {
             return;
@@ -44,6 +49,33 @@ public partial class Observer
 
         logger.RestoringLiveSubscriptionAfterSiloDeparture(State.NextEventSequenceNumber);
         await TransitionTo<Routing>();
+    }
+
+    /// <summary>
+    /// Routes an observer whose catch-up job went down with the silo that ran it.
+    /// </summary>
+    /// <returns>True if the observer was routed again, false if it was left alone.</returns>
+    /// <remarks>
+    /// An observer that holds partitions for catch-up, or holds live delivery back for a catch-up that walks every partition,
+    /// delivers nothing new until that catch-up reports back. When the job was lost with its silo it never does, and only the
+    /// watchdog - a minute apart by default - would find it, long after the clients waiting on the events gave up. The pass
+    /// that already follows a departure looks for exactly that and routes the observer, which starts the catch-up again.
+    /// </remarks>
+    async Task<bool> RecoverCatchUpLostWithSilo()
+    {
+        if (_isPreparingCatchup || (!_walkingEveryPartition && State.CatchingUpPartitions.Count == 0))
+        {
+            return false;
+        }
+
+        if (await HasRunningCatchupJob() || !await IsObservingWithNoTransitionInProgress())
+        {
+            return false;
+        }
+
+        logger.WatchdogCatchupJobMissing();
+        await TransitionTo<Routing>();
+        return true;
     }
 
     bool IsSettledLiveObserver() =>

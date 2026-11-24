@@ -31,6 +31,11 @@ public class a_client_subscription_keeper : Specification
     protected Task _keeping = Task.CompletedTask;
     protected int _unregistered;
 
+    /// <summary>
+    /// Gets the longest a check may run; specifications that hang a check override it to keep it short.
+    /// </summary>
+    protected virtual TimeSpan? CheckTimeout => null;
+
     void Establish()
     {
         _supervisor = Substitute.For<ISiloSupervisor>();
@@ -72,7 +77,8 @@ public class a_client_subscription_keeper : Specification
             _supervisor,
             "the-client",
             NullLogger.Instance,
-            _streamClosed.Token);
+            _streamClosed.Token,
+            CheckTimeout);
         var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
         while (_periodicCheck is null && DateTimeOffset.UtcNow < deadline)
         {
