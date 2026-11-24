@@ -2,10 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Namespaces;
+using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelSinkProvenance;
 
@@ -29,5 +31,5 @@ public class when_another_store_has_a_restricted_producer_in_the_same_database :
 
     async Task Because() => _error = await Catch.Exception(() => _provenance.EnsureReadable(Store, EventStoreNamespaceName.Default, _model));
 
-    [Fact] void should_refuse_the_first_normal_read_before_any_payload_work() => _error.ShouldBeOfExactType<Grpc.Core.RpcException>();
+    [Fact] void should_refuse_the_first_normal_read_before_any_payload_work() => _error.ShouldBeOfExactType<RpcException>();
 }

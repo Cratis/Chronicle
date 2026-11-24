@@ -62,7 +62,8 @@ public class an_http_statistics_reader : Services.ReadModels.for_ReadModels.give
         _httpContext = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(
-                [new Claim("sub", _administratorId.ToString()), new Claim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User)], "spec")),
+                [new Claim("sub", _administratorId.ToString()), new Claim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User)],
+                "spec")),
             RequestServices = _services
         };
         _accessor.HttpContext = _httpContext;
@@ -85,11 +86,11 @@ public class an_http_statistics_reader : Services.ReadModels.for_ReadModels.give
         _reader = new(_service, _grainFactory, Substitute.For<IEventStoreInitialization>());
     }
 
-    void Destroy()
+    async Task Destroy()
     {
         _accessor.HttpContext = _previousHttpContext;
         SystemStoreGuard.InProcessServices = _previousServices;
-        _services.Dispose();
+        await _services.DisposeAsync();
     }
 
     static ExpandoObject Row(string @namespace, long count)

@@ -12,7 +12,7 @@ public class when_many_callers_acquire_the_same_cold_route : given.a_cached_data
 
     async Task Because()
     {
-        using var cache = new SinkProvenanceCache(_clock);
+        await using var cache = new SinkProvenanceCache(_clock);
         _raw.Hold = true;
         var handle = cache.Bind("cold", () => _raw);
         var callers = Enumerable.Range(0, 100).Select(_ => handle.GetLease()).ToArray();

@@ -13,14 +13,20 @@ public sealed class ControlledProvenance : ISinkProvenanceStorage
     SinkProvenanceState? _captured;
 
     public bool Hold { get; set; }
+
     public int Reads { get; set; }
+
     public bool HasHeldRead => _held is not null;
 
     public async Task<SinkProvenanceState> ReadState()
     {
         Reads++;
         var state = await _storage.ReadState();
-        if (!Hold) return state;
+        if (!Hold)
+        {
+            return state;
+        }
+
         _captured = state;
         _held = new();
         return await _held.Task.ConfigureAwait(false);
@@ -34,6 +40,8 @@ public sealed class ControlledProvenance : ISinkProvenanceStorage
     }
 
     public Task<SinkProvenanceState> CompleteInventory(bool restrictedEvidence) => _storage.CompleteInventory(restrictedEvidence);
+
     public Task<bool> IsQuarantined() => _storage.IsQuarantined();
+
     public Task MarkQuarantined() => _storage.MarkQuarantined();
 }

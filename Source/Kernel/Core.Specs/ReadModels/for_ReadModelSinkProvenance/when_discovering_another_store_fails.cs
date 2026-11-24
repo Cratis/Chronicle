@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelSinkProvenance;
 
@@ -22,6 +23,6 @@ public class when_discovering_another_store_fails : given.a_provenance_inventory
         _completed = (await Marker(EventStoreNamespaceName.Default).ReadState()).IsComplete;
     }
 
-    [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<Grpc.Core.RpcException>();
+    [Fact] void should_fail_closed() => _error.ShouldBeOfExactType<RpcException>();
     [Fact] void should_not_complete_a_partially_discovered_inventory() => _completed.ShouldBeFalse();
 }

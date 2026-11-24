@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Cratis.Chronicle.Storage.Sinks;
+using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelLeaseObservation;
 
@@ -27,5 +27,5 @@ public class when_a_mark_arrives_while_a_page_is_held : for_SinkProvenanceCache.
     }
 
     [Fact] void should_discard_the_held_payload() => _delivered.ShouldEqual(0);
-    [Fact] void should_end_only_after_observing_the_mark() => _error.ShouldBeOfExactType<Grpc.Core.RpcException>();
+    [Fact] void should_end_only_after_observing_the_mark() => _error.ShouldBeOfExactType<RpcException>();
 }

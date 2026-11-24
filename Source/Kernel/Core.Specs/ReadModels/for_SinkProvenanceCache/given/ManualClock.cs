@@ -9,7 +9,9 @@ public sealed class ManualClock : TimeProvider
     long _timestamp;
 
     public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
     public override long GetTimestamp() => _timestamp;
+
     public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch.AddTicks(_timestamp);
 
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
@@ -23,7 +25,10 @@ public sealed class ManualClock : TimeProvider
     public void Advance(TimeSpan elapsed)
     {
         _timestamp += elapsed.Ticks;
-        foreach (var timer in _timers.ToArray()) timer.Tick();
+        foreach (var timer in _timers.ToArray())
+        {
+            timer.Tick();
+        }
     }
 
     sealed class ManualTimer(ManualClock clock, TimerCallback callback, object? state) : ITimer
@@ -41,12 +46,21 @@ public sealed class ManualClock : TimeProvider
 
         public void Tick()
         {
-            if (_disposed || clock.GetTimestamp() < _due) return;
+            if (_disposed || clock.GetTimestamp() < _due)
+            {
+                return;
+            }
+
             _due = _period == Timeout.InfiniteTimeSpan ? long.MaxValue : clock.GetTimestamp() + _period.Ticks;
             callback(state);
         }
 
         public void Dispose() => _disposed = true;
-        public ValueTask DisposeAsync() { Dispose(); return ValueTask.CompletedTask; }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return ValueTask.CompletedTask;
+        }
     }
 }

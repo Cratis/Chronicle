@@ -3,8 +3,8 @@
 
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.ReadModels;
-using Cratis.Chronicle.Storage.Sinks;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_MaterializedReadModels.when_getting_instances;

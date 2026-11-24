@@ -25,5 +25,5 @@ public class a_cached_database : Specification
         _raw.Reads = 0;
     }
 
-    void Destroy() => _cache.Dispose();
+    async Task Destroy() => await _cache.DisposeAsync();
 }

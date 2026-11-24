@@ -11,7 +11,7 @@ public class when_a_remote_silo_marks_the_database : given.a_cached_database
 
     async Task Because()
     {
-        using var other = new SinkProvenanceCache(_clock);
+        await using var other = new SinkProvenanceCache(_clock);
         var remote = other.Bind("remote-route", () => _raw);
         await remote.GetLease();
         await remote.MarkQuarantined();
