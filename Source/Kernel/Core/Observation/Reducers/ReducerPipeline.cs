@@ -113,6 +113,19 @@ public partial class ReducerPipeline(
         return snapshot;
     }
 
+    ExpandoObject CreateComparisonResult(ExpandoObject result, object? storedSubject, JsonSchema schema)
+    {
+        if (storedSubject is not null || schema.HasSchemaMetadata()) return result;
+
+        // SQL does not persist subjects for unprotected models. Compare without that transient metadata.
+        var snapshot = new ExpandoObject();
+        foreach (var (name, value) in result.Where(property => property.Key != WellKnownProperties.Subject))
+        {
+            ((IDictionary<string, object?>)snapshot)[name] = value;
+        }
+        return snapshot;
+    }
+
     /// <summary>
     /// Releases the state a partition's read model holds for the reducer.
     /// </summary>
@@ -196,8 +209,9 @@ public partial class ReducerPipeline(
             storedState = encryptedState;
 
             var initialForComparison = CreateComparisonSnapshot(initial, stored.Subject, schema);
+            var resultForComparison = CreateComparisonResult(encryptedState, stored.Subject, schema);
 
-            if (!objectComparer.Compare(initialForComparison, encryptedState, out var differences))
+            if (!objectComparer.Compare(initialForComparison, resultForComparison, out var differences))
             {
                 // The comparer has no child identity for reducer-owned collections. A nested,
                 // unindexed array path cannot be applied safely by sinks, so replace that collection.
