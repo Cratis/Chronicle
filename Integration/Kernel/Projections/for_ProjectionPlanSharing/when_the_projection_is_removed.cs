@@ -18,7 +18,7 @@ public class when_the_projection_is_removed(context context) : Given<context>(co
     {
         public bool StillDefined { get; private set; }
         public int Plans { get; private set; }
-        public Dictionary<string, given.SharedOrder> After { get; } = [];
+        public Dictionary<string, string> After { get; } = [];
 
         async Task Because()
         {
@@ -34,18 +34,18 @@ public class when_the_projection_is_removed(context context) : Given<context>(co
                 (await _stores[@namespace].EventLog.Append(OrderId, new given.SharedLineAdded(OrderId, SkuIn(@namespace, 99), 99))).IsSuccess.ShouldBeTrue();
             }
 
-            // Nothing is left to project it; give a surviving observer ample time to prove it wrong.
+            // Nothing is left to project it, and the public read refuses a read model with no producer, so read the stored order from the sink; give a surviving observer ample time to prove it wrong.
             // Task.Delay: proving an absence; there is no fact to await that something did not happen.
             await Task.Delay(TimeSpan.FromSeconds(5));
             foreach (var @namespace in Namespaces)
             {
-                After[@namespace] = await WaitForOrder(@namespace, _ => true);
+                After[@namespace] = await StoredOrderIn(@namespace);
             }
         }
 
         public bool NoNamespaceProjectedTheLaterEvent => Namespaces.All(@namespace =>
-            After[@namespace].Lines.Count() == LinesIn(@namespace) &&
-            After[@namespace].Lines.All(line => line.Sku != SkuIn(@namespace, 99)));
+            After[@namespace].Contains(SkuIn(@namespace, LinesIn(@namespace)), StringComparison.Ordinal) &&
+            !After[@namespace].Contains(SkuIn(@namespace, 99), StringComparison.Ordinal));
     }
 
     [Fact] void should_no_longer_define_the_projection() => Context.StillDefined.ShouldBeFalse();

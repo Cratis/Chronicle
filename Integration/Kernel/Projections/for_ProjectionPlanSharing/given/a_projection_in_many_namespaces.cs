@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.EventSequences;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Storage;
 using KernelChronicleBuilder = Cratis.Chronicle.Configuration.IChronicleBuilder;
 
 namespace Cratis.Chronicle.Kernel.Integration.Projections.for_ProjectionPlanSharing.given;
@@ -26,6 +29,7 @@ public class a_projection_in_many_namespaces(ProjectionPlanSharingFixture fixtur
     protected string _storeName;
     protected string _projectionId;
     protected Dictionary<string, IEventStore> _stores = [];
+    protected ReadModelDefinition _readModelDefinition;
 
     public override bool AutoDiscoverArtifacts => false;
 
@@ -43,6 +47,20 @@ public class a_projection_in_many_namespaces(ProjectionPlanSharingFixture fixtur
     /// </summary>
     protected int PlansHeld => ((Cratis.Chronicle.Projections.Engine.ProjectionFactory)Services.GetRequiredService<Cratis.Chronicle.Projections.Engine.IProjectionFactory>())
         .CachedPlanCountFor(_storeName, _projectionId);
+
+    /// <summary>
+    /// Reads the stored order of a namespace straight from the sink, as text, bypassing the public read policy that
+    /// refuses a read of a projection-backed read model nothing produces any more.
+    /// </summary>
+    /// <param name="namespace">The namespace to read in.</param>
+    /// <returns>The stored order serialized, or empty when nothing is stored.</returns>
+    protected async Task<string> StoredOrderIn(string @namespace)
+    {
+        var storage = Services.GetRequiredService<IStorage>().GetEventStore(new Concepts.EventStoreName(_storeName));
+        var sink = await storage.GetNamespace(new Concepts.EventStoreNamespaceName(@namespace)).Sinks.GetFor(_readModelDefinition);
+        var stored = await sink.FindInPrimaryOrDefault(new Key(OrderId, ArrayIndexers.NoIndexers));
+        return stored is null ? string.Empty : System.Text.Json.JsonSerializer.Serialize(stored);
+    }
 
     protected static string CustomerNameIn(string @namespace) => $"customer-in-{@namespace}";
 
@@ -157,6 +175,9 @@ public class a_projection_in_many_namespaces(ProjectionPlanSharingFixture fixtur
         {
             await AppendOrderIn(@namespace);
         }
+
+        var definitions = await Services.GetRequiredService<IStorage>().GetEventStore(new Concepts.EventStoreName(_storeName)).ReadModels.GetAll();
+        _readModelDefinition = definitions.Single(definition => definition.Identifier.Value.Contains(nameof(SharedOrder), StringComparison.Ordinal));
 
         foreach (var @namespace in Namespaces)
         {

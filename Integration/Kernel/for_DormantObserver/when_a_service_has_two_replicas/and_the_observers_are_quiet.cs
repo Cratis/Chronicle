@@ -81,6 +81,7 @@ public class and_the_observers_are_quiet(context context) : Given<context>(conte
             var appended = await _store.EventLog.Append("source", new given.DormantObserverEvent("second"));
             SecondEvent = appended.SequenceNumber;
             await WaitForHandled(1);
+
             // Task.Delay: proving an absence; the standby must not handle the event, so there is no fact to await.
             await Task.Delay(TimeSpan.FromSeconds(3));
             HandledByTheStandby = [.. Reactor.Handled];

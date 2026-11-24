@@ -38,6 +38,7 @@ public class and_many_observers_are_behind(context context) : Given<context>(con
             while (DateTimeOffset.UtcNow < until)
             {
                 MostLiveCatchUpJobs = Math.Max(MostLiveCatchUpJobs, await CountLiveCatchUpJobs());
+
                 // Task.Delay: sampling interval while observing the most catch-up jobs alive at once over a fixed window.
                 await Task.Delay(500);
             }

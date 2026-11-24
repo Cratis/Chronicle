@@ -52,5 +52,7 @@ public class two_dormant_observers(DormantSafetyNetFixture fixture) : a_dormant_
 
     protected int AlertCalls(IReactorHandler handler) => Calls.Count(nameof(Cratis.Chronicle.Observation.Alerts.IObserverAlerts), null, handler.Id.Value);
 
+    protected int ObserverCalls(IReactorHandler handler) => Calls.Count(nameof(Cratis.Chronicle.Observation.IObserver), null, handler.Id.Value);
+
     protected int SafetyNetWakes(IReactorHandler handler) => Calls.Count(nameof(Cratis.Chronicle.Observation.IObserver), nameof(Cratis.Chronicle.Observation.IObserver.RunWatchdogOnce), handler.Id.Value);
 }

@@ -15,7 +15,8 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.when_the_safet
 /// The safety net of the appended-events queue wakes only the dormant observers that are behind (#6114). One observer has a
 /// persisted cursor that is behind the tail of its event type, which is what a wake-up lost on its way to a dormant observer
 /// leaves behind; the other has caught up and must neither be woken nor have its alerts reported (#6113). The behind observer
-/// re-subscribes its client while it catches up, which starts a new alert lifecycle and reports it; that is not asserted here.
+/// is woken by whichever path reaches it first: the safety net or its client taking the subscription up again, so the wake is
+/// asserted as the observer being called at all and the delivery of its event, not as a safety net pass. It re-subscribes its client while it catches up, which starts a new alert lifecycle and reports it; that is not asserted here.
 /// </summary>
 /// <param name="context">The specification context.</param>
 [Collection(given.DormantSafetyNetCollection.Name)]
@@ -24,6 +25,8 @@ public class and_one_observer_is_behind(context context) : Given<context>(contex
     public class context(given.DormantSafetyNetFixture fixture) : given.two_dormant_observers(fixture)
     {
         public int AlphaWakesBefore;
+        public int AlphaObserverCallsBefore;
+        public int AlphaObserverCalls;
         public int BetaWakesBefore;
         public int BetaAlertCallsBefore;
         public int AlphaWakes;
@@ -36,6 +39,7 @@ public class and_one_observer_is_behind(context context) : Given<context>(contex
         {
             AlphaWakesBefore = SafetyNetWakes(_alpha);
             BetaWakesBefore = SafetyNetWakes(_beta);
+            AlphaObserverCallsBefore = ObserverCalls(_alpha);
             BetaAlertCallsBefore = AlertCalls(_beta);
 
             // Put the cursor of the alpha observer back to its event, as if the wake-up that followed the append had been lost.
@@ -68,6 +72,7 @@ public class and_one_observer_is_behind(context context) : Given<context>(contex
             await Task.Delay(TimeSpan.FromSeconds(25));
 
             AlphaWakes = SafetyNetWakes(_alpha) - AlphaWakesBefore;
+            AlphaObserverCalls = ObserverCalls(_alpha) - AlphaObserverCallsBefore;
             BetaWakes = SafetyNetWakes(_beta) - BetaWakesBefore;
             BetaAlertCalls = AlertCalls(_beta) - BetaAlertCallsBefore;
             AlphaEventHandledTimes = Alpha.Handled.Count(_ => _ == _alphaEvent);
@@ -75,7 +80,7 @@ public class and_one_observer_is_behind(context context) : Given<context>(contex
         }
     }
 
-    [Fact] void should_wake_the_observer_that_is_behind() => Context.AlphaWakes.ShouldBeGreaterThan(0);
+    [Fact] void should_wake_the_observer_that_is_behind() => Context.AlphaObserverCalls.ShouldBeGreaterThan(0);
     [Fact] void should_deliver_the_event_the_observer_was_behind_on() => Context.AlphaEventHandledTimes.ShouldEqual(2);
     [Fact] void should_not_wake_the_observer_that_is_up_to_date() => Context.BetaWakes.ShouldEqual(0);
     [Fact] void should_not_deliver_anything_again_to_the_observer_that_is_up_to_date() => Context.BetaHandled.Length.ShouldEqual(1);
