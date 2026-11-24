@@ -37,5 +37,5 @@ public class when_inventory_fails : given.a_provenance_inventory
     [Fact] void should_attempt_to_persist_the_inventory() => _markers[(EventStoreNamespaceName.Default, _model.Sink.Configuration)].Received().CompleteInventory(true);
 
     static void ShouldRefuse(Exception? error) =>
-        (error is RpcException { StatusCode: StatusCode.PermissionDenied, Status.Detail: SystemStoreAccess.Refused }).ShouldBeTrue();
+        (error is RpcException { StatusCode: StatusCode.PermissionDenied } rpc && string.Equals(rpc.Status.Detail, SystemStoreAccess.Refused, StringComparison.Ordinal)).ShouldBeTrue();
 }

@@ -20,7 +20,7 @@ public class when_a_quiet_source_is_revoked : for_SinkProvenanceCache.given.a_ca
         var binding = new ReadModelReadBinding(Substitute.For<ISink>(), null) { Lease = _lease };
         using var subscription = binding.Guard(source).Subscribe(_ => _delivered++, error => _ended.TrySetResult(error));
         await _cached.MarkQuarantined();
-        _error = await _ended.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _error = await _ended.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _subscribed = source.HasObservers;
         source.OnNext(42);
     }

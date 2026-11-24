@@ -26,9 +26,9 @@ public class when_a_buffered_page_outlives_the_clean_snapshot : for_SinkProvenan
         _paused = !_delivered.Task.IsCompleted;
         var refresh = _cached.ReadState();
         _raw.Release(); // This response started two seconds ago; it cannot grant a new window.
-        await refresh.WaitAsync(TimeSpan.FromSeconds(5));
+        await refresh.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _clock.Advance(TimeSpan.FromSeconds(1));
-        _value = await _delivered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        _value = await _delivered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
     [Fact] void should_hold_the_page_while_the_snapshot_is_stale() => _paused.ShouldBeTrue();
