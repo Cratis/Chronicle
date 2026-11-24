@@ -6,6 +6,8 @@
   href: short-lived-processes.md
 - name: Foreign event stores
   href: foreign-event-stores.md
+- name: Namespace incarnation binding
+  href: namespace-incarnation-binding.md
 - name: Serverless mode
   href: serverless-mode.md
 - name: Explicit artifact registration

@@ -8,6 +8,8 @@ The Cratis Chronicle .NET client uses `IEventStoreNamespaceResolver` to select a
 The resolver APIs on this page are .NET-specific. For HTTP requests, use [ASP.NET Core namespace resolution](./aspnetcore), which covers request headers, subdomains, and web-host configuration.
 :::
 
+Namespace resolution selects a name, not a captured namespace lifetime for a decision. If work can overlap removal and recreation, see [Bind a .NET writer to a namespace incarnation](../clients/dotnet/namespace-incarnation-binding.md).
+
 ## IEventStoreNamespaceResolver
 
 <ChronicleClientTabs snippet="namespaces/dotnet-client/resolver-shape" />
