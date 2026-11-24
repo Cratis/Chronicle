@@ -22,6 +22,7 @@ public partial class KeyExpressionResolvers(IEventValueProviderExpressionResolve
 {
     readonly IKeyExpressionResolver[] _resolvers =
         [
+            new FlatCompositeKeyExpressionResolver(eventValueProviderExpressionResolvers, defaultKeyResolvers),
             new CompositeKeyExpressionResolver(eventValueProviderExpressionResolvers, defaultKeyResolvers),
             new EventValueKeyExpressionResolver(eventValueProviderExpressionResolvers, defaultKeyResolvers)
         ];

@@ -128,6 +128,12 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
             context.Changeset.SetInitialized(true);
         }
 
+        // The parts of a flat composite key are properties of the read model: a new instance gets them from its key, and an existing one has to agree with it.
+        if (context.Key is FlatCompositeKey flatKey)
+        {
+            FlatCompositeKeyState.Seed(context.Changeset, initialState, flatKey);
+        }
+
         context.Changeset.InitialState = initialState;
 
         return context with { NeedsInitialState = needsInitialState };
@@ -141,6 +147,17 @@ public class SetInitialState(ISink sink, ILogger<SetInitialState> logger) : ICan
 
     void SetKeyForInitialState(IProjection projection, ExpandoObject initialState, Key key)
     {
+        if (key is FlatCompositeKey flat)
+        {
+            // There is no single key property: the parts are the identity, and the initial model state must not decide their values.
+            foreach (var part in flat.Parts.Keys)
+            {
+                ((IDictionary<string, object?>)initialState).Remove(part);
+            }
+
+            return;
+        }
+
         // TODO: We should improve how we work with Keys and not just "magic strings" like id or _id (MongoDB):
         // https://github.com/Cratis/Chronicle/issues/1387
         // https://github.com/Cratis/Chronicle/issues/1630

@@ -185,6 +185,32 @@ public class ProjectionValidator(
         return char.ToLowerInvariant(value[0]) + value[1..];
     }
 
+    static bool IsFlat(CompositeKeySyntax? key) => key is { Type.Length: 0 };
+
+    static IEnumerable<CompositeKeySyntax> RootFlatKeys(ProjectionSyntax projection) =>
+        projection.Blocks.SelectMany<ProjectionBlockSyntax, CompositeKeySyntax?>(block => block switch
+        {
+            FromSyntax from => [from.Key as CompositeKeySyntax],
+            RemoveWithSyntax removeWith => [removeWith.PartsKey],
+            _ => []
+        }).Where(IsFlat)!;
+
+    static IEnumerable<CompositeKeySyntax> FlatKeysBelowRoot(IEnumerable<ProjectionBlockSyntax> blocks) =>
+        blocks.SelectMany(block => block switch
+        {
+            ChildrenSyntax children => FlatKeysIn(children.Blocks),
+            NestedSyntax nested => FlatKeysIn(nested.Blocks),
+            _ => []
+        });
+
+    static IEnumerable<CompositeKeySyntax> FlatKeysIn(IEnumerable<ProjectionBlockSyntax> blocks) =>
+        blocks.SelectMany<ProjectionBlockSyntax, CompositeKeySyntax?>(block => block switch
+        {
+            FromSyntax from => [from.Key as CompositeKeySyntax],
+            RemoveWithSyntax removeWith => [removeWith.PartsKey],
+            _ => []
+        }).Where(IsFlat).Cast<CompositeKeySyntax>().Concat(FlatKeysBelowRoot(blocks));
+
     static void CheckDuplicateEvent(string eventName, SourceLocation location, HashSet<string> seenEvents, CompilerErrors errors)
     {
         if (!seenEvents.Add(eventName))
@@ -197,8 +223,10 @@ public class ProjectionValidator(
     {
         if (projection.Key is CompositeKeySyntax projectionCompositeKey)
         {
-            ValidateCompositeKey(projectionCompositeKey, readModelSchema, errors);
+            ValidateAnyCompositeKey(projectionCompositeKey, readModelSchema, errors);
         }
+
+        ValidateFlatCompositeKeys(projection, errors);
 
         foreach (var block in projection.Blocks)
         {
@@ -246,7 +274,7 @@ public class ProjectionValidator(
     {
         if (from.Key is CompositeKeySyntax compositeKey)
         {
-            ValidateCompositeKey(compositeKey, readModelSchema, errors);
+            ValidateAnyCompositeKey(compositeKey, readModelSchema, errors);
         }
 
         foreach (var eventSpec in from.Events)
@@ -513,6 +541,102 @@ public class ProjectionValidator(
         }
 
         return true;
+    }
+
+    void ValidateAnyCompositeKey(CompositeKeySyntax compositeKey, JsonSchema readModelSchema, CompilerErrors errors)
+    {
+        if (IsFlat(compositeKey))
+        {
+            ValidateFlatCompositeKey(compositeKey, readModelSchema, errors);
+        }
+        else
+        {
+            ValidateCompositeKey(compositeKey, readModelSchema, errors);
+        }
+    }
+
+    void ValidateFlatCompositeKeys(ProjectionSyntax projection, CompilerErrors errors)
+    {
+        foreach (var below in FlatKeysBelowRoot(projection.Blocks))
+        {
+            errors.Add("A flat composite key identifies the root read model; it cannot be used in children, joins or nested scopes", below.Location.Line, below.Location.Column);
+        }
+
+        var rootKeys = RootFlatKeys(projection).ToArray();
+        var isFlat = rootKeys.Length > 0 || IsFlat(projection.Key as CompositeKeySyntax);
+        if (!isFlat)
+        {
+            return;
+        }
+
+        var expected = rootKeys.FirstOrDefault();
+        foreach (var other in rootKeys.Skip(1))
+        {
+            if (!other.Parts.Select(_ => _.Property).ToHashSet(StringComparer.Ordinal).SetEquals(expected!.Parts.Select(_ => _.Property)))
+            {
+                errors.Add("Every root handler of a flat composite key must supply the same parts", other.Location.Line, other.Location.Column);
+            }
+        }
+
+        foreach (var block in projection.Blocks)
+        {
+            switch (block)
+            {
+                case FromSyntax { Key: not CompositeKeySyntax { Type.Length: 0 } } from:
+                    errors.Add("A projection identified by a flat composite key needs the key parts in every root from", from.Location.Line, from.Location.Column);
+                    break;
+                case RemoveWithSyntax { PartsKey: null } removeWith:
+                    errors.Add("A projection identified by a flat composite key needs the key parts in every root remove with", removeWith.Location.Line, removeWith.Location.Column);
+                    break;
+                case RemoveViaJoinSyntax or ClearWithSyntax or JoinSyntax or ChildrenSyntax or NestedSyntax:
+                    errors.Add($"'{block.GetType().Name}' is not supported in a projection identified by a flat composite key", block.Location.Line, block.Location.Column);
+                    break;
+            }
+        }
+    }
+
+    void ValidateFlatCompositeKey(CompositeKeySyntax compositeKey, JsonSchema readModelSchema, CompilerErrors errors)
+    {
+        var parts = compositeKey.Parts.ToArray();
+        if (parts.Length < FlatCompositeKeyExpression.MinimumParts)
+        {
+            errors.Add($"A flat composite key needs at least {FlatCompositeKeyExpression.MinimumParts} parts", compositeKey.Location.Line, compositeKey.Location.Column);
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var part in parts)
+        {
+            if (!seen.Add(part.Property))
+            {
+                errors.Add($"Key part '{part.Property}' is given more than once", part.Location.Line, part.Location.Column);
+                continue;
+            }
+
+            if (part.Property.StartsWith('_') || part.Property.Equals("id", StringComparison.OrdinalIgnoreCase) || part.Property.Contains('.'))
+            {
+                errors.Add($"'{part.Property}' is not supported as a flat composite key part; use a simple root property name that is not 'id' and does not start with '_'", part.Location.Line, part.Location.Column);
+                continue;
+            }
+
+            var property = readModelSchema.Properties.FirstOrDefault(_ => _.Key.Equals(part.Property, StringComparison.Ordinal)).Value;
+            if (property is null)
+            {
+                errors.Add($"Property '{part.Property}' not found in the read model{CompilerErrorSuggestions.ForProperty(part.Property, readModelSchema)}", part.Location.Line, part.Location.Column);
+                continue;
+            }
+
+            var actual = property.ActualSchema;
+            if (actual.Type.HasFlag(JsonObjectType.Object) || actual.Type.HasFlag(JsonObjectType.Array))
+            {
+                errors.Add($"Flat composite key part '{part.Property}' must be a scalar property of the read model", part.Location.Line, part.Location.Column);
+                continue;
+            }
+
+            if (part.Expression is not (PathExpressionSyntax or EventContextExpressionSyntax or EventSourceIdExpressionSyntax or CausedByExpressionSyntax or LiteralExpressionSyntax))
+            {
+                errors.Add($"Expression type '{part.Expression.GetType().Name}' is not supported in composite keys", part.Location.Line, part.Location.Column);
+            }
+        }
     }
 
     void ValidateCompositeKey(CompositeKeySyntax compositeKey, JsonSchema readModelSchema, CompilerErrors errors)

@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
@@ -73,6 +74,20 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             }
 
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));
+        }));
+
+    /// <inheritdoc/>
+    public KeyResolver FlatComposite(IReadOnlyList<(string Property, ValueProvider<AppendedEvent> Provider)> parts) =>
+        PageKeyResolver.Pure(CreateKeyResolver(nameof(FlatComposite), (_, _, @event) =>
+        {
+            var key = new ExpandoObject();
+            var values = (IDictionary<string, object?>)key;
+            foreach (var (property, provider) in parts)
+            {
+                values[property] = provider(@event) ?? throw new FlatCompositeKeyPartHasNoValue(property);
+            }
+
+            return Task.FromResult(KeyResolverResult.Resolved(new FlatCompositeKey(key, ArrayIndexers.NoIndexers)));
         }));
 
     /// <summary>
