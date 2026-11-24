@@ -173,13 +173,7 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         var eventContextType = context.Compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName);
         for (var index = 1; index < parameters.Length; index++)
         {
-            var parameterType = parameters[index].Type;
-            if (eventContextType != null && SymbolEqualityComparer.Default.Equals(parameterType, eventContextType))
-            {
-                continue;
-            }
-
-            if (parameterType.IsValueType || parameterType.SpecialType == SpecialType.System_String)
+            if (IsUnresolvableDependency(parameters[index].Type, eventContextType))
             {
                 var diagnostic = Diagnostic.Create(
                     SignatureRule,
@@ -191,6 +185,16 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
         }
 
         return true;
+    }
+
+    static bool IsUnresolvableDependency(ITypeSymbol parameterType, INamedTypeSymbol? eventContextType)
+    {
+        if (SymbolEqualityComparer.Default.Equals(parameterType, eventContextType))
+        {
+            return false;
+        }
+
+        return parameterType.IsValueType || parameterType.SpecialType == SpecialType.System_String;
     }
 
     /// <summary>

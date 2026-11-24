@@ -139,19 +139,33 @@ public class NonAwaitedAssertionAnalyzer : DiagnosticAnalyzer
 
     static bool IsScenarioResultDiscarded(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
     {
-        var expression = OutermostParentheses(invocation);
-        if (expression.Parent is AssignmentExpressionSyntax assignment && assignment.Right == expression &&
-            semanticModel.GetOperation(assignment) is ISimpleAssignmentOperation { Target: IDiscardOperation })
-        {
-            expression = OutermostParentheses(assignment);
-        }
-
+        var expression = EnclosingDiscardAssignmentOrSelf(OutermostParentheses(invocation), semanticModel);
         return expression.Parent switch
         {
             ExpressionStatementSyntax => true,
             ArrowExpressionClauseSyntax arrow => ReturnsVoid(arrow.Parent),
             _ => false
         };
+    }
+
+    static ExpressionSyntax EnclosingDiscardAssignmentOrSelf(ExpressionSyntax expression, SemanticModel semanticModel)
+    {
+        if (expression.Parent is not AssignmentExpressionSyntax assignment)
+        {
+            return expression;
+        }
+
+        if (assignment.Right != expression)
+        {
+            return expression;
+        }
+
+        if (semanticModel.GetOperation(assignment) is not ISimpleAssignmentOperation { Target: IDiscardOperation })
+        {
+            return expression;
+        }
+
+        return OutermostParentheses(assignment);
     }
 
     static ExpressionSyntax OutermostParentheses(ExpressionSyntax expression)
