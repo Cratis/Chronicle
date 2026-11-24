@@ -494,8 +494,11 @@ interface [GrainInterfaceType("Cratis.Chronicle.Observation.States.IReplayCandid
 class [GrainType("replaycandidaterecommendation")] Cratis.Chronicle.Observation.States.ReplayCandidateRecommendation
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Supervisors.IObserverSupervisor")] Cratis.Chronicle.Observation.Supervisors.IObserverSupervisor [Version(0)]
+  DA72536B: Bind(Cratis.Chronicle.Concepts.EventStoreNamespaceName, Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription) -> Task
   01D19B3A: FindBehind() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.ObserverKey>>
+  62C1C9F6: GetBinding(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task<Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription>
   31745D0D: Publish() -> Task<Cratis.Chronicle.Observation.ObserverRouting.ObserverRevisionAcknowledgements>
+  16802526: Unbind(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
 
 class [GrainType("observersupervisor")] Cratis.Chronicle.Observation.Supervisors.ObserverSupervisor
 

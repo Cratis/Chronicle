@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Observation.ObserverRouting;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.Supervisors;
 
@@ -26,7 +27,26 @@ public class ObserverSupervisor(
     IObserverBehindCheck behindCheck,
     IStorage storage) : Grain, IObserverSupervisor
 {
+    readonly Dictionary<EventStoreNamespaceName, ObserverDurableSubscription> _bindings = [];
     ObserverSupervisorKey _key = new(EventStoreName.NotSet, ObserverId.Unspecified);
+
+    /// <inheritdoc/>
+    public Task Bind(EventStoreNamespaceName @namespace, ObserverDurableSubscription binding)
+    {
+        _bindings[@namespace] = binding;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Unbind(EventStoreNamespaceName @namespace)
+    {
+        _bindings.Remove(@namespace);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<ObserverDurableSubscription?> GetBinding(EventStoreNamespaceName @namespace) =>
+        Task.FromResult(_bindings.TryGetValue(@namespace, out var binding) ? binding : null);
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
