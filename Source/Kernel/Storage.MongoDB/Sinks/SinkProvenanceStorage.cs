@@ -75,11 +75,30 @@ public class SinkProvenanceStorage(IMongoDatabase database) : ISinkProvenanceSto
         if (!(await ReadState()).Restricted) throw Unavailable();
     }
 
+    static SinkProvenanceState Parse(BsonDocument record)
+    {
+        if (record.GetValue("version", BsonNull.Value) is not BsonInt32 { Value: 1 } ||
+            record.GetValue("inventoryVersion", BsonNull.Value) is not BsonInt32 inventory ||
+            record.GetValue("restricted", BsonNull.Value) is not BsonBoolean restricted ||
+            record.GetValue("databaseId", BsonNull.Value) is not BsonString id || !Guid.TryParseExact(id.Value, "D", out var databaseId))
+        {
+            throw Unavailable();
+        }
+        return new SinkProvenanceState(new(databaseId), inventory.Value, restricted.Value).Validate();
+    }
+
+    static bool IsMarker(BsonDocument record) =>
+        record.GetValue("version", BsonNull.Value) is BsonInt32 { Value: 1 } &&
+        record.GetValue("restricted", BsonNull.Value) is BsonBoolean { Value: true };
+
+    static InvalidOperationException Unavailable() => new("Read-model storage is not available.");
+
     async Task Bootstrap()
     {
         try
         {
-            await _collection.UpdateOneAsync(new BsonDocument("_id", State),
+            await _collection.UpdateOneAsync(
+                new BsonDocument("_id", State),
                 Builders<BsonDocument>.Update.SetOnInsert("databaseId", Guid.NewGuid().ToString("D"))
                     .SetOnInsert("version", 1).SetOnInsert("inventoryVersion", 0).SetOnInsert("restricted", false),
                 new UpdateOptions { IsUpsert = true });
@@ -104,19 +123,4 @@ public class SinkProvenanceStorage(IMongoDatabase database) : ISinkProvenanceSto
         }
         return (state, marked);
     }
-
-    static SinkProvenanceState Parse(BsonDocument record)
-    {
-        if (record.GetValue("version", BsonNull.Value) is not BsonInt32 { Value: 1 } ||
-            record.GetValue("inventoryVersion", BsonNull.Value) is not BsonInt32 inventory ||
-            record.GetValue("restricted", BsonNull.Value) is not BsonBoolean restricted ||
-            record.GetValue("databaseId", BsonNull.Value) is not BsonString id || !Guid.TryParseExact(id.Value, "D", out var databaseId)) throw Unavailable();
-        return new SinkProvenanceState(new(databaseId), inventory.Value, restricted.Value).Validate();
-    }
-
-    static bool IsMarker(BsonDocument record) =>
-        record.GetValue("version", BsonNull.Value) is BsonInt32 { Value: 1 } &&
-        record.GetValue("restricted", BsonNull.Value) is BsonBoolean { Value: true };
-
-    static InvalidOperationException Unavailable() => new("Read-model storage is not available.");
 }

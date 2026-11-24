@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="logger">Optional <see cref="ILogger{T}"/> for logging refused destructive operations.</param>
 /// <param name="writes">Optional sink write executor.</param>
 /// <param name="generationClaims">Optional generation ownership lookup.</param>
+/// <param name="provenance">Optional sink provenance storage.</param>
 /// <remarks>
 /// Every destructive operation - clearing, dropping and renaming - is guarded by <see cref="SinkCollectionGuards"/>, so it only
 /// ever touches the collection this sink owns in its current lifecycle phase, and fails loudly otherwise.
