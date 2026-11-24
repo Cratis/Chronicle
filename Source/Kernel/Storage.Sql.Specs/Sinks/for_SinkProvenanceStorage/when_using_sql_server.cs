@@ -32,7 +32,7 @@ public class when_using_sql_server(SqlServerFixture fixture) : given.a_provenanc
     [Fact] void should_leave_an_independent_physical_database_unmarked() => _independent.ShouldBeFalse();
     [Fact] void should_fail_closed_on_an_unsupported_marker_version() => _malformedError.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_fail_closed_on_missing_metadata_in_verify_mode() => _missingError.ShouldNotBeNull();
-    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.TrueForAll(table => table is global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata or global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Inventory).ShouldBeTrue();
+    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.TrueForAll(table => string.Equals(table, global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata, StringComparison.Ordinal) || string.Equals(table, global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Inventory, StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_reserve_catalog_equivalent_names_not_just_ordinal_matches() => _catalogEquivalentError.ShouldBeOfExactType<InvalidOperationException>();
 
     async Task Destroy()

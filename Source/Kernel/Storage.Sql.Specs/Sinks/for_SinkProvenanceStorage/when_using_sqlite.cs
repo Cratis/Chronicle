@@ -36,7 +36,7 @@ public class when_using_sqlite : given.a_provenance_database
     [Fact] void should_leave_an_independent_physical_database_unmarked() => _independent.ShouldBeFalse();
     [Fact] void should_fail_closed_on_an_unsupported_marker_version() => _malformedError.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_fail_closed_on_missing_metadata_in_verify_mode() => _missingError.ShouldNotBeNull();
-    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.TrueForAll(table => table is global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata or global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Inventory).ShouldBeTrue();
+    [Fact] void should_only_open_the_reserved_metadata_table() => _openedTables.TrueForAll(table => string.Equals(table, global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata, StringComparison.Ordinal) || string.Equals(table, global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Inventory, StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_fail_closed_when_the_durable_mark_cannot_be_written() => _writeError.ShouldNotBeNull();
     [Fact] void should_not_report_a_marker_that_was_never_persisted() => _markedAfterFailure.ShouldBeFalse();
 

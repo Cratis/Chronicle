@@ -25,7 +25,10 @@ public class when_credentials_and_payload_schemas_differ : Specification
 
     static ReadModelDbContext Context(string user, string password, string payloadSchema, string metadataSchema) => new(
         SpecDbContextOptions.Kernel<ReadModelDbContext>($"Host=localhost;Database=physical;Username={user};Password={password};Search Path={payloadSchema}"),
-        SinkProvenanceNames.Inventory, SinkProvenanceSchema.InventoryColumns, Substitute.For<IReadModelMigrator>(), metadataSchema);
+        SinkProvenanceNames.Inventory,
+        SinkProvenanceSchema.InventoryColumns,
+        Substitute.For<IReadModelMigrator>(),
+        metadataSchema);
 
     [Fact] void should_not_treat_credential_rotation_as_relocation() => _rotation.ShouldBeNull();
     [Fact] void should_address_metadata_in_the_configured_storage_schema() => _schema.ShouldEqual("canonical");
