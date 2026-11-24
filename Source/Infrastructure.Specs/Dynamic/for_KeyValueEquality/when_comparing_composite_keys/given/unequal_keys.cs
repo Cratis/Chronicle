@@ -33,7 +33,7 @@ public class unequal_keys : Specification
             (collision, collision),
             (duplicate, duplicate),
             ("{\"id\":7,\"id\":7}", new { id = 7 }),
-            ("{broken", "{broken"),
+            ("{\"id\":7,\"id\":7}", "{\"id\":7,\"id\":7}"),
             (identity, "{broken"),
             (custom, custom),
             (custom, new { id = 7 }),

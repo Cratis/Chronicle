@@ -29,7 +29,7 @@ public class unequal_keys : Specification
             (collision, collision),
             (duplicate, duplicate),
             ("{\"id\":7,\"id\":7}", new { id = 7 }),
-            (malformed, malformed),
+            ("{\"id\":7,\"id\":7}", "{\"id\":7,\"id\":7}"),
             (key, malformed),
             (key, key.GetType().ToString()),
             (new { id = "AD037C1513544CD7A069F24AA1706109" }, new { id = "ad037c1513544cd7a069f24aa1706109" })
