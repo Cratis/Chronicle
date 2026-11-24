@@ -16,7 +16,7 @@ public sealed partial class NamespaceIncarnationCoordinator
     public async Task<NamespaceLifecycle> Resume(Guid operation, long revision)
     {
         var current = await RecoveryState(operation, revision);
-        if (current.AttemptInProgress || current.DestructiveAttemptOutstanding) throw new NamespaceRecoveryRequired(name);
+        if (HasOutstandingAttempt(current)) throw new NamespaceRecoveryRequired(name);
         var next = current with
         {
             Revision = current.Revision + 1,
@@ -39,7 +39,7 @@ public sealed partial class NamespaceIncarnationCoordinator
     public async Task<NamespaceLifecycle> Abort(Guid operation, long revision)
     {
         var current = await RecoveryState(operation, revision);
-        if (current.AttemptInProgress || current.DestructiveAttemptOutstanding || current.DestructiveActionIssued) throw new NamespaceRemovalCannotBeAborted();
+        RequireAbortable(current);
         if (!await marker.TryClose(current.Incarnation)) throw new NamespaceRecoveryRequired(name);
         var next = new NamespaceLifecycle(current.Namespace, new NamespaceIncarnationId(Guid.NewGuid()), clock.GetUtcNow())
         {
@@ -55,14 +55,25 @@ public sealed partial class NamespaceIncarnationCoordinator
         return await Save(current, next);
     }
 
+    static bool HasOutstandingAttempt(NamespaceLifecycle current) => current.AttemptInProgress || current.DestructiveAttemptOutstanding;
+
+    static void RequireAbortable(NamespaceLifecycle current)
+    {
+        if (HasOutstandingAttempt(current) || current.DestructiveActionIssued) throw new NamespaceRemovalCannotBeAborted();
+    }
+
     async Task<NamespaceLifecycle> RecoveryState(Guid operation, long revision)
     {
-        var current = await lifecycle.Get(name);
-        if (operation == Guid.Empty || current is null || current.Status != NamespaceLifecycleStatus.RecoveryRequired ||
-            current.OperationId != operation || current.Revision != revision)
-        {
-            throw new NamespaceLifecycleChanged(name);
-        }
+        var current = await lifecycle.Get(name) ?? throw new NamespaceLifecycleChanged(name);
+        RequireRecoveryOperation(current, operation, revision);
         return current;
+    }
+
+    void RequireRecoveryOperation(NamespaceLifecycle current, Guid operation, long revision)
+    {
+        if (operation == Guid.Empty) throw new NamespaceLifecycleChanged(name);
+        if (current.Status != NamespaceLifecycleStatus.RecoveryRequired) throw new NamespaceLifecycleChanged(name);
+        if (current.OperationId != operation) throw new NamespaceLifecycleChanged(name);
+        if (current.Revision != revision) throw new NamespaceLifecycleChanged(name);
     }
 }

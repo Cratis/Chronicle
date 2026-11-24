@@ -24,6 +24,7 @@ namespace Cratis.Chronicle.Namespaces;
 [ReadModel]
 [BelongsTo(WellKnownServices.Namespaces)]
 [StoreAccess(StoreAccess.Manage)]
+[StoreCapability("chronicle.event-store.manage")]
 public record NamespaceRemovalStatus(
     string Namespace,
     string Status,

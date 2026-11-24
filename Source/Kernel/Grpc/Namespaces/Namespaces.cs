@@ -87,7 +87,7 @@ internal sealed class Namespaces(
     public Task<global::Cratis.Chronicle.Contracts.Queries.QueryResult<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceRemovalStatusResponse>> GetNamespaceRemovalStatus(global::Cratis.Chronicle.Contracts.Namespaces.GetNamespaceRemovalStatusRequest request, global::ProtoBuf.Grpc.CallContext callContext = default) =>
         QueryExecutor.Execute<global::Cratis.Chronicle.Contracts.Namespaces.NamespaceRemovalStatusResponse>(
             callContext,
-            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
+            new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, Capability: "chronicle.event-store.manage"),
             async () =>
             {
                 if (!string.IsNullOrEmpty(request.Namespace))
