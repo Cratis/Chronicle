@@ -63,12 +63,10 @@ public class when_materializing_flat_keys(MongoDBFixture fixture) : Specificatio
     }
 
     [Fact]
-    public async Task should_select_and_remove_only_the_complete_tuple_even_with_an_opaque_id()
+    public async Task should_select_and_remove_only_the_complete_identity_document()
     {
-        await _collection.InsertManyAsync([
-            new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "customerId", "customer" }, { "orderNumber", 1 }, { "amount", 10 } },
-            new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "customerId", "customer" }, { "orderNumber", 2 }, { "amount", 20 } }
-        ]);
+        await Write(Key(1), 10, 1);
+        await Write(Key(2), 20, 2);
         (await _sink.FindOrDefault(Key(1))).ShouldNotBeNull();
         await Remove(Key(3), 1);
         await Remove(Key(1), 2);
@@ -78,14 +76,28 @@ public class when_materializing_flat_keys(MongoDBFixture fixture) : Specificatio
     }
 
     [Fact]
-    public async Task should_prefetch_flat_tuples_without_caching_another_tuple_or_using_the_mongo_id()
+    public async Task should_prefetch_flat_keys_by_identity_without_caching_another_tuple()
     {
-        await _collection.InsertOneAsync(new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "customerId", "customer" }, { "orderNumber", 1 }, { "amount", 10 } });
+        await Write(Key(1), 10, 1);
         await _sink.BeginBulk();
         await ((ISinkPagePrefetch)_sink).PrefetchPage([Key(1), Key(2)]);
         (await _sink.FindOrDefault(Key(1))).ShouldNotBeNull();
         (await _sink.FindOrDefault(Key(2))).ShouldBeNull();
         await _sink.EndBulk();
+    }
+
+    [Fact]
+    public async Task should_ignore_root_tuple_matches_with_an_unrelated_identity()
+    {
+        await _collection.InsertOneAsync(new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "customerId", "customer" }, { "orderNumber", 1 }, { "amount", 10 } });
+        (await _sink.FindOrDefault(Key(1))).ShouldBeNull();
+        (await _sink.FindInPrimaryOrDefault(Key(1))).ShouldBeNull();
+        await _sink.BeginBulk();
+        await ((ISinkPagePrefetch)_sink).PrefetchPage([Key(1)]);
+        (await _sink.FindOrDefault(Key(1))).ShouldBeNull();
+        await _sink.EndBulk();
+        await Remove(Key(1), 2);
+        (await _collection.CountDocumentsAsync(new BsonDocument())).ShouldEqual(1L);
     }
 
     async Task Write(FlatCompositeKey key, int amount, ulong sequence)

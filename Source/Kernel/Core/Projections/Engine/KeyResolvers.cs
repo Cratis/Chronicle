@@ -84,7 +84,13 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             var values = (IDictionary<string, object?>)key;
             foreach (var (property, provider) in parts)
             {
-                values[property] = provider(@event) ?? throw new FlatCompositeKeyPartHasNoValue(property);
+                var value = provider(@event) ?? throw new FlatCompositeKeyPartHasNoValue(property);
+                values[property] = value switch
+                {
+                    string or bool or char or byte or sbyte or short or ushort or int or uint or long or ulong or
+                    float or double or decimal or Guid or DateTime or DateTimeOffset or DateOnly or TimeOnly or TimeSpan => value,
+                    _ => throw new FlatCompositeKeyNotSupported($"Flat composite key part '{property}' must have a scalar value.")
+                };
             }
 
             return Task.FromResult(KeyResolverResult.Resolved(new FlatCompositeKey(key, ArrayIndexers.NoIndexers)));

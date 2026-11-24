@@ -222,6 +222,24 @@ public class ProjectionValidator(
             _ => []
         }).Where(IsFlat).Cast<CompositeKeySyntax>().Concat(FlatKeysBelowRoot(blocks));
 
+    static string? FlatKeyPropertyError(JsonSchema readModelSchema, string name)
+    {
+        var property = readModelSchema.Properties.FirstOrDefault(_ => _.Key.Equals(name, StringComparison.Ordinal)).Value;
+        if (property is null)
+        {
+            return $"Property '{name}' not found in the read model{CompilerErrorSuggestions.ForProperty(name, readModelSchema)}";
+        }
+
+        if (FlatCompositeKeyDefinition.IsProtectedProperty(property))
+        {
+            return $"Flat composite key part '{name}' cannot carry compliance or security metadata";
+        }
+
+        return FlatCompositeKeyDefinition.IsScalarProperty(property)
+            ? null
+            : $"Flat composite key part '{name}' must be a scalar property of the read model";
+    }
+
     static void CheckDuplicateEvent(string eventName, SourceLocation location, HashSet<string> seenEvents, CompilerErrors errors)
     {
         if (!seenEvents.Add(eventName))
@@ -629,17 +647,9 @@ public class ProjectionValidator(
                 continue;
             }
 
-            var property = readModelSchema.Properties.FirstOrDefault(_ => _.Key.Equals(part.Property, StringComparison.Ordinal)).Value;
-            if (property is null)
+            if (FlatKeyPropertyError(readModelSchema, part.Property) is { } propertyError)
             {
-                errors.Add($"Property '{part.Property}' not found in the read model{CompilerErrorSuggestions.ForProperty(part.Property, readModelSchema)}", part.Location.Line, part.Location.Column);
-                continue;
-            }
-
-            var actual = property.ActualSchema;
-            if (actual.Type.HasFlag(JsonObjectType.Object) || actual.Type.HasFlag(JsonObjectType.Array))
-            {
-                errors.Add($"Flat composite key part '{part.Property}' must be a scalar property of the read model", part.Location.Line, part.Location.Column);
+                errors.Add(propertyError, part.Location.Line, part.Location.Column);
                 continue;
             }
 

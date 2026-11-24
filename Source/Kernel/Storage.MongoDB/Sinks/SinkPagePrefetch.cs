@@ -96,16 +96,14 @@ internal sealed class SinkPagePrefetch(IMongoDBConverter converter)
     async Task PrefetchFlatBatch(IMongoCollection<BsonDocument> collection, FlatCompositeKey[] page, Action<Key, BsonDocument> seed)
     {
         var missing = page.ToDictionary(key => SinkCacheKey.For(converter.ToBsonValue(key)));
-        var names = page[0].Parts.Keys.Order(StringComparer.Ordinal).ToArray();
         var allReturnedTuplesMatched = true;
-        var filter = Builders<BsonDocument>.Filter.Or(page.Select(key => (FilterDefinition<BsonDocument>)FlatCompositeKeyFilter.Create(key, converter)));
+        var filter = Builders<BsonDocument>.Filter.In("_id", page.Select(converter.ToBsonValue));
         using var cursor = await collection.FindAsync(filter);
         while (await cursor.MoveNextAsync())
         {
             foreach (var document in cursor.Current)
             {
-                var tuple = new BsonDocument(names.Select(name => new BsonElement(name, document.GetValue(name, BsonNull.Value))));
-                if (missing.Remove(SinkCacheKey.For(tuple), out var key))
+                if (missing.Remove(SinkCacheKey.For(document["_id"]), out var key))
                 {
                     seed(key, document);
                 }

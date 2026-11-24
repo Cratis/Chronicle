@@ -303,6 +303,14 @@ public class Projection(
         }
     }
 
+    static void SeedFlatCompositeKey(ProjectionEventContext context, ExpandoObject state)
+    {
+        if (context.Key is FlatCompositeKey flatKey)
+        {
+            FlatCompositeKeyState.Seed(context.Changeset, state, flatKey);
+        }
+    }
+
     static void VerifyFlatCompositeKey(ProjectionEventContext context)
     {
         if (context.Key is FlatCompositeKey flatKey && !context.IsDeferred && !context.IsUnresolvable)
@@ -354,6 +362,8 @@ public class Projection(
                 operationType,
                 false);
 
+            SeedFlatCompositeKey(context, state);
+
             await HandleEventFor(projection!, context, NullSink.Instance, eventSequenceStorage);
 
             var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, [.. changeset.Changes], CreatesInstance(projection!, context));
@@ -366,7 +376,6 @@ public class Projection(
             {
                 if (key is FlatCompositeKey flatKey)
                 {
-                    FlatCompositeKeyState.Seed(changeset, state, flatKey);
                     FlatCompositeKeyState.Verify(changeset, flatKey);
                 }
 

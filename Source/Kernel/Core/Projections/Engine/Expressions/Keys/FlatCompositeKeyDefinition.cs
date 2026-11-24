@@ -48,6 +48,21 @@ internal static class FlatCompositeKeyDefinition
         ValidateProperties(readModel, ValidateRootKeys(definition));
     }
 
+    /// <summary>
+    /// Checks the scalar schema shapes supported by flat key parts.
+    /// </summary>
+    /// <param name="property">The key part's property schema.</param>
+    /// <returns>Whether the property has a supported scalar type.</returns>
+    internal static bool IsScalarProperty(JsonSchema property) =>
+        (property.ActualSchema.Type & ~JsonObjectType.Null) is JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean;
+
+    /// <summary>
+    /// Checks for protection metadata on a property or its references.
+    /// </summary>
+    /// <param name="property">The key part's property schema.</param>
+    /// <returns>Whether using this property in an identity would bypass protection.</returns>
+    internal static bool IsProtectedProperty(JsonSchema property) => property.HasComplianceMetadata() || property.HasSecurityMetadata();
+
     static string[] ValidateRootKeys(ProjectionDefinition definition)
     {
         string[]? expected = null;
@@ -109,15 +124,20 @@ internal static class FlatCompositeKeyDefinition
 
     static void ValidateProperties(ReadModelDefinition readModel, IEnumerable<string> names)
     {
+        var schema = readModel.GetSchemaForLatestGeneration();
         foreach (var name in names)
         {
-            if (!readModel.GetSchemaForLatestGeneration().Properties.TryGetValue(name, out var property))
+            if (!schema.Properties.TryGetValue(name, out var property))
             {
                 throw new FlatCompositeKeyNotSupported($"Flat composite key part '{name}' is not a root read model property.");
             }
 
-            var type = property.ActualSchema.Type & ~JsonObjectType.Null;
-            if (type is not (JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean))
+            if (IsProtectedProperty(property))
+            {
+                throw new FlatCompositeKeyNotSupported($"Flat composite key part '{name}' cannot carry compliance or security metadata.");
+            }
+
+            if (!IsScalarProperty(property))
             {
                 throw new FlatCompositeKeyNotSupported($"Flat composite key part '{name}' must be scalar.");
             }

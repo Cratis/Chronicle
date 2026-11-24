@@ -8,6 +8,8 @@ using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter;
 
@@ -44,11 +46,11 @@ public class when_converting_flat_composite_keys : given.a_mongodb_converter
     }
 
     [Fact]
-    void should_filter_by_all_root_fields_without_id_or_subset_matching()
+    void should_filter_by_the_complete_sorted_id_document_using_the_id_index()
     {
-        var filter = FlatCompositeKeyFilter.Create(_key, _converter);
-        filter.ShouldEqual(new BsonDocument { { "customerId", "customer" }, { "orderNumber", 42 } });
-        filter.Contains("_id").ShouldBeFalse();
+        var filter = FlatCompositeKeyFilter.Create(_key, _converter).Render(new RenderArgs<BsonDocument>(
+            BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry));
+        filter.ShouldEqual(new BsonDocument("_id", new BsonDocument { { "customerId", "customer" }, { "orderNumber", 42 } }));
     }
 
     [Fact]

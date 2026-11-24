@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.ReadModels;
 
@@ -14,6 +15,7 @@ public partial class ProjectionsManager
     async Task<List<ProjectionDefinition>> PreflightFlatKeys(IEnumerable<ProjectionDefinition> definitions, Dictionary<ProjectionId, Exception> failures)
     {
         var accepted = new List<ProjectionDefinition>();
+        Task<IEnumerable<ReadModelDefinition>>? readModels = null;
         foreach (var definition in definitions)
         {
             try
@@ -21,7 +23,8 @@ public partial class ProjectionsManager
                 RefuseKeyModeChange(definition);
                 if (FlatCompositeKeyDefinition.HasFlatKey(definition))
                 {
-                    await ValidateFlatKeySink(definition);
+                    readModels ??= GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
+                    ValidateFlatKeySink(definition, await readModels);
                 }
 
                 accepted.Add(definition);
@@ -52,9 +55,8 @@ public partial class ProjectionsManager
         }
     }
 
-    async Task ValidateFlatKeySink(ProjectionDefinition definition)
+    void ValidateFlatKeySink(ProjectionDefinition definition, IEnumerable<ReadModelDefinition> readModels)
     {
-        var readModels = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
         var readModel = readModels.FirstOrDefault(model => model.Identifier == definition.ReadModel)
             ?? throw new ReadModelNotFound(definition.ReadModel);
         var sinkNamespace = definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : EventStoreNamespaceName.Default;
