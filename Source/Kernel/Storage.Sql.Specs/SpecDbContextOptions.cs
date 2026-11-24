@@ -3,6 +3,7 @@
 
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql;
@@ -48,7 +49,10 @@ public static class SpecDbContextOptions
     public static TBuilder WithoutServiceProviderCaching<TBuilder>(this TBuilder builder)
         where TBuilder : DbContextOptionsBuilder
     {
-        builder.EnableServiceProviderCaching(false);
+        // EF checks the process-wide cache count even for uncached providers. These fixtures deliberately
+        // isolate their services, so log that diagnostic without changing the guard on cached kernel options.
+        builder.EnableServiceProviderCaching(false)
+            .ConfigureWarnings(warnings => warnings.Log(CoreEventId.ManyServiceProvidersCreatedWarning));
         return builder;
     }
 }

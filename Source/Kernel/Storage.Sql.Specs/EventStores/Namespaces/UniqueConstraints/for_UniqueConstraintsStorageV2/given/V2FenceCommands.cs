@@ -21,7 +21,7 @@ public class V2FenceCommands(V2Interleaving interleaving) : DbCommandInterceptor
 
     public override async ValueTask<int> NonQueryExecutedAsync(DbCommand command, CommandExecutedEventData eventData, int result, CancellationToken cancellationToken = default)
     {
-        if (command.CommandText.TrimStart().StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) && command.CommandText.Contains("UniqueConstraintAuthoritiesV2", StringComparison.Ordinal))
+        if (SqlCommandText.StartsWithStatement(command.CommandText, "UPDATE") && command.CommandText.Contains("UniqueConstraintAuthoritiesV2", StringComparison.Ordinal))
         {
             await interleaving.FencePassed();
         }
