@@ -15,6 +15,7 @@ public class watched_reactors : Specification
     protected readonly List<ReadModelChangeType> _changes = [];
     protected readonly List<EventContext> _contexts = [];
     protected ReadModelReactors _reactors;
+    protected IClientArtifactsProvider _artifacts;
     protected EventContext _context;
     ServiceProvider _services;
 
@@ -23,8 +24,8 @@ public class watched_reactors : Specification
         var eventStore = Substitute.For<IEventStore>();
         eventStore.Reducers.HasFor<Item>().Returns(true);
         eventStore.ReadModels.Watch<Item>().Returns(_frames);
-        var artifacts = Substitute.For<IClientArtifactsProvider>();
-        artifacts.ReadModelReactors.Returns([typeof(Reactor)]);
+        _artifacts = Substitute.For<IClientArtifactsProvider>();
+        _artifacts.ReadModelReactors.Returns([typeof(Reactor)]);
         var activator = Substitute.For<IClientArtifactsActivator>();
         activator.Activate(Arg.Any<IServiceProvider>(), typeof(Reactor)).Returns(
             new ActivatedArtifact(new Reactor(), typeof(Reactor), Substitute.For<ILogger<ActivatedArtifact>>()));
@@ -37,7 +38,7 @@ public class watched_reactors : Specification
                 return Task.CompletedTask;
             });
         _services = new ServiceCollection().BuildServiceProvider();
-        _reactors = new(eventStore, artifacts, activator, _services, invoker, new JsonSerializerOptions(), Substitute.For<ILogger<ReadModelReactors>>());
+        _reactors = new(eventStore, _artifacts, activator, _services, invoker, new JsonSerializerOptions(), Substitute.For<ILogger<ReadModelReactors>>());
         _context = EventContext.EmptyWithEventSourceId("item");
         _reactors.Start();
     }

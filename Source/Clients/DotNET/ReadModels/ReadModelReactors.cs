@@ -31,27 +31,37 @@ public class ReadModelReactors(
 {
     readonly object _sync = new();
     readonly List<IDisposable> _subscriptions = [];
-    bool _started;
     bool _released;
+    int _generation;
+    Type[]? _reactorTypes;
 
     /// <inheritdoc/>
     public void Start()
     {
+        var reactorTypes = clientArtifactsProvider.ReadModelReactors.ToArray();
+        int generation;
+        List<IDisposable> previous;
         lock (_sync)
         {
-            if (_released || _started)
+            if (_released || _reactorTypes?.SequenceEqual(reactorTypes) == true)
             {
                 return;
             }
 
-            _started = true;
+            _reactorTypes = reactorTypes;
+            generation = ++_generation;
+            previous = _subscriptions.ToList();
+            _subscriptions.Clear();
         }
+
+        // Registration can discover a new reactor catalog after reconnecting.
+        DisposeAll(previous);
 
         // Subscribing reaches into the services, so it never runs under the lock.
         var started = new List<IDisposable>();
         try
         {
-            foreach (var reactorType in clientArtifactsProvider.ReadModelReactors)
+            foreach (var reactorType in reactorTypes)
             {
                 foreach (var readModelType in ReadModelReactorMethods.GetReadModelTypesFor(reactorType))
                 {
@@ -61,7 +71,7 @@ public class ReadModelReactors(
         }
         finally
         {
-            Publish(started);
+            Publish(started, generation);
         }
     }
 
@@ -94,18 +104,19 @@ public class ReadModelReactors(
         lock (_sync)
         {
             _released |= release;
-            _started = false;
+            _reactorTypes = null;
+            _generation++;
             var taken = _subscriptions.ToList();
             _subscriptions.Clear();
             return taken;
         }
     }
 
-    void Publish(List<IDisposable> started)
+    void Publish(List<IDisposable> started, int generation)
     {
         lock (_sync)
         {
-            if (!_released && _started)
+            if (!_released && generation == _generation)
             {
                 _subscriptions.AddRange(started);
                 return;
