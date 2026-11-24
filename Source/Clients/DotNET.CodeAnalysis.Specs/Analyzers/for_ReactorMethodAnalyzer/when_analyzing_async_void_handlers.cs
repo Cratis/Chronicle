@@ -25,6 +25,21 @@ public class when_analyzing_async_void_handlers : given.a_reactor_method_analyze
             }
             """), new ExpectedDiagnostic("CHR0083", DiagnosticSeverity.Warning, "On"));
 
+    [Theory]
+    [InlineData("private")]
+    [InlineData("protected")]
+    [InlineData("internal")]
+    [InlineData("protected internal")]
+    [InlineData("private protected")]
+    public Task should_warn_on_nonpublic_handlers(string accessibility) =>
+        AnalyzerVerifier<CodeAnalysis.Analyzers.ReactorMethodAnalyzer>.VerifyAnalyzer(CreateSource($$"""
+            [EventType] public class Happened { }
+            public class Reactor : Cratis.Chronicle.Reactors.IReactor
+            {
+                {{accessibility}} async void {|#0:On|}(Happened @event) { await Task.Yield(); }
+            }
+            """), new ExpectedDiagnostic(DiagnosticIds.ReactorMethodMustNotBeAsyncVoid, DiagnosticSeverity.Warning, "On"));
+
     [Fact]
     public Task should_recognize_explicit_event_and_reactor_registration() =>
         AnalyzerVerifier<CodeAnalysis.Analyzers.ReactorMethodAnalyzer>.VerifyAnalyzer(CreateSource("""

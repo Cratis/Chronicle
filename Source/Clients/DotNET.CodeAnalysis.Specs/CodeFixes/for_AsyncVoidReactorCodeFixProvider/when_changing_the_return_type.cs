@@ -11,6 +11,9 @@ public class when_changing_the_return_type : Analyzers.for_ReactorMethodAnalyzer
     [Theory]
     [InlineData("public async void On(Happened @event) { await global::System.Threading.Tasks.Task.Yield(); }")]
     [InlineData("public async void On(Happened @event) => await global::System.Threading.Tasks.Task.Delay(1);")]
+    [InlineData("private async void On(Happened @event) { await global::System.Threading.Tasks.Task.Yield(); }")]
+    [InlineData("protected async void On(Happened @event) { await global::System.Threading.Tasks.Task.Yield(); }")]
+    [InlineData("internal async void On(Happened @event) { await global::System.Threading.Tasks.Task.Yield(); }")]
     [InlineData("[Cratis.Chronicle.Reactors.OnceOnly] public async void On(Happened @event, IService service) { await global::System.Threading.Tasks.Task.Yield(); }")]
     [InlineData("public async /* before */ void /* after */ On(Happened @event) { /* body */ await global::System.Threading.Tasks.Task.Yield(); }")]
     public async Task should_preserve_the_handler_and_produce_compiling_task_code(string method)

@@ -118,14 +118,14 @@ public class ReactorMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (IsPublicInstanceAsyncVoid(methodSymbol))
+        if (IsInstanceAsyncVoid(methodSymbol))
         {
             context.ReportDiagnostic(Diagnostic.Create(AsyncVoidRule, methodSymbol.Locations.FirstOrDefault(), methodSymbol.Name));
         }
     }
 
-    static bool IsPublicInstanceAsyncVoid(IMethodSymbol method) =>
-        method.DeclaredAccessibility == Accessibility.Public && !method.IsStatic && method.IsAsync && method.ReturnsVoid;
+    static bool IsInstanceAsyncVoid(IMethodSymbol method) =>
+        !method.IsStatic && method.IsAsync && method.ReturnsVoid;
 
     static bool ValidateReturnType(SymbolAnalysisContext context, IMethodSymbol methodSymbol, ExplicitRegistrationEvidence evidence, bool isHandler)
     {

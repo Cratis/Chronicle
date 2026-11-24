@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Composition;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -38,7 +39,13 @@ public class AsyncVoidReactorCodeFixProvider : CodeFixProvider
         }
 
         var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (semanticModel?.GetDeclaredSymbol(method, context.CancellationToken) is not { IsAsync: true, ReturnsVoid: true })
+        var symbol = semanticModel?.GetDeclaredSymbol(method, context.CancellationToken);
+        if (symbol is not { IsAsync: true, ReturnsVoid: true })
+        {
+            return;
+        }
+
+        if (!CanChangeReturnType(symbol))
         {
             return;
         }
@@ -46,6 +53,23 @@ public class AsyncVoidReactorCodeFixProvider : CodeFixProvider
         context.RegisterCodeFix(
             CodeAction.Create(Title, cancellationToken => ReturnTask(context.Document, method, cancellationToken), Title),
             context.Diagnostics);
+    }
+
+    static bool CanChangeReturnType(IMethodSymbol method)
+    {
+        if (method.IsOverride)
+        {
+            return false;
+        }
+
+        if (!method.ExplicitInterfaceImplementations.IsEmpty)
+        {
+            return false;
+        }
+
+        return !method.ContainingType.AllInterfaces
+            .SelectMany(@interface => @interface.GetMembers())
+            .Any(member => SymbolEqualityComparer.Default.Equals(method, method.ContainingType.FindImplementationForInterfaceMember(member)));
     }
 
     static async Task<Document> ReturnTask(Document document, MethodDeclarationSyntax method, CancellationToken cancellationToken)

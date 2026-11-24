@@ -13,7 +13,7 @@ public class when_async_void_is_not_an_eligible_handler : given.a_reactor_method
     [InlineData("public async Task On(Happened @event) { await Task.Yield(); }")]
     [InlineData("public Task On(Happened @event) => Task.CompletedTask;")]
     [InlineData("public Task<Happened> On(Happened @event) => Task.FromResult(@event);")]
-    [InlineData("private async void On(Happened @event) { await Task.Yield(); }")]
+    [InlineData("private async void Helper(Unknown value) { await Task.Yield(); }")]
     [InlineData("public static async void On(Happened @event) { await Task.Yield(); }")]
     [InlineData("public async void Helper() { await Task.Yield(); }")]
     [InlineData("public async void Helper(Unknown value, int count) { await Task.Yield(); }")]

@@ -15,14 +15,16 @@ namespace Cratis.Chronicle.CodeAnalysis.Specs.CodeFixes.for_AsyncVoidReactorCode
 public class when_fixing_all_handlers : Analyzers.for_ReactorMethodAnalyzer.given.a_reactor_method_analyzer
 {
     [Fact]
-    public async Task should_fix_each_handler_and_leave_other_methods_unchanged()
+    public async Task should_fix_only_handlers_without_signature_contracts()
     {
         var source = CreateSource("""
             [EventType] public class Happened { }
-            public class Reactor : Cratis.Chronicle.Reactors.IReactor
+            public interface IHandler { void Contract(Happened @event); }
+            public class Reactor : IHandler, Cratis.Chronicle.Reactors.IReactor
             {
                 public async void First(Happened @event) { await Task.Yield(); }
                 public async void Second(Happened @event) => await Task.Delay(1);
+                public async void Contract(Happened @event) { await Task.Yield(); }
                 public void Helper() { }
             }
             """);
@@ -44,8 +46,12 @@ public class when_fixing_all_handlers : Analyzers.for_ReactorMethodAnalyzer.give
         var solution = operations.OfType<ApplyChangesOperation>().Single().ChangedSolution;
         var fixedDocument = solution.GetDocument(document.Id)!;
         var fixedText = (await fixedDocument.GetTextAsync()).ToString();
-        fixedText.ShouldEqual(source.Replace("async void", "async global::System.Threading.Tasks.Task", StringComparison.Ordinal));
-        await AnalyzerVerifier<ReactorMethodAnalyzer>.VerifyAnalyzer(fixedText);
+        var expected = source
+            .Replace("async void First", "async global::System.Threading.Tasks.Task First", StringComparison.Ordinal)
+            .Replace("async void Second", "async global::System.Threading.Tasks.Task Second", StringComparison.Ordinal);
+        fixedText.ShouldEqual(expected);
+        await AnalyzerVerifier<ReactorMethodAnalyzer>.VerifyAnalyzer(
+            fixedText, new ExpectedDiagnostic(DiagnosticIds.ReactorMethodMustNotBeAsyncVoid, DiagnosticSeverity.Warning, "Contract"));
     }
 
     sealed class HandlerDiagnostics : FixAllContext.DiagnosticProvider
