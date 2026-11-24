@@ -227,6 +227,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Observer deactivation did not finish before the runtime stopped waiting for it; the remaining teardown was abandoned")]
     internal static partial void DeactivationOutlivedItsTimeout(this ILogger<Observer> logger, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Activation of observer {ObserverId} was cancelled by the runtime after {Elapsed}; the last step it completed was '{LastStep}'")]
+    internal static partial void ActivationCancelled(this ILogger<Observer> logger, ObserverId observerId, TimeSpan elapsed, string lastStep);
+
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
 

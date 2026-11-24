@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.StateMachines;
 using Cratis.Chronicle.Concepts;
@@ -94,6 +95,7 @@ public partial class Observer(
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
     string _observerKeyText = string.Empty;
+    string _activationStep = string.Empty;
     TimeSpan? _responseTimeout;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
@@ -207,11 +209,26 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        await base.OnActivateAsync(cancellationToken);
-        await FinishWakeFromDormancy();
-        await ReconcilePartitionDeferrals();
-        RememberHandledEventsReportsForTheResponseTimeout();
-        ScheduleActivationAlertReport();
+        var started = Stopwatch.GetTimestamp();
+        try
+        {
+            await base.OnActivateAsync(cancellationToken);
+            ActivationCheckpoint("transition", cancellationToken);
+            await FinishWakeFromDormancy();
+            ActivationCheckpoint("finish waking from dormancy", cancellationToken);
+            await ReconcilePartitionDeferrals();
+            ActivationCheckpoint("reconcile partition deferrals", cancellationToken);
+            RememberHandledEventsReportsForTheResponseTimeout();
+            ScheduleActivationAlertReport();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The runtime has stopped waiting for this activation and marked it invalid, so carrying on would only end in
+            // a failure nobody observes. It ends as cancelled; record how far it got and how long it took, which is what
+            // tells why the runtime gave up on it.
+            logger.ActivationCancelled(_observerId, Stopwatch.GetElapsedTime(started), _activationStep);
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -222,12 +239,15 @@ public partial class Observer(
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
         if (!await SeedRunningStateHistory()) return;
+        ActivationCheckpoint("seed running state history", cancellationToken);
         SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
         await _failureReads.Read(failures.ReadStateAsync);
+        ActivationCheckpoint("read failures", cancellationToken);
         await RestoreDeliveryFences();
+        ActivationCheckpoint("restore delivery fences", cancellationToken);
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
@@ -237,6 +257,7 @@ public partial class Observer(
         _metrics = meter.BeginObserverScope(_observerId, _observerKey, optionsMonitor.CurrentValue?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
         var config = await configurationProvider.GetFor(_observerKey);
+        ActivationCheckpoint("read configuration", cancellationToken);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         RegisterWatchdog(config.WatchdogInterval);
@@ -249,6 +270,7 @@ public partial class Observer(
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();
+        ActivationCheckpoint("initialize alert state", cancellationToken);
         if (!KeyOwnsDefinition)
         {
             logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
@@ -259,7 +281,14 @@ public partial class Observer(
             await RestoreFromDurableSubscription();
         }
 
+        ActivationCheckpoint("restore durable subscription", cancellationToken);
         PublishFailedPartitionsGauge();
+    }
+
+    void ActivationCheckpoint(string completedStep, CancellationToken cancellationToken)
+    {
+        _activationStep = completedStep;
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     /// <inheritdoc/>
