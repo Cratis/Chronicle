@@ -129,8 +129,8 @@ public static class DateTimeValues
 
     static bool HoldsDateTimes(JsonSchema schema) => _holdsDateTimes.GetValue(schema, _ => new(HoldsDateTimes(_, []))).Value;
 
-    static bool HoldsDateTimes(JsonSchema schema, HashSet<JsonSchema> visited) =>
-        visited.Add(schema) &&
+    static bool HoldsDateTimes(JsonSchema schema, HashSet<string> visited) =>
+        visited.Add(schema.GetStructuralKey()) &&
         (IsDateTime(schema) ||
             (schema.Item is not null && HoldsDateTimes(schema.Item.ActualTypeSchema, visited)) ||
             schema.FlattenedProperties.Any(property => IsDateTime(property) || HoldsDateTimes(property.ActualTypeSchema, visited)));

@@ -92,33 +92,45 @@ internal static class GenerationProtectionSchemas
         }
     }
 
-    static IEnumerable<(JsonSchema Target, JsonSchema Higher)> MatchingProperties(JsonSchema target, JsonSchema higher, HashSet<(JsonSchema Target, JsonSchema Higher)> visited)
+    static IEnumerable<(JsonSchema Target, JsonSchema Higher)> MatchingProperties(JsonSchema target, JsonSchema higher, HashSet<(string Target, string Higher)> ancestors)
     {
         target = target.ActualTypeSchema;
         higher = higher.ActualTypeSchema;
-        if (!visited.Add((target, higher)))
+
+        // Resolving a reference yields a new schema every time, so a recursive schema is recognized by what it
+        // describes. Only the schemas being walked into count: the same description reached by another path is a
+        // different place in the document and has to be matched in its own right.
+        var key = (target.GetStructuralKey(), higher.GetStructuralKey());
+        if (!ancestors.Add(key))
         {
             yield break;
         }
 
-        var higherProperties = higher.GetFlattenedProperties().DistinctBy(_ => _.Name).ToDictionary(_ => _.Name);
-        foreach (var property in target.GetFlattenedProperties().Where(_ => higherProperties.ContainsKey(_.Name)))
+        try
         {
-            var source = higherProperties[property.Name];
-            yield return (property, source);
-            foreach (var pair in MatchingProperties(property, source, visited))
+            var higherProperties = higher.GetFlattenedProperties().DistinctBy(_ => _.Name).ToDictionary(_ => _.Name);
+            foreach (var property in target.GetFlattenedProperties().Where(_ => higherProperties.ContainsKey(_.Name)))
+            {
+                var source = higherProperties[property.Name];
+                yield return (property, source);
+                foreach (var pair in MatchingProperties(property, source, ancestors))
+                {
+                    yield return pair;
+                }
+            }
+
+            foreach (var pair in MatchingItemProperties(target.Item?.ActualSchema, higher.Item?.ActualSchema, ancestors))
             {
                 yield return pair;
             }
         }
-
-        foreach (var pair in MatchingItemProperties(target.Item?.ActualSchema, higher.Item?.ActualSchema, visited))
+        finally
         {
-            yield return pair;
+            ancestors.Remove(key);
         }
     }
 
-    static IEnumerable<(JsonSchema Target, JsonSchema Higher)> MatchingItemProperties(JsonSchema? target, JsonSchema? higher, HashSet<(JsonSchema Target, JsonSchema Higher)> visited)
+    static IEnumerable<(JsonSchema Target, JsonSchema Higher)> MatchingItemProperties(JsonSchema? target, JsonSchema? higher, HashSet<(string Target, string Higher)> ancestors)
     {
         if (target is null || higher is null)
         {
@@ -127,7 +139,7 @@ internal static class GenerationProtectionSchemas
 
         // Primitive items are boundaries too; CanInherit retains the plain-string policy.
         yield return (target, higher);
-        foreach (var pair in MatchingProperties(target, higher, visited))
+        foreach (var pair in MatchingProperties(target, higher, ancestors))
         {
             yield return pair;
         }
