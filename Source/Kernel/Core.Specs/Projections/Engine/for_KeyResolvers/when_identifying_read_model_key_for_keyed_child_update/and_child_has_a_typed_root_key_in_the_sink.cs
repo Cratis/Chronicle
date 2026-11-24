@@ -20,7 +20,7 @@ public class and_child_has_a_typed_root_key_in_the_sink : given.a_flat_child_pro
         Sink.TryFindRootKeyByChildValue("children.childId", ChildKey)
             .Returns(new Option<Key>(new Key("other-root", ArrayIndexers.NoIndexers)));
         Storage.WithParentHistory(_rootId.ToString(), CreateEvent(0, RootCreatedEventType, _rootId.ToString(), new { }.AsExpandoObject()));
-        Sink.TryFindRootKeyByChildValueInRoot("children.childId", ChildKey, Arg.Is<Key>(key => Equals(key.Value, _rootId.ToString())))
+        Sink.TryFindRootKeyByChildValueInRoot("children.childId", ChildKey, Arg.Is<Key>(key => Equals(key.Value, _rootId)))
             .Returns(new Option<Key>(new Key(_rootId, ArrayIndexers.NoIndexers)));
     }
 
@@ -29,13 +29,15 @@ public class and_child_has_a_typed_root_key_in_the_sink : given.a_flat_child_pro
         var resolver = KeyResolvers.FromParentHierarchy(
             ChildProjection,
             KeyResolvers.FromEventValueProvider(EventValueProviders.EventContent("childId")),
-            KeyResolvers.FromEventSourceId,
+            (_, _, _) => Task.FromResult(KeyResolverResult.Resolved(new Key(_rootId, ArrayIndexers.NoIndexers))),
             "childId");
         _result = ((ResolvedKey)await resolver(Storage, Sink, ChildMovedEvent)).Key;
     }
 
     [Fact] void should_preserve_the_typed_root_identifier() => _result.Value.ShouldEqual(_rootId);
     [Fact] void should_keep_the_child_indexer() => _result.ArrayIndexers.All.Single().Identifier.ShouldEqual(ChildKey);
+    [Fact] void should_scope_the_lookup_to_the_typed_parent() => Sink.Received(1).TryFindRootKeyByChildValueInRoot("children.childId", ChildKey, Arg.Is<Key>(key => Equals(key.Value, _rootId)));
+    [Fact] void should_not_query_other_roots() => Sink.DidNotReceive().TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), Arg.Any<object>());
     [Fact] void should_not_look_up_parent_events() => Storage.DidNotReceive().GetInstancesOfAnyInRange(Arg.Any<IEnumerable<EventSourceId>>(), Arg.Any<IEnumerable<EventTypeId>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<EventSequenceNumber>());
     [Fact] void should_not_scan_parent_history() => Storage.DidNotReceive().GetHeadSequenceNumber(Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>());
 }

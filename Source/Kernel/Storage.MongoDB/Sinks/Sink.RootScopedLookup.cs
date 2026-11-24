@@ -17,15 +17,15 @@ public partial class Sink
     public async Task<Option<Key>> TryFindRootKeyByChildValueInRoot(PropertyPath childPropertyPath, object childValue, Key rootKey)
     {
         await SettleGuardedBulkReads();
-        if (!CanConvertScopedRootKey(rootKey)) return Option<Key>.None();
+        var rootId = ConvertScopedRootKey(rootKey);
 
-        if (_isBulkMode && TryAnswerFromBulk(rootKey, out var state))
+        if (_isBulkMode && TryAnswerFromScopedBulk(SinkCacheKey.For(rootId), out var state))
         {
             return FindScopedRootInBulkState(childPropertyPath, childValue, rootKey, state);
         }
 
         var collection = Collection;
-        var filter = Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(rootKey)) &
+        var filter = Builders<BsonDocument>.Filter.Eq("_id", rootId) &
             Builders<BsonDocument>.Filter.Eq(childPropertyPath.ToMongoDB(), childValue.ToBsonValue());
         using var result = await collection.FindAsync(
             filter,
@@ -42,16 +42,36 @@ public partial class Sink
     Option<Key> FindScopedRootInBulkState(PropertyPath childPropertyPath, object childValue, Key rootKey, ExpandoObject? state)
     {
         if (state is null || !TryFindValueInDocument(state, childPropertyPath.Segments.ToArray(), 0, childValue)) return Option<Key>.None();
-        var cacheKey = SinkCacheKey.For(converter.ToBsonValue(rootKey));
+        var cacheKey = SinkCacheKey.For(ConvertScopedRootKey(rootKey));
         return new Option<Key>(_bulkKeysByCacheKey.GetValueOrDefault(cacheKey, rootKey));
     }
 
-    bool CanConvertScopedRootKey(Key rootKey)
+    bool TryAnswerFromScopedBulk(string cacheKey, out ExpandoObject? answer)
+    {
+        if (_bulkStateCache.TryGetValue(cacheKey, out var cachedState))
+        {
+            answer = cachedState;
+            return true;
+        }
+
+        answer = default;
+        return _bulkPendingDeletes.ContainsKey(cacheKey) || _pagePrefetch.IsKnownMiss(cacheKey);
+    }
+
+    BsonValue ConvertScopedRootKey(Key rootKey)
+    {
+        var id = rootKey.Value?.ToString();
+        return id is not null && HasGuidRootSchema() && !Guid.TryParse(id, out _)
+            ? new BsonString(id)
+            : converter.ToBsonValue(rootKey);
+    }
+
+    bool HasGuidRootSchema()
     {
         var schema = readModel.GetSchemaForLatestGeneration();
         var keyPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
-        if (string.IsNullOrEmpty(keyPropertyName)) return true;
+        if (string.IsNullOrEmpty(keyPropertyName)) return false;
         var format = schema.GetSchemaPropertyForPropertyPath(keyPropertyName)?.Format?.TrimEnd('?').ToLowerInvariant();
-        return format is not ("guid" or "uuid") || Guid.TryParse(rootKey.Value?.ToString(), out _);
+        return string.Equals(format, "guid", StringComparison.Ordinal) || string.Equals(format, "uuid", StringComparison.Ordinal);
     }
 }

@@ -200,12 +200,12 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         if (CanResolveExistingChildBySink(parentProjection, childKeyValue, @event))
         {
             var childLocationPath = BuildFullParentChildPropertyPath(projection, identifiedByProperty);
-            var existingChildRoot = await FindParentRootInSink(sink, childLocationPath, childKeyValue, @event);
+            var existingChildRoot = await sink.TryFindRootKeyByChildValueInRoot(childLocationPath, childKeyValue, parentKey);
             if (existingChildRoot.TryGetValue(out var existingChildRootKey) &&
                 Equals(existingChildRootKey.Value?.ToString(), parentKey.Value!.ToString()))
             {
                 logger.FromParentHierarchyResolvedExistingChildBySink(childKeyValue, childLocationPath.Path, parentKey.Value);
-                return KeyResolverResult.Resolved(existingChildRootKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, childKeyValue)]) });
+                return KeyResolverResult.Resolved(parentKey with { ArrayIndexers = new ArrayIndexers([new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, childKeyValue)]) });
             }
         }
 
@@ -714,8 +714,9 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 rootKey,
                 sink,
                 parentKey.Value!,
-                new ArrayIndexer(projection.ChildrenPropertyPath, identifiedByProperty, childKey.Value),
-                @event);
+                projection.ChildrenPropertyPath,
+                identifiedByProperty,
+                childKey.Value);
 
             return new ParentEventResult(null, KeyResolverResult.Resolved(hierarchyResult));
         }
@@ -788,19 +789,20 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         Key currentKey,
         Storage.Sinks.ISink sink,
         object intermediateKeyValue,
-        ArrayIndexer leafIndexer,
-        AppendedEvent @event)
+        PropertyPath leafChildrenProperty,
+        PropertyPath leafIdentifiedByProperty,
+        object leafKeyValue)
     {
-        logger.ResolveParentHierarchyFromSinkStart(currentKey.Value, intermediateKeyValue, leafIndexer.ArrayProperty.Path, leafIndexer.IdentifierProperty.Path, leafIndexer.Identifier);
+        logger.ResolveParentHierarchyFromSinkStart(currentKey.Value, intermediateKeyValue, leafChildrenProperty.Path, leafIdentifiedByProperty.Path, leafKeyValue);
 
         // Build indexers from root down to leaf
         var arrayIndexers = new List<ArrayIndexer>();
 
         // Recursively walk up to collect all parent levels
-        await CollectParentIndexers(projection, currentKey, sink, arrayIndexers, intermediateKeyValue, @event);
+        await CollectParentIndexers(projection, currentKey, sink, arrayIndexers, intermediateKeyValue);
 
         // Add the final leaf indexer
-        arrayIndexers.Add(leafIndexer);
+        arrayIndexers.Add(new ArrayIndexer(leafChildrenProperty, leafIdentifiedByProperty, leafKeyValue));
 
         logger.ResolveParentHierarchyFromSinkResult(arrayIndexers.Count, currentKey.Value);
 
@@ -812,8 +814,7 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         Key currentKey,
         Storage.Sinks.ISink sink,
         List<ArrayIndexer> indexers,
-        object childKeyValue,
-        AppendedEvent @event)
+        object childKeyValue)
     {
         logger.CollectParentIndexersStart(projection.Path, currentKey.Value, childKeyValue);
         logger.CollectParentIndexersProjectionInfo(projection.HasParent, projection.Parent?.ChildrenPropertyPath.IsSet ?? false);
@@ -831,14 +832,14 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
                 var childPropertyPath = BuildFullParentChildPropertyPath(parentProjection, parentIdentifiedByProperty);
                 logger.CollectParentIndexersLookup(childPropertyPath.Path, childKeyValue);
 
-                var optionalRootKey = await FindParentRootInSink(sink, childPropertyPath, childKeyValue, @event);
+                var optionalRootKey = await sink.TryFindRootKeyByChildValue(childPropertyPath, childKeyValue);
 
                 if (optionalRootKey.TryGetValue(out var rootKey))
                 {
                     logger.CollectParentIndexersFoundRoot(rootKey.Value);
 
                     // Recursively collect parent's indexers first (to maintain root-to-leaf order)
-                    await CollectParentIndexers(parentProjection, rootKey, sink, indexers, currentKey.Value!, @event);
+                    await CollectParentIndexers(parentProjection, rootKey, sink, indexers, currentKey.Value!);
                 }
                 else
                 {

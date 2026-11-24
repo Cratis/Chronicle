@@ -8,6 +8,7 @@ using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.MongoDB.Sinks.for_MongoDBConverter.given;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks.for_Sink;
@@ -38,8 +39,8 @@ public class when_looking_up_a_child_with_an_invalid_guid_root : given.a_sink_ob
     [Fact] void should_return_none_for_both_normal_and_bulk_lookups() => _found.ShouldBeFalse();
     [Fact] void should_not_log_key_conversion_warnings() => _converterLogger.ReceivedCalls().ShouldBeEmpty();
     [Fact]
-    void should_not_query_an_invalid_root_identifier() => _collection.DidNotReceive().FindAsync(
-        Arg.Any<FilterDefinition<BsonDocument>>(),
+    void should_query_the_string_root_in_both_modes() => _collection.Received(2).FindAsync(
+        Arg.Is<FilterDefinition<BsonDocument>>(filter => filter.Render(new RenderArgs<BsonDocument>(BsonSerializer.SerializerRegistry.GetSerializer<BsonDocument>(), BsonSerializer.SerializerRegistry))["_id"].AsString == "separate-child-stream"),
         Arg.Any<FindOptions<BsonDocument, BsonDocument>>(),
         Arg.Any<CancellationToken>());
 }
