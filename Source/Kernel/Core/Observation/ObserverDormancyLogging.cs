@@ -18,4 +18,7 @@ internal static partial class ObserverDormancyLogging
 
     [LoggerMessage(LogLevel.Warning, "The appended events queue could not drop the stored subscription that could not be restored")]
     internal static partial void ForgettingDormantEntryFailed(this ILogger<Observer> logger, Exception exception);
+
+    [LoggerMessage(LogLevel.Debug, "The supervisor of the observer could not be told or asked which connection serves it; the observer relies on its own record")]
+    internal static partial void SharingBindingFailed(this ILogger<Observer> logger, Exception exception);
 }

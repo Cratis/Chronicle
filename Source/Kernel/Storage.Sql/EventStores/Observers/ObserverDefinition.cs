@@ -48,4 +48,9 @@ public class ObserverDefinition
     /// Gets or sets the event generation delivery policy.
     /// </summary>
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the revision of the definition. A row stored before revisions existed reads as 0.
+    /// </summary>
+    public long Revision { get; set; }
 }

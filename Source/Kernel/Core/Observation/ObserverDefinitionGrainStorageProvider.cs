@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.ObserverRouting;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
 using Orleans.Storage;
@@ -15,14 +16,16 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="cacheClient">The <see cref="IObserverDefinitionsCacheClient"/> that tells every silo a definition was saved.</param>
+/// <param name="routingClient">The <see cref="IObserverRoutingClient"/> that publishes the stored revision to the routing table of every silo; optional for standalone specifications.</param>
 /// <remarks>
 /// A definition is stored by observer identifier alone, so the activations of one observer in every namespace read the
 /// same record. Reads are served by the event store's immutable observer definition registry: every namespace's
 /// activation is given the registry's own instance, so there is one definition per observer per silo and no storage read
 /// while the registry is warm. Writes go to storage through the registry and are announced to every silo before the
-/// write returns.
+/// write returns, and the revision storage stamped is published to the routing table of every silo, which answers once it
+/// holds that revision.
 /// </remarks>
-public class ObserverDefinitionGrainStorageProvider(IStorage storage, IObserverDefinitionsCacheClient cacheClient) : IGrainStorage
+public class ObserverDefinitionGrainStorageProvider(IStorage storage, IObserverDefinitionsCacheClient cacheClient, IObserverRoutingClient? routingClient = null) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -69,7 +72,12 @@ public class ObserverDefinitionGrainStorageProvider(IStorage storage, IObserverD
         // What was just saved is now the registry's instance. Hold that one rather than this activation's own copy, so
         // there is a single definition per observer in the silo; a stored definition that differs is left alone.
         var saved = await observers.Get(observerKey.ObserverId);
-        if (saved.Equals(definition with { EventTypes = EventTypeSet.From(definition.EventTypes) }))
+        if (routingClient is not null)
+        {
+            await routingClient.Publish(observerKey.EventStore, observerKey.ObserverId, saved.Revision);
+        }
+
+        if (saved.Equals(definition with { EventTypes = EventTypeSet.From(definition.EventTypes), Revision = saved.Revision }))
         {
             actualGrainState.State = saved;
         }
