@@ -21,8 +21,13 @@ public class when_validating_flat_definitions_directly : given.a_runtime_languag
     [Fact]
     void should_refuse_an_incomplete_removal_tuple()
     {
-        var definition = Definition();
-        definition.RemovedWith[(EventType)"Removed"] = new(WellKnownExpressions.EventSourceId, null);
+        var definition = Definition() with
+        {
+            RemovedWith = new Dictionary<EventType, RemovedWithDefinition>
+            {
+                [(EventType)"Removed"] = new(WellKnownExpressions.EventSourceId, null)
+            }
+        };
         Catch.Exception(() => FlatCompositeKeyDefinition.Validate(definition, _readModel)).ShouldBeOfExactType<FlatCompositeKeyNotSupported>();
     }
 
@@ -45,9 +50,15 @@ public class when_validating_flat_definitions_directly : given.a_runtime_languag
     void should_explain_why_an_id_part_is_refused(string part)
     {
         var definition = Definition();
-        definition.From[(EventType)"Changed"] = definition.From[(EventType)"Changed"] with
+        definition = definition with
         {
-            Key = $"$flatComposite({part}=$eventContent.name,age=$eventContent.age)"
+            From = new Dictionary<EventType, FromDefinition>
+            {
+                [(EventType)"Changed"] = definition.From[(EventType)"Changed"] with
+                {
+                    Key = $"$flatComposite({part}=$eventContent.name,age=$eventContent.age)"
+                }
+            }
         };
         var exception = Catch.Exception(() => FlatCompositeKeyDefinition.Validate(definition, _readModel));
         exception.ShouldBeOfExactType<InvalidFlatCompositeKeyExpression>();
