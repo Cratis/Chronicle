@@ -16,9 +16,10 @@ internal sealed class StalledObserverJobs
     /// </summary>
     internal const int MaxResumesPerTick = 16;
     readonly Dictionary<JobId, Mark> _marks = [];
+    long _nextSequence;
 
     /// <summary>
-    /// Finds the oldest stalled jobs, resetting their stall periods when returned.
+    /// Finds the least recently attempted stalled jobs, resetting their stall periods when returned.
     /// </summary>
     /// <param name="jobs">The observer's current unfinished jobs.</param>
     /// <param name="now">The current time.</param>
@@ -36,11 +37,12 @@ internal sealed class StalledObserverJobs
             TrackProgress(job, now);
         }
 
-        var stalled = _marks.Where(_ => now - _.Value.Since >= JobLiveness.ResumeStalledAfter)
-            .OrderBy(_ => _.Value.Since).Take(MaxResumesPerTick).Select(_ => _.Key).ToArray();
+        var stalled = _marks.Where(_ => _.Value.RetryDue || now - _.Value.Since >= JobLiveness.ResumeStalledAfter)
+            .OrderBy(_ => _.Value.LastAttempt).ThenBy(_ => _.Value.Since).ThenBy(_ => _.Value.Sequence)
+            .Take(MaxResumesPerTick).Select(_ => _.Key).ToArray();
         foreach (var id in stalled)
         {
-            _marks[id] = _marks[id] with { Since = now };
+            _marks[id] = _marks[id] with { Since = now, LastAttempt = now, RetryDue = false };
         }
         return stalled;
     }
@@ -56,7 +58,7 @@ internal sealed class StalledObserverJobs
     {
         if (_marks.TryGetValue(id, out var mark))
         {
-            _marks[id] = mark with { Since = DateTimeOffset.MinValue };
+            _marks[id] = mark with { RetryDue = true };
         }
     }
 
@@ -64,11 +66,17 @@ internal sealed class StalledObserverJobs
     {
         var progress = job.Progress;
         var concluded = progress.SuccessfulSteps + progress.FailedSteps + progress.StoppedSteps + progress.UnreachableSteps;
-        if (!_marks.TryGetValue(job.Id, out var mark) || (mark.TotalSteps, mark.Concluded) != (progress.TotalSteps, concluded))
+        if (!_marks.TryGetValue(job.Id, out var mark))
         {
-            _marks[job.Id] = new(progress.TotalSteps, concluded, now);
+            _marks[job.Id] = new(progress.TotalSteps, concluded, now, null, false, _nextSequence++);
+            return;
+        }
+
+        if ((mark.TotalSteps, mark.Concluded) != (progress.TotalSteps, concluded))
+        {
+            _marks[job.Id] = mark with { TotalSteps = progress.TotalSteps, Concluded = concluded, Since = now, RetryDue = false };
         }
     }
 
-    record Mark(int TotalSteps, int Concluded, DateTimeOffset Since);
+    record Mark(int TotalSteps, int Concluded, DateTimeOffset Since, DateTimeOffset? LastAttempt, bool RetryDue, long Sequence);
 }
