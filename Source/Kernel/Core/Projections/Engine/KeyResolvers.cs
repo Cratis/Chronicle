@@ -215,7 +215,7 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         if (CanResolveExistingChildBySink(parentProjection, childKeyValue, @event))
         {
             var childLocationPath = BuildFullParentChildPropertyPath(projection, identifiedByProperty);
-            var existingChildRoot = await sink.TryFindRootKeyByChildValue(childLocationPath, childKeyValue);
+            var existingChildRoot = await sink.TryFindRootKeyByChildValueInRoot(childLocationPath, childKeyValue, parentKey);
             if (existingChildRoot.TryGetValue(out var existingChildRootKey) &&
                 Equals(existingChildRootKey.Value?.ToString(), parentKey.Value!.ToString()))
             {

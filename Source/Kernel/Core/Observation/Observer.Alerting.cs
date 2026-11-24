@@ -24,7 +24,7 @@ public partial class Observer
     long _alertRevision;
     AlertDisposition _alertDisposition;
     Guid? _quarantineEpisodeId;
-    bool _alertReconciliationPending = true;
+    bool _alertReconciliationPending;
     bool _alertReportRequested;
     bool _alertStateNeedsPersistence;
     bool _alertReportScheduled;
@@ -59,11 +59,10 @@ public partial class Observer
     /// Gets a value indicating whether something is waiting to be reported, which is the only time the reminder is needed.
     /// </summary>
     /// <remarks>
-    /// Every activation confirms its alert level once, but that confirmation alone does not need a durable wakeup: the
-    /// activation reports it straight away, the watchdog retries it while the activation lives and the next activation
-    /// confirms again. Registering a reminder for it made every activation write one and release it a period later, so a
-    /// cold start of thousands of healthy observers wrote thousands of reminders, and a silo that went down within that
-    /// period left them all overdue for the next start (#5677).
+    /// An activation that finds nothing alert-relevant reports nothing and registers nothing: waking thousands of
+    /// healthy observers neither writes thousands of reminders nor touches their alert companions (#5677, #6113). A
+    /// change registers the reminder when it is reported, and a report that does not land is retried by the watchdog
+    /// while the activation lives and by the reminder after it is gone.
     /// </remarks>
     bool HasAlertWorkPending =>
         (_alertReconciliationPending && _alertReportRequested) ||
@@ -90,8 +89,6 @@ public partial class Observer
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
         _shortCatchUpRetryTimer?.Dispose();
-        _departureCheckTimer?.Dispose();
-        StopWatchingSiloDepartures();
         GC.SuppressFinalize(this);
     }
 
@@ -227,9 +224,18 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Confirms the alert level this activation loaded, without the durable wakeup a change needs.
+    /// Reports on activation only when the loaded state has something alert-relevant: an unreported lifecycle, a failed
+    /// partition or a quarantine. A healthy observer reports on change and on the reminder, never on activation.
     /// </summary>
-    void ScheduleActivationAlertReport() => ScheduleAlertReportTurn();
+    void ScheduleActivationAlertReportIfNeeded()
+    {
+        if (_alertReconciliationPending ||
+            Failures.HasFailedPartitions ||
+            State.RunningState == ObserverRunningState.Quarantined)
+        {
+            ScheduleAlertReportTurn();
+        }
+    }
 
     void ScheduleAlertReportTurn()
     {
@@ -346,6 +352,7 @@ public partial class Observer
         {
             _alertLifecycleId = Guid.NewGuid();
             _alertRevision++;
+            _alertReconciliationPending = true;
             await WriteStateAsync();
         }
     }

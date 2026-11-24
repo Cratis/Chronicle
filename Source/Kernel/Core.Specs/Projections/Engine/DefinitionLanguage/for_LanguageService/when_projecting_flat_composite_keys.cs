@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
 using Cratis.Chronicle.Schemas;
@@ -110,6 +111,30 @@ public class when_projecting_flat_composite_keys : given.a_runtime_language_serv
     {
         var result = _language.Compile("projection Alerts => Alert\n  " + Body.Replace("\n", "\n  ").Replace("remove with Removed\n    key\n      customerId = $eventSourceId\n      orderNumber = name", "remove with Removed"), ProjectionOwner.Client, [_readModel], _schemas);
         result.Match(_ => false, errors => errors.HasErrors).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task should_recheck_namespace_sink_support_when_activating_a_shared_plan()
+    {
+        var plan = new ProjectionPlan(
+            _eventStore,
+            _definition,
+            _readModel,
+            ProjectionFactory.DefinitionFingerprintFor(_definition),
+            ProjectionFactory.ReadModelFingerprintFor(_readModel),
+            _schemas);
+        var supported = await _factory.Create(_eventStore, _namespace, plan);
+        supported.Identifier.ShouldEqual(_definition.Identifier);
+        var exception = await Catch.Exception(() => _factory.Create(_eventStore, "unsupported-namespace", plan));
+        exception.ShouldBeOfExactType<FlatCompositeKeyNotSupported>();
+    }
+
+    [Fact]
+    public async Task should_refuse_an_invalid_flat_definition_before_caching_its_plan()
+    {
+        var exception = await Catch.Exception(() => _factory.GetPlan(_eventStore, _definition with { SubscribesToAllEvents = true }, _readModel));
+        exception.ShouldBeOfExactType<FlatCompositeKeyNotSupported>();
+        _factory.CachedPlanCount.ShouldEqual(0);
     }
 
     async Task<Key> Apply(string eventType, string? number, int amount, ulong sequence)

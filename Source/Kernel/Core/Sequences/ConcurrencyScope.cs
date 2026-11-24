@@ -21,12 +21,14 @@ namespace Cratis.Chronicle.Sequences;
 /// namespace, rather than reaching into <c language="csharp">Contracts.EventSequences.Concurrency</c>, where a hand-written contract
 /// of the same name still serves the not-yet-retired <c language="csharp">EventSequences</c> service.
 /// </remarks>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Sequences.ConcurrencyScope")]
 public record ConcurrencyScope(
-    ulong SequenceNumber,
-    bool EventSourceId,
-    string? EventStreamType = default,
-    string? EventStreamId = default,
-    string? EventSourceType = default,
-    IEnumerable<EventType>? EventTypes = default,
-    bool ExpectsNoMatchingEvent = default,
-    ulong? MutationEpoch = default);
+    [Id(0)] ulong SequenceNumber,
+    [Id(1)] bool EventSourceId,
+    [Id(2)] string? EventStreamType = default,
+    [Id(3)] string? EventStreamId = default,
+    [Id(4)] string? EventSourceType = default,
+    [Id(5)] IEnumerable<EventType>? EventTypes = default,
+    [Id(6)] bool ExpectsNoMatchingEvent = default,
+    [Id(7)] ulong? MutationEpoch = default);

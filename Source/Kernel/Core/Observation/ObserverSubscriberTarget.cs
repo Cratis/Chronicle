@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="SiloAddress">The <see cref="SiloAddress"/> of the silo terminating the client instance's connection.</param>
 /// <param name="ConnectedClient">The <see cref="ConnectedClient"/> for the client instance, or null for kernel-owned subscribers.</param>
-public record ObserverSubscriberTarget(SiloAddress SiloAddress, ConnectedClient? ConnectedClient = null);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverSubscriberTarget")]
+public record ObserverSubscriberTarget([Id(0)] SiloAddress SiloAddress, [Id(1)] ConnectedClient? ConnectedClient = null);

@@ -10,6 +10,8 @@ namespace Cratis.Chronicle.Storage.Seeding;
 /// </summary>
 /// <param name="ByEventType">Events grouped by event type.</param>
 /// <param name="ByEventSource">Events grouped by event source.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Seeding.EventSeeds")]
 public record EventSeeds(
-    IDictionary<EventTypeId, IEnumerable<SeededEventEntry>> ByEventType,
-    IDictionary<EventSourceId, IEnumerable<SeededEventEntry>> ByEventSource);
+    [Id(0)] IDictionary<EventTypeId, IEnumerable<SeededEventEntry>> ByEventType,
+    [Id(1)] IDictionary<EventSourceId, IEnumerable<SeededEventEntry>> ByEventSource);

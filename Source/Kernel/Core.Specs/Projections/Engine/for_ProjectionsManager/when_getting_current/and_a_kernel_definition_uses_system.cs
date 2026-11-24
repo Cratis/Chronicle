@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -23,5 +22,5 @@ public class and_a_kernel_definition_uses_system : given.a_manager_with_shared_d
     }
 
     [Fact] void should_load_every_kernel_definition() => _results.TrueForAll(_ => _ is not null).ShouldBeTrue();
-    [Fact] void should_compile_every_variant() => _projectionFactory.Received(4).Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<ProjectionDefinition>(_ => _.Owner == ProjectionOwner.Kernel), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>());
+    [Fact] void should_compile_every_variant() => _projectionFactory.Received(4).Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<ProjectionDefinition>(_ => _.Owner == ProjectionOwner.Kernel), Arg.Any<ReadModelDefinition>());
 }

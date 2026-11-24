@@ -7,4 +7,6 @@ namespace Cratis.Chronicle.Concepts.Security;
 /// Represents bearer token authentication.
 /// </summary>
 /// <param name="Token">The bearer token.</param>
-public record BearerTokenAuthorization(Token Token);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Security.BearerTokenAuthorization")]
+public record BearerTokenAuthorization([Id(0)] Token Token);

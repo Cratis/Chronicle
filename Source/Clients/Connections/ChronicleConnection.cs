@@ -72,11 +72,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     GrpcChannel? _channel;
     IConnectionService? _connectionService;
     IServices _services;
+    bool _servicesMatchCurrentChannel;
     IDisposable? _keepAliveSubscription;
     TaskCompletionSource? _connectTcs;
     ChronicleServerAddress? _lastDroppedAddress;
     DateTimeOffset? _lastConnectFailure;
     int _consecutiveResolutionFailures;
+    int _kernelStatus;
     bool _hasEverConnected;
 
     /// <summary>
@@ -273,6 +275,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     }
 
     /// <summary>
+    /// Gets a value indicating whether observation is carried over one stream for every reactor and reducer when the kernel
+    /// advertises <see cref="Contracts.Clients.KernelCapabilities.MultiplexedObservation"/>. Against a kernel that does not,
+    /// every reactor and reducer keeps its own stream whatever this is.
+    /// </summary>
+    public bool MultiplexObservation { get; init; } = true;
+
+    /// <summary>
     /// Gets the longest a connect attempt waits for one server to complete its handshake while another server is
     /// still untried. The last untried server gets whatever remains of the connect timeout.
     /// </summary>
@@ -290,6 +299,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!Lifecycle.IsConnected)
         {
             await Connect().WaitAsync(cancellationToken);
+            EnsureServicesMatchCurrentChannel();
         }
 
         return _services;
@@ -324,6 +334,38 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     /// <inheritdoc/>
     public void RequestReconnect() => _watchDog.RequestReconnect();
+
+    /// <summary>
+    /// Decides how reactors and reducers observe: over one multiplexed stream when it is enabled and the kernel advertises it,
+    /// otherwise over one stream each, which is all an older kernel serves.
+    /// </summary>
+    /// <param name="perObserver">The services with one stream per reactor and reducer.</param>
+    /// <param name="enabled">Whether multiplexed observation is enabled.</param>
+    /// <param name="capabilities">The capabilities the kernel advertised.</param>
+    /// <param name="multiplexedObservation">Creates the proxy of the kernel's multiplexed observation. Only called when it is used.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> for the shared channel.</param>
+    /// <returns>The services to use.</returns>
+    internal static Services ChooseObservation(
+        Services perObserver,
+        bool enabled,
+        IReadOnlyCollection<string> capabilities,
+        Func<Contracts.Observation.Multiplexed.IMultiplexedObservation> multiplexedObservation,
+        ILoggerFactory loggerFactory)
+    {
+        if (!enabled || !capabilities.Contains(Contracts.Clients.KernelCapabilities.MultiplexedObservation))
+        {
+            return perObserver;
+        }
+
+        var channel = new Multiplexed.MultiplexedObservationChannel(
+            multiplexedObservation(),
+            loggerFactory.CreateLogger<Multiplexed.MultiplexedObservationChannel>());
+        return perObserver with
+        {
+            Reactors = new Multiplexed.MultiplexedReactors(perObserver.Reactors, channel),
+            Reducers = new Multiplexed.MultiplexedReducers(channel)
+        };
+    }
 
     /// <summary>
     /// Reconnect on behalf of the watchdog, which must always get to attempt.
@@ -533,14 +575,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             return;
         }
 
-        // Re-arm the staleness clock right before the watchdog starts evaluating it. The clock was last set
-        // when the keep-alive stream was subscribed - potentially a full connect timeout ago if the wait timed
-        // out. Starting the watchdog on that stale a timestamp let it declare the session dropped on its very
-        // first tick, against a connection that never finished establishing (or, on a kernel slow to answer
-        // during its own restart, one still legitimately coming up) - tearing the channel down and immediately
-        // reconnecting on top of an attempt that might still have succeeded.
-        _watchDog.NotifyKeepAlive();
-        await ExecutionContextDetached.Start(() => Task.Run(_watchDog.Start));
+        await StartMonitoring();
 
         if (!connected)
         {
@@ -627,8 +662,21 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
+    async Task StartMonitoring()
+    {
+        // Re-arm the staleness clock right before the watchdog starts evaluating it. The clock was last set
+        // when the keep-alive stream was subscribed - potentially a full connect timeout ago if the wait timed
+        // out. Starting the watchdog on that stale a timestamp let it declare the session dropped on its very
+        // first tick, against a connection that never finished establishing (or, on a kernel slow to answer
+        // during its own restart, one still legitimately coming up) - tearing the channel down and immediately
+        // reconnecting on top of an attempt that might still have succeeded.
+        _watchDog.NotifyKeepAlive();
+        await ExecutionContextDetached.Start(() => Task.Run(_watchDog.Start));
+    }
+
     void DisposeCurrentAttempt()
     {
+        _servicesMatchCurrentChannel = false;
         _channel?.Dispose();
         _keepAliveSubscription?.Dispose();
     }
@@ -697,6 +745,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
 
         _services = CreateServices(callInvoker, clientFactory);
+        _servicesMatchCurrentChannel = true;
 
         if (_skipKeepAlive)
         {
@@ -714,7 +763,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     IConnectionService CreateConnectionService(ChronicleServerAddress address, CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory) =>
         ConnectionServiceFactory?.Invoke(address, callInvoker) ?? callInvoker.CreateGrpcService<IConnectionService>(clientFactory);
 
-    Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
+    Services CreateServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory) =>
+        ChooseObservation(
+            CreatePerObserverServices(callInvoker, clientFactory),
+            MultiplexObservation,
+            Capabilities,
+            () => callInvoker.CreateGrpcService<Contracts.Observation.Multiplexed.IMultiplexedObservation>(clientFactory),
+            _loggerFactory);
+
+    Services CreatePerObserverServices(CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory)
     {
         return new Services(
             callInvoker.CreateGrpcService<ICompliance>(clientFactory),
@@ -778,16 +835,35 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         try
         {
             await handshake.Task.WaitAsync(budget, _timeProvider);
-            _logger.Connected();
-            _hasEverConnected = true;
-            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
-            return true;
         }
         catch (Exception ex) when (ex is TimeoutException or ConnectionUnavailable or RpcException)
         {
             _logger.EndpointHandshakeFailed(DescribeEndpoint(address), ex is RpcException rpc ? rpc.StatusCode.ToString() : ex.Message);
             return false;
         }
+
+        _logger.Connected();
+        _hasEverConnected = true;
+        try
+        {
+            await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
+        }
+        catch
+        {
+            if (!_cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await StartMonitoring();
+                }
+                catch
+                {
+                    // Monitor startup must not replace the connected handler's original failure.
+                }
+            }
+            throw;
+        }
+        return true;
     }
 
     /// <summary>
@@ -847,6 +923,15 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!Lifecycle.IsConnected)
         {
             Connect().GetAwaiter().GetResult();
+            EnsureServicesMatchCurrentChannel();
+        }
+    }
+
+    void EnsureServicesMatchCurrentChannel()
+    {
+        if (!Lifecycle.IsConnected && !_servicesMatchCurrentChannel)
+        {
+            throw new ConnectionTimedOut(DescribeCurrentEndpoint(), _connectTimeout);
         }
     }
 
@@ -921,6 +1006,28 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         }
     }
 
+    /// <summary>
+    /// Tells in the log when the kernel reports that it is busy, and when it stops, rather than leaving the client's
+    /// users to guess from timeouts.
+    /// </summary>
+    /// <param name="status">The <see cref="KernelStatus"/> the keep-alive carried.</param>
+    void ReportKernelStatus(KernelStatus status)
+    {
+        if (Interlocked.Exchange(ref _kernelStatus, (int)status) == (int)status)
+        {
+            return;
+        }
+
+        if (status == KernelStatus.Accepting)
+        {
+            _logger.KernelIsAccepting();
+        }
+        else
+        {
+            _logger.KernelIsBusy(status);
+        }
+    }
+
     void HandleConnection(TaskCompletionSource handshake, ConnectionKeepAlive keepAlive)
     {
         // A late callback from an attempt that has since been replaced must not touch the current one.
@@ -931,6 +1038,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         handshake.TrySetResult();
         _watchDog.NotifyKeepAlive();
+        ReportKernelStatus(keepAlive.Status);
 
         // Always answer, also with a debugger attached: the kernel drops a connection whose keep-alives go unanswered.
         _connectionService?.ConnectionKeepAlive(keepAlive).GetAwaiter().GetResult();

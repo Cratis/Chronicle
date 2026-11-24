@@ -29,6 +29,7 @@ internal sealed class ObserverMetrics(MetricSet metrics) : IDisposable
     MetricInstrument<int, CounterMetricRecorder<int>>? _observerQuarantined;
     MetricInstrument<int, CounterMetricRecorder<int>>? _skipped;
     MetricInstrument<int, CounterMetricRecorder<int>>? _zeroWorkCatchup;
+    MetricInstrument<int, CounterMetricRecorder<int>>? _catchUpDeferrals;
     MetricInstrument<int, CounterMetricRecorder<int>>? _claimDivergence;
     MetricInstrument<int, CounterMetricRecorder<int>>? _dormantResumes;
     MetricInstrument<int, CounterMetricRecorder<int>>? _probeScheduled;
@@ -68,6 +69,9 @@ internal sealed class ObserverMetrics(MetricSet metrics) : IDisposable
 
     internal void ZeroWorkCatchUp() =>
         (_zeroWorkCatchup ??= metrics.Counter<int>(WellKnownMetricNames.ObserverZeroWorkCatchUps, WellKnownMetricNames.ObserverZeroWorkCatchUpsUnit, "Number of catch-up jobs per observer that concluded without moving the observer forward: no events handled and nothing read past its position")).Record(1);
+
+    internal void CatchUpDeferred(string reason) =>
+        (_catchUpDeferrals ??= metrics.Counter<int>(WellKnownMetricNames.ObserverCatchUpDeferrals, WellKnownMetricNames.ObserverCatchUpDeferralsUnit, "Number of catch-ups per observer that were deferred instead of starting a catch-up job, by reason: no connected client, or too many catch-up jobs running", WellKnownTelemetryAttributes.ObserverCatchUpDeferralReason)).Record(1, reason);
 
     internal void ClaimDivergence(ShadowClaimDivergence divergence) =>
         (_claimDivergence ??= metrics.Counter<int>(WellKnownMetricNames.ObserverClaimDivergences, WellKnownMetricNames.ObserverClaimDivergencesUnit, "Shadow partition-claim divergences from replaying/catching-up sets", WellKnownTelemetryAttributes.ObserverClaimDivergence)).Record(1, divergence.ToString());

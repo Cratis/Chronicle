@@ -22,7 +22,7 @@ public class when_jobs_migrations_are_called_directly_in_verify_mode : given.a_s
         _connection = scope.DbContext.Database.GetConnectionString();
         await using var jobs = new JobsDbContext(Database.BuildOptions<JobsDbContext>(_services, _connection));
         _migration = jobs.Database.GetMigrations().First();
-        await scope.DbContext.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM __EFMigrationsHistory WHERE MigrationId = {_migration}");
+        await scope.DbContext.Database.ExecuteSqlAsync($"DELETE FROM __EFMigrationsHistory WHERE MigrationId = {_migration}");
     }
 
     async Task Because()

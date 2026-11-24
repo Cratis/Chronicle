@@ -31,11 +31,6 @@ public partial class EventTypesStorage
         // Compare the entire serialized map so a concurrent update of another generation is preserved too.
         var changed = await scope.DbContext.EventTypes.Where(_ => _.Id == id && _.Schemas == observed)
             .ExecuteUpdateAsync(_ => _.SetProperty(item => item.Schemas, replacement));
-        if (changed > 0)
-        {
-            Invalidate(eventTypeId);
-        }
-
         return changed > 0;
     }
 }

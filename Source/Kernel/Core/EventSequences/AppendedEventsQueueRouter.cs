@@ -73,7 +73,7 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
                 continue;
             }
 
-            byObserver[subscription.ObserverKey] = subscription.EventTypeIds.ToHashSet();
+            byObserver[subscription.ObserverKey] = subscription.EventTypes.Ids;
         }
 
         _subscriptionsByQueue[queueIndex] = byObserver;
@@ -91,7 +91,7 @@ public sealed class AppendedEventsQueueRouter(int queueCount)
     public int Subscribe(ObserverKey observerKey, IEnumerable<EventTypeId> eventTypeIds)
     {
         var queueIndex = GetQueueIndexFor(observerKey);
-        var eventTypes = eventTypeIds.ToHashSet();
+        var eventTypes = eventTypeIds as IReadOnlySet<EventTypeId> ?? eventTypeIds.ToHashSet();
 
         if (_allEventTypesByQueue.TryGetValue(queueIndex, out var allEventTypes))
         {

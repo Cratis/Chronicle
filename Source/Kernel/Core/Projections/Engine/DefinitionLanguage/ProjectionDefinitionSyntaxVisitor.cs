@@ -131,17 +131,18 @@ public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IE
     {
         if (isChildContext)
         {
-            context.Every = context.Every with { IncludeChildren = every.IncludeChildren };
-            var properties = (Dictionary<PropertyPath, string>)context.Every.Properties;
+            var properties = new Dictionary<PropertyPath, string>(context.Every.Properties);
             foreach (var (property, expression) in ProcessMappings(every.Mappings))
             {
                 properties[property] = expression;
             }
 
-            if (every.AutoMap != AutoMapMode.Inherit)
+            context.Every = context.Every with
             {
-                context.Every.AutoMap = GetAutoMapValue(every.AutoMap);
-            }
+                IncludeChildren = every.IncludeChildren,
+                Properties = properties,
+                AutoMap = every.AutoMap != AutoMapMode.Inherit ? GetAutoMapValue(every.AutoMap) : context.Every.AutoMap
+            };
 
             return;
         }

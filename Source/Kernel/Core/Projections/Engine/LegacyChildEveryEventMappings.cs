@@ -55,9 +55,9 @@ internal static partial class LegacyChildEveryEventMappings
     internal static partial void LogMoved(ILogger<ProjectionFactory> logger, string projectionId, string property);
 
     static Dictionary<PropertyPath, ChildrenDefinition>? NormalizeDescendants(
-        IDictionary<PropertyPath, ChildrenDefinition>? definitions,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? definitions,
         JsonSchema schema,
-        IDictionary<PropertyPath, string> candidates,
+        IReadOnlyDictionary<PropertyPath, string> candidates,
         ISet<PropertyPath> moved,
         bool isCollection) => definitions?.ToDictionary(
             entry => entry.Key,
@@ -71,7 +71,7 @@ internal static partial class LegacyChildEveryEventMappings
     static ChildrenDefinition NormalizeChild(
         ChildrenDefinition definition,
         JsonSchema schema,
-        IDictionary<PropertyPath, string> candidates,
+        IReadOnlyDictionary<PropertyPath, string> candidates,
         ISet<PropertyPath> moved)
     {
         var properties = definition.FromEvery.Properties.ToDictionary();

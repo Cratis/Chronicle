@@ -22,12 +22,14 @@ namespace Cratis.Chronicle.Captures;
 /// <param name="localSiloDetails"><see cref="ILocalSiloDetails"/> for the silo the subscriber runs on.</param>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for getting the observers and namespaces.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="definitionsCacheClient">The <see cref="IObserverDefinitionsCacheClient"/> that tells every silo a definition was deleted.</param>
 [Singleton]
 public class CaptureEventsSubscriptions(
     IStorage storage,
     ILocalSiloDetails localSiloDetails,
     IGrainFactory grainFactory,
-    ILogger<CaptureEventsSubscriptions> logger) : ICaptureEventsSubscriptions
+    ILogger<CaptureEventsSubscriptions> logger,
+    IObserverDefinitionsCacheClient definitionsCacheClient) : ICaptureEventsSubscriptions
 {
     /// <inheritdoc/>
     public async Task Subscribe(EventStoreName eventStore, CaptureDefinition definition)
@@ -134,7 +136,9 @@ public class CaptureEventsSubscriptions(
             await eventStoreStorage.Captures.Delete(CaptureObservers.ObservationIdFor(definition.Id, @namespace));
         }
 
-        await eventStoreStorage.Observers.Delete(CaptureObservers.For(definition.Id));
+        var observerId = CaptureObservers.For(definition.Id);
+        await eventStoreStorage.Observers.Delete(observerId);
+        await definitionsCacheClient.Invalidate(eventStore, observerId);
     }
 
     static void ThrowWhenNotEvents(CaptureDefinition definition)

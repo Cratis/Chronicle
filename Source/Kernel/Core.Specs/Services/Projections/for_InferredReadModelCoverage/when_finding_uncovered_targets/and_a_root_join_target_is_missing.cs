@@ -8,10 +8,10 @@ namespace Cratis.Chronicle.Services.Projections.for_InferredReadModelCoverage.wh
 
 public class and_a_root_join_target_is_missing : given.a_projection_definition
 {
-    void Establish() => _definition.Join[EventType] = new(
+    void Establish() => _definition = _definition.WithJoin(EventType, new(
         "ProductId",
         new Dictionary<PropertyPath, string> { ["ProductName"] = "Name" },
-        "ProductId");
+        "ProductId"));
 
     void Because() => _uncovered = InferredReadModelCoverage.FindUncoveredTargets(_definition, JsonSchema.FromJson("""{ "type": "object" }"""));
 

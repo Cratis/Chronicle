@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Clients;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Connections;
@@ -32,6 +33,12 @@ internal static partial class ChronicleConnectionLogMessages
 
     [LoggerMessage(LogLevel.Warning, "The keep-alive stream from Chronicle server {Server} ended, reconnecting")]
     internal static partial void KeepAliveStreamEnded(this ILogger<ChronicleConnection> logger, string server);
+
+    [LoggerMessage(LogLevel.Warning, "Chronicle reports that it is {Status}: calls to it may be slow or time out until it recovers")]
+    internal static partial void KernelIsBusy(this ILogger<ChronicleConnection> logger, KernelStatus status);
+
+    [LoggerMessage(LogLevel.Information, "Chronicle reports that it is accepting calls normally again")]
+    internal static partial void KernelIsAccepting(this ILogger<ChronicleConnection> logger);
 
     [LoggerMessage(LogLevel.Warning, "No Chronicle server accepted a connection within {TimeoutSeconds} seconds. Candidates: {Server} - retrying in the background")]
     internal static partial void NotAcceptingConnectionsYet(this ILogger<ChronicleConnection> logger, string server, int timeoutSeconds);

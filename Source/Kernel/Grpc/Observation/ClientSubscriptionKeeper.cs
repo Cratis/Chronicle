@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Supervision;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Services.Observation;
@@ -20,9 +21,11 @@ namespace Cratis.Chronicle.Services.Observation;
 /// </para>
 /// <para>
 /// Checking costs grain calls per subscription, so how often is decided by <see cref="SubscriptionCheckSchedule"/>: often
-/// while a subscription is not confirmed intact and for a while after a silo starts leaving the cluster, which is what
-/// loses subscriptions, and only at a slow, jittered safety-net interval otherwise. The checks after a departure are
-/// spread over one revise interval, so the keepers of every stream on a silo do not all call their observers at once.
+/// while a subscription is not confirmed intact, and only at a slow, jittered safety-net interval otherwise. A silo
+/// leaving the cluster is what loses subscriptions, so the silo's <see cref="ISiloSupervisor"/> also asks every keeper to
+/// check once per revise interval for a while after it, spread in batches so the keepers of every stream on a silo do not
+/// all call their observers at once. The supervisor runs every keeper of the silo on one loop, so an open stream costs a
+/// registry entry rather than a timer and a pending wait of its own.
 /// </para>
 /// <para>
 /// A failed check is logged and retried at the next one; a silo that is still leaving the cluster can fail a call or two.
@@ -31,45 +34,81 @@ namespace Cratis.Chronicle.Services.Observation;
 internal static class ClientSubscriptionKeeper
 {
     /// <summary>
+    /// The longest a single check may run before it is given up as failed.
+    /// </summary>
+    /// <remarks>
+    /// A check asks an observer, and the observer can be on a silo that is going down: the call then waits for the response
+    /// timeout. A check still running makes a departure ask for nothing, so one hung call would leave the subscription it
+    /// was meant to restore unrestored for as long as the call hangs, and nothing is delivered to the client meanwhile.
+    /// </remarks>
+    internal static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// Keep the subscription until the stream closes.
     /// </summary>
     /// <param name="keep">Keeps the subscription in place, restoring it if it was lost. Returns whether it was found intact.</param>
     /// <param name="schedule">The <see cref="SubscriptionCheckSchedule"/> deciding when to check.</param>
-    /// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when a silo leaves the cluster.</param>
-    /// <param name="timeProvider">The <see cref="TimeProvider"/> to wait with.</param>
+    /// <param name="supervisor">The <see cref="ISiloSupervisor"/> running the checks.</param>
     /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
     /// <param name="logger">The <see cref="ILogger"/> to log with.</param>
     /// <param name="cancellationToken">Cancelled when the stream closes.</param>
+    /// <param name="checkTimeout">The longest a single check may run; <see cref="CheckTimeout"/> when not given.</param>
     /// <returns>A task that completes when the stream has closed.</returns>
     public static async Task KeepWhileConnected(
         Func<Task<bool>> keep,
         SubscriptionCheckSchedule schedule,
-        ISiloDepartures siloDepartures,
-        TimeProvider timeProvider,
+        ISiloSupervisor supervisor,
         ConnectionId connectionId,
         ILogger logger,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? checkTimeout = default)
     {
+        var timeout = checkTimeout ?? CheckTimeout;
+        var key = $"client-subscription:{connectionId}:{Guid.NewGuid()}";
+        var checking = 0;
+
+        // A check that is still running is not started a second time: a departure can ask while the periodic check runs,
+        // and the one in flight already covers it.
+        async Task<bool> CheckOnce()
+        {
+            if (Interlocked.CompareExchange(ref checking, 1, 0) != 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                var intact = await Keep(keep, connectionId, logger, timeout, cancellationToken);
+                schedule.Checked(intact);
+                return true;
+            }
+            finally
+            {
+                Volatile.Write(ref checking, 0);
+            }
+        }
+
+        supervisor.Register(
+            key,
+            schedule.Revise,
+            async () =>
+            {
+                await CheckOnce();
+                return schedule.NextCheckAfter();
+            },
+            () => CheckOnce());
+
         try
         {
-            // The departure is taken once and replaced only after it has been acted on: a silo that leaves while a check
-            // or the spread runs completes this task, and the next pass sees it instead of a fresh one that never will.
-            var departure = siloDepartures.Next;
-            while (true)
-            {
-                if (departure.IsCompleted || await WaitForCheck(schedule.NextCheckAfter(timeProvider.GetUtcNow()), departure, timeProvider, cancellationToken))
-                {
-                    departure = siloDepartures.Next;
-                    schedule.SiloLeft(timeProvider.GetUtcNow());
-                    await Task.Delay(schedule.SpreadAfterDeparture(), timeProvider, cancellationToken);
-                }
-
-                schedule.Checked(await Keep(keep, connectionId, logger, cancellationToken));
-            }
+            await Task.Delay(Timeout.Infinite, cancellationToken);
         }
         catch (OperationCanceledException)
         {
             // The stream closed; there is nothing left to keep.
+        }
+        finally
+        {
+            supervisor.Unregister(key);
         }
     }
 
@@ -180,21 +219,11 @@ internal static class ClientSubscriptionKeeper
             return await isIntact();
         };
 
-    static async Task<bool> WaitForCheck(TimeSpan interval, Task departure, TimeProvider timeProvider, CancellationToken cancellationToken)
-    {
-        using var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var elapsed = Task.Delay(interval, timeProvider, waiting.Token);
-        var first = await Task.WhenAny(elapsed, departure);
-        await waiting.CancelAsync();
-        cancellationToken.ThrowIfCancellationRequested();
-        return first == departure;
-    }
-
-    static async Task<bool> Keep(Func<Task<bool>> keep, ConnectionId connectionId, ILogger logger, CancellationToken cancellationToken)
+    static async Task<bool> Keep(Func<Task<bool>> keep, ConnectionId connectionId, ILogger logger, TimeSpan timeout, CancellationToken cancellationToken)
     {
         try
         {
-            return await keep();
+            return await keep().WaitAsync(timeout, TimeProvider.System);
         }
         catch (Exception ex)
         {

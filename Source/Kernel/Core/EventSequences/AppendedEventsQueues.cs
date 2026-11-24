@@ -60,17 +60,16 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
+    public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, EventTypeSet eventTypes, ObserverFilters? filters = null)
     {
         if (_isResetting)
         {
             return new AppendedEventsQueueSubscription(observerKey, _router.GetQueueIndexFor(observerKey));
         }
 
-        var eventTypesList = eventTypes as IReadOnlyCollection<EventType> ?? eventTypes.ToArray();
-        var queueIndex = _router.Subscribe(observerKey, eventTypesList.Select(eventType => eventType.Id));
+        var queueIndex = _router.Subscribe(observerKey, eventTypes.Ids);
         var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
-        await _queues[queueIndex].Subscribe(observerKey, eventTypesList, filters);
+        await _queues[queueIndex].Subscribe(observerKey, eventTypes, filters);
         return subscription;
     }
 

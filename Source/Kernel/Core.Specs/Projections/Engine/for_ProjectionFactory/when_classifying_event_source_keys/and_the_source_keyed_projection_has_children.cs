@@ -5,7 +5,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_classif
 
 public class and_the_source_keyed_projection_has_children : given.a_projection_with_source_keys
 {
-    void Establish() => _definition.Children["notes"] = Child();
+    void Establish() => _definition = _definition.WithChild("notes", Child());
 
     async Task Because() => _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, _schemas);
 

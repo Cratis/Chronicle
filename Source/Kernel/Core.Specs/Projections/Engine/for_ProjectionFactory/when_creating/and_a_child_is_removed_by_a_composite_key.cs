@@ -4,6 +4,7 @@
 using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
@@ -33,12 +34,21 @@ public class and_a_child_is_removed_by_a_composite_key : given.a_child_collectio
               }}}
             }}
             """);
-        var child = _definition.Children["notes"];
-        child.From[_noteWritten] = new(
-            new Dictionary<PropertyPath, string> { ["text"] = "text" },
-            CompositeKey,
-            "$eventSourceId");
-        child.RemovedWith[_noteRemoved] = new(CompositeKey, "$eventSourceId");
+        var notes = _definition.Children["notes"] with
+        {
+            From = new Dictionary<EventType, FromDefinition>(_definition.Children["notes"].From)
+            {
+                [_noteWritten] = new(
+                    new Dictionary<PropertyPath, string> { ["text"] = "text" },
+                    CompositeKey,
+                    "$eventSourceId")
+            },
+            RemovedWith = new Dictionary<EventType, RemovedWithDefinition>(_definition.Children["notes"].RemovedWith)
+            {
+                [_noteRemoved] = new(CompositeKey, "$eventSourceId")
+            }
+        };
+        _definition = _definition with { Children = new Dictionary<PropertyPath, ChildrenDefinition>(_definition.Children) { ["notes"] = notes } };
     }
 
     async Task Because()

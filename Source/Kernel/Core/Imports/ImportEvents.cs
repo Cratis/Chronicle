@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Imports;
+using Cratis.Chronicle.Jobs;
 
 namespace Cratis.Chronicle.Imports;
 
@@ -32,8 +33,17 @@ public class ImportEvents : Job<ImportEventsRequest, JobState>, IImportEvents
     protected override Task<bool> CanResume() => Task.FromResult(true);
 
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "import_events");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "import_events", State.Progress);
+
         // Also called when the job is removed. A completed or already failed import ignores this.
         if (AllStepsCompletedSuccessfully) return;
         var import = GrainFactory.GetGrain<IImport>(new ImportKey(JobKey.Scope, JobKey.Namespace, Request.ImportId));

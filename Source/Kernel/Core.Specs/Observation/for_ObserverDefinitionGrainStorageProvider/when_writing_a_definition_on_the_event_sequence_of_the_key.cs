@@ -9,5 +9,6 @@ public class when_writing_a_definition_on_the_event_sequence_of_the_key : given.
 
     Task Because() => _provider.WriteStateAsync("name", _grainId, _grainState);
 
+    [Fact] async Task should_announce_the_change_to_every_silo() => await _cacheClient.Received(1).Invalidate(_observerKey.EventStore, _observerId);
     [Fact] async Task should_save_the_definition() => await _definitionsStorage.Received(1).Save(_grainState.State);
 }

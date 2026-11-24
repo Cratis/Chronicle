@@ -8,6 +8,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,7 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="storage">The infrastructure storage for disconnected leases.</param>
 /// <param name="departureNotifier">The <see cref="IClientDepartureNotifier"/> telling observers a connection was dropped.</param>
+/// <param name="supervisor">The optional <see cref="ISiloSupervisor"/> that revises the clients on a schedule.</param>
 [KeepAlive]
 [ConnectedClientsPlacement]
 public partial class ConnectedClients(
@@ -30,28 +32,41 @@ public partial class ConnectedClients(
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ConnectedClients> meter,
     IOptions<ChronicleOptions> options,
     IStorage storage,
-    IClientDepartureNotifier departureNotifier) : Grain, IConnectedClients
+    IClientDepartureNotifier departureNotifier,
+    ISiloSupervisor? supervisor = null) : Grain, IConnectedClients
 {
     readonly ConnectedClientsMetrics _metrics = new(meter, options.Value.Telemetry.MetricNames);
-    readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds);
+    readonly TimeSpan _reviseConnectedClientsPeriod = TimeSpan.FromSeconds(Math.Max(options.Value.ConnectedClients.ReviseIntervalSeconds, options.Value.ConnectedClients.StaleThresholdSeconds));
     readonly TimeSpan _reservationTtl = TimeSpan.FromSeconds(options.Value.ConnectedClients.ReservationTtlSeconds);
     readonly int _staleThresholdSeconds = options.Value.ConnectedClients.StaleThresholdSeconds;
     readonly Dictionary<ConnectionId, ConnectionEntry> _clients = [];
     readonly List<DateTimeOffset> _reservations = [];
-    IGrainTimer? _reviseConnectedClientsTimer;
+    string _supervisionKey = string.Empty;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _reviseConnectedClientsTimer = this.RegisterGrainTimer(ReviseConnectedClients, new() { DueTime = TimeSpan.Zero, Period = _reviseConnectedClientsPeriod });
+        // A client that closes its connection is reported at once. Revising is only the safety net for one that
+        // vanished without it, so it needs no finer clock than the stale threshold, and one supervisor loop per silo
+        // runs it rather than a grain timer of its own.
+        _supervisionKey = $"connected-clients:{this.GetPrimaryKeyString()}";
+        var self = GrainFactory.GetGrain<IConnectedClients>(this.GetPrimaryKeyString());
+        supervisor?.Register(
+            _supervisionKey,
+            _reviseConnectedClientsPeriod,
+            async () =>
+            {
+                await self.Revise();
+                return null;
+            },
+            null);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        _reviseConnectedClientsTimer?.Dispose();
-        _reviseConnectedClientsTimer = null;
+        supervisor?.Unregister(_supervisionKey);
         return Task.CompletedTask;
     }
 
@@ -179,26 +194,8 @@ public partial class ConnectedClients(
         return Task.FromResult(entry.Client);
     }
 
-    static ConnectionEntry CreateEntry(
-        ConnectionId connectionId,
-        string version,
-        bool isRunningWithDebugger,
-        int processId,
-        string processPath,
-        string machineName,
-        string clientType) => new(new()
-        {
-            ConnectionId = connectionId,
-            Version = version,
-            LastSeen = DateTimeOffset.UtcNow,
-            IsRunningWithDebugger = isRunningWithDebugger,
-            ProcessId = processId,
-            ProcessPath = processPath,
-            MachineName = machineName,
-            ClientType = clientType
-        });
-
-    async Task ReviseConnectedClients(CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public async Task Revise()
     {
         RemoveExpiredReservations();
 
@@ -217,6 +214,25 @@ public partial class ConnectedClients(
             }
         }
     }
+
+    static ConnectionEntry CreateEntry(
+        ConnectionId connectionId,
+        string version,
+        bool isRunningWithDebugger,
+        int processId,
+        string processPath,
+        string machineName,
+        string clientType) => new(new()
+        {
+            ConnectionId = connectionId,
+            Version = version,
+            LastSeen = DateTimeOffset.UtcNow,
+            IsRunningWithDebugger = isRunningWithDebugger,
+            ProcessId = processId,
+            ProcessPath = processPath,
+            MachineName = machineName,
+            ClientType = clientType
+        });
 
     void RemoveExpiredReservations()
     {

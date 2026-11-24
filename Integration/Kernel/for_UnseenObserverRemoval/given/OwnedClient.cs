@@ -39,11 +39,30 @@ public sealed class OwnedClient : IAsyncDisposable
     /// <param name="namespace">The namespace the client connects to.</param>
     /// <param name="observers">The reactor and reducer instances the client owns.</param>
     /// <returns>The started client.</returns>
+    public static Task<OwnedClient> Start(
+        IServiceProvider kernelServices,
+        Sinks.SinkTypeId defaultSinkTypeId,
+        string eventStore,
+        string @namespace,
+        params object[] observers) =>
+        Start(kernelServices, defaultSinkTypeId, eventStore, @namespace, [typeof(UnseenEvent)], observers);
+
+    /// <summary>
+    /// Starts a client that owns the given reactors and reducers, knowing the given event types, and waits until each is subscribed.
+    /// </summary>
+    /// <param name="kernelServices">The services of the kernel the client connects to.</param>
+    /// <param name="defaultSinkTypeId">The default sink of the client.</param>
+    /// <param name="eventStore">The event store the client connects to.</param>
+    /// <param name="namespace">The namespace the client connects to.</param>
+    /// <param name="eventTypes">The event types the client knows.</param>
+    /// <param name="observers">The reactor and reducer instances the client owns.</param>
+    /// <returns>The started client.</returns>
     public static async Task<OwnedClient> Start(
         IServiceProvider kernelServices,
         Sinks.SinkTypeId defaultSinkTypeId,
         string eventStore,
         string @namespace,
+        Type[] eventTypes,
         params object[] observers)
     {
         var services = new ServiceCollection();
@@ -59,7 +78,7 @@ public sealed class OwnedClient : IAsyncDisposable
         services.AddSingleton(kernelServices.GetRequiredService<IServices>());
         services.AddSingleton(kernelServices.GetRequiredService<ILoggerFactory>());
         services.AddSingleton<IOptions<ChronicleOptions>>(Options.Create(new ChronicleOptions { DefaultSinkTypeId = defaultSinkTypeId }));
-        services.AddInProcessChronicleClient(new Artifacts(observers.Select(_ => _.GetType()).ToArray()), eventStore);
+        services.AddInProcessChronicleClient(new Artifacts(eventTypes, observers.Select(_ => _.GetType()).ToArray()), eventStore);
 
         var provider = services.BuildServiceProvider();
         try
@@ -116,9 +135,9 @@ public sealed class OwnedClient : IAsyncDisposable
         }
     }
 
-    sealed class Artifacts(Type[] observers) : DefaultClientArtifactsProvider(new NoAssemblies())
+    sealed class Artifacts(Type[] eventTypes, Type[] observers) : DefaultClientArtifactsProvider(new NoAssemblies())
     {
-        public override IEnumerable<Type> EventTypes => [typeof(UnseenEvent)];
+        public override IEnumerable<Type> EventTypes => eventTypes;
 
         public override IEnumerable<Type> Reactors => observers.Where(_ => typeof(IReactor).IsAssignableFrom(_));
 

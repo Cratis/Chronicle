@@ -158,4 +158,9 @@ public static class WellKnownServices
     /// The narrow service served on the dedicated federation listener that peers pull events from.
     /// </summary>
     public const string FederationPull = "FederationPull";
+
+    /// <summary>
+    /// The service for diagnosing what the kernel is busy with.
+    /// </summary>
+    public const string Diagnostics = "Diagnostics";
 }

@@ -22,8 +22,8 @@ public class when_lowering_sqlite_decimal_composites : Specification
     {
         _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"amount":{"type":"number","format":"decimal"}}}""");
         _columns = ProjectedColumns.ForSchema(_schema);
-        await using var sqlite = new DbContext(new DbContextOptionsBuilder().UseSqlite("Data Source=:memory:").Options);
-        await using var postgres = new DbContext(new DbContextOptionsBuilder().UseNpgsql("Host=localhost;Database=indexes").Options);
+        await using var sqlite = new DbContext(new DbContextOptionsBuilder().UseSqlite("Data Source=:memory:").WithoutServiceProviderCaching().IgnoringManyServiceProviders().Options);
+        await using var postgres = new DbContext(new DbContextOptionsBuilder().UseNpgsql("Host=localhost;Database=indexes").WithoutServiceProviderCaching().Options);
         _sqlite = sqlite.GetService<ISqlGenerationHelper>();
         _postgres = postgres.GetService<ISqlGenerationHelper>();
     }

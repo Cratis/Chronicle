@@ -6,6 +6,8 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// <summary>
 /// Represents a definition for the closed-stream constraint.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.ClosedStreamConstraintDefinition")]
 public record ClosedStreamConstraintDefinition : IConstraintDefinition
 {
     /// <summary>

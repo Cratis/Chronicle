@@ -20,5 +20,5 @@ public class and_a_registered_type_has_a_new_generation : given.an_event_sequenc
 
     [Fact] async Task should_update_the_subscription_generation() => (await _captureObserver.GetSubscription()).EventTypes.ShouldContainOnly(_registeredTypes);
     [Fact] async Task should_update_the_reactor_definition() => await _captureDefinitions.Received(1).Save(Arg.Any<ReactorDefinition>());
-    [Fact] async Task should_update_the_queue_subscription() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<IEnumerable<EventType>>(types => types.ToHashSet().SetEquals(_registeredTypes)), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_update_the_queue_subscription() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<EventTypeSet>(types => types.ToHashSet().SetEquals(_registeredTypes)), Arg.Any<ObserverFilters?>());
 }

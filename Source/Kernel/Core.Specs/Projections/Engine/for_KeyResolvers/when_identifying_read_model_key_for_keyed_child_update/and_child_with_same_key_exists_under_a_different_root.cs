@@ -22,7 +22,7 @@ public class and_child_with_same_key_exists_under_a_different_root : given.a_fla
 
     void Establish()
     {
-        Sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey)
+        Sink.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), ChildKey, Arg.Any<Key>())
             .Returns(new Option<Key>(new Key(OtherRootKey, ArrayIndexers.NoIndexers)));
 
         Storage.WithParentHistory(BoardKey, RootCreatedEvent);

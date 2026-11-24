@@ -11,9 +11,11 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="Execution">The observer-assigned execution number, advanced for each replacement job.</param>
 /// <param name="State">The entry's recovery state.</param>
 /// <param name="Revision">The control record revision under which the execution was started.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryOwner")]
 public record FailedPartitionRecoveryOwner(
-    Guid EpisodeId,
-    Guid JobId,
-    long Execution,
-    FailedPartitionRecoveryState State,
-    long Revision);
+    [Id(0)] Guid EpisodeId,
+    [Id(1)] Guid JobId,
+    [Id(2)] long Execution,
+    [Id(3)] FailedPartitionRecoveryState State,
+    [Id(4)] long Revision);

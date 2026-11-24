@@ -79,7 +79,7 @@ public class and_the_same_event_is_delivered_on_every_path(context context) : Gi
                 ObserverId = _id,
                 Partition = _source
             });
-            retry.Outcome.ShouldEqual(Contracts.Observation.PartitionRecoveryOutcome.Started);
+            retry.Outcome.ShouldEqual(Contracts.Observation.PartitionRecoveryOutcome.Accepted);
             var retried = await _receiver.NextDelivery();
             Retried = retried.Event;
             Job retryJob;

@@ -22,6 +22,6 @@ public class and_the_quarantined_subscription_has_stale_event_types : given.a_ma
 
     [Fact] void should_reconcile_the_event_types_once() => ShouldSubscribe(_observer);
     [Fact] void should_not_explicitly_subscribe() => ShouldNotSubscribe(_observer);
-    [Fact] async Task should_apply_the_current_event_types() => (await _observer.GetEventTypes()).ShouldEqual([EventType.Unknown]);
+    [Fact] async Task should_apply_the_current_event_types() => (await _observer.GetEventTypes()).ShouldEqual(EventTypeSet.From([EventType.Unknown]));
     [Fact] void should_keep_scheduling_the_reminder() => ShouldScheduleReminder(3);
 }

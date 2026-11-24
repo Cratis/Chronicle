@@ -11,7 +11,7 @@ public class and_a_legacy_selected_event_type_replay_has_no_held_back_position :
     void Establish()
     {
         _request = _request with { ReplaysAllEventTypes = false, HeldBackFrom = EventSequenceNumber.Unavailable };
-        _observer.GetEventTypes().Returns(Task.FromResult<IEnumerable<EventType>>([.. _request.EventTypes, new EventType("other-event", EventTypeGeneration.First)]));
+        _observer.GetEventTypes().Returns(Task.FromResult(EventTypeSet.From([.. _request.EventTypes, new EventType("other-event", EventTypeGeneration.First)])));
         _stateStorage.State.LastHandledEventSequenceNumber = 50UL;
         _stateStorage.State.LastScannedEventSequenceNumber = 50UL;
         _stateStorage.State.HandledAllEvents = true;

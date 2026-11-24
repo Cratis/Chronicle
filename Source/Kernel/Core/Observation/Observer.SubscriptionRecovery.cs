@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     /// <inheritdoc/>
-    public async Task<bool> NeedsSubscriptionRecovery(IEnumerable<EventType> eventTypes)
+    public async Task<bool> NeedsSubscriptionRecovery(EventTypeSet eventTypes)
     {
         if (_removed || IsRetired || State.AlertDisposition == AlertDisposition.Retired || State.RunningState == ObserverRunningState.Quarantined)
         {
@@ -38,9 +38,9 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventType>> SubscribeAdditively<TObserverSubscriber>(
+    public async Task<EventTypeSet> SubscribeAdditively<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
@@ -53,9 +53,9 @@ public partial class Observer
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventType>> RecoverStalledSubscription<TObserverSubscriber>(
+    public async Task<EventTypeSet> RecoverStalledSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
@@ -63,7 +63,7 @@ public partial class Observer
         where TObserverSubscriber : IObserverSubscriber
     {
         if (CannotReconcileSubscription() || !await NeedsSubscriptionRecovery(eventTypes)) return _subscription.EventTypes;
-        await ReconcileSubscription<TObserverSubscriber>(type, MergeSubscribedEventTypes(eventTypes), siloAddress, false, subscriberArgs: subscriberArgs, isReplayable: isReplayable, filters: filters);
+        await ReconcileSubscription<TObserverSubscriber>(type, EventTypeSet.From(MergeSubscribedEventTypes(eventTypes)), siloAddress, false, subscriberArgs: subscriberArgs, isReplayable: isReplayable, filters: filters);
 
         return _subscription.EventTypes;
     }
@@ -71,7 +71,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReconcileSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         bool subscribesToAllEvents,
         EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility,

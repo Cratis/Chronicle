@@ -32,4 +32,16 @@ public interface IConnectionOwnership
     /// <param name="owner">The <see cref="ConnectionOwner"/> to check.</param>
     /// <returns>True if the owner holds the connection; false otherwise.</returns>
     bool IsOwnedBy(string connectionId, ConnectionOwner owner);
+
+    /// <summary>
+    /// Takes back a claim for a stream that turned out not to be the owner's to open, so that it leaves no trace.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="Release"/>, which keeps the released claim for a while so that a replayed keep-alive from a
+    /// departed owner is still recognized, this is for a stream refused after it was already served: a claim that is
+    /// kept for an hour would lock out the real owner of the connection for that hour.
+    /// </remarks>
+    /// <param name="connectionId">The <see cref="ConnectionId"/> that was claimed.</param>
+    /// <param name="owner">The <see cref="ConnectionOwner"/> that claimed it.</param>
+    void Revoke(ConnectionId connectionId, ConnectionOwner owner);
 }

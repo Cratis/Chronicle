@@ -604,9 +604,7 @@ public class ProjectionObserverSubscriber(
         {
             if (_definition.UsesUnsupportedEventSequence()) throw new InvalidOperationException("Projection does not accept the system event sequence.");
             var readModel = await GrainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(_definition.ReadModel, _key.EventStore)).GetDefinition();
-            var eventStoreStorage = storage.GetEventStore(_key.EventStore);
-            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-            var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, _definition, readModel, eventTypeSchemas);
+            var projection = await projectionFactory.Create(_key.EventStore, _key.Namespace, _definition, readModel);
             _pipeline = await projectionPipelineManager.GetFor(_key.EventStore, _key.Namespace, projection);
             _projection = projection;
             _schema = readModel.GetSchemaForLatestGeneration();

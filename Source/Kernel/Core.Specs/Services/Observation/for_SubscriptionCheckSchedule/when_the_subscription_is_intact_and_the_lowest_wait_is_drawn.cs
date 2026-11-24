@@ -13,7 +13,7 @@ public class when_the_subscription_is_intact_and_the_lowest_wait_is_drawn : give
 
     void Establish() => _schedule.Checked(true);
 
-    void Because() => _next = _schedule.NextCheckAfter(Now);
+    void Because() => _next = _schedule.NextCheckAfter();
 
     [Fact] void should_check_after_three_quarters_of_the_safety_net_interval() => _next.ShouldEqual(SafetyNet * 0.75);
 }

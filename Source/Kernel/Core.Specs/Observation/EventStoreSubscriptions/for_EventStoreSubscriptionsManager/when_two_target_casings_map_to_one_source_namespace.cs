@@ -31,7 +31,7 @@ public class when_two_target_casings_map_to_one_source_namespace : Specification
             _keys.Add(identity.ToString());
             return _observer;
         });
-        _manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
+        _manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("Target");
     }
 
     async Task Because()
@@ -43,5 +43,5 @@ public class when_two_target_casings_map_to_one_source_namespace : Specification
     [Fact] void should_request_only_the_canonical_observer_key() => _keys.Distinct().ShouldContainOnly(new ObserverKey("Source->Target", "Source", "Cratis", Concepts.EventSequences.EventSequenceId.Outbox).ToString());
     [Fact]
     void should_subscribe_exactly_once() => _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
-        ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
+        ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), true, automatic: true);
 }

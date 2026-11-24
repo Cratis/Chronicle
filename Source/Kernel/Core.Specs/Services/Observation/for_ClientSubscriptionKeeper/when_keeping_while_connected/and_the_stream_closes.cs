@@ -7,12 +7,13 @@ public class and_the_stream_closes : given.a_client_subscription_keeper
 {
     async Task Because()
     {
-        StartKeeping();
-        await _clock.Elapse();
-        await _clock.NextWait();
+        await StartKeeping();
+        await _periodicCheck();
         await _streamClosed.CancelAsync();
+        await _keeping.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
-    [Fact] async Task should_complete() => await Observation.given.ManualClock.Within(_keeping);
     [Fact] void should_have_checked_once() => _checks.ShouldEqual(1);
+    [Fact] void should_leave_the_supervisor() => _unregistered.ShouldEqual(1);
+    [Fact] void should_unregister_the_key_it_registered() => _supervisor.Received(1).Unregister(_key);
 }

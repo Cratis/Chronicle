@@ -11,26 +11,32 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents the result of an append many operation.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.AppendManyResult")]
 public class AppendManyResult
 {
     /// <summary>
     /// Gets the <see cref="CorrelationId"/> for the operation.
     /// </summary>
+    [Id(0)]
     public CorrelationId CorrelationId { get; init; } = CorrelationId.NotSet;
 
     /// <summary>
     /// Gets the sequence numbers of the events that were appended, if successful. In the same sequence as the events were provided.
     /// </summary>
+    [Id(1)]
     public IEnumerable<EventSequenceNumber> SequenceNumbers { get; init; } = [];
 
     /// <summary>
     /// Gets the immutable receipt when this append settles an occurrence effect.
     /// </summary>
+    [Id(2)]
     public Occurrences.EffectReceiptDetails? EffectReceipt { get; init; }
 
     /// <summary>
     /// Gets whether the effect was already durable before this attempt.
     /// </summary>
+    [Id(3)]
     public bool EffectAlreadyRecorded { get; init; }
 
     /// <summary>
@@ -72,21 +78,25 @@ public class AppendManyResult
     /// declared a scope the kernel cannot validate (an incomplete scope) and that check was skipped. A skipped check
     /// looks from the outside exactly like a passing one, which is why the outcome says which it was.
     /// </remarks>
+    [Id(4)]
     public bool ConcurrencyCheckPerformed { get; init; }
 
     /// <summary>
     /// Gets any violations that occurred during the operation.
     /// </summary>
+    [Id(5)]
     public IEnumerable<ConstraintViolation> ConstraintViolations { get; init; } = [];
 
     /// <summary>
     /// Gets any exception messages that might have occurred.
     /// </summary>
+    [Id(6)]
     public IEnumerable<AppendError> Errors { get; init; } = [];
 
     /// <summary>
     /// Gets any concurrency violations <see cref="ConcurrencyViolation"/>.
     /// </summary>
+    [Id(7)]
     public IEnumerable<ConcurrencyViolation> ConcurrencyViolations { get; init; } = [];
 
     /// <summary>

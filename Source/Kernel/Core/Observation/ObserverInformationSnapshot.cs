@@ -12,8 +12,10 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="State">The <see cref="ObserverState"/>.</param>
 /// <param name="IsSubscribed">Whether a subscription is installed, including while its setup is in progress.</param>
 /// <param name="RunningStateChangedAt">When the running state last changed, or null if unknown.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverInformationSnapshot")]
 public record ObserverInformationSnapshot(
-    ObserverDefinition Definition,
-    ObserverState State,
-    bool IsSubscribed,
-    DateTimeOffset? RunningStateChangedAt);
+    [Id(0)] ObserverDefinition Definition,
+    [Id(1)] ObserverState State,
+    [Id(2)] bool IsSubscribed,
+    [Id(3)] DateTimeOffset? RunningStateChangedAt);

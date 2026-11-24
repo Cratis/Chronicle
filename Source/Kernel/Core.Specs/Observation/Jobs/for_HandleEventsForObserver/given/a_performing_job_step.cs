@@ -105,6 +105,7 @@ public class a_performing_job_step : Specification
             typeof(ISomeObserverType),
             SiloAddress.Zero);
         _observer = Substitute.For<IObserver>();
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(subscription);
         _observerSubscriber = Substitute.For<ISomeObserverType>();
         _observerSubscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())

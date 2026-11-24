@@ -89,6 +89,11 @@ public class ClusteringFixture : IAsyncLifetime
     public FanOutReactorSignal FanOutSignal { get; } = new();
 
     /// <summary>
+    /// Gets the signal the served reactor and reducer record their deliveries in.
+    /// </summary>
+    public for_ClientObserverServing.ServedSignal ServedSignal { get; } = new();
+
+    /// <summary>
     /// Gets the <see cref="IEventStore"/> from the second client instance, co-hosted on the observers silo.
     /// </summary>
     public IEventStore SecondClientEventStore => ObserversSilo.ServiceProvider.GetRequiredService<IEventStore>();
@@ -111,6 +116,12 @@ public class ClusteringFixture : IAsyncLifetime
     /// Gets the number of kernel silos to deploy.
     /// </summary>
     protected virtual short SiloCount => 2;
+
+    /// <summary>
+    /// Gets how the client's observation reaches the kernel: <see langword="null"/> for one stream per reactor and reducer,
+    /// otherwise the function that passes the kernel's multiplexed observation to the client, which a fixture uses to watch it.
+    /// </summary>
+    protected virtual Func<Cratis.Chronicle.Contracts.Observation.Multiplexed.IMultiplexedObservation, Cratis.Chronicle.Contracts.Observation.Multiplexed.IMultiplexedObservation>? MultiplexedObservation => null;
 
     /// <summary>
     /// Configures the backing store without replacing cluster membership.
@@ -235,6 +246,7 @@ public class ClusteringFixture : IAsyncLifetime
                 services.AddSingleton(ReactorSignal);
                 services.AddSingleton(ScaledOutSignal);
                 services.AddSingleton(FanOutSignal);
+                services.AddSingleton(ServedSignal);
 
                 ConceptTypeConvertersRegistrar.EnsureFor(typeof(ClusteringFixture).Assembly);
                 ConceptTypeConvertersRegistrar.EnsureForEntryAssembly();
@@ -265,7 +277,8 @@ public class ClusteringFixture : IAsyncLifetime
                     // across multiple connected client instances.
                     services.AddInProcessChronicleClient(
                         new DefaultClientArtifactsProvider(new SingleAssemblyDiscovery(typeof(ClusteringFixture).Assembly)),
-                        Constants.EventStore);
+                        Constants.EventStore,
+                        MultiplexedObservation);
                 });
             });
 
@@ -313,6 +326,9 @@ public class ClusteringFixture : IAsyncLifetime
         await kernelReactors.DiscoverAndRegister(
             (KernelConcepts::Cratis.Chronicle.Concepts.EventStoreName)Constants.EventStore,
             KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName.Default);
+
+        // Resumes the registrations the kernel accepted before it stopped, as the server's startup task does.
+        await grainFactory.GetGrain<KernelCore::Cratis.Chronicle.Registrations.IRegistrationInbox>(userEventStore).Ensure();
     }
 
     /// <summary>

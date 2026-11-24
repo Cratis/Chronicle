@@ -7,6 +7,7 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
@@ -306,6 +307,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnFailedToPrepare()
     {
+        JobFailures.FailedToPrepare(ServiceProvider, "replay");
         await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var quarantine = ReleasesAbandonedReplayAtRetainedCursor;
@@ -329,6 +331,7 @@ public class ReplayObserver(
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "replay", State.Progress);
         _gauge.Release();
         await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);

@@ -77,61 +77,21 @@ public partial class ReadModels(
     /// <inheritdoc/>
     public async Task Register<TReadModel>()
     {
-        var observerType = ReadModelObserverType.Projection;
-        var observerIdentifier = string.Empty;
-
         if (eventTypes.IsEventTarget(typeof(TReadModel)))
         {
-            var targetHandler = (IHaveReadModel?)projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel))
-                ?? reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
-            if (targetHandler is IReducerHandler targetReducer)
-            {
-                observerType = ReadModelObserverType.Reducer;
-                observerIdentifier = targetReducer.Id.Value;
-            }
-            else if (targetHandler is IProjectionHandler targetProjection)
-            {
-                observerIdentifier = targetProjection.Id.Value;
-            }
-
-            await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
-            {
-                EventStore = eventStore.Name,
-                Owner = ReadModelOwner.Client,
-                ReadModels = [CreateEventTargetDefinition(typeof(TReadModel), observerType, observerIdentifier)]
-            });
+            await RegisterEventTarget(typeof(TReadModel));
             return;
         }
 
         // A read model nothing in this client knows yet, carrying model-bound attributes, is a request to register it
         // explicitly - its projection is registered along with it, which in turn registers the read model below.
-        if (!projections.HasFor<TReadModel>() &&
-            !reducers.HasFor<TReadModel>() &&
-            typeof(TReadModel).HasModelBoundProjectionAttributes())
+        if (NeedsModelBoundProjectionRegistration<TReadModel>())
         {
             await projections.Register<TReadModel>();
             return;
         }
 
-        if (projections.HasFor<TReadModel>())
-        {
-            var handler = projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
-            if (handler is IProjectionHandler projectionHandler)
-            {
-                observerType = ReadModelObserverType.Projection;
-                observerIdentifier = projectionHandler.Id.Value;
-            }
-        }
-        else if (reducers.HasFor<TReadModel>())
-        {
-            var handler = reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel));
-            if (handler is IReducerHandler reducerHandler)
-            {
-                observerType = ReadModelObserverType.Reducer;
-                observerIdentifier = reducerHandler.Id.Value;
-            }
-        }
-
+        var (observerType, observerIdentifier) = GetObserverFor<TReadModel>();
         var readModelDefinitions = new List<ReadModelDefinition>()
         {
             new()
@@ -235,7 +195,7 @@ public partial class ReadModels(
 
         // A bounded replay is a request to apply exactly that many events from the beginning, which the
         // materialized store cannot answer — reduce it in-process, as for a passive read model.
-        if (reducers.HasFor(readModelType) && (readModelType.IsPassive() || eventCount is not null))
+        if (ShouldReduceInProcess(readModelType, eventCount))
         {
             var reducerInstances = await reducers.GetInstances(readModelType, eventCount);
             return await Release(reducerInstances.Cast<TReadModel>());
@@ -329,6 +289,12 @@ public partial class ReadModels(
         EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
         if (reducers.HasFor<TReadModel>())
         {
+            var handler = reducers.GetHandlerForReadModelType(typeof(TReadModel));
+            if (handler.IsObservedByKernel())
+            {
+                return GetReducerWatcher<TReadModel>().Observable;
+            }
+
             return reducerObservers.GetWatcher<TReadModel>().Observable
                 .Select(changeset => new ReadModelChangeset<TReadModel>(
                     changeset.Namespace,
@@ -352,6 +318,11 @@ public partial class ReadModels(
     {
         ReadProtectionGuard.Read(nameof(GetWatcherFor));
         EventStreamReadModel.RequireStreamScope(typeof(TReadModel));
+        if (reducers.HasFor<TReadModel>() && reducers.GetHandlerForReadModelType(typeof(TReadModel)).IsObservedByKernel())
+        {
+            return GetReducerWatcher<TReadModel>();
+        }
+
         if (!projections.HasFor<TReadModel>())
         {
             throw new UnknownReadModel(typeof(TReadModel));
@@ -383,6 +354,18 @@ public partial class ReadModels(
 
     /// <inheritdoc/>
     public Task<IEnumerable<TReadModel>> Release<TReadModel>(IEnumerable<TReadModel> instances) => _releaser.Release(instances);
+
+    /// <summary>
+    /// Gets the observer type and identifier for a read model handler.
+    /// </summary>
+    /// <param name="handler">The handler of the read model, if any.</param>
+    /// <returns>The observer type and identifier.</returns>
+    static (ReadModelObserverType Type, string Identifier) GetObserver(IHaveReadModel? handler) => handler switch
+    {
+        IReducerHandler reducer => (ReadModelObserverType.Reducer, reducer.Id.Value),
+        IProjectionHandler projection => (ReadModelObserverType.Projection, projection.Id.Value),
+        _ => (ReadModelObserverType.Projection, string.Empty)
+    };
 
     object DeserializeInstance(Type readModelType, ReadModelKey key, GetInstanceByKeyResponse response)
     {
@@ -570,4 +553,43 @@ public partial class ReadModels(
         readModelType.IsPassive() || (projections is IKnowPassiveProjections passiveProjections && passiveProjections.IsPassive(readModelType));
 
     List<IndexDefinition> GetIndexesForType(Type type) => new ReadModelIndexes(namingPolicy).For(type);
+
+    async Task RegisterEventTarget(Type readModelType)
+    {
+        var handler = (IHaveReadModel?)projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == readModelType)
+            ?? reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == readModelType);
+        var (observerType, observerIdentifier) = GetObserver(handler);
+        await _chronicleServicesAccessor.Services.ReadModels.RegisterMany(new RegisterManyRequest
+        {
+            EventStore = eventStore.Name,
+            Owner = ReadModelOwner.Client,
+            ReadModels = [CreateEventTargetDefinition(readModelType, observerType, observerIdentifier)]
+        });
+    }
+
+    bool NeedsModelBoundProjectionRegistration<TReadModel>() =>
+        !projections.HasFor<TReadModel>() && !reducers.HasFor<TReadModel>() && typeof(TReadModel).HasModelBoundProjectionAttributes();
+
+    (ReadModelObserverType Type, string Identifier) GetObserverFor<TReadModel>()
+    {
+        if (projections.HasFor<TReadModel>())
+        {
+            return GetObserver(projections.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel)));
+        }
+
+        return reducers.HasFor<TReadModel>()
+            ? GetObserver(reducers.GetAllHandlers().FirstOrDefault(h => h.ReadModelType == typeof(TReadModel)))
+            : (ReadModelObserverType.Projection, string.Empty);
+    }
+
+    IReadModelWatcher<TReadModel> GetReducerWatcher<TReadModel>()
+    {
+        // Start is idempotent; a cached watcher whose stream failed must be retried too.
+        var watcher = readModelWatcherManager.GetWatcher<TReadModel>();
+        watcher.Start();
+        return watcher;
+    }
+
+    bool ShouldReduceInProcess(Type readModelType, EventCount? eventCount) =>
+        reducers.HasFor(readModelType) && (readModelType.IsPassive() || eventCount is not null);
 }

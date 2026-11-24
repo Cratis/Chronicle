@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -47,7 +46,7 @@ public class a_manager_recovering_a_retired_observer : Observation.for_Observer.
         engineProjection.EventTypes.Returns([]);
         engineProjection.IsEventSourceKeyed.Returns(true);
         var factory = Substitute.For<IProjectionFactory>();
-        factory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(engineProjection);
+        factory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>()).Returns(engineProjection);
         _managerSilo.AddService(factory);
         var service = Substitute.For<IProjectionsServiceClient>();
         service.Register(Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionDefinition>>())
@@ -76,8 +75,8 @@ public class a_manager_recovering_a_retired_observer : Observation.for_Observer.
         _managedObserver.IsSubscribed().Returns(_ => _observer.IsSubscribed());
         _managedObserver.IsSubscriptionEstablished().Returns(_ => _observer.IsSubscriptionEstablished());
         _managedObserver.GetState().Returns(_ => _observer.GetState());
-        _managedObserver.Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>())
-            .Returns(call => _observer.Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, call.Arg<IEnumerable<EventType>>(), SiloAddress.Zero, reactivateRetired: call.ArgAt<bool>(6)));
+        _managedObserver.Subscribe<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>())
+            .Returns(call => _observer.Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, call.Arg<EventTypeSet>(), SiloAddress.Zero, reactivateRetired: call.ArgAt<bool>(6)));
         _managedObserver.SubscribeToAllEvents<IProjectionObserverSubscriber>(Arg.Any<ObserverType>(), Arg.Any<SiloAddress>(), reactivateRetired: Arg.Any<bool>())
             .Returns(call => _observer.SubscribeToAllEvents<IProjectionObserverSubscriber>(ObserverType.Projection, SiloAddress.Zero, reactivateRetired: call.ArgAt<bool>(4)));
         _managerSilo.AddProbe(_ => _managedObserver);

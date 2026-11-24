@@ -227,6 +227,10 @@ Maximum gRPC message sizes in bytes. See [gRPC Message Size](grpc-message-size) 
 | Type | `int?` |
 | Default | `104857600` (100 MB) |
 
+### MultiplexObservation
+
+Whether every reactor and reducer of the client is observed over one stream per connection instead of one stream each. It defaults to `true` and takes effect only against a kernel that advertises the `multiplexed-observation` capability; against an older kernel every reactor and reducer keeps its own stream whatever this is set to. Turn it off to keep per-observer streams, for example when a proxy between the client and the kernel does not suit long-lived multiplexed streams.
+
 ### ProgramIdentifier
 
 A human-readable identifier for the running application. Included in root causation metadata to identify which program appended an event.

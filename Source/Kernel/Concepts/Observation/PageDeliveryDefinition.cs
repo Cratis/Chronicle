@@ -9,4 +9,6 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="MaxEventsPerPage">The most events a page may hold. Zero means the kernel decides.</param>
 /// <param name="MaxDelay">How long the kernel may wait to fill a page. Zero means it does not wait.</param>
 /// <param name="MaxBytesPerPage">The most bytes of event content a page may hold. Zero means the kernel decides.</param>
-public record PageDeliveryDefinition(int MaxEventsPerPage = 0, TimeSpan MaxDelay = default, int MaxBytesPerPage = 0);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.PageDeliveryDefinition")]
+public record PageDeliveryDefinition([Id(0)] int MaxEventsPerPage = 0, [Id(1)] TimeSpan MaxDelay = default, [Id(2)] int MaxBytesPerPage = 0);

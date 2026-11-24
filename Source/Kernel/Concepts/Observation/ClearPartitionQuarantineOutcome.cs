@@ -21,5 +21,10 @@ public enum ClearPartitionQuarantineOutcome
     /// <summary>
     /// The partition is failed but not quarantined, so nothing was changed.
     /// </summary>
-    NotQuarantined = 2
+    NotQuarantined = 2,
+
+    /// <summary>
+    /// The clearing was accepted as a job and is carried out when the observer can serve it; the job reports what became of it.
+    /// </summary>
+    Accepted = 3
 }

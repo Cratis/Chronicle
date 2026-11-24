@@ -12,6 +12,7 @@ public partial class Observer
     DurableSubscriptionStance _durableSubscriptionStance = DurableSubscriptionStance.Preserve;
     ObserverSubscription? _durableSubscriptionSource;
     ObserverDurableSubscription? _durableSubscriptionRecorded;
+    int _durableSubscriptionRecordedVersion;
     bool _forgottenDurableSubscriptionIsPending;
 
     /// <summary>
@@ -37,7 +38,8 @@ public partial class Observer
     /// Only a state write that follows a (re)subscription records it, so the record changes in the same write as the
     /// subscription. An activation that has not subscribed keeps what it read, so a progress write on an observer that
     /// was activated by something other than a subscription never erases a subscription it knows nothing about. The
-    /// recorded value is cached against the live subscription, which is an immutable record replaced on every change.
+    /// recorded value is cached against the live subscription, which is an immutable record replaced on every change, and
+    /// against the standbys it records, which change in place.
     /// </remarks>
     ObserverDurableSubscription? DurableSubscriptionToWrite()
     {
@@ -49,10 +51,14 @@ public partial class Observer
         switch (_durableSubscriptionStance)
         {
             case DurableSubscriptionStance.Record:
-                if (!ReferenceEquals(_durableSubscriptionSource, _subscription))
+                if (!ReferenceEquals(_durableSubscriptionSource, _subscription) || _durableSubscriptionRecordedVersion != _supersededRegistrationsVersion)
                 {
                     _durableSubscriptionSource = _subscription;
-                    _durableSubscriptionRecorded = _subscription.ToDurable();
+                    _durableSubscriptionRecordedVersion = _supersededRegistrationsVersion;
+                    var durable = _subscription.ToDurable();
+                    _durableSubscriptionRecorded = durable is not null && DurableStandbys() is { } standbys
+                        ? durable with { Standbys = standbys }
+                        : durable;
                 }
 
                 return _durableSubscriptionRecorded;

@@ -17,7 +17,7 @@ public class when_mixed_release_subscription_exhausts_retries : given.registrati
     void Establish()
     {
         _releases.Summarize().Returns(new ClusterReleaseSummary([(new(19, 111, 0), 1), (new(19, 112, 0), 1)], 0, 0));
-        _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), null, false)
+        _observer.Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), null, false)
             .Returns(_ => Task.FromException(++_calls == 1 ? _original : new InvalidOperationException("later failure")));
     }
 

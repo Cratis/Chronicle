@@ -13,14 +13,16 @@ namespace Cratis.Chronicle.Federation;
 /// <param name="Serial">The serial number of the certificate. Empty unless issued.</param>
 /// <param name="NotAfter">When the certificate expires.</param>
 /// <param name="Endpoint">The current public endpoint of the authority, which can move without re-enrolling.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Federation.FederationIssuance")]
 public record FederationIssuance(
-    FederationIssuanceOutcome Outcome,
-    string Certificate,
-    string Authority,
-    string Identity,
-    string Serial,
-    DateTimeOffset NotAfter,
-    string Endpoint)
+    [Id(0)] FederationIssuanceOutcome Outcome,
+    [Id(1)] string Certificate,
+    [Id(2)] string Authority,
+    [Id(3)] string Identity,
+    [Id(4)] string Serial,
+    [Id(5)] DateTimeOffset NotAfter,
+    [Id(6)] string Endpoint)
 {
     /// <summary>
     /// Gets the result of a refused request.

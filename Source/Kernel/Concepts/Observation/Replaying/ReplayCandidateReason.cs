@@ -7,4 +7,6 @@ namespace Cratis.Chronicle.Concepts.Observation.Replaying;
 /// Represents the base for a reason for a replay candidate.
 /// </summary>
 /// <param name="Type">The <see cref="ReplayCandidateReasonType"/>.</param>
-public record ReplayCandidateReason(ReplayCandidateReasonType Type);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.Replaying.ReplayCandidateReason")]
+public record ReplayCandidateReason([Id(0)] ReplayCandidateReasonType Type);

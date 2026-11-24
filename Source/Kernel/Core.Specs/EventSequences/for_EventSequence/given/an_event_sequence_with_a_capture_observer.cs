@@ -61,7 +61,7 @@ public class an_event_sequence_with_a_capture_observer : an_event_sequence
         observerSilo.AddProbe(_ => _captureSubscriber);
         _captureSubscriber.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(ObserverSubscriberResult.Ok(43UL));
-        _appendedEventsQueues.Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+        _appendedEventsQueues.Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>())
             .Returns(call => new AppendedEventsQueueSubscription(call.Arg<ObserverKey>(), 0));
         var definition = observerSilo.StorageManager.GetStorage<ObserverDefinition>(nameof(ObserverDefinition));
         definition.State = new ObserverDefinition { Identifier = PatternCapture.ObserverIdentifier, IsReplayable = false };

@@ -16,16 +16,20 @@ namespace Cratis.Chronicle.Storage.Seeding;
 /// <param name="EventTypeId">The event type identifier.</param>
 /// <param name="Content">The JSON content of the event.</param>
 /// <param name="Tags">The collection of tags associated with the event.</param>
-public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTypeId, string Content, IEnumerable<string>? Tags)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Seeding.SeededEventEntry")]
+public record SeededEventEntry([Id(0)] EventSourceId EventSourceId, [Id(1)] EventTypeId EventTypeId, [Id(2)] string Content, [Id(3)] IEnumerable<string>? Tags)
 {
     /// <summary>
     /// Gets or inits the origin of the global seed entry.
     /// </summary>
+    [Id(4)]
     public SeedOrigin Origin { get; init; }
 
     /// <summary>
     /// Gets or inits the program that supplied the global seed entry.
     /// </summary>
+    [Id(5)]
     public string Owner
     {
         get => field ?? string.Empty;
@@ -35,6 +39,7 @@ public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTyp
     /// <summary>
     /// Gets or inits the event source type.
     /// </summary>
+    [Id(6)]
     public EventSourceType EventSourceType
     {
         get => field ?? EventSourceType.Default;
@@ -44,6 +49,7 @@ public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTyp
     /// <summary>
     /// Gets or inits the event stream type.
     /// </summary>
+    [Id(7)]
     public EventStreamType EventStreamType
     {
         get => field ?? EventStreamType.All;
@@ -53,6 +59,7 @@ public record SeededEventEntry(EventSourceId EventSourceId, EventTypeId EventTyp
     /// <summary>
     /// Gets or inits the event stream identifier.
     /// </summary>
+    [Id(8)]
     public EventStreamId EventStreamId
     {
         get => field ?? new EventStreamId(EventStreamId.Default);

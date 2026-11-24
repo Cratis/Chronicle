@@ -29,5 +29,5 @@ public class and_a_pinned_pdl_definition_is_not_rewindable : given.a_projections
     async Task Because() => await _grain.Register([_definition]);
 
     [Fact] void should_keep_the_pdl_rewindability_setting() => _definition.IsRewindable.ShouldBeFalse();
-    [Fact] void should_subscribe_as_replayable() => _observerGrain.Received(1).SubscribeWithGenerationDelivery<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, isReplayable: true, reactivateRetired: true);
+    [Fact] void should_subscribe_as_replayable() => _observerGrain.Received(1).SubscribeWithGenerationDelivery<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, isReplayable: true, reactivateRetired: true);
 }

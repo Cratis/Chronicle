@@ -18,14 +18,16 @@ namespace Cratis.Chronicle.Occurrences;
 /// <param name="Reasons">The refusal reasons.</param>
 /// <param name="Response">The optional verbatim JSON response.</param>
 /// <param name="RecordedAt">The kernel's recording instant.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Occurrences.EffectReceiptDetails")]
 public record EffectReceiptDetails(
-    string Id,
-    string OccurrenceId,
-    long Epoch,
-    EffectOutcome Outcome,
-    string? EventSequenceId,
-    ulong? FirstSequenceNumber,
-    ulong? LastSequenceNumber,
-    IEnumerable<string> Reasons,
-    string? Response,
-    DateTimeOffset RecordedAt);
+    [Id(0)] string Id,
+    [Id(1)] string OccurrenceId,
+    [Id(2)] long Epoch,
+    [Id(3)] EffectOutcome Outcome,
+    [Id(4)] string? EventSequenceId,
+    [Id(5)] ulong? FirstSequenceNumber,
+    [Id(6)] ulong? LastSequenceNumber,
+    [Id(7)] IEnumerable<string> Reasons,
+    [Id(8)] string? Response,
+    [Id(9)] DateTimeOffset RecordedAt);

@@ -121,7 +121,7 @@ public partial class Generator
     string IdentityOutput(PropertyExpression? identity) =>
         identity is null ? string.Empty : $" identified by {ConvertExpressionForOutput(identity.Value)}";
 
-    void GenerateGraphMappings(StringBuilder sb, IDictionary<string, string> properties, string? skip)
+    void GenerateGraphMappings(StringBuilder sb, IReadOnlyDictionary<string, string> properties, string? skip)
     {
         foreach (var (name, expression) in properties)
         {

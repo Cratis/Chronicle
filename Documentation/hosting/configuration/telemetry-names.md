@@ -36,10 +36,12 @@ Every convention suffix in this table has the prefix `cratis.chronicle.`. Legacy
 | `observer.quarantines` | `{quarantine}` | `chronicle-observer-quarantined` |
 | `observer.suspected_skipped_events` | `{event}` | `chronicle-observer-events-suspected-skipped` |
 | `observer.zero_work_catch_ups` | `{catch_up}` | `chronicle-observer-zero-work-catch-ups` |
+| `observer.catch_up_deferrals` | `{catch_up}` | `chronicle-observer-catch-up-deferrals` |
 | `observer.claim_divergences` | `{divergence}` | `chronicle-observer-claim-divergences` |
 | `observer.dormant_releases` | `{observer}` | `chronicle-observer-dormant-releases` |
 | `observer.dormant_wakes` | `{wake}` | `chronicle-observer-dormant-wakes` |
 | `observer.dormant_wakes_delayed` | `{wake}` | `chronicle-observer-dormant-wakes-delayed` |
+| `observer.dormant_safety_net_checks` | `{check}` | `chronicle-observer-dormant-safety-net-checks` |
 | `observer.dormant_resumes` | `{resume}` | `chronicle-observer-dormant-resumes` |
 | `webhook.probes_scheduled` | `{probe}` | `chronicle-webhook-probe-scheduled` |
 | `webhook.probe_attempts` | `{probe}` | `chronicle-webhook-probe-attempts` |
@@ -98,6 +100,14 @@ These instruments were added after the convention. They have no legacy name and 
 | `observer.resident` | `{observer}` |
 | `observer.dormant` | `{observer}` |
 | `job.running` | `{job}` |
+| `grain.calls.running` | `{call}` |
+| `grain.calls.pending` | `{call}` |
+| `grain.calls.oldest_pending_age` | `s` |
+| `kernel.load_status` | `1` |
+| `grpc.streams.open` | `{stream}` |
+| `registration.pending` | `{registration}` |
+| `registration.oldest_pending_age` | `s` |
+| `job.failed` | `{job}` |
 | `observer.job.handled_steps` | `{step}` |
 | `observer.job.total_steps` | `{step}` |
 | `event_sequence.append.duration` | `s` |
@@ -127,6 +137,7 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `divergence` | `cratis.chronicle.observer.claim_divergence` |
 | `WakeCause` | `cratis.chronicle.observer.wake_cause` |
 | `ResumeOutcome` | `cratis.chronicle.observer.resume_outcome` |
+| `SafetyNetOutcome` | `cratis.chronicle.observer.safety_net_outcome` |
 | `Condition` | `cratis.chronicle.alert.condition` |
 | `Severity` | `cratis.chronicle.alert.severity` |
 | `state` | `cratis.chronicle.abandoned_delivery.result_state` |
@@ -136,8 +147,9 @@ The convention series use only the shared keys below, not both sets of keys on e
 | `query` | `cratis.chronicle.sql.live_query.name` |
 | `kind` | `cratis.chronicle.sql.live_query.failure_kind` |
 | `operation` | `cratis.chronicle.sql.upsert.operation` |
+| `grain_type` | `cratis.chronicle.grain.type` |
 
-The keys `cratis.replay`, `cratis.observer.type`, `cratis.chronicle.observer.state` and `cratis.chronicle.job.type` have no legacy key. Instruments with a legacy name never carry them on their legacy series.
+The keys `cratis.replay`, `cratis.observer.type`, `cratis.chronicle.observer.state`, `cratis.chronicle.job.type` and `cratis.chronicle.grain.type` have no legacy key. Instruments with a legacy name never carry them on their legacy series.
 
 ## Span names and attributes
 

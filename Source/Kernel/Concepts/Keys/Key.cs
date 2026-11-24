@@ -11,7 +11,9 @@ namespace Cratis.Chronicle.Concepts.Keys;
 /// </summary>
 /// <param name="Value">The actual key value.</param>
 /// <param name="ArrayIndexers">Any array indexers.</param>
-public record Key(object Value, ArrayIndexers ArrayIndexers)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Keys.Key")]
+public record Key([Id(0)] object Value, [Id(1)] ArrayIndexers ArrayIndexers)
 {
     /// <summary>
     /// Gets the <see cref="Key"/> representing an unset key.

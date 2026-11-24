@@ -21,7 +21,7 @@ public abstract class ChronicleWebApplicationFactory<TStartup>(IChronicleSetupFi
     /// <summary>
     /// Gets the artifacts provider for this host.
     /// </summary>
-    internal virtual IClientArtifactsProvider ClientArtifactsProvider => DelegatingClientArtifactsProvider.GetOrCreate(fixture);
+    internal virtual IClientArtifactsProvider ClientArtifactsProvider => fixture.SharedArtifactsProvider;
 
     /// <summary>
     /// Gets a value indicating whether the derived factory wires its own <see cref="IChronicleClient"/>

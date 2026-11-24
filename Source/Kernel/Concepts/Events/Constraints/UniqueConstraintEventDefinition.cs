@@ -8,7 +8,9 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </summary>
 /// <param name="EventTypeId">The <see cref="EventTypeId"/>.</param>
 /// <param name="Properties">The properties on the event type.</param>
-public record UniqueConstraintEventDefinition(EventTypeId EventTypeId, IEnumerable<string> Properties)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.UniqueConstraintEventDefinition")]
+public record UniqueConstraintEventDefinition([Id(0)] EventTypeId EventTypeId, [Id(1)] IEnumerable<string> Properties)
 {
     /// <summary>
     /// Compare with another <see cref="UniqueConstraintEventDefinition"/> by value.

@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Concepts.Security;
 /// </summary>
 /// <param name="Username">The username.</param>
 /// <param name="Password">The password.</param>
-public record BasicAuthorization(Username Username, Password Password);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Security.BasicAuthorization")]
+public record BasicAuthorization([Id(0)] Username Username, [Id(1)] Password Password);

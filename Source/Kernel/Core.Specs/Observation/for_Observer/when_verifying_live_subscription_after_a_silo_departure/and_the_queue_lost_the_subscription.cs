@@ -14,7 +14,7 @@ public class and_the_queue_lost_the_subscription : given.an_observing_observer
 {
     void Establish() => _appendedEventsQueues.IsSubscribed(_observerKey).Returns(false);
 
-    async Task Because() => await _observer.VerifyLiveSubscriptionForTesting();
+    async Task Because() => await _observer.VerifyLiveSubscriptionAfterDeparture();
 
     [Fact] void should_resubscribe_the_observer_to_its_queue() => ShouldHaveResubscribed();
     [Fact] async Task should_be_observing_again() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();

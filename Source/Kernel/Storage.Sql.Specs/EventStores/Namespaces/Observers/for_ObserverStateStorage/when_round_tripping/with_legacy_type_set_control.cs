@@ -18,7 +18,7 @@ public class with_legacy_type_set_control : given.an_observer_state_storage
         const string control = """
             {"Revision":7,"Contract":{"SubscriberType":"reactor-subscriber","Filters":{"Tags":[],"EventSourceType":"","EventStreamType":""}},"Members":{"event-a":{"Incarnation":3,"JoinFence":42}},"Registrations":[]}
             """;
-        await context.Database.ExecuteSqlInterpolatedAsync($"UPDATE Observers SET TypeSetControl = {control} WHERE Id = 'observer'");
+        await context.Database.ExecuteSqlAsync($"UPDATE Observers SET TypeSetControl = {control} WHERE Id = 'observer'");
     }
 
     async Task Because() => _saved = await _storage.Get("observer");

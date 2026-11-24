@@ -69,4 +69,46 @@ public class a_quarantined_reactor(QuarantineRecoveryFixture fixture) : Specific
 
     protected async Task<IEnumerable<Job>> GetRetryJobs() =>
         (await _store.Jobs.GetJobs()).Where(job => job.Type.Value.Contains("RetryFailedPartition", StringComparison.Ordinal)).ToArray();
+
+    protected async Task<IEnumerable<Job>> GetRetryJobs(TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        while (true)
+        {
+            var jobs = await GetRetryJobs();
+            if (jobs.Any() || DateTimeOffset.UtcNow > deadline)
+            {
+                return jobs;
+            }
+
+            // Task.Delay: poll interval while waiting for the jobs, bounded by the deadline.
+            await Task.Delay(250);
+        }
+    }
+
+    /// <summary>
+    /// Waits for the job carrying an operator command to finish. Operator commands are accepted as jobs.
+    /// </summary>
+    /// <param name="timeout">How long to wait.</param>
+    /// <returns>The job, once it has finished.</returns>
+    protected async Task<Job?> WaitForOperatorCommandJobToFinish(TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        while (true)
+        {
+            var job = (await _store.Jobs.GetJobs()).FirstOrDefault(job => job.Type.Value.Contains("ObserverOperatorCommand", StringComparison.Ordinal));
+            if (job is not null)
+            {
+                return await _store.Jobs.WaitTillJobCompletesOrIsDeleted(job.Id, timeout);
+            }
+
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                return null;
+            }
+
+            // Task.Delay: poll interval while waiting for the observer state, bounded by the deadline.
+            await Task.Delay(250);
+        }
+    }
 }

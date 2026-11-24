@@ -31,7 +31,6 @@ public partial class EventTypesStorage
 
             if (await TrySaveRegistration(context, existing, registration))
             {
-                Invalidate(registration.Id);
                 return result with { Changed = true };
             }
         }

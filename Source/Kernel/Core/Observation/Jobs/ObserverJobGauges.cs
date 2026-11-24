@@ -68,6 +68,12 @@ public sealed class ObserverJobGauges : IObserverJobGauges
         return entry;
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyList<RunningObserverJobs> Running() =>
+        [.. _entries.Values
+            .GroupBy(_ => new RunningGroup(_.ObserverKey.EventStore.Value, _.ObserverKey.Namespace.Value, _.JobType))
+            .Select(_ => new RunningObserverJobs(_.Key.EventStore, _.Key.Namespace, For(_.Key.JobType), _.Count()))];
+
     /// <summary>
     /// Gets the attribute value of an <see cref="ObserverJobGaugeType"/>.
     /// </summary>

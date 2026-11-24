@@ -15,10 +15,12 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="ConstraintName"><see cref="ConstraintName"/> that was violated.</param>
 /// <param name="Message"><see cref="ConstraintViolationMessage"/> with the message.</param>
 /// <param name="Details"><see cref="ConstraintViolationDetails"/> with more details associated with the violation.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Events.Constraints.ConstraintViolation")]
 public record ConstraintViolation(
-    EventTypeId EventTypeId,
-    EventSequenceNumber SequenceNumber,
-    ConstraintType ConstraintType,
-    ConstraintName ConstraintName,
-    ConstraintViolationMessage Message,
-    ConstraintViolationDetails Details);
+    [Id(0)] EventTypeId EventTypeId,
+    [Id(1)] EventSequenceNumber SequenceNumber,
+    [Id(2)] ConstraintType ConstraintType,
+    [Id(3)] ConstraintName ConstraintName,
+    [Id(4)] ConstraintViolationMessage Message,
+    [Id(5)] ConstraintViolationDetails Details);

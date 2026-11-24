@@ -205,7 +205,7 @@ internal static class ProjectionReplayRecommendationEvaluator
         };
 
     static Dictionary<EventType, TDefinition> FilterByEventType<TDefinition>(
-        IDictionary<EventType, TDefinition> source,
+        IReadOnlyDictionary<EventType, TDefinition> source,
         HashSet<EventType> eventTypesToExclude)
         where TDefinition : class =>
         source

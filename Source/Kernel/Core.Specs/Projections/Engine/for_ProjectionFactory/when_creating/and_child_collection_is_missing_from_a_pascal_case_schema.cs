@@ -9,8 +9,9 @@ public class and_child_collection_is_missing_from_a_pascal_case_schema : given.a
 
     void Establish()
     {
-        _definition.Children.Clear();
-        _definition.Children["reactions"] = Child();
+        _definition = _definition
+            .WithoutChildren()
+            .WithChild("reactions", Child());
     }
 
     async Task Because() => _exception = await Catch.Exception(() => _factory.Create(_eventStore, _namespace, _definition, _readModel, []));
