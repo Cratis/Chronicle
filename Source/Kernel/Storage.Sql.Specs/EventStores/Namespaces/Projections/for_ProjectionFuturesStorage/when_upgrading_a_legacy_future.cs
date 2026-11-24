@@ -22,7 +22,7 @@ public class when_upgrading_a_legacy_future : given.a_futures_storage
             await context.Database.ExecuteSqlRawAsync(command.CommandText);
         }
         await context.Database.ExecuteSqlRawAsync(context.GetService<IHistoryRepository>().GetDeleteScript("NS-ProjectionFutures-v19_37_8"));
-        await context.Database.ExecuteSqlInterpolatedAsync($$"""
+        await context.Database.ExecuteSqlAsync($$"""
             INSERT INTO "ProjectionFutures"
                 ("Id", "ProjectionId", "EventSequenceNumber", "EventTypeId", "EventTypeGeneration", "EventSourceId",
                  "EventContentJson", "ParentPath", "ChildPath", "IdentifiedByProperty", "ParentIdentifiedByProperty", "ParentKeyJson", "Created")

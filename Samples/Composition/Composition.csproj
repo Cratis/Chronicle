@@ -1,19 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Sdk Name="Aspire.AppHost.Sdk" Version="13.6.5" />
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <IsAspireHost>true</IsAspireHost>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.Yarp" />
   </ItemGroup>
 
+  <!-- Build ordering only: the AppHost launches these projects by path, it does not reference their assemblies. -->
   <ItemGroup>
-    <ProjectReference Include="..\..\Source\Kernel\Server\Server.csproj" />
-    <ProjectReference Include="..\AspNetCore\AspNetCore.csproj" />
+    <ProjectReference Include="..\..\Source\Kernel\Server\Server.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\AspNetCore\AspNetCore.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>
