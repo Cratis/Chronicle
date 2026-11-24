@@ -69,7 +69,7 @@ Materialized comparison uses serialized values keyed by `id`, `_id`, or `Id`. It
 
 In .NET, active reducers with event types use the kernel change stream for both `Watch<T>()` and read model reactors. A removal carries a default read model value and the causing event context. Reducer watches use the handler's event sequence.
 
-For these kernel-observed reducers, `Watch<T>()` waits for the kernel to confirm the subscription before returning. Subscribe before appending the events you want to observe; no sentinel event or retry loop is needed to establish readiness. After a disconnect, await `ReadModels.GetWatcherFor<T>().Subscribed` before issuing writes that must be observed by the reconnected watch. This task is renewed on disconnect and completes when the kernel confirms the new subscription.
+For these kernel-observed reducers, `Watch<T>()` returns without waiting for the kernel acknowledgment, just as projection watches do. Subscribe, then await `ReadModels.GetWatcherFor<T>().Subscribed` before appending events you expect to observe. Bound the wait with `WaitAsync` and a timeout or cancellation token; no sentinel event or polling loop is needed. A stream failure faults or cancels the readiness task, and the next `Watch<T>()` or `GetWatcherFor<T>()` call retries the cached stream. After a disconnect, readiness is renewed and completes when the kernel confirms the reconnected subscription. Await that task before issuing writes that must be observed by the reconnected watch.
 
 A reducer reaching an event sequence number confirms reducer progress, not delivery to a watch or reactor. When testing a notification, await the matching watch frame or reactor invocation before inspecting it.
 

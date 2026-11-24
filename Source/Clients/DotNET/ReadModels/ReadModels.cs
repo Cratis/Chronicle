@@ -292,9 +292,7 @@ public partial class ReadModels(
             var handler = reducers.GetHandlerForReadModelType(typeof(TReadModel));
             if (handler.IsObservedByKernel())
             {
-                var watcher = GetReducerWatcher<TReadModel>();
-                watcher.Subscribed.GetAwaiter().GetResult();
-                return watcher.Observable;
+                return GetReducerWatcher<TReadModel>().Observable;
             }
 
             return reducerObservers.GetWatcher<TReadModel>().Observable
@@ -586,10 +584,10 @@ public partial class ReadModels(
 
     IReadModelWatcher<TReadModel> GetReducerWatcher<TReadModel>()
     {
-        // Finish connecting before starting the watcher: connection registration can start reactors
-        // that watch this same model and must not wait on a stream still waiting for Connect to return.
-        _ = _chronicleServicesAccessor.Services;
-        return readModelWatcherManager.GetWatcher<TReadModel>();
+        // Start is idempotent; a cached watcher whose stream failed must be retried too.
+        var watcher = readModelWatcherManager.GetWatcher<TReadModel>();
+        watcher.Start();
+        return watcher;
     }
 
     bool ShouldReduceInProcess(Type readModelType, EventCount? eventCount) =>

@@ -105,6 +105,33 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
 
         var isReducer = _eventStore.Reducers.HasFor<TReadModel>();
         _isReducer = isReducer;
+        try
+        {
+            SubscribeToServer(isReducer, subscribed);
+        }
+        catch (Exception error) when (isReducer)
+        {
+            StreamEnded(subscribed, error);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Stop()
+    {
+        _stopped?.Invoke();
+        _stopped = null;
+        Dispose();
+    }
+
+    static ReadModelChangeType ToChangeType(ContractReadModels.ReadModelChangeType changeType) => changeType switch
+    {
+        ContractReadModels.ReadModelChangeType.Added => ReadModelChangeType.Added,
+        ContractReadModels.ReadModelChangeType.Removed => ReadModelChangeType.Removed,
+        _ => ReadModelChangeType.Modified
+    };
+
+    void SubscribeToServer(bool isReducer, TaskCompletionSource subscribed)
+    {
         var eventSequenceId = isReducer
             ? _eventStore.Reducers.GetHandlerForReadModelType(typeof(TReadModel)).EventSequenceId
             : EventSequenceId.Log;
@@ -135,21 +162,6 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         subscription.Dispose();
     }
 
-    /// <inheritdoc/>
-    public void Stop()
-    {
-        _stopped?.Invoke();
-        _stopped = null;
-        Dispose();
-    }
-
-    static ReadModelChangeType ToChangeType(ContractReadModels.ReadModelChangeType changeType) => changeType switch
-    {
-        ContractReadModels.ReadModelChangeType.Added => ReadModelChangeType.Added,
-        ContractReadModels.ReadModelChangeType.Removed => ReadModelChangeType.Removed,
-        _ => ReadModelChangeType.Modified
-    };
-
     void OnServerChangeset(ContractReadModels.ReadModelChangeset changeset, bool isReducer, TaskCompletionSource subscribed)
     {
         if (changeset.Subscribed)
@@ -161,15 +173,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         _observable.OnNext(ToChangeset(changeset, isReducer));
     }
 
-    void StreamEnded(TaskCompletionSource subscribed, Exception? error = null)
-    {
-        if (_isReducer)
-        {
-            if (error is not null) subscribed.TrySetException(error);
-            else subscribed.TrySetCanceled();
-        }
-        ResetForReconnect();
-    }
+    void StreamEnded(TaskCompletionSource subscribed, Exception? error = null) => ResetForReconnect(subscribed, error: error);
 
     bool CanPublish(TaskCompletionSource subscribed)
     {
@@ -204,11 +208,11 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
 
     Task ClientDisconnected()
     {
-        ResetForReconnect();
+        ResetForReconnect(renewReadiness: true);
         return Task.CompletedTask;
     }
 
-    void ResetForReconnect()
+    void ResetForReconnect(TaskCompletionSource? endedSubscription = null, bool renewReadiness = false, Exception? error = null)
     {
         // Tear down the current server stream and clear the started latch so the next
         // OnConnected re-subscribes. Reached both on disconnect and on a stream fault or
@@ -216,16 +220,30 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         IDisposable? subscription;
         lock (_sync)
         {
+            if (endedSubscription is not null && !ReferenceEquals(endedSubscription, _subscribedTcs)) return;
             subscription = _serverSubscription;
             _serverSubscription = null;
             _started = false;
-            if (_isReducer)
-            {
-                _subscribedTcs.TrySetCanceled();
-                _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            }
+            EndReadiness(endedSubscription, renewReadiness, error);
         }
 
         subscription?.Dispose();
+    }
+
+    void EndReadiness(TaskCompletionSource? endedSubscription, bool renewReadiness, Exception? error)
+    {
+        if (!_isReducer || _disposed) return;
+        if (endedSubscription is not null && _subscribedTcs.Task.IsCompletedSuccessfully)
+        {
+            _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        if (error is not null) _subscribedTcs.TrySetException(error);
+        else _subscribedTcs.TrySetCanceled();
+
+        if (renewReadiness)
+        {
+            _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
     }
 }

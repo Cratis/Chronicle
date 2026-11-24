@@ -51,6 +51,10 @@ public class a_reducer_able_to_delete<TReducer>(ChronicleFixture chronicleFixtur
     {
         const string eventSourceId = "some source";
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (_reducer.IsActive)
+        {
+            await EventStore.ReadModels.GetWatcherFor<SomeReadModel>().Subscribed.WaitAsync(timeout.Token);
+        }
         await EventStore.EventLog.Append(eventSourceId, new SomeEvent(42));
         await _added.Task.WaitAsync(timeout.Token);
         CountAfterFirstEvent = Interlocked.Read(ref _netCount);

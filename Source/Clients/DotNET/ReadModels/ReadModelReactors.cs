@@ -131,12 +131,14 @@ public class ReadModelReactors(
             return;
         }
 
-        var subscription = eventStore.ReadModels.Watch<TReadModel>().Subscribe(changeset => DispatchAll(
-            reactorType,
-            typeof(TReadModel),
-            changeset.ReadModel,
-            changeset.ChangeType,
-            changeset.ChangeContext ?? EventContext.EmptyWithEventSourceId(changeset.ModelKey)));
+        var subscription = eventStore.ReadModels.Watch<TReadModel>().Subscribe(
+            changeset => DispatchAll(
+                reactorType,
+                typeof(TReadModel),
+                changeset.ReadModel,
+                changeset.ChangeType,
+                changeset.ChangeContext ?? EventContext.EmptyWithEventSourceId(changeset.ModelKey)),
+            error => logger.FailedDispatchingReadModelChange(reactorType.Name, error));
         subscriptions.Add(subscription);
     }
 
