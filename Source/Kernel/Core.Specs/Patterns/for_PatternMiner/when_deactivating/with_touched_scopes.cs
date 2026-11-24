@@ -13,5 +13,6 @@ public class with_touched_scopes : given.a_pattern_miner
 
     async Task Because() => await _silo.DeactivateAsync(_miner);
 
+    [Fact] void should_leave_the_supervisor() => _supervisor.ReceivedWithAnyArgs(1).Unregister(default!);
     [Fact] async Task should_persist_what_the_interval_had_not_flushed_yet() => await _patterns.Received(1).Save(Arg.Any<IEnumerable<BehaviorPattern>>());
 }

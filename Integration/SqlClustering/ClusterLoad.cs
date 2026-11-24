@@ -420,7 +420,10 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         const string ConnectionFailed = "Command failed: Exception while sending message: Orleans.Runtime.Messaging.ConnectionFailedException: Unable to connect to ";
         var refused = message.StartsWith($"{ConnectionFailed}endpoint S", StringComparison.Ordinal) && message.Contains("ConnectionRefused", StringComparison.Ordinal);
         var backingOff = message.StartsWith($"{ConnectionFailed}S", StringComparison.Ordinal) && message.Contains(", will retry after ", StringComparison.Ordinal);
-        if (exceptionType != "Cratis.Chronicle.Contracts.Commands.CommandFailed" || !(refused || backingOff))
+
+        // On a loaded host the attempt to reach the dead silo times out instead of being refused.
+        var timedOut = message.StartsWith("Command failed: Exception while sending message: Orleans.Runtime.Messaging.ConnectionFailedException: Connection attempt to endpoint S", StringComparison.Ordinal) && message.Contains(" timed out after ", StringComparison.Ordinal);
+        if (exceptionType != "Cratis.Chronicle.Contracts.Commands.CommandFailed" || !(refused || backingOff || timedOut))
         {
             return false;
         }
@@ -503,7 +506,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
     }
 
-    [GeneratedRegex(@"Unable to connect to (?:endpoint )?S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,]", RegexOptions.CultureInvariant, 1000)]
+    [GeneratedRegex(@"(?:Unable to connect to (?:endpoint )?|Connection attempt to endpoint )S(?<address>[^:\s]+):\d+:(?<generation>-?\d+)[.,\s]", RegexOptions.CultureInvariant, 1000)]
     private static partial Regex DepartedEndpoint { get; }
 
     sealed class FallbackActivitySource<T> : IActivitySource<T>

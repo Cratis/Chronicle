@@ -414,6 +414,11 @@ public static class WellKnownTableNames
     public const string GenerationFloorHistory = "GenerationFloorHistory";
 
     /// <summary>
+    /// The table that holds accepted registration intents.
+    /// </summary>
+    public const string RegistrationIntents = "RegistrationIntents";
+
+    /// <summary>
     /// The table that holds lifecycle fan-out intents.
     /// </summary>
     public const string LifecycleFanOutIntents = "LifecycleFanOutIntents";

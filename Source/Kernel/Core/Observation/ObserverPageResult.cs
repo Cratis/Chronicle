@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Observation;
 /// so a partition that failed does not take the others in the page with it.
 /// </summary>
 /// <param name="Results">The result of each partition in the page.</param>
-public record ObserverPageResult(IReadOnlyDictionary<Key, ObserverSubscriberResult> Results);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverPageResult")]
+public record ObserverPageResult([Id(0)] IReadOnlyDictionary<Key, ObserverSubscriberResult> Results);

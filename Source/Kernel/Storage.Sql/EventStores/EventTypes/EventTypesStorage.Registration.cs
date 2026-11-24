@@ -80,7 +80,6 @@ public partial class EventTypesStorage
 
             if (await TrySaveRegistration(context, observed, registration))
             {
-                Invalidate(registration.Id);
                 return;
             }
 

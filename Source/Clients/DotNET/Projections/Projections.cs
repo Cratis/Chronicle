@@ -17,6 +17,7 @@ using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Serialization;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections;
@@ -43,6 +44,11 @@ public class Projections(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<Projections> logger) : IProjections, IKnowPassiveProjections, IKnowReadModelContainerNames
 {
+    /// <summary>
+    /// How long registration waits for the kernel to apply what it accepted before it carries on.
+    /// </summary>
+    static readonly TimeSpan _maxWaitForAcceptedRegistration = TimeSpan.FromMinutes(5);
+
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly Lock _explicitLock = new();
     readonly Dictionary<Type, IExplicitProjection> _explicitProjections = [];
@@ -308,7 +314,65 @@ public class Projections(
     internal async Task RegisterPrepared(RegisterRequest request)
     {
         await _servicesAccessor.Services.Projections.Register(request);
+        await WaitForAcceptedRegistration(request.Registrant);
         Registered?.Invoke();
+    }
+
+    /// <summary>
+    /// Waits until the kernel has applied what it accepted from this registrant.
+    /// </summary>
+    /// <param name="registrant">The registrant the registration was made as.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="ProjectionRegistrationNotApplied">The kernel accepted the registration but could not apply it.</exception>
+    /// <remarks>
+    /// The kernel accepts a registration and answers at once; applying it happens in the background. Waiting here with
+    /// short calls, instead of one long call, is what keeps a busy kernel from timing the client out: the wait is
+    /// bounded and, when it ends, the registration is still the kernel's to apply. A kernel that does not accept
+    /// registrations answers after applying them, and has no status to wait for.
+    /// </remarks>
+    internal async Task WaitForAcceptedRegistration(string registrant)
+    {
+        if (string.IsNullOrEmpty(registrant))
+        {
+            return;
+        }
+
+        var delay = TimeSpan.FromMilliseconds(50);
+        var started = TimeProvider.System.GetTimestamp();
+        while (true)
+        {
+            RegistrationStatus status;
+            try
+            {
+                status = await _servicesAccessor.Services.Projections.GetRegistrationStatus(new() { EventStore = eventStore.Name, Registrant = registrant });
+            }
+            catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+            {
+                return;
+            }
+
+            if (status is null)
+            {
+                return;
+            }
+
+            switch (status.State)
+            {
+                case RegistrationState.Applied:
+                    return;
+                case RegistrationState.Failed:
+                    throw new ProjectionRegistrationNotApplied(registrant, status.Failure ?? string.Empty);
+            }
+
+            if (TimeProvider.System.GetElapsedTime(started) > _maxWaitForAcceptedRegistration)
+            {
+                logger.RegistrationStillBeingApplied(registrant, _maxWaitForAcceptedRegistration);
+                return;
+            }
+
+            await Task.Delay(delay);
+            delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 2000));
+        }
     }
 
     /// <summary>
@@ -528,16 +592,18 @@ public class Projections(
         {
             // Read models are registered before the projections that maintain them, as the full registration pass does.
             await eventStore.ReadModels.Register<TReadModel>();
+            var registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty;
             await _servicesAccessor.Services.Projections.Register(new()
             {
                 EventStore = eventStore.Name,
                 Owner = ProjectionOwner.Client,
                 Projections = [registration.Definition],
-                Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
+                Registrant = registrant,
                 Version = SoftwareVersion,
                 ConnectionId = CurrentConnectionId,
                 FullSet = false
             });
+            await WaitForAcceptedRegistration(registrant);
             Registered?.Invoke();
         }
 

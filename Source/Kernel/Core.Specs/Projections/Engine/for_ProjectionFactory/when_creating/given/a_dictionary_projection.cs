@@ -39,7 +39,7 @@ public class a_dictionary_projection : a_child_collection_projection
             }
             """);
         _readModel.Schemas[ReadModelGeneration.First] = _schema;
-        _definition.Children.Clear();
+        _definition = _definition.WithoutChildren();
         _incoming = new(
             EventContext.EmptyWithEventSourceId("stream") with { EventType = _payloadReceived },
             new { data = new { value = "kept" }, nested = new { data = new { value = "kept" } } }.AsExpandoObject());

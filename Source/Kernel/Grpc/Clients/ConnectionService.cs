@@ -7,6 +7,7 @@ using Cratis.Chronicle.Clients;
 using Cratis.Chronicle.Compatibility;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Clients;
+using Cratis.Chronicle.Diagnostics.Load;
 using Cratis.Chronicle.Services.Host;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -29,6 +30,7 @@ namespace Cratis.Chronicle.Services.Clients;
 /// <param name="visibility"><see cref="IConnectedClientsVisibility"/> limiting which connected clients a caller sees.</param>
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="options"><see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
+/// <param name="kernelLoad">The <see cref="IKernelLoad"/> telling how busy this silo is, reported on every keep-alive.</param>
 internal sealed class ConnectionService(
     IGrainFactory grainFactory,
     ILocalSiloDetails localSiloDetails,
@@ -37,7 +39,8 @@ internal sealed class ConnectionService(
     IConnectionOwnership ownership,
     IConnectedClientsVisibility visibility,
     ILogger<ConnectionService> logger,
-    IOptions<ChronicleOptions> options) : IConnectionService
+    IOptions<ChronicleOptions> options,
+    IKernelLoad? kernelLoad = null) : IConnectionService
 {
     /// <summary>
     /// How many keep-alive intervals a reservation lease lasts without being renewed. The holder renews it every
@@ -67,6 +70,11 @@ internal sealed class ConnectionService(
     /// Gets or sets the clock used for registration deadlines.
     /// </summary>
     internal TimeProvider RegistrationTimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
+    /// How long a connect or a keep-alive waits for the grains behind it before answering anyway.
+    /// </summary>
+    TimeSpan Grace => TimeSpan.FromSeconds(options.Value.ConnectedClients.GraceSeconds);
 
     /// <summary>
     /// How often the holder renews its lease: half of the lease, so a lease survives a missed renewal.
@@ -117,27 +125,21 @@ internal sealed class ConnectionService(
             throw new RpcException(_notAvailableToCaller);
         }
 
-        var respondedAt = DateTimeOffset.UtcNow;
+        // The registry is bookkeeping: the client is answered within the grace whatever the grain behind it is doing, and
+        // the response is applied to the registry whenever the registry gets to it. The bookkeeping never holds the answer back.
+        var handling = HandleResponse(keepAlive.ConnectionId, DateTimeOffset.UtcNow);
         try
         {
-            var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
-            var registryKnowsClient = await connectedClients.OnClientPing(keepAlive.ConnectionId);
-            if (!registryKnowsClient && !openConnections.IsOpen(keepAlive.ConnectionId))
-            {
-                // The connection was opened on another silo, and the load balancer sent this keep-alive here. Its own
-                // silo has to see it, or the client is dropped as stale while it is alive (#5665).
-                await PingOwningSilo(keepAlive.ConnectionId);
-                return;
-            }
-
-            if (openConnections.Responded(keepAlive.ConnectionId, registryKnowsClient, respondedAt, _lapse, out var request))
-            {
-                await Restore(connectedClients, request);
-            }
+            await handling.WaitAsync(Grace, RegistrationTimeProvider, context.CancellationToken).ConfigureAwait(false);
         }
-        finally
+        catch (TimeoutException)
         {
-            openConnections.Handled(keepAlive.ConnectionId, DateTimeOffset.UtcNow);
+            logger.KeepAliveBookkeepingContinuesInBackground(keepAlive.ConnectionId);
+            _ = handling.ContinueWith(
+                task => logger.FailedToKeepClientRegistered(keepAlive.ConnectionId, task.Exception!),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
     }
 
@@ -169,7 +171,7 @@ internal sealed class ConnectionService(
         {
             ServerVersion = ServerVersion.Version,
             ServerProtocolVersion = Contracts.ProtocolVersion.Current,
-            Capabilities = [KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences, KernelCapabilities.Imports, KernelCapabilities.ConcurrencyScopeConjunctions, KernelCapabilities.IdempotentAppends, KernelCapabilities.CompositeKeyLookups]
+            Capabilities = [KernelCapabilities.PreciseEventTypeSchemas, KernelCapabilities.ClosesStreamConstraints, KernelCapabilities.EffectReceipts, KernelCapabilities.Occurrences, KernelCapabilities.Imports, KernelCapabilities.ConcurrencyScopeConjunctions, KernelCapabilities.IdempotentAppends, KernelCapabilities.CompositeKeyLookups, KernelCapabilities.MultiplexedObservation]
         };
 
         try
@@ -276,8 +278,10 @@ internal sealed class ConnectionService(
         CancellationToken cancellationToken)
     {
         var token = Guid.NewGuid();
-        if (!await TryClaim(subject, request, owner, token, cancellationToken))
+        if (owner.IsUnidentified)
         {
+            logger.ConnectionRefusedWithoutIdentity(request.ConnectionId);
+            subject.OnError(new RpcException(_notAvailableToCaller));
             return;
         }
 
@@ -287,25 +291,25 @@ internal sealed class ConnectionService(
         }
         finally
         {
-            ownership.Release(request.ConnectionId, owner);
             ReleaseReservation(request.ConnectionId, owner, token);
         }
     }
 
-    async Task<bool> TryClaim(
-        ReplaySubject<ConnectionKeepAlive> subject,
-        ConnectRequest request,
-        ConnectionOwner owner,
-        Guid token,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Verifies across the cluster that no other caller holds the connection, and takes the cluster-wide reservation.
+    /// </summary>
+    /// <remarks>
+    /// Both steps are grain calls, so this never blocks the connection: the caller waits for it for a short grace and
+    /// carries on if the grains are slow, and the outcome is acted on whenever it arrives. It reports its failures
+    /// rather than throwing them.
+    /// </remarks>
+    /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
+    /// <param name="owner">The <see cref="ConnectionOwner"/> opening the connection.</param>
+    /// <param name="token">The token identifying this connection's claim on the reservation.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that ends the verification.</param>
+    /// <returns>Granted when verified, Refused when another caller holds the connection, Failed when it could not be told.</returns>
+    async Task<ReservationOutcome> VerifyAcrossCluster(ConnectRequest request, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
     {
-        if (owner.IsUnidentified)
-        {
-            logger.ConnectionRefusedWithoutIdentity(request.ConnectionId);
-            subject.OnError(new RpcException(_notAvailableToCaller));
-            return false;
-        }
-
         try
         {
             var isElsewhere = await connectedClientsQuery
@@ -316,51 +320,26 @@ internal sealed class ConnectionService(
             if (isElsewhere)
             {
                 logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
-                subject.OnError(new RpcException(_notAvailableToCaller));
-                return false;
+                return ReservationOutcome.Refused;
             }
 
             var reservation = await TryReserve(request, owner, token, cancellationToken);
-            if (reservation != ReservationOutcome.Granted)
+            if (reservation == ReservationOutcome.Refused)
             {
-                if (reservation == ReservationOutcome.Refused)
-                {
-                    logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
-                    subject.OnError(new RpcException(_notAvailableToCaller));
-                }
-                else if (cancellationToken.IsCancellationRequested)
-                {
-                    subject.OnCompleted();
-                }
-                else
-                {
-                    subject.OnError(new RpcException(new Status(StatusCode.Unavailable, "Client registration could not be verified")));
-                }
-
-                return false;
-            }
-
-            if (ownership.Claim(request.ConnectionId, owner) == ConnectionClaim.Refused)
-            {
-                ReleaseReservation(request.ConnectionId, owner, token);
                 logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
-                subject.OnError(new RpcException(_notAvailableToCaller));
-                return false;
             }
+
+            return reservation;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            subject.OnCompleted();
-            return false;
+            return ReservationOutcome.Failed;
         }
         catch (Exception ex)
         {
             logger.ClientRegistrationFailed(request.ConnectionId, ex);
-            subject.OnError(new RpcException(new Status(StatusCode.Unavailable, "Client registration could not be verified")));
-            return false;
+            return ReservationOutcome.Failed;
         }
-
-        return true;
     }
 
     async Task<ReservationOutcome> TryReserve(ConnectRequest request, ConnectionOwner owner, Guid token, CancellationToken cancellationToken)
@@ -442,17 +421,38 @@ internal sealed class ConnectionService(
     {
         var terminated = false;
         var reservedByAnother = false;
+        var claimed = false;
         try
         {
-            if (!await TryRegister(subject, connectedClients, request, cancellationToken))
+            using var renewals = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            // The cluster-wide checks are grain calls, so they must not decide whether the client is answered: the
+            // connection is served once the local claim holds, the checks carry on, and a refusal that arrives later ends the stream.
+            var verification = VerifyAcrossCluster(request, owner, token, renewals.Token);
+            var (proceed, outcome) = await TryVerify(subject, verification, cancellationToken);
+            if (!proceed)
+            {
+                return;
+            }
+
+            if (ownership.Claim(request.ConnectionId, owner) == ConnectionClaim.Refused)
+            {
+                logger.ConnectionRefusedForAnotherCaller(request.ConnectionId);
+                subject.OnError(new RpcException(_notAvailableToCaller));
+                return;
+            }
+
+            claimed = true;
+            var (registered, registration) = await TryRegister(subject, connectedClients, request, cancellationToken);
+            if (!registered)
             {
                 return;
             }
 
             openConnections.Opened(request, DateTimeOffset.UtcNow);
             var keepRegistered = Task.CompletedTask;
-            Task<ReservationOutcome>? renewal = null;
-            using var renewals = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var renewal = outcome is null ? verification : null;
+            var retryVerification = outcome == ReservationOutcome.Failed;
             var lastRenewal = RegistrationTimeProvider.GetTimestamp();
 
             try
@@ -461,10 +461,7 @@ internal sealed class ConnectionService(
                 // how the client learns that - it does not treat itself as connected until one arrives. Send it
                 // straight away rather than after a first interval, or every client everywhere pays the whole
                 // keep-alive interval before it can do anything.
-                subject.OnNext(new ConnectionKeepAlive
-                {
-                    ConnectionId = request.ConnectionId
-                });
+                subject.OnNext(AliveFor(request.ConnectionId));
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
@@ -474,10 +471,11 @@ internal sealed class ConnectionService(
 
                     if (request.IsRunningWithDebugger)
                     {
-                        // Only the wait is cancellable: an ending call must not wait out a registry call. KeepRegistered
-                        // handles its own failures, so a check given up on cannot fault unobserved.
+                        // Only the wait is cancellable and bounded: an ending call must not wait out a registry call, and a
+                        // registry too slow to answer must not hold the next keep-alive back. KeepRegistered handles its own
+                        // failures, so a check given up on cannot fault unobserved.
                         keepRegistered = KeepRegistered(connectedClients, request, cancellationToken);
-                        await keepRegistered.WaitAsync(cancellationToken).ConfigureAwait(false);
+                        await WaitForGrace(keepRegistered, cancellationToken).ConfigureAwait(false);
                     }
                     else if (openConnections.HasLapsed(request.ConnectionId))
                     {
@@ -488,26 +486,36 @@ internal sealed class ConnectionService(
                     // a finished renewal that was refused closes the stream.
                     if (renewal is { IsCompleted: true })
                     {
-                        var outcome = await renewal.ConfigureAwait(false);
+                        var renewed = await renewal.ConfigureAwait(false);
                         renewal = null;
-                        if (outcome == ReservationOutcome.Refused)
+                        if (renewed == ReservationOutcome.Refused)
                         {
                             logger.ConnectionClosedForAnotherCaller(request.ConnectionId);
                             reservedByAnother = true;
                             break;
                         }
+
+                        // A connection that could not be verified when it opened is verified again at the next keep-alive.
+                        if (renewed == ReservationOutcome.Granted)
+                        {
+                            outcome = ReservationOutcome.Granted;
+                        }
+                        else if (outcome != ReservationOutcome.Granted)
+                        {
+                            retryVerification = true;
+                        }
                     }
 
-                    if (renewal is null && RegistrationTimeProvider.GetElapsedTime(lastRenewal) >= RenewalPeriod)
+                    if (renewal is null && (retryVerification || RegistrationTimeProvider.GetElapsedTime(lastRenewal) >= RenewalPeriod))
                     {
                         lastRenewal = RegistrationTimeProvider.GetTimestamp();
-                        renewal = RenewReservation(request, owner, token, renewals.Token);
+                        retryVerification = false;
+                        renewal = outcome == ReservationOutcome.Granted
+                            ? RenewReservation(request, owner, token, renewals.Token)
+                            : VerifyAcrossCluster(request, owner, token, renewals.Token);
                     }
 
-                    subject.OnNext(new ConnectionKeepAlive
-                    {
-                        ConnectionId = request.ConnectionId
-                    });
+                    subject.OnNext(AliveFor(request.ConnectionId));
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -527,6 +535,10 @@ internal sealed class ConnectionService(
             terminated = true;
             if (reservedByAnother)
             {
+                // The connection was served before the cluster said it was not this caller's. The claim must not be kept
+                // as a released one, or it would lock out the connection's real owner on this silo.
+                ownership.Revoke(request.ConnectionId, owner);
+                claimed = false;
                 subject.OnError(new RpcException(_notAvailableToCaller));
             }
             else
@@ -538,12 +550,21 @@ internal sealed class ConnectionService(
 
             // A registry check given up on above may still be putting the client back. Let it settle first, so the
             // disconnect is the registry's last word for this connection rather than being undone by a late restore.
-            await keepRegistered.ConfigureAwait(false);
+            // The same goes for a registration still running after the grace: it is the registry's last word too.
+            await WaitForSettling(keepRegistered).ConfigureAwait(false);
+            await WaitForSettling(registration).ConfigureAwait(false);
             await connectedClients.OnClientDisconnected(request.ConnectionId, "Client disconnected");
         }
         catch (Exception ex)
         {
             ReportConnectionFailure(subject, request.ConnectionId, terminated, ex);
+        }
+        finally
+        {
+            if (claimed)
+            {
+                ownership.Release(request.ConnectionId, owner);
+            }
         }
     }
 
@@ -558,66 +579,192 @@ internal sealed class ConnectionService(
     }
 
     /// <summary>
-    /// Registers the client, reporting a failed, timed out or cancelled registration to the subject.
+    /// Waits a short grace for the cluster-wide verification, and goes on without it if the grains are slow.
     /// </summary>
+    /// <param name="subject">The <see cref="ReplaySubject{T}"/> to terminate when the connection is refused or the call is cancelled.</param>
+    /// <param name="verification">The running verification.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the call.</param>
+    /// <returns>Whether to go on, and the outcome of the verification, or null when it is still running.</returns>
+    async Task<(bool Proceed, ReservationOutcome? Outcome)> TryVerify(
+        ReplaySubject<ConnectionKeepAlive> subject,
+        Task<ReservationOutcome> verification,
+        CancellationToken cancellationToken)
+    {
+        ReservationOutcome? outcome = null;
+        try
+        {
+            outcome = await verification.WaitAsync(Grace, RegistrationTimeProvider, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            // The grains are slow. The connection is served and the verification is acted on when it arrives.
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The call ended while verifying - not an error.
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            subject.OnCompleted();
+            return (false, null);
+        }
+
+        if (outcome == ReservationOutcome.Refused)
+        {
+            subject.OnError(new RpcException(_notAvailableToCaller));
+            return (false, outcome);
+        }
+
+        return (true, outcome);
+    }
+
+    /// <summary>
+    /// Registers the client, reporting a failed or cancelled registration to the subject, and going on without it when
+    /// the registry is slow.
+    /// </summary>
+    /// <remarks>
+    /// The registry is bookkeeping, so a registry that has not answered within the grace does not hold the client
+    /// back: the registration carries on, and a client the registry does not know when it responds to a keep-alive is registered again.
+    /// </remarks>
     /// <param name="subject">The <see cref="ReplaySubject{T}"/> to terminate when the client is not registered.</param>
     /// <param name="connectedClients">The <see cref="IConnectedClients"/> registry of the silo the client is connected to.</param>
     /// <param name="request">The <see cref="ConnectRequest"/> the client connected with.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the call.</param>
-    /// <returns>True if the client is registered and the call is still live, false if the subject has been terminated.</returns>
-    async Task<bool> TryRegister(
+    /// <returns>Whether the call is live and the client is served, and the registration, which may still be running.</returns>
+    async Task<(bool Proceed, Task Registration)> TryRegister(
         ReplaySubject<ConnectionKeepAlive> subject,
         IConnectedClients connectedClients,
         ConnectRequest request,
         CancellationToken cancellationToken)
     {
+        var pending = Task.CompletedTask;
         if (!cancellationToken.IsCancellationRequested)
         {
             try
             {
                 var registration = Register(connectedClients, request);
+                pending = registration;
 
                 // Only the wait is bounded and cancellable, not the registration itself. Should it fault after the
                 // wait has been given up on, nobody awaits it - observe it so the fault is not unobserved.
                 //
-                // A registration given up on (cancelled or timed out) is deliberately not compensated with a disconnect.
+                // A registration given up on (cancelled) is deliberately not compensated with a disconnect at once.
                 // The client retries an uncompleted connect with the same ConnectionId and the registry has no per-attempt
-                // identity, so a late disconnect by id would remove the retry's entry. Entries left behind rely on the
-                // registry's own lifecycle (an entry flagged as running with a debugger that never pinged is swept as stale too).
-                // This differs from the legacy cancel path, which disconnected after a late success.
+                // identity, so a late disconnect by id would remove the retry's entry. A registration that outlasts the
+                // grace is settled before the connection's disconnect instead, and one that never completes relies on
+                // the registry's own lifecycle (an entry flagged as running with a debugger that never pinged is swept as stale too).
                 _ = registration.ContinueWith(
                     static task => _ = task.Exception,
                     CancellationToken.None,
                     TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
                     TaskScheduler.Default);
-
-                await registration.WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider, cancellationToken).ConfigureAwait(false);
+                await registration.WaitAsync(Grace, RegistrationTimeProvider, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 // The call was cancelled while registering - not an error.
+            }
+            catch (TimeoutException)
+            {
+                logger.ClientRegistrationContinuesInBackground(request.ConnectionId);
+                _ = pending.ContinueWith(
+                    task => logger.ClientRegistrationFailed(request.ConnectionId, task.Exception!.GetBaseException()),
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
             }
             catch (Exception ex)
             {
                 logger.ClientRegistrationFailed(request.ConnectionId, ex);
                 var status = ex switch
                 {
-                    TimeoutException => new Status(StatusCode.Unavailable, "Client registration timed out"),
                     RpcException rpcException => new Status(rpcException.StatusCode, "Client registration failed"),
                     _ => new Status(StatusCode.Unknown, "Client registration failed")
                 };
                 subject.OnError(new RpcException(status));
-                return false;
+                return (false, pending);
             }
         }
 
         if (cancellationToken.IsCancellationRequested)
         {
             subject.OnCompleted();
-            return false;
+            return (false, pending);
         }
 
-        return true;
+        return (true, pending);
+    }
+
+    ConnectionKeepAlive AliveFor(string connectionId) => new()
+    {
+        ConnectionId = connectionId,
+        Status = (kernelLoad?.Status ?? KernelLoadStatus.Accepting) switch
+        {
+            KernelLoadStatus.Degraded => KernelStatus.Degraded,
+            KernelLoadStatus.Recovering => KernelStatus.Recovering,
+            _ => KernelStatus.Accepting
+        }
+    };
+
+    /// <summary>
+    /// Waits for a task for at most the grace, leaving it running when it takes longer.
+    /// </summary>
+    /// <param name="task">The task to wait for. It handles its own failures.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> that ends the wait.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task WaitForGrace(Task task, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await task.WaitAsync(Grace, RegistrationTimeProvider, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            // Slow grains do not hold the next keep-alive back. The task carries on.
+        }
+    }
+
+    /// <summary>
+    /// Waits for a task that may still be running at the end of a connection, for at most the response timeout.
+    /// </summary>
+    /// <param name="task">The task to wait for.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task WaitForSettling(Task task)
+    {
+        try
+        {
+            await task.WaitAsync(options.Value.Clustering.ResponseTimeout, RegistrationTimeProvider).ConfigureAwait(false);
+        }
+        catch
+        {
+            // It reports its own failures; ending the connection must not depend on it.
+        }
+    }
+
+    async Task HandleResponse(Cratis.Chronicle.Concepts.Clients.ConnectionId connectionId, DateTimeOffset respondedAt)
+    {
+        try
+        {
+            var connectedClients = grainFactory.GetConnectedClients(localSiloDetails.SiloAddress);
+            var registryKnowsClient = await connectedClients.OnClientPing(connectionId);
+            if (!registryKnowsClient && !openConnections.IsOpen(connectionId))
+            {
+                // The connection was opened on another silo, and the load balancer sent this keep-alive here. Its own
+                // silo has to see it, or the client is dropped as stale while it is alive (#5665).
+                await PingOwningSilo(connectionId);
+                return;
+            }
+
+            if (openConnections.Responded(connectionId, registryKnowsClient, respondedAt, _lapse, out var request))
+            {
+                await Restore(connectedClients, request);
+            }
+        }
+        finally
+        {
+            openConnections.Handled(connectionId, DateTimeOffset.UtcNow);
+        }
     }
 
     /// <summary>

@@ -31,7 +31,7 @@ public class with_explicit_scope : Specification
             namespaces.HasEveryNamespace().GetAll().Returns(_namespaces);
             silo.AddProbe(_ => namespaces);
             silo.AddProbe<IObserver>(identity => GetObserver(identity.ToString()));
-            var manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>(consumer);
+            var manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(consumer);
             await manager.Add(new EventStoreSubscriptionDefinition(SubscriptionId, Source, [new EventType("published", 1)]));
             _managers.Add(manager);
         }
@@ -62,7 +62,7 @@ public class with_explicit_scope : Specification
                 var key = new ObserverKey($"{SubscriptionId}->{consumer}", Source, ns, EventSequenceId.Outbox);
                 _observers[key].Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
                     ObserverType.External,
-                    Arg.Any<IEnumerable<EventType>>(),
+                    Arg.Any<EventTypeSet>(),
                     Arg.Any<SiloAddress>(),
                     consumer,
                     Arg.Any<bool>(),

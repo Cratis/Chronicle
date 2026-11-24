@@ -40,7 +40,7 @@ public class a_manager_over_several_namespaces : Specification
         _silo.AddService(Substitute.For<ILocalSiloDetails>());
         var storage = Substitute.For<IStorage>();
         storage.GetEventStores().Returns(_ => Task.FromResult<IEnumerable<EventStoreName>>(_eventStores));
-        _silo.AddService(storage);
+        _silo.AddObserverDefinitions(storage);
         _silo.AddProbe<IEventStoreSubscriptionsManager>(identity =>
         {
             var key = identity.ToString();

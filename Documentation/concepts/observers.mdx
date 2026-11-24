@@ -176,7 +176,7 @@ invoking it, and its failed partitions are discarded. Use it only when you inten
 
 It is the opposite of a replay: nothing the observer already built is reset, so whatever the skipped events would have
 done is missing from it. An observer that is replaying cannot be fast forwarded until the replay completes, and events
-appended after the tail was read are handled as normal.
+appended after the tail was read are handled as normal. The command is accepted as a job and returns at once with the outcome `Accepted`, even while the observer is busy; an observer that is replaying, retired or removed makes the job fail with that reason.
 
 - Workbench: select the observer and choose **Fast forward**.
 - CLI: `cratis chronicle observers fast-forward <observer-id>`.

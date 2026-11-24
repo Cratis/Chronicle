@@ -30,7 +30,7 @@ public class a_manager_with_a_pass_skipping_an_announced_definition : a_projecti
             .Returns(_comparison.Task);
         _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscribed);
         _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(
-            ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), false)
+            ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), false)
             .Returns(_ =>
             {
                 _subscribed = true;

@@ -13,7 +13,14 @@ namespace Cratis.Chronicle.Kernel.Integration.for_DormantObserver.given;
 /// A registered reactor of a kernel that releases a subscribed observer after two quiet seconds and wakes dormant ones every five.
 /// </summary>
 /// <param name="fixture">The fixture that hosts the in-process kernel.</param>
-public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<DormantObserverFixture>(fixture)
+/// <typeparam name="TFixture">The type of the fixture.</typeparam>
+/// <remarks>
+/// The in-process kernel is created once for every type a specification is a <see cref="Specification{T}"/> of, with the settings
+/// of the first context that needed it. A variant of the kernel with other settings therefore has to be its own type, which is
+/// why this is generic over the fixture instead of deriving from <see cref="Specification{T}"/> of the base fixture.
+/// </remarks>
+public class a_dormant_reactor<TFixture>(TFixture fixture) : Specification<TFixture>(fixture)
+    where TFixture : DormantObserverFixture
 {
     protected const string ObserverGrainPrefix = "observer/";
 
@@ -34,13 +41,29 @@ public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<D
         services.AddSingleton(ChronicleFixture.Gamma);
     }
 
+    /// <summary>
+    /// Gives a derived context the chance to change the observer settings the kernel starts with. The kernel is started once
+    /// per fixture, so a different setting needs a fixture of its own.
+    /// </summary>
+    /// <param name="settings">The settings, keyed by their configuration path.</param>
+    protected virtual void ConfigureObserverSettings(Dictionary<string, string?> settings)
+    {
+    }
+
+    /// <summary>
+    /// Gives a derived context the chance to add services to the kernel silo.
+    /// </summary>
+    /// <param name="services">The silo's services.</param>
+    protected virtual void ConfigureSiloServices(IServiceCollection services)
+    {
+    }
+
     protected override Action<KernelChronicleBuilder> GetStorageConfigurator(string mongoServer) => builder =>
     {
         builder.WithMongoDB($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", Constants.EventStore);
         builder.SiloBuilder.ConfigureServices(services =>
         {
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
+            var settings = new Dictionary<string, string?>
                 {
                     ["Observers:WatchdogInterval"] = "1",
                     ["Observers:DormantAfter"] = "2",
@@ -51,9 +74,11 @@ public class a_dormant_reactor(DormantObserverFixture fixture) : Specification<D
                     // a dormant observer would show within the time the observers are waited on.
                     ["ConnectedClients:SubscriptionCheckIntervalSeconds"] = "4",
                     ["ConnectedClients:SubscriptionSettleSeconds"] = "2"
-                })
-                .Build();
+                };
+            ConfigureObserverSettings(settings);
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
             services.PostConfigure<Configuration.ChronicleOptions>(options => configuration.Bind(options));
+            ConfigureSiloServices(services);
         });
     };
 

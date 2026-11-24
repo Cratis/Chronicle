@@ -41,5 +41,5 @@ public class when_subscription_succeeds_in_a_mixed_cluster : given.registrations
 
     [Fact] void should_await_ensure_before_subscribing() => _subscriptionsBeforeEnsureCompleted.ShouldEqual(0);
     [Fact] async Task should_ensure_only_once() => await _observer.Received(1).Ensure();
-    [Fact] async Task should_subscribe_only_once() => await _observer.Received(1).Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), null, false);
+    [Fact] async Task should_subscribe_only_once() => await _observer.Received(1).Subscribe<IReactorObserverSubscriber<TenantReactor>>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), null, false);
 }

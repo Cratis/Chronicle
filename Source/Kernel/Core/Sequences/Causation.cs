@@ -9,7 +9,9 @@ namespace Cratis.Chronicle.Sequences;
 /// <param name="Occurred">The time and date for when it occurred.</param>
 /// <param name="Type">The type of cause.</param>
 /// <param name="Properties">Properties associated with the causation.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Sequences.Causation")]
 public record Causation(
-    DateTimeOffset Occurred,
-    string Type,
-    IDictionary<string, string> Properties);
+    [Id(0)] DateTimeOffset Occurred,
+    [Id(1)] string Type,
+    [Id(2)] IDictionary<string, string> Properties);

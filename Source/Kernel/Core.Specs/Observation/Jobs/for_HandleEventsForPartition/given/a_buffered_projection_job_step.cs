@@ -27,8 +27,9 @@ public class a_buffered_projection_job_step : a_performing_job_step
         }]);
         _projection = Substitute.For<ICollapsingProjectionObserverSubscriber>();
         _silo.AddProbe(_ => _projection);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(new ObserverSubscription(
-            "observer-id", _performState.ObserverKey, _performState.EventTypes, typeof(ICollapsingProjectionObserverSubscriber), SiloAddress.Zero));
+            "observer-id", _performState.ObserverKey, EventTypeSet.From(_performState.EventTypes), typeof(ICollapsingProjectionObserverSubscriber), SiloAddress.Zero));
         _projection.OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>())
             .Returns(Task.FromResult(ObserverSubscriberResult.Ok(1UL)));
         _performState.EventObservationState = EventObservationState.Replay;

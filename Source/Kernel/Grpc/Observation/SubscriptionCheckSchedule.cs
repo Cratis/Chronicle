@@ -11,9 +11,9 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <remarks>
 /// <para>
 /// A subscription that is not confirmed intact - one that was just registered, one that was just restored, one whose
-/// check failed - is checked every revise interval, so a restore is confirmed or retried quickly. So is every
-/// subscription for a settle window after a silo starts leaving the cluster, which is what loses subscriptions.
-/// Otherwise a subscription known to be intact is only checked at the safety-net interval.
+/// check failed - is checked every revise interval, so a restore is confirmed or retried quickly. Otherwise a
+/// subscription known to be intact is only checked at the safety-net interval. The checks after a silo starts leaving
+/// the cluster, which is what loses subscriptions, are not decided here: the silo's supervisor asks for them.
 /// </para>
 /// <para>
 /// The safety-net wait is drawn anew for every check, between three quarters of the interval and the whole interval.
@@ -37,23 +37,19 @@ internal sealed class SubscriptionCheckSchedule
     internal static readonly TimeSpan MinimumRevise = TimeSpan.FromSeconds(1);
 
     readonly TimeSpan _safetyNet;
-    readonly TimeSpan _settle;
     readonly Func<double> _random;
     bool _intact;
-    DateTimeOffset _settlingUntil = DateTimeOffset.MinValue;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionCheckSchedule"/> class.
     /// </summary>
     /// <param name="revise">The interval between checks of a subscription that is not confirmed intact.</param>
     /// <param name="safetyNet">The longest interval between checks of a subscription known to be intact.</param>
-    /// <param name="settle">How long after a silo starts leaving every subscription is checked every <paramref name="revise"/> interval.</param>
     /// <param name="random">Draws a number between 0 and 1 for spreading checks; <see cref="Random.Shared"/> when not given.</param>
-    internal SubscriptionCheckSchedule(TimeSpan revise, TimeSpan safetyNet, TimeSpan settle, Func<double>? random = default)
+    internal SubscriptionCheckSchedule(TimeSpan revise, TimeSpan safetyNet, Func<double>? random = default)
     {
         Revise = revise;
         _safetyNet = safetyNet < revise ? revise : safetyNet;
-        _settle = settle;
         _random = random ?? Random.Shared.NextDouble;
     }
 
@@ -72,18 +68,16 @@ internal sealed class SubscriptionCheckSchedule
         var revise = TimeSpan.FromSeconds(options.ConnectedClients.ReviseIntervalSeconds);
         return new(
             revise < MinimumRevise ? MinimumRevise : revise,
-            TimeSpan.FromSeconds(options.ConnectedClients.SubscriptionCheckIntervalSeconds),
-            TimeSpan.FromSeconds(options.ConnectedClients.SubscriptionSettleSeconds));
+            TimeSpan.FromSeconds(options.ConnectedClients.SubscriptionCheckIntervalSeconds));
     }
 
     /// <summary>
     /// Gets how long to wait before the next check.
     /// </summary>
-    /// <param name="now">The current time.</param>
     /// <returns>The time until the next check.</returns>
-    internal TimeSpan NextCheckAfter(DateTimeOffset now)
+    internal TimeSpan NextCheckAfter()
     {
-        if (!_intact || now < _settlingUntil)
+        if (!_intact)
         {
             return Revise;
         }
@@ -93,21 +87,8 @@ internal sealed class SubscriptionCheckSchedule
     }
 
     /// <summary>
-    /// Gets how long to wait before the first check after a silo started leaving, so the keepers of every stream on a
-    /// silo do not all call their observers at once.
-    /// </summary>
-    /// <returns>A wait within one revise interval.</returns>
-    internal TimeSpan SpreadAfterDeparture() => Revise * _random();
-
-    /// <summary>
     /// Records the outcome of a check.
     /// </summary>
     /// <param name="intact">Whether the subscription was found intact, with nothing to restore.</param>
     internal void Checked(bool intact) => _intact = intact;
-
-    /// <summary>
-    /// Records that a silo started leaving the cluster, or left it.
-    /// </summary>
-    /// <param name="now">The current time.</param>
-    internal void SiloLeft(DateTimeOffset now) => _settlingUntil = now + _settle;
 }

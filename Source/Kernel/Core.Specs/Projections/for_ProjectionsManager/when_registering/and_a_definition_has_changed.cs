@@ -41,7 +41,7 @@ public class and_a_definition_has_changed : given.a_projections_manager_grain
     void should_subscribe_the_observer() =>
         _observerGrain.Received(1).Subscribe<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>());
 
     [Fact] void should_replace_the_registered_definition() => _state.Projections.ShouldContainOnly(_incoming);

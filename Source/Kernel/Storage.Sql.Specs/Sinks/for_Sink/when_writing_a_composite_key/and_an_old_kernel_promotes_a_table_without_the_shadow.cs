@@ -31,7 +31,7 @@ public class and_an_old_kernel_promotes_a_table_without_the_shadow : given.a_com
             new ProjectedColumn("id", typeof(string), true, false, false, false),
             new ProjectedColumn("name", typeof(string), false, false, false, true)
         };
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_harness.ConnectionString).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_harness.ConnectionString).IgnoringManyServiceProviders().Options;
         await using var old = new ReadModelDbContext(options, Table, columns, Substitute.For<IReadModelMigrator>());
         await ReadModelIndexes.DropUndeclared(old, Table, []);
         await ReadModelIndexes.NameAfterTable(old, Table);

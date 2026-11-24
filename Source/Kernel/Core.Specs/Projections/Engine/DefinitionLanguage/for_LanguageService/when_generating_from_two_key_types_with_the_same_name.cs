@@ -30,7 +30,7 @@ public class when_generating_from_two_key_types_with_the_same_name : given.a_lan
         var compiled = _languageService.Compile(Declaration, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(value => value, errors => throw new InvalidOperationException(string.Join(", ", errors.Errors)));
         var eventType = compiled.From.Keys.Single();
-        compiled.From[eventType] = compiled.From[eventType] with { Key = fluentKey.Build().Value };
+        compiled = compiled.WithFrom(eventType, compiled.From[eventType] with { Key = fluentKey.Build().Value });
         _generated = _languageService.Generate(compiled, _readModelDefinition);
         var recompiled = _languageService.Compile(_generated, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(value => value, errors => throw new InvalidOperationException(string.Join(", ", errors.Errors)));

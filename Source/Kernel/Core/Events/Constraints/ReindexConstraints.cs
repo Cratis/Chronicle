@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.Jobs;
+using Cratis.Chronicle.Jobs;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -18,6 +19,20 @@ public class ReindexConstraints : Job<ReindexConstraintsRequest, JobState>, IRei
             request.Changes.Count == 0
                 ? []
                 : [CreateStep<IReindexConstraintsStep>(request)]);
+
+    /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "reindex_constraints");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnAllStepsCompleted()
+    {
+        JobFailures.Completed(ServiceProvider, "reindex_constraints", State.Progress);
+        return base.OnAllStepsCompleted();
+    }
 
     /// <inheritdoc/>
     protected override JobDetails GetJobDetails() => $"Reindex constraints for {Request.EventSequenceId}";

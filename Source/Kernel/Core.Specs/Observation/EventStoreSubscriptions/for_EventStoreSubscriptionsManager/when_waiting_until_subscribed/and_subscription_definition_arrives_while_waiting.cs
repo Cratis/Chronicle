@@ -42,7 +42,7 @@ public class and_subscription_definition_arrives_while_waiting : Specification
         observer.IsSubscribed().Returns(true);
         _silo.AddProbe(_ => observer);
 
-        _manager = await _silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
+        _manager = await _silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
 
         _definition = new EventStoreSubscriptionDefinition(
             new EventStoreSubscriptionId(SourceEventStore),

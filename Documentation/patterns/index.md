@@ -76,6 +76,8 @@ Configure mining under `Cratis:Chronicle:PatternDetection`. Start with the defau
 
 | Setting | Default | What it does |
 | --- | --- | --- |
+| `Enabled` | `true` | Whether capture is on for event stores and namespaces that have no entry in `Overrides` |
+| `Overrides` | none | Turns capture on or off for one event store (key `store`) or one namespace (key `store/namespace`); a namespace entry wins over its event store's entry, which wins over `Enabled` |
 | `Facets` | `CommandType`, `InitiatorType`, `CausedByCommand`, `AggregateType`, `Day`, `TimeBucket` | Which facets take part in the mined combination |
 | `MaximumCombinationSize` | `3` | The largest number of facets a combination may hold |
 | `Error` | `0.001` | The Lossy Counting error parameter; a smaller value trades more memory for counting accuracy |
@@ -85,6 +87,29 @@ Configure mining under `Cratis:Chronicle:PatternDetection`. Start with the defau
 | `PersistenceInterval` | `5` | Seconds between persisting the scopes mining has touched |
 
 `Year` and `Month` are available but excluded from `Facets` by default. Including them splits otherwise recurring behavior across separate years or months and increases the number of distinct combinations to track. Add them when that seasonal distinction matters. `FirstSeen` and `LastSeen` retain the pattern's observed time range without adding those dimensions.
+
+## Turning capture off
+
+Capture is on in every namespace by default. Switch it off for everything with `Enabled: false`, or for a single event store or namespace with `Overrides`:
+
+```json
+{
+  "Cratis": {
+    "Chronicle": {
+      "PatternDetection": {
+        "Overrides": {
+          "billing": false,
+          "billing/audit": true
+        }
+      }
+    }
+  }
+}
+```
+
+A namespace where capture is off costs nothing: no capture observer, no miner, and no persistence pass exist for it. Events appended while capture is off are not captured, so a namespace that is switched on later has a gap in what it has learned. Capture that was on keeps its subscription, but its subscriber drops what it receives while capture is off.
+
+Where capture is on, an idle namespace is cheap too. The capture observer is released like any other dormant observer and woken by the next event, and the miner leaves memory after a persistence interval without mining. Everything it held is in storage, and the next event restores it.
 
 ## When capture starts
 

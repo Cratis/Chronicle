@@ -11,7 +11,7 @@ public class and_the_silo_does_not_support_shared_registration : given.a_registr
     {
         _request.FullSet = true;
         _request.Registrant = "the-app";
-        _manager.RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), Arg.Any<Concepts.Projections.ProjectionOwner?>(), Arg.Any<string?>(), Arg.Any<string?>())
+        _manager.RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), Arg.Any<Concepts.Projections.ProjectionOwner?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<GrainCancellationToken?>())
             .Returns(Task.FromException(new TypeLoadException("The silo predates shared registration")));
     }
 

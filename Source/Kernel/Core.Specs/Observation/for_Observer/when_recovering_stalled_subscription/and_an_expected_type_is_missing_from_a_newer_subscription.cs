@@ -32,5 +32,5 @@ public class and_an_expected_type_is_missing_from_a_newer_subscription : given.a
     [Fact] void should_return_the_effective_merged_types() => _effectiveTypes.ShouldContainOnly(_mergedTypes);
     [Fact] async Task should_preserve_newer_types_in_the_subscription() => (await _observer.GetSubscription()).EventTypes.ShouldContainOnly(_mergedTypes);
     [Fact] void should_preserve_newer_types_in_the_observer_definition() => _definitionStorage.State.EventTypes.ShouldContainOnly(_mergedTypes);
-    [Fact] async Task should_subscribe_the_queue_to_the_merged_types() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<IEnumerable<EventType>>(types => types.ToHashSet().SetEquals(_mergedTypes)), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_subscribe_the_queue_to_the_merged_types() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Is<EventTypeSet>(types => types.ToHashSet().SetEquals(_mergedTypes)), Arg.Any<ObserverFilters?>());
 }

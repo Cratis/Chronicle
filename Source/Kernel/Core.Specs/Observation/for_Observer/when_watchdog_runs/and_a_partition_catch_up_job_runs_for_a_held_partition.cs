@@ -38,5 +38,5 @@ public class and_a_partition_catch_up_job_runs_for_a_held_partition : given.an_o
     [Fact] void should_keep_the_hold() => _stateStorage.State.CatchingUpPartitions.ShouldContain(_partition);
     [Fact] void should_not_re_subscribe_the_observer_to_its_queue() => _appendedEventsQueues
         .DidNotReceive()
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

@@ -12,4 +12,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Partition">The held partition.</param>
 /// <param name="ReleaseBy">The deadline identifying this hold.</param>
 /// <param name="Targets">The original delivery targets, or empty for a conservative hold.</param>
-public record DeliveryFenceState(Key Partition, DateTimeOffset ReleaseBy, IReadOnlyList<DeliveryFenceTarget> Targets);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.DeliveryFenceState")]
+public record DeliveryFenceState([Id(0)] Key Partition, [Id(1)] DateTimeOffset ReleaseBy, [Id(2)] IReadOnlyList<DeliveryFenceTarget> Targets);

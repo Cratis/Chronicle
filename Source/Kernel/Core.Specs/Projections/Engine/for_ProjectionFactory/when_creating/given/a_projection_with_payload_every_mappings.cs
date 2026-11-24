@@ -36,9 +36,10 @@ public class a_projection_with_payload_every_mappings : a_child_collection_proje
         {
             FromEvery = new(new Dictionary<PropertyPath, string> { ["lastValue"] = "value", ["count"] = "$count" }, true)
         };
-        _definition.From[_valueChanged] = new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null);
-        _definition.From[_unrelated] = new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null);
-        _definition.Children["notes"].From[_childUpdated] = new(new Dictionary<PropertyPath, string>(), "noteId", "parentId");
+        _definition = _definition
+            .WithFrom(_valueChanged, new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null))
+            .WithFrom(_unrelated, new(new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet, null))
+            .WithChild("notes", c1 => c1.WithFrom(_childUpdated, new(new Dictionary<PropertyPath, string>(), "noteId", "parentId")));
         var parent = new AppendedEvent(EventContext.EmptyWithEventSourceId("parent") with { EventType = _valueChanged, SequenceNumber = 0 }, new ExpandoObject());
         _eventSequenceStorage.WithParentHistory("parent", parent);
     }

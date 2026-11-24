@@ -81,7 +81,7 @@ public class KernelProjectionBuilder<TReadModel>(ProjectionId identifier, ReadMo
     {
         var builder = new KernelProjectionFromBuilder<TReadModel>();
         builderCallback(builder);
-        _from[eventType] = new FromDefinition(builder.Properties, _key, null);
+        _from[eventType] = new FromDefinition(new Dictionary<PropertyPath, string>(builder.Properties), _key, null);
         return this;
     }
 

@@ -12,7 +12,9 @@ namespace Cratis.Chronicle.Seeding;
 /// has already appended - so a caller that learns only that something was left behind can safely re-offer
 /// the whole set, and does not need to know which entries those were.
 /// </remarks>
-public record SeedingResult(bool AllEntriesSeeded)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Seeding.SeedingResult")]
+public record SeedingResult([Id(0)] bool AllEntriesSeeded)
 {
     /// <summary>
     /// Every entry was appended.

@@ -34,7 +34,7 @@ public class an_observing_state : Specification
     protected ObserverDefinition _observerDefinition;
     protected ObserverKey _observerKey;
     protected IAppendedEventsQueue _appendedEventsQueue;
-    protected IEnumerable<EventType> _eventTypes = [
+    protected EventTypeSet _eventTypes = [
         new EventType(Guid.NewGuid().ToString(), 0),
         new EventType(Guid.NewGuid().ToString(), 1)
     ];
@@ -57,7 +57,7 @@ public class an_observing_state : Specification
             _eventStoreName,
             _eventStoreNamespace,
             _eventSequenceId);
-        _appendedEventsQueues.Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>()).Returns(_queueSubscription);
+        _appendedEventsQueues.Subscribe(_observerKey, Arg.Any<EventTypeSet>()).Returns(_queueSubscription);
         _queueSubscription = new(_observerKey, 0);
         _appendedEventsQueues.Subscribe(Arg.Any<ObserverKey>(), _eventTypes).Returns(_queueSubscription);
         _definitionState = Substitute.For<IPersistentState<ObserverDefinition>>();

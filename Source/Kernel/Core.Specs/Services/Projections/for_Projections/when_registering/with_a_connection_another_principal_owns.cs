@@ -17,5 +17,5 @@ public class with_a_connection_another_principal_owns : given.a_registration_wit
     async Task Because() => await _service.Register(_request);
 
     [Fact] async Task should_not_record_on_the_local_silo() => await _localClients.DidNotReceive().RecordDeclaredProjectionVersions(Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<IEnumerable<ProjectionId>>(), Arg.Any<string?>());
-    [Fact] async Task should_still_register_the_projections() => await _manager.Received(1).RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), null, null, RegisteredVersion);
+    [Fact] async Task should_still_register_the_projections() => await _manager.Received(1).RegisterShared(Arg.Any<string>(), Arg.Any<IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition>>(), null, null, RegisteredVersion, Arg.Any<GrainCancellationToken?>());
 }

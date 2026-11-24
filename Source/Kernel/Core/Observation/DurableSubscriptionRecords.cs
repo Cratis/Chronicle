@@ -82,7 +82,9 @@ public class DurableSubscriptionRecords(
 
     /// <inheritdoc/>
     public async Task<bool> Names(ObserverKey observer, ConnectionId connectionId) =>
-        await Get(observer) is { } record && record.Targets.Any(target => target.ConnectionId == connectionId.Value && IsThisSilo(target.Silo));
+        await Get(observer) is { } record &&
+        (record.Targets.Any(target => target.ConnectionId == connectionId.Value && IsThisSilo(target.Silo)) ||
+         (record.Standbys?.Any(standby => standby.ConnectionId == connectionId.Value && IsThisSilo(standby.Silo)) ?? false));
 
     /// <inheritdoc/>
     public Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetAll(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, bool fresh = false)

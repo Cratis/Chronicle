@@ -18,6 +18,7 @@ internal static class DefinitionChangeIdentity
         Converters =
         {
             new ComplexKeyDictionaryJsonConverterFactory(),
+            new ReadOnlyComplexKeyDictionaryJsonConverterFactory(),
             new PropertyPathJsonConverter()
         }
     };

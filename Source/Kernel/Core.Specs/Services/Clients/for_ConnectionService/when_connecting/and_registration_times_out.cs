@@ -1,37 +1,35 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Grpc.Core;
-
 namespace Cratis.Chronicle.Services.Clients.for_ConnectionService.when_connecting;
 
+/// <summary>
+/// A registry too slow to register the client within the grace must not leave the client without an answer.
+/// </summary>
 public class and_registration_times_out : given.a_registration_lifetime
 {
-    bool _terminalBeforeExpiry;
+    bool _servedBeforeGrace;
+    bool _heartbeatArrived;
     bool _registrationStillPending;
 
     async Task Because()
     {
         Connect();
         await Arrives(_entered.Task);
-        _timerCreated = await Arrives(_clock.Created);
-        _terminalBeforeExpiry = _terminal.Task.IsCompleted;
-        _clock.Expire();
-        _terminalArrived = await Arrives(_terminal.Task);
+        _servedBeforeGrace = _heartbeat.Task.IsCompleted;
+        _timerCreated = await _clock.WaitForTimerDue(Grace);
+        _clock.ExpireDue(Grace);
+        _heartbeatArrived = await Arrives(_heartbeat.Task);
         _registrationStillPending = !_registration.Task.IsCompleted;
     }
 
-    [Fact] void should_arm_the_registration_deadline() => _timerCreated.ShouldBeTrue();
-    [Fact] void should_use_the_configured_response_budget() => _clock.DueTime.ShouldEqual(ResponseTimeout);
-    [Fact] void should_not_terminate_before_the_explicit_deadline() => _terminalBeforeExpiry.ShouldBeFalse();
-    [Fact] void should_report_a_terminal_notification() => _terminalArrived.ShouldBeTrue();
-    [Fact] void should_report_a_retryable_registration_error() => ((RpcException)_errors.Single()).StatusCode.ShouldEqual(StatusCode.Unavailable);
-    [Fact] void should_report_a_generic_timeout_detail() => ((RpcException)_errors.Single()).Status.Detail.ShouldEqual("Client registration timed out");
-    [Fact] void should_log_the_timeout() => _logger.Entries.Any(_ => _.Exception is TimeoutException).ShouldBeTrue();
-    [Fact] void should_report_only_one_error() => _errors.Count.ShouldEqual(1);
-    [Fact] void should_not_reclassify_timeout_as_cancellation() => _completed.ShouldEqual(0);
+    [Fact] void should_arm_the_grace_for_the_registration() => _timerCreated.ShouldBeTrue();
+    [Fact] void should_not_serve_the_client_before_the_grace_has_passed() => _servedBeforeGrace.ShouldBeFalse();
+    [Fact] void should_serve_the_client_once_the_grace_has_passed() => _heartbeatArrived.ShouldBeTrue();
+    [Fact] void should_not_report_an_error() => _errors.ShouldBeEmpty();
+    [Fact] void should_not_terminate_the_connection() => _terminal.Task.IsCompleted.ShouldBeFalse();
+    [Fact] void should_log_that_the_registration_continues() => _logger.Entries.Any(_ => _.Message.Contains("continues in the background")).ShouldBeTrue();
     [Fact] void should_bound_the_waiter_not_the_remote_operation() => _registrationStillPending.ShouldBeTrue();
-    [Fact] void should_not_send_a_heartbeat() => _heartbeats.ShouldEqual(0);
-    [Fact] void should_not_open_locally() => LocallyOpen.ShouldBeFalse();
-    [Fact] void should_not_compensate_by_disconnecting_as_a_retry_reuses_the_connection_id() => Disconnects.ShouldEqual(0);
+    [Fact] void should_open_locally() => LocallyOpen.ShouldBeTrue();
+    [Fact] void should_not_disconnect_the_client() => Disconnects.ShouldEqual(0);
 }

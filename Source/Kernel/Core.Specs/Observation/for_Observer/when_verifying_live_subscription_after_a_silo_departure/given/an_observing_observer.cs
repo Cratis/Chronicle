@@ -23,11 +23,11 @@ public class an_observing_observer : when_watchdog_runs.given.an_observer_with_c
 
     protected void ShouldHaveResubscribed() => _appendedEventsQueues
         .Received(1)
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 
     protected void ShouldNotHaveResubscribed() => _appendedEventsQueues
         .DidNotReceive()
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 
     protected void ShouldNotHaveStartedCatchup() => _jobsManager
         .DidNotReceive()

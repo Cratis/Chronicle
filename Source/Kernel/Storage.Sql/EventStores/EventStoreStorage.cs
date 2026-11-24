@@ -78,7 +78,7 @@ public class EventStoreStorage(
     public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypes.EventTypesStorage(eventStore, database, loggerFactory?.CreateLogger<EventTypes.EventTypesStorage>() ?? NullLogger<EventTypes.EventTypesStorage>.Instance);
+    public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypes.EventTypesStorage(eventStore, database, loggerFactory?.CreateLogger<EventTypes.EventTypesStorage>() ?? NullLogger<EventTypes.EventTypesStorage>.Instance));
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSources.EventSourcesStorage(eventStore, database);
@@ -87,7 +87,7 @@ public class EventStoreStorage(
     public IConstraintsStorage Constraints { get; } = new Constraints.ConstraintsStorage(eventStore, database);
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new Observers.ObserverDefinitionsStorage(eventStore, database);
+    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionRegistry(new Observers.ObserverDefinitionsStorage(eventStore, database));
 
     /// <inheritdoc/>
     public IReactorDefinitionsStorage Reactors { get; } = new Reactors.ReactorDefinitionsStorage(eventStore, database);
@@ -112,6 +112,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public ISequenceQueryStorage SequenceQueries { get; } = new SequenceQueries.SequenceQueryStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public Chronicle.Storage.Registrations.IRegistrationIntentStorage RegistrationIntents { get; } = new Registrations.RegistrationIntentStorage(eventStore, database);
 
     /// <inheritdoc/>
     public ICapturesStorage Captures { get; } = new Captures.CapturesStorage(eventStore, database);

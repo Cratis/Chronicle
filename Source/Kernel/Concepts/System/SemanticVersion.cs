@@ -14,7 +14,9 @@ namespace Cratis.Chronicle.Concepts.System;
 /// <param name="Patch">Patch version number.</param>
 /// <param name="PreRelease">Optional pre-release identifier.</param>
 /// <param name="BuildMetadata">Optional build metadata.</param>
-public partial record SemanticVersion(int Major, int Minor, int Patch, string PreRelease = "", string BuildMetadata = "") : IComparable<SemanticVersion>, IComparable
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.System.SemanticVersion")]
+public partial record SemanticVersion([Id(0)] int Major, [Id(1)] int Minor, [Id(2)] int Patch, [Id(3)] string PreRelease = "", [Id(4)] string BuildMetadata = "") : IComparable<SemanticVersion>, IComparable
 {
     /// <summary>
     /// Gets an empty version (0.0.0).

@@ -22,7 +22,7 @@ public class OccurrenceQueue(IStorage storage, IOptions<ChronicleOptions> option
     IOccurrencesStorage _occurrences = null!;
     OccurrenceDelivery _delivery = null!;
     TriggerId _trigger = null!;
-    IGrainTimer? _timer;
+    bool _wakeInstalled;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -31,13 +31,6 @@ public class OccurrenceQueue(IStorage storage, IOptions<ChronicleOptions> option
         _trigger = new(key.Trigger);
         _occurrences = key.Storage(storage);
         _delivery = new(_occurrences, storage.GetEventStore(new(key.EventStore)).TriggerDefinitions, _trigger, options.Value.Occurrences, _clock);
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
-    {
-        _timer?.Dispose();
         return Task.CompletedTask;
     }
 
@@ -97,8 +90,7 @@ public class OccurrenceQueue(IStorage storage, IOptions<ChronicleOptions> option
         }
         else
         {
-            _timer?.Dispose();
-            _timer = null;
+            _wakeInstalled = false;
             var reminder = await this.GetReminder(WakeReminder);
             if (reminder is not null)
             {
@@ -115,12 +107,14 @@ public class OccurrenceQueue(IStorage storage, IOptions<ChronicleOptions> option
 
     async Task EnsureWake()
     {
-        if (_timer is not null)
+        if (_wakeInstalled)
         {
             return;
         }
 
+        // The reminder alone is the wake: it brings a deactivated queue back and, finding no pending work, removes
+        // itself. A grain timer ticking every second beside it only repeated what the reminder does.
         await this.RegisterOrUpdateReminder(WakeReminder, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-        _timer = this.RegisterGrainTimer(_ => Wake(), new() { DueTime = TimeSpan.FromSeconds(1), Period = TimeSpan.FromSeconds(1), Interleave = false });
+        _wakeInstalled = true;
     }
 }

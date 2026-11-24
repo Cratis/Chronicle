@@ -46,4 +46,10 @@ internal static partial class AuthorizationControllerLogging
 
     [LoggerMessage(LogLevel.Warning, "Refresh token grant failed: user not found")]
     internal static partial void RefreshTokenUserNotFound(this ILogger<AuthorizationController> logger);
+
+    [LoggerMessage(LogLevel.Warning, "The event log is slow to append an authentication audit event; the application is authenticated and the append continues in the background")]
+    internal static partial void AuthenticationAuditContinuesInBackground(this ILogger<AuthorizationController> logger);
+
+    [LoggerMessage(LogLevel.Error, "Could not append an authentication audit event")]
+    internal static partial void AuthenticationAuditFailed(this ILogger<AuthorizationController> logger, Exception exception);
 }

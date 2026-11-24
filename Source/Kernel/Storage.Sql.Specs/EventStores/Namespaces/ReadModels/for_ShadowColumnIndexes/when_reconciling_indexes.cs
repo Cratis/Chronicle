@@ -18,7 +18,7 @@ public class when_reconciling_indexes : for_ReadModelMigrator.given.a_read_model
     {
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"amount":{"type":"number","format":"decimal"}}}""");
         await using var context = CreateContext("shadow_indexes", ProjectedColumns.ForSchema(schema, [new IndexDefinition("amount")]));
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(context.Database.GetConnectionString()).AddInterceptors(_commands).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(context.Database.GetConnectionString()).AddInterceptors(_commands).IgnoringManyServiceProviders().Options;
         await using var indexed = new ReadModelDbContext(options, context.TableName, context.Columns, _migrator);
         await indexed.EnsureTableExists();
         await using var unindexed = new ReadModelDbContext(options, context.TableName, ProjectedColumns.ForSchema(schema), _migrator);

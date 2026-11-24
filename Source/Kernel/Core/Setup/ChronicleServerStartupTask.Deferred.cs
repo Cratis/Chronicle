@@ -10,6 +10,7 @@ using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Occurrences;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Registrations;
 
 namespace Orleans.Hosting;
 
@@ -270,6 +271,7 @@ internal sealed partial class ChronicleServerStartupTask
 
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(eventStore);
         await projectionsManager.Ensure().WaitAsync(token);
+        await grainFactory.GetGrain<IRegistrationInbox>(eventStore).Ensure().WaitAsync(token);
         var projectionDefinitions = await projectionsManager.GetProjectionDefinitions().WaitAsync(token);
         await RegisterPersistedProjectionDefinitions(eventStore, projectionDefinitions).WaitAsync(token);
     }

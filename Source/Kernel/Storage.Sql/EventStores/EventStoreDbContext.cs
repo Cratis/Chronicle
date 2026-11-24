@@ -134,6 +134,11 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
     public DbSet<CaptureObservationEntry> CaptureObservations { get; set; }
 
     /// <summary>
+    /// Gets or sets the registration intents DbSet.
+    /// </summary>
+    public DbSet<Registrations.RegistrationIntentEntry> RegistrationIntents { get; set; }
+
+    /// <summary>
     /// Gets or sets the constraints DbSet.
     /// </summary>
     public DbSet<ConstraintDefinition> Constraints { get; set; }
@@ -180,6 +185,8 @@ public class EventStoreDbContext(DbContextOptions<EventStoreDbContext> options) 
             .ToTable(WellKnownTableNames.ProjectionDefinitionHistory)
             .HasKey(row => new { row.ProjectionId, row.Digest });
 
+        modelBuilder.Entity<Registrations.RegistrationIntentEntry>().ToTable(WellKnownTableNames.RegistrationIntents).HasKey(row => row.Id);
+        modelBuilder.Entity<Registrations.RegistrationIntentEntry>().Property(row => row.Id).HasMaxLength(64).ValueGeneratedNever();
         modelBuilder.Entity<EventStoreInitialization>().ToTable(WellKnownTableNames.EventStoreInitialization);
         modelBuilder.Entity<Generations.GenerationInitializationReceiptRow>().ToTable(WellKnownTableNames.GenerationInitializationReceipts).HasKey(row => new { row.Step, row.Subject });
         modelBuilder.Entity<Generations.GenerationInitializationBlockerRow>().ToTable(WellKnownTableNames.GenerationInitializationBlockers).HasKey(row => new { row.Kind, row.Subject });

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -28,7 +27,7 @@ public class and_the_definition_has_changed_its_pin : given.a_pinned_subscriber
                 [_pin] = new(new Dictionary<PropertyPath, string> { ["fullName"] = "$eventContent(fullName)" }, "$eventSourceId", string.Empty)
             }
         };
-        _factory.Create(_key.EventStore, _key.Namespace, _updated, Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(_ =>
+        _factory.Create(_key.EventStore, _key.Namespace, _updated, Arg.Any<ReadModelDefinition>()).Returns(_ =>
         {
             _projection.EventTypes.Returns([_pin]);
             _projection.Accepts(_event.Context.EventType).Returns(false);

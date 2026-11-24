@@ -14,8 +14,10 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="RegistrationId">The optional caller-supplied identity used to correlate registration status.</param>
 /// <param name="DeclaredTypes">The declared event types with their generation pins.</param>
 /// <param name="GenerationDelivery">The connection's event generation delivery mode.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverRegistrationIdentity")]
 public record ObserverRegistrationIdentity(
-    ConnectionId ConnectionId,
-    Guid? RegistrationId,
-    IReadOnlyList<EventType> DeclaredTypes,
-    EventGenerationDelivery GenerationDelivery);
+    [Id(0)] ConnectionId ConnectionId,
+    [Id(1)] Guid? RegistrationId,
+    [Id(2)] IReadOnlyList<EventType> DeclaredTypes,
+    [Id(3)] EventGenerationDelivery GenerationDelivery);

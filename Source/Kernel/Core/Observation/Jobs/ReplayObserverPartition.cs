@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
@@ -84,11 +85,16 @@ public class ReplayObserverPartition(
     }
 
     /// <inheritdoc/>
-    protected override Task OnFailedToPrepare() => EnsureReplaySupported();
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "replay_partition");
+        return EnsureReplaySupported();
+    }
 
     /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "replay_partition", State.Progress);
         await EnsureReplaySupported();
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);

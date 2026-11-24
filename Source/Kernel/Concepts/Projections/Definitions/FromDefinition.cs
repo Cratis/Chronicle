@@ -11,7 +11,17 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// <param name="Properties">Properties and expressions for each property.</param>
 /// <param name="Key">Key expression, represents the key to use for identifying the model instance.</param>
 /// <param name="ParentKey">Optional parent key expression, typically used in child relationships for identifying parent read model.</param>
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Definitions.FromDefinition")]
 public record FromDefinition(
-    IDictionary<PropertyPath, string> Properties,
-    PropertyExpression Key,
-    PropertyExpression? ParentKey);
+    IReadOnlyDictionary<PropertyPath, string> Properties,
+    [Id(1)] PropertyExpression Key,
+    [Id(2)] PropertyExpression? ParentKey)
+{
+    /// <summary>
+    /// Gets properties and expressions for each property.
+    /// </summary>
+    [Id(0)]
+    public IReadOnlyDictionary<PropertyPath, string> Properties { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(Properties);
+}

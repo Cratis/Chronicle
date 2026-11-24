@@ -16,6 +16,7 @@ public class and_the_observer_is_quarantined(context context) : Given<context>(c
     {
         public ReactorPartitionRetryOutcome Outcome;
         public IEnumerable<Job> RetryJobs;
+        public Job? CommandJob;
         public ReactorState State;
         public IEnumerable<FailedPartition> FailedPartitions;
 
@@ -24,13 +25,15 @@ public class and_the_observer_is_quarantined(context context) : Given<context>(c
         async Task Because()
         {
             Outcome = await RetryFailedPartition();
+            CommandJob = await WaitForOperatorCommandJobToFinish(TimeSpan.FromSeconds(30));
             RetryJobs = await GetRetryJobs();
             State = await _handler.GetState();
             FailedPartitions = await _handler.GetFailedPartitions();
         }
     }
 
-    [Fact] void should_refuse_because_the_observer_is_quarantined() => Context.Outcome.ShouldEqual(ReactorPartitionRetryOutcome.ObserverQuarantined);
+    [Fact] void should_accept_the_retry_as_a_job() => Context.Outcome.ShouldEqual(ReactorPartitionRetryOutcome.Accepted);
+    [Fact] void should_fail_the_job_because_the_observer_is_quarantined() => Context.CommandJob?.Status.ShouldEqual(JobStatus.CompletedWithFailures);
     [Fact] void should_not_create_a_retry_job() => Context.RetryJobs.ShouldBeEmpty();
     [Fact] void should_keep_the_observer_quarantined() => Context.State.RunningState.ShouldEqual(ObserverRunningState.Quarantined);
     [Fact] void should_keep_the_failed_partition() => Context.FailedPartitions.Select(partition => partition.Partition).ShouldContain(Context.FailedPartition);

@@ -35,7 +35,7 @@ public class when_configuring_a_database_name_prefix : Specification
                     options.Server = "mongodb://localhost:27017";
                     options.Database = "run_chronicle+main";
                 },
-                _ => { })
+                SpecSerializationSetup.ConfigureLikeTheServer)
             .UseOrleans(silo =>
             {
                 silo.Services.AddTypeDiscovery();

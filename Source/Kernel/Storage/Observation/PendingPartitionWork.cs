@@ -13,4 +13,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Holder">The kind of work requested.</param>
 /// <param name="From">The position from which work is requested.</param>
 /// <param name="RequestedAt">When the work was requested.</param>
-public record PendingPartitionWork(Key Partition, ClaimHolderKind Holder, EventSequenceNumber From, DateTimeOffset RequestedAt);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.PendingPartitionWork")]
+public record PendingPartitionWork([Id(0)] Key Partition, [Id(1)] ClaimHolderKind Holder, [Id(2)] EventSequenceNumber From, [Id(3)] DateTimeOffset RequestedAt);

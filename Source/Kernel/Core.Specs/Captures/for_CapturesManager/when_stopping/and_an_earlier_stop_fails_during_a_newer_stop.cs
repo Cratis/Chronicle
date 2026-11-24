@@ -43,7 +43,7 @@ public class and_an_earlier_stop_fails_during_a_newer_stop : given.a_captures_ma
         await _secondEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _manager.Ensure();
         await _manager.EnsureSubscribedIn("new-tenant");
-        await _silo.TimerRegistry.FireAllAsync();
+        await _manager.Reconcile();
         _releaseSecond.TrySetResult();
         await second.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }

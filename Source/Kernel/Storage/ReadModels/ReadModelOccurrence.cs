@@ -14,9 +14,11 @@ namespace Cratis.Chronicle.Storage.ReadModels;
 /// <param name="Type">The <see cref="ReadModelType"/> of the read model.</param>
 /// <param name="ContainerName">Container name of the read model (collection, table, etc.).</param>
 /// <param name="RevertContainerName">Container name of the revert read model (collection, table, etc.).</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.ReadModels.ReadModelOccurrence")]
 public record ReadModelOccurrence(
-    ObserverId ObserverId,
-    DateTimeOffset Occurred,
-    ReadModelType Type,
-    ReadModelContainerName ContainerName,
-    ReadModelContainerName RevertContainerName);
+    [Id(0)] ObserverId ObserverId,
+    [Id(1)] DateTimeOffset Occurred,
+    [Id(2)] ReadModelType Type,
+    [Id(3)] ReadModelContainerName ContainerName,
+    [Id(4)] ReadModelContainerName RevertContainerName);

@@ -605,6 +605,12 @@ public partial class Observer
             return Cratis.Choreography.Jobs.JobId.NotSet;
         }
 
+        if (IsWithoutClient)
+        {
+            DeferringRecoveryWithoutClient(logger, failedPartition.Partition);
+            return Cratis.Choreography.Jobs.JobId.NotSet;
+        }
+
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         if (failedPartition.IsQuarantined ||
             await ParkExpiredWebhookRetry(failedPartition, await GetRetryConfiguration()) ||

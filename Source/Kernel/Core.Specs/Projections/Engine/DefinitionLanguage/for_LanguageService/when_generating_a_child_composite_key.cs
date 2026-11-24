@@ -37,9 +37,8 @@ public class when_generating_a_child_composite_key : given.a_language_service_wi
 
         var compiled = _languageService.Compile(Declaration, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)
             .Match(value => value, errors => throw new InvalidOperationException(string.Join(", ", errors.Errors)));
-        var child = compiled.Children.Values.Single();
         var eventType = (EventType)nameof(given.UserAdded);
-        child.From[eventType] = child.From[eventType] with { Key = _fluentExpression };
+        compiled = compiled.WithChild(compiled.Children.Keys.Single(), child => child.WithFrom(eventType, child.From[eventType] with { Key = _fluentExpression }));
         _generated = _languageService.Generate(compiled, _readModelDefinition);
         _code = new CodeGeneration.CSharp.DeclarativeCodeGenerator().Generate(compiled, _readModelDefinition).ToFullString();
         var recompiled = _languageService.Compile(_generated, Concepts.Projections.ProjectionOwner.Client, [_readModelDefinition], _eventTypeSchemas)

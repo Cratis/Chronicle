@@ -50,7 +50,7 @@ public class and_a_registration_is_replacing_the_definition : given.a_projection
     void should_subscribe_only_for_the_registered_definition() =>
         _observerGrain.Received(1).Subscribe<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),

@@ -29,11 +29,12 @@ public class and_a_nested_object_property_is_set_once : given.a_child_collection
               "details":{"type":"object","properties":{"raisedBy":{"type":"string"}}}
             }}
             """);
-        _definition.Children.Clear();
-        _definition.From[_alertRaised] = new(
-            new Dictionary<PropertyPath, string> { ["details.raisedBy"] = $"{WellKnownExpressions.SetOnce}(by)" },
-            "$eventSourceId",
-            null);
+        _definition = _definition
+            .WithoutChildren()
+            .WithFrom(_alertRaised, new(
+                new Dictionary<PropertyPath, string> { ["details.raisedBy"] = $"{WellKnownExpressions.SetOnce}(by)" },
+                "$eventSourceId",
+                null));
     }
 
     async Task Because()

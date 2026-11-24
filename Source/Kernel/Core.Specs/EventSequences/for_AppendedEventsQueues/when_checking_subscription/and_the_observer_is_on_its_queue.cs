@@ -19,7 +19,7 @@ public class and_the_observer_is_on_its_queue : given.two_seeded_queues
         _observerKey = ObserverKeyFor("a-live-observer");
         _queueGrains[QueueIndexFor(_observerKey)].GetSubscriptions().Returns(
         [
-            new AppendedEventsQueueObserverSubscription(_observerKey, [subscribed_event_type.Id])
+            new AppendedEventsQueueObserverSubscription(_observerKey, [subscribed_event_type])
         ]);
     }
 

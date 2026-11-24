@@ -196,13 +196,16 @@ public interface IEventTypesStorage
     Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventType> eventTypes);
 
     /// <summary>
-    /// Evict any cached schema and definition information held for a specific <see cref="EventTypeId"/>.
+    /// Tell the storage that an event type changed elsewhere in the cluster, so anything it holds on to for the event
+    /// type is reloaded on next use.
     /// </summary>
-    /// <param name="eventTypeId">The <see cref="EventTypeId"/> to evict.</param>
+    /// <param name="eventTypeId">The <see cref="EventTypeId"/> that changed.</param>
     /// <remarks>
-    /// Called locally after a registration and on every silo when an event type is registered elsewhere in the
-    /// cluster, so a peer cannot keep serving a stale definition after a new generation is added. Implementations
-    /// without an in-memory cache treat this as a no-op.
+    /// The storage providers are plain reads and writes and keep nothing, so for them this does nothing. It is
+    /// honored by <see cref="EventTypeRegistry"/>, which is what <see cref="IEventStoreStorage.EventTypes"/> hands out and
+    /// which is called locally after a registration and on every silo when an event type is registered elsewhere in the cluster.
     /// </remarks>
-    void Invalidate(EventTypeId eventTypeId);
+    void Invalidate(EventTypeId eventTypeId)
+    {
+    }
 }

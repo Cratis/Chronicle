@@ -23,6 +23,7 @@ using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="clientReducerSubscriptions"><see cref="IClientReducerSubscriptions"/> for the subscription of each connected client reducer.</param>
 /// <param name="reducerMediator"><see cref="IReducerMediator"/> for observing actual events as they are made available.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting to and from <see cref="ExpandoObject"/>.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -49,10 +51,11 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
-/// <param name="siloDepartures">The <see cref="ISiloDepartures"/> telling when to check client subscriptions early.</param>
+/// <param name="siloSupervisor">The <see cref="ISiloSupervisor"/> that runs the checks of client subscriptions.</param>
 /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
+    IClientReducerSubscriptions clientReducerSubscriptions,
     IReducerMediator reducerMediator,
     IExpandoObjectConverter expandoObjectConverter,
     JsonSerializerOptions jsonSerializerOptions,
@@ -62,7 +65,7 @@ internal sealed class Reducers(
     ILogger<Reducers> logger,
     IObserverRegistrationGate registrationGate,
     INamespaceCasing namespaceCasing,
-    ISiloDepartures siloDepartures,
+    ISiloSupervisor siloSupervisor,
     IDormantObservers? dormantObservers = null) : IReducers
 {
     /// <summary>
@@ -87,7 +90,7 @@ internal sealed class Reducers(
 
         var registrationTcs = new TaskCompletionSource<RegisterReducer>(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingDeliveries = new PendingDeliveries<ReducerSubscriberResult>();
-        IReducer? clientObserver = null;
+        IClientReducerSubscription? clientObserver = null;
         var stateFingerprints = new ReducerStateFingerprints(MaxCachedStateFingerprints);
 
         // The read model definition will be populated once the reducer is registered.
@@ -288,7 +291,7 @@ internal sealed class Reducers(
                             using var span = activitySource.Register();
                             span?.Activity?.Tag(key, ObserverType.Reducer);
 
-                            clientObserver = grainFactory.GetGrain<IReducer>(key);
+                            clientObserver = clientReducerSubscriptions.Create(key);
                             var reducer = clientObserver;
                             await ObserverRegistrationEstablishment.Establish(
                                 () => reducer.SetDefinitionAndSubscribe(reducerDefinition),
@@ -317,8 +320,7 @@ internal sealed class Reducers(
                                 () => clientObserver.KeepSubscription(reducerDefinition))
                             : KeepInactive(clientObserver!, reducerDefinition),
                         SubscriptionCheckSchedule.From(options.Value),
-                        siloDepartures,
-                        TimeProvider.System,
+                        siloSupervisor,
                         registration.ConnectionId,
                         logger,
                         cancellation.Token);
@@ -404,17 +406,16 @@ internal sealed class Reducers(
     /// <summary>
     /// Keeps an inactive reducer: there is no subscription to lose, only a registration a webhook may still hold back.
     /// </summary>
-    /// <param name="reducer">The client <see cref="IReducer"/>.</param>
+    /// <param name="reducer">The client <see cref="IClientReducerSubscription"/>.</param>
     /// <param name="definition">The definition the client registered.</param>
     /// <returns>
     /// False while the registration is still deferred, so the keeper tries to complete it every revise interval; true once
     /// it is complete, so the keeper checks it at the safety-net interval.
     /// </returns>
     /// <remarks>
-    /// A silo of an older version does not know <see cref="IReducer.IsRegistrationDeferred"/>; the failing call counts as
-    /// deferred, which is how it was kept before.
+    /// A failing check counts as deferred, so the keeper tries to complete the registration again.
     /// </remarks>
-    internal static async Task<bool> KeepInactive(IReducer reducer, Concepts.Observation.Reducers.ReducerDefinition definition)
+    internal static async Task<bool> KeepInactive(IClientReducerSubscription reducer, Concepts.Observation.Reducers.ReducerDefinition definition)
     {
         await reducer.KeepSubscription(definition);
         try
@@ -525,7 +526,7 @@ internal sealed class Reducers(
         }
     }
 
-    IReducer? ObserverAfterCancellation(IReducer? observer, bool revoked, (ObserverId Observer, ConnectionId Connection) stream)
+    IClientReducerSubscription? ObserverAfterCancellation(IClientReducerSubscription? observer, bool revoked, (ObserverId Observer, ConnectionId Connection) stream)
     {
         logger.DisconnectedUngracefully(stream.Observer, stream.Connection);
         return revoked ? observer : null;
@@ -537,7 +538,7 @@ internal sealed class Reducers(
         ReducerReplayObserver? replay) =>
         deliver is null || replay is null || reducerMediator.Disconnected(key.ObserverId, key.ConnectionId, key.EventStore, key.Namespace, deliver, replay);
 
-    async Task ReleaseRegistration(IReducer? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
+    async Task ReleaseRegistration(IClientReducerSubscription? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
     {
         if (clientObserver is null)
         {

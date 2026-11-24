@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_classif
 
 public class and_source_keys_are_mixed_with_shared_keys : given.a_projection_with_source_keys
 {
-    void Establish() => _definition.From[_second] = new(new Dictionary<PropertyPath, string>(), "$value(shared)", null);
+    void Establish() => _definition = _definition.WithFrom(_second, new(new Dictionary<PropertyPath, string>(), "$value(shared)", null));
 
     async Task Because() => _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, _schemas);
 

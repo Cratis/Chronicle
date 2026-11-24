@@ -22,16 +22,19 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// closure snapshot, it leaves this owner's rows untouched, logs a warning and rebuilds other constraints.
 /// </remarks>
 [method: JsonConstructor]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.ClosesStreamConstraintDefinition")]
 public record ClosesStreamConstraintDefinition(
-    ConstraintName Name,
-    IEnumerable<EventTypeId> EventTypeIds,
-    ClosedStreamDimensions Dimensions,
-    IEnumerable<EventTypeId> ReopenedBy,
-    string? EventStreamIdFrom = default) : IConstraintDefinition
+    [Id(0)] ConstraintName Name,
+    [Id(1)] IEnumerable<EventTypeId> EventTypeIds,
+    [Id(2)] ClosedStreamDimensions Dimensions,
+    [Id(3)] IEnumerable<EventTypeId> ReopenedBy,
+    [Id(4)] string? EventStreamIdFrom = default) : IConstraintDefinition
 {
     /// <summary>
     /// Gets the event sequences this declaration applies to; empty means all sequences.
     /// </summary>
+    [Id(5)]
     public IEnumerable<EventSequenceId> EventSequences { get; init; } = [];
 
     /// <inheritdoc/>

@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creatin
 
 public class and_the_every_mapping_source_has_a_missing_ancestor : given.a_projection_with_payload_every_mappings
 {
-    void Establish() => _definition.FromEvery.Properties["lastValue"] = "details.value";
+    void Establish() => _definition = _definition.WithEveryProperty("lastValue", "details.value");
 
     Task Because() => Project(_unrelated, new ExpandoObject());
 

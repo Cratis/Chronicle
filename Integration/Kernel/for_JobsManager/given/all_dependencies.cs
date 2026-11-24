@@ -14,6 +14,7 @@ public class all_dependencies(ChronicleFixture chronicleFixture) : Specification
     void Establish()
     {
         JobStepProcessor = Services.GetRequiredService<TheJobStepProcessor>();
+        JobStepProcessor.MakeCurrent();
         JobStorage = EventStoreStorage.GetNamespace(EventStore.Namespace.Value).Jobs;
         JobStepStorage = EventStoreStorage.GetNamespace(EventStore.Namespace.Value).JobSteps;
     }

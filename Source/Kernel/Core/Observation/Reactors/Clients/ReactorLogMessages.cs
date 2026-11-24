@@ -12,17 +12,20 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients;
 internal static partial class ReactorLogMessages
 {
     [LoggerMessage(LogLevel.Information, "Client subscription for reactor '{ReactorId}' is waiting for the webhook to leave")]
-    internal static partial void WaitingForWebhook(this ILogger<Reactor> logger, ReactorId reactorId);
+    internal static partial void WaitingForWebhook(this ILogger<ClientReactorSubscription> logger, ReactorId reactorId);
 
     [LoggerMessage(LogLevel.Warning, "Could not record reactor '{ReactorId}' for connection {ConnectionId}; takeover on disconnect falls back to the watchdog")]
-    internal static partial void FailedToRecordObserver(this ILogger<Reactor> logger, ReactorId reactorId, ConnectionId connectionId, Exception exception);
+    internal static partial void FailedToRecordObserver(this ILogger<ClientReactorSubscription> logger, ReactorId reactorId, ConnectionId connectionId, Exception exception);
 
     [LoggerMessage(LogLevel.Debug, "Starting client Reactor {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
-    internal static partial void Starting(this ILogger<Reactor> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+    internal static partial void Starting(this ILogger<ClientReactorSubscription> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Information, "Client with connection id {connectionId} has disconnected - unsubscribing observer {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace}")]
-    internal static partial void ClientDisconnected(this ILogger<Reactor> logger, ConnectionId connectionId, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+    internal static partial void ClientDisconnected(this ILogger<ClientReactorSubscription> logger, ConnectionId connectionId, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
 
     [LoggerMessage(LogLevel.Information, "Auto-replaying reactor {ReactorId} for event store {EventStore} on sequence {EventSequenceId} for namespace {Namespace} due to definition change")]
-    internal static partial void AutoReplayingReactor(this ILogger<Reactor> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+    internal static partial void AutoReplayingReactor(this ILogger<ClientReactorSubscription> logger, EventStoreName eventStore, ReactorId ReactorId, EventSequenceId eventSequenceId, EventStoreNamespaceName @namespace);
+
+    [LoggerMessage(LogLevel.Error, "Replaying reactor {ReactorId} after its definition changed failed")]
+    internal static partial void FailedToReplayAfterDefinitionChange(this ILogger<ClientReactorSubscription> logger, ReactorId reactorId, Exception exception);
 }

@@ -190,7 +190,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
             serverAddressResolver: null,
             loadBalancerStrategy: options.LoadBalancerStrategy,
             timeProvider: null,
-            certificateAuthorities: certificateAuthorities);
+            certificateAuthorities: certificateAuthorities)
+        {
+            MultiplexObservation = options.MultiplexObservation
+        };
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
