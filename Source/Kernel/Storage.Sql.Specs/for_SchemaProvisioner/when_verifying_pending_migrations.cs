@@ -17,7 +17,7 @@ public class when_verifying_pending_migrations : given.a_schema_provisioner
         await _provisioner.Migrate(Scope);
         await using var cluster = await _schemaDatabase.Cluster();
         _migration = (await cluster.DbContext.Database.GetAppliedMigrationsAsync()).Last();
-        await cluster.DbContext.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM __EFMigrationsHistory WHERE MigrationId = {_migration}");
+        await cluster.DbContext.Database.ExecuteSqlAsync($"DELETE FROM __EFMigrationsHistory WHERE MigrationId = {_migration}");
     }
 
     async Task Because()

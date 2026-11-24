@@ -13,5 +13,6 @@ public enum NeutralOperation
     Add = 2,
     Subtract = 3,
     Increment = 4,
-    Decrement = 5
+    Decrement = 5,
+    SetOnce = 6
 }

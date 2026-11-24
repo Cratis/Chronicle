@@ -23,7 +23,7 @@ public class when_runtime_verify_accesses_a_scope_again : given.a_schema_provisi
         // A schema that is no longer current is only noticed by a check that actually reads history.
         await using var scope = await _schemaDatabase.Namespace("orders", "production");
         var migration = (await scope.DbContext.Database.GetAppliedMigrationsAsync()).Last();
-        await scope.DbContext.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM __EFMigrationsHistory WHERE MigrationId = {migration}");
+        await scope.DbContext.Database.ExecuteSqlAsync($"DELETE FROM __EFMigrationsHistory WHERE MigrationId = {migration}");
     }
 
     async Task Because() => _exception = await Catch.Exception(async () =>

@@ -58,6 +58,7 @@ public class GraphProjectionPlanFactory(
     static bool ReadsCurrentState(IReadOnlyDictionary<string, string> properties) => properties.Values.Any(expression =>
         expression.StartsWith(WellKnownExpressions.Add, StringComparison.Ordinal) ||
         expression.StartsWith(WellKnownExpressions.Subtract, StringComparison.Ordinal) ||
+        expression.StartsWith(WellKnownExpressions.SetOnce, StringComparison.Ordinal) ||
         expression == WellKnownExpressions.Count ||
         expression == WellKnownExpressions.Increment ||
         expression == WellKnownExpressions.Decrement);
