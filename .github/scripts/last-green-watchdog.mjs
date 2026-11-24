@@ -6,7 +6,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { restTransport, paginate } from './nightly-build-health.mjs';
-import { trackerTitle, workflowPath } from './nightly-build-health-policy.mjs';
+import { trackerTitle, workflowPath, safeName } from './nightly-build-health-policy.mjs';
 
 export const marker = '<!-- last-green-watchdog:v1 -->';
 const STALE_HOURS = 36;
@@ -170,7 +170,11 @@ export async function main({ environment = process.env, argv = process.argv.slic
         output(JSON.stringify(result));
         return 0;
     } catch (error) {
-        output(JSON.stringify({ status: 'failed', error: error.message === 'tracker-missing' ? 'tracker-missing' : 'watchdog-reporting-failed' }));
+        // Every thrown message here is already a short, static code - a GitHub operation/status
+        // pair or a fixed reason - never raw response bodies, stack traces or the token. Surfacing
+        // it is what makes a failed run diagnosable from its own log instead of a generic reason;
+        // safeName is the same credential-aware guard the sibling reporter uses for untrusted text.
+        output(JSON.stringify({ status: 'failed', error: safeName(error.message) }));
         return 1;
     }
 }
