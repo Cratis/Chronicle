@@ -25,6 +25,7 @@ public static class ObserverDefinitionConverters
             Owner = definition.Owner,
             IsReplayable = definition.IsReplayable,
             GenerationDelivery = definition.GenerationDelivery,
+            Revision = definition.Revision,
         };
 
     /// <summary>
@@ -41,6 +42,7 @@ public static class ObserverDefinitionConverters
             schema.Owner,
             schema.IsReplayable)
         {
-            GenerationDelivery = schema.GenerationDelivery
+            GenerationDelivery = schema.GenerationDelivery,
+            Revision = schema.Revision
         };
 }
