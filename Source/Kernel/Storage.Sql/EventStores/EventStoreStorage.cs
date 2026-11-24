@@ -46,7 +46,7 @@ public class EventStoreStorage(
     JsonSerializerOptions jsonSerializerOptions,
     Json.IExpandoObjectConverter converter,
     ILoggerFactory? loggerFactory = null,
-    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage, IHaveNamespaceIncarnations
 {
     readonly Occurrences.OccurrencesStorage<EventStoreDbContext> _occurrences = new(() => database.EventStore(eventStore), database);
 
@@ -76,6 +76,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public INamespaceStorage Namespaces { get; } = new Namespaces.NamespaceStorage(eventStore, database);
+
+    /// <inheritdoc/>
+    public INamespaceLifecycleStorage NamespaceLifecycles { get; } = new Namespaces.NamespaceLifecycleStorage(() => database.EventStore(eventStore));
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypes.EventTypesStorage(eventStore, database, loggerFactory?.CreateLogger<EventTypes.EventTypesStorage>() ?? NullLogger<EventTypes.EventTypesStorage>.Instance));
@@ -166,4 +169,8 @@ public class EventStoreStorage(
     /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
         => new Namespaces.EventStoreNamespaceStorage(eventStore, @namespace, database, sinkFactories, jobsStorage, jsonSerializerOptions, EventTypes, converter, mutationDigestKeys);
+
+    /// <inheritdoc/>
+    public INamespaceMarkerStorage GetNamespaceMarker(EventStoreNamespaceName @namespace) =>
+        new Namespaces.NamespaceMarkerStorage(() => database.Namespace(eventStore, @namespace));
 }

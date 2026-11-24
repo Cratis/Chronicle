@@ -27,7 +27,7 @@ Read, Append, and Manage are independent grants. A grant for another event store
 
 ## Capture the lifetime before deciding
 
-An authorized binding lookup returns the canonical namespace name, lifecycle status, protocol version, and an incarnation identity only when the namespace is Open. Lookup does not Ensure, create, or reopen a namespace. An absent lifecycle is reported as Removed without an identity.
+An authorized binding lookup returns the canonical namespace name, lifecycle status, protocol version, and an incarnation identity only when the namespace is Open. Lookup does not Ensure, create, or reopen a namespace. An absent lifecycle rejects the lookup with `NamespaceIncarnationUnavailable`.
 
 The non-open states are Preparing, Closing, Removed, and RecoveryRequired. None admits a bound writer. Do not generate an identity locally or treat a namespace spelling, creation timestamp, or cached event-store instance as an incarnation.
 
