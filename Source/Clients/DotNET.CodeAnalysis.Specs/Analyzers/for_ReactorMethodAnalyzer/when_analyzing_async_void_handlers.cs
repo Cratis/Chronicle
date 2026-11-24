@@ -23,7 +23,8 @@ public class when_analyzing_async_void_handlers : given.a_reactor_method_analyze
                 {{attribute}}
                 public async void {|#0:On|}(Happened @event{{dependencies}}) { await Task.Yield(); }
             }
-            """), new ExpectedDiagnostic("CHR0083", DiagnosticSeverity.Warning, "On"));
+            """),
+        new ExpectedDiagnostic("CHR0083", DiagnosticSeverity.Warning, "On"));
 
     [Theory]
     [InlineData("private")]
@@ -38,7 +39,8 @@ public class when_analyzing_async_void_handlers : given.a_reactor_method_analyze
             {
                 {{accessibility}} async void {|#0:On|}(Happened @event) { await Task.Yield(); }
             }
-            """), new ExpectedDiagnostic(DiagnosticIds.ReactorMethodMustNotBeAsyncVoid, DiagnosticSeverity.Warning, "On"));
+            """),
+        new ExpectedDiagnostic(DiagnosticIds.ReactorMethodMustNotBeAsyncVoid, DiagnosticSeverity.Warning, "On"));
 
     [Fact]
     public Task should_recognize_explicit_event_and_reactor_registration() =>
@@ -64,5 +66,6 @@ public class when_analyzing_async_void_handlers : given.a_reactor_method_analyze
                     public void RegisterReactor<T>() { }
                 }
             }
-            """, new ExpectedDiagnostic("CHR0083", DiagnosticSeverity.Warning, "On"));
+            """,
+        new ExpectedDiagnostic("CHR0083", DiagnosticSeverity.Warning, "On"));
 }
