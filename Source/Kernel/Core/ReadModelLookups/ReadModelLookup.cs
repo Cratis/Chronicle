@@ -54,6 +54,7 @@ public record ReadModelLookup(ReadModelLookupOutcome Outcome, string ReadModel, 
         var identifier = new ReadModelIdentifier(readModel);
         var definition = await grainFactory.GetReadModel(identifier, eventStore).GetDefinition();
         if (definition?.Sink is null) throw new ReadModelNotFound(identifier);
+        await ReadModelReadPolicy.EnsureReadable(grainFactory, eventStore, definition);
         if (!store.IsMaterialized(definition)) return ReadModelLookupResults.Empty(ReadModelLookupOutcome.NotSupported, "Only materialized read models can be looked up by composite key.");
         var schema = definition.GetSchemaForLatestGeneration();
         var normalization = CompositeKeyNormalizer.Normalize(schema, parts.AsReadOnly(), typeFormats);

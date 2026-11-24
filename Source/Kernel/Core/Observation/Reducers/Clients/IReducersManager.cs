@@ -3,12 +3,16 @@
 
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
+using Orleans.CodeGeneration;
+using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
 
 /// <summary>
 /// Defines a grain for working with all <see cref="IReducer">client reducers</see>.
 /// </summary>
+[Version(1)]
 public interface IReducersManager : IGrainWithStringKey
 {
     /// <summary>
@@ -18,4 +22,12 @@ public interface IReducersManager : IGrainWithStringKey
     /// <param name="definitions">Collection of <see cref="ReducerDefinition"/>.</param>
     /// <returns>Awaitable task.</returns>
     Task Register(ConnectionId connectionId, IEnumerable<ReducerDefinition> definitions);
+
+    /// <summary>
+    /// Check whether a stored reducer targets the read model.
+    /// </summary>
+    /// <param name="readModel">The read model identifier.</param>
+    /// <returns>Whether a reducer targets the read model.</returns>
+    [AlwaysInterleave]
+    Task<bool> HasReducerForReadModel(ReadModelIdentifier readModel);
 }
