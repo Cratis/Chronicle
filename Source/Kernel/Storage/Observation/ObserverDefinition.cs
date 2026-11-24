@@ -45,4 +45,23 @@ public record ObserverDefinition(
     /// </summary>
     [Id(6)]
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the <see cref="ObserverDefinitionRevision"/> of the definition, which increases every time its content changes.
+    /// </summary>
+    /// <remarks>
+    /// Stamped by storage when the definition is saved, never by the code that builds a definition. A definition stored before
+    /// revisions existed reads as <see cref="ObserverDefinitionRevision.None"/>.
+    /// </remarks>
+    [Id(7)]
+    public ObserverDefinitionRevision Revision { get; init; } = ObserverDefinitionRevision.None;
+
+    /// <summary>
+    /// Gets whether another definition has the same content as this one, whatever the revisions of the two are.
+    /// </summary>
+    /// <param name="other">The <see cref="ObserverDefinition"/> to compare with.</param>
+    /// <returns>True when the content is the same; otherwise false.</returns>
+    public bool HasSameContentAs(ObserverDefinition other) =>
+        (this with { EventTypes = EventTypeSet.From(EventTypes), Revision = ObserverDefinitionRevision.None })
+            .Equals(other with { EventTypes = EventTypeSet.From(other.EventTypes), Revision = ObserverDefinitionRevision.None });
 }

@@ -23,6 +23,18 @@ public static class JsonSchemaExtensions
         schema.FlattenedProperties;
 
     /// <summary>
+    /// Gets a key that identifies what a schema describes, independent of the <see cref="JsonSchema"/> instance holding it.
+    /// </summary>
+    /// <remarks>
+    /// Resolving a reference yields a new <see cref="JsonSchema"/> every time, so a walk over a recursive schema can never
+    /// recognize one it has already visited by instance: it has to compare by key to stop.
+    /// </remarks>
+    /// <param name="schema"><see cref="JsonSchema"/> to get the key for.</param>
+    /// <returns>A key that is equal for schemas that describe the same thing.</returns>
+    public static string GetStructuralKey(this JsonSchema schema) =>
+        schema.Node.ToJsonString();
+
+    /// <summary>
     /// Gets the flattened properties of a schema keyed by their exact name. The dictionary is built once per
     /// schema, so it is cheap to ask for on every document converted.
     /// </summary>

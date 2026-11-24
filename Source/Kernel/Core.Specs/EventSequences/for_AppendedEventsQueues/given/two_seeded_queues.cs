@@ -1,10 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Observation.ObserverRouting;
+using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Options;
 using Orleans.TestKit;
 
@@ -31,18 +35,18 @@ public class two_seeded_queues : Specification
             Events = new Configuration.Events { Queues = QueueCount }
         }));
 
-        // Every queue is seeded with an authoritative subscription that covers only the subscribed event type,
-        // so the router narrows delivery and nothing is broadcast merely because a queue is unseeded.
+        // The routing table holds one observer of the subscribed event type on every queue, so the router narrows
+        // delivery to the event types the table knows and nothing is broadcast for the others.
+        var definitions = Enumerable.Range(0, QueueCount)
+            .Select(queueIndex => new ObserverDefinition(ObserverIdOnQueue(queueIndex), EventTypeSet.From([subscribed_event_type]), EventSequenceId.Log, ObserverType.Reactor, ObserverOwner.Client, true))
+            .ToFrozenDictionary(_ => _.Identifier);
+        _silo.AddService<IObservers>(new FixedObservers(ObserverRoutingTable.From(new ObserverDefinitionRegistrySnapshot(1, definitions))));
+
         _queueGrains = new IAppendedEventsQueue[QueueCount];
         var queueGrainsByIdentity = new Dictionary<string, IAppendedEventsQueue>();
         for (var queueIndex = 0; queueIndex < QueueCount; queueIndex++)
         {
             var queueGrain = Substitute.For<IAppendedEventsQueue>();
-            queueGrain.GetSubscriptions().Returns(
-            [
-                new AppendedEventsQueueObserverSubscription(ObserverKeyFor($"observer-{queueIndex}"), [subscribed_event_type])
-            ]);
-
             _queueGrains[queueIndex] = queueGrain;
             queueGrainsByIdentity[GrainIdKeyExtensions.CreateIntegerKey(queueIndex, _eventSequenceKey).ToString()] = queueGrain;
         }
@@ -72,4 +76,24 @@ public class two_seeded_queues : Specification
             EventSourceId = "some-event-source"
         }
     };
+
+    static ObserverId ObserverIdOnQueue(int queueIndex)
+    {
+        var router = new AppendedEventsQueueRouter(QueueCount);
+        return Enumerable.Range(0, 1000)
+            .Select(_ => new ObserverId($"observer-{_}"))
+            .First(_ => router.GetQueueIndexFor(_) == queueIndex);
+    }
+
+    /// <summary>
+    /// An <see cref="IObservers"/> that always answers with the same table.
+    /// </summary>
+    /// <param name="table">The table to answer with.</param>
+    sealed class FixedObservers(ObserverRoutingTable table) : IObservers
+    {
+        public ValueTask<ObserverRoutingTable> GetTable(EventStoreName eventStore) => ValueTask.FromResult(table);
+
+        public Task<ObserverDefinitionRevision> Acknowledge(EventStoreName eventStore, ObserverId observerId, ObserverDefinitionRevision revision) =>
+            Task.FromResult(revision);
+    }
 }

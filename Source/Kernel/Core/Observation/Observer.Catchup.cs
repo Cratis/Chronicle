@@ -423,6 +423,28 @@ public partial class Observer
         await TransitionTo<Routing>();
     }
 
+    void ScheduleDeferredCatchUpRetry(TimeSpan delay)
+    {
+        var epoch = _catchUpOwnershipEpoch;
+        CancelShortCatchUpRetry();
+        _shortCatchUpRetryTimer = this.RegisterGrainTimer(
+            cancellationToken => RetryDeferredCatchUp(epoch, cancellationToken),
+            new GrainTimerCreationOptions { DueTime = delay, Period = Timeout.InfiniteTimeSpan });
+    }
+
+    async Task RetryDeferredCatchUp(int ownershipEpoch, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return;
+
+        CancelShortCatchUpRetry();
+
+        // The observer settles in observing after it was deferred; anywhere else the watchdog is the fallback.
+        if (!CanRetryCatchUp(ownershipEpoch) || await GetCurrentState() is not Observing) return;
+
+        _catchUpBackoffUntil = default;
+        await TransitionTo<Routing>();
+    }
+
     bool CanRetryCatchUp(int ownershipEpoch) =>
         IsObservingOwnedCatchUp(ownershipEpoch) && State.RunningState != ObserverRunningState.Replaying && _subscription.IsSubscribed;
 

@@ -1,44 +1,53 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Concepts.Events;
+using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics;
-using Cratis.Chronicle.Storage.EventSequences;
-using Cratis.Chronicle.Storage.Observation;
+using Cratis.Metrics;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_verifying_live_start;
 
-public class and_a_gap_is_reported_to_metrics : given.a_queue_reporting_its_metrics
+public class and_a_gap_is_reported_to_metrics : given.a_queue_verifying_live_gaps
 {
-    async Task Establish()
-    {
-        var cursor = Substitute.For<IEventCursor>();
-        cursor.Current.Returns(new[] { EventAt(102) });
-        cursor.MoveNext().Returns(true, false);
-        var events = _storage.GetEventStore(EventStore).GetNamespace(Namespace).GetEventSequence(_eventSequence);
-        events.GetRange(
-                Arg.Any<EventSequenceNumber>(),
-                Arg.Any<EventSequenceNumber>(),
-                Arg.Any<EventSourceId?>(),
-                Arg.Any<IEnumerable<EventType>?>(),
-                Arg.Any<IEnumerable<Tag>?>(),
-                Arg.Any<EventSourceType?>(),
-                Arg.Any<EventStreamType?>(),
-                Arg.Any<CancellationToken>())
-            .Returns(cursor);
-        _observer.GetState().Returns(new ObserverState { NextEventSequenceNumber = 102UL, RunningState = ObserverRunningState.Active });
+    readonly ConcurrentQueue<(string Instrument, int Value, string? Tag)> _measurements = [];
+    Meter _meter;
+    MeterListener _listener;
 
-        // The base seeds the observer as dormant; subscribing makes it live, so the batch goes through the live-start check.
-        await _queue.Subscribe(_observerKey, [_eventType]);
+    protected override ObserverFilters? LiveFilters => null;
+
+    internal override AppendedEventsQueueMetrics? CreateMetrics()
+    {
+        _meter = new($"queue-metrics-{Guid.NewGuid():N}");
+        _listener = new()
+        {
+            InstrumentPublished = (instrument, listener) =>
+            {
+                if (ReferenceEquals(instrument.Meter, _meter)) listener.EnableMeasurementEvents(instrument);
+            }
+        };
+        _listener.SetMeasurementEventCallback<int>((instrument, value, tags, _) =>
+            _measurements.Enqueue((instrument.Name, value, tags.ToArray().Select(tag => tag.Value?.ToString()).LastOrDefault())));
+        _listener.Start();
+        var meter = Substitute.For<IMeter<AppendedEventsQueue>>();
+        meter.ActualMeter.Returns(_meter);
+        return meter.BeginScope(new EventSequenceKey(_eventSequence, EventStore, Namespace), 0, MetricNames.Convention);
     }
 
-    async Task Because()
+    void Establish() => _history = [EventAt(102)];
+
+    Task Because() => Deliver(EventAt(105));
+
+    void Destroy()
     {
-        await _queue.Enqueue([EventAt(105)]);
-        await _queue.AwaitQueueDepletion();
+        _listener?.Dispose();
+        _meter?.Dispose();
     }
 
     [Fact] void should_report_a_live_delivery_gap() => Recorded(WellKnownMetricNames.AppendedEventsQueueObserverSpills, AppendedEventsQueueSpillReasons.LiveDeliveryGap).ShouldEqual(1);
     [Fact] void should_not_report_backlog_pressure() => Recorded(WellKnownMetricNames.AppendedEventsQueueObserverSpills, AppendedEventsQueueSpillReasons.LaggingBacklog).ShouldEqual(0);
+
+    int Recorded(string instrument, string tag) => _measurements.Where(_ => _.Instrument == instrument && _.Tag == tag).Sum(_ => _.Value);
 }

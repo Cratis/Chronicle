@@ -2,17 +2,18 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 
-public class a_queue_verifying_live_gaps : a_queue_with_a_stored_durable_subscription
+public class a_queue_verifying_live_gaps : a_queue_with_an_unsubscribed_instance
 {
     protected IEventSequenceStorage _events;
     protected AppendedEvent[] _history = [];
-    protected virtual bool StartsDormant => false;
+    protected int _handledEvents;
     protected virtual ObserverFilters? LiveFilters => new(["included"]);
 
     protected static AppendedEvent MatchingAt(ulong sequence, string partition = "partition")
@@ -21,10 +22,15 @@ public class a_queue_verifying_live_gaps : a_queue_with_a_stored_durable_subscri
         return @event with { Context = @event.Context with { Tags = [new Tag("included")] } };
     }
 
-    protected async Task Deliver(params AppendedEvent[] events)
+    /// <summary>
+    /// Releases the observer as dormant, which drops its live subscription, and subscribes it again as its catch-up does after
+    /// it is rung. The new subscription is a new epoch that must prove its own live start.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected async Task ReleaseAndSubscribeAgain()
     {
-        await _queue.Enqueue(events);
-        await _queue.AwaitQueueDepletion();
+        (await _queue.TryMarkDormant(_observerKey)).ShouldBeTrue();
+        await _queue.Subscribe(_observerKey, [_eventType], LiveFilters);
     }
 
     protected static AppendedEvent RedactionAt(ulong sequence, EventTypeId originalEventType)
@@ -57,8 +63,13 @@ public class a_queue_verifying_live_gaps : a_queue_with_a_stored_durable_subscri
                 Arg.Any<EventStreamType?>(),
                 Arg.Any<CancellationToken>())
             .Returns(call => ReadHistory(call.ArgAt<EventSequenceNumber>(0), call.ArgAt<EventSequenceNumber>(1)));
+        _observer.Handle(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>()).Returns(callInfo =>
+        {
+            _calls.Enqueue("handle");
+            Interlocked.Add(ref _handledEvents, callInfo.Arg<IEnumerable<AppendedEvent>>().Count());
+            return Task.CompletedTask;
+        });
         _observer.GetState().Returns(new ObserverState { NextEventSequenceNumber = 102UL, RunningState = ObserverRunningState.Active });
         await _queue.Subscribe(_observerKey, [_eventType], LiveFilters);
-        if (StartsDormant) (await _queue.TryMarkDormant(_observerKey)).ShouldBeTrue();
     }
 }

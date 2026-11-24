@@ -14,6 +14,8 @@ For database naming and the effect on read-model queries, see [Namespaces and da
 
 ## Namespaces and tenancy
 
+The cross-product [Organization, workspace and namespace](https://cratis.io/concepts/organization-workspace-namespace/) explanation distinguishes the vocabulary from each product's operational mapping. Here, a namespace segregates data within one event store; it does not establish identity or membership, and products need not share one tenant or namespace identifier.
+
 Map an authorized tenant id to a namespace so the event store instance operates on that tenant's data. Namespace selection does not check whether the caller may access that tenant. Your application must validate tenant access and decide whether a missing tenant may use the default namespace.
 
 The Cratis Arc Chronicle integration registers a resolver that maps Arc's current tenant to a namespace. You do not need a second resolver for the same tenant context. See [Arc Chronicle tenancy](/arc/backend/csharp/chronicle/tenancy/) for the mapping and its default-tenant behavior.

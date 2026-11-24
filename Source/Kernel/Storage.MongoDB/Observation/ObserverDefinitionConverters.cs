@@ -27,7 +27,8 @@ public static class ObserverDefinitionConverters
             Type = definition.Type,
             Owner = definition.Owner,
             IsReplayable = definition.IsReplayable,
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            Revision = definition.Revision
         };
 
     /// <summary>
@@ -44,7 +45,8 @@ public static class ObserverDefinitionConverters
             definition.Owner,
             definition.IsReplayable)
         {
-            GenerationDelivery = definition.GenerationDelivery
+            GenerationDelivery = definition.GenerationDelivery,
+            Revision = definition.Revision
         };
 
     /// <summary>

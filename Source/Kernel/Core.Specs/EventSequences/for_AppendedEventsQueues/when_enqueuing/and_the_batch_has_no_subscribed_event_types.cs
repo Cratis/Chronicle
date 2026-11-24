@@ -6,7 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueues.when_enqueuing;
 
 /// <summary>
-/// Establishes that the seeded router really does narrow delivery, which is what makes the redaction
+/// Establishes that routing from the table really does narrow delivery, which is what makes the redaction
 /// force-broadcast load-bearing rather than incidental.
 /// </summary>
 public class and_the_batch_has_no_subscribed_event_types : given.two_seeded_queues
