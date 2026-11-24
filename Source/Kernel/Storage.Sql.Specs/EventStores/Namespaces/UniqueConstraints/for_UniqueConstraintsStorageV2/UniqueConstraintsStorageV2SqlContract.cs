@@ -29,7 +29,7 @@ public abstract partial class UniqueConstraintsStorageV2SqlContract : UniqueCons
     protected IUniqueConstraintsStorageV2 Handle(string sequence = "log", string? connectionString = null) => new UniqueConstraintsStorageV2(sequence, () =>
     {
         Interlocked.Increment(ref _optionsCreated);
-        return Configure(new DbContextOptionsBuilder(), connectionString ?? _connectionString).AddInterceptors(_interleaving, _interleaving.Commands).Options;
+        return Configure(new DbContextOptionsBuilder(), connectionString ?? _connectionString).WithoutServiceProviderCaching().AddInterceptors(_interleaving, _interleaving.Commands).Options;
     });
 
     protected override Task<IUniqueConstraintsStorageV2> ReopenStorage() => Task.FromResult(Handle());
