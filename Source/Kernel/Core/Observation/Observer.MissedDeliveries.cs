@@ -56,6 +56,41 @@ public partial class Observer
         }
     }
 
+    async Task<bool> RepairLiveDeliveryGap(AppendedEvent[] events)
+    {
+        if (!CanRepairLiveDeliveryGap(events)) return false;
+        if (await HasRunningCatchupJob()) return false;
+
+        var from = State.NextEventSequenceNumber;
+        var next = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(from, _subscription.EventTypes);
+        var hasGap = next.Match(
+            sequenceNumber => sequenceNumber.IsActualValue && sequenceNumber < events[0].Context.SequenceNumber,
+            _ => true);
+        if (!hasGap) return false;
+        if (State.NextEventSequenceNumber != from) return false;
+        if (!CanRepairLiveDeliveryGap(events)) return false;
+
+        // The missing event may belong to another partition. A whole-observer catch-up must own it before
+        // this live batch can move the shared cursor; remembering a dropped run afterwards is too late.
+        await CatchUp();
+        return true;
+    }
+
+    bool CanRepairLiveDeliveryGap(AppendedEvent[] events) =>
+        IsLiveRunAheadOfCursor(events) && CanRepairMissedDeliveries() && !HasLiveGapRecoveryOwner();
+
+    bool IsLiveRunAheadOfCursor(AppendedEvent[] events) =>
+        _pageFloor is null &&
+        events.Length > 0 &&
+        State.NextEventSequenceNumber.IsActualValue &&
+        events[0].Context.SequenceNumber > State.NextEventSequenceNumber;
+
+    bool HasLiveGapRecoveryOwner() =>
+        _isPreparingCatchup || _heldBackDeliveries.Count > 0 || HasPartitionGapRecoveryOwner();
+
+    bool HasPartitionGapRecoveryOwner() =>
+        State.CatchingUpPartitions.Count > 0 || State.ReplayingPartitions.Count > 0 || Failures.HasFailedPartitions;
+
     void QueueMissedDelivery(Key partition, EventSequenceNumber first)
     {
         if (!_missedDeliveries.TryGetValue(partition, out var pending) || first < pending)
