@@ -10,15 +10,39 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 /// </summary>
 public class InMemorySinkProvenanceStorage : ISinkProvenanceStorage
 {
-    int _quarantined;
+    readonly Lock _gate = new();
+    SinkProvenanceState _state = new(new(Guid.NewGuid()), 0, false);
 
     /// <inheritdoc/>
-    public Task<bool> IsQuarantined() => Task.FromResult(Volatile.Read(ref _quarantined) != 0);
+    public Task<SinkProvenanceState> ReadState()
+    {
+        lock (_gate) return Task.FromResult(_state);
+    }
+
+    /// <inheritdoc/>
+    public Task<SinkProvenanceState> CompleteInventory(bool restrictedEvidence)
+    {
+        lock (_gate)
+        {
+            if (!_state.IsComplete)
+            {
+                _state = _state with { InventoryVersion = SinkProvenanceState.CurrentInventoryVersion, Restricted = _state.Restricted || restrictedEvidence };
+            }
+
+            return Task.FromResult(_state);
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsQuarantined()
+    {
+        lock (_gate) return Task.FromResult(_state.Restricted);
+    }
 
     /// <inheritdoc/>
     public Task MarkQuarantined()
     {
-        Interlocked.Exchange(ref _quarantined, 1);
+        lock (_gate) _state = _state with { Restricted = true };
         return Task.CompletedTask;
     }
 }

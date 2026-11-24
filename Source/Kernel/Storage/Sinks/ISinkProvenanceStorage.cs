@@ -9,6 +9,20 @@ namespace Cratis.Chronicle.Storage.Sinks;
 public interface ISinkProvenanceStorage
 {
     /// <summary>
+    /// Reads or atomically bootstraps the incomplete database-local inventory state.
+    /// </summary>
+    /// <returns>The committed state. Missing required schema must fail closed.</returns>
+    Task<SinkProvenanceState> ReadState() => throw new NotSupportedException("Read-model storage is not available.");
+
+    /// <summary>
+    /// Atomically commits inventory evidence and completion if inventory is still incomplete.
+    /// Already completed inventory discards late evidence from another inventory worker.
+    /// </summary>
+    /// <param name="restrictedEvidence">Whether this inventory found restricted evidence.</param>
+    /// <returns>The committed state, including independent explicit marks.</returns>
+    Task<SinkProvenanceState> CompleteInventory(bool restrictedEvidence) => throw new NotSupportedException("Read-model storage is not available.");
+
+    /// <summary>
     /// Gets whether the database has hosted a protected producer. Failures must not be treated as absence.
     /// </summary>
     /// <returns>Whether the marker exists.</returns>

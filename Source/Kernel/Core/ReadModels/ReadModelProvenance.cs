@@ -3,96 +3,102 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
-using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Sinks;
-using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels;
 
 /// <summary>
-/// Preserves evidence and checks live provenance for one event store.
+/// Stages a complete storage-wide inventory before committing any database's completion.
 /// </summary>
-/// <param name="storage">The authoritative definition and sink storage.</param>
-/// <param name="eventStore">The event store to inventory.</param>
-internal sealed class ReadModelProvenance(IStorage storage, EventStoreName eventStore)
+/// <param name="storage">The authoritative storage.</param>
+internal sealed class ReadModelProvenance(IStorage storage)
 {
-    readonly IEventStoreStorage _storage = storage.GetEventStore(eventStore);
-    readonly Lock _gate = new();
-    Task _pending = Task.CompletedTask;
-    IReadOnlyList<ReadModelDefinition>? _legacy;
+    readonly Dictionary<SinkProvenanceDatabaseId, Destination> _destinations = [];
+    readonly List<Source> _sources = [];
 
-    /// <summary>
-    /// Persists all discoverable evidence before a definition can be changed.
-    /// </summary>
-    /// <returns>The preservation task.</returns>
-    internal Task Preserve() => Serialize(PreserveEvidence);
-
-    /// <summary>
-    /// Checks the live database marker and retained definition before admitting a read.
-    /// </summary>
-    /// <param name="namespace">The actual destination namespace.</param>
-    /// <param name="definition">The requested definition.</param>
-    /// <returns>The admission task.</returns>
-    internal Task EnsureReadable(EventStoreNamespaceName @namespace, ReadModelDefinition definition) =>
-        Serialize(() => CheckEvidence(@namespace, definition));
-
-    static async Task RunAfter(Task previous, Func<Task> operation)
+    internal async Task Inventory(EventStoreName requestedStore, EventStoreNamespaceName? requestedNamespace, ReadModelDefinition? requestedModel)
     {
-        // Each caller observes its own failure; a failed inventory must not prevent a later retry.
-        await previous.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
-        await operation();
-    }
-
-    Task Serialize(Func<Task> operation)
-    {
-        lock (_gate)
+        var stores = (await storage.GetEventStores()).Append(requestedStore).Distinct(CaseInsensitiveEventStoreNameComparer.Instance).ToArray();
+        foreach (var store in stores)
         {
-            return _pending = RunAfter(_pending, operation);
+            await Discover(store);
+        }
+
+        if (requestedModel is not null && requestedNamespace is not null)
+        {
+            await AddDestination(storage.GetEventStore(requestedStore), requestedNamespace, requestedModel);
+        }
+
+        await GatherEvidence();
+
+        // No completion is published until discovery and evidence collection for every scope has succeeded.
+        foreach (var destination in _destinations.Values.Where(_ => !_.State.IsComplete))
+        {
+            await destination.Storage.CompleteInventory(destination.RestrictedEvidence);
         }
     }
 
-    async Task PreserveEvidence()
+    async Task GatherEvidence()
     {
-        var candidates = await Candidates();
-        var namespaces = (await _storage.Namespaces.GetAll()).Select(_ => _.Name)
-            .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet).Distinct();
-        foreach (var @namespace in namespaces) await Mark(@namespace, candidates);
-    }
-
-    async Task CheckEvidence(EventStoreNamespaceName @namespace, ReadModelDefinition definition)
-    {
-        await Mark(@namespace, await Candidates());
-        await Check(@namespace, definition);
-        if (await _storage.ReadModels.Has(definition.Identifier))
+        foreach (var source in _sources)
         {
-            await Check(@namespace, await _storage.ReadModels.Get(definition.Identifier));
+            if (source.Destinations.All(_ => _.State.IsComplete)) continue;
+            var restricted = (await LegacyReadModelSinkInventory.Find(source.Storage, includeUnresolved: true)).Select(_ => _.Identifier).ToHashSet();
+            foreach (var binding in source.Bindings.Where(_ => restricted.Contains(_.Model.Identifier)))
+            {
+                binding.Destination.RestrictedEvidence = true;
+            }
         }
     }
 
-    async Task Check(EventStoreNamespaceName @namespace, ReadModelDefinition definition)
+    async Task Discover(EventStoreName store)
     {
-        if (SinkProvenanceExemptions.IsNonDatabase(definition.Sink.Type)) return;
-        if (await _storage.GetNamespace(@namespace).Sinks.GetProvenance(definition).IsQuarantined())
+        var eventStore = storage.GetEventStore(store);
+        var models = (await eventStore.ReadModels.GetAll()).ToArray();
+        var namespaces = (await eventStore.Namespaces.GetAll()).Select(_ => _.Name)
+            .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet).Distinct().ToArray();
+        var source = new Source(eventStore);
+        _sources.Add(source);
+        foreach (var model in models)
         {
-            throw new RpcException(new Status(StatusCode.PermissionDenied, SystemStoreAccess.Refused));
+            foreach (var @namespace in namespaces)
+            {
+                if (await AddDestination(eventStore, @namespace, model) is { } destination)
+                {
+                    source.Bindings.Add(new(model, destination));
+                }
+            }
         }
     }
 
-    async Task<IEnumerable<ReadModelDefinition>> Candidates()
+    async Task<Destination?> AddDestination(IEventStoreStorage store, EventStoreNamespaceName @namespace, ReadModelDefinition model)
     {
-        // Capture unresolved legacy bindings before the first registration. An ordinary new registration
-        // can persist its read model before its producer, without adding evidence of protected data.
-        _legacy ??= await LegacyReadModelSinkInventory.Find(_storage, includeUnresolved: true);
-        return _legacy.Concat(await LegacyReadModelSinkInventory.Find(_storage, includeUnresolved: false));
+        if (SinkProvenanceExemptions.IsNonDatabase(model.Sink.TypeId)) return null;
+        var provenance = store.GetNamespace(@namespace).Sinks.GetProvenance(model);
+        var state = (await provenance.ReadState()).Validate();
+        if (!_destinations.TryGetValue(state.DatabaseId, out var destination))
+        {
+            destination = new(provenance, state);
+            _destinations.Add(state.DatabaseId, destination);
+        }
+
+        return destination;
     }
 
-    async Task Mark(EventStoreNamespaceName @namespace, IEnumerable<ReadModelDefinition> candidates)
+    sealed class Source(IEventStoreStorage storage)
     {
-        var sinks = _storage.GetNamespace(@namespace).Sinks;
-        foreach (var definition in candidates.Where(_ => !SinkProvenanceExemptions.IsNonDatabase(_.Sink.Type)))
-        {
-            await sinks.GetProvenance(definition).MarkQuarantined();
-        }
+        internal IEventStoreStorage Storage { get; } = storage;
+        internal List<Binding> Bindings { get; } = [];
+        internal IEnumerable<Destination> Destinations => Bindings.Select(_ => _.Destination);
+    }
+
+    sealed record Binding(ReadModelDefinition Model, Destination Destination);
+
+    sealed class Destination(ISinkProvenanceStorage storage, SinkProvenanceState state)
+    {
+        internal ISinkProvenanceStorage Storage { get; } = storage;
+        internal SinkProvenanceState State { get; } = state;
+        internal bool RestrictedEvidence { get; set; }
     }
 }
