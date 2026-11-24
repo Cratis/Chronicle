@@ -315,18 +315,6 @@ public partial class AppendedEventsQueue
         }
     }
 
-    static async Task ResumeDormantObserver(IObserver observer, EventSequenceNumber first)
-    {
-        await observer.Ensure();
-        if (await observer.GetState() is { RunningState: ObserverRunningState.Active, NextEventSequenceNumber.IsActualValue: true } state &&
-            state.NextEventSequenceNumber < first)
-        {
-            // Ensure activates a dormant grain, but does nothing when seeding rediscovered a resident one.
-            // In that case its cursor, not the incoming doorbell, is still the resume position.
-            await observer.CatchUp();
-        }
-    }
-
     bool TakeDormantMark(ObserverKey observerKey)
     {
         lock (_subscriptionsLock)
@@ -362,7 +350,10 @@ public partial class AppendedEventsQueue
 
         try
         {
-            await WithWakeAdmission(() => ResumeDormantObserver(lane.Observer, events[0].Context.SequenceNumber), WakeCauses.Event);
+            // A resident grain's Ensure is a no-op. Re-arm the same filtered boundary check used by a new
+            // subscription, before either single-partition or page delivery can reach the subscriber.
+            _verifiedLiveStarts.Remove(CurrentSubscriptionOf(lane));
+            await WithWakeAdmission(lane.Observer.Ensure, WakeCauses.Event);
             return true;
         }
         catch (OperationCanceledException) when (_catchupCancellationToken.IsCancellationRequested)

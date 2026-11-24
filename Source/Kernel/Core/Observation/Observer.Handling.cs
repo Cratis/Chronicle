@@ -407,7 +407,6 @@ public partial class Observer
         var tailEventSequenceNumber = preparationContext.NextEventSequenceNumber;
 
         var eventsToHandle = prepared.EventsToHandle;
-        if (await RepairLiveDeliveryGap(eventsToHandle)) return;
         if (await RepairDiscardedDeliveries(partition, events, tailEventSequenceNumber)) return;
         var configuration = await configurationProvider.GetFor(_observerKeyText);
         if (ExceedsLiveBudget(configuration, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
