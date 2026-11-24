@@ -17,6 +17,9 @@ public abstract class a_provenance_database : Specification
 {
     protected readonly List<string> _openedTables = [];
     protected bool _empty;
+    protected bool _stableIdentity;
+    protected bool _lateEvidenceDiscarded;
+    protected bool _atomicRestrictedCompletion;
     protected bool _alias;
     protected bool _reloaded;
     protected bool _verify;
@@ -29,12 +32,17 @@ public abstract class a_provenance_database : Specification
         var first = new SinkProvenanceStorage(DatabaseFor(connectionString), "store", "namespace");
         var alias = new SinkProvenanceStorage(DatabaseFor(aliasConnection ?? connectionString), "other-store", "other-namespace");
         _empty = await first.IsQuarantined();
+        _stableIdentity = (await first.ReadState()).DatabaseId == (await alias.ReadState()).DatabaseId;
+        await first.CompleteInventory(false);
+        _lateEvidenceDiscarded = !(await alias.CompleteInventory(true)).Restricted;
         await Task.WhenAll(first.MarkQuarantined(), alias.MarkQuarantined());
         _alias = await alias.IsQuarantined();
         _reloaded = await new SinkProvenanceStorage(DatabaseFor(connectionString), "store", "namespace").IsQuarantined();
         _verify = await new SinkProvenanceStorage(DatabaseFor(connectionString, SchemaMode.Verify), "store", "namespace").IsQuarantined();
         var independent = new SinkProvenanceStorage(DatabaseFor(independentConnection), "store", "namespace");
         _independent = await independent.IsQuarantined();
+        var committed = await independent.CompleteInventory(true);
+        _atomicRestrictedCompletion = committed.IsComplete && committed.Restricted;
         await new SinkProvenanceStorage(DatabaseFor(independentConnection, SchemaMode.Verify), "store", "namespace").MarkQuarantined();
         await Execute(independentConnection, "UPDATE \"__cratis_sink_provenance\" SET \"Version\" = 99");
         _malformedError = await Catch.Exception(independent.IsQuarantined);
@@ -45,7 +53,7 @@ public abstract class a_provenance_database : Specification
     protected IDatabase DatabaseFor(string connectionString, SchemaMode mode = SchemaMode.Migrate)
     {
         var database = Substitute.For<IDatabase>();
-        database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>())
+        database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>(), Arg.Any<SinkProvenanceTarget?>())
             .Returns(call => Open(connectionString, mode, (call.ArgAt<string>(2), call.ArgAt<IReadOnlyList<ProjectedColumn>>(3))));
         return database;
     }

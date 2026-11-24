@@ -17,16 +17,18 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 /// Initializes a new instance of the <see cref="InMemorySinkFactory"/> class.
 /// </remarks>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
-public class InMemorySinkFactory(ITypeFormats typeFormats) : ISinkFactory
+/// <param name="cache">The silo's shared physical provenance cache.</param>
+public class InMemorySinkFactory(ITypeFormats typeFormats, ISinkProvenanceCache? cache = null) : ISinkFactory
 {
     readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName), InMemorySinkProvenanceStorage> _provenance = new();
+    readonly ISinkProvenanceCache _cache = cache ?? new SinkProvenanceCache();
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
     public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? containerName = null) =>
-        sink.IsDefault ? _provenance.GetOrAdd((eventStore, @namespace), _ => new()) : throw new SinkTypeDoesNotSupportNamedConfigurations(TypeId, sink);
+        sink.IsDefault ? _cache.Bind((typeof(InMemorySinkFactory), eventStore, @namespace), () => _provenance.GetOrAdd((eventStore, @namespace), _ => new())) : throw new SinkTypeDoesNotSupportNamedConfigurations(TypeId, sink);
 
     /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) => new InMemorySink(readModel, typeFormats, GetProvenance(eventStore, @namespace, SinkName.Default));

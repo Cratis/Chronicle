@@ -113,8 +113,9 @@ public interface IDatabase
     /// <param name="containerName">The container name of the read model (table name).</param>
     /// <param name="columns">The columns derived from the read model's <see cref="Schemas.JsonSchema"/>.</param>
     /// <param name="purpose">The <see cref="ConnectionPurpose"/> the returned context connects for; <see cref="ConnectionPurpose.Schema"/> for changing tables.</param>
+    /// <param name="admittedTarget">The physical target admitted by the metadata lease, if bound.</param>
     /// <returns>A <see cref="DbContextScope{ReadModelDbContext}"/> for the specified read model table.</returns>
-    Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime);
+    Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime, Sinks.SinkProvenanceTarget? admittedTarget = null);
 
     /// <summary>
     /// Gets a database context scope for a read model table that already exists, bringing its columns up to date.
@@ -124,8 +125,9 @@ public interface IDatabase
     /// <param name="namespace">The name of the namespace.</param>
     /// <param name="containerName">The container name of the read model (table name).</param>
     /// <param name="columns">The columns derived from the read model's <see cref="Schemas.JsonSchema"/>.</param>
+    /// <param name="admittedTarget">The physical target admitted by the metadata lease, if bound.</param>
     /// <returns>A <see cref="DbContextScope{ReadModelDbContext}"/> for the table, or null when the table does not exist.</returns>
-    Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns);
+    Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, Sinks.SinkProvenanceTarget? admittedTarget = null);
 
     /// <summary>
     /// Clears all cached table-migration state that was recorded for the given connection string prefix.

@@ -69,7 +69,7 @@ public class a_materialized_read_model : Specification
             .Returns(callInfo => Task.FromResult(callInfo.ArgAt<IEnumerable<ExpandoObject>>(3)));
 
         _readBindings = Substitute.For<IReadModelReadBindings>();
-        _readBindings.Resolve(EventStore, EventStoreNamespace, _definition).Returns(new ReadModelReadBinding(_sink, null));
+        _readBindings.Resolve(EventStore, EventStoreNamespace, _definition).Returns(new ReadModelReadBinding(_sink, null) { Lease = SinkProvenanceLease.Exempt });
         _store = new MaterializedReadModelStore(_readBindings, _compliance);
     }
 

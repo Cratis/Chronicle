@@ -473,7 +473,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     async Task<DbContextScope<ReadModelDbContext>> OpenScope(string table, ConnectionPurpose purpose = ConnectionPurpose.Runtime)
     {
         await EnsureLayout();
-        return await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, purpose);
+        return await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, purpose, ProvenanceTarget);
     }
 
     /// <inheritdoc/>
@@ -601,10 +601,10 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         await EnsureLayoutForRead();
         if (occurrence is null || containerName == _tableName)
         {
-            return await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            return await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns, admittedTarget: ProvenanceTarget);
         }
 
-        return await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+        return await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns, ProvenanceTarget);
     }
 
     /// <summary>

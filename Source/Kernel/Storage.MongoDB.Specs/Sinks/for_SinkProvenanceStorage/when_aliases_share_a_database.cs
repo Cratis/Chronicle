@@ -34,6 +34,6 @@ public class when_aliases_share_a_database(ReplicaSetMongoDBFixture fixture) : g
     [Fact] void should_share_the_mark_across_aliases_even_with_a_secondary_preference() => _alias.ShouldBeTrue();
     [Fact] void should_retain_the_mark_after_storage_recreation() => _recreated.ShouldBeTrue();
     [Fact] void should_not_affect_an_independent_database() => _independent.ShouldBeFalse();
-    [Fact] void should_keep_one_monotonic_record_after_concurrent_marks() => _records.ShouldEqual(1);
+    [Fact] void should_keep_one_mark_and_one_database_identity_after_concurrent_marks() => _records.ShouldEqual(2);
     [Fact] void should_not_create_an_ordinary_sink_collection() => _collections.ShouldEqual(new[] { SinkProvenanceNames.Metadata });
 }

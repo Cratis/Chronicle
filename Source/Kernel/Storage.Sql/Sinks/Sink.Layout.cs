@@ -113,7 +113,7 @@ public partial class Sink
 
     async Task<bool> ResolveLayoutForRead()
     {
-        var scope = await _database.ExistingReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        var scope = await _database.ExistingReadModelTable(_eventStoreName, _namespace, _tableName, _columns, ProvenanceTarget);
         if (scope is null)
         {
             return false;
@@ -130,7 +130,7 @@ public partial class Sink
 
     async Task ResolveLayout()
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns, admittedTarget: ProvenanceTarget);
         var database = scope.DbContext.Database;
         var layout = await ReadTableLayout(database, database.GetDatabaseType(), _tableName);
         AdoptLayout(layout);

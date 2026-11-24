@@ -9,6 +9,12 @@ namespace Cratis.Chronicle.Storage.Sinks;
 public interface ISinkProvenanceStorage
 {
     /// <summary>
+    /// Gets a revocable lease from the silo cache. Raw or unsupported providers authorize nothing.
+    /// </summary>
+    /// <returns>The physical database lease.</returns>
+    Task<SinkProvenanceLease> GetLease() => Task.FromResult(SinkProvenanceLease.Unavailable);
+
+    /// <summary>
     /// Reads or atomically bootstraps the incomplete database-local inventory state.
     /// </summary>
     /// <returns>The committed state. Missing required schema must fail closed.</returns>

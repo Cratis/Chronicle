@@ -28,7 +28,8 @@ public class a_database_with_provenance : all_dependencies
         _eventStoreStorage.Projections.GetAll().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([]));
         _eventStoreStorage.Reducers.GetAll().Returns(Task.FromResult<IEnumerable<ReducerDefinition>>([]));
         _marker = new();
-        _sinks.GetProvenance(Arg.Any<ReadModelDefinition>()).Returns(_marker);
+        var cache = new Cratis.Chronicle.Storage.Sinks.SinkProvenanceCache();
+        _sinks.GetProvenance(Arg.Any<ReadModelDefinition>()).Returns(cache.Bind("database", () => _marker));
         _provenance = new(_storage);
         _readBindings = new ReadModelReadBindings(_storage, _grainFactory, Substitute.For<IReadModelInstanceVisibilities>(), _provenance);
         _service = CreateService(_provenance);

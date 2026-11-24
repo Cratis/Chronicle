@@ -32,7 +32,8 @@ public class SinkCollections(
     IMongoDatabase database,
     ILogger<SinkCollections>? logger,
     ISinkWrites? writes,
-    IGenerationContainerClaims? generationClaims = null) : ISinkCollections
+    IGenerationContainerClaims? generationClaims = null,
+    ISinkProvenanceStorage? provenance = null) : ISinkCollections
 {
     const int NamespaceNotFound = 26;
     const int NamespaceExists = 48;
@@ -59,7 +60,7 @@ public class SinkCollections(
     string ReplayCollectionName => _names.Replay;
 
     /// <inheritdoc/>
-    public Task EnsureProvenance() => SinkAcquisitionProvenance.Ensure(new SinkProvenanceStorage(database));
+    public Task EnsureProvenance() => SinkAcquisitionProvenance.Ensure(provenance ?? new SinkProvenanceStorage(database));
 
     /// <inheritdoc/>
     public async Task BeginReplay(Chronicle.Storage.ReadModels.ReplayContext context)

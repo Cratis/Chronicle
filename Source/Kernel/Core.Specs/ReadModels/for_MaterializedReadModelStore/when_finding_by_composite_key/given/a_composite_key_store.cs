@@ -17,7 +17,7 @@ public class a_composite_key_store : for_MaterializedReadModelStore.given.a_mate
     {
         _sink = Substitute.For<ISink, ISinkCompositeKeyLookup>();
         _lookup = (ISinkCompositeKeyLookup)_sink;
-        _readBindings.Resolve(EventStore, EventStoreNamespace, _definition).Returns(new ReadModelReadBinding(_sink, "occurrence"));
+        _readBindings.Resolve(EventStore, EventStoreNamespace, _definition).Returns(new ReadModelReadBinding(_sink, "occurrence") { Lease = SinkProvenanceLease.Exempt });
         _key = new Key(new ExpandoObject(), ArrayIndexers.NoIndexers);
     }
     protected async Task Find() => _result = await _store.FindByCompositeKey(EventStore, EventStoreNamespace, _definition, _key);

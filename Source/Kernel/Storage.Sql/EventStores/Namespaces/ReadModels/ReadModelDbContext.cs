@@ -27,11 +27,13 @@ namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 /// <param name="tableName">The name of the table (read model container name).</param>
 /// <param name="columns">The columns derived from the read model's schema.</param>
 /// <param name="migrator">The <see cref="IReadModelMigrator"/> for managing table migrations.</param>
+/// <param name="provenanceSchema">The configured storage schema, independent of resolved payload schemas.</param>
 public class ReadModelDbContext(
     DbContextOptions<ReadModelDbContext> options,
     string tableName,
     IReadOnlyList<ProjectedColumn> columns,
-    IReadModelMigrator migrator) : BaseDbContext(options), ITableDbContext
+    IReadModelMigrator migrator,
+    string? provenanceSchema = null) : BaseDbContext(options), ITableDbContext
 {
     static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerOptions.Default)
     {
@@ -68,6 +70,11 @@ public class ReadModelDbContext(
     /// Gets the name of the read model table.
     /// </summary>
     public string TableName => tableName;
+
+    /// <summary>
+    /// Gets the configured, database-wide provenance schema.
+    /// </summary>
+    public string? ProvenanceSchema { get; } = provenanceSchema;
 
     /// <summary>
     /// Gets the column metadata used to register the dynamic entity and create the underlying table.
@@ -244,7 +251,7 @@ public class ReadModelDbContext(
         _ => "TEXT"
     };
 
-    string? TableSchema(DatabaseType databaseType) => tableName == global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata
-        ? Sinks.SinkProvenanceSchema.Schema(databaseType)
+    string? TableSchema(DatabaseType databaseType) => tableName is global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata or global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Inventory
+        ? Sinks.SinkProvenanceSchema.Schema(databaseType, ProvenanceSchema)
         : null;
 }

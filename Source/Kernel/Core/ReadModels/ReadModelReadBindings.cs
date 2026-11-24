@@ -33,7 +33,9 @@ public class ReadModelReadBindings(IStorage storage, IGrainFactory grainFactory,
             ? await sinks.GetWithoutProvisioning(definition)
             : await sinks.GetFor(definition, definition.ContainerName);
         var visibility = await visibilities.GetFor(eventStore, eventStoreNamespace, definition);
-        return new(sink, occurrence, visibility);
+        var lease = await sinks.GetProvenance(definition).GetLease();
+        await lease.Ensure();
+        return new(sink, occurrence, visibility) { Lease = lease };
     }
 
     async Task EnsureKnownOccurrence(

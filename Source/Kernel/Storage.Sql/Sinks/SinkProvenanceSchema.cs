@@ -14,62 +14,48 @@ using Npgsql;
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
 /// <summary>
-/// Opens the database-local provenance table independently of the connection's default schema.
+/// Addresses metadata in the configured storage schema, never a route's payload search path.
 /// </summary>
 internal static class SinkProvenanceSchema
 {
-    static readonly ProjectedColumn[] _columns =
+    internal static readonly ProjectedColumn[] MarkerColumns =
     [
         new("Id", typeof(string), true, false, false, false),
         new("Version", typeof(int), false, false, false, false),
         new("Restricted", typeof(bool), false, false, false, false)
     ];
 
-    /// <summary>
-    /// Gets the fixed metadata schema for a supported provider.
-    /// </summary>
-    /// <param name="databaseType">The physical provider.</param>
-    /// <returns>The fixed metadata schema.</returns>
-    /// <exception cref="InvalidOperationException">The database provider does not support provenance metadata.</exception>
-    internal static string Schema(DatabaseType databaseType) => databaseType switch
+    internal static readonly ProjectedColumn[] InventoryColumns =
+    [
+        .. MarkerColumns,
+        new("DatabaseId", typeof(string), false, false, false, false),
+        new("InventoryVersion", typeof(int), false, false, false, false)
+    ];
+
+    internal static string Schema(DatabaseType databaseType, string? configured = null) => databaseType switch
     {
-        DatabaseType.PostgreSql => "public",
-        DatabaseType.SqlServer => "dbo",
+        DatabaseType.PostgreSql => string.IsNullOrEmpty(configured) ? "public" : configured,
+        DatabaseType.SqlServer => string.IsNullOrEmpty(configured) ? "dbo" : configured,
         DatabaseType.Sqlite => "main",
         _ => throw new InvalidOperationException("Read-model storage is not available.")
     };
 
-    /// <summary>
-    /// Selects metadata with an explicit physical schema, including SQLite where EF ignores table schemas.
-    /// </summary>
-    /// <param name="databaseType">The physical provider.</param>
-    /// <returns>The fixed metadata query.</returns>
-    /// <exception cref="InvalidOperationException">The database provider does not support provenance metadata.</exception>
-    internal static string Select(DatabaseType databaseType) => databaseType switch
-    {
-        DatabaseType.PostgreSql => "SELECT \"Id\", \"Version\", \"Restricted\" FROM public.\"__cratis_sink_provenance\"",
-        DatabaseType.SqlServer => "SELECT [Id], [Version], [Restricted] FROM [dbo].[__cratis_sink_provenance]",
-        DatabaseType.Sqlite => "SELECT [Id], [Version], [Restricted] FROM [main].[__cratis_sink_provenance]",
-        _ => throw new InvalidOperationException("Read-model storage is not available.")
-    };
+    internal static string Quote(DatabaseType type, string name) => type == DatabaseType.PostgreSql
+        ? $"\"{name.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
+        : $"[{name.Replace("]", "]]", StringComparison.Ordinal)}]";
 
-    /// <summary>
-    /// Opens the reserved table on the primary connection. Verify mode never creates it.
-    /// </summary>
-    /// <param name="database">The resolved sink database.</param>
-    /// <param name="eventStore">The event store.</param>
-    /// <param name="namespace">The namespace.</param>
-    /// <returns>The marker context scope.</returns>
-    internal static Task<DbContextScope<ReadModelDbContext>> Open(IDatabase database, EventStoreName eventStore, EventStoreNamespaceName @namespace) =>
-        database.ReadModelTable(eventStore, @namespace, SinkProvenanceNames.Metadata, _columns);
+    internal static string Qualified(ReadModelDbContext context, string table) =>
+        $"{Quote(context.Database.GetDatabaseType(), Schema(context.Database.GetDatabaseType(), context.ProvenanceSchema))}.{Quote(context.Database.GetDatabaseType(), table)}";
 
-    /// <summary>
-    /// Checks SQL Server destinations using the catalog's own identifier comparison rules.
-    /// </summary>
-    /// <param name="context">The metadata context.</param>
-    /// <param name="containerName">The ordinary destination, if any.</param>
-    /// <returns>The validation task.</returns>
-    /// <exception cref="InvalidOperationException">The destination identifies protected metadata.</exception>
+    internal static string Select(DatabaseType type) =>
+        $"SELECT {string.Join(", ", MarkerColumns.Select(_ => Quote(type, _.Name)))} FROM {Quote(type, Schema(type))}.{Quote(type, SinkProvenanceNames.Metadata)}";
+
+    internal static string Select(ReadModelDbContext context) =>
+        $"SELECT {string.Join(", ", context.Columns.Select(_ => Quote(context.Database.GetDatabaseType(), _.Name)))} FROM {Qualified(context, context.TableName)}";
+
+    internal static Task<DbContextScope<ReadModelDbContext>> Open(IDatabase database, EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkProvenanceTarget? admittedTarget = null) =>
+        database.ReadModelTable(eventStore, @namespace, SinkProvenanceNames.Metadata, MarkerColumns, admittedTarget: admittedTarget);
+
     internal static async Task EnsureDestinationAvailable(ReadModelDbContext context, ReadModelContainerName? containerName)
     {
         if (containerName is null) return;
@@ -79,54 +65,52 @@ internal static class SinkProvenanceSchema
         try
         {
             await using var command = context.Database.GetDbConnection().CreateCommand();
-            command.CommandText = "SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id WHERE s.name = N'dbo' AND t.name = N'__cratis_sink_provenance' AND t.name = @destination";
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = "@destination";
-            parameter.Value = containerName.Value;
-            command.Parameters.Add(parameter);
-            if (Convert.ToInt32(await command.ExecuteScalarAsync()) != 0)
-            {
-                throw new InvalidOperationException("Read-model storage is not available.");
-            }
+            command.CommandText = "SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id WHERE s.name = @schema AND t.name IN (@marker, @inventory) AND t.name = @destination";
+            Add(command, "@schema", Schema(DatabaseType.SqlServer, context.ProvenanceSchema));
+            Add(command, "@marker", SinkProvenanceNames.Metadata);
+            Add(command, "@inventory", SinkProvenanceNames.Inventory);
+            Add(command, "@destination", containerName.Value);
+            if (Convert.ToInt32(await command.ExecuteScalarAsync()) != 0) throw new InvalidOperationException("Read-model storage is not available.");
         }
-        finally
-        {
-            await context.Database.CloseConnectionAsync();
-        }
+        finally { await context.Database.CloseConnectionAsync(); }
     }
 
-    /// <summary>
-    /// Creates only the fixed metadata table in Migrate mode. The caller validates its typed contents.
-    /// </summary>
-    /// <param name="context">The metadata context.</param>
-    /// <returns>The provisioning task.</returns>
     internal static async Task Ensure(ReadModelDbContext context)
     {
-        var databaseType = context.Database.GetDatabaseType();
-        _ = Schema(databaseType);
+        var type = context.Database.GetDatabaseType();
+        _ = Schema(type);
         if (SinkCycleReceiptSchema.IsVerify(context)) return;
-        var sql = CreateTable(databaseType);
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(sql);
-        }
-        catch (SqlException exception) when (exception.Number == 2714)
-        {
-            // A concurrent creator is accepted only after the caller reads and validates the table.
-        }
-        catch (PostgresException exception) when (
-            string.Equals(exception.SqlState, PostgresErrorCodes.DuplicateTable, StringComparison.Ordinal) ||
-            string.Equals(exception.SqlState, PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal))
-        {
-            // PostgreSQL can race on the table or its catalog type; the typed read must still succeed.
-        }
+        try { await context.Database.ExecuteSqlRawAsync(CreateTable(context)); }
+        catch (SqlException exception) when (exception.Number == 2714) { /* Validate the concurrent winner on read. */ }
+        catch (PostgresException exception) when (exception.SqlState is PostgresErrorCodes.DuplicateTable or PostgresErrorCodes.UniqueViolation) { /* Validate the concurrent winner on read. */ }
     }
 
-    static string CreateTable(DatabaseType databaseType) => databaseType switch
+    internal static void Add(System.Data.Common.DbCommand command, string name, object value)
     {
-        DatabaseType.PostgreSql => "CREATE TABLE IF NOT EXISTS public.\"__cratis_sink_provenance\" (\"Id\" varchar(200) PRIMARY KEY, \"Version\" integer NOT NULL, \"Restricted\" boolean NOT NULL)",
-        DatabaseType.SqlServer => "IF OBJECT_ID(N'dbo.__cratis_sink_provenance', N'U') IS NULL CREATE TABLE [dbo].[__cratis_sink_provenance] ([Id] nvarchar(200) NOT NULL PRIMARY KEY, [Version] int NOT NULL, [Restricted] bit NOT NULL)",
-        DatabaseType.Sqlite => "CREATE TABLE IF NOT EXISTS [main].[__cratis_sink_provenance] ([Id] TEXT NOT NULL PRIMARY KEY, [Version] INTEGER NOT NULL, [Restricted] INTEGER NOT NULL)",
-        _ => throw new InvalidOperationException("Read-model storage is not available.")
-    };
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    static string CreateTable(ReadModelDbContext context)
+    {
+        var type = context.Database.GetDatabaseType();
+        var schema = Schema(type, context.ProvenanceSchema);
+        var table = Qualified(context, context.TableName);
+        var id = Quote(type, "Id");
+        var version = Quote(type, "Version");
+        var restricted = Quote(type, "Restricted");
+        var inventory = context.TableName == SinkProvenanceNames.Inventory;
+        var extra = inventory ? $", {Quote(type, "DatabaseId")} {(type == DatabaseType.SqlServer ? "nvarchar(200)" : "varchar(200)")} NOT NULL, {Quote(type, "InventoryVersion")} int NOT NULL" : string.Empty;
+        return type switch
+        {
+            DatabaseType.PostgreSql => $"CREATE SCHEMA IF NOT EXISTS {Quote(type, schema)}; CREATE TABLE IF NOT EXISTS {table} ({id} varchar(200) PRIMARY KEY, {version} integer NOT NULL, {restricted} boolean NOT NULL{extra})",
+            DatabaseType.SqlServer => $"IF SCHEMA_ID(N'{Literal(schema)}') IS NULL EXEC(N'CREATE SCHEMA {Literal(Quote(type, schema))}'); IF OBJECT_ID(N'{Literal(table)}', N'U') IS NULL CREATE TABLE {table} ({id} nvarchar(200) NOT NULL PRIMARY KEY, {version} int NOT NULL, {restricted} bit NOT NULL{extra})",
+            DatabaseType.Sqlite => $"CREATE TABLE IF NOT EXISTS {table} ({id} TEXT NOT NULL PRIMARY KEY, {version} INTEGER NOT NULL, {restricted} INTEGER NOT NULL{extra})",
+            _ => throw new InvalidOperationException("Read-model storage is not available.")
+        };
+    }
+
+    static string Literal(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 }

@@ -17,7 +17,7 @@ public class and_the_projection_is_child_only : given.a_materialized_read_model
         _stored = InstanceNamed("Child-only before upgrade");
         ((IDictionary<string, object?>)_stored)[WellKnownProperties.ReadModelInstanceInitialized] = false;
         _readBindings.Resolve(EventStore, EventStoreNamespace, _definition)
-            .Returns(new ReadModelReadBinding(_sink, null, ReadModelInstanceVisibility.IncludeUninitialized));
+            .Returns(new ReadModelReadBinding(_sink, null, ReadModelInstanceVisibility.IncludeUninitialized) { Lease = SinkProvenanceLease.Exempt });
         _sink.FindInPrimaryOrDefault("the-key").Returns(_stored);
     }
 

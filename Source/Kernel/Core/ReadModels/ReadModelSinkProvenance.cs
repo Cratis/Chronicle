@@ -52,6 +52,8 @@ public class ReadModelSinkProvenance(IStorage storage) : IReadModelSinkProvenanc
         await _inventory.WaitAsync();
         try
         {
+            if (definition is not null && @namespace is not null &&
+                (await storage.GetEventStore(eventStore).GetNamespace(@namespace).Sinks.GetProvenance(definition).ReadState()).Validate().IsComplete) return;
             await new ReadModelProvenance(storage).Inventory(eventStore, @namespace, definition);
         }
         catch (Exception exception) when (exception is not ReadModelIsNotAvailable)

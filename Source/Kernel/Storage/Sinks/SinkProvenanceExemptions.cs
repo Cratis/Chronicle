@@ -49,6 +49,9 @@ public static class SinkProvenanceExemptions
         internal static readonly NonDatabaseProvenance Instance = new();
 
         /// <inheritdoc/>
+        public Task<SinkProvenanceLease> GetLease() => Task.FromResult(SinkProvenanceLease.Exempt);
+
+        /// <inheritdoc/>
         public Task<bool> IsQuarantined() => Task.FromResult(false);
 
         /// <inheritdoc/>

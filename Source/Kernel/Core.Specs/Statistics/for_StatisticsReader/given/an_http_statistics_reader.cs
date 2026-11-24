@@ -77,7 +77,7 @@ public class an_http_statistics_reader : Services.ReadModels.for_ReadModels.give
         _grainFactory.GetGrain<INamespaces>("System").Returns(_namespaces);
         _secondSink = Substitute.For<ISink>();
         _readBindings.Resolve(Arg.Any<EventStoreName>(), (EventStoreNamespaceName)"second", Arg.Any<ReadModelDefinition>(), Arg.Any<ReadModelContainerName?>())
-            .Returns(call => new ReadModelReadBinding(_secondSink, call.ArgAt<ReadModelContainerName?>(3)));
+            .Returns(call => new ReadModelReadBinding(_secondSink, call.ArgAt<ReadModelContainerName?>(3)) { Lease = SinkProvenanceLease.Exempt });
         _sink.GetInstances(Arg.Any<Concepts.ReadModels.ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>())
             .Returns(new ReadModelInstances([Row("first", 3)], 1));
         _secondSink.GetInstances(Arg.Any<Concepts.ReadModels.ReadModelContainerName?>(), Arg.Any<int>(), Arg.Any<int>())

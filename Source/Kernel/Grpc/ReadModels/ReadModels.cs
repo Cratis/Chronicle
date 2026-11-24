@@ -183,6 +183,7 @@ internal sealed class ReadModels(
             instances);
 
         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(schema))).ToList();
+        binding.Lease.Check();
         return new()
         {
             Instances = instancesAsJson,

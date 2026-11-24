@@ -106,6 +106,7 @@ public partial class Database
         var context = request.Create(OptionsFor(request.Cache, $"{request.Key}:{nameof(ConnectionPurpose.Runtime)}", target));
         try
         {
+            request.Admit?.Invoke(context);
             if (await ExistsFor(request, context, target))
             {
                 return context;
@@ -141,6 +142,11 @@ public partial class Database
         }
 
         await using var schemaContext = request.Create(OptionsFor(request.Cache, $"{request.Key}:{nameof(ConnectionPurpose.Schema)}", schemaTarget));
+        request.Admit?.Invoke(schemaContext);
+        if (context is ReadModelDbContext runtime && schemaContext is ReadModelDbContext schema)
+        {
+            Sinks.SinkProvenanceTarget.For(runtime).Ensure(schema);
+        }
         return await request.Exists(schemaContext, schemaTarget);
     }
 
@@ -148,7 +154,8 @@ public partial class Database
         EventStoreName eventStore,
         EventStoreNamespaceName @namespace,
         string tableName,
-        Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext)
+        Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext,
+        Sinks.SinkProvenanceTarget? admittedTarget)
     {
 #pragma warning disable CA2000
         var dbContext = await CreateExistingContext(new ExistingContextRequest<ReadModelDbContext>(
@@ -156,7 +163,8 @@ public partial class Database
             $"readmodel-read:{eventStore.Value}:{@namespace.Value}",
             _readModelOptions,
             options => createDbContext(options, tableName).ServeExisting(),
-            (context, _) => readModelMigrator.ProbeExistingTable(context.TableName, context)));
+            (context, _) => readModelMigrator.ProbeExistingTable(context.TableName, context),
+            context => admittedTarget?.Ensure(context)));
 #pragma warning restore CA2000
 
         return dbContext is null ? null : new DbContextScope<ReadModelDbContext>(dbContext, static () => { });
@@ -167,6 +175,7 @@ public partial class Database
         string Key,
         ConcurrentDictionary<string, CachedDbContextOptions<TDbContext>> Cache,
         Func<DbContextOptions<TDbContext>, TDbContext> Create,
-        Func<TDbContext, SqlTarget, Task<bool>> Exists)
+        Func<TDbContext, SqlTarget, Task<bool>> Exists,
+        Action<TDbContext>? Admit = null)
         where TDbContext : DbContext;
 }

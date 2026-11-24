@@ -41,7 +41,9 @@ public class MaterializedReadModelStore(
         Key key)
     {
         var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
+        await binding.Lease.Ensure();
         var instance = await binding.Sink.FindInPrimaryOrDefault(key);
+        binding.Lease.Check();
         if (instance is null)
         {
             return null;
@@ -52,11 +54,13 @@ public class MaterializedReadModelStore(
             return null;
         }
 
-        return await compliance.Release(
+        var released = await compliance.Release(
             eventStore,
             eventStoreNamespace,
             definition.GetSchemaForLatestGeneration(),
             instance);
+        binding.Lease.Check();
+        return released;
     }
 
     /// <inheritdoc/>
@@ -69,9 +73,12 @@ public class MaterializedReadModelStore(
         if (!IsMaterialized(definition)) return CompositeKeyLookupResult.NotSupported;
         var binding = await readBindings.Resolve(eventStore, eventStoreNamespace, definition);
         if (binding.Sink is not ISinkCompositeKeyLookup lookup) return CompositeKeyLookupResult.NotSupported;
+        await binding.Lease.Ensure();
         var result = await lookup.FindByCompositeKey(key);
+        binding.Lease.Check();
         if (result.Outcome != CompositeKeyLookupOutcome.Found) return result;
         var instance = await compliance.Release(eventStore, eventStoreNamespace, definition.GetSchemaForLatestGeneration(), result.Instance!);
+        binding.Lease.Check();
         return result with { Instance = instance };
     }
 
@@ -105,6 +112,8 @@ public class MaterializedReadModelStore(
             }
         }
 
-        return await ReleaseKeys.Complete<IEnumerable<ExpandoObject>>(() => instances);
+        var released = await ReleaseKeys.Complete<IEnumerable<ExpandoObject>>(() => instances);
+        binding.Lease.Check();
+        return released;
     }
 }

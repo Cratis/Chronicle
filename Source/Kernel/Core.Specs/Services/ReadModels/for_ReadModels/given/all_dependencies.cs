@@ -76,7 +76,7 @@ public class all_dependencies : Specification
         _sinks.GetFor(Arg.Any<ReadModelDefinition>()).Returns(_sink);
         _readBindings = Substitute.For<IReadModelReadBindings>();
         _readBindings.Resolve(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelDefinition>(), Arg.Any<ReadModelContainerName?>())
-            .Returns(call => new ReadModelReadBinding(_sink, call.ArgAt<ReadModelContainerName?>(3)));
+            .Returns(call => new ReadModelReadBinding(_sink, call.ArgAt<ReadModelContainerName?>(3)) { Lease = SinkProvenanceLease.Exempt });
 
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);

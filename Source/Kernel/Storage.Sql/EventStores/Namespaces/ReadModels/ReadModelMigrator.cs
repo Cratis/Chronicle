@@ -43,7 +43,7 @@ public class ReadModelMigrator(
     /// <inheritdoc/>
     public async Task EnsureTableMigrated(string tableName, ReadModelDbContext context)
     {
-        if (tableName == global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata)
+        if (tableName is global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Metadata or global::Cratis.Chronicle.Storage.Sinks.SinkProvenanceNames.Inventory)
         {
             await Sinks.SinkProvenanceSchema.Ensure(context);
             return;

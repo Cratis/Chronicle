@@ -14,13 +14,19 @@ public static class SinkProvenanceNames
     public const string Metadata = "__cratis_sink_provenance";
 
     /// <summary>
+    /// The Chronicle-owned database inventory state table.
+    /// </summary>
+    public const string Inventory = "__cratis_sink_inventory";
+
+    /// <summary>
     /// Rejects metadata names, including names a provider compares without case sensitivity.
     /// </summary>
     /// <param name="destination">The ordinary destination.</param>
     /// <exception cref="InvalidOperationException">The destination is reserved for provenance metadata.</exception>
     public static void EnsureNotReserved(string destination)
     {
-        if (string.Equals(destination, Metadata, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(destination, Metadata, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(destination, Inventory, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("Read-model storage is not available.");
         }

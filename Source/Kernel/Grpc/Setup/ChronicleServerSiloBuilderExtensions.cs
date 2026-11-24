@@ -126,6 +126,7 @@ public static class ChronicleServerSiloBuilderExtensions
         });
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Storage.Sinks.ISinkProvenanceCache, Cratis.Chronicle.Storage.Sinks.SinkProvenanceCache>();
         builder.Services.TryAddSingleton<IReadModelReadBindings, ReadModelReadBindings>();
         builder.Services.TryAddSingleton<IMaterializedReadModelStore, MaterializedReadModelStore>();
         builder.Services.TryAddSingleton<Cratis.Chronicle.Storage.Sinks.ISinkConfigurations, Cratis.Chronicle.Sinks.SinkConfigurations>();

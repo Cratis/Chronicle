@@ -37,6 +37,7 @@ public class SinkFactory(
     IServiceProvider serviceProvider,
     ITypeFormats typeFormats) : ISinkFactory
 {
+    readonly Lazy<ISinkProvenanceCache> _provenance = new(() => serviceProvider.GetService<ISinkProvenanceCache>() ?? new SinkProvenanceCache());
     readonly Lazy<NamedSinkDatabases> _namedDatabases = new(() => new(serviceProvider.GetRequiredService<IOptions<ChronicleOptions>>().Value));
     readonly Lazy<IExpandoObjectConverter> _expandoObjectConverter = new(() => new ExpandoObjectConverter(typeFormats));
     readonly Lazy<IReadModelChangeStreams> _changeStreams = new(() => new ReadModelChangeStreams(serviceProvider.GetRequiredService<ILogger<ReadModelChangeStreams>>()));
@@ -46,21 +47,21 @@ public class SinkFactory(
 
     /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) =>
-        Create(eventStore, @namespace, readModel, serviceProvider.GetRequiredService<IDatabase>().GetReadModelDatabase(eventStore, @namespace));
+        Create(eventStore, @namespace, readModel, serviceProvider.GetRequiredService<IDatabase>().GetReadModelDatabase(eventStore, @namespace), SinkName.Default);
 
     /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, SinkName sink) =>
         sink.IsDefault
             ? CreateFor(eventStore, @namespace, readModel)
-            : Create(eventStore, @namespace, readModel, _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace));
+            : Create(eventStore, @namespace, readModel, _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace), sink);
 
     /// <inheritdoc/>
     public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? containerName = null) =>
-        new SinkProvenanceStorage(sink.IsDefault
+        _provenance.Value.Bind((typeof(SinkFactory), eventStore, @namespace, sink), () => new SinkProvenanceStorage(sink.IsDefault
             ? serviceProvider.GetRequiredService<IDatabase>().GetReadModelDatabase(eventStore, @namespace)
-            : _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace));
+            : _namedDatabases.Value.GetReadModelDatabase(sink, eventStore, @namespace)));
 
-    Sink Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, IMongoDatabase readModelDatabase)
+    Sink Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, IMongoDatabase readModelDatabase, SinkName sink)
     {
         // A named sink stores to MongoDB whatever engine the kernel runs on, and the kernel removes the MongoDB storage services
         // when it runs on another one, so the collaborators a MongoDB sink needs fall back to instances of its own.
@@ -78,7 +79,8 @@ public class SinkFactory(
             readModelDatabase,
             serviceProvider.GetRequiredService<ILogger<SinkCollections>>(),
             writes,
-            new MongoDBGenerationContainerClaims(readModelDatabase));
+            new MongoDBGenerationContainerClaims(readModelDatabase),
+            GetProvenance(eventStore, @namespace, sink));
         var mongoDBChangesetConverter = new ChangesetConverter(
             readModel,
             mongoDBConverter,

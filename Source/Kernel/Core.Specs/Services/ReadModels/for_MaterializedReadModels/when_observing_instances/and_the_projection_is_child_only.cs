@@ -15,7 +15,7 @@ public class and_the_projection_is_child_only : for_ReadModels.given.all_depende
     void Establish()
     {
         _readBindings.Resolve("test-store", "test-namespace", _readModelDefinition, (ReadModelContainerName)"requested-occurrence")
-            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence", ReadModelInstanceVisibility.IncludeUninitialized));
+            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence", ReadModelInstanceVisibility.IncludeUninitialized) { Lease = SinkProvenanceLease.Exempt });
         _sink.GetInstances((ReadModelContainerName)"bound-occurrence", 10, 10, ReadModelInstanceVisibility.IncludeUninitialized).Returns(new ReadModelInstances([], 0));
         _sink.ObserveInstances((ReadModelContainerName)"bound-occurrence", 10, 10, ReadModelInstanceVisibility.IncludeUninitialized).Returns(Observable.Return(Enumerable.Empty<System.Dynamic.ExpandoObject>()));
     }
