@@ -13,11 +13,12 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.14" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <!-- Aspire -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting" Version="17.0.0" />
     <!-- Pin MessagePack, pulled in transitively by Aspire.Hosting at 2.5.302, to a patched build (GHSA-qhrr-8q5h-9q3h affects < 2.5.303). -->
     <PackageVersion Include="MessagePack" Version="3.1.12" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.5" />
-    <PackageVersion Include="Aspire.Hosting.Yarp" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Yarp" Version="17.0.0" />
     <!-- Cratis -->
     <!-- Cratis.Choreography requires at least Cratis.Fundamentals 7.32.0; a lower pin fails restore with NU1605. -->
     <PackageVersion Include="Cratis.Fundamentals" Version="7.34.3" />
@@ -36,16 +37,16 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="4.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.11.0" />
