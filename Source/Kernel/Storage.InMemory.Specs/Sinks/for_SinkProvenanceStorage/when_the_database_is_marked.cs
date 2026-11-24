@@ -17,11 +17,16 @@ public class when_the_database_is_marked : Specification
     {
         var factory = new InMemorySinkFactory(new TypeFormats());
         var marker = factory.GetProvenance("store", "namespace", SinkName.Default);
+        var newScope = new InMemorySinkFactory(new TypeFormats()).GetProvenance("store", "namespace", SinkName.Default);
+        var otherNamespace = factory.GetProvenance("store", "other-namespace", SinkName.Default);
+        var otherStore = factory.GetProvenance("other-store", "namespace", SinkName.Default);
+        await Task.WhenAll(newScope.CompleteInventory(false), otherNamespace.CompleteInventory(false), otherStore.CompleteInventory(false));
+
         await Task.WhenAll(marker.MarkQuarantined(), marker.MarkQuarantined());
         _sameScope = await factory.GetProvenance("store", "namespace", SinkName.Default).IsQuarantined();
-        _newScope = await new InMemorySinkFactory(new TypeFormats()).GetProvenance("store", "namespace", SinkName.Default).IsQuarantined();
-        _otherNamespace = await factory.GetProvenance("store", "other-namespace", SinkName.Default).IsQuarantined();
-        _otherStore = await factory.GetProvenance("other-store", "namespace", SinkName.Default).IsQuarantined();
+        _newScope = await newScope.IsQuarantined();
+        _otherNamespace = await otherNamespace.IsQuarantined();
+        _otherStore = await otherStore.IsQuarantined();
     }
 
     [Fact] void should_share_the_monotonic_mark_inside_the_storage_scope() => _sameScope.ShouldBeTrue();
