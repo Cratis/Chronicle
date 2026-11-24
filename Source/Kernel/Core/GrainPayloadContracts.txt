@@ -1164,6 +1164,9 @@ orleans [Alias("Cratis.Chronicle.Observation.ObserverPageResult")] Cratis.Chroni
 orleans [Alias("Cratis.Chronicle.Observation.ObserverPartitionBatch")] Cratis.Chronicle.Observation.ObserverPartitionBatch
   [Id(0,Level=0,Constructor=true)] Partition: Cratis.Chronicle.Concepts.Keys.Key
   [Id(1,Level=0,Constructor=true)] Events: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Events.AppendedEvent>
+orleans [Alias("Cratis.Chronicle.Observation.ObserverRouting.ObserverRevisionAcknowledgements")] Cratis.Chronicle.Observation.ObserverRouting.ObserverRevisionAcknowledgements
+  [Id(0,Level=0,Constructor=true)] Acknowledged: int
+  [Id(1,Level=0,Constructor=true)] Lagging: System.Collections.Generic.IReadOnlyCollection<Orleans.Runtime.SiloAddress>
 orleans [Alias("Cratis.Chronicle.Observation.ObserverSubscriberContext")] Cratis.Chronicle.Observation.ObserverSubscriberContext
   [Id(1)] DeliverBy: System.DateTimeOffset?
   [Id(2)] AbandonAt: System.DateTimeOffset?
@@ -1404,12 +1407,14 @@ orleans [Alias("Cratis.Chronicle.Storage.Observation.ObserverCompatibilityContra
   [Id(1,Level=0,Constructor=true)] Filters: Cratis.Chronicle.Concepts.Observation.ObserverFilters
 orleans [Alias("Cratis.Chronicle.Storage.Observation.ObserverDefinition")] Cratis.Chronicle.Storage.Observation.ObserverDefinition
   [Id(6)] GenerationDelivery: Cratis.Chronicle.Concepts.Observation.EventGenerationDelivery
+  [Id(7)] Revision: Cratis.Chronicle.Storage.Observation.ObserverDefinitionRevision
   [Id(0,Level=0,Constructor=true)] Identifier: Cratis.Chronicle.Concepts.Observation.ObserverId
   [Id(1,Level=0,Constructor=true)] EventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   [Id(2,Level=0,Constructor=true)] EventSequenceId: Cratis.Chronicle.Concepts.EventSequences.EventSequenceId
   [Id(3,Level=0,Constructor=true)] Type: Cratis.Chronicle.Concepts.Observation.ObserverType
   [Id(4,Level=0,Constructor=true)] Owner: Cratis.Chronicle.Concepts.Observation.ObserverOwner
   [Id(5,Level=0,Constructor=true)] IsReplayable: bool
+concept Cratis.Chronicle.Storage.Observation.ObserverDefinitionRevision : long
 orleans [Alias("Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription")] Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription
   [Id(0,Level=0,Constructor=true)] Kind: Cratis.Chronicle.Storage.Observation.ObserverSubscriptionKind
   [Id(1,Level=0,Constructor=true)] DeliversPages: bool

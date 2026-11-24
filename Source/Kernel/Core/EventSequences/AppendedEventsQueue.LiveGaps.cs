@@ -31,8 +31,17 @@ public partial class AppendedEventsQueue
         if (_lanes.TryGetValue(subscription.ObserverKey, out var lane)) lane.Subscription = subscription;
     }
 
-    async Task<bool> ReadyForDelivery(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events) =>
-        await WakeDormantObserver(lane, events) && await VerifyLiveStart(lane, events);
+    /// <summary>
+    /// The delivery every live lane is created with: no event reaches the observer before its subscription proved a gap-free
+    /// live start. Lanes are the only live-dispatch path, and a lazily rung observer re-enters through a new subscription.
+    /// </summary>
+    /// <param name="lane">The <see cref="AppendedEventsQueueObserverLane"/> of the observer.</param>
+    /// <param name="events">The events, in sequence order.</param>
+    /// <returns>Awaitable task.</returns>
+    async Task DeliverVerifiedLiveEvents(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
+    {
+        if (await VerifyLiveStart(lane, events)) await DeliverToObserver(lane, events);
+    }
 
     async Task<bool> VerifyLiveStart(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
