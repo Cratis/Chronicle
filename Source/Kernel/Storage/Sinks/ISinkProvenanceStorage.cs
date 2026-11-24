@@ -18,6 +18,7 @@ public interface ISinkProvenanceStorage
     /// Reads or atomically bootstraps the incomplete database-local inventory state.
     /// </summary>
     /// <returns>The committed state. Missing required schema must fail closed.</returns>
+    /// <exception cref="NotSupportedException">The provider does not support durable inventory.</exception>
     Task<SinkProvenanceState> ReadState() => throw new NotSupportedException("Read-model storage is not available.");
 
     /// <summary>
@@ -26,6 +27,7 @@ public interface ISinkProvenanceStorage
     /// </summary>
     /// <param name="restrictedEvidence">Whether this inventory found restricted evidence.</param>
     /// <returns>The committed state, including independent explicit marks.</returns>
+    /// <exception cref="NotSupportedException">The provider does not support durable inventory.</exception>
     Task<SinkProvenanceState> CompleteInventory(bool restrictedEvidence) => throw new NotSupportedException("Read-model storage is not available.");
 
     /// <summary>

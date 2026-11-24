@@ -1,14 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Microsoft.Extensions.Logging;
+
 namespace Cratis.Chronicle.Storage.Sinks;
 
 public sealed partial class SinkProvenanceCache
 {
+    /// <summary>
+    /// Shares monotonic observations, refresh work and revocation for one database.
+    /// </summary>
+    /// <param name="owner">The silo cache and clock.</param>
+    /// <param name="raw">The durable metadata access.</param>
+    /// <param name="initial">The validated initial observation.</param>
     internal sealed class Entry(SinkProvenanceCache owner, ISinkProvenanceStorage raw, SinkProvenanceState initial) : IDisposable
     {
         readonly Lock _gate = new();
         readonly CancellationTokenSource _revoked = new();
+        readonly Lock _revocationGate = new();
+        bool _revocationDisposed;
         TaskCompletionSource _changed = NewSignal();
         SinkProvenanceState _state = initial;
         Task? _refresh;
@@ -17,21 +27,71 @@ public sealed partial class SinkProvenanceCache
         bool _disposed;
         SinkProvenanceLease? _lease;
 
-        internal SinkProvenanceLease Lease { get { lock (_gate) return _lease ??= new(this); } }
-        internal Task InFlight { get { lock (_gate) return _refresh ?? Task.CompletedTask; } }
-        internal CancellationToken Revoked => _revoked.Token;
-        internal bool IsRestricted { get { lock (_gate) return _state.Restricted; } }
+        /// <summary>
+        /// Gets the shared read lease.
+        /// </summary>
+        internal SinkProvenanceLease Lease
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    ObjectDisposedException.ThrowIf(_disposed, this);
+                    return _lease ??= new(this);
+                }
+            }
+        }
 
+        /// <summary>
+        /// Gets the refresh work to drain before disposing the shared semaphore.
+        /// </summary>
+        internal Task InFlight
+        {
+            get
+            {
+                lock (_gate) return _refresh ?? Task.CompletedTask;
+            }
+        }
+
+        /// <summary>
+        /// Gets the revocation token captured when a lease is created.
+        /// </summary>
+        internal CancellationToken Revoked => _revoked.Token;
+
+        /// <summary>
+        /// Gets whether a restricted mark has been observed.
+        /// </summary>
+        internal bool IsRestricted
+        {
+            get
+            {
+                lock (_gate) return _state.Restricted;
+            }
+        }
+
+        static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <inheritdoc/>
         public void Dispose()
         {
             lock (_gate)
             {
+                if (_disposed) return;
                 _disposed = true;
                 _valid = false;
                 Pulse();
             }
+            lock (_revocationGate)
+            {
+                _revocationDisposed = true;
+                _revoked.Dispose();
+            }
         }
 
+        /// <summary>
+        /// Reads current facts, refreshing an expired observation.
+        /// </summary>
+        /// <returns>The validated database state.</returns>
         internal async Task<SinkProvenanceState> ReadState()
         {
             bool refresh;
@@ -44,6 +104,10 @@ public sealed partial class SinkProvenanceCache
             }
         }
 
+        /// <summary>
+        /// Obtains fresh authority for a one-shot read.
+        /// </summary>
+        /// <returns>The admission task.</returns>
         internal async Task Ensure()
         {
             bool refresh;
@@ -56,6 +120,11 @@ public sealed partial class SinkProvenanceCache
             Deliver(static () => { });
         }
 
+        /// <summary>
+        /// Holds a reader until clean authority returns or a mark is observed.
+        /// </summary>
+        /// <param name="cancellationToken">The reader cancellation.</param>
+        /// <returns>The wait task.</returns>
         internal async Task WaitUntilReadable(CancellationToken cancellationToken)
         {
             while (true)
@@ -73,6 +142,10 @@ public sealed partial class SinkProvenanceCache
             }
         }
 
+        /// <summary>
+        /// Serializes final delivery with permission checks.
+        /// </summary>
+        /// <param name="deliver">The synchronous delivery.</param>
         internal void Deliver(Action deliver)
         {
             lock (_gate)
@@ -82,6 +155,9 @@ public sealed partial class SinkProvenanceCache
             }
         }
 
+        /// <summary>
+        /// Publishes local denial before a durable mark is attempted.
+        /// </summary>
         internal void Deny()
         {
             lock (_gate)
@@ -89,9 +165,14 @@ public sealed partial class SinkProvenanceCache
                 _state = _state with { Restricted = true };
                 Pulse();
             }
-            _revoked.Cancel();
+            PublishRevocation();
         }
 
+        /// <summary>
+        /// Publishes a validated observation without clearing monotonic facts.
+        /// </summary>
+        /// <param name="state">The committed state.</param>
+        /// <param name="started">The monotonic start of its metadata read.</param>
         internal void Observe(SinkProvenanceState state, long started)
         {
             state.Validate();
@@ -113,9 +194,12 @@ public sealed partial class SinkProvenanceCache
                 revoke = _state.Restricted;
                 Pulse();
             }
-            if (revoke) _revoked.Cancel();
+            if (revoke) PublishRevocation();
         }
 
+        /// <summary>
+        /// Starts at most one background refresh for this database.
+        /// </summary>
         internal void ScheduleRefresh()
         {
             lock (_gate)
@@ -127,8 +211,14 @@ public sealed partial class SinkProvenanceCache
 
         async Task ObserveRefresh()
         {
-            try { await Refresh(); }
-            catch (Exception) { /* Unavailable metadata is not a clean observation. The next poll may recover. */ }
+            try
+            {
+                await Refresh();
+            }
+            catch (Exception exception)
+            {
+                owner._logger.LogDebug(exception, "Read-model metadata refresh is unavailable.");
+            }
         }
 
         Task Refresh()
@@ -174,7 +264,14 @@ public sealed partial class SinkProvenanceCache
 
         bool Readable() => !_disposed && _state.IsComplete && !_state.Restricted && Fresh();
         bool Fresh() => _valid && owner._time.GetElapsedTime(_started) < TimeSpan.FromSeconds(2);
-        static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void PublishRevocation()
+        {
+            lock (_revocationGate)
+            {
+                if (!_revocationDisposed) _revoked.Cancel();
+            }
+        }
 
         void Pulse()
         {

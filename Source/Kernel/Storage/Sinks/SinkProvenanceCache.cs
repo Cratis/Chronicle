@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 using Cratis.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Storage.Sinks;
 
@@ -10,14 +12,17 @@ namespace Cratis.Chronicle.Storage.Sinks;
 /// Caches revocable observations by durable physical identity, independently of routing aliases.
 /// </summary>
 /// <param name="timeProvider">The monotonic clock and timer provider.</param>
+/// <param name="logger">The logger for unavailable metadata and shutdown reads.</param>
 [Singleton]
-public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = null) : ISinkProvenanceCache, IDisposable, IAsyncDisposable
+public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = null, ILogger<SinkProvenanceCache>? logger = null) : ISinkProvenanceCache, IDisposable, IAsyncDisposable
 {
     readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
+    readonly ILogger<SinkProvenanceCache> _logger = logger ?? NullLogger<SinkProvenanceCache>.Instance;
     readonly ConcurrentDictionary<object, Handle> _routes = new();
     readonly ConcurrentDictionary<SinkProvenanceDatabaseId, Entry> _entries = new();
     readonly SemaphoreSlim _refreshSlots = new(4, 4);
     readonly Lock _lifetime = new();
+    readonly TaskCompletionSource _drained = new(TaskCreationOptions.RunContinuationsAsynchronously);
     ITimer? _timer;
     bool _disposed;
 
@@ -28,12 +33,21 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             _timer ??= _time.CreateTimer(Poll, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-            return _routes.GetOrAdd(route, _ => new(this, create()));
+            return _routes.GetOrAdd(route, static (_, context) => new(context.Owner, context.Create()), (Owner: this, Create: create));
         }
     }
 
     /// <inheritdoc/>
-    public void Dispose()
+    public void Dispose() => BeginDisposal();
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
+    {
+        BeginDisposal();
+        await _drained.Task.ConfigureAwait(false);
+    }
+
+    void BeginDisposal()
     {
         lock (_lifetime)
         {
@@ -42,15 +56,25 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
             _timer?.Dispose();
             foreach (var entry in _entries.Values) entry.Dispose();
         }
+        var draining = _entries.Values.Select(_ => _.InFlight).Concat(_routes.Values.Select(_ => _.InFlight)).ToArray();
+        _ = DrainAndDispose(draining);
     }
 
-    /// <inheritdoc/>
-    public async ValueTask DisposeAsync()
+    async Task DrainAndDispose(Task[] draining)
     {
-        Dispose();
-        var draining = _entries.Values.Select(_ => _.InFlight).Concat(_routes.Values.Select(_ => _.InFlight)).ToArray();
-        try { await Task.WhenAll(draining).ConfigureAwait(false); }
-        catch (Exception) { /* Disposal already denied publication; failed metadata reads grant nothing. */ }
+        try
+        {
+            await Task.WhenAll(draining).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "Read-model metadata work failed during shutdown.");
+        }
+        finally
+        {
+            _refreshSlots.Dispose();
+            _drained.TrySetResult();
+        }
     }
 
     void Poll(object? state)
@@ -69,12 +93,15 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
             started = _time.GetTimestamp();
             state = (await storage.ReadState().ConfigureAwait(false)).Validate();
         }
-        finally { _refreshSlots.Release(); }
+        finally
+        {
+            _refreshSlots.Release();
+        }
         Entry entry;
         lock (_lifetime)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            entry = _entries.GetOrAdd(state.DatabaseId, _ => new(this, storage, state));
+            entry = _entries.GetOrAdd(state.DatabaseId, static (_, context) => new(context.Owner, context.Storage, context.State), (Owner: this, Storage: storage, State: state));
         }
         entry.Observe(state, started);
         return entry;
@@ -85,7 +112,16 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
         readonly Lock _gate = new();
         Task<Entry>? _entry;
 
-        internal Task InFlight { get { lock (_gate) return (Task?)_entry ?? Task.CompletedTask; } }
+        /// <summary>
+        /// Gets the initialization work that must drain before refresh resources are disposed.
+        /// </summary>
+        internal Task InFlight
+        {
+            get
+            {
+                lock (_gate) return (Task?)_entry ?? Task.CompletedTask;
+            }
+        }
 
         public async Task<SinkProvenanceState> ReadState() => await (await GetEntry()).ReadState();
 
@@ -120,8 +156,8 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
             lock (_gate)
             {
                 ObjectDisposedException.ThrowIf(Volatile.Read(ref owner._disposed), owner);
-                if (_entry is null || _entry.IsFaulted || _entry.IsCanceled) _entry = owner.Initialize(raw);
-                return _entry;
+                if (_entry?.IsCompleted == true && !_entry.IsCompletedSuccessfully) _entry = null;
+                return _entry ??= owner.Initialize(raw);
             }
         }
     }
