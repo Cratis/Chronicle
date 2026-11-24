@@ -58,14 +58,17 @@ public class when_enumerating_cases_for_every_profile : Specification
     [Fact] void should_generate_thirty_six_short_cases() => _timed["short"].Length.ShouldEqual(36);
     [Fact] void should_generate_thirty_six_medium_cases() => _timed["medium"].Length.ShouldEqual(36);
 
-    static string[] ExpectedCases(BenchmarkProfile profile) =>
-        [.. Enum.GetValues<StorageProvider>().SelectMany(provider =>
+    static string[] ExpectedCases(BenchmarkProfile profile)
+    {
+        var cases = Enum.GetValues<StorageProvider>().SelectMany(provider =>
             profile.BatchSizes.Select(size => Key(typeof(AppendBatchBenchmark), nameof(AppendBatchBenchmark.AppendBatch), [("Provider", provider), ("BatchSize", size)]))
                 .Concat(profile.Concurrency.SelectMany(writers => new[]
                 {
                     Key(typeof(ConcurrentAppendBenchmark), nameof(ConcurrentAppendBenchmark.ConcurrentOneSequence), [("Provider", provider), ("WriterCount", writers)]),
                     Key(typeof(ConcurrentAppendBenchmark), nameof(ConcurrentAppendBenchmark.ConcurrentManySequences), [("Provider", provider), ("WriterCount", writers)])
-                })))];
+                })));
+        return [.. cases];
+    }
 
     static IEnumerable<string> CountedCases(Type type) =>
         CountedPass.Combinations(type).SelectMany(combination => type.GetMethods()
