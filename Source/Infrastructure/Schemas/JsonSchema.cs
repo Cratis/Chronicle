@@ -81,7 +81,10 @@ public partial class JsonSchema
     public JsonObjectType Type
     {
         // Read for every value converted, and parsing it walks the node each time.
-        get => (_typeCache ??= new Cached<JsonObjectType>(ParseTypeFromNode(Node))).Value;
+        get
+        {
+            return (_typeCache ??= new Cached<JsonObjectType>(ParseTypeFromNode(Node))).Value;
+        }
         set
         {
             _typeCache = null;
@@ -95,7 +98,10 @@ public partial class JsonSchema
     public string? Format
     {
         // Read for every value converted, and reading it from the node allocates a string each time.
-        get => (_formatCache ??= new Cached<string?>(Node["format"]?.GetValue<string>())).Value;
+        get
+        {
+            return (_formatCache ??= new Cached<string?>(Node["format"]?.GetValue<string>())).Value;
+        }
         set
         {
             _formatCache = null;
@@ -115,7 +121,10 @@ public partial class JsonSchema
     /// </summary>
     public string? Title
     {
-        get => Node["title"]?.GetValue<string>();
+        get
+        {
+            return Node["title"]?.GetValue<string>();
+        }
         set
         {
             if (value is null)
@@ -134,7 +143,10 @@ public partial class JsonSchema
     /// </summary>
     public string? Description
     {
-        get => Node["description"]?.GetValue<string>();
+        get
+        {
+            return Node["description"]?.GetValue<string>();
+        }
         set
         {
             if (value is null)
@@ -419,7 +431,10 @@ public partial class JsonSchema
     /// </summary>
     public IDictionary<string, object?>? ExtensionData
     {
-        get => _extensionDataCache ??= new ExtensionDataDictionary(Node);
+        get
+        {
+            return _extensionDataCache ??= new ExtensionDataDictionary(Node);
+        }
         set
         {
             if (value is null) return;
@@ -1076,7 +1091,10 @@ public partial class JsonSchema
     {
         public new JsonSchemaProperty this[string key]
         {
-            get => base[key];
+            get
+            {
+                return base[key];
+            }
             set
             {
                 base[key] = value;
@@ -1153,7 +1171,10 @@ public partial class JsonSchema
                 }
                 return null;
             }
-            set => node[key] = SerializeValue(value);
+            set
+            {
+                node[key] = SerializeValue(value);
+            }
         }
 
         public void Add(string key, object? value) => this[key] = value;

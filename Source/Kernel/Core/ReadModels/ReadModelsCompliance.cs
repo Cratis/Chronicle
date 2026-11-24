@@ -37,10 +37,9 @@ public class ReadModelsCompliance(
         }
 
         var instanceAsDictionary = (IDictionary<string, object?>)instance;
-        var defaultSubject = instanceAsDictionary.TryGetValue(WellKnownProperties.Subject, out var storedSubject) &&
-                             storedSubject?.ToString() is { Length: > 0 } storedSubjectValue
-            ? storedSubjectValue
-            : identifier;
+        var hasStoredSubject = instanceAsDictionary.TryGetValue(WellKnownProperties.Subject, out var storedSubject) &&
+                               storedSubject?.ToString() is { Length: > 0 };
+        var defaultSubject = hasStoredSubject ? storedSubject!.ToString()! : identifier;
         var subjects = instanceAsDictionary.TryGetValue(WellKnownProperties.Subjects, out var storedSubjects)
             ? ReadModelSubjects.From(storedSubjects)
             : [];

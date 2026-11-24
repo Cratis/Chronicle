@@ -11,9 +11,9 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.CSharp;
 
-/// <summary>
+/// <content>
 /// Renders record declarations and their child scopes.
-/// </summary>
+/// </content>
 public partial class ModelBoundCodeGenerator
 {
     static RecordDeclarationSyntax CreateRecordDeclaration(RecordScope scope)

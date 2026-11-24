@@ -34,30 +34,38 @@ public class an_organization_definition : Specification
         var schema = Definition["schema"]!;
         return new(
             Definition["graph"]!.GetValue<string>(),
-            [.. schema["nodes"]!.AsArray().Select(node => new GraphNodeDefinition(
-                node!["label"]!.GetValue<string>(),
-                node["key"]!.GetValue<string>(),
-                SchemaOf(node["properties"]!.AsArray())))],
-            [.. schema["edges"]!.AsArray().Select(edge => new GraphEdgeDefinition(
-                edge!["type"]!.GetValue<string>(),
-                edge["source"]!.GetValue<string>(),
-                edge["target"]!.GetValue<string>(),
-                edge["identifiedBy"]?.GetValue<string>(),
-                SchemaOf(edge["properties"]!.AsArray())))]);
+            [
+                .. schema["nodes"]!.AsArray().Select(node => new GraphNodeDefinition(
+                    node!["label"]!.GetValue<string>(),
+                    node["key"]!.GetValue<string>(),
+                    SchemaOf(node["properties"]!.AsArray())))
+            ],
+            [
+                .. schema["edges"]!.AsArray().Select(edge => new GraphEdgeDefinition(
+                    edge!["type"]!.GetValue<string>(),
+                    edge["source"]!.GetValue<string>(),
+                    edge["target"]!.GetValue<string>(),
+                    edge["identifiedBy"]?.GetValue<string>(),
+                    SchemaOf(edge["properties"]!.AsArray())))
+            ]);
     }
 
     protected static IReadOnlyList<GraphView> OrganizationViews() =>
-        [.. Definition["views"]!.AsArray().Select(view => new GraphView(
-            view!["name"]!.GetValue<string>(),
-            view["root"]!.GetValue<string>(),
-            [.. view["members"]!.AsArray().Select(member => new GraphViewMember(
-                member!["name"]!.GetValue<string>(),
-                Enum.Parse<GraphViewMemberKind>(member["kind"]!.GetValue<string>(), true),
-                member["source"]?.GetValue<string>(),
-                member["edge"]?.GetValue<string>(),
-                member["direction"] is null ? null : Enum.Parse<GraphViewDirection>(member["direction"]!.GetValue<string>(), true),
-                member["cardinality"] is null ? null : Enum.Parse<GraphViewCardinality>(member["cardinality"]!.GetValue<string>(), true),
-                member["view"]?.GetValue<string>()))]))];
+        [
+            .. Definition["views"]!.AsArray().Select(view => new GraphView(
+                view!["name"]!.GetValue<string>(),
+                view["root"]!.GetValue<string>(),
+                [
+                    .. view["members"]!.AsArray().Select(member => new GraphViewMember(
+                        member!["name"]!.GetValue<string>(),
+                        Enum.Parse<GraphViewMemberKind>(member["kind"]!.GetValue<string>(), true),
+                        member["source"]?.GetValue<string>(),
+                        member["edge"]?.GetValue<string>(),
+                        member["direction"] is null ? null : Enum.Parse<GraphViewDirection>(member["direction"]!.GetValue<string>(), true),
+                        member["cardinality"] is null ? null : Enum.Parse<GraphViewCardinality>(member["cardinality"]!.GetValue<string>(), true),
+                        member["view"]?.GetValue<string>()))
+                ]))
+        ];
 
     protected static Dictionary<string, object?> PropertiesOf(JsonNode? node) =>
         node?.AsObject().ToDictionary(_ => _.Key, _ => ValueOf(_.Value)) ?? [];

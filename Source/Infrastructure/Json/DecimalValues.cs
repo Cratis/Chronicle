@@ -170,7 +170,7 @@ public static class DecimalValues
     static decimal Widen(ulong mantissa, int power, bool negative)
     {
         var product = (UInt128)mantissa * (UInt128)_powers10[power];
-        return product > ((UInt128)uint.MaxValue << 64 | ulong.MaxValue)
+        return product > (((UInt128)uint.MaxValue << 64) | ulong.MaxValue)
             ? throw new OverflowException()
             : new decimal((int)(uint)product, (int)(uint)(product >> 32), (int)(uint)(product >> 64), negative, 0);
     }

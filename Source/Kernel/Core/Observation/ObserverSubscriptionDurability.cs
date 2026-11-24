@@ -85,15 +85,17 @@ public static class ObserverSubscriptionDurability
             return null;
         }
 
+        var targets = subscription.Targets
+            .Where(target => target.ConnectedClient is not null)
+            .Select(target => new ObserverDurableSubscriptionTarget(
+                target.ConnectedClient!.ConnectionId.Value,
+                target.SiloAddress.ToParsableString()));
+
         return new(
             kind,
             subscription.DeliversPartitionPages || subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber)),
             ObserverDurableSubscriptionFilters.From(subscription.Filters),
-            [.. subscription.Targets
-                .Where(target => target.ConnectedClient is not null)
-                .Select(target => new ObserverDurableSubscriptionTarget(
-                    target.ConnectedClient!.ConnectionId.Value,
-                    target.SiloAddress.ToParsableString()))]);
+            [.. targets]);
     }
 
     static bool IsKernelReactor(Type type) =>

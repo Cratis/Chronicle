@@ -6,9 +6,9 @@ using Microsoft.Data.Sqlite;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Database"/> that coordinates SQLite resets with migrations.
-/// </summary>
+/// </content>
 public partial class Database
 {
     async Task WipeAllSqliteDatabases(string clusterConnectionString)

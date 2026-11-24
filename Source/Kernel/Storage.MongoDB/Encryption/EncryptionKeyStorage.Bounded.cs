@@ -8,9 +8,9 @@ using MongoDB.Driver;
 
 namespace Cratis.Compliance.MongoDB;
 
-/// <summary>
+/// <content>
 /// Bounds every fence read and write by the fence timeout.
-/// </summary>
+/// </content>
 /// <remarks>
 /// The server-side time limit and the write concern timeout only start once a server is selected; an unreachable server holds the call for the
 /// driver's server selection timeout, 30 seconds by default, which is the whole Orleans call budget. The cancellation

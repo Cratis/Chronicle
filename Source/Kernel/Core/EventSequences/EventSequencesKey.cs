@@ -29,13 +29,13 @@ public record EventSequencesKey(EventStoreName EventStore, EventStoreNamespaceNa
     /// <param name="key">String to convert from.</param>
     public static implicit operator EventSequencesKey(string key) => Parse(key);
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
-
     /// <summary>
     /// Parse a <see cref="EventSequencesKey"/> from a string.
     /// </summary>
     /// <param name="key">String to parse.</param>
     /// <returns>A parsed <see cref="EventSequencesKey"/>.</returns>
     public static EventSequencesKey Parse(string key) => KeyHelper.Parse<EventSequencesKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 }

@@ -7,9 +7,9 @@ using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
-/// <summary>
+/// <content>
 /// Converts consecutive direct changes without moving them across a join or a child removal.
-/// </summary>
+/// </content>
 public partial class ChangesetConverter
 {
     /// <inheritdoc/>

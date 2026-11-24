@@ -69,9 +69,12 @@ internal record VaultLegacyEntry(string Path, string? Destination, uint? Revisio
             return new(path, locations.ErasurePath, null);
         }
 
-        return uint.TryParse(leaf, NumberStyles.None, CultureInfo.InvariantCulture, out var revision) &&
-            revision.ToString(CultureInfo.InvariantCulture) == leaf
-            ? new(path, locations.Path(revision), revision)
-            : new(path, null, null);
+        if (uint.TryParse(leaf, NumberStyles.None, CultureInfo.InvariantCulture, out var revision) &&
+            revision.ToString(CultureInfo.InvariantCulture) == leaf)
+        {
+            return new(path, locations.Path(revision), revision);
+        }
+
+        return new(path, null, null);
     }
 }

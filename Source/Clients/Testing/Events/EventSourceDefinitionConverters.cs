@@ -24,8 +24,10 @@ internal static class EventSourceDefinitionConverters
             definition.Description,
             KernelEventSources::EventSourceOwner.Client,
             (KernelEventSources::ConcurrencyDimensions)(int)definition.Concurrency,
-            [.. definition.Streams.Select(stream => new KernelEventSources::EventStreamDefinition(
-                stream.Name,
-                stream.Description,
-                (KernelEventSources::ConcurrencyDimensions)(int)stream.Concurrency))]);
+            [
+                .. definition.Streams.Select(stream => new KernelEventSources::EventStreamDefinition(
+                    stream.Name,
+                    stream.Description,
+                    (KernelEventSources::ConcurrencyDimensions)(int)stream.Concurrency))
+            ]);
 }

@@ -10,9 +10,9 @@ using MongoDB.Driver;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
-/// <summary>
+/// <content>
 /// Applies mixed changesets without moving direct writes across their multi-document operations.
-/// </summary>
+/// </content>
 public partial class Sink
 {
     static bool CanContinueOrderedWrite(UpdateResult? result, bool guarded) =>

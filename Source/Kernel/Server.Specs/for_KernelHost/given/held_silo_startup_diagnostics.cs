@@ -73,8 +73,17 @@ internal sealed class held_silo_startup_diagnostics(TimeProvider clock)
         return step;
     }
 
-    static string Format(startup_step? step) => step is null ? "none observed" : string.Create(CultureInfo.InvariantCulture,
-        $"{step.Name} at UTC={step.Utc:O}, elapsedMs={step.Elapsed.TotalMilliseconds:F3}, sincePreviousMs={step.SincePrevious.TotalMilliseconds:F3}");
+    static string Format(startup_step? step)
+    {
+        if (step is null)
+        {
+            return "none observed";
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{step.Name} at UTC={step.Utc:O}, elapsedMs={step.Elapsed.TotalMilliseconds:F3}, sincePreviousMs={step.SincePrevious.TotalMilliseconds:F3}");
+    }
 
     static string DescribeException(Exception? exception)
     {

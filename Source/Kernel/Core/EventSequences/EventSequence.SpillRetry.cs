@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.EventSequences;
 
-/// <summary>
+/// <content>
 /// Retries a failed spill of the appended-events queues to catch-up on a short timer.
-/// </summary>
+/// </content>
 /// <remarks>
 /// A failed spill means durable events may have no path to their observers: live delivery failed and the observers
 /// were not told to catch up. Right after a node loss both calls can be addressed to the dead silo until the grain

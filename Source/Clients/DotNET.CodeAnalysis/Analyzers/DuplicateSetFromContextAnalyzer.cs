@@ -99,10 +99,9 @@ public class DuplicateSetFromContextAnalyzer : DiagnosticAnalyzer
         }
 
         var attributeName = attributeClass.OriginalDefinition.ToDisplayString();
-        return string.Equals(attributeName, WellKnownTypes.SetFromContextAttributeName, StringComparison.Ordinal) ||
-            string.Equals(attributeName, WellKnownTypes.SetFromEventSourceIdAttributeName, StringComparison.Ordinal)
-            ? attributeClass.TypeArguments[0] as INamedTypeSymbol
-            : null;
+        var isSetFrom = string.Equals(attributeName, WellKnownTypes.SetFromContextAttributeName, StringComparison.Ordinal) ||
+            string.Equals(attributeName, WellKnownTypes.SetFromEventSourceIdAttributeName, StringComparison.Ordinal);
+        return isSetFrom ? attributeClass.TypeArguments[0] as INamedTypeSymbol : null;
     }
 
     static IEnumerable<(ISymbol Member, IEnumerable<AttributeData> Attributes)> GetMembersWithEffectiveAttributes(INamedTypeSymbol typeSymbol, CancellationToken cancellationToken)

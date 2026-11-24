@@ -15,8 +15,7 @@ public class and_there_is : Specification
 
         _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([provider]),
-            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
-        );
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([]));
     }
 
     void Because() => _result = _resolver.HasMetadataFor(typeof(object));

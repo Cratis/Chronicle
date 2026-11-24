@@ -8,9 +8,9 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.CSharp;
 
-/// <summary>
+/// <content>
 /// Reuses record declarations and identifies incompatible uses of a shared type.
-/// </summary>
+/// </content>
 public partial class ModelBoundCodeGenerator
 {
     static IEnumerable<RecordDeclarationSyntax> CollectUniqueRecordDeclarations(RecordScope scope)

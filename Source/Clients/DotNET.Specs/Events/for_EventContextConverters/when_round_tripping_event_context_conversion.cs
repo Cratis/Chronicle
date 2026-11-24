@@ -30,8 +30,7 @@ public class when_round_tripping_event_context_conversion : Specification
             [],
             EventHash.NotSet,
             EventObservationState.Initial,
-            new Subject("SomeComplianceSubject")
-        );
+            new Subject("SomeComplianceSubject"));
     }
 
     void Because() => _result = _original.ToContract().ToClient();

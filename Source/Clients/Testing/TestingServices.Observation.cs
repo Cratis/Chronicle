@@ -21,9 +21,9 @@ using KernelWebhooksService = KernelGrpc::Cratis.Chronicle.Services.Observation.
 
 namespace Cratis.Chronicle.Testing;
 
-/// <summary>
+/// <content>
 /// Creates the observation related kernel gRPC services backed by in-memory storage.
-/// </summary>
+/// </content>
 internal sealed partial class TestingServices
 {
     static ObserversForTesting CreateObservers(TestingServiceContext context) =>

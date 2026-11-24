@@ -47,8 +47,7 @@ internal static class MembershipEntryConverters
         HostName = row.HostName,
         Status = (SiloStatus)row.Status,
         ProxyPort = row.ProxyPort,
-        SuspectTimes = row.SuspectTimes is null ? null : JsonSerializer.Deserialize<Suspect[]>(row.SuspectTimes)!
-            .Select(vote => Tuple.Create(SiloAddress.FromParsableString(vote.Silo), new DateTime(vote.UtcTicks, DateTimeKind.Utc))).ToList(),
+        SuspectTimes = SuspectTimesOf(row.SuspectTimes),
         StartTime = DateTime.SpecifyKind(row.StartTime, DateTimeKind.Utc),
         IAmAliveTime = DateTime.SpecifyKind(row.IAmAliveTime, DateTimeKind.Utc),
         RoleName = row.RoleName,
@@ -65,6 +64,17 @@ internal static class MembershipEntryConverters
     {
         var utc = time.ToUniversalTime();
         return new DateTime(utc.Ticks - (utc.Ticks % TimeSpan.TicksPerMillisecond), DateTimeKind.Utc);
+    }
+
+    static List<Tuple<SiloAddress, DateTime>>? SuspectTimesOf(string? json)
+    {
+        if (json is null)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<Suspect[]>(json)!
+            .Select(vote => Tuple.Create(SiloAddress.FromParsableString(vote.Silo), new DateTime(vote.UtcTicks, DateTimeKind.Utc))).ToList();
     }
 
     sealed record Suspect(string Silo, long UtcTicks);

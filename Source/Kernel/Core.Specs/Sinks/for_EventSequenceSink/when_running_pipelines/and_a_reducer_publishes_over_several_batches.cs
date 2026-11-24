@@ -58,8 +58,10 @@ public class and_a_reducer_publishes_over_several_batches : given.a_sink
     }
 
     static ReducerContext Context(ulong number) => new(
-        [new AppendedEvent(
-            EventContext.From("store", "tenant", new("Source", EventTypeGeneration.First), EventSourceType.Default, "key", EventStreamType.All, EventStreamId.Default, number, CorrelationId.New(), null, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
-            new ExpandoObject())],
+        [
+            new AppendedEvent(
+               EventContext.From("store", "tenant", new("Source", EventTypeGeneration.First), EventSourceType.Default, "key", EventStreamType.All, EventStreamId.Default, number, CorrelationId.New(), null, new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
+               new ExpandoObject())
+        ],
         new Key("key", Properties.ArrayIndexers.NoIndexers));
 }

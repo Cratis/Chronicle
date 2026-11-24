@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Recovering every failed partition an observer remembers.
-/// </summary>
+/// </content>
 /// <remarks>
 /// Recovering a partition starts a job for it through the jobs manager, which reads the observer's jobs from storage
 /// and then prepares and starts the job. For an observer that has accumulated hundreds of failed partitions, doing all

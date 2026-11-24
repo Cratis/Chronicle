@@ -33,17 +33,6 @@ public record AdminPasswordStatus(
     }
 
     /// <summary>
-    /// Deconstructs the original two-value status shape for existing callers.
-    /// </summary>
-    /// <param name="isRequired">Whether setup is required.</param>
-    /// <param name="adminUserId">The administrator identifier.</param>
-    public void Deconstruct(out bool isRequired, out Guid? adminUserId)
-    {
-        isRequired = IsRequired;
-        adminUserId = AdminUserId;
-    }
-
-    /// <summary>
     /// Gets the initial admin password setup status.
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to read users from.</param>
@@ -61,5 +50,16 @@ public record AdminPasswordStatus(
         var adminUser = await storage.System.Users.GetByUsername(options.Value.Authentication.EffectiveAdminUsername);
         var required = adminUser is { HasLoggedIn: false } && string.IsNullOrEmpty(adminUser.PasswordHash?.Value);
         return new AdminPasswordStatus(required, required ? (Guid)adminUser!.Id : null, required ? adminUser!.Username : string.Empty);
+    }
+
+    /// <summary>
+    /// Deconstructs the original two-value status shape for existing callers.
+    /// </summary>
+    /// <param name="isRequired">Whether setup is required.</param>
+    /// <param name="adminUserId">The administrator identifier.</param>
+    public void Deconstruct(out bool isRequired, out Guid? adminUserId)
+    {
+        isRequired = IsRequired;
+        adminUserId = AdminUserId;
     }
 }

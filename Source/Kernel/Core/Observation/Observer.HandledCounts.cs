@@ -7,9 +7,9 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Persists handled-count chunks and retains only their unconfirmed suffixes for retry.
-/// </summary>
+/// </content>
 public partial class Observer
 {
     /// <summary>

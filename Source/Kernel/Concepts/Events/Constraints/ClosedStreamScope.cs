@@ -43,6 +43,22 @@ public record ClosedStreamScope(
         (string.IsNullOrEmpty(EventStreamId?.Value) || EventStreamId?.Value == Events.EventStreamId.Default);
 
     /// <summary>
+    /// Select the dimensions of an append participating in a scope.
+    /// </summary>
+    /// <param name="eventSourceId">The event source identifier.</param>
+    /// <param name="eventSourceType">The event source type.</param>
+    /// <param name="eventStreamType">The stream type.</param>
+    /// <param name="eventStreamId">The stream identifier.</param>
+    /// <param name="mask">The dimensions to select.</param>
+    /// <returns>The normalized scope.</returns>
+    public static ClosedStreamScope ForAppend(EventSourceId eventSourceId, EventSourceType eventSourceType, EventStreamType eventStreamType, EventStreamId eventStreamId, ClosedStreamDimensions mask) =>
+        new ClosedStreamScope(
+            mask.HasFlag(ClosedStreamDimensions.EventSourceId) ? eventSourceId : null,
+            mask.HasFlag(ClosedStreamDimensions.EventSourceType) ? eventSourceType : null,
+            mask.HasFlag(ClosedStreamDimensions.EventStreamType) ? eventStreamType : null,
+            mask.HasFlag(ClosedStreamDimensions.EventStreamId) ? eventStreamId : null).Normalized();
+
+    /// <summary>
     /// Normalize unspecified event source dimensions and empty stream values to unset dimensions.
     /// </summary>
     /// <returns>The normalized scope.</returns>
@@ -70,20 +86,4 @@ public record ClosedStreamScope(
             (closure.EventStreamType is null || closure.EventStreamType == target.EventStreamType) &&
             (closure.EventStreamId is null || closure.EventStreamId == target.EventStreamId);
     }
-
-    /// <summary>
-    /// Select the dimensions of an append participating in a scope.
-    /// </summary>
-    /// <param name="eventSourceId">The event source identifier.</param>
-    /// <param name="eventSourceType">The event source type.</param>
-    /// <param name="eventStreamType">The stream type.</param>
-    /// <param name="eventStreamId">The stream identifier.</param>
-    /// <param name="mask">The dimensions to select.</param>
-    /// <returns>The normalized scope.</returns>
-    public static ClosedStreamScope ForAppend(EventSourceId eventSourceId, EventSourceType eventSourceType, EventStreamType eventStreamType, EventStreamId eventStreamId, ClosedStreamDimensions mask) =>
-        new ClosedStreamScope(
-            mask.HasFlag(ClosedStreamDimensions.EventSourceId) ? eventSourceId : null,
-            mask.HasFlag(ClosedStreamDimensions.EventSourceType) ? eventSourceType : null,
-            mask.HasFlag(ClosedStreamDimensions.EventStreamType) ? eventStreamType : null,
-            mask.HasFlag(ClosedStreamDimensions.EventStreamId) ? eventStreamId : null).Normalized();
 }

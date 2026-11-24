@@ -17,12 +17,10 @@ internal static class SinkDefinitionConverters
     /// <returns>Converted contract version.</returns>
     public static Contracts.Sinks.SinkDefinition ToContract(this SinkDefinition definition)
     {
-        return new()
+        Contracts.Sinks.EventSequenceSinkConfiguration? eventSequence = null;
+        if (definition.EventSequence is not null)
         {
-            ConfigurationId = definition.Configuration,
-            TypeId = definition.EventSequence is null ? definition.Type : WellKnownSinkTypes.EventSequence,
-            Name = definition.Name?.Value ?? string.Empty,
-            EventSequence = definition.EventSequence is null ? null : new()
+            eventSequence = new()
             {
                 EventType = new()
                 {
@@ -32,7 +30,15 @@ internal static class SinkDefinitionConverters
                 },
                 EventSequence = definition.EventSequence.Destination,
                 IsPublic = definition.EventSequence.IsPublic
-            }
+            };
+        }
+
+        return new()
+        {
+            ConfigurationId = definition.Configuration,
+            TypeId = definition.EventSequence is null ? definition.Type : WellKnownSinkTypes.EventSequence,
+            Name = definition.Name?.Value ?? string.Empty,
+            EventSequence = eventSequence
         };
     }
 
@@ -44,10 +50,14 @@ internal static class SinkDefinitionConverters
     public static SinkDefinition ToChronicle(this Contracts.Sinks.SinkDefinition contract)
     {
         var eventSequence = contract.EventSequence;
-        var configuration = eventSequence is null ? null : new EventSequenceSinkConfiguration(
-            new(eventSequence.EventType.Id, eventSequence.EventType.Generation, eventSequence.EventType.Tombstone),
-            eventSequence.EventSequence is null ? null : new(eventSequence.EventSequence),
-            eventSequence.IsPublic);
+        EventSequenceSinkConfiguration? configuration = null;
+        if (eventSequence is not null)
+        {
+            configuration = new(
+                new(eventSequence.EventType.Id, eventSequence.EventType.Generation, eventSequence.EventType.Tombstone),
+                eventSequence.EventSequence is null ? null : new(eventSequence.EventSequence),
+                eventSequence.IsPublic);
+        }
 
         return new(new SinkConfigurationId(contract.ConfigurationId), eventSequence is null ? contract.TypeId : WellKnownSinkTypes.EventSequence, configuration)
         {

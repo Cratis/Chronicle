@@ -15,14 +15,18 @@ public static class header_events
     public static readonly string[] Sentinels = ["current-header-value", "original-header-value", "revision-one-header-value", "revision-two-header-value", "generation-one-header-value", "generation-three-header-value"];
 
     public static AppendedEvent[] All() =>
-        [.. Direct().Concat(revised_header_events.All())
-            .Select((@event, index) => @event with { Context = @event.Context with { SequenceNumber = (ulong)index + 12 } })];
+        [
+            .. Direct().Concat(revised_header_events.All())
+                .Select((@event, index) => @event with { Context = @event.Context with { SequenceNumber = (ulong)index + 12 } })
+        ];
 
     public static AppendedEvent[] Direct() =>
-        [.. new[] { typeof(WebhookAdded).GetEventType(), typeof(TargetHeadersSetForWebhook).GetEventType() }
-            .SelectMany(type => new uint[] { 1, 3 }.SelectMany(generation => new[] { EventStoreName.System, new EventStoreName("application-store") }
-                .Select(store => Create(type with { Generation = generation }, store))))
-            .Select((@event, index) => @event with { Context = @event.Context with { SequenceNumber = (ulong)index + 12 } })];
+        [
+            .. new[] { typeof(WebhookAdded).GetEventType(), typeof(TargetHeadersSetForWebhook).GetEventType() }
+                .SelectMany(type => new uint[] { 1, 3 }.SelectMany(generation => new[] { EventStoreName.System, new EventStoreName("application-store") }
+                    .Select(store => Create(type with { Generation = generation }, store))))
+                .Select((@event, index) => @event with { Context = @event.Context with { SequenceNumber = (ulong)index + 12 } })
+        ];
 
     public static AppendedEvent Create(EventType type, EventStoreName store)
     {

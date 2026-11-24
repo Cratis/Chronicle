@@ -36,8 +36,10 @@ public class when_mapping_a_recursive_child : given.a_recursive_collection
         }.AsExpandoObject();
         _event = new AppendedEvent(EventContext.EmptyWithEventSourceId("slice"), new ExpandoObject());
         _indexers = new ArrayIndexers(
-            [new("[features]", "id", "feature"), new("[features].[subFeatures]", "id", "sub-feature"),
-             new("[features].[subFeatures].[slices]", "id", "slice")]);
+            [
+                new("[features]", "id", "feature"), new("[features].[subFeatures]", "id", "sub-feature"),
+                new("[features].[subFeatures].[slices]", "id", "slice")
+            ]);
         _map = ResolvedCollectionPath.Mapper(_slices, "[features].[slices].name", property =>
         {
             _mapperCreations++;

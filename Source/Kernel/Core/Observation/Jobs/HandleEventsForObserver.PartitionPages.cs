@@ -10,9 +10,9 @@ using OneOf.Types;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
-/// <summary>
+/// <content>
 /// Partial for walking the event sequence once for an observer that takes pages spanning partitions, and settling each partition on its own.
-/// </summary>
+/// </content>
 public partial class HandleEventsForObserver
 {
     async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandlePartitionPage(
