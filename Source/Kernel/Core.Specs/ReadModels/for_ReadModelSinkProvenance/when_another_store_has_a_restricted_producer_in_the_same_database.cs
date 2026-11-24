@@ -22,7 +22,7 @@ public class when_another_store_has_a_restricted_producer_in_the_same_database :
         _storage.GetEventStores().Returns(Task.FromResult<IEnumerable<EventStoreName>>([Store, other]));
         _storage.GetEventStore(other).Returns(store);
         store.ReadModels.GetAll().Returns(Task.FromResult<IEnumerable<ReadModelDefinition>>([_model]));
-        store.Projections.GetAll().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([_projection with { Owner = ProjectionOwner.Server }]));
+        store.Projections.GetAll().Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([_projection with { Owner = ProjectionOwner.Server, EventSequenceId = "system" }]));
         store.Namespaces.GetAll().Returns(Task.FromResult<IEnumerable<NamespaceState>>([new("another-namespace", DateTimeOffset.UnixEpoch)]));
         var scope = Substitute.For<IEventStoreNamespaceStorage>();
         scope.Sinks.GetProvenance(Arg.Any<ReadModelDefinition>()).Returns(Marker(EventStoreNamespaceName.Default));

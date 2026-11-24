@@ -12,10 +12,10 @@ public class and_a_mark_arrives_during_compliance_release : given.a_revocable_ob
     async Task Because()
     {
         _source.OnNext([]);
-        await _releaseStarted.Task;
+        await _releaseStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await _cached.MarkQuarantined();
         _release.TrySetResult([]);
-        _error = await _ended.Task;
+        _error = await _ended.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact] void should_not_release_an_in_flight_page() => _delivered.ShouldEqual(0);

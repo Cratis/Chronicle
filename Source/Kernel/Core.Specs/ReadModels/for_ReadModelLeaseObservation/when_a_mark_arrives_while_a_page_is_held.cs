@@ -23,7 +23,7 @@ public class when_a_mark_arrives_while_a_page_is_held : for_SinkProvenanceCache.
         source.OnNext(42);
         await _cached.MarkQuarantined();
         _raw.Release();
-        _error = await _ended.Task;
+        _error = await _ended.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact] void should_discard_the_held_payload() => _delivered.ShouldEqual(0);

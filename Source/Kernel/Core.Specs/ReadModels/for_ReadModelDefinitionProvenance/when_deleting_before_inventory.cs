@@ -7,6 +7,8 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Projections;
+using Cratis.Chronicle.Security;
+using Grpc.Core;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelDefinitionProvenance;
 
@@ -48,7 +50,7 @@ public class when_deleting_before_inventory : Projections.for_ProjectionsManager
         _errors.Add(await Catch.Exception(() => reducers.WriteStateAsync("reducer", reducerKey, new GrainState<ReducerDefinition> { State = reducer })));
     }
 
-    [Fact] void should_refuse_every_evidence_changing_operation() => _errors.TrueForAll(error => ReferenceEquals(error, _failure)).ShouldBeTrue();
+    [Fact] void should_refuse_every_evidence_changing_operation() => _errors.TrueForAll(error => error is RpcException { StatusCode: StatusCode.PermissionDenied, Status.Detail: SystemStoreAccess.Refused }).ShouldBeTrue();
     [Fact] void should_not_call_any_delete_or_save() => _eventStoreStorage.Projections.ReceivedCalls().Concat(_eventStoreStorage.ReadModels.ReceivedCalls()).Concat(_eventStoreStorage.Reducers.ReceivedCalls()).Any(call => call.GetMethodInfo().Name == "Delete" || call.GetMethodInfo().Name == "Save").ShouldBeFalse();
     [Fact] void should_not_append_projection_history() => _eventStoreStorage.ProjectionDefinitionHistory.ReceivedCalls().Any().ShouldBeFalse();
     [Fact] void should_not_stop_or_remove_an_observer() => _observerGrain.ReceivedCalls().Any().ShouldBeFalse();

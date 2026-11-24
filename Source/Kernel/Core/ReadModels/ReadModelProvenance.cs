@@ -28,12 +28,13 @@ internal sealed class ReadModelProvenance(IStorage storage)
     {
         foreach (var store in (await storage.GetEventStores()).Append(requestedStore).Distinct(CaseInsensitiveEventStoreNameComparer.Instance).ToArray())
         {
-            await Discover(store);
-        }
-
-        if (requestedModel is not null && requestedNamespace is not null)
-        {
-            await AddDestination(storage.GetEventStore(requestedStore), requestedNamespace, requestedModel);
+            var scope = CaseInsensitiveEventStoreNameComparer.Instance.Equals(store, requestedStore) ? requestedNamespace : null;
+            var source = await Discover(store, scope);
+            if (requestedModel is not null && scope is not null)
+            {
+                var destination = await AddDestination(source.Storage, scope, requestedModel);
+                if (destination is not null) source.Bindings.Add(new(requestedModel, destination));
+            }
         }
 
         await GatherEvidence();
@@ -58,12 +59,13 @@ internal sealed class ReadModelProvenance(IStorage storage)
         }
     }
 
-    async Task Discover(EventStoreName store)
+    async Task<Source> Discover(EventStoreName store, EventStoreNamespaceName? requestedNamespace)
     {
         var eventStore = storage.GetEventStore(store);
         var models = (await eventStore.ReadModels.GetAll()).ToArray();
         var namespaces = (await eventStore.Namespaces.GetAll()).Select(_ => _.Name)
-            .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet).Distinct().ToArray();
+            .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet)
+            .Append(requestedNamespace ?? EventStoreNamespaceName.NotSet).Distinct().ToArray();
         var source = new Source(eventStore);
         _sources.Add(source);
         foreach (var model in models)
@@ -76,6 +78,7 @@ internal sealed class ReadModelProvenance(IStorage storage)
                 }
             }
         }
+        return source;
     }
 
     async Task<Destination?> AddDestination(IEventStoreStorage store, EventStoreNamespaceName @namespace, ReadModelDefinition model)

@@ -27,12 +27,15 @@ internal static class ReadModelDefinitionProvenance
         IEnumerable<ReadModelDefinition> definitions)
     {
         await provenance.Preserve(eventStore);
-        var namespaces = (await storage.GetEventStore(eventStore).Namespaces.GetAll()).Select(_ => _.Name)
+        var store = storage.GetEventStore(eventStore);
+        var namespaces = (await store.Namespaces.GetAll()).Select(_ => _.Name)
             .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet).Distinct().ToArray();
         foreach (var definition in definitions)
         {
+            var retained = await store.ReadModels.Has(definition.Identifier) ? await store.ReadModels.Get(definition.Identifier) : null;
             foreach (var @namespace in namespaces)
             {
+                if (retained is not null) await provenance.EnsureReadable(eventStore, @namespace, retained);
                 await provenance.EnsureReadable(eventStore, @namespace, definition);
             }
         }

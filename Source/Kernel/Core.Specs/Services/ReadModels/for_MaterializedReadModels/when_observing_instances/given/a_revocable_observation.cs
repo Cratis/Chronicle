@@ -45,13 +45,13 @@ public class a_revocable_observation : for_ReadModels.given.all_dependencies
         _sink.GetInstances(Arg.Any<ReadModelContainerName?>(), 0, 10).Returns(_ =>
         {
             _countStarted.TrySetResult();
-            return _count.Task;
+            return _count.Task.WaitAsync(TimeSpan.FromSeconds(5));
         });
         _complianceHelper.Release(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<IEnumerable<ExpandoObject>>())
             .Returns(_ =>
             {
                 _releaseStarted.TrySetResult();
-                return _release.Task;
+                return _release.Task.WaitAsync(TimeSpan.FromSeconds(5));
             });
         var service = new MaterializedReadModels(_grainFactory, _readBindings, _complianceHelper, NullLogger<MaterializedReadModels>.Instance, NamespaceCasingContext.Create());
         _subscription = service.ObserveInstances(new()
@@ -61,7 +61,7 @@ public class a_revocable_observation : for_ReadModels.given.all_dependencies
             ReadModel = _readModelDefinition.Identifier,
             PageSize = 10
         }).Subscribe(_ => _delivered++, error => _ended.TrySetResult(error));
-        await _subscribed.Task;
+        await _subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     async Task Destroy()
@@ -70,7 +70,7 @@ public class a_revocable_observation : for_ReadModels.given.all_dependencies
         _source.Dispose();
         if (_cache is not null)
         {
-            await _cache.DisposeAsync();
+            await _cache.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
         }
     }
 }

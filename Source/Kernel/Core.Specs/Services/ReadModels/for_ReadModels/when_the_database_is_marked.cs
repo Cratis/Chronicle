@@ -22,7 +22,7 @@ public class when_the_database_is_marked : given.a_database_with_provenance
         _errors.Add(await Catch.Exception(() => _service.GetInstanceByKey(new() { EventStore = "store", Namespace = "namespace", ReadModelIdentifier = "test-read-model", EventSequenceId = "log" })));
         _errors.Add(await Catch.Exception(() => _service.GetAllInstances(new() { EventStore = "store", Namespace = "namespace", ReadModelIdentifier = "test-read-model", EventSequenceId = "log" })));
         _errors.Add(await Catch.Exception(() => _service.GetAllInstances(new() { EventStore = "store", Namespace = "namespace", ReadModelIdentifier = "test-read-model", EventSequenceId = "log", EventCount = 1 })));
-        _errors.Add(await Catch.Exception(() => watch.FirstAsync().ToTask()));
+        _errors.Add(await Catch.Exception(() => watch.FirstAsync().ToTask().WaitAsync(TimeSpan.FromSeconds(5))));
         _errors.Add(await Catch.Exception(() => _service.DehydrateSession(new() { EventStore = "store", Namespace = "namespace", ReadModelIdentifier = "test-read-model", EventSequenceId = "log" })));
     }
 

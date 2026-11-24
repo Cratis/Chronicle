@@ -13,10 +13,10 @@ public class and_a_mark_arrives_during_response_counting : given.a_revocable_obs
     {
         _release.TrySetResult([]);
         _source.OnNext([]);
-        await _countStarted.Task;
+        await _countStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await _cached.MarkQuarantined();
         _count.TrySetResult(new([], 42));
-        _error = await _ended.Task;
+        _error = await _ended.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact] void should_not_emit_the_buffered_response() => _delivered.ShouldEqual(0);

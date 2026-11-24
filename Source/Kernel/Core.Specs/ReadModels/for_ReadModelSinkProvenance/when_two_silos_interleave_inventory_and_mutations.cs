@@ -14,6 +14,8 @@ public class when_two_silos_interleave_inventory_and_mutations : given.a_provena
 {
     readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly Lock _gate = new();
+    SinkProvenanceState _state = new(new(Guid.NewGuid()), 0, false);
     bool _marked;
     bool _deletedBeforeMark;
     bool _readCompletedBeforeMark;
@@ -25,13 +27,9 @@ public class when_two_silos_interleave_inventory_and_mutations : given.a_provena
         _projection = _projection with { EventSequenceId = "system" };
         _projections = [_projection];
         var marker = Substitute.For<ISinkProvenanceStorage>();
+        marker.ReadState().Returns(_ => Task.FromResult(_state));
         marker.IsQuarantined().Returns(_ => Task.FromResult(_marked));
-        marker.MarkQuarantined().Returns(async _ =>
-        {
-            _entered.TrySetResult();
-            await _release.Task;
-            _marked = true;
-        });
+        marker.CompleteInventory(Arg.Any<bool>()).Returns(call => CompleteInventory(call.Arg<bool>()));
         _markers[(EventStoreNamespaceName.Default, _model.Sink.Configuration)] = marker;
         _eventStore.Projections.Delete(_projection.Identifier).Returns(_ =>
         {
@@ -46,14 +44,29 @@ public class when_two_silos_interleave_inventory_and_mutations : given.a_provena
         var provider = new ProjectionDefinitionStorageProvider(_storage, TimeProvider.System, _provenance);
         var key = GrainId.Create("projection", new ProjectionKey(_projection.Identifier, Store).ToString());
         var mutation = provider.ClearStateAsync("projection", key, new GrainState<ProjectionDefinition> { State = _projection });
-        await _entered.Task;
+        await _entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
         _deletedBeforeMark = _eventStore.Projections.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Delete");
         var otherSilo = new ReadModelSinkProvenance(_storage);
         var read = Catch.Exception(() => otherSilo.EnsureReadable(Store, EventStoreNamespaceName.Default, _model));
         _readCompletedBeforeMark = read.IsCompleted;
         _release.TrySetResult();
-        await mutation;
-        _readError = await read;
+        await mutation.WaitAsync(TimeSpan.FromSeconds(5));
+        _readError = await read.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    async Task<SinkProvenanceState> CompleteInventory(bool restrictedEvidence)
+    {
+        _entered.TrySetResult();
+        await _release.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        lock (_gate)
+        {
+            if (!_state.IsComplete)
+            {
+                _state = _state with { InventoryVersion = SinkProvenanceState.CurrentInventoryVersion, Restricted = restrictedEvidence };
+            }
+            _marked = _state.Restricted;
+            return _state;
+        }
     }
 
     [Fact] void should_not_delete_evidence_before_the_durable_mark() => _deletedBeforeMark.ShouldBeFalse();

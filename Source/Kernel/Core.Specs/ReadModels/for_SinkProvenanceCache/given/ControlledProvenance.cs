@@ -29,7 +29,7 @@ public sealed class ControlledProvenance : ISinkProvenanceStorage
 
         _captured = state;
         _held = new();
-        return await _held.Task.ConfigureAwait(false);
+        return await _held.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
     }
 
     public void Release()

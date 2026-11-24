@@ -22,7 +22,7 @@ public class when_the_database_is_marked : for_ReadModels.given.a_database_with_
         _wasCold = !_sinks.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "GetProvenance");
         await _marker.MarkQuarantined();
         _getError = await Catch.Exception(() => service.GetInstances(new() { EventStore = "store", Namespace = "namespace", ReadModel = "test-read-model", Occurrence = "retained-copy" }));
-        _observeError = await Catch.Exception(() => stream.FirstAsync().ToTask());
+        _observeError = await Catch.Exception(() => stream.FirstAsync().ToTask().WaitAsync(TimeSpan.FromSeconds(5)));
     }
 
     [Fact] void should_check_the_stream_at_subscription() => _wasCold.ShouldBeTrue();
