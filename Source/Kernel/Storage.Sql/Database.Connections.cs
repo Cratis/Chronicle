@@ -23,9 +23,9 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Database"/> that decides where and how each database context connects.
-/// </summary>
+/// </content>
 public partial class Database
 {
     /// <summary>
@@ -260,14 +260,17 @@ public partial class Database
             return Task.FromResult(KnownConnectionString(identity));
         }
 
-        return UsesBindings
-        ? _databaseNames.Resolve(
+        if (!UsesBindings)
+        {
+            return Task.FromResult(ConnectionStringFor(identity.LogicalName(string.Empty)));
+        }
+
+        return _databaseNames.Resolve(
             identity,
             Cluster,
             connection => new EventStoreDbContext(BuildOptions<EventStoreDbContext>(MetadataTarget(connection))),
             connection => new NamespaceDbContext(BuildOptions<NamespaceDbContext>(MetadataTarget(connection))),
-            serviceProvider.GetService<ILogger<DatabaseNameResolver>>() ?? NullLogger<DatabaseNameResolver>.Instance)
-        : Task.FromResult(ConnectionStringFor(identity.LogicalName(string.Empty)));
+            serviceProvider.GetService<ILogger<DatabaseNameResolver>>() ?? NullLogger<DatabaseNameResolver>.Instance);
     }
 
     string KnownConnectionString(DatabaseIdentity identity)

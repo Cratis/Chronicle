@@ -9,9 +9,9 @@ using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.CSharp;
 
-/// <summary>
+/// <content>
 /// Collects the mappings rendered by the model-bound code generator.
-/// </summary>
+/// </content>
 public partial class ModelBoundCodeGenerator
 {
     enum CallKind

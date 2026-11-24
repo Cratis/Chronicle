@@ -8,9 +8,9 @@ using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation.Reducers.Clients;
 
-/// <summary>
+/// <content>
 /// Partial for reducing a page of partitions spanning event sources in one delivery and settling each partition on its own.
-/// </summary>
+/// </content>
 public partial class ReducerObserverSubscriber
 {
     /// <inheritdoc/>

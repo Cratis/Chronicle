@@ -241,9 +241,12 @@ public class Projection(
     /// </summary>
     /// <param name="changes">The changes recorded for the event.</param>
     /// <returns>The changes without any that only record the marker.</returns>
-    static Change[] WithoutInitializationMarker(Change[] changes) =>
-        [.. changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
-            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized))];
+    static Change[] WithoutInitializationMarker(Change[] changes)
+    {
+        var remaining = changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
+            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized));
+        return [.. remaining];
+    }
 
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,

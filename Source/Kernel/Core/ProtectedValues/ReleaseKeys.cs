@@ -80,8 +80,9 @@ public static class ReleaseKeys
         var fence = (await memo.Read(new(storage, eventStore, ns, identifier), memo.BeginAttempt(cancellationToken))).Fence;
 
         // A protocol authority initializes an empty fence for provisioning; that is not evidence of erasure.
-        return fence is { NewKeyAllowed: true, Lifecycle: 1, ErasedLifecycle: 0 } &&
-            fence.ErasedThrough.Value == 0 && fence.ErasedKeyFingerprints.Count == 0 ? null : fence;
+        var isEmptyFence = fence is { NewKeyAllowed: true, Lifecycle: 1, ErasedLifecycle: 0 } &&
+            fence.ErasedThrough.Value == 0 && fence.ErasedKeyFingerprints.Count == 0;
+        return isEmptyFence ? null : fence;
     }
 
     /// <summary>Revalidate all material immediately before the synchronous hand-off.</summary>

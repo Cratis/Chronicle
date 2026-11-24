@@ -7,9 +7,9 @@ using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Delivery fence management for the observer.
-/// </summary>
+/// </content>
 public partial class Observer
 {
     readonly DeliveryFences _deliveryFences = new();

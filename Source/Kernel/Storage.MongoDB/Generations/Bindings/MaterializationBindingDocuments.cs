@@ -126,12 +126,17 @@ internal static class MaterializationBindingDocuments
     /// <param name="receipt">The receipt.</param>
     /// <param name="request">The activation request.</param>
     /// <returns>The stored representation or decoded value.</returns>
-    internal static MaterializationPublication Outcome(BsonDocument receipt, MaterializationPublicationRequest request) => new(
-        (receipt["key"].AsString, receipt["expectedActive"].AsInt32, receipt["expectedEpoch"].AsInt64, receipt["candidate"].AsInt32, receipt.GetValue("rollbackWindow", BsonNull.Value), receipt.GetValue("restore", false).AsBoolean)
-            == (request.Key.Value, checked((int)request.Active.Value), request.Epoch.Value, checked((int)request.Candidate.Value), new BsonInt64(request.RollbackWindow.Ticks), request.Restore)
-            ? (MaterializationPublicationResult)receipt["result"].AsInt32 : MaterializationPublicationResult.ReceiptConflict,
-        new(checked((uint)receipt["active"].AsInt32)),
-        new(checked((uint)receipt["epoch"].AsInt64)));
+    internal static MaterializationPublication Outcome(BsonDocument receipt, MaterializationPublicationRequest request)
+    {
+        var isSameRequest =
+            (receipt["key"].AsString, receipt["expectedActive"].AsInt32, receipt["expectedEpoch"].AsInt64, receipt["candidate"].AsInt32, receipt.GetValue("rollbackWindow", BsonNull.Value), receipt.GetValue("restore", false).AsBoolean)
+            == (request.Key.Value, checked((int)request.Active.Value), request.Epoch.Value, checked((int)request.Candidate.Value), new BsonInt64(request.RollbackWindow.Ticks), request.Restore);
+
+        return new(
+            isSameRequest ? (MaterializationPublicationResult)receipt["result"].AsInt32 : MaterializationPublicationResult.ReceiptConflict,
+            new(checked((uint)receipt["active"].AsInt32)),
+            new(checked((uint)receipt["epoch"].AsInt64)));
+    }
 
     /// <summary>
     /// Encodes a lifecycle timestamp without losing precision.

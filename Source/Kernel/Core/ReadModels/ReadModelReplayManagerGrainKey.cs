@@ -23,13 +23,13 @@ public record ReadModelReplayManagerGrainKey(
     /// <param name="key"><see cref="ReadModelReplayManagerGrainKey"/> to convert from.</param>
     public static implicit operator string(ReadModelReplayManagerGrainKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, Namespace, ReadModel);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ReadModelReplayManagerGrainKey"/> instance.</returns>
     public static ReadModelReplayManagerGrainKey Parse(string key) => KeyHelper.Parse<ReadModelReplayManagerGrainKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace, ReadModel);
 }

@@ -154,9 +154,11 @@ public class ImportStorage(IEventStoreNamespaceDatabase database) : IImportStora
         return document is null ? null : ToSummary(document);
     }
 
-    Task EnsureIndexes() => _chunks.EnsureIndexesOnceAsync(
-        _ensuredIndexes,
-        [new CreateIndexModel<BsonDocument>(
+    Task EnsureIndexes()
+    {
+        var chunkIndex = new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending(ImportIdField).Ascending(ChunkIndexField),
-            new CreateIndexOptions { Name = "importId_chunkIndex", Background = true })]);
+            new CreateIndexOptions { Name = "importId_chunkIndex", Background = true });
+        return _chunks.EnsureIndexesOnceAsync(_ensuredIndexes, [chunkIndex]);
+    }
 }

@@ -78,6 +78,27 @@ public record ExternalService(
     }
 
     /// <summary>
+    /// Gets every external service registered with an event store.
+    /// </summary>
+    /// <param name="eventStore">The event store to get external services for.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
+    /// <returns>A collection of external services.</returns>
+    public static async Task<IEnumerable<ExternalService>> GetExternalServices(EventStoreName eventStore, IStorage storage)
+    {
+        var definitions = await storage.GetEventStore(eventStore).ExternalServices.GetAll();
+        return definitions.ToReadModel();
+    }
+
+    /// <summary>
+    /// Observes every external service registered with an event store.
+    /// </summary>
+    /// <param name="eventStore">The event store to observe external services for.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
+    /// <returns>An observable subject emitting collections of external services.</returns>
+    public static ISubject<IEnumerable<ExternalService>> ObserveExternalServices(EventStoreName eventStore, IStorage storage) =>
+        storage.GetEventStore(eventStore).ExternalServices.ObserveAll().TransformSubject(_ => _.ToReadModel());
+
+    /// <summary>
     /// Deconstructs the read model without header value metadata.
     /// </summary>
     /// <param name="Id">The external service identifier.</param>
@@ -117,25 +138,4 @@ public record ExternalService(
         Options = this.Options;
     }
 #pragma warning restore SA1313
-
-    /// <summary>
-    /// Gets every external service registered with an event store.
-    /// </summary>
-    /// <param name="eventStore">The event store to get external services for.</param>
-    /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
-    /// <returns>A collection of external services.</returns>
-    public static async Task<IEnumerable<ExternalService>> GetExternalServices(EventStoreName eventStore, IStorage storage)
-    {
-        var definitions = await storage.GetEventStore(eventStore).ExternalServices.GetAll();
-        return definitions.ToReadModel();
-    }
-
-    /// <summary>
-    /// Observes every external service registered with an event store.
-    /// </summary>
-    /// <param name="eventStore">The event store to observe external services for.</param>
-    /// <param name="storage">The <see cref="IStorage"/> holding the definitions.</param>
-    /// <returns>An observable subject emitting collections of external services.</returns>
-    public static ISubject<IEnumerable<ExternalService>> ObserveExternalServices(EventStoreName eventStore, IStorage storage) =>
-        storage.GetEventStore(eventStore).ExternalServices.ObserveAll().TransformSubject(_ => _.ToReadModel());
 }

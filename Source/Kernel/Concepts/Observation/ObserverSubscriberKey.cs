@@ -54,9 +54,6 @@ public record ObserverSubscriberKey(
     /// <param name="key"><see cref="ObserverKey"/> to convert from.</param>
     public static implicit operator string(ObserverSubscriberKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId, EventSourceId, SiloAddress);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
@@ -88,4 +85,7 @@ public record ObserverSubscriberKey(
     /// <returns>An ObserverSubscriber Key.</returns>
     public static ObserverSubscriberKey FromObserverKey(ObserverKey observerKey, EventSourceId eventSourceId, string siloAddress)
         => new(observerKey.ObserverId, observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId, eventSourceId, siloAddress);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId, EventSourceId, SiloAddress);
 }

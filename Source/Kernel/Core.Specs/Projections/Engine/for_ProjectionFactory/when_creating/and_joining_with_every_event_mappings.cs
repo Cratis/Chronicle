@@ -69,14 +69,17 @@ public class and_joining_with_every_event_mappings : Specification
         {
             [(EventType)(fromAlsoJoins ? "Joined" : "Created")] = new FromDefinition(fromAlsoJoins ? new Dictionary<PropertyPath, string>() : new Dictionary<PropertyPath, string> { [(PropertyPath)"joinId"] = "joinId" }, PropertyExpression.NotSet, null)
         };
-        var joins = includeJoin ? new Dictionary<EventType, JoinDefinition>
+        var joins = new Dictionary<EventType, JoinDefinition>();
+        if (includeJoin)
         {
-            [(EventType)"Joined"] = new JoinDefinition((PropertyPath)"joinId", new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet)
-        } : new Dictionary<EventType, JoinDefinition>();
+            joins[(EventType)"Joined"] = new JoinDefinition((PropertyPath)"joinId", new Dictionary<PropertyPath, string>(), PropertyExpression.NotSet);
+        }
+
         var every = new FromEveryDefinition(new Dictionary<PropertyPath, string> { [(PropertyPath)"count"] = WellKnownExpressions.Count }, includeChildren);
-        var children = isChild ? new Dictionary<PropertyPath, ChildrenDefinition>
+        var children = new Dictionary<PropertyPath, ChildrenDefinition>();
+        if (isChild)
         {
-            [(PropertyPath)"items"] = new ChildrenDefinition(
+            children[(PropertyPath)"items"] = new ChildrenDefinition(
                 (PropertyPath)"id",
                 from,
                 joins,
@@ -84,8 +87,9 @@ public class and_joining_with_every_event_mappings : Specification
                 every,
                 new Dictionary<EventType, RemovedWithDefinition>(),
                 new Dictionary<EventType, RemovedWithJoinDefinition>(),
-                AutoMap: AutoMap.Disabled)
-        } : new Dictionary<PropertyPath, ChildrenDefinition>();
+                AutoMap: AutoMap.Disabled);
+        }
+
         var definition = new ProjectionDefinition(
             ProjectionOwner.Client,
             EventSequenceId.Log,

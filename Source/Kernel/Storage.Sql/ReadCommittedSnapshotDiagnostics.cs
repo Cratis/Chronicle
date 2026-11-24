@@ -64,7 +64,7 @@ internal sealed record ReadCommittedSnapshotDiagnostics(
         $"session {blocker.SessionId.ToString(CultureInfo.InvariantCulture)} (wait {SafeValue(blocker.WaitType)}, blocking session {blocker.BlockingSessionId?.ToString(CultureInfo.InvariantCulture) ?? "none"})";
 
     static string SafeValue(string? value) =>
-        value is { Length: > 0 and <= 60 } && value.All(_ => _ is >= 'A' and <= 'Z' or >= '0' and <= '9' or '_')
+        value is { Length: > 0 and <= 60 } && value.All(_ => _ is (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_')
             ? value
             : "unknown";
 

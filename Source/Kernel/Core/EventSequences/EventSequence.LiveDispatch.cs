@@ -5,9 +5,9 @@ using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.EventSequences;
 
-/// <summary>
+/// <content>
 /// Hands durable events to the appended-events queues, and spills the queues to catch-up, without holding the append.
-/// </summary>
+/// </content>
 /// <remarks>
 /// <para>
 /// An event is acknowledged as soon as it is durable. Handing it to live delivery, and the spill that recovers a failed

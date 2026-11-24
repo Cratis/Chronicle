@@ -233,12 +233,17 @@ public class JsonSchemaMetadataManager(
 
         var markerPrefix = VerificationMarkers.NewPrefix();
         var values = new Dictionary<string, JsonNode>();
-        var masked = !schema.HasSchemaMetadata() ? json : await TryTransformForComparison(schema, json, (_, _, node) =>
+        var masked = json;
+        if (schema.HasSchemaMetadata())
         {
-            var marker = $"{markerPrefix}{values.Count}";
-            values.Add(marker, node.DeepClone());
-            return Task.FromResult<JsonNode?>(JsonValue.Create(marker));
-        });
+            masked = await TryTransformForComparison(schema, json, (_, _, node) =>
+            {
+                var marker = $"{markerPrefix}{values.Count}";
+                values.Add(marker, node.DeepClone());
+                return Task.FromResult<JsonNode?>(JsonValue.Create(marker));
+            });
+        }
+
         var converted = masked is null ? null : await convert(masked);
         if (converted is null)
         {
@@ -252,19 +257,24 @@ public class JsonSchemaMetadataManager(
             // was duplicated, moved to an unprotected location or embedded in other text means the migration did
             // something to the protected value that this comparison cannot reproduce: never report it as equal.
             var restoredMarkers = new HashSet<string>(StringComparer.Ordinal);
-            var restored = !content.Schema.HasSchemaMetadata() ? content.Content : await TryTransformForComparison(content.Schema, content.Content, (boundarySchema, _, node) =>
+            var restored = content.Content;
+            if (content.Schema.HasSchemaMetadata())
             {
-                if (node is not JsonValue scalar || !scalar.TryGetValue<string>(out var marker) ||
-                    !values.TryGetValue(marker, out var value) || !restoredMarkers.Add(marker))
+                restored = await TryTransformForComparison(content.Schema, content.Content, (boundarySchema, _, node) =>
                 {
-                    return Task.FromResult<JsonNode?>(null);
-                }
+                    if (node is not JsonValue scalar || !scalar.TryGetValue<string>(out var marker) ||
+                        !values.TryGetValue(marker, out var value) || !restoredMarkers.Add(marker))
+                    {
+                        return Task.FromResult<JsonNode?>(null);
+                    }
 
-                // Source values were protected before conversion. Migrated values, however, pass through
-                // the target schema before protection; never restore raw plaintext over a lossy conversion.
-                var restoredValue = value.DeepClone();
-                return Task.FromResult(convertProtectedValue is null ? restoredValue : convertProtectedValue(generation, boundarySchema, restoredValue));
-            });
+                    // Source values were protected before conversion. Migrated values, however, pass through
+                    // the target schema before protection; never restore raw plaintext over a lossy conversion.
+                    var restoredValue = value.DeepClone();
+                    return Task.FromResult(convertProtectedValue is null ? restoredValue : convertProtectedValue(generation, boundarySchema, restoredValue));
+                });
+            }
+
             if (restored is null || VerificationMarkers.AppearIn(restored))
             {
                 return null;

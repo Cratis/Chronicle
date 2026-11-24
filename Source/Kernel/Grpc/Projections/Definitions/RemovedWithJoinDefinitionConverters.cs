@@ -31,7 +31,6 @@ internal static class RemovedWithJoinDefinitionConverters
     public static RemovedWithJoinDefinition ToChronicle(this Contracts.Projections.RemovedWithJoinDefinition contract)
     {
         return new(
-            contract.Key
-        );
+            contract.Key);
     }
 }

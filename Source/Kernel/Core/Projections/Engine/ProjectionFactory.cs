@@ -357,9 +357,9 @@ public class ProjectionFactory(
     }
 
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
-        projectionDefinition.InitialModelState.ToJsonObject() is { Count: > 0 } initialModelState ?
-            expandoObjectConverter.ToExpandoObject(initialModelState, readModelSchema) :
-            CreateInitialState(readModelSchema);
+        projectionDefinition.InitialModelState.ToJsonObject() is { Count: > 0 } initialModelState
+            ? expandoObjectConverter.ToExpandoObject(initialModelState, readModelSchema)
+            : CreateInitialState(readModelSchema);
 
     static ExpandoObject CreateInitialState(JsonSchema readModelSchema)
     {
@@ -709,9 +709,9 @@ public class ProjectionFactory(
     void SetupChildSubscriptions(ProjectionLevel level, KeyValuePair<PropertyPath, ChildrenDefinition> childEntry, Projection childProjection, SubscriptionContext context)
     {
         var childDefinition = childEntry.Value;
-        var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
-            childProjection.IdentifiedByProperty :
-            childDefinition.IdentifiedBy;
+        var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot
+            ? childProjection.IdentifiedByProperty
+            : childDefinition.IdentifiedBy;
         var childrenProperty = GetChildCollectionProperty(level.Projection.Identifier, context.RootReadModel, level.Schema, childEntry.Key);
         var childSchema = childrenProperty.Item?.ActualSchema ?? level.Schema;
 
@@ -889,9 +889,9 @@ public class ProjectionFactory(
             if (childEntry.child is Projection childProjection)
             {
                 var childDefinition = childEntry.kvp.Value;
-                var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
-                    childProjection.IdentifiedByProperty :
-                    childDefinition.IdentifiedBy;
+                var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot
+                    ? childProjection.IdentifiedByProperty
+                    : childDefinition.IdentifiedBy;
 
                 ResolveEventsRecursively(
                     childProjection,

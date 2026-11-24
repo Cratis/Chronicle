@@ -32,7 +32,10 @@ public partial class Changeset<TSource, TTarget>(IObjectComparer comparer, TSour
     /// <inheritdoc/>
     public TTarget InitialState
     {
-        get => _initialState;
+        get
+        {
+            return _initialState;
+        }
         set
         {
             _initialState = value;

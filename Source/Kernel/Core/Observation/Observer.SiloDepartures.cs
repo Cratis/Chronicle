@@ -7,9 +7,9 @@ using Cratis.Chronicle.Supervision;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Re-verifies the live subscription of an observer after a silo leaves the cluster.
-/// </summary>
+/// </content>
 /// <remarks>
 /// <para>
 /// The appended-events queues are grains of their own, and their subscriptions live only in memory. A silo that leaves

@@ -38,7 +38,6 @@ internal static class JoinDefinitionConverters
             contract.On,
             contract.Properties.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value),
             contract.Key,
-            (AutoMap)contract.AutoMap
-        );
+            (AutoMap)contract.AutoMap);
     }
 }

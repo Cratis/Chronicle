@@ -31,12 +31,6 @@ public record EventType([Id(0)] EventTypeId Id, [Id(1)] EventTypeGeneration Gene
     /// <param name="value">String representation.</param>
     public static implicit operator EventType(string value) => Parse(value);
 
-    /// <inheritdoc/>
-    public override string ToString()
-    {
-        return $"{Id.Value}+{Generation.Value}";
-    }
-
     /// <summary>
     /// Parse from a string representation of event type to actual type.
     /// </summary>
@@ -58,5 +52,11 @@ public record EventType([Id(0)] EventTypeId Id, [Id(1)] EventTypeGeneration Gene
             return new(segments[0], uint.Parse(segments[1]), false);
         }
         return new(segments[0], uint.Parse(segments[1]), bool.Parse(segments[2]));
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"{Id.Value}+{Generation.Value}";
     }
 }

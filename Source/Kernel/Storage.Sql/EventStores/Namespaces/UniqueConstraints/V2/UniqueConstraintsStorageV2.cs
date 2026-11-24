@@ -39,7 +39,7 @@ public sealed partial class UniqueConstraintsStorageV2(EventSequenceId eventSequ
 
     static void ValidateValue(UniqueConstraintValue value)
     {
-        if (value is null || value.Value.Length != 64 || !value.Value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f'))
+        if (value is null || value.Value.Length != 64 || !value.Value.All(character => character is (>= '0' and <= '9') or (>= 'a' and <= 'f')))
         {
             throw new InvalidUniqueConstraintV2Input(nameof(UniqueConstraintValue));
         }

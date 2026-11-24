@@ -20,9 +20,9 @@ using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Sink"/> that applies projected changes to a tracked read model row.
-/// </summary>
+/// </content>
 public partial class Sink
 {
     void ApplyChangesToEntity(EntityEntry<DynamicReadModelEntity> entry, IEnumerable<Change> changes, ArrayIndexers ambientIndexers)

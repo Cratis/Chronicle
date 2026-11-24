@@ -34,8 +34,24 @@ internal static class AppendResultConverters
     /// </summary>
     /// <param name="violation">The <see cref="ConcurrencyViolation"/> to convert.</param>
     /// <returns>The converted <see cref="Contracts.EventSequences.Concurrency.ConcurrencyViolation"/>.</returns>
-    public static Contracts.EventSequences.Concurrency.ConcurrencyViolation ToContract(this ConcurrencyViolation violation) =>
-        new()
+    public static Contracts.EventSequences.Concurrency.ConcurrencyViolation ToContract(this ConcurrencyViolation violation)
+    {
+        Contracts.Sequences.ConcurrencyScope? scope = null;
+        if (violation.Scope is { } violationScope)
+        {
+            scope = new()
+            {
+                SequenceNumber = violationScope.SequenceNumber,
+                EventSourceId = violationScope.EventSourceId,
+                EventStreamType = violationScope.EventStreamType,
+                EventStreamId = violationScope.EventStreamId,
+                EventSourceType = violationScope.EventSourceType,
+                EventTypes = violationScope.EventTypes?.Select(_ => new Contracts.Sequences.EventType { Id = _.Id, Generation = _.Generation, Tombstone = _.Tombstone }).ToList(),
+                ExpectsNoMatchingEvent = violationScope.ExpectsNoMatchingEvent
+            };
+        }
+
+        return new()
         {
             EventSourceId = violation.EventSourceId,
             ExpectedSequenceNumber = violation.ExpectedSequenceNumber,
@@ -43,17 +59,9 @@ internal static class AppendResultConverters
             ConflictingEventTypeId = violation.ConflictingEventTypeId?.Value,
             ConflictingSequenceNumber = violation.ConflictingSequenceNumber?.Value,
             ScopeIndex = violation.ScopeIndex,
-            Scope = violation.Scope is { } scope ? new()
-            {
-                SequenceNumber = scope.SequenceNumber,
-                EventSourceId = scope.EventSourceId,
-                EventStreamType = scope.EventStreamType,
-                EventStreamId = scope.EventStreamId,
-                EventSourceType = scope.EventSourceType,
-                EventTypes = scope.EventTypes?.Select(_ => new Contracts.Sequences.EventType { Id = _.Id, Generation = _.Generation, Tombstone = _.Tombstone }).ToList(),
-                ExpectsNoMatchingEvent = scope.ExpectsNoMatchingEvent
-            } : null
+            Scope = scope
         };
+    }
 
     /// <summary>
     /// Converts an <see cref="IdempotencyKeyConflict"/> to its <see cref="Contracts.Sequences.IdempotencyKeyConflict"/> representation.
