@@ -92,6 +92,18 @@ public class MongoDBConverter(
             throw new ReadModelKeyHasNoValue(readModel.Identifier);
         }
 
+        // A flat composite key has no key property to look up: the id is the document of its parts, in part name order, each converted using the root property it identifies.
+        if (key is FlatCompositeKey flat)
+        {
+            var id = new BsonDocument();
+            foreach (var (part, value) in flat.Parts.OrderBy(part => part.Key, StringComparer.Ordinal))
+            {
+                id[part] = ToBsonValue(value, new PropertyPath(part));
+            }
+
+            return id;
+        }
+
         var schema = readModel.GetSchemaForLatestGeneration();
         var idPropertyName = schema.HasKeyProperty() ? schema.GetKeyProperty().Name : schema.GetLikelyKeyPropertyName();
 

@@ -38,6 +38,7 @@ public class a_child_collection_projection : Specification
         eventStoreStorage.GetNamespace(_namespace).Returns(namespaceStorage);
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         namespaceStorage.GetEventSequence(EventSequenceId.Log).Returns(_eventSequenceStorage);
+        namespaceStorage.Sinks.SupportsFlatCompositeKeys(Arg.Any<ReadModelDefinition>()).Returns(true);
 
         var typeFormats = new TypeFormats();
         var keyResolvers = new KeyResolvers(NullLogger<KeyResolvers>.Instance);

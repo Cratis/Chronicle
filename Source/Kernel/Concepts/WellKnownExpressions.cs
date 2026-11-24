@@ -74,6 +74,15 @@ public static class WellKnownExpressions
     public const string Composite = "$composite";
 
     /// <summary>
+    /// The flat composite key expression - an untyped key whose parts are ordinary root properties of the read model.
+    /// </summary>
+    /// <remarks>
+    /// A kernel that predates this expression routes a projection using it by event source identifier, so a read model
+    /// identified by it needs a kernel that knows it on every silo that executes the projection.
+    /// </remarks>
+    public const string FlatComposite = "$flatComposite";
+
+    /// <summary>
     /// The this accessor expression.
     /// </summary>
     public const string This = "$this";

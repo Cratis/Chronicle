@@ -346,6 +346,11 @@ public partial class ProjectionsManager(
             fullSetOwner = null;
         }
 
+        var failures = new Dictionary<ProjectionId, Exception>();
+        var submittedDefinitions = definitionList;
+        definitionList = await PreflightFlatKeys(submittedDefinitions, failures);
+        Withdraw(submittedDefinitions.Where(definition => failures.ContainsKey(definition.Identifier)));
+        var retainedDefinitions = PreserveRejectedMaterializations(submittedDefinitions, failures.Keys.ToHashSet());
         var registrantsChanged = RecordRegistrant(definitionList, registrant);
 
         // Same-version client replicas re-register identical definitions on every startup and reconnect. Handling
@@ -368,8 +373,6 @@ public partial class ProjectionsManager(
         timing.Mark(RegistrationPhase.Detecting);
 
         KeepAnnounced(changedDefinitions);
-
-        var failures = new Dictionary<ProjectionId, Exception>();
 
         if (changedDefinitions.Count == 0)
         {
@@ -416,7 +419,7 @@ public partial class ProjectionsManager(
 
         if (fullSetOwner is not null)
         {
-            await RetireUnregisteredProjections(definitionList, fullSetOwner.Value, registrant, failures);
+            await RetireUnregisteredProjections(retainedDefinitions, fullSetOwner.Value, registrant, failures);
         }
 
         timing.Mark(RegistrationPhase.Retiring);
