@@ -147,6 +147,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddReplayStateManagement()
             .AddEventTypesCacheInvalidation()
             .AddObserverDefinitionsCacheInvalidation()
+            .AddObserverRouting()
             .AddEncryptionKeyCacheInvalidation()
             .AddStoreEntitlementsCache()
             .AddProjectionsService()

@@ -97,6 +97,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo supports dormant observers; without it none is kept.</param>
     /// <param name="wakeAdmission">The <see cref="IWakeAdmission"/> that bounds how many dormant observers wake at once; without it wakes are not bounded.</param>
     /// <param name="dormantObserverGauge">The <see cref="IDormantObserverGauge"/> the queue reports its dormant observers to; optional for standalone specification queues.</param>
+    /// <param name="routing">The silo-local routing table the queue compares its own matching with; without it nothing is compared.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
@@ -107,8 +108,10 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         IStorage? storage = null,
         IClusterReleases? clusterReleases = null,
         IWakeAdmission? wakeAdmission = null,
-        IDormantObserverGauge? dormantObserverGauge = null)
+        IDormantObserverGauge? dormantObserverGauge = null,
+        Observation.ObserverRouting.IObservers? routing = null)
     {
+        _routing = routing;
         _dormantObserverGauge = dormantObserverGauge;
         _clusterReleases = clusterReleases;
         _wakeAdmission = wakeAdmission;
@@ -746,11 +749,13 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
 
                 Interlocked.Add(ref _channelEvents, -coalesced.Count);
 
+                var routingTable = await GetShadowRoutingTable();
+
                 try
                 {
                     if (!_isResetting)
                     {
-                        Route(coalesced, batchesDrained);
+                        Route(coalesced, batchesDrained, routingTable);
                         _metrics?.EventsHandled(coalesced.Count);
                     }
                 }
@@ -779,7 +784,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// </summary>
     /// <param name="events">The coalesced events.</param>
     /// <param name="batches">The number of queued batches the events came from.</param>
-    void Route(List<AppendedEvent> events, int batches)
+    /// <param name="routingTable">The silo-local routing table to compare the matching with, or null to compare nothing.</param>
+    void Route(List<AppendedEvent> events, int batches, Observation.ObserverRouting.ObserverRoutingTable? routingTable = null)
     {
         var sorted = SortBySequenceNumber(events);
 
@@ -787,7 +793,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         // before anything is routed to it, so its cursor can never pass an event it skipped.
         var spilled = SpillFragmentedSubscriptions(sorted);
         var batchEventTypes = DistinctEventTypes(sorted, out var hasRedaction);
-        foreach (var subscription in GetSubscriptionsSnapshot())
+        var subscriptions = GetSubscriptionsSnapshot();
+        foreach (var subscription in subscriptions)
         {
             if (spilled.Contains(subscription.ObserverKey) || !MayMatch(subscription, batchEventTypes, hasRedaction))
             {
@@ -799,6 +806,11 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             {
                 RouteToLane(subscription, matching, batches);
             }
+        }
+
+        if (routingTable is not null)
+        {
+            CompareWithRoutingTable(routingTable, subscriptions, batchEventTypes);
         }
     }
 
