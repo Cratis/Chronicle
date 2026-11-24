@@ -44,6 +44,7 @@ internal sealed class ReadModelProvenance(IStorage storage)
         {
             await destination.Storage.CompleteInventory(destination.RestrictedEvidence);
         }
+        foreach (var source in _sources.Where(_ => !_.InventoryComplete)) await source.Storage.MarkSinkProvenanceInventoryComplete();
     }
 
     async Task GatherEvidence()
@@ -51,7 +52,7 @@ internal sealed class ReadModelProvenance(IStorage storage)
         foreach (var source in _sources)
         {
             if (source.Destinations.All(_ => _.State.IsComplete)) continue;
-            var restricted = (await LegacyReadModelSinkInventory.Find(source.Storage, includeUnresolved: true)).Select(_ => _.Identifier).ToHashSet();
+            var restricted = (await LegacyReadModelSinkInventory.Find(source.Storage, includeUnresolved: !source.InventoryComplete)).Select(_ => _.Identifier).ToHashSet();
             foreach (var binding in source.Bindings.Where(_ => restricted.Contains(_.Model.Identifier)))
             {
                 binding.Destination.RestrictedEvidence = true;
@@ -66,7 +67,7 @@ internal sealed class ReadModelProvenance(IStorage storage)
         var namespaces = (await eventStore.Namespaces.GetAll()).Select(_ => _.Name)
             .Append(EventStoreNamespaceName.Default).Append(EventStoreNamespaceName.NotSet)
             .Append(requestedNamespace ?? EventStoreNamespaceName.NotSet).Distinct().ToArray();
-        var source = new Source(eventStore);
+        var source = new Source(eventStore, await eventStore.IsSinkProvenanceInventoryComplete());
         _sources.Add(source);
         foreach (var model in models)
         {
@@ -95,12 +96,17 @@ internal sealed class ReadModelProvenance(IStorage storage)
         return destination;
     }
 
-    sealed class Source(IEventStoreStorage storage)
+    sealed class Source(IEventStoreStorage storage, bool inventoryComplete)
     {
         /// <summary>
         /// Gets the authoritative producer storage.
         /// </summary>
         internal IEventStoreStorage Storage { get; } = storage;
+
+        /// <summary>
+        /// Gets whether one-time legacy evidence was already preserved for this store.
+        /// </summary>
+        internal bool InventoryComplete { get; } = inventoryComplete;
 
         /// <summary>
         /// Gets the discovered read-model destination bindings.

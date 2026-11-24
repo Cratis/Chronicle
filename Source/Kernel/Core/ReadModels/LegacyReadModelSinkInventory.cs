@@ -17,14 +17,14 @@ internal static class LegacyReadModelSinkInventory
     /// Reads current definitions and every discoverable projection history before any mutation can remove them.
     /// </summary>
     /// <param name="storage">The event-store storage.</param>
-    /// <param name="includeUnresolved">Whether unresolved active legacy bindings must also be preserved.</param>
+    /// <param name="includeUnresolved">Whether one-time legacy history and unresolved bindings must also be preserved.</param>
     /// <returns>The destinations requiring quarantine.</returns>
     internal static async Task<IReadOnlyList<ReadModelDefinition>> Find(IEventStoreStorage storage, bool includeUnresolved)
     {
         var models = (await storage.ReadModels.GetAll()).ToArray();
         var projections = (await storage.Projections.GetAll()).ToArray();
         var protectedModels = projections.Where(IsProtected).Select(_ => _.ReadModel).ToHashSet();
-        await AddHistory(storage, models, projections, protectedModels);
+        if (includeUnresolved) await AddHistory(storage, models, projections, protectedModels);
         return models.Where(model => protectedModels.Contains(model.Identifier) ||
             (includeUnresolved && IsUnresolved(model, projections))).ToArray();
     }

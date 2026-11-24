@@ -184,6 +184,20 @@ public interface IEventStoreStorage
     Task MarkObserversInitialized() => throw new EventStoreInitializationNotSupported();
 
     /// <summary>
+    /// Checks whether the store's one-time legacy sink inventory has completed.
+    /// </summary>
+    /// <returns>Whether every discovered database completed inventory.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task<bool> IsSinkProvenanceInventoryComplete() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
+    /// Durably records the store's legacy inventory after all discovered databases complete.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="EventStoreInitializationNotSupported">The provider does not support initialization markers.</exception>
+    Task MarkSinkProvenanceInventoryComplete() => throw new EventStoreInitializationNotSupported();
+
+    /// <summary>
     /// Get a specific <see cref="IEventStoreNamespaceStorage"/> for a <see cref="EventStoreNamespaceName"/>.
     /// </summary>
     /// <param name="namespace">The <see cref="EventStoreNamespaceName"/> to get for.</param>

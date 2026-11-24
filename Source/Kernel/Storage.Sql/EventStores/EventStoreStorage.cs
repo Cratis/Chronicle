@@ -154,6 +154,20 @@ public class EventStoreStorage(
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsSinkProvenanceInventoryComplete()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        return await scope.DbContext.EventStoreInitialization.AnyAsync(row => row.Id == 3);
+    }
+
+    /// <inheritdoc/>
+    public async Task MarkSinkProvenanceInventoryComplete()
+    {
+        await using var scope = await database.EventStore(eventStore);
+        await scope.DbContext.EventStoreInitialization.Upsert(new EventStoreInitialization { Id = 3 });
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace)
     {
         await using var scope = await database.ExistingNamespace(eventStore, @namespace);

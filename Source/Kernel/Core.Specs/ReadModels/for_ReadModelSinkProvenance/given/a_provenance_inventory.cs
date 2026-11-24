@@ -22,6 +22,7 @@ public class a_provenance_inventory : Specification
     protected readonly Dictionary<(EventStoreNamespaceName Namespace, SinkConfigurationId Configuration), ISinkProvenanceStorage> _markers = new();
     protected IStorage _storage;
     protected IEventStoreStorage _eventStore;
+    protected bool _inventoryComplete;
     protected ReadModelSinkProvenance _provenance;
     protected ReadModelDefinition _model;
     protected ProjectionDefinition _projection;
@@ -43,6 +44,12 @@ public class a_provenance_inventory : Specification
         _storage = Substitute.For<IStorage>();
         _eventStore = Substitute.For<IEventStoreStorage>();
         _storage.GetEventStore(Store).Returns(_eventStore);
+        _eventStore.IsSinkProvenanceInventoryComplete().Returns(_ => Task.FromResult(_inventoryComplete));
+        _eventStore.MarkSinkProvenanceInventoryComplete().Returns(_ =>
+        {
+            _inventoryComplete = true;
+            return Task.CompletedTask;
+        });
         _eventStore.ReadModels.GetAll().Returns(_ => Task.FromResult<IEnumerable<ReadModelDefinition>>(_models));
         _eventStore.Projections.GetAll().Returns(_ => Task.FromResult<IEnumerable<ProjectionDefinition>>(_projections));
         _eventStore.Reducers.GetAll().Returns(Task.FromResult<IEnumerable<ReducerDefinition>>([]));
