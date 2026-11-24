@@ -9,15 +9,15 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_SinkProvenanceStorage;
 public class when_using_sql_server(SqlServerFixture fixture) : given.a_provenance_database
 {
     string _primary;
-    string _independent;
+    string _independentDatabase;
     Exception? _catalogEquivalentError;
 
     async Task Because()
     {
         _primary = await fixture.CreateDatabase();
-        _independent = await fixture.CreateDatabase();
+        _independentDatabase = await fixture.CreateDatabase();
         var alias = new SqlConnectionStringBuilder(_primary) { ApplicationName = "provenance-alias" };
-        await Exercise(_primary, _independent, alias.ConnectionString);
+        await Exercise(_primary, _independentDatabase, alias.ConnectionString);
         var reserved = new SinkProvenanceStorage(DatabaseFor(_primary), "store", "namespace", "__cratis_sink_provenance ");
         _catalogEquivalentError = await Catch.Exception(reserved.IsQuarantined);
     }
@@ -35,6 +35,6 @@ public class when_using_sql_server(SqlServerFixture fixture) : given.a_provenanc
     async Task Destroy()
     {
         await fixture.DropDatabase(_primary);
-        await fixture.DropDatabase(_independent);
+        await fixture.DropDatabase(_independentDatabase);
     }
 }

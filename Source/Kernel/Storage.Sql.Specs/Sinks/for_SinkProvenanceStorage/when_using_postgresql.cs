@@ -9,15 +9,15 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_SinkProvenanceStorage;
 public class when_using_postgresql(PostgreSqlFixture fixture) : given.a_provenance_database
 {
     string _primary;
-    string _independent;
+    string _independentDatabase;
 
     async Task Because()
     {
         _primary = await fixture.CreateDatabase();
-        _independent = await fixture.CreateDatabase();
+        _independentDatabase = await fixture.CreateDatabase();
         await Execute(_primary, "CREATE SCHEMA alternate");
         var alias = new NpgsqlConnectionStringBuilder(_primary) { SearchPath = "alternate" };
-        await Exercise(_primary, _independent, alias.ConnectionString);
+        await Exercise(_primary, _independentDatabase, alias.ConnectionString);
     }
 
     [Fact] void should_allow_a_database_without_positive_evidence() => _empty.ShouldBeFalse();
@@ -32,6 +32,6 @@ public class when_using_postgresql(PostgreSqlFixture fixture) : given.a_provenan
     async Task Destroy()
     {
         await fixture.DropDatabase(_primary);
-        await fixture.DropDatabase(_independent);
+        await fixture.DropDatabase(_independentDatabase);
     }
 }

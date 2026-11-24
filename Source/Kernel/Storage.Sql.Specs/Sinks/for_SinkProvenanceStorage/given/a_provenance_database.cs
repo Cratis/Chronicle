@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Connections;
-using Cratis.Arc.EntityFrameworkCore;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
