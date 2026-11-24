@@ -65,7 +65,7 @@ public class and_reregistering_the_full_set(context context) : Given<context>(co
             var definitions = await servicesAccessor.Services.Projections.GetAllDefinitions(new() { EventStore = EventStore.Name });
             DefinitionIdentifiers = definitions.Select(definition => definition.Identifier).ToArray();
             Recommendations = await ReadinessWait.Until(
-                async () => (IEnumerable<RecommendationDetailsResponse>)await servicesAccessor.Services.Recommendations.GetRecommendations(new() { EventStore = EventStore.Name, Namespace = EventStore.Namespace }).EnsureSuccess(),
+                async () => await servicesAccessor.Services.Recommendations.GetRecommendations(new() { EventStore = EventStore.Name, Namespace = EventStore.Namespace }).EnsureSuccess(),
                 recommendations => recommendations.Any(recommendation => recommendation.Description.Contains("retired")));
             OrphanObserver = await servicesAccessor.Services.Observers.GetObserverInformation(new()
             {
