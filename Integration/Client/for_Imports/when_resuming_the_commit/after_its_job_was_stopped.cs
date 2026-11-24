@@ -33,7 +33,10 @@ public class after_its_job_was_stopped(context context) : Given<context>(context
         {
             ImportedCustomersReactor.Handled.Clear();
             await EventStore.Reactors.WaitTillActive<ImportedCustomersReactor>();
-            await using var import = await EventStore.EventLog.BeginImport(new ImportOptions { MaxEventsPerChunk = 500, WaitForCommit = false });
+
+            // Small chunks make the commit walk hundreds of chunks, so it is still committing when the job is stopped; with
+            // large ones a fast kernel finished committing before the stop could reach it.
+            await using var import = await EventStore.EventLog.BeginImport(new ImportOptions { MaxEventsPerChunk = 10, WaitForCommit = false });
             await import.Add(Customers.Stream("restarted", NumberOfEvents));
             await import.Complete();
             await import.WaitTill(_ => _ == ImportState.Committing, TimeSpan.FromSeconds(60));
