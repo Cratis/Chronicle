@@ -408,4 +408,9 @@ public static class DiagnosticIds
     /// A self-reducer read model has conflicting visible builder ownership.
     /// </summary>
     public const string ReadModelBuilderOwnershipMustBeUnambiguous = "CHR0061";
+
+    /// <summary>
+    /// A scenario terminal task is discarded.
+    /// </summary>
+    public const string NonAwaitedScenarioTerminal = "CHR0082";
 }

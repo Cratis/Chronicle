@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Cratis.Chronicle.CodeAnalysis.Analyzers;
 
@@ -42,24 +43,42 @@ public class NonAwaitedAssertionAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "Awaitable-returning assertions throw on a Task or ValueTask the caller must observe. Discarding that awaitable from a void-bodied test silently turns the assertion into a no-op that passes regardless of behavior, and the compiler's CS4014 does not fire outside an async method. Await the assertion and declare the containing member as 'async Task'.");
 
+    static readonly DiagnosticDescriptor ScenarioRule = new(
+        id: DiagnosticIds.NonAwaitedScenarioTerminal,
+        title: "Scenario terminal task is discarded",
+        messageFormat: "The task returned by '{0}' is discarded; await or return it to complete the scenario operation",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Scenario terminal operations return tasks that must be observed to complete setup or delivery and propagate failures.");
+
     /// <inheritdoc/>
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule, ScenarioRule);
 
     /// <inheritdoc/>
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
+        context.RegisterCompilationStartAction(startContext =>
+        {
+            var scenarioMethods = ScenarioTerminalMethods.Resolve(startContext.Compilation);
+            startContext.RegisterSyntaxNodeAction(nodeContext => AnalyzeInvocation(nodeContext, scenarioMethods), SyntaxKind.InvocationExpression);
+        });
     }
 
-    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
+    static void AnalyzeInvocation(SyntaxNodeAnalysisContext context, ImmutableHashSet<IMethodSymbol> scenarioMethods)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
 
         if (context.SemanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol methodSymbol)
         {
             return;
+        }
+
+        if (scenarioMethods.Contains(methodSymbol.OriginalDefinition) && IsScenarioResultDiscarded(invocation, context.SemanticModel))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(ScenarioRule, invocation.GetLocation(), methodSymbol.Name));
         }
 
         if (!IsAwaitableAssertion(methodSymbol) || !IsResultDiscarded(invocation))
@@ -116,6 +135,33 @@ public class NonAwaitedAssertionAnalyzer : DiagnosticAnalyzer
 
         return namespaceWithTrailingDot.Contains(TestingNamespaceSegment) ||
                namespaceWithTrailingDot.Contains(IntegrationTestingNamespaceSegment);
+    }
+
+    static bool IsScenarioResultDiscarded(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
+    {
+        var expression = OutermostParentheses(invocation);
+        if (expression.Parent is AssignmentExpressionSyntax assignment && assignment.Right == expression &&
+            semanticModel.GetOperation(assignment) is ISimpleAssignmentOperation { Target: IDiscardOperation })
+        {
+            expression = OutermostParentheses(assignment);
+        }
+
+        return expression.Parent switch
+        {
+            ExpressionStatementSyntax => true,
+            ArrowExpressionClauseSyntax arrow => ReturnsVoid(arrow.Parent),
+            _ => false
+        };
+    }
+
+    static ExpressionSyntax OutermostParentheses(ExpressionSyntax expression)
+    {
+        while (expression.Parent is ParenthesizedExpressionSyntax parenthesized)
+        {
+            expression = parenthesized;
+        }
+
+        return expression;
     }
 
     static bool IsResultDiscarded(InvocationExpressionSyntax invocation) =>

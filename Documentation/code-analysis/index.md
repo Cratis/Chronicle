@@ -91,6 +91,7 @@ Rule IDs are not a continuous sequence. The table includes the retired CHR0047 r
 | [CHR0079](CHR0079) | A relation of a graph view must follow an edge | Error | The type given to `Follows<TEdge>` is not an edge |
 | [CHR0080](CHR0080) | A relation of a graph view must lead to a view | Error | A relation member's type, or the item type of its collection, is not a view |
 | [CHR0081](CHR0081) | A graph view cannot be a node or an edge | Error | A type is both a view and a node or an edge |
+| [CHR0082](CHR0082) | Scenario terminal task is discarded | Warning | A known scenario setup or delivery task is discarded rather than observed |
 
 ## Explicit registration evidence
 
