@@ -236,6 +236,13 @@ public partial class ProjectionsManager(
     public Task<IEnumerable<ProjectionDefinition>> GetProjectionDefinitions() => Task.FromResult(State.Projections);
 
     /// <inheritdoc/>
+    public async Task<ProjectionDefinition?> GetStoredProjectionDefinition(ProjectionId identifier)
+    {
+        var definitions = storage.GetEventStore(_eventStoreName).Projections;
+        return await definitions.Has(identifier) ? await definitions.Get(identifier) : null;
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<ProjectionWithDeclaration>> GetProjectionDeclarations()
     {
         var readModelDefinitions = await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions();
@@ -644,7 +651,7 @@ public partial class ProjectionsManager(
 
     async Task SubscribeIfNotSubscribed(ProjectionDefinition definition, ReadModelDefinition readModelDefinition, EventStoreNamespaceName namespaceName, IEnumerable<EventTypeSchema> eventTypeSchemas, bool reactivateRetired, bool reconcile = false, bool boundedByRegistration = false)
     {
-        if (!definition.IsActive)
+        if (!definition.IsActive || definition.UsesUnsupportedEventSequence())
         {
             return;
         }
