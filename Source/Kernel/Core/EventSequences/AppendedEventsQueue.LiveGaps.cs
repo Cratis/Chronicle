@@ -80,7 +80,10 @@ public partial class AppendedEventsQueue
             return CompleteLiveStart(lane, subscription, null, false);
         }
 
-        var eligible = events.Where(@event => @event.Context.SequenceNumber >= state.NextEventSequenceNumber && MatchesSubscription(subscription, @event)).ToArray();
+        // Eligibility is by sequence number alone: every event at or past the cursor is dispatched, and the observer
+        // advances its cursor past a run even when none of it matches (an inapplicable run). A replacement subscription
+        // whose filters exclude the whole queued batch must therefore still be verified up to the batch's last event.
+        var eligible = events.Where(@event => @event.Context.SequenceNumber >= state.NextEventSequenceNumber).ToArray();
         if (eligible.Length == 0) return CompleteLiveStart(lane, subscription, null, false);
 
         var hasGap = await HasMissingMatchingEvent(subscription, state.NextEventSequenceNumber, eligible);
