@@ -61,7 +61,7 @@ public partial class InMemorySink
         else if (!keyedWrite.IsRejected)
         {
             state = ApplyActualChanges(key, changes, state);
-            ((IDictionary<string, object?>)state)["id"] = Detached(key.Value);
+            if (key is not FlatCompositeKey) ((IDictionary<string, object?>)state)["id"] = Detached(key.Value);
             staged.Stage(keyValue, state, advancesWatermark: true);
         }
 
@@ -117,7 +117,7 @@ public partial class InMemorySink
         }
 
         state = ApplyActualChanges(keyedWrite.Key, directChanges, state);
-        ((IDictionary<string, object?>)state)["id"] = Detached(keyedWrite.Key.Value);
+        if (keyedWrite.Key is not FlatCompositeKey) ((IDictionary<string, object?>)state)["id"] = Detached(keyedWrite.Key.Value);
         staged.Stage(keyedWrite.KeyValue, state, advancesWatermark: true);
         return state;
     }

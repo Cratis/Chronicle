@@ -22,5 +22,8 @@ public class InMemorySinkFactory(ITypeFormats typeFormats) : ISinkFactory
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
+    public bool SupportsFlatCompositeKeys => true;
+
+    /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) => new InMemorySink(readModel, typeFormats);
 }
