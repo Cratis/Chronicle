@@ -19,17 +19,8 @@ import strings from 'Strings';
 import { applyCoordinateFormatting } from 'Components/CoordinateFormatter/CoordinateFormatter';
 import { RevisionComparison } from './RevisionComparison/RevisionComparison';
 import { ComparisonScope } from './RevisionComparison/ComparisonScope';
+import { buildContextObject, buildGenerationOptions, buildRevisionOptions, contextSchema, deriveSchema, parseContent, revisionMetadata } from './eventDetailsModel';
 import css from './EventDetails.module.css';
-
-interface RevisionOption {
-    label: string;
-    value: number;
-}
-
-interface GenerationOption {
-    label: string;
-    value: number;
-}
 
 export interface EventDetailsProps extends IDetailsComponentProps<AppendedEvent> {
     /** Where the event was read from. When given, an optional read-only revision comparison is offered. */
@@ -50,35 +41,11 @@ export const EventDetails = ({ item, comparisonScope }: EventDetailsProps) => {
     const generationEntries = item.generationalContent ?? [];
     const hasMultipleGenerations = generationEntries.length > 1;
 
-    // Build revision options: -1 = latest (default), 0 = original, 1..N = revision entries
-    const revisionOptions: RevisionOption[] = useMemo(() => {
-        if (!isRevised) return [];
+    const revisionOptions = useMemo(() => buildRevisionOptions(revisions), [revisions]);
 
-        const options: RevisionOption[] = [
-            { label: strings.eventStore.namespaces.sequences.details.originalRevision, value: 0 }
-        ];
-        revisions.forEach((_, index) => {
-            const isLatest = index === revisions.length - 1;
-            const label = isLatest
-                ? `${strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1))} (latest)`
-                : strings.eventStore.namespaces.sequences.details.revisionLabel.replace('{n}', String(index + 1));
-            options.push({ label, value: index + 1 });
-        });
-        return options;
-    }, [revisions, isRevised]);
-
-    // Build generation options from available generational content
-    const generationOptions: GenerationOption[] = useMemo(() => {
-        if (!hasMultipleGenerations) return [];
-        return generationEntries
-            .slice()
-            .sort((a, b) => a.key - b.key)
-            .map(({ key }) => {
-                const isStored = key === item.context.eventType.generation;
-                const baseLabel = strings.eventStore.namespaces.sequences.details.generationLabel.replace('{n}', String(key));
-                return { label: isStored ? `${baseLabel} (stored)` : baseLabel, value: key };
-            });
-    }, [generationEntries, hasMultipleGenerations, item.context.eventType.generation]);
+    const generationOptions = useMemo(
+        () => hasMultipleGenerations ? buildGenerationOptions(generationEntries, item.context.eventType.generation) : [],
+        [generationEntries, hasMultipleGenerations, item.context.eventType.generation]);
 
     // Default to latest revision when revised
     const effectiveRevision = selectedRevision === -1 && isRevised ? revisions.length : selectedRevision;
@@ -86,49 +53,21 @@ export const EventDetails = ({ item, comparisonScope }: EventDetailsProps) => {
     // Effective generation for content display
     const effectiveGeneration = selectedGeneration ?? item.context.eventType.generation;
 
-    // Get current revision content
+    const shownRevision = isRevised && effectiveRevision !== 0 ? revisions[effectiveRevision - 1] : undefined;
+    const hasShownRevisionEntry = !isRevised || effectiveRevision === 0 || shownRevision !== undefined;
+
     const currentContent = useMemo(() => {
         // When a specific generation is selected and there are multiple generations, show that generation's raw content
         if (hasMultipleGenerations && selectedGeneration !== null) {
             const entry = generationEntries.find(g => g.key === effectiveGeneration);
-            if (entry?.value) {
-                try { return JSON.parse(entry.value); } catch { return entry.value; }
-            }
+            if (entry?.value) return parseContent(entry.value);
         }
-        if (!isRevised || effectiveRevision === 0) {
-            const rawContent = effectiveRevision === 0 && item.originalContent ? item.originalContent : item.content;
-            try {
-                return typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
-            } catch {
-                return rawContent;
-            }
-        }
-        const revision = revisions[effectiveRevision - 1];
-        if (!revision) return {};
-        try {
-            return typeof revision.content === 'string' ? JSON.parse(revision.content) : revision.content;
-        } catch {
-            return revision.content;
-        }
-    }, [effectiveRevision, effectiveGeneration, selectedGeneration, generationEntries, hasMultipleGenerations, isRevised, item.content, item.originalContent, revisions]);
+        if (shownRevision) return parseContent(shownRevision.content);
+        if (!hasShownRevisionEntry) return {};
+        return parseContent(effectiveRevision === 0 && item.originalContent ? item.originalContent : item.content);
+    }, [effectiveRevision, effectiveGeneration, selectedGeneration, generationEntries, hasMultipleGenerations, hasShownRevisionEntry, shownRevision, item.content, item.originalContent]);
 
-    // Get metadata (occurred, correlationId, causedBy) for the current revision
-    const currentMetadata = useMemo(() => {
-        if (!isRevised || effectiveRevision === 0) {
-            return {
-                occurred: item.context.occurred,
-                correlationId: item.context.correlationId,
-                causedBy: item.context.causedBy
-            };
-        }
-        const revision = revisions[effectiveRevision - 1];
-        if (!revision) return { occurred: item.context.occurred, correlationId: item.context.correlationId, causedBy: item.context.causedBy };
-        return {
-            occurred: revision.occurred,
-            correlationId: revision.correlationId,
-            causedBy: revision.causedBy
-        };
-    }, [effectiveRevision, isRevised, item.context, revisions]);
+    const currentMetadata = useMemo(() => revisionMetadata(item, shownRevision), [item, shownRevision]);
 
     // Schema: look for an exact generation match in allGenerations (historical) then in ObserveEventTypes (latest).
     // Never fall back to a different generation — that would show wrong property labels.
@@ -143,18 +82,9 @@ export const EventDetails = ({ item, comparisonScope }: EventDetailsProps) => {
         );
     }, [allGenerations.data, eventTypes.data, effectiveGeneration, item.context.eventType.id]);
 
-    const schema = useMemo(() => {
-        if (effectiveEventType) return JSON.parse(effectiveEventType.schema);
-        // No registered schema for this generation — derive from the content's own keys
-        if (currentContent && typeof currentContent === 'object' && !Array.isArray(currentContent)) {
-            return {
-                properties: Object.fromEntries(
-                    Object.keys(currentContent).map(key => [key, { type: 'string' }])
-                )
-            };
-        }
-        return { properties: {} };
-    }, [effectiveEventType, currentContent]);
+    const schema = useMemo(
+        () => effectiveEventType ? JSON.parse(effectiveEventType.schema) : deriveSchema(currentContent),
+        [effectiveEventType, currentContent]);
 
     // Pre-process content: replace coordinate object values with formatted strings so the editor
     // renders them as plain text instead of expanding sub-objects.
@@ -166,70 +96,7 @@ export const EventDetails = ({ item, comparisonScope }: EventDetailsProps) => {
     const eventSource = eventSources.data.find(source => source.name === item.context.eventSourceType);
     const eventStream = eventSource?.streams.find(stream => stream.name === item.context.eventStreamType);
 
-    // Build context object for display - metadata reflects the current revision
-    const contextObject = {
-        eventType: item.context.eventType.id,
-        generation: item.context.eventType.generation,
-        eventSourceType: item.context.eventSourceType,
-        ...(eventSource?.description ? { eventSourceDescription: eventSource.description } : {}),
-        ...(item.context.eventSource ? { eventSource: item.context.eventSource } : {}),
-        eventSourceId: item.context.eventSourceId,
-        sequenceNumber: item.context.sequenceNumber,
-        eventStreamType: item.context.eventStreamType,
-        ...(eventStream?.description ? { eventStreamDescription: eventStream.description } : {}),
-        eventStreamId: item.context.eventStreamId,
-        occurred: currentMetadata.occurred instanceof Date
-            ? (currentMetadata.occurred as Date).toISOString()
-            : new Date(currentMetadata.occurred as string).toISOString(),
-        correlationId: currentMetadata.correlationId?.toString() ?? '',
-        causedBy: {
-            name: currentMetadata.causedBy?.name ?? '',
-            subject: currentMetadata.causedBy?.subject ?? ''
-        },
-        causation: item.context.causation.map(c => ({
-            type: c.type,
-            occurred: c.occurred instanceof Date ? (c.occurred as Date).toISOString() : new Date(c.occurred as string).toISOString(),
-            properties: c.properties
-        }))
-    };
-
-    const contextSchema = {
-        type: 'object',
-        properties: {
-            eventType: { type: 'string', title: 'Event Type' },
-            generation: { type: 'number', title: 'Generation' },
-            eventSourceType: { type: 'string', title: 'Event Source Type' },
-            eventSourceDescription: { type: 'string', title: 'Event Source Description' },
-            eventSource: { type: 'string', title: 'Event Source' },
-            eventSourceId: { type: 'string', title: 'Event Source ID' },
-            sequenceNumber: { type: 'number', title: 'Sequence Number' },
-            eventStreamType: { type: 'string', title: 'Event Stream Type' },
-            eventStreamDescription: { type: 'string', title: 'Event Stream Description' },
-            eventStreamId: { type: 'string', title: 'Event Stream ID' },
-            occurred: { type: 'string', title: 'Occurred', format: 'date-time' },
-            correlationId: { type: 'string', title: 'Correlation ID' },
-            causedBy: {
-                type: 'object',
-                title: 'Caused By',
-                properties: {
-                    name: { type: 'string', title: 'Name' },
-                    subject: { type: 'string', title: 'Subject' }
-                }
-            },
-            causation: {
-                type: 'array',
-                title: 'Causation',
-                items: {
-                    type: 'object',
-                    properties: {
-                        type: { type: 'string', title: 'Type' },
-                        occurred: { type: 'string', title: 'Occurred', format: 'date-time' },
-                        properties: { type: 'object', title: 'Properties' }
-                    }
-                }
-            }
-        }
-    };
+    const contextObject = buildContextObject(item, currentMetadata, eventSource, eventStream);
 
     const revisionPlaceholder = isRevised ? revisionOptions[revisionOptions.length - 1]?.label : undefined;
     const generationPlaceholder = hasMultipleGenerations ? generationOptions.find(o => o.value === item.context.eventType.generation)?.label : undefined;
