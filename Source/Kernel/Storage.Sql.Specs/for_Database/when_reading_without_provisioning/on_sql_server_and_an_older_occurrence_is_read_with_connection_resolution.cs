@@ -25,6 +25,7 @@ public class on_sql_server_and_an_older_occurrence_is_read_with_connection_resol
         _databasesAfter = await PhysicalDatabases();
     }
 
-    [Fact] void should_read_nothing_and_change_nothing() =>
+    [Fact]
+    void should_read_nothing_and_change_nothing() =>
         (_catalogBefore.Contains($"{ColdIndexedSink.Occurrence}.id", StringComparison.Ordinal), _read, _catalogAfter == _catalogBefore, string.Join(',', _databasesAfter) == string.Join(',', _databasesBefore)).ShouldEqual((true, new OccurrenceRead(0, 0, 0), true, true));
 }
