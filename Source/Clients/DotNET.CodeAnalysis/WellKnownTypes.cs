@@ -244,6 +244,11 @@ public static class WellKnownTypes
     public const string EventTypeMigrationGenericDisplay = "Cratis.Chronicle.Events.Migrations.EventTypeMigration<TUpgrade, TPrevious>";
 
     /// <summary>
+    /// The open-generic display string of the IEventTypeMigrationFor&lt;TUpgrade, TPrevious&gt; interface.
+    /// </summary>
+    public const string EventTypeMigrationForGenericDisplay = "Cratis.Chronicle.Events.Migrations.IEventTypeMigrationFor<TUpgrade, TPrevious>";
+
+    /// <summary>
     /// The full name of the EventStreamId attribute.
     /// </summary>
     public const string EventStreamIdAttributeName = "Cratis.Chronicle.Events.EventStreamIdAttribute";

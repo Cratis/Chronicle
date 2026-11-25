@@ -83,8 +83,6 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
 
     static string? UnsupportedOption(SyntaxNode node) => node switch
     {
-        CompositeKeySyntax { Type.Length: 0 } => "Untyped composite projection keys are not supported; name the key type",
-        RemoveWithSyntax { PartsKey: not null } => "Untyped composite removal keys are not supported; name the key type",
         RemoveKeyMappingSyntax removal => DynamicMappingTarget.GetError(removal.Property),
         MappingSyntax mapping when mapping.Property.Contains(".$", StringComparison.Ordinal) => DynamicMappingTarget.GetError(mapping.Property),
         _ => null

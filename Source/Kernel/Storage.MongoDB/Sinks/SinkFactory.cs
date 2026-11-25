@@ -45,6 +45,9 @@ public class SinkFactory(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
+    public bool SupportsFlatCompositeKeys => true;
+
+    /// <inheritdoc/>
     public ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel) =>
         Create(eventStore, @namespace, readModel, serviceProvider.GetRequiredService<IDatabase>().GetReadModelDatabase(eventStore, @namespace));
 
