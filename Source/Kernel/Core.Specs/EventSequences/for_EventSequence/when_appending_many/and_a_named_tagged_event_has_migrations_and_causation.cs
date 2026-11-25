@@ -51,11 +51,13 @@ public class and_a_named_tagged_event_has_migrations_and_causation : given.an_ev
     }
 
     async Task Because() => _result = await _eventSequence.AppendMany(
-        [new EventToAppend(EventSourceType.Default, _eventSourceId, EventStreamType.All, EventStreamId.Default, _eventType, [], new JsonObject { ["legacyValue"] = "original" })
-        {
-            NamedTags = [new NamedTag(new TagName("account"), "one")],
-            Causation = [new Causation(DateTimeOffset.UnixEpoch, "individual", new Dictionary<string, string>())]
-        }],
+        [
+            new EventToAppend(EventSourceType.Default, _eventSourceId, EventStreamType.All, EventStreamId.Default, _eventType, [], new JsonObject { ["legacyValue"] = "original" })
+           {
+               NamedTags = [new NamedTag(new TagName("account"), "one")],
+               Causation = [new Causation(DateTimeOffset.UnixEpoch, "individual", new Dictionary<string, string>())]
+           }
+        ],
         CorrelationId.NotSet,
         [new Causation(DateTimeOffset.UnixEpoch, "ambient", new Dictionary<string, string>())],
         Identity.System,

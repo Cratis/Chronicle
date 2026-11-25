@@ -73,17 +73,20 @@ public class UniqueEventTypeConstraintValidator(
         //
         // It is not moved to the violation details either. Details travel the same route to the same caller, so
         // that would relocate the value rather than withhold it.
-        return isAllowed ?
-            ConstraintValidationResult.Success :
-            new()
-            {
-                Violations =
-                [
-                    this.CreateViolation(
-                        context,
-                        sequenceNumber,
-                        $"Event '{context.EventTypeId}' violated a unique event type constraint on sequence number {sequenceNumber}")
-                ]
-            };
+        if (isAllowed)
+        {
+            return ConstraintValidationResult.Success;
+        }
+
+        return new()
+        {
+            Violations =
+            [
+                this.CreateViolation(
+                    context,
+                    sequenceNumber,
+                    $"Event '{context.EventTypeId}' violated a unique event type constraint on sequence number {sequenceNumber}")
+            ]
+        };
     }
 }

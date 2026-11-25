@@ -132,7 +132,8 @@ public partial class OccurrencesStorage<TContext>(Func<Task<DbContextScope<TCont
 
         var existing = await Get(token.OccurrenceId);
         return existing?.State == OccurrenceState.Completed && existing.Epoch == token.Epoch
-            ? OccurrenceLeaseResult.AlreadyCompleted : OccurrenceLeaseResult.OccurrenceLeaseLost;
+            ? OccurrenceLeaseResult.AlreadyCompleted
+            : OccurrenceLeaseResult.OccurrenceLeaseLost;
     }
 
     /// <inheritdoc/>

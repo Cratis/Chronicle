@@ -183,9 +183,9 @@ public partial class EventValueProviderExpressionResolvers(ITypeFormats typeForm
             return Convert(schemaProperty, conceptValue!);
         }
 
-        var properties = schemaProperty.IsArray ?
-            schemaProperty.Item!.GetFlattenedProperties() :
-            schemaProperty.GetFlattenedProperties();
+        var properties = schemaProperty.IsArray
+            ? schemaProperty.Item!.GetFlattenedProperties()
+            : schemaProperty.GetFlattenedProperties();
 
         foreach (var property in properties)
         {

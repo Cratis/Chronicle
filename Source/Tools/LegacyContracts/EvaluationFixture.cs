@@ -17,6 +17,21 @@ record EvaluationFixture(Matrix Matrix, OwnerIssue[] Issues, IReadOnlyDictionary
         new Dictionary<string, JobResult>(StringComparer.Ordinal) { ["wire"] = new("success", null) },
         PassingTrx);
 
+    public static string WithOtherTest(string outcome) => PassingTrx
+        .Replace("</Results>", $"<UnitTestResult testId=\"test-2\" outcome=\"{outcome}\" /></Results>", StringComparison.Ordinal)
+        .Replace("</TestDefinitions>", "<UnitTest id=\"test-2\"><TestMethod className=\"Example.Contract\" name=\"should_keep_the_contract\" /></UnitTest></TestDefinitions>", StringComparison.Ordinal);
+
+    public static string TrxFor(string outcome) => string.Join(
+        "\n",
+        "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\">",
+        "  <Results>",
+        $"    <UnitTestResult testId=\"test-1\" outcome=\"{outcome}\" />",
+        "  </Results>",
+        "  <TestDefinitions>",
+        "    <UnitTest id=\"test-1\"><TestMethod className=\"Example.Contract\" name=\"should_reject_a_break\" /></UnitTest>",
+        "  </TestDefinitions>",
+        "</TestRun>");
+
     public EvaluationFixture WithRow(MatrixRow row) => this with { Matrix = Matrix with { Rows = [row] } };
 
     public EvaluationFixture WithJob(string result, bool skipped = false) => this with
@@ -32,19 +47,4 @@ record EvaluationFixture(Matrix Matrix, OwnerIssue[] Issues, IReadOnlyDictionary
         JsonSerializer.Serialize(Issues),
         JsonSerializer.Serialize(Jobs),
         () => TestResults.Parse(Trx ?? throw new CannotEvaluate("No TRX files were supplied.")));
-
-    public static string WithOtherTest(string outcome) => PassingTrx
-        .Replace("</Results>", $"<UnitTestResult testId=\"test-2\" outcome=\"{outcome}\" /></Results>", StringComparison.Ordinal)
-        .Replace("</TestDefinitions>", "<UnitTest id=\"test-2\"><TestMethod className=\"Example.Contract\" name=\"should_keep_the_contract\" /></UnitTest></TestDefinitions>", StringComparison.Ordinal);
-
-    public static string TrxFor(string outcome) => string.Join(
-        "\n",
-        "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\">",
-        "  <Results>",
-        $"    <UnitTestResult testId=\"test-1\" outcome=\"{outcome}\" />",
-        "  </Results>",
-        "  <TestDefinitions>",
-        "    <UnitTest id=\"test-1\"><TestMethod className=\"Example.Contract\" name=\"should_reject_a_break\" /></UnitTest>",
-        "  </TestDefinitions>",
-        "</TestRun>");
 }

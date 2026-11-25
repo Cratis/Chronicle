@@ -16,13 +16,13 @@ public record ProjectionKey(ProjectionId ProjectionId, EventStoreName EventStore
     /// <param name="key"><see cref="ProjectionKey"/> to convert from.</param>
     public static implicit operator string(ProjectionKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ProjectionId, EventStore);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ProjectionKey"/> instance.</returns>
     public static ProjectionKey Parse(string key) => KeyHelper.Parse<ProjectionKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ProjectionId, EventStore);
 }

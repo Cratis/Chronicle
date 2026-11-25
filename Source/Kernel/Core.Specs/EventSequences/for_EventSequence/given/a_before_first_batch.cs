@@ -33,13 +33,13 @@ public class a_before_first_batch : appending_many_events
                 var stream = call.ArgAt<EventStreamId?>(3);
                 var streamType = call.ArgAt<EventStreamType?>(4);
                 _checkedSources.Add(source);
-                return _history.Exists(@event =>
+                var exists = _history.Exists(@event =>
                     (eventTypes is not { Length: > 0 } || eventTypes.Any(eventType => eventType.Id == @event.EventType.Id)) &&
                     (source?.IsSpecified != true || @event.EventSourceId == source) &&
                     (sourceType?.IsDefaultOrUnspecified != false || @event.EventSourceType == sourceType) &&
                     (stream?.IsDefault != false || @event.eventStreamId == stream) &&
-                    (streamType?.IsAll != false || @event.eventStreamType == streamType))
-                    ? (EventSequenceNumber)5 : EventSequenceNumber.Unavailable;
+                    (streamType?.IsAll != false || @event.eventStreamType == streamType));
+                return exists ? (EventSequenceNumber)5 : EventSequenceNumber.Unavailable;
             });
         _eventSequenceStorage.AppendMany(Arg.Any<IEnumerable<EventToAppendToStorage>>())
             .Returns(call =>

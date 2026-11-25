@@ -22,14 +22,24 @@ internal static class ConcurrencyViolationConverters
             ActualEventSequenceNumber: (EventSequenceNumber)violation.ActualSequenceNumber)
         {
             ScopeIndex = violation.ScopeIndex,
-            Scope = violation.Scope is null ? null : new ConcurrencyScope(
-                violation.Scope.ExpectsNoMatchingEvent ? EventSequenceNumber.BeforeFirst : new EventSequenceNumber(violation.Scope.SequenceNumber),
-                violation.Scope.EventSourceId ? new EventSourceId(violation.EventSourceId) : null,
-                violation.Scope.EventStreamType is null ? null : new EventStreamType(violation.Scope.EventStreamType),
-                violation.Scope.EventStreamId is null ? null : new EventStreamId(violation.Scope.EventStreamId),
-                violation.Scope.EventSourceType is null ? null : new EventSourceType(violation.Scope.EventSourceType),
-                violation.Scope.EventTypes?.Select(_ => _.ToClient()).ToArray()),
+            Scope = ToClient(violation.Scope, violation.EventSourceId),
             ConflictingEventTypeId = string.IsNullOrEmpty(violation.ConflictingEventTypeId) ? null : new EventTypeId(violation.ConflictingEventTypeId),
             ConflictingEventSequenceNumber = violation.ConflictingSequenceNumber is { } conflicting ? new EventSequenceNumber(conflicting) : null
         };
+
+    static ConcurrencyScope? ToClient(Contracts.Sequences.ConcurrencyScope? scope, string eventSourceId)
+    {
+        if (scope is null)
+        {
+            return null;
+        }
+
+        return new ConcurrencyScope(
+            scope.ExpectsNoMatchingEvent ? EventSequenceNumber.BeforeFirst : new EventSequenceNumber(scope.SequenceNumber),
+            scope.EventSourceId ? new EventSourceId(eventSourceId) : null,
+            scope.EventStreamType is null ? null : new EventStreamType(scope.EventStreamType),
+            scope.EventStreamId is null ? null : new EventStreamId(scope.EventStreamId),
+            scope.EventSourceType is null ? null : new EventSourceType(scope.EventSourceType),
+            scope.EventTypes?.Select(_ => _.ToClient()).ToArray());
+    }
 }

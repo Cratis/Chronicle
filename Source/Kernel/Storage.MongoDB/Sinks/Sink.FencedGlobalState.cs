@@ -8,9 +8,9 @@ using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 
-/// <summary>
+/// <content>
 /// The bookkeeping a <see cref="SinkWriteMode.FencedGlobal"/> write is checked against.
-/// </summary>
+/// </content>
 public partial class Sink
 {
     /// <summary>

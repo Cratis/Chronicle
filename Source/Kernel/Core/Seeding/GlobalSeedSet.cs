@@ -38,10 +38,9 @@ internal static class GlobalSeedSet
         var updated = new EventSeeds(
             AddGrouping(current.ByEventType, entries.GroupBy(_ => _.EventTypeId), owner),
             AddGrouping(current.ByEventSource, entries.GroupBy(_ => _.EventSourceId), owner));
-        return updated.ByEventType.Values.Sum(_ => _.Count()) == current.ByEventType.Values.Sum(_ => _.Count()) &&
-            updated.ByEventSource.Values.Sum(_ => _.Count()) == current.ByEventSource.Values.Sum(_ => _.Count())
-            ? current
-            : updated;
+        var isUnchanged = updated.ByEventType.Values.Sum(_ => _.Count()) == current.ByEventType.Values.Sum(_ => _.Count()) &&
+            updated.ByEventSource.Values.Sum(_ => _.Count()) == current.ByEventSource.Values.Sum(_ => _.Count());
+        return isUnchanged ? current : updated;
     }
 
     /// <summary>
@@ -71,10 +70,18 @@ internal static class GlobalSeedSet
 
     static int Count(EventSeeds seeds, SeededEventEntry entry)
     {
-        var byType = seeds.ByEventType.TryGetValue(entry.EventTypeId, out var types)
-            ? types.Count(_ => SeededEventEntryIdentity.Comparer.Equals(_, entry)) : 0;
-        var bySource = seeds.ByEventSource.TryGetValue(entry.EventSourceId, out var sources)
-            ? sources.Count(_ => SeededEventEntryIdentity.Comparer.Equals(_, entry)) : 0;
+        var byType = 0;
+        if (seeds.ByEventType.TryGetValue(entry.EventTypeId, out var types))
+        {
+            byType = types.Count(_ => SeededEventEntryIdentity.Comparer.Equals(_, entry));
+        }
+
+        var bySource = 0;
+        if (seeds.ByEventSource.TryGetValue(entry.EventSourceId, out var sources))
+        {
+            bySource = sources.Count(_ => SeededEventEntryIdentity.Comparer.Equals(_, entry));
+        }
+
         return Math.Max(byType, bySource);
     }
 

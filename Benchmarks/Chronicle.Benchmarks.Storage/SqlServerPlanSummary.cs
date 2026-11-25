@@ -34,9 +34,10 @@ internal static class SqlServerPlanSummary
         var counters = children.Where(element => element.Name == _showplan + "RunTimeCountersPerThread").ToArray();
         var objects = children.Where(element => element.Name == _showplan + "Object").Select(element =>
             $"{Value(element, "Table")}.{Value(element, "Index")}");
-        var lookup = children.Any(element =>
+        var isLookup = children.Any(element =>
             string.Equals((string?)element.Attribute("Lookup"), "1", StringComparison.Ordinal) ||
-            string.Equals((string?)element.Attribute("Lookup"), "true", StringComparison.Ordinal)) ? " (Key Lookup)" : string.Empty;
+            string.Equals((string?)element.Attribute("Lookup"), "true", StringComparison.Ordinal));
+        var lookup = isLookup ? " (Key Lookup)" : string.Empty;
         return $"Node {Value(operation, "NodeId")}: {Value(operation, "PhysicalOp")}{lookup}; estimated rows={Value(operation, "EstimateRows")}; actual rows={Total(counters, "ActualRows")}; executions={Total(counters, "ActualExecutions")}; {string.Join(", ", objects)}";
     }
 

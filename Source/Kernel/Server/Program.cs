@@ -134,7 +134,8 @@ ChronicleOptions chronicleOptions;
 SchemaAction schemaAction;
 try
 {
-    schemaAction = schemaCommand.Action != SchemaAction.None ? schemaCommand.Action
+    schemaAction = schemaCommand.Action != SchemaAction.None
+        ? schemaCommand.Action
         : builder.Configuration.GetValue<SchemaAction>($"{ChronicleOptions.SectionPath}:Storage:SchemaAction");
     if (!Enum.IsDefined(schemaAction))
     {

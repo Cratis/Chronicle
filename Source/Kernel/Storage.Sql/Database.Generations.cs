@@ -19,9 +19,9 @@ using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// Reads generation metadata without provisioning, migration, or SQLite write pragmas.
-/// </summary>
+/// </content>
 public partial class Database
 {
     /// <inheritdoc/>

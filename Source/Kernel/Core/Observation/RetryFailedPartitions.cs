@@ -37,6 +37,21 @@ namespace Cratis.Chronicle.Observation;
 public record RetryFailedPartitions(string EventStore, string Namespace, string ObserverId, string EventSequenceId)
 {
     /// <summary>
+    /// Accepts the retry of every failed partition of an observer as a job.
+    /// </summary>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the jobs manager with.</param>
+    /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
+    /// <param name="key">The <see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>How many partitions are failed, and the <see cref="JobId"/> of the job retrying them; <see cref="JobId.NotSet"/> if none is failed or no job could be started.</returns>
+    public static async Task<(int FailedPartitions, JobId JobId)> Accept(IGrainFactory grainFactory, IStorage storage, ObserverKey key)
+    {
+        var failedPartitions = await FailedPartitionCount(storage, key);
+        return (failedPartitions, failedPartitions == 0
+            ? JobId.NotSet
+            : await ObserverOperatorCommandJobs.Accept(grainFactory, key, ObserverOperatorCommand.RetryFailedPartitions));
+    }
+
+    /// <summary>
     /// Handles the command by accepting it as a job that asks the target observer grain to recover its failed partitions.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
@@ -54,21 +69,6 @@ public record RetryFailedPartitions(string EventStore, string Namespace, string 
         }
 
         return new RetryFailedPartitionsResult(failedPartitions);
-    }
-
-    /// <summary>
-    /// Accepts the retry of every failed partition of an observer as a job.
-    /// </summary>
-    /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get the jobs manager with.</param>
-    /// <param name="storage">The <see cref="IStorage"/> holding the failed partitions.</param>
-    /// <param name="key">The <see cref="ObserverKey"/> of the observer.</param>
-    /// <returns>How many partitions are failed, and the <see cref="JobId"/> of the job retrying them; <see cref="JobId.NotSet"/> if none is failed or no job could be started.</returns>
-    public static async Task<(int FailedPartitions, JobId JobId)> Accept(IGrainFactory grainFactory, IStorage storage, ObserverKey key)
-    {
-        var failedPartitions = await FailedPartitionCount(storage, key);
-        return (failedPartitions, failedPartitions == 0
-            ? JobId.NotSet
-            : await ObserverOperatorCommandJobs.Accept(grainFactory, key, ObserverOperatorCommand.RetryFailedPartitions));
     }
 
     /// <summary>

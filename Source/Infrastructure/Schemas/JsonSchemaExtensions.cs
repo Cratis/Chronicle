@@ -199,12 +199,14 @@ public static class JsonSchemaExtensions
             return typeFormats.GetTypeForFormat(schemaProperty.Format);
         }
 
-        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                    schemaProperty.Reference?.Type ??
-                        (schemaProperty.HasOneOfSchemaReference ?
-                            schemaProperty.OneOf[0].Reference?.Type ?? JsonObjectType.None :
-                            JsonObjectType.None) :
-                    schemaProperty.Type;
+        var type = schemaProperty.Type;
+        if (type == JsonObjectType.None && schemaProperty.HasReference)
+        {
+            var oneOfType = schemaProperty.HasOneOfSchemaReference
+                ? schemaProperty.OneOf[0].Reference?.Type ?? JsonObjectType.None
+                : JsonObjectType.None;
+            type = schemaProperty.Reference?.Type ?? oneOfType;
+        }
 
         if (type.HasFlag(JsonObjectType.Null))
         {

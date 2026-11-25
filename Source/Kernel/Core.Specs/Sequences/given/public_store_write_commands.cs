@@ -44,9 +44,15 @@ public static class public_store_write_commands
 
     public static string StoreMember(Type commandType) => StoreProperty(commandType).Name;
 
-    static Type? ValidatedCommand(Type type) =>
-        type.BaseType is { IsGenericType: true } parent && parent.GetGenericTypeDefinition() == typeof(CommandValidator<>)
-            ? parent.GenericTypeArguments[0] : null;
+    static Type? ValidatedCommand(Type type)
+    {
+        if (type.BaseType is { IsGenericType: true } parent && parent.GetGenericTypeDefinition() == typeof(CommandValidator<>))
+        {
+            return parent.GenericTypeArguments[0];
+        }
+
+        return null;
+    }
 
     static PropertyInfo StoreProperty(Type type) => type.GetProperty(type == typeof(EnsureEventStore) ? "Name" : "EventStore")!;
 

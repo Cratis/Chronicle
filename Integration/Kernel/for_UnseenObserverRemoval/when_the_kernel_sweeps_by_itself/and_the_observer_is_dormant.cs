@@ -44,13 +44,17 @@ public class and_the_observer_is_dormant(context context) : Given<context>(conte
             HandledAfterTheWake = alpha.Handled.Count;
         }
 
-        async Task<string[]> ResidentObserverGrains(string observerId) =>
-            [.. (await Services.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0).GetDetailedGrainStatistics())
-                .Select(statistics => statistics.GrainId.ToString())
+        async Task<string[]> ResidentObserverGrains(string observerId)
+        {
+            var statistics = await Services.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0).GetDetailedGrainStatistics();
+            var grains = statistics
+                .Select(statistic => statistic.GrainId.ToString())
                 .Where(grain =>
                     grain.Contains(observerId, StringComparison.OrdinalIgnoreCase) &&
                     grain.Contains(_storeName, StringComparison.Ordinal) &&
-                    grain.StartsWith("observer/", StringComparison.OrdinalIgnoreCase))];
+                    grain.StartsWith("observer/", StringComparison.OrdinalIgnoreCase));
+            return [.. grains];
+        }
     }
 
     [Fact] void should_have_been_released_from_memory() => Context.WasReleased.ShouldBeTrue();

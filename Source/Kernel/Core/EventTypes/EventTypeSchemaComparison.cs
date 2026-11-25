@@ -26,8 +26,9 @@ static class EventTypeSchemaComparison
             return null;
         }
 
-        var definitions = eventType.Generations.Count > 0 ? eventType.Generations :
-            [new Contracts.Events.EventTypeGenerationDefinition { Generation = eventType.Type.Generation, Schema = eventType.Schema }];
+        var definitions = eventType.Generations.Count > 0
+            ? eventType.Generations
+            : [new Contracts.Events.EventTypeGenerationDefinition { Generation = eventType.Type.Generation, Schema = eventType.Schema }];
         foreach (var genDef in definitions)
         {
             if (await FindDifferenceInGeneration(storedDefinition, genDef, allowEvolution) is { } problem)

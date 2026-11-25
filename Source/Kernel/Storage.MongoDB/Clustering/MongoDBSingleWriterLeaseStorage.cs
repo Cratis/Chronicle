@@ -96,6 +96,13 @@ public class MongoDBSingleWriterLeaseStorage(IDatabase database) : ISingleWriter
     static PipelineUpdateDefinition<SingleWriterLeaseDocument> Pipeline(BsonDocument fields) =>
         new(new[] { new BsonDocument("$set", fields) });
 
-    static SingleWriterLeaseHolder? Holder(SingleWriterLeaseDocument? document) => document is null ? null :
-        new(new(document.Owner), document.HostName, document.Version, new DateTimeOffset(document.AcquiredAt), new DateTimeOffset(document.ExpiresAt));
+    static SingleWriterLeaseHolder? Holder(SingleWriterLeaseDocument? document)
+    {
+        if (document is null)
+        {
+            return null;
+        }
+
+        return new(new(document.Owner), document.HostName, document.Version, new DateTimeOffset(document.AcquiredAt), new DateTimeOffset(document.ExpiresAt));
+    }
 }

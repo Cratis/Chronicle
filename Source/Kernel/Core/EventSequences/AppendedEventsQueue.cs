@@ -12,7 +12,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Cratis.Tasks;
@@ -26,7 +25,11 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents the state of <see cref="AppendedEventsQueues"/>.
 /// </summary>
-[KeepAlive]
+/// <remarks>
+/// The queue is collected like any other grain when it owes nothing: it keeps itself only while it holds live subscriptions,
+/// queued or in-flight deliveries, catch-up triggers or rings. What it holds is rebuilt lazily: the observers it serves come
+/// from the routing table and their stored cursors, and an observer whose live subscription was lost is rung by its next event.
+/// </remarks>
 [PreferLocalPlacement]
 public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
@@ -94,9 +97,9 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
     /// <param name="storage">The <see cref="IStorage"/> the queue compares its subscriptions with; optional for standalone specification queues.</param>
-    /// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo supports dormant observers; without it none is kept.</param>
     /// <param name="wakeAdmission">The <see cref="IWakeAdmission"/> that bounds how many dormant observers wake at once; without it wakes are not bounded.</param>
     /// <param name="dormantObserverGauge">The <see cref="IDormantObserverGauge"/> the queue reports its dormant observers to; optional for standalone specification queues.</param>
+    /// <param name="routing">The silo-local routing table the queue compares its own matching with; without it nothing is compared.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
@@ -105,12 +108,12 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         ILogger<AppendedEventsQueue> logger,
         IShutdownDrainBudget? stopBudget = null,
         IStorage? storage = null,
-        IClusterReleases? clusterReleases = null,
         IWakeAdmission? wakeAdmission = null,
-        IDormantObserverGauge? dormantObserverGauge = null)
+        IDormantObserverGauge? dormantObserverGauge = null,
+        Observation.ObserverRouting.IObservers? routing = null)
     {
+        _routing = routing;
         _dormantObserverGauge = dormantObserverGauge;
-        _clusterReleases = clusterReleases;
         _wakeAdmission = wakeAdmission;
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
@@ -177,9 +180,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         Identify(EventSequenceKey.Parse(key!), queueId);
         _metrics = _meter.BeginScope(key!, queueId, _metricNames);
         _dormantGaugeRegistration = _dormantObserverGauge?.Register(_eventSequenceKey, () => DormantCount);
-        ConfigureDurableSubscriptionCheck(_observers);
         ConfigureDormantSafetyNet();
-        await SeedDormantSubscriptions();
+        await ReadInstances();
         await base.OnActivateAsync(cancellationToken);
     }
 
@@ -231,6 +233,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
 
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
+        KeepWhileOwed();
 
         // The channel is bounded in batches, and a batch can hold any number of events, so it is bounded in events too.
         // A batch that arrives while nothing else waits is always taken: it can only be spilled by the lanes.
@@ -264,6 +267,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         lock (_subscriptionsLock)
         {
             _subscriptions.Clear();
+            _releasedWhileDormant.Clear();
             catchupTriggers = [.. _catchupTriggers];
         }
 
@@ -308,7 +312,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             // catch-up); each entry would otherwise leave stale duplicates behind and cause
             // observer.Handle to be invoked multiple times for the same event.
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
-            _dormant.Remove(observerKey);
+            NoteSubscribed(observerKey);
             _subscriptions.Add(new(observerKey, eventTypes, filters));
         }
 
@@ -326,7 +330,7 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             }
 
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
-            _dormant.Remove(observerKey);
+            NoteSubscribed(observerKey);
             _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
         }
 
@@ -344,9 +348,9 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         lock (_subscriptionsLock)
         {
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
-            _dormant.Remove(observerKey);
             CloseLane(observerKey);
             _pageObservers.TryRemove(observerKey, out _);
+            _releasedWhileDormant.Remove(observerKey.ObserverId);
         }
 
         return Task.CompletedTask;
@@ -446,12 +450,6 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             foreach (var subscription in _subscriptions.ToArray())
             {
                 if (!MayMatch(subscription, batchEventTypes, hasRedaction) || GetFilteredEvents(batch, subscription).Count == 0)
-                {
-                    continue;
-                }
-
-                // A stopping silo activates no dormant observer: it stays dormant for the safety net of the next owner.
-                if (IsStopping && _dormant.ContainsKey(subscription.ObserverKey))
                 {
                     continue;
                 }
@@ -746,11 +744,13 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
 
                 Interlocked.Add(ref _channelEvents, -coalesced.Count);
 
+                var routingTable = await GetShadowRoutingTable();
+
                 try
                 {
                     if (!_isResetting)
                     {
-                        Route(coalesced, batchesDrained);
+                        Route(coalesced, batchesDrained, routingTable);
                         _metrics?.EventsHandled(coalesced.Count);
                     }
                 }
@@ -779,7 +779,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// </summary>
     /// <param name="events">The coalesced events.</param>
     /// <param name="batches">The number of queued batches the events came from.</param>
-    void Route(List<AppendedEvent> events, int batches)
+    /// <param name="routingTable">The silo-local routing table to compare the matching with, or null to compare nothing.</param>
+    void Route(List<AppendedEvent> events, int batches, Observation.ObserverRouting.ObserverRoutingTable? routingTable = null)
     {
         var sorted = SortBySequenceNumber(events);
 
@@ -787,7 +788,8 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
         // before anything is routed to it, so its cursor can never pass an event it skipped.
         var spilled = SpillFragmentedSubscriptions(sorted);
         var batchEventTypes = DistinctEventTypes(sorted, out var hasRedaction);
-        foreach (var subscription in GetSubscriptionsSnapshot())
+        var subscriptions = GetSubscriptionsSnapshot();
+        foreach (var subscription in subscriptions)
         {
             if (spilled.Contains(subscription.ObserverKey) || !MayMatch(subscription, batchEventTypes, hasRedaction))
             {
@@ -799,6 +801,12 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
             {
                 RouteToLane(subscription, matching, batches);
             }
+        }
+
+        if (routingTable is not null)
+        {
+            CompareWithRoutingTable(routingTable, subscriptions, batchEventTypes);
+            RingUnsubscribedObservers(routingTable, subscriptions, batchEventTypes);
         }
     }
 
@@ -852,11 +860,6 @@ public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposa
     /// <returns>Awaitable task.</returns>
     async Task DeliverToObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
     {
-        if (!await WakeDormantObserver(lane, events))
-        {
-            return;
-        }
-
         var runs = SplitIntoPartitionRuns(events);
         var deliversPages = await DeliversPages(lane);
         if (!deliversPages && runs.Count > MaxPartitionRunsPerLiveDispatch && SpillFragmentedSubscriptionToCatchup(CurrentSubscriptionOf(lane)))

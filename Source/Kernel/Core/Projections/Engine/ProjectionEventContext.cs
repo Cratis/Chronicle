@@ -31,8 +31,8 @@ public record ProjectionEventContext(
     readonly List<ProjectionFuture> _deferredFutures = [];
     readonly List<FailedPartition> _failedPartitions = [];
     readonly List<PendingFutureSave> _pendingFutureSaves = [];
-    List<Key>? _affectedParentKeys;
     readonly Dictionary<KeyResolver, KeyResolverResult> _resolvedKeys = [];
+    List<Key>? _affectedParentKeys;
     bool _isKeyUnresolvable;
 
     /// <summary>
@@ -130,6 +130,20 @@ public record ProjectionEventContext(
     internal bool HasPendingFutureSaves => _pendingFutureSaves.Count > 0;
 
     /// <summary>
+    /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
+    /// <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="comparer">The <see cref="IObjectComparer"/>.</param>
+    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
+    /// <returns>The <see cref="ProjectionEventContext"/>.</returns>
+    public static ProjectionEventContext Empty(IObjectComparer comparer, AppendedEvent @event) => new(
+        Key.Undefined,
+        @event,
+        new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
+        ProjectionOperationType.None,
+        false);
+
+    /// <summary>
     /// Adds a deferred future to the context.
     /// </summary>
     /// <param name="future">The <see cref="ProjectionFuture"/> to add.</param>
@@ -212,18 +226,4 @@ public record ProjectionEventContext(
     /// <param name="futureId">The identity of the persisted future.</param>
     public void AddPendingFutureSave(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, ProjectionFutureId futureId) =>
         _pendingFutureSaves.Add(new PendingFutureSave(key, changeset) { FutureId = futureId });
-
-    /// <summary>
-    /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
-    /// <see cref="AppendedEvent"/>.
-    /// </summary>
-    /// <param name="comparer">The <see cref="IObjectComparer"/>.</param>
-    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
-    /// <returns>The <see cref="ProjectionEventContext"/>.</returns>
-    public static ProjectionEventContext Empty(IObjectComparer comparer, AppendedEvent @event) => new(
-        Key.Undefined,
-        @event,
-        new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
-        ProjectionOperationType.None,
-        false);
 }

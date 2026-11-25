@@ -63,7 +63,8 @@ internal static class AppendFingerprintComparison
         if (plain != stored.Plain || !stored.ProtectedParts.Select(part => part.Kind).ToHashSet().SetEquals(groups.Keys))
         {
             var reason = stored.EventType.Id == input.EventType.Id && stored.EventType.Generation != input.EventType.Generation
-                ? FingerprintConflictReason.Generation : FingerprintConflictReason.Content;
+                ? FingerprintConflictReason.Generation
+                : FingerprintConflictReason.Content;
             return new FingerprintComparisonResult(FingerprintComparisonStatus.Conflict, stored.EventType, reason);
         }
 

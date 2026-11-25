@@ -95,14 +95,14 @@ public class and_replicas_register_the_same_artifacts_concurrently_with_a_small_
         {
             var eventStoreName = $"rl-{Guid.NewGuid().ToString("N")[..8]}";
             var replicas = Enumerable.Range(0, Replicas).Select(_ => CreateReplica()).ToArray();
-            var registrations = replicas.SelectMany(replica => Enumerable.Range(0, Namespaces).Select(index => (replica, @namespace: $"tenant-{index}"))).ToArray();
+            var registrations = replicas.SelectMany(replica => Enumerable.Range(0, Namespaces).Select(index => (replica, Namespace: $"tenant-{index}"))).ToArray();
             Registrations = registrations.Length;
 
             var stopwatch = Stopwatch.StartNew();
             try
             {
                 // One deadline covers the whole concurrent workload: getting the stores, registering and waiting.
-                var results = await Task.WhenAll(registrations.Select(_ => Register(_.replica, eventStoreName, _.@namespace))).WaitAsync(Bound);
+                var results = await Task.WhenAll(registrations.Select(_ => Register(_.replica, eventStoreName, _.Namespace))).WaitAsync(Bound);
                 Elapsed = stopwatch.Elapsed;
                 Failures = [.. results.OfType<Exception>()];
                 Succeeded = results.Count(_ => _ is null);

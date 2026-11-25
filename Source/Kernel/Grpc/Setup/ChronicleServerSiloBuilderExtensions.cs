@@ -147,6 +147,7 @@ public static class ChronicleServerSiloBuilderExtensions
             .AddReplayStateManagement()
             .AddEventTypesCacheInvalidation()
             .AddObserverDefinitionsCacheInvalidation()
+            .AddObserverRouting()
             .AddEncryptionKeyCacheInvalidation()
             .AddStoreEntitlementsCache()
             .AddProjectionsService()
@@ -175,7 +176,6 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.Replace(ServiceDescriptor.Singleton<Cratis.Chronicle.Supervision.SiloSupervisor, Cratis.Chronicle.Supervision.SiloSupervisor>());
         builder.Services.Replace(ServiceDescriptor.Singleton<Cratis.Chronicle.Supervision.ISiloSupervisor>(sp => sp.GetRequiredService<Cratis.Chronicle.Supervision.SiloSupervisor>()));
         builder.Services.AddSingleton<ILifecycleParticipant<ISiloLifecycle>>(sp => sp.GetRequiredService<Cratis.Chronicle.Supervision.SiloSupervisor>());
-        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Observation.DormantSiloDepartures>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILifecycleParticipant<ISiloLifecycle>, Cratis.Chronicle.Observation.UnseenObserverRemoval>());
 
         builder.Services.AddChronicleAdministratorAuthorization();

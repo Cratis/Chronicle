@@ -20,13 +20,13 @@ public record ReducerKey(ReducerId ReducerId, EventStoreName EventStore, EventSt
     /// <param name="key"><see cref="ReducerKey"/> to convert from.</param>
     public static implicit operator string(ReducerKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ReducerId, EventStore, Namespace, EventSequenceId);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ReducerKey"/> instance.</returns>
     public static ReducerKey Parse(string key) => KeyHelper.Parse<ReducerKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ReducerId, EventStore, Namespace, EventSequenceId);
 }

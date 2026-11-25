@@ -14,9 +14,9 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Sink"/> that promotes a rebuilt replay table to the primary table.
-/// </summary>
+/// </content>
 public partial class Sink
 {
     async Task PerformRenameSwap(ReplayContext context)

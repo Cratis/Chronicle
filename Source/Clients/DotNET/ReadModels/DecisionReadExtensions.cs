@@ -25,9 +25,9 @@ public static class DecisionReadExtensions
             .GroupBy(_ => _.EventSourceId.Value, StringComparer.Ordinal)
             .ToDictionary(_ => _.Key, _ => _.First(), StringComparer.Ordinal);
         return reads
-            .Select(read => (read, label: read.EventStreamType is not null || read.EventStreamId is not null ? read.Scope.EventSourceId!.Value : read.Key.Value))
-            .Where(_ => violations.ContainsKey(_.label))
-            .Select(_ => new DecisionConflict(_.read.ReadModelType, _.read.Key).CausedBy(violations[_.label]))
+            .Select(read => (read, Label: read.EventStreamType is not null || read.EventStreamId is not null ? read.Scope.EventSourceId!.Value : read.Key.Value))
+            .Where(_ => violations.ContainsKey(_.Label))
+            .Select(_ => new DecisionConflict(_.read.ReadModelType, _.read.Key).CausedBy(violations[_.Label]))
             .Distinct().ToArray();
     }
 

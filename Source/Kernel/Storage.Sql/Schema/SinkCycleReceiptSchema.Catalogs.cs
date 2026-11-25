@@ -9,9 +9,9 @@ namespace Cratis.Chronicle.Storage.Sql.Schema;
 
 #pragma warning disable EF1002 // The catalog statements are constants of this assembly; the table and index names are parameters.
 
-/// <summary>
+/// <content>
 /// The read-only catalog inspection of the receipt table.
-/// </summary>
+/// </content>
 internal static partial class SinkCycleReceiptSchema
 {
 #pragma warning disable MA0136 // Line endings in these statements are only whitespace between clauses.

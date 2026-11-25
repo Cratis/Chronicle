@@ -52,7 +52,7 @@ public sealed partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStora
     {
         if (value is null) throw new InvalidUniqueConstraintV2Input(nameof(value));
         if (value.Value.Length != 64) throw new InvalidUniqueConstraintV2Input(nameof(value));
-        if (value.Value.Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f'))) throw new InvalidUniqueConstraintV2Input(nameof(value));
+        if (value.Value.Any(character => character is not ((>= '0' and <= '9') or (>= 'a' and <= 'f')))) throw new InvalidUniqueConstraintV2Input(nameof(value));
     }
 
     static void ValidatePhase(UniqueConstraintWritePhase phase)

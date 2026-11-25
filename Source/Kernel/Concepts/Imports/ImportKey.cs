@@ -25,13 +25,13 @@ public record ImportKey([Id(0)] EventStoreName EventStore, [Id(1)] EventStoreNam
     /// <param name="key">The key as a string.</param>
     public static implicit operator ImportKey(string key) => Parse(key);
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, Namespace, ImportId);
-
     /// <summary>
     /// Parses an <see cref="ImportKey"/> from a string.
     /// </summary>
     /// <param name="key">The key as a string.</param>
     /// <returns>The <see cref="ImportKey"/>.</returns>
     public static ImportKey Parse(string key) => KeyHelper.Parse<ImportKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace, ImportId);
 }

@@ -69,7 +69,14 @@ public partial class Observer
     /// </remarks>
     async Task RestoreFromDurableSubscription()
     {
-        if (State.DurableSubscription is not { } record ||
+        // Without a record of its own, the binding its supervisor holds in memory is the hint the observer resumes from.
+        var record = State.DurableSubscription;
+        if (record is null && _observerExists && !_subscription.IsSubscribed && DormantReleaseAllowed && IsResumableState)
+        {
+            record = await BindingFromSupervisor();
+        }
+
+        if (record is null ||
             !_observerExists ||
             _subscription.IsSubscribed ||
             !record.Kind.IsReleasedWhenDormant(_dormantKinds) ||

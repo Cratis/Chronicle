@@ -595,9 +595,9 @@ public partial class Sink(
         // against a Guid-keyed model) cannot be converted to the _id type and throws "Unrecognized Guid
         // format", freezing the partition — even though that value is never used to key a document here.
         var usesJoinTargetsOnlyFilter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin;
-        var filter = usesJoinTargetsOnlyFilter ?
-            FilterDefinition<BsonDocument>.Empty :
-            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+        var filter = usesJoinTargetsOnlyFilter
+            ? FilterDefinition<BsonDocument>.Empty
+            : Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
 
         // A ROOT-level join (no array indexers) never CONSTRUCTS a root document — it only enriches an
         // existing root matched by the join column; the root's own key is set by its From/[FromEvent] source.

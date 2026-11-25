@@ -26,12 +26,28 @@ public partial record VerifyContent
         return sources.Length == 1 ? sources[0] : null;
     }
 
+    static EventTypeDefinition? SelectDefinition(EventTypeDefinition current, GenerationProvenance? recorded, IReadOnlyDictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>> versions)
+    {
+        if (recorded is null)
+        {
+            return current;
+        }
+        return versions.TryGetValue(recorded.MigrationsVersion, out var migrations) ? current with { Migrations = migrations } : null;
+    }
+
     bool CanProveOriginalDifference(EventTypeGeneration appended, StoredEventGenerations? history) =>
         EventType.Generation == appended.Value || RequestProvenance(appended, history) is not null;
 
-    GenerationProvenance? RequestProvenance(EventTypeGeneration appended, StoredEventGenerations? history) =>
-        history?.DerivedGenerations.TryGetValue(new(EventType.Generation), out var provenance) == true &&
-        provenance.SourceIsAppended && provenance.Source == appended ? provenance : null;
+    GenerationProvenance? RequestProvenance(EventTypeGeneration appended, StoredEventGenerations? history)
+    {
+        if (history?.DerivedGenerations.TryGetValue(new(EventType.Generation), out var provenance) == true &&
+            provenance.SourceIsAppended && provenance.Source == appended)
+        {
+            return provenance;
+        }
+
+        return null;
+    }
 
     async Task<Dictionary<int, EventTypeDefinition>?> GetDefinitions(IEventTypesStorage eventTypes, StoredEventGenerations? history, EventTypeGeneration appended, IEnumerable<int> generations)
     {
@@ -52,15 +68,6 @@ public partial record VerifyContent
             result[generation] = selected;
         }
         return result;
-    }
-
-    static EventTypeDefinition? SelectDefinition(EventTypeDefinition current, GenerationProvenance? recorded, IReadOnlyDictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>> versions)
-    {
-        if (recorded is null)
-        {
-            return current;
-        }
-        return versions.TryGetValue(recorded.MigrationsVersion, out var migrations) ? current with { Migrations = migrations } : null;
     }
 
     sealed class ExpectedContent(VerifyContent request, IEventTypeMigrations migrations, IExpandoObjectConverter converter)

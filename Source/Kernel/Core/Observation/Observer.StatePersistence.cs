@@ -27,6 +27,7 @@ public partial class Observer
             checkpoint.ThrowIfInvalidated();
             if (!CanContinueStateWrite()) return;
             RecordPersistedState(revision);
+            ShareBindingWithSupervisor();
         }
         catch (ObserverContinuationInvalidated)
         {

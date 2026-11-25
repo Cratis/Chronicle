@@ -6,9 +6,9 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Sink"/> that adopts the key layout an existing table already has.
-/// </summary>
+/// </content>
 public partial class Sink
 {
     /// <summary>

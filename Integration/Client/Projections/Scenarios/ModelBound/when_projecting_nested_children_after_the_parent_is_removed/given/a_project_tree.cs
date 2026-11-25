@@ -56,10 +56,18 @@ public class a_project_tree(ChronicleFixture fixture) : Specification(fixture)
     /// <summary>
     /// Gets the ids of the applications stored in the project document, matching field names whatever the naming policy.
     /// </summary>
-    public IEnumerable<Guid?> StoredApplicationIds =>
-        ProjectDocument?.Elements.FirstOrDefault(_ => _.Name.Equals(nameof(TreeProject.Applications), StringComparison.OrdinalIgnoreCase)).Value is BsonArray applications ?
-            applications.Select(_ => GuidOf(_.AsBsonDocument["_id"])) :
-            [];
+    public IEnumerable<Guid?> StoredApplicationIds
+    {
+        get
+        {
+            if (ProjectDocument?.Elements.FirstOrDefault(_ => _.Name.Equals(nameof(TreeProject.Applications), StringComparison.OrdinalIgnoreCase)).Value is BsonArray applications)
+            {
+                return applications.Select(_ => GuidOf(_.AsBsonDocument["_id"]));
+            }
+
+            return [];
+        }
+    }
 
     /// <summary>
     /// Gets whether every stored document is at most a placeholder: not initialized and holding none of the project's data.

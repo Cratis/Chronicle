@@ -14,11 +14,15 @@ public class a_namespace_without_pattern_capture(PatternCaptureOffFixture fixtur
     protected override void ConfigureObserverSettings(Dictionary<string, string?> settings) =>
         settings["PatternDetection:Enabled"] = "false";
 
-    protected async Task<string[]> Resident(string grainType, string containing) =>
-        [.. (await Services.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0).GetDetailedGrainStatistics())
-            .Select(statistics => statistics.GrainId.ToString())
+    protected async Task<string[]> Resident(string grainType, string containing)
+    {
+        var statistics = await Services.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0).GetDetailedGrainStatistics();
+        var grains = statistics
+            .Select(statistic => statistic.GrainId.ToString())
             .Where(grain =>
                 grain.StartsWith(grainType, StringComparison.OrdinalIgnoreCase) &&
                 grain.Contains(containing, StringComparison.OrdinalIgnoreCase) &&
-                grain.Contains(_store.Name.Value, StringComparison.Ordinal))];
+                grain.Contains(_store.Name.Value, StringComparison.Ordinal));
+        return [.. grains];
+    }
 }
