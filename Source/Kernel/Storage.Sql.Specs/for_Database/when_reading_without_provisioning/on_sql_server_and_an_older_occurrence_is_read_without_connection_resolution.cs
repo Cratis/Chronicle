@@ -11,6 +11,13 @@ public class on_sql_server_and_an_older_occurrence_is_read_without_connection_re
 {
     protected override Database Reader => Database;
 
+    async Task Establish()
+    {
+        await new SinkProvenanceStorage(Database, Store, Namespace).CompleteInventory(false);
+        _catalogBefore = await Catalog(ConnectionFor(await ReadModelDatabaseName()));
+        _databasesBefore = await PhysicalDatabases();
+    }
+
     async Task Because()
     {
         _read = await ColdIndexedSink.ReadTheOccurrence(Reader, ColdIndexedSink.IntegerValueSchema, Store, Namespace);

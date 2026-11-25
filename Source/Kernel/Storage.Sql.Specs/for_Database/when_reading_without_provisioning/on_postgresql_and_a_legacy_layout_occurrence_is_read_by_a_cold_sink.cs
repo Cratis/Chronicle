@@ -24,6 +24,7 @@ public class on_postgresql_and_a_legacy_layout_occurrence_is_read_by_a_cold_sink
     async Task Establish()
     {
         await ProvisionPrimaryTable();
+        await new SinkProvenanceStorage(Database, Store, Namespace).CompleteInventory(false);
         var connection = await ReadModelConnection();
         foreach (var table in new[] { "indexed_model", ColdIndexedSink.Occurrence, Backup })
         {
