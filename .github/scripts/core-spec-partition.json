@@ -3,903 +3,919 @@
     "units": [
         {
             "prefix": "Cratis.Chronicle.Alerts.",
-            "weight": 0.004104954902287687
+            "weight": 0.0049265167547130955
         },
         {
             "prefix": "Cratis.Chronicle.Architecture.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Captures.",
-            "weight": 0.0059703077042604835
+            "weight": 0.007495972391240634
         },
         {
             "prefix": "Cratis.Chronicle.Clients.",
-            "weight": 0.002749405967938925
+            "weight": 0.003336148044201087
         },
         {
             "prefix": "Cratis.Chronicle.Compliance.",
-            "weight": 0.004953645929827791
+            "weight": 0.00568284845417483
         },
         {
             "prefix": "Cratis.Chronicle.Configuration.",
-            "weight": 0.006179533689947796
+            "weight": 0.007532234869981938
         },
         {
             "prefix": "Cratis.Chronicle.Core.",
-            "weight": 0.0006866148544386437
+            "weight": 0.0009531851554860243
         },
         {
             "prefix": "Cratis.Chronicle.DevelopmentTools.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Diagnostics.",
-            "weight": 0.0039959213474562915
+            "weight": 0.0044084813441228644
         },
         {
             "prefix": "Cratis.Chronicle.EventSequences.",
-            "weight": 0.0582384951427934
+            "weight": 0.0543729961775154
         },
         {
             "prefix": "Cratis.Chronicle.EventSources.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.EventStores.",
-            "weight": 0.010532023561217652
+            "weight": 0.012386226667212409
         },
         {
             "prefix": "Cratis.Chronicle.EventTypes.",
-            "weight": 0.008790438243735944
+            "weight": 0.008526862340279774
         },
         {
             "prefix": "Cratis.Chronicle.Events.",
-            "weight": 0.027753383795953494
+            "weight": 0.03452187976173297
         },
         {
             "prefix": "Cratis.Chronicle.ExternalServices.",
-            "weight": 0.0020068013556768954
+            "weight": 0.0027455876761282223
         },
         {
             "prefix": "Cratis.Chronicle.Federation.",
-            "weight": 0.029801442158532143
+            "weight": 0.06240254555969931
         },
         {
             "prefix": "Cratis.Chronicle.Generations.",
-            "weight": 0.0033859247542918536
+            "weight": 0.0031496552963886032
         },
         {
             "prefix": "Cratis.Chronicle.Helpers.",
-            "weight": 0.0003212060907030565
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Identities.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Imports.",
-            "weight": 0.0029851538521302417
+            "weight": 0.003605526457708007
         },
         {
             "prefix": "Cratis.Chronicle.Jobs.",
-            "weight": 0.0003418340047849043
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Namespaces.",
-            "weight": 0.0017622132315635588
+            "weight": 0.002284536160702918
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Alerts.",
-            "weight": 0.0013408144153200987
+            "weight": 0.0019115506650779512
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Claims.",
-            "weight": 0.0014586882100735142
+            "weight": 0.0014764009201821578
         },
         {
             "prefix": "Cratis.Chronicle.Observation.EventStoreSubscriptions.",
-            "weight": 0.005230649642182803
+            "weight": 0.006351114133836221
         },
         {
             "prefix": "Cratis.Chronicle.Observation.FailedPartitionsHelpers.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Jobs.",
-            "weight": 0.015951270685636877
+            "weight": 0.017918844852316027
         },
         {
             "prefix": "Cratis.Chronicle.Observation.ObserverRouting.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Placement.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Reactors.",
-            "weight": 0.003117761871227835
+            "weight": 0.005169993397690502
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Reducers.",
-            "weight": 0.004818091065861362
+            "weight": 0.005895242972516825
         },
         {
             "prefix": "Cratis.Chronicle.Observation.States.",
-            "weight": 0.0027258315036727283
+            "weight": 0.003035687506058752
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Supervisors.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.Webhooks.",
-            "weight": 0.034345475767538124
+            "weight": 0.04763335548573653
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_AbandonedDeliveryDrain.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_AsyncGate.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_BoundedPageDelivery.",
-            "weight": 0.0007514454415530222
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_CatchUpAdmission.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ClearObserverQuarantine.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ClearPartitionQuarantine.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ClientDeliveryWait.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_DefinitionEvolutionPlan.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_DefinitionEvolutionPolicy.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_DeliveryFences.",
-            "weight": 0.00031825924583422113
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_DormantObserverGauge.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_DormantObservers.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_DurableSubscriptionRecords.",
-            "weight": 0.000371302453473258
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_EventSkipDetector.",
-            "weight": 0.0006571464057502903
+            "weight": 0.0009324637390624155
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ExceptionFailureKindExtensions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_FailedPartitionDetails.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_FailedPartitionDetailsConverters.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_FailedPartitionGrainStorageProvider.",
-            "weight": 0.00030352502149004425
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_FailedPartitionGroup.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_FailedPartitionGroupConverters.",
-            "weight": 0.0003153124009653858
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_FastForward.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_GenerationInitializationReplay.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_HandledEventsReportDeduplication.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_JobsManagerExtensions.",
-            "weight": 0.0016973826444491797
+            "weight": 0.0016732543762064452
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_Observer.",
-            "weight": 0.05416300868919388
+            "weight": 0.06239736520559355
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverBulkDrain.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverConfigProviderExtensions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverContinuationLifetime.",
-            "weight": 0.00038898352268627027
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverDefinitionGrainStorageProvider.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverDurableSubscriptionFilters.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverEventSequenceResolver.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverFiltersExtensions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverGauges.",
-            "weight": 0.0005333789212592041
+            "weight": 0.0005853800139669605
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverInformation.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverInformationForEventType.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverInformationForEventTypeFilter.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverMetrics.",
-            "weight": 0.0007278706826023393
+            "weight": 0.0008340370110502713
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverPartitionCommands.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverRemover.",
-            "weight": 0.0005363257661280393
+            "weight": 0.0007977745323089552
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverRunPreparation.",
-            "weight": 0.00040666459189928257
+            "weight": 0.000528396118802035
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverRunningStateChanges.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverService.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverServiceClient.",
-            "weight": 0.00034772769452257496
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverState.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverStateGrainStorageProvider.",
-            "weight": 0.0005304320763903685
+            "weight": 0.000766692407673541
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscriberContext.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscriberExtensions.",
-            "weight": 0.0005628473699475578
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscriberResultDeferrals.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscriberSelector.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscription.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverSubscriptionDurability.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ObserverTransitionStateMerge.",
-            "weight": 0.0004361330405876363
+            "weight": 0.0005439371811197422
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PageBounds.",
-            "weight": 0.00037719614321092874
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PageBoundsSplitting.",
-            "weight": 0.00046265434972266793
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PartitionRebuildChangesets.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PartitionRebuildFutures.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PartitionRebuildSink.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_PartitionReplayabilityClassifier.",
-            "weight": 0.0005451663007345457
+            "weight": 0.0005853800139669608
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ProjectionBulkFailures.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ReactorReplayHandler.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ReducerReplayHandler.",
-            "weight": 0.0004980167828331795
+            "weight": 0.0007925941782030528
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ReplayObserver.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ReplayObserverValidator.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_ReplayPartition.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_RetryFailedPartitions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_RetryPartition.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_RoundRobinObserverSubscriberSelector.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_SerializedStateReads.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_StalledObserverJobs.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_SubscriptionAdmission.",
-            "weight": 0.00032415293557189185
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_SuspectedSkipWarningLimiter.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_UnpartitionedGates.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_UnseenObserverRemoval.",
-            "weight": 0.00043613304058763645
+            "weight": 0.0005750193057551561
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_WakeAdmission.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_WebhookProbeEligibility.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_WebhookProbeOutcome.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.for_WebhookProbeSchedule.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Observation.given.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Occurrences.",
-            "weight": 0.0024576683259242217
+            "weight": 0.0027196859055987114
         },
         {
             "prefix": "Cratis.Chronicle.Patching.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Patterns.",
-            "weight": 0.003197326682686389
+            "weight": 0.004004413723862484
         },
         {
             "prefix": "Cratis.Chronicle.ProjectionEditor.",
-            "weight": 0.001243568534648531
+            "weight": 0.0012588260477342606
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.CodeGeneration.",
-            "weight": 0.0005775815942917347
+            "weight": 0.000828856656944369
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_DeclarativeCodeGenerator.",
-            "weight": 0.08280634081427417
+            "weight": 0.041359946663488585
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_Generator.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_LanguageService.",
-            "weight": 0.010841442272445368
+            "weight": 0.013479280865522372
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ModelBoundCodeGenerator.",
-            "weight": 0.05925515632785734
+            "weight": 0.06213316662815684
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_ScreenplayConformance.",
-            "weight": 0.010956368927645456
+            "weight": 0.014484269044032015
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.Expressions.",
-            "weight": 0.0047473670836938
+            "weight": 0.004527629488558617
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.Graphs.",
-            "weight": 0.00092530928881431
+            "weight": 0.0013054492346873815
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.Pipelines.",
-            "weight": 0.008616574396474657
+            "weight": 0.010158674401674407
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.StructuredLiteralPrototype.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ChangesetChildRemovals.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_EventTypeSchemasExtensions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_EventValueProviders.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_FencedGlobalEligibility.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_KeyResolvers.",
-            "weight": 0.002021535580021072
+            "weight": 0.002351880764079647
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_LegacyChildEveryEventMappings.",
-            "weight": 0.001222940620566683
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_LegacyEventSourceIdKeys.",
-            "weight": 0.0005304320763903687
+            "weight": 0.0006993478042968113
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ParticipatingEventTypes.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_Projection.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDateTimes.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDefinitionComparer.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDefinitionInitialization.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionDefinitionRegistrationFailed.",
-            "weight": 0.0003064718663588796
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionEventContextExtensions.",
-            "weight": 0.0003830898329485994
+            "weight": 0.0005698389516492538
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionExtensions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.",
-            "weight": 0.005230649642182802
+            "weight": 0.005838259077351896
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionInitialization.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionRegistrationError.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ProjectionsManager.",
-            "weight": 0.0009606714272403344
+            "weight": 0.0012122028607811398
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_PropertyMappers.",
-            "weight": 0.0038868883819938673
+            "weight": 0.0034656568968486436
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_RecursiveChildProjections.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_ResolvedCollectionPath.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.for_StateValues.",
-            "weight": 0.0006158905775865946
+            "weight": 0.0007148888666145182
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.given.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Engine.when_parsing_flat_composite_keys.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Generations.",
-            "weight": 0.0018034690597272536
+            "weight": 0.0011085957786630936
         },
         {
             "prefix": "Cratis.Chronicle.Projections.Kernel.",
-            "weight": 0.0005245383866526978
+            "weight": 0.0006889870960850067
         },
         {
             "prefix": "Cratis.Chronicle.Projections.SettableTimeProvider.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_IProjection.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_IProjectionsManager.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ImmediateProjection.",
-            "weight": 0.001986173441595048
+            "weight": 0.0020566005800432157
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ImmediateProjectionKey.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_InMemoryProjectionEvents.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_KernelProjections.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_Projection.",
-            "weight": 0.0077973512282539315
+            "weight": 0.010878742586324019
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionCatchupHandler.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionChangesetNotifier.",
-            "weight": 0.00061883742245543
+            "weight": 0.0005957407221787652
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionDefinitionStorageProvider.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionFutures.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionFuturesStorageProvider.",
-            "weight": 0.000309418711227715
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.",
-            "weight": 0.004190413108799426
+            "weight": 0.0055274378309977616
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionRegistrationSignature.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionReplayHandler.",
-            "weight": 0.001049076773305396
+            "weight": 0.0013209902970050885
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionReplayRecommendationEvaluator.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionVersions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0008651191356856851
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionWatchGate.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionWatchGates.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ProjectionsManager.",
-            "weight": 0.017934497282363134
+            "weight": 0.015965849800284655
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_ReadModelChangesetSubscriber.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_RegistrationTiming.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.for_SomeProjectionDefinitionsFailedToRegister.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Projections.when_previewing_flat_keys.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ProtectedValues.",
-            "weight": 0.0029556854034418884
+            "weight": 0.0036676907069788343
         },
         {
             "prefix": "Cratis.Chronicle.ReadModelDefinitions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModelExplorer.",
-            "weight": 0.0008604787016999313
+            "weight": 0.0015800080023002034
         },
         {
             "prefix": "Cratis.Chronicle.ReadModelLookups.",
-            "weight": 0.0005304320763903686
+            "weight": 0.0007356102830381274
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ComplianceIdentifierExtensions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_CompositeKeyNormalizer.",
-            "weight": 0.00043907988545647175
+            "weight": 0.0005542978893315466
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_MaterializedReadModelStore.",
-            "weight": 0.0005923158186359117
+            "weight": 0.0007200692207204205
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModel.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelChangeBookkeeping.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelDefinitionConverters.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelDefinitionExtensions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
+        },
+        {
+            "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelDefinitionProvenance.",
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelDefinitions.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelIndexUpdates.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelInstanceVisibilities.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
+        },
+        {
+            "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelLeaseObservation.",
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReadBindings.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReadPolicy.",
-            "weight": 0.0003742492983420933
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReplayManager.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelReplayManagerStorageProvider.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
+        },
+        {
+            "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelSinkProvenance.",
+            "weight": 0.0005439371811197421
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelsCompliance.",
-            "weight": 0.25073228594026953
+            "weight": 0.15925444177936662
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelsManager.",
-            "weight": 0.0018093627494649247
+            "weight": 0.002704144843281004
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_ReadModelsManagerStorageProvider.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.ReadModels.for_SinkChangeReplays.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
+        },
+        {
+            "prefix": "Cratis.Chronicle.ReadModels.for_SinkProvenanceCache.",
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Recommendations.",
-            "weight": 0.0023162200669046102
+            "weight": 0.0022845361607029178
         },
         {
             "prefix": "Cratis.Chronicle.Registrations.",
-            "weight": 0.0008192228735362355
+            "weight": 0.0010775136540276797
         },
         {
             "prefix": "Cratis.Chronicle.Releases.",
-            "weight": 0.0006129437327177593
+            "weight": 0.0006682656796613975
         },
         {
             "prefix": "Cratis.Chronicle.Schemas.",
-            "weight": 0.005952626635047471
+            "weight": 0.00911224235424674
         },
         {
             "prefix": "Cratis.Chronicle.Security.",
-            "weight": 0.036160733090794324
+            "weight": 0.035361096090818306
         },
         {
             "prefix": "Cratis.Chronicle.Seeding.",
-            "weight": 0.003170805078866872
+            "weight": 0.004040676202603801
         },
         {
             "prefix": "Cratis.Chronicle.SequenceQueries.",
-            "weight": 0.0018918741111078287
+            "weight": 0.002403684305138671
         },
         {
             "prefix": "Cratis.Chronicle.Sequences.",
-            "weight": 0.04555822049345683
+            "weight": 0.048115128417585085
         },
         {
             "prefix": "Cratis.Chronicle.Servers.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Services.",
-            "weight": 0.04970443181327698
+            "weight": 0.04976765930522671
         },
         {
             "prefix": "Cratis.Chronicle.Setup.",
-            "weight": 0.00471789834032096
+            "weight": 0.005268420125702647
         },
         {
             "prefix": "Cratis.Chronicle.SingleWriter.",
-            "weight": 0.0010461299284365605
+            "weight": 0.00101016905065095
         },
         {
             "prefix": "Cratis.Chronicle.Sinks.",
-            "weight": 0.0011315884296327866
+            "weight": 0.001554106231770692
         },
         {
             "prefix": "Cratis.Chronicle.Specs.",
-            "weight": 0.0010932794463379266
+            "weight": 0.0009583655095919267
         },
         {
             "prefix": "Cratis.Chronicle.Statistics.",
-            "weight": 0.0012700901384680493
+            "weight": 0.0016162704810415201
         },
         {
             "prefix": "Cratis.Chronicle.Storage.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Supervision.",
-            "weight": 0.00030352502149004425
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.Sys.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Cratis.Chronicle.given.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Foreign.Driver.DerivedInvalidOperationException.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Foreign.Driver.DerivedWaitQueueFullException.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Foreign.Driver.PoolExhaustedException.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "ForeignAssemblies.Recommendations.ForeignRequest.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         },
         {
             "prefix": "Orleans.Hosting.for_ChronicleServerStartupTask.",
-            "weight": 0.003474330100356916
+            "weight": 0.004066577973133312
         },
         {
             "prefix": "ThirdParty.IExternalPayload`1.",
-            "weight": 0.00029468448688353807
+            "weight": 0.0005180354105902306
         }
     ]
 }

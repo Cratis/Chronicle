@@ -71,8 +71,10 @@ public class when_creating_a_stored_global_kernel_projection : Specification
 
     [Fact] void should_create_the_global_projection() => _projection.Scope.ShouldEqual(ProjectionScope.Global);
     [Fact] void should_not_group_statistics_by_event_source() => _projection.IsEventSourceKeyed.ShouldBeFalse();
-    [Fact] async Task should_materialize_into_the_global_sink() =>
+    [Fact]
+    async Task should_materialize_into_the_global_sink() =>
         await _storage.GetEventStore(_eventStore).GetNamespace(EventStoreNamespaceName.NotSet).Sinks.Received(1).GetFor(_readModel);
-    [Fact] async Task should_not_materialize_into_the_observed_tenant_sink() =>
+    [Fact]
+    async Task should_not_materialize_into_the_observed_tenant_sink() =>
         await _storage.GetEventStore(_eventStore).GetNamespace(_namespace).Sinks.DidNotReceive().GetFor(_readModel);
 }
