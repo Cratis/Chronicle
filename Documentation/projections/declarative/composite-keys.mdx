@@ -68,6 +68,32 @@ Use the same key structure for events targeting the same read model instance. Ea
 
 The combined values must distinguish the instances you want to keep separate. A typed key makes the mapped properties explicit, but it does not establish business uniqueness for you.
 
+## Flat composite keys in declarations
+
+A typeless `key` block identifies a root read model by its ordinary root properties, without an `Id` property or a separate key record. This is different from the legacy untyped fluent expression described below.
+
+```pdl
+projection Orders => Order
+  no automap
+  from OrderPlaced
+    key
+      customerId = customerId
+      orderNumber = orderNumber
+    amount = amount
+  remove with OrderCanceled
+    key
+      orderNumber = orderNumber
+      customerId = customerId
+```
+
+The `Order` schema declares scalar `customerId`, `orderNumber`, and `amount` properties. Every root `from` and `remove with` handler must supply the same complete set of at least two key parts. Part order does not affect identity. Chronicle stores and seeds the parts as root properties, even with `no automap`. Mappings may assign the same values again, but an event that changes or removes a key part fails before saving. A removal selects only the complete tuple; removing a missing tuple does nothing, and a later creation can recreate it.
+
+Flat keys currently support root handlers with MongoDB and InMemory sinks only. Children, joins, nested scopes, every/all handlers, clear, and remove-via-join are not supported. Part names must be simple root scalar properties; `id` (in any casing), names beginning with `_`, dotted names, and duplicate parts are refused. Screenplay checks completeness against its declared identifier; Chronicle checks consistency between handlers and the supplied read model schema, not an identifier omitted from every handler.
+
+The stored expression is `$flatComposite(customerId=$eventContent.customerId,orderNumber=$eventContent.orderNumber)`. Existing `$composite(...)` definitions keep their legacy single-`Id` semantics. Registration refuses changing between flat and non-flat key modes on an existing projection or read model. Use a new read model for a different identity contract; registration does not migrate existing documents.
+
+Flat definitions require the kernel release introducing `$flatComposite` or later on **every** executing kernel. Upgrade the entire kernel fleet before deploying them. Older kernels can silently interpret an unknown key expression as the event source ID; do not deploy flat definitions to them or roll an active flat projection back to them. Wire compatibility checks do not fence this feature.
+
 ## Kernel compatibility
 
 Projection declarations that specify a composite key type require Chronicle kernel v19.8.1 or later. Older kernels reject the type name when projecting events, so upgrade the kernel before deploying those declarations.

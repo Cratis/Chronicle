@@ -68,6 +68,18 @@ The optional text records why the value is classified as personal. It is stored 
 
 <ChronicleClientTabs snippet="compliance/pii/with-details" />
 
+### C# classification properties
+
+`PIIAttribute` also accepts three optional named properties:
+
+- `SpecialCategory`: one GDPR Article 9 category, such as `SpecialCategory.Health`; defaults to `SpecialCategory.None`.
+- `Criminal`: personal data relating to criminal convictions and offenses under GDPR Article 10; defaults to `false`.
+- `OperationalSecret`: the personal value is also an operational secret; defaults to `false`.
+
+<ChronicleClientTabs snippet="compliance/pii/classification" />
+
+These properties classify only and add no protection. They are not added to schema metadata and do not change encryption or erasure. Subject encryption already covers an operational secret marked as PII; do not add `[Encrypted]`, because Chronicle rejects combining `[PII]` and `[Encrypted]`.
+
 ## Where you can mark PII
 
 | Target | Supported | Notes |

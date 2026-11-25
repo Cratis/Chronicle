@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Properties;
 
 namespace Cratis.Chronicle.Projections.Engine;
@@ -41,6 +42,16 @@ public interface IKeyResolvers
     /// <param name="propertiesWithKeyValueProviders">Target property paths in key and resolvers to use for resolving.</param>
     /// <returns>A new <see cref="KeyResolver"/>.</returns>
     KeyResolver Composite(IDictionary<PropertyPath, ValueProvider<AppendedEvent>> propertiesWithKeyValueProviders);
+
+    /// <summary>
+    /// Create a <see cref="KeyResolver"/> that provides a <see cref="FlatCompositeKey"/> from a set of root properties and their <see cref="ValueProvider{T}"/>.
+    /// </summary>
+    /// <param name="parts">The key parts, ordered by part name, with the provider of each value.</param>
+    /// <returns>A new <see cref="KeyResolver"/>.</returns>
+    /// <remarks>
+    /// A part the event gives no value is refused with an exception rather than resolved to a partial key.
+    /// </remarks>
+    KeyResolver FlatComposite(IReadOnlyList<(string Property, ValueProvider<AppendedEvent> Provider)> parts);
 
     /// <summary>
     /// Create a <see cref="KeyResolver"/> that provides a key value for a join relationship.

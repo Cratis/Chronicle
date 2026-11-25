@@ -182,6 +182,10 @@ appended after the tail was read are handled as normal. The command is accepted 
 - CLI: `cratis chronicle observers fast-forward <observer-id>`.
 - Clients: `IReactors`, `IReducers` and `IProjections` in .NET expose `FastForward`. TypeScript, Kotlin, Elixir and Go provide fast-forwarding through their observer administration APIs; method signatures differ by client.
 
+## Handled event counts are approximate
+
+The handled event count an observer reports is a diagnostic statistic, not exact bookkeeping. It can lag behind or drift from the events actually handled, and after an ambiguous storage acknowledgment it can over-count. The kernel does not use it to decide what to deliver, catch up or replay; those decisions use event sequence positions. Do not use it for billing, as proof of exact completion, or as proof of delivery.
+
 ## Removing an observer
 
 An observer outlives the code that declared it. Delete a read model and its projection, or remove a reactor, and nothing tells the event store — the observer simply stops being reported by any client, settles into `Disconnected` and stays there, keeping its definition, its state and handled counts in every namespace, its failed partitions and, for a projection, its projection definition.
