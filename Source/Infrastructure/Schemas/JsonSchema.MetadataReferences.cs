@@ -9,16 +9,6 @@ public partial class JsonSchema
 {
     const int MaxMetadataReferenceStates = 4096;
 
-    /// <summary>
-    /// Gets the conservative, document-local reference graph for metadata, independently of type selection.
-    /// </summary>
-    internal MetadataReach MetadataReferences => ReachMetadata(includeChildren: false);
-
-    /// <summary>
-    /// Gets metadata reach through references and supported child schemas, sharing one traversal budget.
-    /// </summary>
-    internal MetadataReach MetadataGraph => ReachMetadata(includeChildren: true);
-
     static bool ContainsContextualReference(JsonObject node, int depth = 0) =>
         node.ContainsKey("$dynamicRef") || node.ContainsKey("$recursiveRef") ||
         (depth < MaxResourceTraversalDepth && ResourceSchemaChildren(node).Any(child => ContainsContextualReference(child, depth + 1)));
@@ -56,7 +46,7 @@ public partial class JsonSchema
     void AddStaticTarget(MetadataReach reach, bool contextual)
     {
         if (Node["$ref"] is null) return;
-        var reference = ResolveScopedRef(Node["$ref"]!.GetValue<string>());
+        var reference = contextual ? ResolveScopedRef(Node["$ref"]!.GetValue<string>()) : Reference;
         if (reference is null) reach.Indeterminate |= contextual;
         else reach.Schemas.Add(reference);
     }
