@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { useId } from 'react';
+import { observer } from '@cratis/arc.react.mvvm';
 import strings from 'Strings';
 import { ComparisonViewModel } from './ComparisonViewModel';
 import { RevisionChoice } from './RevisionChoice';
@@ -48,7 +49,7 @@ const SideSelect = ({ label, value, choices, onChange }: SideSelectProps) => {
  * @param props The view model to present.
  * @returns The comparison panel.
  */
-export const ComparisonPanel = ({ viewModel }: { viewModel: ComparisonViewModel }) => {
+export const ComparisonPanel = observer(({ viewModel }: { viewModel: ComparisonViewModel }) => {
     const compare = text();
     const { revisions, comparison } = viewModel;
     const message = statusMessage(revisions, comparison);
@@ -98,4 +99,4 @@ export const ComparisonPanel = ({ viewModel }: { viewModel: ComparisonViewModel 
             )}
         </section>
     );
-};
+});
