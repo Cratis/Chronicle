@@ -42,6 +42,14 @@ public class ConnectionWatchdog(
     int _reconnectRequested;
 
     /// <summary>
+    /// Gets or sets what describes the connect attempt for the log when a reconnect attempt fails: the endpoint and phase it reached.
+    /// </summary>
+    /// <remarks>
+    /// Diagnostics only. It must return a description that is safe to log - never a credential or a raw connection string.
+    /// </remarks>
+    internal Func<string> DiagnosticContext { get; set; } = static () => "no connect context available";
+
+    /// <summary>
     /// Records that a keep-alive was observed, marking the session as healthy.
     /// </summary>
     public void NotifyKeepAlive() => _lastKeepAlive = _timeProvider.GetUtcNow();
@@ -67,6 +75,18 @@ public class ConnectionWatchdog(
 
     static TimeSpan BackoffFor(int attempt) =>
         TimeSpan.FromSeconds(Math.Min(_maxReconnectBackoff.TotalSeconds, Math.Pow(2, attempt - 1)));
+
+    string DescribeAttempt()
+    {
+        try
+        {
+            return DiagnosticContext();
+        }
+        catch (Exception)
+        {
+            return "no connect context available";
+        }
+    }
 
     async Task RunAsync()
     {
@@ -125,7 +145,7 @@ public class ConnectionWatchdog(
             catch (Exception ex)
             {
                 var backoff = BackoffFor(attempt);
-                logger.ReconnectAttemptFailed(attempt, backoff.TotalSeconds, ex);
+                logger.ReconnectAttemptFailed(attempt, backoff.TotalSeconds, DescribeAttempt(), ex);
                 await tasks.Delay((int)backoff.TotalMilliseconds, cancellationToken);
             }
         }

@@ -48,6 +48,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// </summary>
     internal const int ResolutionFailuresBeforeError = 10;
 
+    static readonly TimeSpan _startGracePeriod = TimeSpan.FromMilliseconds(100);
+
     readonly ChronicleConnectionString _connectionString;
     readonly int _connectTimeout;
     readonly int? _maxReceiveMessageSize;
@@ -80,6 +82,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     int _consecutiveResolutionFailures;
     int _kernelStatus;
     bool _hasEverConnected;
+    volatile string _attemptPhase = "idle";
+    volatile string? _attemptEndpoint;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleConnection"/> class.
@@ -233,7 +237,10 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             Reconnect,
             loggerFactory.CreateLogger<ConnectionWatchdog>(),
             cancellationToken,
-            _timeProvider);
+            _timeProvider)
+        {
+            DiagnosticContext = DescribeAttempt
+        };
 
         _cancellationToken.Register(() =>
         {
@@ -291,6 +298,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     /// Gets how the connection service for a server is created. Specs replace this to fake the keep-alive stream per server.
     /// </summary>
     internal Func<ChronicleServerAddress, CallInvoker, IConnectionService>? ConnectionServiceFactory { get; init; }
+
+    /// <summary>
+    /// Gets how the HTTP handler of each new channel is wrapped. Specs replace this to observe which transport a channel owns and when it is disposed.
+    /// </summary>
+    internal Func<SocketsHttpHandler, HttpMessageHandler>? HttpHandlerWrapper { get; init; }
 
     /// <inheritdoc/>
     public async ValueTask<IServices> GetServices(CancellationToken cancellationToken)
@@ -452,6 +464,26 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         _logger.CompatibilityCheckPassed(ChronicleClientIdentity.Version, ChronicleClientIdentity.ProtocolVersion, response.ServerVersion, response.ServerProtocolVersion);
     }
 
+    /// <summary>
+    /// Gives work that was just moved off this thread a moment, in real time, to get going before the attempt's own clock is watched.
+    /// </summary>
+    /// <param name="started">The work that was started.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The attempt budget is measured by the time provider, but moving work to the thread pool takes real time that must not count against it.
+    /// </remarks>
+    static async Task AllowToStart(Task started)
+    {
+        if (started.IsCompleted)
+        {
+            return;
+        }
+
+        using var grace = new CancellationTokenSource();
+        await Task.WhenAny(started, Task.Delay(_startGracePeriod, TimeProvider.System, grace.Token));
+        await grace.CancelAsync();
+    }
+
     static void EnsureClientCredentialsUseTls(ChronicleConnectionString connectionString)
     {
         if (connectionString.DisableTls && connectionString.AuthenticationMode == AuthenticationMode.ClientCredentials)
@@ -476,7 +508,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         if (!await _connectLock.WaitAsync(connectTimeout, _cancellationToken))
         {
             RecordConnectFailure();
-            throw new ConnectionTimedOut();
+            _logger.WaitingForConnectAttemptTimedOut(DescribeAttempt(), _connectTimeout);
+            throw new ConnectionTimedOut(DescribeCurrentEndpoint(), _connectTimeout);
         }
 
         try
@@ -557,6 +590,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     async Task ConnectInternal()
     {
         _logger.Connecting(_connectionString.Redacted);
+        _attemptEndpoint = null;
+        _attemptPhase = "resolving servers";
         DisposeCurrentAttempt();
 
         var untried = await ResolveCandidates();
@@ -610,11 +645,11 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     {
         try
         {
-            List<ChronicleServerAddress> candidates = [.. await _serverAddressResolver.Resolve(_connectionString)];
+            List<ChronicleServerAddress> candidates = [.. await BoundByConnectTimeout(() => _serverAddressResolver.Resolve(_connectionString))];
             Interlocked.Exchange(ref _consecutiveResolutionFailures, 0);
             return candidates;
         }
-        catch (Exception ex) when (!_skipKeepAlive && ex is NoSrvRecordsFound or DnsResponseException or SocketException)
+        catch (Exception ex) when (!_skipKeepAlive && ex is NoSrvRecordsFound or DnsResponseException or SocketException or ConnectionTimedOut)
         {
             var failures = Interlocked.Increment(ref _consecutiveResolutionFailures);
             if (failures == ResolutionFailuresBeforeError)
@@ -703,7 +738,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             }
         }
 
-        var next = await _loadBalancerStrategy.Next(pool);
+        _attemptPhase = "selecting a server";
+        var next = await BoundByConnectTimeout(() => _loadBalancerStrategy.Next(pool));
         if (!untried.Remove(next))
         {
             untried.Clear();
@@ -722,6 +758,9 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
     {
         var attemptStarted = _timeProvider.GetTimestamp();
         _currentServerAddress = address;
+        _attemptEndpoint = DescribeEndpoint(address);
+        _attemptPhase = "creating the channel";
+        _logger.AttemptingEndpoint(_attemptEndpoint);
         _channel = CreateGrpcChannel(address);
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
         var callInvoker = _channel
@@ -733,9 +772,14 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             try
             {
+                _attemptPhase = "checking compatibility";
                 var compatibilityBudget = budget - _timeProvider.GetElapsedTime(attemptStarted);
-                await CheckCompatibility(CreateConnectionService(address, callInvoker, clientFactory))
-                    .WaitAsync(compatibilityBudget > TimeSpan.Zero ? compatibilityBudget : TimeSpan.Zero, _timeProvider);
+
+                // Run off this thread: a token provider that blocks while the call starts would otherwise block before
+                // the wait below ever got a task to bound, and the connect lock would never be released.
+                var check = Task.Run(() => CheckCompatibility(CreateConnectionService(address, callInvoker, clientFactory)));
+                await AllowToStart(check);
+                await check.WaitAsync(compatibilityBudget > TimeSpan.Zero ? compatibilityBudget : TimeSpan.Zero, _timeProvider);
             }
             catch (TimeoutException)
             {
@@ -751,6 +795,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _logger.Connected();
             _hasEverConnected = true;
+            _attemptPhase = "running connected handlers";
             await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
             return true;
         }
@@ -812,12 +857,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
     async Task<bool> AwaitHandshake(ChronicleServerAddress address, CallInvoker callInvoker, InProcessAwareGrpcClientProxiesClientFactory clientFactory, TimeSpan budget)
     {
+        _attemptPhase = "awaiting the handshake";
         _connectionService = CreateConnectionService(address, callInvoker, clientFactory);
         _watchDog.NotifyKeepAlive();
         var handshake = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _connectTcs = handshake;
 
-        await ExecutionContextDetached.Start(() => Task.Run(() => _keepAliveSubscription = _connectionService.Connect(
+        var subscribing = ExecutionContextDetached.Start(() => Task.Run(() => SubscribeToKeepAlive(handshake, address, _connectionService.Connect(
             new()
             {
                 ConnectionId = Lifecycle.ConnectionId,
@@ -827,14 +873,13 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 ProcessPath = ClientProcess.Path,
                 MachineName = ClientProcess.MachineName,
                 ClientType = ChronicleClientIdentity.Type,
-            }).Subscribe(
-                keepAlive => HandleConnection(handshake, keepAlive),
-                error => HandleStreamEnded(handshake, address, error),
-                () => HandleStreamEnded(handshake, address, null))));
+            }))));
 
         try
         {
-            await handshake.Task.WaitAsync(budget, _timeProvider);
+            // Starting the call can block in the token provider, so it is bounded by the same budget as the handshake.
+            await AllowToStart(subscribing);
+            await Task.WhenAll(subscribing, handshake.Task).WaitAsync(budget, _timeProvider);
         }
         catch (Exception ex) when (ex is TimeoutException or ConnectionUnavailable or RpcException)
         {
@@ -844,6 +889,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
 
         _logger.Connected();
         _hasEverConnected = true;
+        _attemptPhase = "running connected handlers";
         try
         {
             await ExecutionContextDetached.Start(() => Task.Run(Lifecycle.Connected));
@@ -973,7 +1019,8 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                 address,
                 new GrpcChannelOptions
                 {
-                    HttpHandler = httpHandler,
+                    HttpHandler = HttpHandlerWrapper?.Invoke(httpHandler) ?? httpHandler,
+                    DisposeHttpClient = true,
                     MaxReceiveMessageSize = _maxReceiveMessageSize,
                     MaxSendMessageSize = _maxSendMessageSize,
                     ServiceConfig = new ServiceConfig
@@ -996,7 +1043,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
                     }
                 });
 
-            _logger.ChannelCreated(_connectionString.Redacted);
+            _logger.ChannelCreated(DescribeEndpoint(serverAddress));
             return channel;
         }
         catch
@@ -1026,6 +1073,64 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
         {
             _logger.KernelIsBusy(status);
         }
+    }
+
+    /// <summary>
+    /// Describes what the current connect attempt is doing, for diagnostics. Never drives behavior.
+    /// </summary>
+    /// <returns>The safe description: the endpoint being attempted, if any, and the phase.</returns>
+    string DescribeAttempt() =>
+        _attemptEndpoint is null
+            ? $"no endpoint attempted yet, phase: {_attemptPhase}"
+            : $"endpoint: {_attemptEndpoint}, phase: {_attemptPhase}";
+
+    /// <summary>
+    /// Runs an operation of the connect attempt that has no deadline of its own under the connect timeout.
+    /// </summary>
+    /// <typeparam name="T">The type of result.</typeparam>
+    /// <param name="operation">The operation to run.</param>
+    /// <returns>The result.</returns>
+    /// <exception cref="ConnectionTimedOut">Thrown when it did not complete within the connect timeout.</exception>
+    /// <remarks>
+    /// An attempt holds the connect lock for as long as it runs, so a resolver or load balancer that never completes
+    /// would starve every later attempt. An operation that has already completed costs no timer. It is abandoned, not cancelled, when it runs out of time.
+    /// </remarks>
+    async Task<T> BoundByConnectTimeout<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            var running = operation();
+            if (running.IsCompleted)
+            {
+                return await running;
+            }
+
+            return await running.WaitAsync(TimeSpan.FromSeconds(_connectTimeout), _timeProvider, _cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            throw new ConnectionTimedOut(_connectionString.Redacted, _connectTimeout);
+        }
+    }
+
+    IDisposable SubscribeToKeepAlive(TaskCompletionSource handshake, ChronicleServerAddress address, IObservable<ConnectionKeepAlive> stream)
+    {
+        var subscription = stream.Subscribe(
+            keepAlive => HandleConnection(handshake, keepAlive),
+            error => HandleStreamEnded(handshake, address, error),
+            () => HandleStreamEnded(handshake, address, null));
+
+        // Starting the call can outlive the attempt that began it; a replaced attempt must not keep its stream.
+        if (ReferenceEquals(_connectTcs, handshake))
+        {
+            _keepAliveSubscription = subscription;
+        }
+        else
+        {
+            subscription.Dispose();
+        }
+
+        return subscription;
     }
 
     void HandleConnection(TaskCompletionSource handshake, ConnectionKeepAlive keepAlive)
