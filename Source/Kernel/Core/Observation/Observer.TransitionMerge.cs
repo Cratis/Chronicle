@@ -30,11 +30,29 @@ public partial class Observer
     /// transition completes, which only makes the fast handover fall back to the full subscribe.
     /// </remarks>
     bool _stateTransitionInProgress;
+    bool _leavingState;
+    bool _recoverSubscriptionAfterLeaving;
+    IGrainTimer? _subscriptionRecoveryAfterLeaveTimer;
+
+    /// <summary>
+    /// Ends a failed leave and schedules any owed recovery after Choreography has unwound the transition.
+    /// </summary>
+    internal void StateLeaveFailed()
+    {
+        _leavingState = false;
+        if (!_recoverSubscriptionAfterLeaving) return;
+
+        _subscriptionRecoveryAfterLeaveTimer?.Dispose();
+        _subscriptionRecoveryAfterLeaveTimer = this.RegisterGrainTimer(
+            RecoverSubscriptionAfterFailedLeave,
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+    }
 
     /// <inheritdoc/>
     protected override Task OnBeforeLeavingState(IState<ObserverState> state)
     {
         _stateTransitionInProgress = true;
+        _leavingState = true;
         BeginTransitionHook();
         return Task.CompletedTask;
     }
@@ -42,8 +60,23 @@ public partial class Observer
     /// <inheritdoc/>
     protected override Task OnAfterLeavingState(IState<ObserverState> state)
     {
+        _leavingState = false;
         KeepWhatWasRecordedDuringTransitionHook();
         return Task.CompletedTask;
+    }
+
+    Task RecoverSubscriptionAfterFailedLeave(CancellationToken cancellationToken)
+    {
+        _subscriptionRecoveryAfterLeaveTimer?.Dispose();
+        _subscriptionRecoveryAfterLeaveTimer = null;
+        return cancellationToken.IsCancellationRequested ? Task.CompletedTask : RecoverSubscriptionAfterLeaving();
+    }
+
+    Task RecoverSubscriptionAfterLeaving()
+    {
+        var recover = _recoverSubscriptionAfterLeaving && _subscription.IsSubscribed;
+        _recoverSubscriptionAfterLeaving = false;
+        return recover ? RecoverAfterSubscribing(leavesQuarantine: false) : Task.CompletedTask;
     }
 
     /// <summary>
