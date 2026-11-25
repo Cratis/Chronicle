@@ -31,7 +31,7 @@ internal static class OutboxEventTypeQueryFilter
         string eventSequenceId,
         EventSequenceQueryCriteria criteria)
     {
-        if (eventSequenceId != WellKnownEventSequences.Outbox)
+        if (!string.Equals(eventSequenceId, WellKnownEventSequences.Outbox, StringComparison.OrdinalIgnoreCase))
         {
             return criteria;
         }

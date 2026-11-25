@@ -32,7 +32,9 @@ export const visibilityColumn = () => (
 );
 
 /**
- * Builds the origin column.
+ * Builds the origin column. The origin is picked from a list of known values, so it must match exactly:
+ * the text default (contains) would also show `store-a-remote` when `store-a` is selected. The
+ * non-text data type makes equals the default mode, including after the filter has been cleared.
  * @param filterOptions The distinct origins present in the table.
  * @returns The origin column element.
  */
@@ -42,6 +44,7 @@ export const originColumn = (filterOptions: { label: string; value: string }[]) 
         field='originText'
         style={{ width: '160px' }}
         header={strings.eventStore.general.eventTypes.columns.origin}
+        dataType='numeric'
         showFilterMatchModes={false}
         filter
         filterField='originText'
