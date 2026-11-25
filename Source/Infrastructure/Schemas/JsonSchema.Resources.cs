@@ -13,7 +13,8 @@ public partial class JsonSchema
     static readonly string[] _resourceSchemaArrays = ["allOf", "anyOf", "oneOf"];
     static readonly string[] _resourceSingleSchemas = ["items", "additionalProperties", "not"];
     readonly Uri? _resourceBase;
-    volatile Cached<(Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors, Dictionary<JsonObject, Uri> Scopes)>? _resourceIndex;
+    readonly ResolutionContext? _resolutionContext;
+    volatile Cached<ResourceIndexContext>? _resourceIndex;
     volatile Cached<IReadOnlyList<JsonSchema>>? _referenceChain;
 
     /// <summary>
@@ -21,12 +22,13 @@ public partial class JsonSchema
     /// </summary>
     /// <param name="node">The schema node.</param>
     /// <param name="root">The document root.</param>
-    /// <param name="resourceBase">The effective base, with the node's identifier already applied.</param>
-    internal JsonSchema(JsonObject node, JsonSchema root, Uri resourceBase)
+    /// <param name="context">The origin and entered resource scope, with the node's identifier already applied.</param>
+    internal JsonSchema(JsonObject node, JsonSchema root, ResolutionContext context)
     {
         Node = node;
         _root = root;
-        _resourceBase = resourceBase;
+        _resourceBase = context.ResourceBase;
+        _resolutionContext = context;
     }
 
     /// <summary>
@@ -38,17 +40,15 @@ public partial class JsonSchema
 
     Uri ResourceBase => _resourceBase ?? ResourceId(Root.Node, _anonymousResourceBase);
 
-    (Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors, Dictionary<JsonObject, Uri> Scopes) ResourceIndex
+    ResourceIndexContext ResourceIndex
     {
         get
         {
             var cached = _resourceIndex;
             if (cached is not null) return cached.Value;
-            var roots = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
-            var anchors = new Dictionary<(string Resource, string Anchor), JsonObject>();
-            var scopes = new Dictionary<JsonObject, Uri>();
-            IndexResources(Node, _anonymousResourceBase, new(roots, anchors, scopes), 0);
-            return (_resourceIndex = new((roots, anchors, scopes))).Value;
+            var index = new ResourceIndexContext();
+            IndexResources(Node, _anonymousResourceBase, index, 0);
+            return (_resourceIndex = new(index)).Value;
         }
     }
 
@@ -80,7 +80,12 @@ public partial class JsonSchema
 
     static void IndexResources(JsonObject node, Uri inherited, ResourceIndexContext context, int depth)
     {
-        if (depth > MaxResourceTraversalDepth || context.Scopes.ContainsKey(node)) return;
+        if (depth > MaxResourceTraversalDepth)
+        {
+            context.Truncated = true;
+            return;
+        }
+        if (context.Scopes.ContainsKey(node)) return;
         var scope = ResourceId(node, inherited);
         context.Scopes.Add(node, scope);
         if (depth == 0 || scope != inherited) context.Roots.TryAdd(scope.AbsoluteUri, node);
@@ -88,6 +93,7 @@ public partial class JsonSchema
         {
             context.Anchors.TryAdd((scope.AbsoluteUri, anchor), node);
         }
+        IndexDynamicAnchor(node, scope, context);
         foreach (var child in ResourceSchemaChildren(node))
         {
             IndexResources(child, scope, context, depth + 1);
@@ -125,18 +131,19 @@ public partial class JsonSchema
         return target is null ? null : CreateResolvedSchema(target);
     }
 
-    JsonSchema CreateChildSchema(JsonObject node) => new(node, Root, ResourceId(node, ResourceBase));
+    JsonSchema CreateChildSchema(JsonObject node) => new((JsonObject)node.DeepClone(), Root, ChildResolutionContext(node));
 
-    JsonSchemaProperty CreateChildProperty(string name, JsonObject node) => new(name, node, Root, ResourceId(node, ResourceBase));
+    JsonSchemaProperty CreateChildProperty(string name, JsonObject node) => new(name, (JsonObject)node.DeepClone(), Root, ChildResolutionContext(node));
 
     JsonSchema CreateResolvedSchema(JsonObject target) =>
-        new((JsonObject)target.DeepClone(), Root, Root.ResourceIndex.Scopes.GetValueOrDefault(target, Root.ResourceBase));
+        new((JsonObject)target.DeepClone(), Root, EnterResource(Root.ResourceIndex.Scopes.GetValueOrDefault(target, Root.ResourceBase), target.GetPath(), Root.ResolutionScope.OriginRoot));
 
     JsonSchema? ResolveScopedRef(string reference)
     {
         // Preserve the root's legacy fragment precedence; embedded resources get first refusal in their own scope.
         if (ResourceBase != Root.ResourceBase && ResolveResourceRef(reference) is { } scoped) return scoped;
-        return Root.ResolveRootRef(reference) ?? Root.ResolveResourceRef(reference);
+        var target = Root.ResolveRootRef(reference) ?? Root.ResolveResourceRef(reference);
+        return target is null ? null : new((JsonObject)target.Node.DeepClone(), Root, EnterResource(target.ResourceBase, target.ResolutionScope.Origin, target.ResolutionScope.OriginRoot));
     }
 
     List<JsonSchema> BuildReferenceChain()
@@ -146,7 +153,7 @@ public partial class JsonSchema
         var current = this;
         for (var hop = 0; hop < MaxResourceTraversalDepth; hop++)
         {
-            if (current.Node["$ref"]?.GetValue<string>() is not { } reference || !visited.Add((current.ResourceBase, reference))) break;
+            if (current.ReferenceValue is not { } reference || !visited.Add((current.ResourceBase, reference))) break;
             if (current.Reference is not { } target) break;
             chain.Add(target);
             current = target;
@@ -154,8 +161,13 @@ public partial class JsonSchema
         return chain;
     }
 
-    sealed record ResourceIndexContext(
-        Dictionary<string, JsonObject> Roots,
-        Dictionary<(string Resource, string Anchor), JsonObject> Anchors,
-        Dictionary<JsonObject, Uri> Scopes);
+    sealed class ResourceIndexContext
+    {
+        internal Dictionary<string, JsonObject> Roots { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<(string Resource, string Anchor), JsonObject> Anchors { get; } = [];
+        internal Dictionary<(string Resource, string Anchor), JsonObject> DynamicAnchors { get; } = [];
+        internal Dictionary<JsonObject, Uri> Scopes { get; } = [];
+        internal HashSet<string> IndeterminateResources { get; } = [];
+        internal bool Truncated { get; set; }
+    }
 }

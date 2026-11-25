@@ -24,7 +24,7 @@ namespace Cratis.Chronicle.Schemas;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="unrecoverableValues">The process-local unrecoverable value reporter.</param>
 [Singleton]
-public class JsonSchemaMetadataManager(
+public partial class JsonSchemaMetadataManager(
     IInstancesOf<IJsonSchemaMetadataValueHandler> propertyValueHandlers,
     ILogger<JsonSchemaMetadataManager> logger,
     UnrecoverableProtectedValueReporter? unrecoverableValues = null) : IJsonSchemaMetadataManager
@@ -421,7 +421,7 @@ public class JsonSchemaMetadataManager(
     {
         // The strict type probe follows references recursively. Do not turn an unresolved or cyclic
         // definition into a new append failure while deciding whether to extend metadata reach.
-        if (depth > 64) return false;
+        if (CannotInspectReferencedType(schema, depth)) return false;
         if (schema.HasReference && !CanInspectReference(schema, depth)) return false;
         return schema.AllOf.Concat(schema.AnyOf).Concat(schema.OneOf).All(alternative => CanInspectReferencedType(alternative, depth + 1));
     }
@@ -437,7 +437,7 @@ public class JsonSchemaMetadataManager(
     /// <returns>Whether classification is stable for this schema and its descendants.</returns>
     static bool CanCacheClassification(JsonSchema schema, int depth = 0)
     {
-        if (depth > 32 || schema.IsDynamic()) return false;
+        if (HasUnstableClassification(schema, depth)) return false;
         if (!CanCacheReference(schema, depth) || HasUnspecifiedType(schema)) return false;
         if (!schema.AllOf.Concat(schema.AnyOf).Concat(schema.OneOf).Concat(schema.Properties.Values)
             .All(child => CanCacheClassification(child, depth + 1)))
@@ -536,9 +536,8 @@ public class JsonSchemaMetadataManager(
 
     ClassifiedMetadata ClassificationFor(JsonSchema schema) => _classified.GetValue(schema, static current => new(CanCacheClassification(current)));
 
-    (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Classify(JsonSchema schema, bool forComparison)
+    (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] ClassifyOrdinaryReferences(JsonSchema schema, SchemaMetadataCategory[] categories)
     {
-        var categories = forComparison ? _comparisonCategories : _categories;
         var own = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
         CollectMetadata(schema, categories, own);
         if (!schema.HasReference || schema.Reference is not { } reference) return own.ToArray();

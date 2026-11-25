@@ -21,8 +21,6 @@ namespace Cratis.Chronicle.Schemas;
 /// </remarks>
 public static class SchemaMetadataExtensions
 {
-    const int MaxSchemaMetadataTraversalDepth = 64;
-
     /// <summary>
     /// Ensure the schema metadata for a given category on the schema node itself is typed rather than raw JSON.
     /// </summary>
@@ -97,7 +95,8 @@ public static class SchemaMetadataExtensions
         }
 
         var key = KeyFor(category);
-        var result = WalkSchemaMetadata(schema, new(candidate => candidate.ExtensionData?.ContainsKey(key) ?? false, []), 0);
+        var reach = schema.MetadataGraph;
+        var result = reach.Indeterminate || reach.Schemas.Exists(candidate => candidate.ExtensionData?.ContainsKey(key) ?? false);
         if (category == SchemaMetadataCategory.Compliance)
         {
             schema.CachedHasComplianceMetadata = result;
@@ -135,7 +134,7 @@ public static class SchemaMetadataExtensions
     /// present at all.
     /// </remarks>
     public static bool HasSchemaMetadata(this JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate) =>
-        WalkSchemaMetadata(schema, new(candidate => candidate.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)), []), 0);
+        schema.MetadataGraph.Schemas.Exists(candidate => candidate.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)));
 
     /// <summary>
     /// Check recursively whether the schema has metadata for any known category.
@@ -157,30 +156,6 @@ public static class SchemaMetadataExtensions
     /// <returns>The extension data key.</returns>
     internal static string KeyFor(SchemaMetadataCategory category) =>
         category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
-
-    static bool WalkSchemaMetadata(JsonSchema schema, MetadataTraversal context, int depth)
-    {
-        // Inspect every reference hop, including annotations beside $ref. Count hops against the same
-        // depth budget as child schemas, so recursive child/reference graphs cannot restart the limit.
-        var chain = schema.ReferenceChain;
-        for (var hop = 0; hop < chain.Count && depth + hop <= MaxSchemaMetadataTraversalDepth; hop++)
-        {
-            var candidate = chain[hop];
-            if (!context.Visited.Add(candidate)) continue;
-            if (context.Matches(candidate)) return true;
-            if (MetadataChildren(candidate).Any(child => WalkSchemaMetadata(child, context, depth + hop + 1))) return true;
-        }
-        return false;
-    }
-
-    static IEnumerable<JsonSchema> MetadataChildren(JsonSchema schema) =>
-        schema.Properties.Values.Concat(MetadataCompositions(schema))
-            .Concat(new[] { schema.Item, schema.AdditionalPropertiesSchema }.OfType<JsonSchema>());
-
-    static IEnumerable<JsonSchema> MetadataCompositions(JsonSchema schema) => schema.AllOf.Count > 0
-        ? schema.AllOf
-        : schema.AnyOf.Where(candidate => candidate.Type != JsonObjectType.Null &&
-            !(candidate.HasReference && candidate.Reference?.Type == JsonObjectType.Null)).Take(1);
 
     static void ConvertIfNeeded(JsonSchema schema, string key)
     {
@@ -210,6 +185,4 @@ public static class SchemaMetadataExtensions
             .Select(x => new ComplianceSchemaMetadata(x.MetadataTypeStr!, x.Details!))
             .ToList();
     }
-
-    sealed record MetadataTraversal(Func<JsonSchema, bool> Matches, HashSet<JsonSchema> Visited);
 }

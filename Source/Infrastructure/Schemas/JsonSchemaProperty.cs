@@ -35,8 +35,8 @@ public class JsonSchemaProperty : JsonSchema
     /// <param name="name">The property name.</param>
     /// <param name="node">The schema node.</param>
     /// <param name="root">The document root.</param>
-    /// <param name="resourceBase">The effective resource base.</param>
-    internal JsonSchemaProperty(string name, JsonObject node, JsonSchema root, Uri resourceBase) : base(node, root, resourceBase)
+    /// <param name="context">The schema origin and entered resource scope.</param>
+    internal JsonSchemaProperty(string name, JsonObject node, JsonSchema root, ResolutionContext context) : base(node, root, context)
     {
         Name = name;
     }
