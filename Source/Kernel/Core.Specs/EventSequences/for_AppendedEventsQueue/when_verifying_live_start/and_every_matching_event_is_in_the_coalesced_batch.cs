@@ -11,4 +11,5 @@ public class and_every_matching_event_is_in_the_coalesced_batch : given.a_queue_
 
     [Fact] void should_deliver_both_matching_events() => _handledEvents.ShouldEqual(2);
     [Fact] void should_not_treat_a_present_event_as_a_gap() => _observer.DidNotReceive().CatchUp();
+    [Fact] void should_not_warn_about_a_gap() => LiveStartGapWarnings.ShouldBeEmpty();
 }

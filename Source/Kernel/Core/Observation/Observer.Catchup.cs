@@ -526,7 +526,7 @@ public partial class Observer
             },
             () =>
             {
-                logger.StartCatchUpJob(State.NextEventSequenceNumber);
+                logger.StartCatchUpJob(State.NextEventSequenceNumber, _observerKey);
                 return Task.CompletedTask;
             },
 

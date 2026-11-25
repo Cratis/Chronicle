@@ -19,4 +19,5 @@ public class and_the_subscription_changes_during_a_gap_read : given.a_queue_with
     [Fact] void should_recheck_the_replacement_subscription() => _observer.Received(2).GetState();
     [Fact] void should_not_drop_the_live_batch_because_of_an_obsolete_gap() => _handledEvents.ShouldEqual(1);
     [Fact] void should_not_spill_the_replacement_subscription() => _observer.DidNotReceive().CatchUp();
+    [Fact] void should_not_warn_about_the_obsolete_gap() => LiveStartGapWarnings.ShouldBeEmpty();
 }

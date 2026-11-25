@@ -8,9 +8,9 @@ using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.EventSequences;
 
-/// <summary>
+/// <content>
 /// Verifies filtered continuity once when a subscription enters live delivery, before partition or page dispatch.
-/// </summary>
+/// </content>
 public partial class AppendedEventsQueue
 {
     /// <summary>
@@ -89,29 +89,30 @@ public partial class AppendedEventsQueue
         var state = await lane.Observer.GetState();
         if (state is not { RunningState: ObserverRunningState.Active, NextEventSequenceNumber.IsActualValue: true })
         {
-            return CompleteLiveStart(lane, subscription, null, false);
+            return CompleteLiveStart(lane, subscription, null, null);
         }
 
         // Eligibility is by sequence number alone: every event at or past the cursor is dispatched, and the observer
         // advances its cursor past a run even when none of it matches (an inapplicable run). A replacement subscription
         // whose filters exclude the whole queued batch must therefore still be verified up to the batch's last event.
         var eligible = events.Where(@event => @event.Context.SequenceNumber >= state.NextEventSequenceNumber).ToArray();
-        if (eligible.Length == 0) return CompleteLiveStart(lane, subscription, null, false);
+        if (eligible.Length == 0) return CompleteLiveStart(lane, subscription, null, null);
 
-        var hasGap = await HasMissingMatchingEvent(subscription, state.NextEventSequenceNumber, eligible);
-        return CompleteLiveStart(lane, subscription, eligible[^1].Context.SequenceNumber, hasGap);
+        var gap = await FindLiveStartGap(subscription, state.NextEventSequenceNumber, eligible);
+        return CompleteLiveStart(lane, subscription, eligible[^1].Context.SequenceNumber, gap);
     }
 
-    bool? CompleteLiveStart(AppendedEventsQueueObserverLane lane, AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber? through, bool hasGap)
+    bool? CompleteLiveStart(AppendedEventsQueueObserverLane lane, AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber? through, LiveStartGap? gap)
     {
         lock (_subscriptionsLock)
         {
             if (lane.IsClosed) return false;
             if (!ReferenceEquals(subscription, lane.Subscription)) return null;
-            if (hasGap)
+            if (gap is not null)
             {
                 // Partition recovery does not prove every matching hole belongs to that partition. Conservatively
                 // stop live delivery; normal catch-up acquires/adopts ownership without trusting the later batch.
+                _logger.LiveStartDeliveryGap(subscription.ObserverKey, gap.From, gap.FirstLive, gap.LastLive, gap.Missing);
                 SpillLaggingSubscriptionToCatchup(subscription, AppendedEventsQueueSpillReasons.LiveDeliveryGap);
                 return false;
             }
@@ -122,10 +123,10 @@ public partial class AppendedEventsQueue
         }
     }
 
-    async Task<bool> HasMissingMatchingEvent(AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber from, AppendedEvent[] eligible)
+    async Task<LiveStartGap?> FindLiveStartGap(AppendedEventsQueueObserverSubscription subscription, EventSequenceNumber from, AppendedEvent[] eligible)
     {
         var last = eligible[^1].Context.SequenceNumber;
-        if (from >= last) return false;
+        if (from >= last) return null;
         var delivered = eligible.Select(@event => @event.Context.SequenceNumber).ToHashSet();
         var storage = _storage!.GetEventStore(_eventSequenceKey.EventStore)
             .GetNamespace(_eventSequenceKey.Namespace).GetEventSequence(_eventSequenceKey.EventSequenceId);
@@ -144,12 +145,24 @@ public partial class AppendedEventsQueue
             {
                 // Coalescing can also hide a hole between two new events in the same batch. Already-present
                 // live events are not holes, but every other stored match must be recovered before dispatch.
-                if (MatchesSubscription(subscription, @event) && !delivered.Contains(@event.Context.SequenceNumber)) return true;
+                if (MatchesSubscription(subscription, @event) && !delivered.Contains(@event.Context.SequenceNumber))
+                {
+                    return new(from, eligible[0].Context.SequenceNumber, last, @event.Context.SequenceNumber);
+                }
             }
         }
 
-        return false;
+        return null;
     }
+
+    /// <summary>
+    /// The first stored matching event absent from the live batch, with the cursor and batch boundaries used to find it.
+    /// </summary>
+    /// <param name="From">The observer's next event sequence number.</param>
+    /// <param name="FirstLive">The first cursor-eligible live event sequence number.</param>
+    /// <param name="LastLive">The last live event sequence number, just beyond the probed range.</param>
+    /// <param name="Missing">The first missing matching event sequence number returned by storage.</param>
+    sealed record LiveStartGap(EventSequenceNumber From, EventSequenceNumber FirstLive, EventSequenceNumber LastLive, EventSequenceNumber Missing);
 
     /// <summary>
     /// Cache the proven no-gap boundary for this subscription epoch. Subsequent batches need no storage/state
