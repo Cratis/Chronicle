@@ -99,11 +99,13 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
         return new()
         {
             IdentifiedBy = _identifiedBy,
-            FromEventProperty = _fromEventPropertyEventType is null ? null : new()
-            {
-                Event = _fromEventPropertyEventType,
-                PropertyExpression = _fromEventPropertyExpression!.Build()
-            },
+            FromEventProperty = _fromEventPropertyEventType is null
+                ? null
+                : new()
+                {
+                    Event = _fromEventPropertyEventType,
+                    PropertyExpression = _fromEventPropertyExpression!.Build()
+                },
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
