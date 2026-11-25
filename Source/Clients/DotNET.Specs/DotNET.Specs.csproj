@@ -31,6 +31,13 @@
         <PackageReference Include="SSH.NET" />
     </ItemGroup>
 
+    <!-- The integration scenarios' replay wait diagnostics are specified here, without containers. -->
+    <ItemGroup>
+        <Compile Include="../../../Integration/Client/ReplayWaitDiagnostics.cs" Link="Diagnostics/ReplayWaitDiagnostics.cs" />
+        <Compile Include="../../../Integration/Client/ReplayWaitSources.cs" Link="Diagnostics/ReplayWaitSources.cs" />
+        <Compile Include="../../../Integration/Client/ReplayWaitDidNotComplete.cs" Link="Diagnostics/ReplayWaitDidNotComplete.cs" />
+    </ItemGroup>
+
     <!-- Keep the client diagnostics convention specification independent of the runtime checkout location. -->
     <ItemGroup>
         <EmbeddedResource Include="../Connections/**/*.cs" Exclude="../Connections/obj/**;../Connections/bin/**" LogicalName="ClientDiagnostics.Connections.%(RecursiveDir)%(Filename)%(Extension)" />
