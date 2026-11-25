@@ -15,6 +15,7 @@ public sealed class ProjectionSlice<TReadModel> : IDisposable
 {
     readonly List<(EventSourceId Source, object[] Events)> _batches = [];
     readonly ProjectionSliceOutcome<TReadModel> _outcome;
+    readonly Lock _executionLock = new();
     bool _started;
     bool _completed;
     bool _disposed;
@@ -60,8 +61,11 @@ public sealed class ProjectionSlice<TReadModel> : IDisposable
     /// <exception cref="SliceDisposed">The slice has been disposed.</exception>
     public ProjectionSlice<TReadModel> GivenEvents(EventSourceId eventSourceId, params object[] events)
     {
-        EnsureNotStarted();
-        _batches.Add((eventSourceId, events.ToArray()));
+        lock (_executionLock)
+        {
+            EnsureNotStarted();
+            _batches.Add((eventSourceId, events.ToArray()));
+        }
 
         return this;
     }
@@ -74,8 +78,11 @@ public sealed class ProjectionSlice<TReadModel> : IDisposable
     /// <exception cref="SliceDisposed">The slice has been disposed.</exception>
     public Task<ProjectionSliceOutcome<TReadModel>> Run()
     {
-        EnsureNotStarted();
-        _started = true;
+        lock (_executionLock)
+        {
+            EnsureNotStarted();
+            _started = true;
+        }
         foreach (var batch in _batches) Scenario.CollectEventsFor(batch.Source, batch.Events);
         _ = Scenario.Instances;
         _completed = true;

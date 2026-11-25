@@ -15,6 +15,7 @@ public sealed class ReactionSlice<TReactor> : IDisposable
 {
     readonly List<(EventSourceId Source, object[] Events)> _batches = [];
     readonly ReactionSliceOutcome<TReactor> _outcome;
+    readonly Lock _executionLock = new();
     bool _started;
     bool _completed;
     bool _disposed;
@@ -60,8 +61,11 @@ public sealed class ReactionSlice<TReactor> : IDisposable
     /// <exception cref="SliceDisposed">The slice has been disposed.</exception>
     public ReactionSlice<TReactor> GivenEvents(EventSourceId eventSourceId, params object[] events)
     {
-        EnsureNotStarted();
-        _batches.Add((eventSourceId, events.ToArray()));
+        lock (_executionLock)
+        {
+            EnsureNotStarted();
+            _batches.Add((eventSourceId, events.ToArray()));
+        }
 
         return this;
     }
@@ -74,8 +78,11 @@ public sealed class ReactionSlice<TReactor> : IDisposable
     /// <exception cref="SliceDisposed">The slice has been disposed.</exception>
     public async Task<ReactionSliceOutcome<TReactor>> Run()
     {
-        EnsureNotStarted();
-        _started = true;
+        lock (_executionLock)
+        {
+            EnsureNotStarted();
+            _started = true;
+        }
         foreach (var batch in _batches) await Scenario.Given.ForEventSource(batch.Source).Events(batch.Events);
         _completed = true;
 

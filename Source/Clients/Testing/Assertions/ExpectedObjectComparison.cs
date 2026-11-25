@@ -49,8 +49,12 @@ internal sealed class ExpectedObjectComparison(ValueComparison mode)
         return extra is null ? null : path.Member(extra).Difference("<missing>", actual[extra].GetValue(instance));
     }
 
-    bool RequiresSameType(object expected, object actual) => mode == ValueComparison.Typed ||
-        ExpectedValueComparer.IsScalar(expected.GetType()) || ExpectedValueComparer.IsScalar(actual.GetType());
+    bool RequiresSameType(object expected, object actual) =>
+        ExpectedValueComparer.IsScalar(expected.GetType()) || ExpectedValueComparer.IsScalar(actual.GetType()) ||
+        RequiresTypedObject(expected, actual);
+
+    bool RequiresTypedObject(object expected, object actual) => mode == ValueComparison.Typed &&
+        (_ancestors.Count == 0 || expected is not IEnumerable || actual is not IEnumerable);
 
     bool IsAncestorPair(object expected, object actual) =>
         _ancestors.Exists(pair => ReferenceEquals(pair.Expected, expected) && ReferenceEquals(pair.Actual, actual));
