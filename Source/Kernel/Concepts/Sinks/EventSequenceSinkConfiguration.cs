@@ -13,7 +13,9 @@ namespace Cratis.Chronicle.Concepts.Sinks;
 /// <param name="EventType">The exact registered event type, including its generation.</param>
 /// <param name="EventSequence">The destination sequence; omission selects the outbox, never the event log.</param>
 /// <param name="IsPublic">Whether the client declared the event type public. Only public event types may be published to the outbox.</param>
-public record EventSequenceSinkConfiguration(EventType EventType, EventSequenceId? EventSequence = null, bool IsPublic = false)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Sinks.EventSequenceSinkConfiguration")]
+public record EventSequenceSinkConfiguration([Id(0)] EventType EventType, [Id(1)] EventSequenceId? EventSequence = null, [Id(2)] bool IsPublic = false)
 {
     /// <summary>
     /// Gets the explicit destination for publication.

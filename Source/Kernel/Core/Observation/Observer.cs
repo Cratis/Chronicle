@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.StateMachines;
 using Cratis.Chronicle.Concepts;
@@ -21,8 +22,10 @@ using Cratis.Chronicle.Observation.Placement;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Traces;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,8 +53,10 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="eventGenerationRelease">The pinned generation release boundary.</param>
 /// <param name="timeProvider">The delivery fence clock.</param>
 /// <param name="observerGauges">The <see cref="IObserverGauges"/> the observer reports its current state to.</param>
+/// <param name="clusterReleases">The <see cref="IClusterReleases"/> that tells whether every silo of the cluster supports dormant observers.</param>
+/// <param name="supervisor">The <see cref="ISiloSupervisor"/> running the watchdog and the checks after a silo departure for the observers resident on the silo.</param>
+/// <param name="catchUpAdmission">The <see cref="ICatchUpAdmission"/> limiting how many catch-up jobs run at once; without one they are not limited.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.ObserverState)]
-[KeepAlive]
 [ObserverPlacement]
 public partial class Observer(
     [PersistentState(nameof(ObserverDefinition), WellKnownGrainStorageProviders.ObserverDefinitions)]
@@ -70,7 +75,10 @@ public partial class Observer(
     IOptionsMonitor<ChronicleOptions> optionsMonitor,
     IEventGenerationRelease? eventGenerationRelease = null,
     TimeProvider? timeProvider = null,
-    IObserverGauges? observerGauges = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
+    IObserverGauges? observerGauges = null,
+    IClusterReleases? clusterReleases = null,
+    ISiloSupervisor? supervisor = null,
+    ICatchUpAdmission? catchUpAdmission = null) : StateMachine<ObserverState>, IObserver, IObserverDevelopmentReset, IRemindable, IDisposable
 {
     readonly TimeProvider _clock = timeProvider ?? TimeProvider.System;
     readonly HashSet<JobId> _concludedCatchUpJobs = [];
@@ -88,6 +96,7 @@ public partial class Observer(
     ObserverId _observerId = ObserverId.Unspecified;
     ObserverKey _observerKey = ObserverKey.NotSet;
     string _observerKeyText = string.Empty;
+    string _activationStep = string.Empty;
     TimeSpan? _responseTimeout;
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
@@ -153,6 +162,15 @@ public partial class Observer(
     int _zeroWorkCatchUps;
 
     /// <summary>
+    /// Counts the short retries scheduled in a row for catch-up laps that moved nothing while events of the observer's types wait.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="_zeroWorkCatchUps"/> so the backoff arithmetic is unaffected by the short retries.
+    /// </remarks>
+    int _shortCatchUpRetries;
+    IGrainTimer? _shortCatchUpRetryTimer;
+
+    /// <summary>
     /// The moment from which a catch-up that produced no work may be tried again, or the default value when none is backing off.
     /// </summary>
     DateTimeOffset _catchUpBackoffUntil;
@@ -192,10 +210,26 @@ public partial class Observer(
     /// <inheritdoc/>
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        await base.OnActivateAsync(cancellationToken);
-        await ReconcilePartitionDeferrals();
-        RememberHandledEventsReportsForTheResponseTimeout();
-        ScheduleActivationAlertReport();
+        var started = Stopwatch.GetTimestamp();
+        try
+        {
+            await base.OnActivateAsync(cancellationToken);
+            ActivationCheckpoint("transition", cancellationToken);
+            await FinishWakeFromDormancy();
+            ActivationCheckpoint("finish waking from dormancy", cancellationToken);
+            await ReconcilePartitionDeferrals();
+            ActivationCheckpoint("reconcile partition deferrals", cancellationToken);
+            RememberHandledEventsReportsForTheResponseTimeout();
+            ScheduleActivationAlertReportIfNeeded();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The runtime has stopped waiting for this activation and marked it invalid, so carrying on would only end in
+            // a failure nobody observes. It ends as cancelled; record how far it got and how long it took, which is what
+            // tells why the runtime gave up on it.
+            logger.ActivationCancelled(_observerId, Stopwatch.GetElapsedTime(started), _activationStep);
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -205,13 +239,16 @@ public partial class Observer(
         _observerKeyText = _observerKey.ToString();
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
-        await SeedRunningStateHistory();
+        if (!await SeedRunningStateHistory()) return;
+        ActivationCheckpoint("seed running state history", cancellationToken);
         SeedSuspectedSkipOwnership();
 
         _jobsManager = GrainFactory.GetJobsManager(_observerKey.EventStore, _observerKey.Namespace);
 
-        await failures.ReadStateAsync();
+        await _failureReads.Read(failures.ReadStateAsync);
+        ActivationCheckpoint("read failures", cancellationToken);
         await RestoreDeliveryFences();
+        ActivationCheckpoint("restore delivery fences", cancellationToken);
 
         _eventSequence = GrainFactory.GetGrain<IEventSequence>(
             new EventSequenceKey(_observerKey.EventSequenceId, _observerKey.EventStore, _observerKey.Namespace));
@@ -221,18 +258,31 @@ public partial class Observer(
         _metrics = meter.BeginObserverScope(_observerId, _observerKey, optionsMonitor.CurrentValue?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
         var config = await configurationProvider.GetFor(_observerKey);
+        ActivationCheckpoint("read configuration", cancellationToken);
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
-        RegisterWatchdog(config.WatchdogInterval);
+        _watchdogIntervalSeconds = config.WatchdogInterval;
+        RegisterWithSupervisor(config.WatchdogInterval);
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
+        ConfigureDurableSubscriptions(config.DurableSubscriptions);
+        ConfigureDormancy(config);
+        _dormantResumeMaxEvents = config.DormantResumeMaxEvents < 1 ? 1000 : config.DormantResumeMaxEvents;
+        _unseenRemovalAfter = config.UnseenRemovalAfter > TimeSpan.Zero ? config.UnseenRemovalAfter : Observers.DefaultUnseenRemovalAfter;
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
         await InitializeAlertState();
+        ActivationCheckpoint("initialize alert state", cancellationToken);
         if (!KeyOwnsDefinition)
         {
             logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
         }
 
+        if (_observerExists)
+        {
+            await RestoreFromDurableSubscription();
+        }
+
+        ActivationCheckpoint("restore durable subscription", cancellationToken);
         PublishFailedPartitionsGauge();
     }
 
@@ -241,41 +291,24 @@ public partial class Observer(
     {
         try
         {
-            if (_removed || !_observerExists)
-            {
-                await base.OnDeactivateAsync(reason, cancellationToken);
-                return;
-            }
-
-            using (logger.BeginObserverScope(_observerId, _observerKey))
-            {
-                logger.Deactivating(reason.ReasonCode, reason.Description);
-            }
-
-            await DrainWebhookProbe();
-            await FlushDebouncedProgressState();
-            if (!_observerExists)
-            {
-                await base.OnDeactivateAsync(reason, cancellationToken);
-                return;
-            }
-
-            // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
-            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle)
-            {
-                await TransitionTo<Disconnected>();
-                await base.OnDeactivateAsync(reason, cancellationToken);
-            }
+            await Deactivate(reason, cancellationToken);
         }
-        finally
+        catch (Exception ex) when (cancellationToken.IsCancellationRequested)
         {
-            ReleaseGauge();
-            Dispose();
+            // The runtime stops waiting for this task once the deactivation timeout cancels the token, and goes on to
+            // dispose the activation. Nothing observes the outcome any more, so record it instead of leaving it unobserved.
+            logger.DeactivationOutlivedItsTimeout(ex);
         }
     }
 
     /// <inheritdoc/>
     public Task Ensure() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task CheckHealth() => Watchdog();
+
+    /// <inheritdoc/>
+    public Task VerifyLiveSubscriptionAfterDeparture() => VerifyLiveSubscription();
 
     /// <inheritdoc/>
     public async Task ResetForDevelopment()
@@ -297,14 +330,15 @@ public partial class Observer(
 
 #pragma warning disable CA1721 // Property names should not match get methods
     /// <inheritdoc/>
-    public Task<ObserverDefinition> GetDefinition() => Task.FromResult(observerDefinition.State);
-
-    /// <inheritdoc/>
     public Task<ObserverState> GetState()
     {
         return Task.FromResult(State);
     }
 #pragma warning restore CA1721 // Property namTes should not match get methods
+
+    /// <inheritdoc/>
+    public Task<ObserverInformationSnapshot> GetInformation() =>
+        Task.FromResult(new ObserverInformationSnapshot(observerDefinition.State, State, _subscription.IsSubscribed, _runningStateChangedAt));
 
     /// <inheritdoc/>
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);
@@ -421,7 +455,7 @@ public partial class Observer(
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<EventType>> GetEventTypes()
+    public async Task<EventTypeSet> GetEventTypes()
     {
         // An observer subscribed to all events has no fixed event type list to return - the whole
         // point is that it also covers types that did not exist when it subscribed. Resolve the full,
@@ -429,16 +463,16 @@ public partial class Observer(
         if (State.SubscribesToAllEvents)
         {
             var schemas = await storage.GetEventStore(_observerKey.EventStore).EventTypes.GetLatestForAllEventTypes();
-            return schemas.Select(_ => _.Type);
+            return EventTypeSet.From(schemas.Select(_ => _.Type));
         }
 
-        return Definition.EventTypes;
+        return EventTypeSet.From(Definition.EventTypes);
     }
 
     /// <inheritdoc/>
     public Task Subscribe<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = null,
         bool isReplayable = true,
@@ -451,7 +485,7 @@ public partial class Observer(
     /// <inheritdoc/>
     public Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         EventGenerationDelivery generationDelivery,
         object? subscriberArgs = null,
@@ -477,10 +511,11 @@ public partial class Observer(
 
         logger.Subscribing();
         logger.SubscribingToAllEvents();
+        await EnsureObservedNamespaceExists();
 
         var storageWasReset = await ReloadObserverState();
-        await observerDefinition.ReadStateAsync();
-        await failures.ReadStateAsync();
+        await _definitionReads.Read(observerDefinition.ReadStateAsync);
+        await _failureReads.Read(failures.ReadStateAsync);
         if (!reactivateRetired && State.AlertDisposition == AlertDisposition.Retired) return;
         await ClaimDefinitionForKey();
 
@@ -556,10 +591,14 @@ public partial class Observer(
 
         await CancelWebhookProbe();
         SupersedeRecoveryAfterQuarantine();
+        var wasHeldByClient = IsHeldByClient;
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetDurableSubscription();
         ForgetSupersededRegistrations();
         await PauseJobs();
         await TransitionTo<Disconnected>();
+        await PersistForgottenDurableSubscription();
+        if (wasHeldByClient) await RecordSeenByClient(force: true);
     }
 
     /// <inheritdoc/>
@@ -635,6 +674,9 @@ public partial class Observer(
         }
         if (reminderName == AlertReminderName)
         {
+            // The reminder is the heal path for a report lost with a previous activation, which a healthy-looking
+            // activation cannot know about, so a tick always reports once.
+            _alertReconciliationPending = true;
             await ReconcileAlertsIfNeeded();
             await ReleaseAlertReminderWhenSettled();
             return;
@@ -795,76 +837,6 @@ public partial class Observer(
         }
     }
 
-    /// <inheritdoc/>
-    protected override async Task WriteStateAsync()
-    {
-        if (CannotWriteState()) return;
-        await _stateWriteLock.WaitAsync();
-        try
-        {
-            if (_removed || CannotWriteState()) return;
-
-            // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
-            // so any write while quarantined persists the quarantine rather than a stale active snapshot.
-            if (IsQuarantined)
-            {
-                State = State with { RunningState = ObserverRunningState.Quarantined };
-                _runningStateChangedAt = _quarantineRunningStateChangedAt;
-            }
-
-            // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
-            // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
-            var shadowClaims = ShadowClaimsSnapshot();
-            State = State with
-            {
-                AlertLifecycleId = _alertLifecycleId,
-                AlertRevision = _alertRevision,
-                AlertDisposition = _alertDisposition,
-                QuarantineEpisodeId = _quarantineEpisodeId,
-                WebhookProbe = _webhookProbe,
-                DeliveryFences = DeliveryFenceSnapshot(),
-                PartitionClaims = shadowClaims.Claims,
-                ObserverWideClaim = shadowClaims.Wide,
-                OwnershipRevision = shadowClaims.Revision
-            };
-            var revision = _alertRevision;
-            try
-            {
-                await base.WriteStateAsync();
-                if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
-            }
-            catch (ObserverKeyDoesNotMatchDefinition)
-            {
-                if (await RelinquishOwnershipIfMoved()) return;
-                await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
-                    .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
-                try
-                {
-                    await base.WriteStateAsync();
-                    if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
-                }
-                catch (ObserverKeyDoesNotMatchDefinition)
-                {
-                    if (await RelinquishOwnershipIfMoved()) return;
-                    throw;
-                }
-            }
-
-            _persistedStateWrites++;
-            PublishRunningStateGauge();
-            if (revision == _alertRevision)
-            {
-                _alertStateNeedsPersistence = false;
-            }
-
-            _debouncedProgressWrites = 0;
-        }
-        finally
-        {
-            _stateWriteLock.Release();
-        }
-    }
-
     static bool IsRetryReminderFor(FailedPartition partition, string reminderName) =>
         !partition.IsQuarantined &&
         (PartitionReminderName(partition.Id) == reminderName || partition.Partition.ToString() == reminderName);
@@ -900,10 +872,61 @@ public partial class Observer(
         state is Disconnected &&
         !_recoverSubscriptionAfterQuarantine &&
         _subscription.IsSubscribed &&
-        !_subscription.EventTypes.Any() &&
+        _subscription.EventTypes.Count == 0 &&
         !State.SubscribesToAllEvents;
 
-    bool CannotWriteState() => _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
+    void ActivationCheckpoint(string completedStep, CancellationToken cancellationToken)
+    {
+        _activationStep = completedStep;
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    async Task Deactivate(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (_removed || !_observerExists)
+            {
+                await base.OnDeactivateAsync(reason, cancellationToken);
+                return;
+            }
+
+            using (logger.BeginObserverScope(_observerId, _observerKey))
+            {
+                logger.Deactivating(reason.ReasonCode, reason.Description);
+            }
+
+            await DrainWebhookProbe();
+            await FlushDebouncedProgressState();
+            if (!_observerExists)
+            {
+                await base.OnDeactivateAsync(reason, cancellationToken);
+                return;
+            }
+
+            // An observer released as idle is disconnected already and has nothing left to write, the same as at shutdown.
+            // One released as dormant keeps its subscription - the record in its state and the entry in the queue - so an event wakes it.
+            // If the queue cannot keep it (an event reached its lane since the release was asked for), it leaves the ordinary way.
+            var keepsSubscription = reason.ReasonCode != DeactivationReasonCode.ShuttingDown &&
+                IsReleasedAsDormant &&
+                await KeepQueueEntryForDormantRelease();
+            if (reason.ReasonCode != DeactivationReasonCode.ShuttingDown && !IsReleasedAsIdle && !keepsSubscription)
+            {
+                ForgetDurableSubscription();
+                await TransitionTo<Disconnected>();
+                await PersistForgottenDurableSubscription();
+                await base.OnDeactivateAsync(reason, cancellationToken);
+            }
+        }
+        finally
+        {
+            UnregisterFromSupervisor();
+            ReleaseGauge();
+            Dispose();
+        }
+    }
+
+    bool CannotWriteState() => _disposed || _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
 
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
 
@@ -953,7 +976,7 @@ public partial class Observer(
     /// <returns>True if storage no longer has a record for this observer, false if it does.</returns>
     async Task<bool> ReloadObserverState()
     {
-        await ReadStateAsync();
+        await _stateReads.Read(ReadStateAsync);
         var storageWasReset = State.Identifier == ObserverId.Unspecified;
         State = State with { Identifier = _observerId };
         if (IsQuarantined)
@@ -988,6 +1011,10 @@ public partial class Observer(
         if (!automatic)
         {
             _recoverSubscriptionAfterQuarantine = false;
+            if (!recovering)
+            {
+                await EnsureObservedNamespaceExists();
+            }
         }
 
         // Automatic kernel subscription cannot revive a retired observer or a sealed activation.
@@ -995,7 +1022,7 @@ public partial class Observer(
         if (IsAdditiveSubscriptionBlocked(additive)) return;
         ThrowIfSealed();
         await ThrowIfServedByAnotherTransport(typeof(TObserverSubscriber), subscriberArgs);
-        if (recovering && !await NeedsSubscriptionRecovery(eventTypes)) return;
+        if (recovering && !await NeedsSubscriptionRecovery(EventTypeSet.From(eventTypes))) return;
 
         // Only a subscription that may end quarantine supersedes recovery owed by an earlier clearance.
         var leavesQuarantine = !automatic && !recovering;
@@ -1034,8 +1061,8 @@ public partial class Observer(
                 var wasQuarantined = IsQuarantined;
                 storageWasReset = await ReloadObserverState();
 
-                await observerDefinition.ReadStateAsync();
-                await failures.ReadStateAsync();
+                await _definitionReads.Read(observerDefinition.ReadStateAsync);
+                await _failureReads.Read(failures.ReadStateAsync);
                 if (storageWasReset && wasQuarantined && IsQuarantined)
                 {
                     // The quarantine belonged to a wiped world. Discard it only after all state has been reloaded,
@@ -1107,6 +1134,7 @@ public partial class Observer(
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         _subscription = ObserverSubscription.Unsubscribed;
+        ForgetDurableSubscription();
         ForgetSupersededRegistrations();
     }
 
@@ -1124,7 +1152,8 @@ public partial class Observer(
         if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         var owner = GetOwner<TObserverSubscriber>();
         logger.Subscribing();
-        logger.SubscribingWithEventTypes(eventTypes.Count(), string.Join(", ", eventTypes.Select(et => et.Id)));
+        var eventTypeIds = eventTypes.Select(et => et.Id).ToArray();
+        logger.SubscribingWithEventTypes(eventTypeIds.Length, string.Join(", ", eventTypeIds));
 
         observerDefinition.State = observerDefinition.State with
         {
@@ -1139,9 +1168,11 @@ public partial class Observer(
 
         if (reconcile && CannotReconcileSubscription(typeof(Webhooks.IWebhookObserverSubscriber).IsAssignableFrom(typeof(TObserverSubscriber)))) return;
         ApplySubscription<TObserverSubscriber>(eventTypes, siloAddress, subscriberArgs, isReplayable, filters, generationDelivery);
+        RecordDurableSubscription();
 
         State = State with { SubscribesToAllEvents = false };
         await WriteStateAsync();
+        if (subscriberArgs is ConnectedClient) await RecordSeenByClient(force: true);
     }
 
     async Task SetUpAllEventsSubscription<TObserverSubscriber>(
@@ -1173,9 +1204,11 @@ public partial class Observer(
             subscriberArgs,
             isReplayable);
         ForgetSupersededRegistrations();
+        RecordDurableSubscription();
 
         State = State with { SubscribesToAllEvents = true };
         await WriteStateAsync();
+        if (subscriberArgs is ConnectedClient) await RecordSeenByClient(force: true);
     }
 
     async Task ValidateGenerationDelivery(IEnumerable<EventType> eventTypes, EventGenerationDelivery generationDelivery)
@@ -1207,7 +1240,7 @@ public partial class Observer(
             _subscription = new(
                 _observerId,
                 _observerKey,
-                eventTypes,
+                EventTypeSet.From(eventTypes),
                 typeof(TObserverSubscriber),
                 siloAddress,
                 subscriberArgs,
@@ -1245,21 +1278,12 @@ public partial class Observer(
         // when the client that now owns the subscription leaves.
         SupersedeTargetsOtherThan(connectedClient.ConnectionId);
         var observerType = observerDefinition.State.Type;
-        _resubscribeTarget = existing => SubscribeToEventTypes<TObserverSubscriber>(
-            observerType,
-            eventTypes,
-            existing.SiloAddress,
-            existing.ConnectedClient,
-            isReplayable,
-            filters,
-            reactivateRetired: false,
-            automatic: true,
-            generationDelivery: generationDelivery);
+        _resubscribe = CreateResubscribeDefinition<TObserverSubscriber>(observerType, eventTypes, isReplayable, filters, generationDelivery);
 
         _subscription = new(
             _observerId,
             _observerKey,
-            eventTypes,
+            EventTypeSet.From(eventTypes),
             typeof(TObserverSubscriber),
             siloAddress,
             subscriberArgs,

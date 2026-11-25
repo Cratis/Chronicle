@@ -8,6 +8,10 @@ import { GetStatus } from './GetStatus';
 import { SetInitialAdminPassword } from './SetInitialAdminPassword';
 import { absolutePath } from '../../Utils/basePath';
 import { clearAntiforgeryToken, refreshAntiforgeryToken } from './antiforgery';
+import { getAuthenticationMode } from './authenticationMode';
+
+const autoSignInKey = 'chronicle.trustedProxy.autoSignIn';
+const autoSignInWindowMs = 60_000;
 
 @injectable()
 export class LoginViewModel {
@@ -21,6 +25,8 @@ export class LoginViewModel {
     errorMessage: string = '';
     requiresPasswordChange: boolean = false;
     isInitialSetup: boolean = false;
+    private _navigating = false;
+    isTrustedProxy: boolean = false;
     userId: Guid | null = null;
 
     constructor(
@@ -32,6 +38,19 @@ export class LoginViewModel {
     async checkInitialSetup() {
         this.isLoading = true;
         try {
+            // A reverse proxy owns sign-in in trusted-proxy mode; Chronicle never shows its own password or
+            // initial-setup form there, even if a user lands here because the proxy session is missing or expired.
+            const mode = await getAuthenticationMode();
+            if (mode.mode === 'trustedProxy') {
+                this.isTrustedProxy = true;
+                if (this.shouldSignInAutomatically()) {
+                    // Keep showing the spinner while the browser navigates to the proxy.
+                    this._navigating = true;
+                    this.retrySignIn();
+                }
+                return;
+            }
+
             const result = await this._getStatus.perform();
             if (result.data?.isRequired) {
                 this.isInitialSetup = true;
@@ -42,7 +61,7 @@ export class LoginViewModel {
         } catch (error) {
             console.error('Failed to check initial setup status:', error);
         } finally {
-            this.isLoading = false;
+            this.isLoading = this._navigating;
         }
     }
 
@@ -171,6 +190,27 @@ export class LoginViewModel {
         } finally {
             this.isLoggingIn = false;
         }
+    }
+
+    /**
+     * A background request cannot follow the proxy's redirect to its sign-in, so the Workbench lands here without a session. Only a
+     * page navigation can sign in, so do it once without making the user click. A second arrival within the window means the proxy
+     * did sign the user in but Chronicle still refused them: show the message instead of redirecting in a loop.
+     */
+    private shouldSignInAutomatically(): boolean {
+        try {
+            const last = Number(sessionStorage.getItem(autoSignInKey) ?? 0);
+            if (Date.now() - last < autoSignInWindowMs) return false;
+            sessionStorage.setItem(autoSignInKey, Date.now().toString());
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    retrySignIn() {
+        // The reverse proxy owns the session; sending the user back through it lets the proxy re-establish sign-in.
+        location.assign(absolutePath('/'));
     }
 
     cancelPasswordChange() {

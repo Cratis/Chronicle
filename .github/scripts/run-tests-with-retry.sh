@@ -25,8 +25,9 @@
 # an identical set does not prove the failure is deterministic, and its cause is unknown
 # (#4057). Each attempt starts a new runner and its own fixture, although a failed or
 # killed attempt can still leave state behind. Runs with no recorded failures (a
-# crash, build or container-start failure, see #4048) and runs with more than
-# TEST_MAX_RETRY_TESTS failures are never retried; the identical-set guard covers a fixture
+# crash, build or container-start failure, see #4048), except exit 139 before any
+# recorded results (#5630), and runs with more than TEST_MAX_RETRY_TESTS failures
+# are never retried; the identical-set guard covers a fixture
 # that started and then became unusable. Recycling the fixture between attempts is not done
 # here.
 #
@@ -75,6 +76,28 @@ if names:
 PY
 }
 
+# A missing TRX or a valid TRX with no results is the only evidence accepted here.
+# Malformed TRX and nonzero execution counters cannot establish a pre-test crash.
+has_no_recorded_results() {
+    python3 - "$1" <<'PY'
+import sys, xml.etree.ElementTree as ET
+ns = '{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}'
+try:
+    tree = ET.parse(sys.argv[1])
+except FileNotFoundError:
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+if tree.getroot().tag != f'{ns}TestRun' or list(tree.iter(f'{ns}UnitTestResult')):
+    sys.exit(1)
+try:
+    executed = sum(int(counter.get('executed', '0')) for counter in tree.iter(f'{ns}Counters'))
+except ValueError:
+    sys.exit(1)
+sys.exit(0 if executed == 0 else 1)
+PY
+}
+
 # Union of the tests that failed on attempts 1..N, read back from those attempts' TRX files.
 failed_up_to() {
     local last="$1" i
@@ -117,10 +140,22 @@ run() {
         "${EXTRA_ARGS[@]}"
 }
 
+# A nonempty, enumerated set is required: infrastructure crashes cannot be quarantined.
+finish_failed_attempts() {
+    [ "$#" -gt 0 ] || return 1
+    local remaining
+    remaining=$(printf '%s\n' "$@" | node .github/scripts/quarantine.mjs unquarantined) || return 1
+    [ -z "$remaining" ] || return 1
+    printf '%s\n' "$@" | node .github/scripts/quarantine.mjs record --results-dir "$RESULTS_DIR"
+}
+
 # Stop retrying on an unchanged failure set (bounded retry policy, see the header).
 fail_unchanged_set() {
     local attempt_number="$1"
     shift
+    if finish_failed_attempts "$@"; then
+        exit 0
+    fi
     echo "::error::Attempt ${attempt_number} failed with the identical set of $# test(s) as attempt $((attempt_number - 1)); stopping under the bounded retry policy; cause unknown."
     printf '  - %s\n' "$@"
     exit 1
@@ -129,7 +164,8 @@ fail_unchanged_set() {
 previous_failed_set=""
 attempt=1
 echo "::group::Test attempt ${attempt}/${MAX_ATTEMPTS} (full filter)"
-run "${TEST_FILTER}" "attempt-${attempt}"
+filter="$TEST_FILTER"
+run "$filter" "attempt-${attempt}"
 status=$?
 echo "::endgroup::"
 
@@ -145,53 +181,61 @@ while [ $attempt -lt "$MAX_ATTEMPTS" ]; do
     done < <(extract_failed "${RESULTS_DIR}/attempt-${attempt}/results.trx")
 
     if [ "${#failed[@]}" -eq 0 ]; then
-        # Test run failed but no individual failed test was recorded (e.g. a
-        # crash, build, or fixture/container start error). Retrying the whole
-        # subset is meaningless and would hide an infrastructure failure — fail.
-        echo "Attempt ${attempt} failed but no failed tests were recorded in the TRX. Treating as a hard failure."
-        exit 1
-    fi
+        # Containment for #5630: remove when the dump-based fix lands.
+        if [ "$status" -eq 139 ] && has_no_recorded_results "${RESULTS_DIR}/attempt-${attempt}/results.trx"; then
+            echo "::warning::Temporary containment for Cratis/Chronicle#5630: attempt ${attempt} exited 139 before any test results were recorded; retrying the same filter within the existing attempt budget."
+        else
+            # Other crashes, build and fixture/container errors remain hard failures.
+            echo "Attempt ${attempt} failed but no failed tests were recorded in the TRX. Treating as a hard failure."
+            exit 1
+        fi
+    else
+        if [ "${#failed[@]}" -gt "$MAX_RETRY_TESTS" ]; then
+            # A large failed set is systemic, not flaky — a broken image or a failing
+            # class fixture fails every test in the affected class(es). Re-running it
+            # would just multiply the wasted time, so fail fast instead.
+            echo "Attempt ${attempt} had ${#failed[@]} failed tests (> ${MAX_RETRY_TESTS}). Treating as a systemic failure; not retrying."
+            exit 1
+        fi
 
-    if [ "${#failed[@]}" -gt "$MAX_RETRY_TESTS" ]; then
-        # A large failed set is systemic, not flaky — a broken image or a failing
-        # class fixture fails every test in the affected class(es). Re-running it
-        # would just multiply the wasted time, so fail fast instead.
-        echo "Attempt ${attempt} had ${#failed[@]} failed tests (> ${MAX_RETRY_TESTS}). Treating as a systemic failure; not retrying."
-        exit 1
-    fi
+        # extract_failed output is sorted and unique, so string equality is set equality.
+        current_failed_set="$(printf '%s\n' "${failed[@]}")"
+        if [ "$attempt" -ge 2 ] && [ "$current_failed_set" = "$previous_failed_set" ]; then
+            fail_unchanged_set "$attempt" "${failed[@]}"
+        fi
+        previous_failed_set="$current_failed_set"
 
-    # extract_failed output is sorted and unique, so string equality is set equality.
-    current_failed_set="$(printf '%s\n' "${failed[@]}")"
-    if [ "$attempt" -ge 2 ] && [ "$current_failed_set" = "$previous_failed_set" ]; then
-        fail_unchanged_set "$attempt" "${failed[@]}"
+        filter=""
+        for name in "${failed[@]}"; do
+            [ -n "$filter" ] && filter+="|"
+            filter+="FullyQualifiedName=${name}"
+        done
     fi
-    previous_failed_set="$current_failed_set"
 
     attempt=$((attempt + 1))
 
-    echo "::group::Test attempt ${attempt}/${MAX_ATTEMPTS} (re-running ${#failed[@]} failed test(s))"
-    printf '  - %s\n' "${failed[@]}"
-
-    filter=""
-    for name in "${failed[@]}"; do
-        [ -n "$filter" ] && filter+="|"
-        filter+="FullyQualifiedName=${name}"
-    done
+    if [ "${#failed[@]}" -eq 0 ]; then
+        echo "::group::Test attempt ${attempt}/${MAX_ATTEMPTS} (retrying pre-test crash)"
+    else
+        echo "::group::Test attempt ${attempt}/${MAX_ATTEMPTS} (re-running ${#failed[@]} failed test(s))"
+        printf '  - %s\n' "${failed[@]}"
+    fi
 
     run "$filter" "attempt-${attempt}"
     status=$?
     echo "::endgroup::"
 
     if [ $status -eq 0 ]; then
-        echo "Previously failed tests passed on attempt ${attempt} — treating as flaky, not a regression."
-
         rescued=()
         while IFS= read -r line; do
             [ -n "$line" ] && rescued+=("$line")
         done < <(failed_up_to $((attempt - 1)))
 
         if [ "${#rescued[@]}" -gt 0 ]; then
+            echo "Previously failed tests passed on attempt ${attempt} — treating as flaky, not a regression."
             record_flaky "$attempt" "${rescued[@]}"
+        else
+            echo "All tests passed on attempt ${attempt}."
         fi
 
         exit 0
@@ -205,6 +249,10 @@ done < <(extract_failed "${RESULTS_DIR}/attempt-${attempt}/results.trx")
 
 if [ "$attempt" -ge 2 ] && [ "${#last[@]}" -gt 0 ] && [ "$(printf '%s\n' "${last[@]}")" = "$previous_failed_set" ]; then
     fail_unchanged_set "$attempt" "${last[@]}"
+fi
+
+if finish_failed_attempts "${last[@]}"; then
+    exit 0
 fi
 
 message="Tests still failing after ${MAX_ATTEMPTS} attempts."

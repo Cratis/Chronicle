@@ -22,4 +22,15 @@ public interface IWebhooks
     /// </summary>
     /// <returns>A collection of <see cref="WebhookDefinition"/>.</returns>
     Task<IEnumerable<WebhookDefinition>> GetAll();
+
+    /// <summary>
+    /// Get the public keys receivers use to verify the signatures of webhook deliveries from this event store.
+    /// </summary>
+    /// <remarks>
+    /// Includes the active key and any rotated-out key that is still within its overlap window. Retired keys and keys
+    /// with an algorithm other than Ed25519 are not returned.
+    /// </remarks>
+    /// <returns>A collection of <see cref="WebhookSigningPublicKey"/>.</returns>
+    /// <exception cref="WebhookSigningKeysQueryFailed">Thrown when the Kernel fails or refuses the query.</exception>
+    Task<IEnumerable<WebhookSigningPublicKey>> GetSigningKeys();
 }

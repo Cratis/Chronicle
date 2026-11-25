@@ -20,6 +20,14 @@ namespace Cratis.Chronicle.Contracts.EventTypes;
 public interface IEventTypes
 {
     /// <summary>
+    /// Executes the CheckEventTypeRegistrations command.
+    /// </summary>
+    /// <param name = "request">The CheckEventTypeRegistrations request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<CheckEventTypeRegistrationsResponse>> CheckEventTypeRegistrations(CheckEventTypeRegistrationsRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the CreateEventType command.
     /// </summary>
     /// <param name = "request">The CreateEventType request.</param>
@@ -27,6 +35,14 @@ public interface IEventTypes
     /// <returns>The command result.</returns>
     [Operation]
     Task<CommandResult> CreateEventType(CreateEventTypeRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the NormalizeEventTypeSchemas command.
+    /// </summary>
+    /// <param name = "request">The NormalizeEventTypeSchemas request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult<NormalizeEventTypeSchemasResponse>> NormalizeEventTypeSchemas(NormalizeEventTypeSchemasRequest request, CallContext callContext = default);
     /// <summary>
     /// Executes the RegisterEventTypes command.
     /// </summary>
@@ -67,6 +83,46 @@ public interface IEventTypes
     /// <returns>The query result.</returns>
     [Operation]
     Task<QueryResult<IEnumerable<EventTypeDetailsResponse>>> AllEventTypeGenerations(AllEventTypeGenerationsRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the GetEventTypesWithAnnotations query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<EventTypesWithAnnotationsResponse>>> GetEventTypesWithAnnotations(GetEventTypesWithAnnotationsRequest request, CallContext callContext = default);
+}
+
+/// <summary>
+/// Represents the CheckEventTypeRegistrationsRequest message.
+/// </summary>
+[ProtoContract]
+public class CheckEventTypeRegistrationsRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the types.
+    /// </summary>
+    [ProtoMember(2)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration> Types { get; set; } = new List<global::Cratis.Chronicle.Contracts.Events.EventTypeRegistration>();
+}
+
+/// <summary>
+/// Represents the CheckEventTypeRegistrationsResponse message.
+/// </summary>
+[ProtoContract]
+public class CheckEventTypeRegistrationsResponse
+{
+    /// <summary>
+    /// Gets or sets the Results.
+    /// </summary>
+    [ProtoMember(1)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeCheckResult> Results { get; set; } = new List<global::Cratis.Chronicle.Contracts.EventTypes.EventTypeCheckResult>();
 }
 
 /// <summary>
@@ -86,6 +142,38 @@ public class CreateEventTypeRequest
     /// </summary>
     [ProtoMember(2)]
     public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the NormalizeEventTypeSchemasRequest message.
+/// </summary>
+[ProtoContract]
+public class NormalizeEventTypeSchemasRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the EventTypeIds.
+    /// </summary>
+    [ProtoMember(2)]
+    public IEnumerable<string>? EventTypeIds { get; set; }
+}
+
+/// <summary>
+/// Represents the NormalizeEventTypeSchemasResponse message.
+/// </summary>
+[ProtoContract]
+public class NormalizeEventTypeSchemasResponse
+{
+    /// <summary>
+    /// Gets or sets the Changed.
+    /// </summary>
+    [ProtoMember(1)]
+    public IEnumerable<global::Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse> Changed { get; set; } = new List<global::Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse>();
 }
 
 /// <summary>
@@ -212,4 +300,42 @@ public class AllEventTypeGenerationsRequest
     /// </summary>
     [ProtoMember(2)]
     public string EventTypeId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Represents the EventTypesWithAnnotationsResponse message.
+/// </summary>
+[ProtoContract]
+public class EventTypesWithAnnotationsResponse
+{
+    /// <summary>
+    /// Gets or sets the EventTypeId.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventTypeId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Generation.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::System.UInt32 Generation { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Keywords.
+    /// </summary>
+    [ProtoMember(3)]
+    public IEnumerable<string> Keywords { get; set; } = new List<string>();
+}
+
+/// <summary>
+/// Represents the GetEventTypesWithAnnotationsRequest message.
+/// </summary>
+[ProtoContract]
+public class GetEventTypesWithAnnotationsRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
 }

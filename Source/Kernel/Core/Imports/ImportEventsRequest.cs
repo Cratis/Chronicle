@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Imports;
 /// Represents the request for the job that validates and commits an import.
 /// </summary>
 /// <param name="ImportId">The import to commit; the event store and namespace are the job's own.</param>
-public record ImportEventsRequest(ImportId ImportId) : IJobRequest;
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportEventsRequest")]
+public record ImportEventsRequest([Id(0)] ImportId ImportId) : IJobRequest;

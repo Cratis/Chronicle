@@ -11,6 +11,7 @@ using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Services.Observation.for_Observers.given;
 
@@ -45,7 +46,7 @@ public class a_registered_pattern_capture : Cratis.Chronicle.Observation.for_Obs
         grainFactory.GetGrain<IObserver>(Arg.Any<string>(), Arg.Any<string>()).Returns(_observer);
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         localSiloDetails.SiloAddress.Returns(SiloAddress.Zero);
-        var capture = new PatternCapture(_storage, localSiloDetails, grainFactory, NullLogger<PatternCapture>.Instance);
+        var capture = new PatternCapture(_storage, localSiloDetails, grainFactory, Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions()), NullLogger<PatternCapture>.Instance);
 
         // Startup and event-type registration take this path. The real Observer starts with an
         // existing Owner.None definition and must rewrite it using the actual subscriber type.

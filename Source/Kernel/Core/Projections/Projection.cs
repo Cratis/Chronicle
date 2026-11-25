@@ -187,7 +187,7 @@ public class Projection(
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
 
         var stored = events.ToArray();
-        var released = await projection.ReleaseToPins(stored);
+        var released = projection.ForProjection(await projection.ReleaseToPins(stored));
         var wanted = key.Value;
         var result = new List<AppendedEvent>();
 
@@ -241,9 +241,12 @@ public class Projection(
     /// </summary>
     /// <param name="changes">The changes recorded for the event.</param>
     /// <returns>The changes without any that only record the marker.</returns>
-    static Change[] WithoutInitializationMarker(Change[] changes) =>
-        [.. changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
-            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized))];
+    static Change[] WithoutInitializationMarker(Change[] changes)
+    {
+        var remaining = changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
+            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized));
+        return [.. remaining];
+    }
 
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,
@@ -315,7 +318,7 @@ public class Projection(
         var eventStoreNamespaceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace);
         var eventSequenceStorage = eventStoreNamespaceStorage.GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
-        events = await projection.ReleaseToPins(events);
+        events = projection.ForProjection(await projection.ReleaseToPins(events));
         var state = initialState;
         Key? lastKey = null;
         var hasReadModel = ((IDictionary<string, object?>)state).Count > 0;
@@ -378,7 +381,7 @@ public class Projection(
         var projectionKey = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventSequenceStorage = storage.GetEventStore(projectionKey.EventStore).GetNamespace(eventStoreNamespace).GetEventSequence(State.EventSequenceId);
         var projection = await GetOrCreateProjectionForNamespace(eventStoreNamespace);
-        events = await projection.ReleaseToPins(events);
+        events = projection.ForProjection(await projection.ReleaseToPins(events));
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         var result = initialState.Exists ? initialState with { Model = initialState.Model.Clone() } : SingleReadModelProjectionState.Empty;
@@ -457,7 +460,7 @@ public class Projection(
     /// <returns>The <see cref="PreviewSink"/> holding the read models built.</returns>
     async Task<PreviewSink> ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, IEnumerable<AppendedEvent> events)
     {
-        events = await projection.ReleaseToPins(events);
+        events = projection.ForProjection(await projection.ReleaseToPins(events));
         var sink = new PreviewSink(projection.IdentifiedByProperty ?? new PropertyPath(_identifierPropertyName));
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         var projectionEvents = new InMemoryProjectionEvents(
@@ -577,6 +580,7 @@ public class Projection(
 
     async Task<EngineProjection> GetOrCreateProjectionForNamespace(EventStoreNamespaceName eventStoreNamespace)
     {
+        EnsureSupportedDefinition();
         if (!_projectionsByNamespace.TryGetValue(eventStoreNamespace, out var projection))
         {
             var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
@@ -589,11 +593,9 @@ public class Projection(
             var readModelKey = new ReadModelGrainKey(State.ReadModel, key.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             var readModelDefinition = await readModel.GetDefinition();
-            var eventStoreStorage = storage.GetEventStore(key.EventStore);
-            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            // Reads use the projection's own generation delivery, just like its observer.
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition, eventTypeSchemas);
+            // Reads use the projection's own generation delivery, just like its observer. The compiled plan is shared with every namespace.
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 
@@ -602,12 +604,19 @@ public class Projection(
 
     async Task<EngineProjection> GetOrCreateProjectionForNamespaceWithReadModel(EventStoreNamespaceName eventStoreNamespace, ReadModelDefinition readModelDefinition)
     {
+        EnsureSupportedDefinition();
+
         // For preview with provided read model, always create a fresh projection (don't cache)
         var key = ProjectionKey.Parse(this.GetPrimaryKeyString());
         var eventStoreStorage = storage.GetEventStore(key.EventStore);
         var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
         return await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition, eventTypeSchemas);
+    }
+
+    void EnsureSupportedDefinition()
+    {
+        if (State.UsesUnsupportedEventSequence()) throw new InvalidOperationException("Projection does not accept the system event sequence.");
     }
 
     ProjectionDefinition DefinitionForReads() => State.SubscribesToAllEvents
@@ -701,7 +710,7 @@ public class Projection(
         // Compared by id: the observer is subscribed with the delivery-specific generations of the registered
         // definition, while this grain's projection always resolves compatibility generations.
         var expected = (await GetOrCreateProjectionForNamespace(@namespace)).EventTypes.Select(_ => _.Id).ToHashSet();
-        var subscribed = (await observer.GetDefinition()).EventTypes.Select(_ => _.Id).ToHashSet();
+        var subscribed = (await observer.GetEventTypes()).Select(_ => _.Id).ToHashSet();
         return expected.SetEquals(subscribed);
     }
 
@@ -741,6 +750,7 @@ public class Projection(
             {
                 ObserverId = key.ProjectionId,
                 ObserverKey = new(key.ProjectionId, key.EventStore, @namespace, State.EventSequenceId),
+                ChangeId = DefinitionChangeIdentity.For(currentDefinition),
                 Reasons = [replayRecommendation.Reason]
             });
     }

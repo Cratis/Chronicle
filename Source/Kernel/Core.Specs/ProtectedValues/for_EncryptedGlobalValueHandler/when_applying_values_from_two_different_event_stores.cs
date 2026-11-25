@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.ProtectedValues.for_EncryptedGlobalValueHandler;
@@ -13,7 +14,7 @@ namespace Cratis.Chronicle.ProtectedValues.for_EncryptedGlobalValueHandler;
 /// </summary>
 public class when_applying_values_from_two_different_event_stores : given.a_property_handler
 {
-    void Establish() => _encryption.Encrypt(Arg.Any<byte[]>(), _key).Returns(Encoding.UTF8.GetBytes("cipher"));
+    void Establish() => _encryption.Encrypt(Arg.Any<byte[]>(), _key, Arg.Any<EncryptionKeyRevision>(), Arg.Any<ProtectedValueAddress>()).Returns(Encoding.UTF8.GetBytes("cipher"));
 
     async Task Because()
     {

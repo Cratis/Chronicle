@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.ProtectedValues;
@@ -61,12 +62,12 @@ public class PIICompliancePropertyValueHandler(
         }
 
         var pair = await provisioner.EnsureKeyWithRevisionFor(eventStore, eventStoreNamespace, identifier);
-        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value), new(ProtectionKind.Pii, identifier, pair.Key, pair.Revision));
+        return (ProtectedValueCodec.Encrypt(encryption, pair.Key, value, pair.Revision, new(eventStore, eventStoreNamespace, identifier)), new(ProtectionKind.Pii, identifier, pair.Key, pair.Revision));
     }
 
     /// <inheritdoc/>
     public Task<JsonNode?> TryRelease(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
-        ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, identifier, value);
+        PreserveUnwrapFailure(() => ProtectedValueCodec.TryRelease(encryptionKeyStore, encryption, eventStore, eventStoreNamespace, identifier, value));
 
     /// <inheritdoc/>
     public async Task<ReleasedProtectedValue> ReleaseWithStatus(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
@@ -77,21 +78,32 @@ public class PIICompliancePropertyValueHandler(
         }
 
         using var scope = ReleaseKeys.BeginScope();
-        var key = await ReleaseKeys.TryGetForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier);
-        if (key is null)
+        if (ErasedValueClassifier.Handles(encrypted))
         {
-            return await ReleaseMissingKeyWithStatus(eventStore, eventStoreNamespace, identifier, value);
+            var classified = await ErasedValueClassifier.Classify(encryptionKeyStore, encryption, (eventStore, eventStoreNamespace, identifier), encrypted, value);
+            if (classified.Status == ProtectedValueReleaseStatus.Erased)
+            {
+                return classified;
+            }
+
+            return await ReleaseKeys.Complete(() => classified);
         }
 
         try
         {
-            return await ReleaseKeys.Complete(() => new ReleasedProtectedValue(ProtectedValueCodec.Decrypt(encryption, key, encrypted), ProtectedValueReleaseStatus.Decrypted));
+            var released = await ReleaseEncrypted((eventStore, eventStoreNamespace, identifier), encrypted, false);
+            if (released is null)
+            {
+                return await ReleaseMissingKeyWithStatus(eventStore, eventStoreNamespace, identifier, value);
+            }
+
+            return await ReleaseKeys.Complete(() => new ReleasedProtectedValue(released, ProtectedValueReleaseStatus.Decrypted));
         }
-        catch (EncryptionKeyUnwrapFailed)
+        catch (EncryptionKeyUnwrapFailed failure)
         {
             if (await HasRecordedErasure(eventStore, eventStoreNamespace, identifier))
             {
-                logger.UnrecoverableValueAfterErasure(identifier);
+                logger.UnrecoverableValueAfterErasure(failure.InnerException?.GetType().Name ?? failure.GetType().Name);
                 return new(value, ProtectedValueReleaseStatus.Erased);
             }
 
@@ -105,6 +117,8 @@ public class PIICompliancePropertyValueHandler(
     /// with recorded erasure, the overwhelmingly likely cause is pre-erasure ciphertext; permanently failing
     /// the stored-event migration would block every later event of the type. Only strict release treats such
     /// unwrap failures as erased. Key-storage failures and authenticated-payload corruption still propagate.
+    /// A value that carries a signed managed-key identity is not subject to that rule: it is erased only when its
+    /// signatures verify at this address and the fence records its key, and any other failure propagates (#4619).
     /// </remarks>
     public async Task<JsonNode> ReleaseStrict(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value)
     {
@@ -114,13 +128,34 @@ public class PIICompliancePropertyValueHandler(
 
     /// <inheritdoc/>
     public Task<(JsonNode Value, bool IsErased)> ReleaseReportingErasure(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
-        ReleaseValue(value, () => ReleaseKeys.TryGetForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier), async () => await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier) is not null);
+        ReleaseValue(value, encrypted => ReleaseEncrypted((eventStore, eventStoreNamespace, identifier), encrypted, false), async () => await ReleaseKeys.GetErasureForRelease(encryptionKeyStore, eventStore, eventStoreNamespace, identifier) is not null);
 
     /// <inheritdoc/>
     public async Task<JsonNode> Release(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
-        (await ReleaseValue(value, () => ReleaseKeys.TryGetForReleaseOrEmpty(encryptionKeyStore, eventStore, eventStoreNamespace, identifier), () => Task.FromResult(false))).Value;
+        (await ReleaseValue(value, encrypted => ReleaseEncrypted((eventStore, eventStoreNamespace, identifier), encrypted, true), () => Task.FromResult(false))).Value;
 
-    async Task<(JsonNode Value, bool IsErased)> ReleaseValue(JsonNode value, Func<Task<EncryptionKey?>> getKey, Func<Task<bool>> onMissingKey)
+    static async Task<JsonNode?> PreserveUnwrapFailure(Func<Task<JsonNode?>> release)
+    {
+        try
+        {
+            return await release();
+        }
+        catch (EncryptionKeyUnrecoverable failure) when (failure.InnerException is EncryptionKeyUnwrapFailed original)
+        {
+            // Preserve diagnostic classification without changing the caller-visible exception or its cause.
+            original.UnrecoverableAttempts = failure.AttemptedRevisions;
+            ExceptionDispatchInfo.Throw(original);
+            throw;
+        }
+    }
+
+    Task<JsonNode?> ReleaseEncrypted((EventStoreName Store, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier) address, byte[] encrypted, bool emptyOnUnavailable)
+    {
+        var release = new ProtectedValueRelease(encryptionKeyStore, encryption, address, encrypted);
+        return PreserveUnwrapFailure(async () => emptyOnUnavailable ? await release.ReleaseOrEmpty() : await release.Release());
+    }
+
+    async Task<(JsonNode Value, bool IsErased)> ReleaseValue(JsonNode value, Func<byte[], Task<JsonNode?>> release, Func<Task<bool>> onMissingKey)
     {
         // Only a value this encryption produced can be released. One that carries none of its shape was never
         // encrypted under this subject — it is resolved in memory at the query edge for display, or it predates
@@ -140,18 +175,18 @@ public class PIICompliancePropertyValueHandler(
         }
 
         using var scope = ReleaseKeys.BeginScope();
-        var key = await getKey();
+        var released = await release(encrypted);
 
         // When the encryption key has been deleted (GDPR right-to-erasure / crypto-shredding),
         // the PII is permanently unreadable. Surface it as empty rather than throwing so that
         // queries and read models for an erased subject keep working instead of crashing.
-        if (key is null)
+        if (released is null)
         {
             var isErased = await onMissingKey();
             return (JsonValue.Create(string.Empty), isErased);
         }
 
-        return await ReleaseKeys.Complete(() => (ProtectedValueCodec.Decrypt(encryption, key, encrypted), false));
+        return await ReleaseKeys.Complete(() => (released, false));
     }
 
     /// <summary>

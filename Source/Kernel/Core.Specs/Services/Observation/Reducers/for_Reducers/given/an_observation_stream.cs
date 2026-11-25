@@ -14,6 +14,7 @@ using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Schemas;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -44,11 +45,7 @@ public class an_observation_stream : Specification
         var mediator = Substitute.For<IReducerMediator>();
         mediator.Disconnected(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>(), Arg.Any<ReducerReplayObserver>()).Returns(true);
         mediator.When(_ => _.Subscribe(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerEventsObserver>()))
-            .Do(call =>
-            {
-                _deliver = call.Arg<ReducerEventsObserver>();
-                subscribed.TrySetResult();
-            });
+            .Do(call => _deliver = call.Arg<ReducerEventsObserver>());
         mediator.When(_ => _.SubscribePages(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerPageObserver>(), Arg.Any<Concepts.Observation.PageDeliveryDefinition?>()))
             .Do(call =>
             {
@@ -56,7 +53,12 @@ public class an_observation_stream : Specification
                 _pagesSubscribed.TrySetResult();
             });
         mediator.When(_ => _.SubscribeReplayNotifications(Arg.Any<ReducerId>(), Arg.Any<ConnectionId>(), Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReducerReplayObserver>()))
-            .Do(call => _replay = call.Arg<ReducerReplayObserver>());
+            .Do(call =>
+            {
+                // Replay notifications are subscribed after events, so this signals that both observers are captured.
+                _replay = call.Arg<ReducerReplayObserver>();
+                subscribed.TrySetResult();
+            });
         var grainFactory = Substitute.For<IGrainFactory>();
         var readModel = Substitute.For<IReadModel>();
         grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(readModel);
@@ -75,6 +77,7 @@ public class an_observation_stream : Specification
             []));
         var reducers = new Reducers(
             grainFactory,
+            Substitute.For<IClientReducerSubscriptions>(),
             mediator,
             CreateExpandoObjectConverter(),
             new JsonSerializerOptions(),
@@ -83,7 +86,8 @@ public class an_observation_stream : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloSupervisor.Instance);
         _subscription = reducers.Observe(_messages).Subscribe(_deliveries.Add);
         _messages.OnNext(new(new(new RegisterReducer
         {

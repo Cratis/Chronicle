@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.ReadModels;
 using NSubstitute.ExceptionExtensions;
 
@@ -22,14 +21,14 @@ public class and_an_updated_definition_is_rejected : given.a_projections_manager
             [_firstReadModelDefinition],
             [_namespace]);
         _manager.TryGet(_eventStore, _namespace, _firstDefinition.Identifier, out _projectionBeforeUpdate);
+        _firstDefinition = _firstDefinition with { IsRewindable = !_firstDefinition.IsRewindable };
 
         _projectionFactory
             .Create(
                 Arg.Any<EventStoreName>(),
                 Arg.Any<EventStoreNamespaceName>(),
                 Arg.Is(_firstDefinition),
-                Arg.Any<ReadModelDefinition>(),
-                Arg.Any<IEnumerable<EventTypeSchema>>())
+                Arg.Any<ReadModelDefinition>())
             .ThrowsAsync(new InvalidOperationException("Failed to create the updated projection"));
 
         var result = await _manager.Register(

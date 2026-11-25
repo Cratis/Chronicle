@@ -5,6 +5,7 @@
 
 - Slices are the authoring unit
 - Declare in story order
+- Showing an element in another slice
 - Slice dependencies
 - State-transition table (per entity)
 - Generic edits
@@ -73,6 +74,8 @@ module Moorings
         boatName       BoatName
         produces event BerthRequested
           boatName BoatName = boatName
+      screen RequestBerth
+        action RequestBerth for screen
     slice StateView WaitingList
       readmodel WaitingRequest
         berthRequestId BerthRequestId
@@ -92,6 +95,43 @@ module Moorings
         produces event BerthAssigned
           berthNumber BerthNumber = berthNumber
 ```
+
+## Showing an element in another slice
+
+An event or read model often belongs on the timeline twice: where it is produced, and again where
+a later slice reads it. Declare it once and place it with `shows event <Name>` or
+`shows readmodel <Name>`. Never declare it a second time: a copied declaration is a second
+declaration, with its own identity and no link to the first. Requires Screenplay 6.7.0 or later
+(`screenplay --version`).
+
+```screenplay
+concept OrderId : Uuid
+concept Item : String
+
+module Ordering
+  feature Orders
+    slice StateChange PlaceOrder
+      event OrderPlaced
+        orderId OrderId
+        item    Item
+
+    slice StateView OpenOrdersView
+      readmodel OpenOrders
+        orderId OrderId key
+        item    Item
+
+    slice StateView ShipOrder
+      shows event OrderPlaced
+      shows readmodel OpenOrders
+```
+
+- A placement is a linked copy: a board draws both occurrences as one element, editing either
+  edits the one declaration, and renaming the declaration renames every placement.
+- It is presentation only. It adds nothing to the executable model and changes no behavior, so it
+  does not make the slice produce the event or build the read model.
+- `PLAY0953` (error) is a line that is not `shows event <Name>` or `shows readmodel <Name>`;
+  `PLAY0954` (warning) names no declared event or read model; `PLAY0955` (warning) shows an
+  element the slice declares itself, or shows it twice.
 
 ## Slice dependencies
 

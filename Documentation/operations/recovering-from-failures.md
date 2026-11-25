@@ -27,6 +27,8 @@ Resolve the cause before restarting processing. A transient dependency failure m
 
 For several failed partitions with the same resolved cause, [`retry-failed-partitions`](/cli/chronicle/observers/#retry-failed-partitions) requests recovery together. It requires Chronicle 19.80.0 or later and returns before recovery finishes. Inspect the remaining failures rather than treating the command result as completion.
 
+Every operator command that changes an observer - replay, retry-failed-partitions, retry or replay of one partition, fast forward, and clearing the quarantine of an observer or a partition - is accepted as a job: the command returns at once, even while the observer is busy serving its client, and the job gives the request to the observer when it can. The replay command returns the id of that job; follow it with [`jobs get`](/cli/chronicle/jobs/). The commands that report an outcome (fast forward, retry of a partition, clearing the quarantine of a partition) report `Accepted`; what became of the request, such as an observer that is quarantined or replaying, or a partition that is not failed, is the result of the job and shows there as its failure reason. Repeating a command while its job is unfinished joins the job instead of creating another, also when two identical commands arrive together.
+
 Clearing partition quarantine requires Chronicle 19.29.0 or later. Use `--no-retry` if you want to clear it without requesting an immediate retry. Clearing either level of quarantine does not fix the cause. If both levels are quarantined, release the observer first, then address its partitions.
 
 ### Replay and side effects

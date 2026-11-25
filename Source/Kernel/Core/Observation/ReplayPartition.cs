@@ -2,9 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands.ModelBound;
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Storage;
 
 namespace Cratis.Chronicle.Observation;
@@ -24,15 +26,19 @@ namespace Cratis.Chronicle.Observation;
 public record ReplayPartition(string EventStore, string Namespace, string ObserverId, string EventSequenceId, string Partition)
 {
     /// <summary>
-    /// Handles the command by invoking <see cref="IObserver.ReplayPartition(Concepts.Keys.Key)"/> on the target observer grain.
+    /// Handles the command by accepting it as a job that invokes <see cref="IObserver.ReplayPartition(Concepts.Keys.Key)"/> on the target observer grain.
     /// </summary>
     /// <param name="grainFactory">The <see cref="IGrainFactory"/> to get observer grains with.</param>
     /// <param name="storage">The storage containing observer definitions.</param>
     /// <returns>Awaitable task.</returns>
+    /// <exception cref="ObserverOperatorCommandNotAccepted">The jobs manager did not accept the command.</exception>
     public async Task Handle(IGrainFactory grainFactory, IStorage storage)
     {
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, (EventStoreName)EventStore, (ObserverId)ObserverId, EventSequenceId);
         var key = new ObserverKey((ObserverId)ObserverId, (EventStoreName)EventStore, (EventStoreNamespaceName)Namespace, eventSequenceId);
-        await grainFactory.GetGrain<IObserver>(key).ReplayPartition(Partition);
+        if (await ObserverOperatorCommandJobs.Accept(grainFactory, key, ObserverOperatorCommand.ReplayPartition, Partition) == JobId.NotSet)
+        {
+            throw new ObserverOperatorCommandNotAccepted(ObserverOperatorCommand.ReplayPartition, key);
+        }
     }
 }

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.EventSequences.Mutations;
 /// </summary>
 static class EventSequenceMutationBsonSerialization
 {
-    static readonly object _gate = new();
+    static readonly Lock _gate = new();
     static bool _registered;
 
     /// <summary>

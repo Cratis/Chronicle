@@ -1,4 +1,6 @@
 - name: Overview
   href: index.mdx
+- name: Saved queries and folders
+  href: saved-queries.md
 - name: Development
   href: development.md

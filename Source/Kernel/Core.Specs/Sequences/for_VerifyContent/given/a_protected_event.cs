@@ -38,7 +38,7 @@ public class a_protected_event : a_stored_event
             }
         };
         _storage.GetEventStore("store").EventTypes.GetFor("event", 1U).Returns(new EventTypeSchema(new("event", 1), EventTypeOwner.Client, EventTypeSource.Code, schema));
-        var content = new JsonObject { ["value"] = ProtectedValueCodec.Encrypt(_encryption, key, JsonValue.Create(string.Empty)) };
+        var content = new JsonObject { ["value"] = ProtectedValueCodec.Encrypt(_encryption, key, JsonValue.Create(string.Empty), EncryptionKeyRevision.Initial) };
         _stored = _stored with { GenerationalContent = new Dictionary<int, string> { [1] = content.ToJsonString() } };
         _command = _command with { Content = "{\"value\":\"\"}" };
     }

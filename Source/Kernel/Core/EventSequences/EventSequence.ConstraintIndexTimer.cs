@@ -13,10 +13,17 @@ public partial class EventSequence
     /// </summary>
     bool _catchUpTurnNext;
 
+    bool HasConstraintIndexWork =>
+        _pendingConstraintIndexes.Count > 0 ||
+        HasConstraintIndexGap ||
+        State.ConstraintIndexCatchUpBelow is not null ||
+        _rebuildingConstraintIndexes.Count > 0;
+
+    bool HasConstraintIndexGap => _indexedDefinitions.Count > 0 && _constraintIndexPosition < State.SequenceNumber;
+
     void UpdateConstraintIndexRepairTimer()
     {
-        var hasGap = _indexedDefinitions.Count > 0 && _constraintIndexPosition < State.SequenceNumber;
-        if (_pendingConstraintIndexes.Count == 0 && !hasGap && State.ConstraintIndexCatchUpBelow is null && _rebuildingConstraintIndexes.Count == 0)
+        if (!HasConstraintIndexWork)
         {
             if (_constraintIndexRepairTimerRunning) return;
             _constraintIndexRepairTimer?.Dispose();
@@ -34,6 +41,8 @@ public partial class EventSequence
             });
     }
 
+    bool RepairTurnWins(bool repairDue, bool catchUpDue) => repairDue && (!catchUpDue || !_catchUpTurnNext);
+
     async Task RepairConstraintIndexesOnTimer(CancellationToken cancellationToken)
     {
         _constraintIndexRepairTimerRunning = true;
@@ -44,7 +53,7 @@ public partial class EventSequence
             var now = ConstraintIndexTimeProvider.GetUtcNow();
             var repairDue = _pendingConstraintIndexes.Count > 0 && now >= _nextConstraintRepairAttempt;
             var catchUpDue = ConstraintCatchUpDue(now);
-            if (repairDue && (!catchUpDue || !_catchUpTurnNext))
+            if (RepairTurnWins(repairDue, catchUpDue))
             {
                 _catchUpTurnNext = true;
                 await RunConstraintIndexRepairTurn(ConstraintIndexRepair.TimerTurnBudget, true, cancellationToken);

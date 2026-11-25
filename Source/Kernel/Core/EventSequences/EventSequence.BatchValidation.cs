@@ -59,6 +59,7 @@ public partial class EventSequence
         span?.Activity?.Tag(_eventSequenceKey.EventSequenceId);
         try
         {
+            await EnsureNamespaceForAppend();
             var result = await AppendManyValidatedCore(events, correlationId, causation, causedBy, concurrencyScopes, effectReceipt, legacyScopes);
             span?.Activity?.RecordAppendOutcome(result);
             return result;
@@ -153,7 +154,7 @@ public partial class EventSequence
         // Prepare every event first, then read the constraint indexes for the whole batch at once, then validate the
         // constraints of each event in order - the order is what lets earlier events' claims in the batch be seen by
         // later ones. Validating each event against storage on its own costs one round trip per event and constraint.
-        var validated = new List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)>();
+        List<(EventToAppend Event, Result<(ExpandoObject CompliantEvent, JsonObject CompliantContent, ConstraintValidationContext ConstraintValidationContext), AppendResult> Result)> validated = [];
         foreach (var (eventToAppend, index) in events.Select((@event, index) => (@event, index)))
         {
             var resolvedEventSourceType = await EventSourceResolution.Resolve(EventSourcesStorage, eventToAppend.EventSource, eventToAppend.EventSourceType, eventToAppend.eventStreamType, correlationId);

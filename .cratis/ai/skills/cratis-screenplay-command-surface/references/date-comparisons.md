@@ -8,7 +8,7 @@
 
 - Retention window and rejection specifications
 - Missing-offset input rejection
-- Clock operands and calendars (parsed, not runnable)
+- Clock operands and calendars (ESM v37)
 
 Requires Screenplay 4.199.0 (ESM v26; `screenplay --version`); older binders refuse date comparisons with PLAY0268. Upgrade the compiler without weakening the rule.
 
@@ -37,9 +37,10 @@ pass validation rules other than `not empty`; optional condition operands refuse
 A .NET host that executes commands itself can reuse the reference evaluator's date semantics (Requires Screenplay 4.203.0): see [date comparison checks](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/date-comparison-checks.md) for `SemanticDateComparisons` and `SemanticConditionEvaluator`.
 
 PLAY0268 still refuses mixed Date/DateTime, `$context` operands (including
-`$context.occurred`), `today`, protected read paths, date rules on concepts and
+`$context.occurred`), protected read paths, date rules on concepts and
 reaction `where`. A refused whole comparison reports only PLAY0268, without
-validating its literals. A `given clock` does not admit `today` or now.
+validating its literals. `today` and `now` are clock operands, admitted from v37 (see
+[Clock operands and calendars](#clock-operands-and-calendars-esm-v37)).
 Requires Stage 4.135.0 for v26 admission; older Stage refuses v26 with STAGE-ESM-016.
 The semantic Host and specification executor run the comparisons, including through
 concepts, and reject an offset-less DateTime input after authorization and before any
@@ -71,6 +72,8 @@ module Retention
         produces event WindowKept
           from DateTime = from
           to DateTime = to
+      screen KeepWindow
+        action KeepWindow for screen
       specification AcceptingEqualInstantsWithDifferentOffsets
         when KeepWindow
           windowId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -112,17 +115,75 @@ that invalid value refuses binding with PLAY0273; `then error` does not turn it
 into an executed runtime rejection. Record the target test separately, not as a
 passing `.play` specification or a `given clock` workaround.
 
-## Clock operands and calendars (parsed, not runnable)
+## Clock operands and calendars (ESM v37)
 
-Both compilers parse these forms, but executable binding refuses each with PLAY0268 and
-none selects an ESM version. Do not author them into an executable model:
+Requires Screenplay 5.5.0 (ESM v37; `screenplay --version`); an older binder refuses these
+forms with PLAY0268. A model that uses any of them selects v37 (decisions 0106, 0107, 0132):
 
 - application root: `time zone "<id>"` or `time zone configurable default "<id>"`;
-- command: `calendar "<id>"` or `calendar from $context.<member>`;
+- application root: a `context` block of named `<member> time zone` members;
+- command: `calendar "<id>"`, `calendar from $context.timeZone` or `calendar from $context.<member>`;
 - specification: `given time zone "<id>"`;
-- condition operands: clock offsets such as `today - 7 days` and `now + 2 hours`, and
-  `date of occurred` or `date of now`.
+- condition operands: offsets such as `today - 7 days`, `now + 2 hours` and `now - 30 minutes`,
+  and `date of occurred` or `date of now`.
 
-Bare `today` and `now` stay ordinary property paths. PLAY0812, PLAY0813 and PLAY0814 report
-a repeated or malformed time zone, command calendar and specification time zone.
-Requires Screenplay 4.242.0 (`screenplay --version`) to parse them.
+Admitted positions: command `validate`/`require` conditions, `produces when`, and the right
+operand of a `validate` comparison rule on a `Date` or `DateTime` property. The other side is a
+required scalar command property of the same primitive: `today` and `date of ...` are dates,
+`now` is an instant. A `today` offset is whole days; use `now` for hours or minutes.
+PLAY0268 still refuses a clock operand in a concept, reaction or screen, a clock compared with
+another clock, and a `today` offset in hours or minutes. A bare `today` or `now` is a clock
+operand unless a command property of that name shadows it, in which case it stays an ordinary
+property path. PLAY0812-PLAY0814 report a repeated or malformed time zone, command calendar
+and specification time zone; PLAY0852 an id that is not a known IANA zone (no UTC fallback);
+PLAY0853 a calendar member that is neither `timeZone` nor declared; PLAY0854-PLAY0857 a
+malformed `context` block, member type, repeated name or reserved name.
+
+A command evaluates its clock in its calendar; without one, the application zone applies and an
+application without a declared zone uses UTC, never the machine's zone. Use canonical,
+exact-case IANA ids. A declared member is a calendar source only; it adds no `$context` value.
+The host supplies each member's zone at run time and a specification supplies it with
+`given time zone`; a missing, empty or unknown zone fails the command instead of falling back
+to UTC. `given clock` fixes the instant, and a command a reaction invokes is evaluated in the
+scenario zone too.
+
+```screenplay
+time zone configurable default "Europe/Oslo"
+context
+  businessTimeZone time zone
+module Clocks
+  feature Scheduling
+    slice StateChange Schedule
+      command ScheduleAppointment
+        appointmentId String identifier
+        occurred DateTime
+        calendar from $context.timeZone
+        produces when date of occurred <= date of now + 2 hours
+          AppointmentScheduled
+            for appointmentId
+      event AppointmentScheduled
+      screen ScheduleAppointment
+        action ScheduleAppointment for screen
+      specification InOslo
+        given time zone "Europe/Oslo"
+        given clock "2025-03-01T10:00:00Z"
+        when ScheduleAppointment
+          appointmentId = "a"
+          occurred = "2025-03-01T11:00:00Z"
+        then AppointmentScheduled
+          for "a"
+```
+
+This adapts Screenplay's executable `Documentation/screenplay/fixtures/clock-preview.play`.
+Extract and run it like the example above.
+
+Executing command conditions that read the clock is not clock-trigger realization or rendering.
+Stage admits the 37.0 pair with member scanning and refuses the clock per scope with
+`STAGE-ESM-016`: its sandbox refuses each command that uses a calendar or clock operand and
+each specification in a slice with a clock member (other commands run); an application time
+zone or context member refuses every specification; and the renderer refuses the model. See
+Stage `Documentation/reference/esm-feature-matrix.md`. Reaction `every`/`at` clock triggers are
+a separate construct: the reference runner fires them for `when clock`, while Stage's live
+Host and rendered applications refuse them. Preserve the rule and route delivery to
+authorized gap-fill; see toolchain
+[language admission](../../cratis-screenplay-toolchain/references/language-admission.md).

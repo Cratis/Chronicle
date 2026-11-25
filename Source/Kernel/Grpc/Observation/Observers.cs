@@ -10,12 +10,18 @@ using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Options;
 using ProtoBuf.Grpc;
 
 // Cratis.Chronicle.Observation cannot be imported wholesale here: it declares the kernel-side command records that
 // share their names with the contract types this file is built around, starting with RemoveObserver.
+using IDormantObservers = Cratis.Chronicle.Observation.IDormantObservers;
 using IObserverRemover = Cratis.Chronicle.Observation.IObserverRemover;
+using JobId = Cratis.Choreography.Jobs.JobId;
+using ObserverKey = Cratis.Chronicle.Concepts.Observation.ObserverKey;
+using ObserverOperatorCommand = Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommand;
+using ObserverOperatorCommandJobs = Cratis.Chronicle.Observation.Jobs.ObserverOperatorCommandJobs;
 
 namespace Cratis.Chronicle.Services.Observation;
 
@@ -28,13 +34,15 @@ namespace Cratis.Chronicle.Services.Observation;
 /// <param name="visibility">The <see cref="IConnectedClientsVisibility"/> limiting which connected clients a caller sees.</param>
 /// <param name="options">The <see cref="IOptions{ChronicleOptions}"/> for configuration.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="dormantObservers">The <see cref="IDormantObservers"/> that tells a dormant observer from a resident one without waking it.</param>
 internal sealed class Observers(
     IGrainFactory grainFactory,
     IStorage storage,
     IObserverRemover observerRemover,
     IConnectedClientsVisibility visibility,
     IOptions<ChronicleOptions> options,
-    INamespaceCasing namespaceCasing) : IObservers
+    INamespaceCasing namespaceCasing,
+    IDormantObservers? dormantObservers = null) : IObservers
 {
     const int ObserverCompletionPollingDelayMs = 50;
     const ulong MaximumObserverCompletionRange = 10_000;
@@ -48,19 +56,19 @@ internal sealed class Observers(
     public async Task<RetryPartitionResponse> RetryPartition(RetryPartition command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var outcome = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).TryStartRecoverJobForFailedPartition(command.Partition);
-        return new RetryPartitionResponse { Outcome = (PartitionRecoveryOutcome)(int)outcome };
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.RetryPartition, command.Partition);
+        return new RetryPartitionResponse { Outcome = PartitionRecoveryOutcome.Accepted };
     }
 
     /// <inheritdoc/>
     public async Task<ClearPartitionQuarantineResponse> ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var result = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ClearPartitionQuarantine(command.Partition, command.RetryImmediately);
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.ClearPartitionQuarantine, command.Partition, command.RetryImmediately);
         return new ClearPartitionQuarantineResponse
         {
-            Outcome = (ClearPartitionQuarantineOutcome)(int)result.Outcome,
-            RetryOutcome = (PartitionRecoveryOutcome)(int)result.RetryOutcome
+            Outcome = ClearPartitionQuarantineOutcome.Accepted,
+            RetryOutcome = PartitionRecoveryOutcome.Accepted
         };
     }
 
@@ -68,12 +76,12 @@ internal sealed class Observers(
     public async Task<FastForwardResponse> FastForward(FastForward command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var result = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).FastForward();
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.FastForward);
         return new FastForwardResponse
         {
-            Outcome = (FastForwardOutcome)(int)result.Outcome,
-            PreviousNextEventSequenceNumber = result.PreviousNextEventSequenceNumber.Value,
-            NextEventSequenceNumber = result.NextEventSequenceNumber.Value
+            Outcome = FastForwardOutcome.Accepted,
+            PreviousNextEventSequenceNumber = EventSequenceNumber.Unavailable.Value,
+            NextEventSequenceNumber = EventSequenceNumber.Unavailable.Value
         };
     }
 
@@ -82,8 +90,11 @@ internal sealed class Observers(
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
 
-        // Clients read an empty job id as JobId.NotSet (not replayable, disconnected or quarantined), so keep reporting it rather than throwing.
-        var jobId = await (await grainFactory.GetObserver(command, storage, namespaceCasing)).Replay();
+        // The replay is accepted as a job and the job id returned at once: the observer grain also serves its client's
+        // subscriptions, so asking it directly can queue behind them for longer than a call may take. Clients read an empty
+        // job id as JobId.NotSet (not replayable), so keep reporting it rather than throwing.
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        var jobId = await ObserverOperatorCommandJobs.AcceptReplay(grainFactory, storage, key);
         return new ReplayResponse { JobId = jobId.Value.ToString() };
     }
 
@@ -91,7 +102,7 @@ internal sealed class Observers(
     public async Task ReplayPartition(ReplayPartition command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ReplayPartition(command.Partition);
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.ReplayPartition, command.Partition);
     }
 
     /// <inheritdoc/>
@@ -245,7 +256,7 @@ internal sealed class Observers(
     public async Task ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        await (await grainFactory.GetObserver(command, storage, namespaceCasing)).ClearObserverQuarantine();
+        await AcceptOperatorCommand(command, ObserverOperatorCommand.ClearObserverQuarantine);
     }
 
     /// <inheritdoc/>
@@ -259,9 +270,8 @@ internal sealed class Observers(
     public async Task<RetryFailedPartitionsResponse> RetryFailedPartitions(RetryFailedPartitions command, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(command.EventStore, command.Namespace, command.ObserverId, command.EventSequenceId), StoreAccess.Manage);
-        var observer = await grainFactory.GetObserver(command, storage, namespaceCasing);
-        var failedPartitions = (await observer.GetFailedPartitionKeys()).Count();
-        await observer.TryRecoverAllFailedPartitions();
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        var (failedPartitions, _) = await Chronicle.Observation.RetryFailedPartitions.Accept(grainFactory, storage, key);
         return new RetryFailedPartitionsResponse { FailedPartitions = failedPartitions };
     }
 
@@ -290,27 +300,27 @@ internal sealed class Observers(
     public async Task<ObserverInformation> GetObserverInformation(GetObserverInformationRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId), StoreAccess.Read);
-        var observer = await grainFactory.GetObserver(request, storage, namespaceCasing);
-        var definition = await observer.GetDefinition();
-        var state = await observer.GetState();
-        var runningStateChangedAt = await storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers.GetRunningStateChangedAt(request.ObserverId);
-        var subscribed = await observer.IsSubscribed();
-        return new ObserverInformation
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+
+        // A dormant observer is subscribed and has no activation; inspecting it must not give it one.
+        if (await FindDormant(request) is { Key: var dormantKey })
         {
-            Id = request.ObserverId,
-            EventSequenceId = definition.EventSequenceId,
-            Type = definition.Type.ToContract(),
-            Owner = definition.Owner.ToContract(),
-            EventTypes = definition.EventTypes.ToContract(),
-            NextEventSequenceNumber = state.NextEventSequenceNumber,
-            LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
-            TailEventSequenceNumber = state.TailEventSequenceNumber,
-            HandledEventCount = state.HandledEventCount,
-            RunningState = state.RunningState.ToContract(),
-            RunningStateChangedAt = runningStateChangedAt,
-            IsSubscribed = subscribed,
-            IsReplayable = definition.IsReplayable
-        };
+            var observers = storage.GetEventStore(dormantKey.EventStore);
+            var namespaceObservers = observers.GetNamespace(dormantKey.Namespace).Observers;
+            if (await observers.Observers.Has(dormantKey.ObserverId))
+            {
+                return ToObserverInformation(
+                    request.ObserverId,
+                    await observers.Observers.Get(dormantKey.ObserverId),
+                    await namespaceObservers.Get(dormantKey.ObserverId),
+                    true,
+                    await namespaceObservers.GetRunningStateChangedAt(dormantKey.ObserverId));
+            }
+        }
+
+        var observer = await grainFactory.GetObserver(request, storage, namespaceCasing);
+        var (definition, state, subscribed, runningStateChangedAt) = await observer.GetInformation();
+        return ToObserverInformation(request.ObserverId, definition, state, subscribed, runningStateChangedAt);
     }
 
     /// <inheritdoc/>
@@ -318,8 +328,26 @@ internal sealed class Observers(
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.ObserverId, request.EventSequenceId), StoreAccess.Read);
         var caller = ConnectionCallers.From(context, options.Value);
-        var subscription = await (await grainFactory.GetObserver(request, storage, namespaceCasing)).GetSubscription();
         var clients = new List<Contracts.Clients.ConnectedClient>();
+
+        // A dormant observer holds its clients in its durable subscription; reading them there leaves it dormant.
+        if (await FindDormant(request) is { } dormant)
+        {
+            foreach (var target in dormant.Record.Targets)
+            {
+                var silo = SiloAddress.FromParsableString(target.Silo);
+                var connectedClients = grainFactory.GetConnectedClients(silo);
+                var connectionId = new Concepts.Clients.ConnectionId(target.ConnectionId);
+                if (await connectedClients.IsConnected(connectionId))
+                {
+                    clients.Add(ToContract(await connectedClients.GetConnectedClient(connectionId), silo));
+                }
+            }
+
+            return await visibility.Filter(clients, caller);
+        }
+
+        var subscription = await (await grainFactory.GetObserver(request, storage, namespaceCasing)).GetSubscription();
         foreach (var target in subscription.Targets.Where(_ => _.ConnectedClient is not null))
         {
             // The target holds the client as it looked when it subscribed - resolve it from the
@@ -332,18 +360,7 @@ internal sealed class Observers(
                 client = await connectedClients.GetConnectedClient(client.ConnectionId);
             }
 
-            clients.Add(new()
-            {
-                ConnectionId = client.ConnectionId,
-                Version = client.Version,
-                LastSeen = client.LastSeen,
-                IsRunningWithDebugger = client.IsRunningWithDebugger,
-                SiloAddress = target.SiloAddress.ToParsableString(),
-                ProcessId = client.ProcessId,
-                ProcessPath = client.ProcessPath,
-                MachineName = client.MachineName,
-                ClientType = client.ClientType
-            });
+            clients.Add(ToContract(client, target.SiloAddress));
         }
 
         return await visibility.Filter(clients, caller);
@@ -353,6 +370,7 @@ internal sealed class Observers(
     public async Task<IEnumerable<ObserverInformation>> GetObservers(AllObserversRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetAll();
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
         var observerStates = await observerStateStorage.GetAll();
@@ -368,12 +386,21 @@ internal sealed class Observers(
 
     /// <inheritdoc/>
     public IObservable<IEnumerable<ObserverInformation>> ObserveObservers(AllObserversRequest request, CallContext context = default) =>
-        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read, () => ObserveGuardedObservers(request, context));
+        SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read, () =>
+            Observable.FromAsync(async () =>
+            {
+                request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                return request;
+            })
+            .SelectMany(_ => ObserveGuardedObservers(request, context))
+            .TakeUntil(Observable.Create<bool>(observer =>
+                context.CancellationToken.Register(() => observer.OnNext(true)))));
 
     /// <inheritdoc/>
     public async Task<IEnumerable<ObserverInformation>> GetReplayableObserversForEventTypes(GetReplayableObserversForEventTypesRequest request, CallContext context = default)
     {
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace), StoreAccess.Read);
+        request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         var eventTypes = request.EventTypes.ToChronicle();
         var observerDefinitions = await storage.GetEventStore(request.EventStore).Observers.GetReplayableObserversForEventTypes(eventTypes);
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
@@ -432,6 +459,62 @@ internal sealed class Observers(
         request.FirstEventSequenceNumber <= target.Value &&
         request.TailEventSequenceNumber - request.FirstEventSequenceNumber < MaximumObserverCompletionRange;
 
+    static Contracts.Clients.ConnectedClient ToContract(Concepts.Clients.ConnectedClient client, SiloAddress silo) => new()
+    {
+        ConnectionId = client.ConnectionId,
+        Version = client.Version,
+        LastSeen = client.LastSeen,
+        IsRunningWithDebugger = client.IsRunningWithDebugger,
+        SiloAddress = silo.ToParsableString(),
+        ProcessId = client.ProcessId,
+        ProcessPath = client.ProcessPath,
+        MachineName = client.MachineName,
+        ClientType = client.ClientType
+    };
+
+    static ObserverInformation ToObserverInformation(
+        string observerId,
+        Storage.Observation.ObserverDefinition definition,
+        ObserverState state,
+        bool subscribed,
+        DateTimeOffset? runningStateChangedAt)
+    {
+        return new ObserverInformation
+        {
+            Id = observerId,
+            EventSequenceId = definition.EventSequenceId,
+            Type = definition.Type.ToContract(),
+            Owner = definition.Owner.ToContract(),
+            EventTypes = definition.EventTypes.ToContract(),
+            NextEventSequenceNumber = state.NextEventSequenceNumber,
+            LastHandledEventSequenceNumber = state.LastHandledEventSequenceNumber,
+            TailEventSequenceNumber = state.TailEventSequenceNumber,
+            HandledEventCount = state.HandledEventCount,
+            RunningState = state.RunningState.ToContract(),
+            RunningStateChangedAt = runningStateChangedAt,
+            IsSubscribed = subscribed,
+            IsReplayable = definition.IsReplayable
+        };
+    }
+
+    /// <summary>
+    /// Accepts an operator command as a job, so it is answered at once however busy the observer is.
+    /// </summary>
+    /// <param name="command">The <see cref="IObserverCommand"/> that identifies the observer.</param>
+    /// <param name="operatorCommand">The <see cref="ObserverOperatorCommand"/> to carry out.</param>
+    /// <param name="partition">The partition the command is for, for the commands that are for one partition.</param>
+    /// <param name="retryImmediately">Whether clearing the quarantine of a partition also retries it.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="Chronicle.Observation.ObserverOperatorCommandNotAccepted">The jobs manager did not accept the command.</exception>
+    async Task AcceptOperatorCommand(IObserverCommand command, ObserverOperatorCommand operatorCommand, string? partition = null, bool retryImmediately = false)
+    {
+        var key = await ObserverExtensions.GetObserverKey(command, storage, namespaceCasing);
+        if (await ObserverOperatorCommandJobs.Accept(grainFactory, key, operatorCommand, partition, retryImmediately) == JobId.NotSet)
+        {
+            throw new Chronicle.Observation.ObserverOperatorCommandNotAccepted(operatorCommand, key);
+        }
+    }
+
     IObservable<IEnumerable<ObserverInformation>> ObserveGuardedObservers(AllObserversRequest request, CallContext context)
     {
         var observerStateStorage = storage.GetEventStore(request.EventStore).GetNamespace(request.Namespace).Observers;
@@ -486,7 +569,7 @@ internal sealed class Observers(
             return null;
         }
 
-        var eventTypes = subscription.EventTypes.Any() ? subscription.EventTypes.ToArray() : null;
+        var eventTypes = subscription.EventTypes.Count > 0 ? subscription.EventTypes.ToArray() : null;
         var tags = filters.Tags.Any() ? filters.Tags.Select(_ => (Tag)_).ToArray() : null;
         var eventSequence = storage.GetEventStore(request.EventStore)
             .GetNamespace(request.Namespace)
@@ -515,6 +598,19 @@ internal sealed class Observers(
         }
 
         return lastMatch;
+    }
+
+    async Task<(ObserverKey Key, ObserverDurableSubscription Record)?> FindDormant(IObserverCommand command)
+    {
+        if (dormantObservers is null)
+        {
+            return null;
+        }
+
+        var eventSequenceId = await Chronicle.Observation.ObserverEventSequenceResolver.Resolve(storage, command.EventStore, command.ObserverId, command.EventSequenceId);
+        var @namespace = await namespaceCasing.Canonicalize(command.EventStore, command.Namespace);
+        var key = new ObserverKey(command.ObserverId, command.EventStore, @namespace, eventSequenceId);
+        return await dormantObservers.Find(key) is { } record ? (key, record) : null;
     }
 
     sealed record CachedMatchingEvent(

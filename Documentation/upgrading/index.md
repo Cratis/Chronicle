@@ -18,6 +18,14 @@ This minor release makes TLS validation configuration explicit without changing 
 
 See [Client TLS configuration](../configuration/tls) before updating shared connection settings.
 
+## Cluster traffic TLS needs client authentication
+
+From 19.172.0, a kernel with a configured TLS certificate file and MongoDB or SQL clustering encrypts silo and gateway traffic with that certificate, and each node presents it as both a server and a client. If the certificate has an Extended Key Usage extension, it must include both server authentication (`1.3.6.1.5.5.7.3.1`) and client authentication (`1.3.6.1.5.5.7.3.2`), or the nodes cannot connect to each other. Check the certificate, and stop and restart every node together, before you upgrade. See [Certificate requirements](../hosting/configuration/tls.md#certificate-requirements) and [Upgrading to 19.172.0 or later](../hosting/configuration/tls.md#upgrading-to-191720-or-later).
+
+## Check a release before you deploy it
+
+Before deploying a client release, you can ask the kernel it will connect to whether it would accept the release's event type registrations. See [Check a release against a kernel](../operations/check-a-release-against-a-kernel.md).
+
 ## Guides
 
 Start with [Every major version](major-versions.md) and read each row between your current
@@ -73,6 +81,13 @@ Replay existing SQL read models that carry decimal properties before relying on 
 column mapping. The migrator does not alter their existing columns in place. See
 [Exact decimal values](../events/schema-representation.mdx#exact-decimal-values) for provider mappings, legacy doubles and the
 SQL Server scale limit.
+
+## Stored schema annotations from .NET 11 clients
+
+Upgrade the kernel before clients that emit different schema annotations. Registration tolerates annotation
+differences but does not clean up annotations already stored. To inspect and explicitly normalize schemas
+written by older clients, follow [Clean up stored schema annotations](../operations/schema-annotation-cleanup.md).
+Cleanup preserves titles, descriptions, constraints, generations, migrations, and event content.
 
 ## Reverse proxies after the forwarded-header security change
 

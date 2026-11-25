@@ -125,6 +125,36 @@ children items identified by itemId
 
             <div style={{ marginBottom: '20px' }}>
                 <h3 style={{ color: '#4ec9b0', fontWeight: 600, marginTop: 0, marginBottom: '10px' }}>
+                    Graph Projections
+                </h3>
+                <div style={{ fontSize: '13px', marginBottom: '10px' }}>
+                    A projection can build a property graph instead of a read model. Declare the graph and the
+                    projection that builds it together, and press <strong>Preview</strong> to run the events through
+                    it in memory. Nothing is saved and no graph database is needed. Use <strong>New graph</strong> to
+                    start from an example.
+                </div>
+                <pre style={{ backgroundColor: '#2d2d30', padding: '12px', borderRadius: '4px', fontSize: '13px', margin: 0 }}>
+{`graph Organization
+  node Person
+    personId Uuid key
+    name String
+  node Group
+    groupId Uuid key
+  edge MEMBER_OF source Person target Group
+    since DateTime
+
+projection OrganizationGraph => graph Organization
+  node Person
+    from PersonRegistered key personId
+  edge MEMBER_OF
+    from MemberAdded source personId target groupId
+      since = $eventContext.occurred
+    remove with MemberRemoved source personId target groupId`}
+                </pre>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#4ec9b0', fontWeight: 600, marginTop: 0, marginBottom: '10px' }}>
                     Tips
                 </h3>
                 <div style={{ fontSize: '13px' }}>

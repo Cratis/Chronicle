@@ -11,6 +11,26 @@ namespace Cratis.Chronicle.Configuration;
 public class PatternDetection
 {
     /// <summary>
+    /// Gets whether pattern capture is on for event stores and namespaces that have no entry in <see cref="Overrides"/>.
+    /// </summary>
+    /// <remarks>
+    /// On by default. When off for a namespace nothing is subscribed, mined or persisted for it: no capture observer and no
+    /// miner exist. Events appended while it is off are not captured, so a namespace that is switched on later has a gap in
+    /// what it has learned. A namespace that was already capturing keeps its subscription until the observer is removed, but
+    /// its subscriber discards what it receives while the capture is off.
+    /// </remarks>
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>
+    /// Gets whether pattern capture is on for a given event store or namespace, overriding <see cref="Enabled"/>.
+    /// </summary>
+    /// <remarks>
+    /// A key is an event store name, or an event store name and a namespace name separated by a slash. The namespace entry
+    /// wins over the event store entry, which wins over <see cref="Enabled"/>. Names are not case sensitive.
+    /// </remarks>
+    public IDictionary<string, bool> Overrides { get; init; } = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Gets the facets that take part in the mined itemset key.
     /// </summary>
     /// <remarks>
@@ -79,4 +99,20 @@ public class PatternDetection
     /// or below zero are treated as one second.
     /// </remarks>
     public int PersistenceInterval { get; init; } = 5;
+
+    /// <summary>
+    /// Gets whether pattern capture is on for a namespace of an event store.
+    /// </summary>
+    /// <param name="eventStore">The name of the event store.</param>
+    /// <param name="namespace">The name of the namespace.</param>
+    /// <returns>True when events of the namespace are captured; otherwise false.</returns>
+    public bool IsEnabledFor(string eventStore, string @namespace)
+    {
+        if (Overrides.TryGetValue($"{eventStore}/{@namespace}", out var forNamespace))
+        {
+            return forNamespace;
+        }
+
+        return Overrides.TryGetValue(eventStore, out var forEventStore) ? forEventStore : Enabled;
+    }
 }

@@ -14,6 +14,7 @@ namespace Cratis.Chronicle.Services.Statistics;
 /// </summary>
 internal sealed class Statistics(
     global::Cratis.Chronicle.Statistics.IStatisticsReader statisticsReader,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.Statistics.Statistics> logger) : global::Cratis.Chronicle.Contracts.Statistics.IStatistics
 {
     /// <inheritdoc/>
@@ -35,6 +36,10 @@ internal sealed class Statistics(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.Statistics.EventStatistics.StatisticsForNamespace(statisticsReader, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace);
                 return ToEventStatisticsResponse(result);
             },

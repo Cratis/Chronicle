@@ -23,5 +23,8 @@ internal class EnsureNamespaceValidator : CommandValidator<EnsureNamespace>
         RuleFor(_ => _.Namespace)
             .Must(name => string.IsNullOrEmpty(name) || !name.Contains('+'))
             .WithMessage("The namespace name is not allowed.");
+        RuleFor(_ => _.Namespace)
+            .Must(name => string.IsNullOrEmpty(name) || !NamespaceNameRules.ContainsComma(name))
+            .WithMessage(NamespaceNameRules.CommaMessage);
     }
 }

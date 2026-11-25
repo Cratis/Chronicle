@@ -28,27 +28,43 @@ public partial class Observer
     /// </remarks>
     async Task CheckStrandedSubscription()
     {
-        if (IsQuarantined ||
-            State.IsReplaying ||
-            State.CatchingUpPartitions.Count > 0 ||
-            _isPreparingCatchup ||
-            Failures.HasFailedPartitions)
-        {
-            return;
-        }
-
-        if (await _appendedEventsQueues.IsSubscribed(_observerKey) || IsQuarantined)
-        {
-            return;
-        }
-
-        if (await HasRunningCatchupJob() || IsQuarantined)
+        if (!await QueueLostSubscription())
         {
             return;
         }
 
         logger.WatchdogRescuingStrandedObserver(State.NextEventSequenceNumber);
         await TransitionTo<Routing>();
+    }
+
+    /// <summary>
+    /// Checks whether the appended-events queue no longer holds the subscription of an observer that nothing else is
+    /// driving forward.
+    /// </summary>
+    /// <returns>True when the observer must be re-routed to get its subscription back; otherwise false.</returns>
+    /// <remarks>
+    /// Replaying, catching-up, failed-partition, preparing-catch-up and quarantined observers are already being driven
+    /// forward or deliberately stopped, and an observer with a catch-up job preparing or running is re-subscribed when
+    /// the job concludes, so none of them counts. The queue is asked first because it rules out the common healthy
+    /// case, leaving the job scan off the path a healthy observer takes.
+    /// </remarks>
+    async Task<bool> QueueLostSubscription()
+    {
+        if (IsQuarantined ||
+            State.IsReplaying ||
+            State.CatchingUpPartitions.Count > 0 ||
+            _isPreparingCatchup ||
+            Failures.HasFailedPartitions)
+        {
+            return false;
+        }
+
+        if (await _appendedEventsQueues.IsSubscribed(_observerKey) || IsQuarantined)
+        {
+            return false;
+        }
+
+        return !await HasRunningCatchupJob() && !IsQuarantined;
     }
 
     /// <summary>

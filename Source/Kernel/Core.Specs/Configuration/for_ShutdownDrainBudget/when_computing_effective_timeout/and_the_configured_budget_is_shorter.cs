@@ -7,7 +7,7 @@ public class and_the_configured_budget_is_shorter : Specification
 {
     TimeSpan _effective;
 
-    void Because() => _effective = ShutdownDrainBudget.EffectiveTimeout(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(10));
+    void Because() => _effective = ShutdownDrainBudget.EffectiveTimeout(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(13), TimeSpan.FromSeconds(5));
 
     [Fact] void should_use_the_configured_budget() => _effective.ShouldEqual(TimeSpan.FromSeconds(4));
 }

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Sql.Cluster.for_SqlMembershipTable.given;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_ReminderTable.when_updating_etags;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class conformance(MembershipHarness harness) : Specification
 {
     IReminderTable _table;

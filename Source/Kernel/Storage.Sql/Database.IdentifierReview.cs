@@ -7,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Database"/> that reports encryption key identifiers awaiting review.
-/// </summary>
+/// </content>
 public partial class Database
 {
     /// <summary>

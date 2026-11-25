@@ -3,4 +3,4 @@
 
 using BenchmarkDotNet.Running;
 
-BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+await BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).RunAsync(args);

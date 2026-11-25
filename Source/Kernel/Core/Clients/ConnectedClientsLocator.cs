@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Clients;
+using Cratis.Chronicle.Helpers;
 
 namespace Cratis.Chronicle.Clients;
 
@@ -12,9 +13,14 @@ namespace Cratis.Chronicle.Clients;
 /// A client registers on the silo that receives its <c language="csharp">Connect</c> call, but its keep-alives and the streams of its
 /// reactors and reducers reach whichever silo the load balancer picks. Looking only at the registry of the silo
 /// a call landed on reported a connected client as <see cref="ClientIsNotConnected"/> and let its registration expire (#5665).
+/// Observers and reactors of one client all ask about the same connection, so lookups for the same connection that
+/// are running at the same moment share one answer. Nothing is cached: a lookup that arrives after the running one
+/// completed asks again, so an answer is never older than one lookup.
 /// </remarks>
 public static class ConnectedClientsLocator
 {
+    static readonly SingleFlight<(IGrainFactory GrainFactory, SiloAddress Preferred, ConnectionId ConnectionId), IConnectedClients?> _lookups = new();
+
     /// <summary>
     /// Finds the registry holding a connection, preferring the given silo.
     /// </summary>
@@ -22,10 +28,15 @@ public static class ConnectedClientsLocator
     /// <param name="preferred">The silo to look at first, normally the one handling the call.</param>
     /// <param name="connectionId">The connection to find.</param>
     /// <returns>The registry holding the connection, or null when no silo does.</returns>
-    public static async Task<IConnectedClients?> Find(IGrainFactory grainFactory, SiloAddress preferred, ConnectionId connectionId)
+    public static Task<IConnectedClients?> Find(IGrainFactory grainFactory, SiloAddress preferred, ConnectionId connectionId)
     {
-        if (connectionId is null || connectionId == ConnectionId.NotSet) return null;
+        if (connectionId is null || connectionId == ConnectionId.NotSet) return Task.FromResult<IConnectedClients?>(null);
 
+        return _lookups.Run((grainFactory, preferred, connectionId), () => Lookup(grainFactory, preferred, connectionId));
+    }
+
+    static async Task<IConnectedClients?> Lookup(IGrainFactory grainFactory, SiloAddress preferred, ConnectionId connectionId)
+    {
         var local = grainFactory.GetConnectedClients(preferred);
         if (await local.IsConnected(connectionId)) return local;
 

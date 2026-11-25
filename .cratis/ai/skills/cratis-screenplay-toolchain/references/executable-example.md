@@ -34,6 +34,8 @@ module Gallery
         insuredValue Decimal
       constraint UniqueArtworkTitle
         unique title on ArtworkRegistered
+      screen RegisterArtwork
+        action RegisterArtwork for screen
       specification RegisteringAnArtwork
         given caller
           authenticated

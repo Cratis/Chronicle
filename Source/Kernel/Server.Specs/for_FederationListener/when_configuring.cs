@@ -8,8 +8,8 @@ namespace Cratis.Chronicle.Server.for_FederationListener;
 
 public class when_configuring : Specification
 {
-    readonly List<(int Port, X509Certificate2 Certificate)> _disabledListeners = [];
-    readonly List<(int Port, X509Certificate2 Certificate)> _enabledListeners = [];
+    readonly List<(int Port, X509Certificate2? Certificate)> _disabledListeners = [];
+    readonly List<(int Port, X509Certificate2? Certificate)> _enabledListeners = [];
     X509Certificate2 _certificate;
     Exception _missingCertificate;
     Exception _collision;

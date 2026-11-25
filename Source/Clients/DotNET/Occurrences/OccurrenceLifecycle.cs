@@ -24,7 +24,7 @@ internal sealed class OccurrenceLifecycle(
     IOptions<HostOptions> hostOptions,
     ILogger<OccurrenceLifecycle> logger) : IHostedService, IDisposable
 {
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     CancellationTokenRegistration _stopping;
     CancellationTokenSource? _deadline;
     Task? _shutdown;

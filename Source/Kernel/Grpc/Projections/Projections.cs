@@ -3,26 +3,33 @@
 
 using System.Dynamic;
 using System.Reactive.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Contracts.Projections;
+using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Projections.Engine.DeclarationLanguage;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Services.Projections.Definitions;
 using Cratis.Chronicle.Services.ReadModels;
+using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
+using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -38,6 +45,7 @@ namespace Cratis.Chronicle.Services.Projections;
 /// </summary>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
 /// <param name="expandoObjectConverter"><see cref="IExpandoObjectConverter"/> for converting ExpandoObjects.</param>
+/// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="languageService"><see cref="ILanguageService"/> for handling projection declaration language.</param>
 /// <param name="serviceProvider"><see cref="IServiceProvider"/> for accessing services.</param>
 /// <param name="readModelsCompliance"><see cref="IReadModelsCompliance"/> for decrypting PII fields in previewed read model instances.</param>
@@ -49,6 +57,7 @@ namespace Cratis.Chronicle.Services.Projections;
 internal sealed class Projections(
     IGrainFactory grainFactory,
     IExpandoObjectConverter expandoObjectConverter,
+    JsonSerializerOptions jsonSerializerOptions,
     ILanguageService languageService,
     IServiceProvider serviceProvider,
     IReadModelsCompliance readModelsCompliance,
@@ -76,10 +85,12 @@ internal sealed class Projections(
         foreach (var definition in request.Projections)
         {
             SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
+            if (EventSequenceIdExtensions.IsSystemSequence(definition.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         }
         var projectionsManager = grainFactory.GetGrain<IProjectionsManager>(request.EventStore);
         var owner = (Concepts.Projections.ProjectionOwner)(int)request.Owner;
         var projections = request.Projections.Select(_ => _.ToChronicle(owner)).ToArray();
+        Array.ForEach(projections, EnsurePublicSequence);
         if (!string.IsNullOrEmpty(request.ConnectionId))
         {
             var access = await connectionOwnership.Verify(grainFactory, request.ConnectionId, ConnectionCallers.From(context, options.Value).Owner, options.Value.Clustering.ResponseTimeout, cancellationToken: context.CancellationToken);
@@ -118,12 +129,41 @@ internal sealed class Projections(
                 return;
             }
 
-            await SharedProjectionRegistration.Register(projectionsManager, signature, projections, fullSetOwner, registrant, version);
+            // The kernel takes the registration in and answers; applying it happens in the background, so what the
+            // kernel is busy with does not reach the client. A silo that cannot take the registration in leaves it to be applied first.
+            if (options.Value.Registration.AcceptAsynchronously && await TryAccept(request.EventStore, signature, projections, fullSetOwner, registrant, version))
+            {
+                return;
+            }
+
+            // A caller that gives up cancels the registration it was waiting for, so that it does not keep running for nobody.
+            using var cancellation = new GrainCancellationTokenSource();
+            await using var abandonment = context.CancellationToken.Register(() => _ = cancellation.Cancel());
+            await SharedProjectionRegistration.Register(projectionsManager, signature, projections, fullSetOwner, registrant, version, cancellation.Token);
+        }
+        catch (RegistrationBusyException busy)
+        {
+            // A retryable answer in place of a call timeout; the caller retries after the interval.
+            throw new RpcException(new Status(StatusCode.Unavailable, busy.Message), new Metadata { { "retry-after", ((int)Math.Ceiling(busy.RetryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture) } });
         }
         catch (Exception exception)
         {
             throw ProjectionRegistrationFailed.For(request.EventStore, projections.Select(_ => _.Identifier), exception);
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Contracts.Projections.RegistrationStatus> GetRegistrationStatus(GetRegistrationStatusRequest request, CallContext context = default)
+    {
+        await SystemStoreGuard.Ensure(context, new(request.EventStore), StoreAccess.Read);
+        var status = await grainFactory.GetGrain<IRegistrationInbox>(request.EventStore).GetStatus(Storage.Registrations.RegistrationKind.Projections, request.Registrant);
+        return new Contracts.Projections.RegistrationStatus
+        {
+            State = (Contracts.Projections.RegistrationState)(int)status.State,
+            Revision = status.Revision,
+            AppliedRevision = status.AppliedRevision,
+            Failure = status.Failure
+        };
     }
 
     /// <inheritdoc/>
@@ -152,6 +192,7 @@ internal sealed class Projections(
     /// <inheritdoc/>
     public async Task<OneOf<ContractProjectionPreview, ContractProjectionDefinitionParsingErrors>> Preview(PreviewProjectionRequest request, CallContext context = default)
     {
+        if (EventSequenceIdExtensions.IsSystemSequence(request.EventSequenceId)) throw SystemStoreGuard.RefusedException();
         await SystemStoreGuard.Ensure(context, new(request.EventStore, request.Namespace, request.EventSequenceId, request.DraftReadModel?.Identifier), StoreAccess.Read);
         request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
         if (languageService.IsGraphDeclaration(request.Declaration ?? string.Empty))
@@ -197,7 +238,9 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                EnsurePublicSequence(definition);
                 await SystemStoreGuard.Ensure(context, new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId), StoreAccess.Read, namespaceAddressed: false);
+                definition = definition with { EventSequenceId = request.EventSequenceId };
                 ReadModelDefinition? readModelDefinition;
                 var isInferredReadModel = definition.ReadModel == ReadModelIdentifier.Inferred;
 
@@ -254,7 +297,7 @@ internal sealed class Projections(
 
                 while (await cursor.MoveNext())
                 {
-                    events.AddRange(cursor.Current);
+                    events.AddRange(cursor.Current.Select(@event => PublicEventContentRedactor.Redact(@event, jsonSerializerOptions)));
                 }
 
                 IEnumerable<System.Dynamic.ExpandoObject> result;
@@ -319,6 +362,7 @@ internal sealed class Projections(
         return await compileResult.Match(
             async definition =>
             {
+                EnsurePublicSequence(definition);
                 SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
                 var readModelDefinition = allReadModels.FirstOrDefault(r => r.Identifier == definition.ReadModel);
 
@@ -384,16 +428,16 @@ internal sealed class Projections(
                 }
 
                 definition = definition with { ReadModel = readModelDefinition.Identifier, EventSequenceId = request.EventSequenceId };
+                EnsurePublicSequence(definition);
 
                 if (request.DraftReadModel is not null && draftDefinition is not null)
                 {
-                    var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
                     var definitionToSave = draftDefinition with
                     {
                         ObserverIdentifier = definition.Identifier.Value,
                         ObserverType = ReadModelObserverType.Projection
                     };
-                    await readModelsManager.RegisterSingle(definitionToSave);
+                    await SaveReadModelDefinition(request.EventStore, definitionToSave);
                 }
 
                 // Check if a projection with the same identifier already exists
@@ -424,6 +468,11 @@ internal sealed class Projections(
                 return new SaveProjectionResult();
             },
             errors => Task.FromResult(new SaveProjectionResult { Errors = errors.ToContract().Errors }));
+    }
+
+    static void EnsurePublicSequence(Concepts.Projections.Definitions.ProjectionDefinition definition)
+    {
+        if (definition.EventSequenceId.IsSystemSequence()) throw SystemStoreGuard.RefusedException();
     }
 
     static ReadModelDefinition CreateDraftReadModelDefinition(DraftReadModelDefinition draft)
@@ -687,6 +736,20 @@ internal sealed class Projections(
             ?.ToString();
     }
 
+    async Task SaveReadModelDefinition(EventStoreName eventStore, ReadModelDefinition definition)
+    {
+        var manager = grainFactory.GetReadModelsManager(eventStore);
+        var existing = await manager.GetDefinitions();
+        if (existing.Any(_ => _.Identifier == definition.Identifier))
+        {
+            await manager.UpdateDefinition(definition);
+        }
+        else
+        {
+            await manager.RegisterSingle(definition);
+        }
+    }
+
     /// <summary>
     /// Decrypts PII fields in a set of previewed read model instances, projected directly from stored
     /// (encrypted) events.
@@ -726,6 +789,20 @@ internal sealed class Projections(
         return released;
     }
 
+    async Task<bool> TryAccept(string eventStore, string signature, IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition> projections, Concepts.Projections.ProjectionOwner? fullSetOwner, string? registrant, string? version)
+    {
+        try
+        {
+            await grainFactory.GetGrain<IRegistrationInbox>(eventStore).AcceptProjections(signature, projections, fullSetOwner, registrant, version);
+            return true;
+        }
+        catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
+        {
+            // A silo of the previous release has no inbox; the registration is applied before it is answered.
+            return false;
+        }
+    }
+
     bool TryComputeSignature(IEnumerable<Concepts.Projections.Definitions.ProjectionDefinition> projections, Concepts.Projections.ProjectionOwner? fullSetOwner, string? registrant, string? version, out string signature)
     {
         // Sharing is an optimization. A registration whose signature cannot be computed is registered as before.
@@ -754,11 +831,12 @@ internal sealed class Projections(
         return await compileResult.Match(
             async graph =>
             {
+                EnsurePublicSequence(graph.Projection);
                 var definition = graph.Projection with { EventSequenceId = request.EventSequenceId };
+                EnsurePublicSequence(definition);
                 SystemStoreGuard.EnsureNotSystem(new(request.EventStore, definition.Identifier, definition.ReadModel, definition.EventSequenceId));
 
-                var readModelsManager = grainFactory.GetReadModelsManager(request.EventStore);
-                await readModelsManager.RegisterSingle(graph.ReadModel with { ObserverIdentifier = definition.Identifier.Value });
+                await SaveReadModelDefinition(request.EventStore, graph.ReadModel with { ObserverIdentifier = definition.Identifier.Value });
                 await grainFactory.GetGrain<IProjectionsManager>(request.EventStore).Register([definition]);
                 return new SaveProjectionResult();
             },

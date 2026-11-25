@@ -27,7 +27,7 @@ public class when_the_shadow_ddl_timeout_is_configured : for_ReadModelMigrator.g
         await using var plain = CreateContext("configured_timeout", columns.Select(column => column with { IsCompositeKey = false }).ToArray());
         await plain.EnsureTableExists();
         await plain.Database.ExecuteSqlRawAsync("ALTER TABLE configured_timeout ADD COLUMN __compositeKey TEXT; CREATE INDEX chronicle_shx_obsolete ON configured_timeout(id)");
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).IgnoringManyServiceProviders().Options;
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()), Substitute.For<ILogger<ReadModelMigrator>>(), Options.Create(configuration));
         migrator.ClearMigrationCache(plain.Database.GetConnectionString());
         await using var context = new ReadModelDbContext(options, plain.TableName, columns, migrator);

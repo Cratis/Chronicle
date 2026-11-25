@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
 using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
@@ -12,7 +13,7 @@ using Cratis.Chronicle.Observation.Jobs;
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
 /// <summary>
-/// No job took ownership of the catch-up, so preparation ends without a round handing over. The event it held back is no longer owned, and another partition crossing it is reported once.
+/// No job took ownership of catch-up. Ending preparation must retain its held-back event as pending work.
 /// </summary>
 public class and_catch_up_preparation_ended_without_a_handover : given.an_observer_with_skip_detection
 {
@@ -51,5 +52,6 @@ public class and_catch_up_preparation_ended_without_a_handover : given.an_observ
     }
 
     [Fact] void should_not_report_before_the_position_crosses_the_event() => _reportsBeforeCrossing.ShouldEqual(0);
-    [Fact] void should_report_exactly_one_suspected_skip() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
+    [Fact] void should_not_report_a_skip_that_was_prevented() => _metrics.For(EventsSuspectedSkipped).ShouldBeEmpty();
+    [Fact] void should_keep_the_held_back_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"Q");
 }

@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Captures.Engine;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
+using Cratis.Chronicle.Supervision;
 using Orleans.Concurrency;
 
 namespace Cratis.Chronicle.Captures;
@@ -35,6 +36,17 @@ public interface ICapturesManager : IGrainWithStringKey
     /// <returns>A task that completes after healthy subscriptions; retired observers are skipped and artifact failures are logged for retry.</returns>
     [AlwaysInterleave]
     Task EnsureSubscribedIn(EventStoreNamespaceName @namespace);
+
+    /// <summary>
+    /// Recover every started events capture that has lost its subscription.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Run by the <see cref="ISiloSupervisor"/> of the silo hosting the manager once a minute. Interleaved so a slow
+    /// recovery never holds up starting or stopping a capture.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task Reconcile();
 
     /// <summary>
     /// Start a capture. Once started it captures on its schedule and can not be changed until stopped.

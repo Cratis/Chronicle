@@ -31,6 +31,18 @@ static class FromDefinitionExtensions
     }
 
     /// <summary>
+    /// Adds an event source identifier mapping to the From definition for a given event type.
+    /// </summary>
+    /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>
+    /// <param name="eventType">The event type to map from.</param>
+    /// <param name="propertyName">The property name on the projection model.</param>
+    /// <param name="setOnce">Whether the property is only assigned when it has no value yet.</param>
+    internal static void AddEventSourceIdMapping(this IDictionary<EventType, FromDefinition> targetFrom, EventType eventType, string propertyName, bool setOnce = false)
+    {
+        targetFrom.GetOrCreateFromDefinition(eventType).Properties[propertyName] = Once(WellKnownExpressions.EventSourceId, setOnce);
+    }
+
+    /// <summary>
     /// Adds an add mapping to the From definition for a given event type.
     /// </summary>
     /// <param name="targetFrom">The target From dictionary to add the mapping to.</param>

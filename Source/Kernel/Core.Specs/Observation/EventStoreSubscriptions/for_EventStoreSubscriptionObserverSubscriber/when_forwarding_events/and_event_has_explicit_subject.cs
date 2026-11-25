@@ -34,7 +34,10 @@ public class and_event_has_explicit_subject : Specification
     {
         _silo = new TestKitSilo();
         _silo.AddNamespaceCasing();
-        _silo.AddService(Substitute.For<IStorage>());
+        var storage = Substitute.For<IStorage>();
+        await given.registered_target_event_types.Register(storage, "event-type-id");
+        storage.GetEventStore("Lobby").EventStoreSubscriptions.GetAll().Returns(_ => [new Concepts.Observation.EventStoreSubscriptions.EventStoreSubscriptionDefinition("subscription", "Admin", [])]);
+        _silo.AddService(storage);
         _silo.AddService(Substitute.For<IEventGenerationRelease>());
         _silo.AddService(new JsonSerializerOptions());
         _silo.AddService(Substitute.For<ILogger<EventStoreSubscriptionObserverSubscriber>>());

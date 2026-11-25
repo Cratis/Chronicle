@@ -17,7 +17,7 @@ namespace Cratis.Chronicle.Federation;
 public class ForwardedEventGuard(EventStoreName localEventStore)
 {
     readonly Dictionary<EventStoreName, EventSequenceNumber> _highWaterMarks = [];
-    readonly object _lock = new();
+    readonly Lock _lock = new();
 
     /// <summary>
     /// Evaluate a forwarded event and, when accepted, record it.

@@ -20,12 +20,12 @@ public class and_automatic_reconciliation_after_restart_is_ready_while_quarantin
     async Task Establish()
     {
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([_observerKey.Namespace]);
-        _managerSilo.AddNamespaceCasing();
+        namespaces.HasEveryNamespace().GetAll().Returns([_observerKey.Namespace]);
+        _managerSilo.AddEventStoreStorage();
         _managerSilo.AddService(Substitute.For<ILocalSiloDetails>());
         _managerSilo.AddProbe(_ => namespaces);
         _managerSilo.AddProbe<IObserver>(_ => _observer);
-        _manager = await _managerSilo.CreateGrainAsync<EventStoreSubscriptionsManager>("target");
+        _manager = await _managerSilo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("target");
         await _manager.Add(new(new EventStoreSubscriptionId(_observerKey.EventStore.Value), _observerKey.EventStore, _eventTypes));
         (await _observer.IsSubscribed()).ShouldBeFalse();
     }

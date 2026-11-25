@@ -34,7 +34,6 @@ internal static class FromEventPropertyDefinitionConverters
     {
         return new(
             contract.Event.ToChronicle(),
-            contract.PropertyExpression
-        );
+            contract.PropertyExpression);
     }
 }

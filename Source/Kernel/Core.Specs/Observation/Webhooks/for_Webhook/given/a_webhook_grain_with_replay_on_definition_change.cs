@@ -16,6 +16,7 @@ public class a_webhook_grain_with_replay_on_definition_change : Specification
     protected TestKitSilo _silo;
     protected INamespaces _namespacesGrain;
     protected WebhookDefinition _definition;
+    protected IOptions<ChronicleOptions> _options;
 
     async Task Establish()
     {
@@ -27,10 +28,12 @@ public class a_webhook_grain_with_replay_on_definition_change : Specification
             .Returns(new WebhookDefinitionComparisonResult(WebhookDefinitionCompareResult.Different, null));
         _silo.AddService(definitionComparer);
 
-        _silo.AddService(Options.Create(new ChronicleOptions
+        _options = Substitute.For<IOptions<ChronicleOptions>>();
+        _options.Value.Returns(new ChronicleOptions
         {
             Observers = new Observers { ReplayOnDefinitionChange = true }
-        }));
+        });
+        _silo.AddService(_options);
 
         _namespacesGrain = Substitute.For<INamespaces>();
         _namespacesGrain.GetAll().Returns([]);

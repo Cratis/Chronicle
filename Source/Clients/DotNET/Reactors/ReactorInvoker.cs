@@ -190,11 +190,16 @@ public class ReactorInvoker(
         }
     }
 
-    async Task<object?[]> ResolveArguments(MethodInfo method, object content, EventContext eventContext, ReactorId reactorId) =>
-        _argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
-        method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery))
-            ? await registeredResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider, ResolveDelivery(reactorId, eventContext))
-            : await _argumentsResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider);
+    async Task<object?[]> ResolveArguments(MethodInfo method, object content, EventContext eventContext, ReactorId reactorId)
+    {
+        if (_argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
+            method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery)))
+        {
+            return await registeredResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider, ResolveDelivery(reactorId, eventContext));
+        }
+
+        return await _argumentsResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider);
+    }
 
     ReactorDelivery ResolveDelivery(ReactorId reactorId, EventContext eventContext)
     {

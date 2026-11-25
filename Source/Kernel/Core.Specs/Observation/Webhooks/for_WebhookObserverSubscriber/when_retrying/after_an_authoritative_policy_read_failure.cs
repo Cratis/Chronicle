@@ -15,10 +15,10 @@ public class after_an_authoritative_policy_read_failure : given.a_compatibility_
 
     async Task Because()
     {
-        _failedResult = await _subscriber.OnNext(_partition, _events, new(null));
+        _failedResult = await _subscriber.OnNext(_partition, _events, _context);
         _httpCallsAfterFailure = _receiver.Payloads.Count;
         _webhookDefinitions.Get("webhook").Returns(_webhookDefinition);
-        _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+        _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
     }
 
     [Fact] void should_fail_the_first_attempt() => _failedResult.State.ShouldEqual(ObserverSubscriberState.Failed);

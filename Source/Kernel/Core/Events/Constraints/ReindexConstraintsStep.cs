@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Dynamic;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
@@ -168,6 +169,10 @@ public partial class ReindexConstraintsStep(
             var names = changedDefinitions.Select(definition => definition.Name).Concat(closingDefinitions.Select(definition => definition.Name)).Distinct().ToArray();
             var sequence = grainFactory.GetEventSequence(currentState.EventSequenceId, jobStepKey.Scope, jobStepKey.Namespace);
             var progress = new RebuildProgress();
+            var constraintNames = string.Join(", ", names.Select(name => name.Value));
+            var started = Stopwatch.GetTimestamp();
+            var completed = false;
+            logger.ConstraintIndexRebuildStarted(jobStepKey.Scope, jobStepKey.Namespace, currentState.EventSequenceId, constraintNames, runId.Value);
             try
             {
                 await sequence.ConstraintIndexRebuildStarting(runId, names);
@@ -175,17 +180,19 @@ public partial class ReindexConstraintsStep(
 
                 var tracking = CreateTracking(changedDefinitions, uniqueConstraintsStorage, progress);
                 var storedContent = new StoredConstraintEventContent(jobStepKey.Scope, jobStepKey.Namespace, eventStoreStorage.EventTypes, complianceManager, expandoObjectConverter, schemaCache);
-                await ReindexStoredEvents(namespaceStorage.GetEventSequence(currentState.EventSequenceId), storedContent, closingReindexer, tracking, cancellationToken);
+                await ReindexStoredEvents(namespaceStorage.GetEventSequence(currentState.EventSequenceId), storedContent, closingReindexer, closingDefinitions, tracking, cancellationToken);
                 await closingReindexer.Commit(cancellationToken, () => progress.WroteAnything = true);
                 if (!await ReportCollisions(progress, cancellationToken))
                 {
                     return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
                 }
 
+                completed = true;
                 return JobStepResult.Succeeded(null);
             }
             finally
             {
+                logger.ConstraintIndexRebuildFinished(jobStepKey.Scope, jobStepKey.Namespace, currentState.EventSequenceId, constraintNames, runId.Value, completed, Stopwatch.GetElapsedTime(started));
                 var outcome = !progress.WroteAnything ? ConstraintIndexRebuildOutcome.NothingWritten : new(true, progress.ProcessedThrough);
                 await ReportRebuilt(sequence, runId, names, outcome);
             }
@@ -228,16 +235,32 @@ public partial class ReindexConstraintsStep(
         uniqueConstraintsStorage,
         progress);
 
+    static async Task ClearUnscopedIndexes(RebuildTracking tracking, CancellationToken cancellationToken)
+    {
+        foreach (var definition in tracking.Definitions.Where(definition => definition.Scope?.HasScope != true))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            tracking.Progress.WroteAnything = true;
+            await tracking.Storage.ClearValues(definition, string.Empty);
+            tracking.Seen[definition.Name].Add((EventSourceId.Unspecified, string.Empty));
+        }
+    }
+
     async Task ReindexStoredEvents(
         IEventSequenceStorage eventSequenceStorage,
         StoredConstraintEventContent storedContent,
         ClosesStreamConstraintReindexer closingReindexer,
+        ClosesStreamConstraintDefinition[] closingDefinitions,
         RebuildTracking tracking,
         CancellationToken cancellationToken)
     {
         // GetFromSequenceNumber supplies an ascending sequence-number cursor in every provider. Consume
         // its batches and events sequentially so releases precede subsequent claims, including on retry.
-        using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, cancellationToken: cancellationToken);
+        await ClearUnscopedIndexes(tracking, cancellationToken);
+        var types = ConstraintEventTypes.For(tracking.Definitions.Cast<IConstraintDefinition>().Concat(closingDefinitions));
+        if (types.Length == 0) return;
+
+        using var cursor = await eventSequenceStorage.GetFromSequenceNumber(EventSequenceNumber.First, eventTypes: types, cancellationToken: cancellationToken);
         while (await cursor.MoveNext())
         {
             foreach (var @event in cursor.Current)
@@ -268,7 +291,7 @@ public partial class ReindexConstraintsStep(
             catch (DuplicateUniqueConstraintValue error)
             {
                 tracking.Progress.RecordCollision(definition.Name, claimedValue, @event.Context.SequenceNumber);
-                logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.EventSourceId, @event.Context.SequenceNumber, error);
+                logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.SequenceNumber, error);
             }
         }
     }

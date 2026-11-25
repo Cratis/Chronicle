@@ -29,7 +29,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using static Cratis.Chronicle.Storage.Sql.Sinks.ChildCollectionRemovals;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnCoercion;
 using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnSearch;
 
 #pragma warning disable SA1202 // Private helpers grouped next to the public methods they back.
 #pragma warning disable SA1204 // Static helpers grouped at the bottom for readability.
@@ -226,7 +229,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
             return await ApplyCycle(new CycleWrite { Scope = scope, Key = key, Id = id, Changeset = changeset, SequenceNumber = eventSequenceNumber, Mode = mode });
         }
 
-        await ApplyJoinsAndChildRemovals(scope, changeset, eventSequenceNumber, key.ArrayIndexers);
+        await ApplyJoinsAndChildRemovals(scope, changeset.Changes, eventSequenceNumber, key.ArrayIndexers);
 
         var nonJoinedChanges = changeset.Changes
             .Where(c => c is not Joined and not ChildRemovedFromAll)
@@ -261,18 +264,22 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         }
     }
 
-    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber, ArrayIndexers ambientIndexers)
+    async Task ApplyJoinsAndChildRemovals(DbContextScope<ReadModelDbContext> scope, IEnumerable<Change> changes, EventSequenceNumber eventSequenceNumber, ArrayIndexers ambientIndexers)
     {
         // Composite-key design §4.1: these paths lack target key parts. Leave shadows untouched;
         // never reconstruct composite parts from ambiguous or culture-sensitive legacy ids.
-        foreach (var joined in changeset.Changes.OfType<Joined>())
+        foreach (var change in changes)
         {
-            await ApplyJoinedChange(scope, joined, eventSequenceNumber, ambientIndexers);
-        }
+            switch (change)
+            {
+                case Joined joined:
+                    await ApplyJoinedChange(scope, joined, eventSequenceNumber, ambientIndexers);
+                    break;
 
-        foreach (var childRemovedFromAll in changeset.Changes.OfType<ChildRemovedFromAll>())
-        {
-            await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
+                case ChildRemovedFromAll childRemovedFromAll:
+                    await RemoveChildFromAllEntries(scope, childRemovedFromAll, eventSequenceNumber);
+                    break;
+            }
         }
     }
 
@@ -501,6 +508,27 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         return Option<Key>.None();
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved)
+    {
+        await EnsureLayout();
+        var column = FindColumn(childRemoved.ChildrenProperty.Segments.First().Value);
+        var keyColumn = _columns.FirstOrDefault(c => c.IsKey);
+        if (column?.IsJson != true || keyColumn is null)
+        {
+            return [];
+        }
+
+        // The removal runs on a copy deserialized from the stored JSON and is never written back, so this uses
+        // exactly the predicate the removal uses while leaving every stored row untouched.
+        var removal = new ChildRemoval(childRemoved.ChildrenProperty.Segments.ToArray(), childRemoved.IdentifiedByProperty, childRemoved.Key);
+        await using var scope = await OpenActiveScope();
+        var entries = await CandidateEntries(scope.DbContext, column, childRemoved.Key, tracking: false);
+        return [.. entries
+            .Where(entry => HoldsChild(entry, column, removal) && entry[keyColumn.Name] is not null)
+            .Select(entry => new Key(entry[keyColumn.Name]!, ArrayIndexers.NoIndexers))];
+    }
+
     static bool ContainsChildValue(DynamicReadModelEntity entry, ProjectedColumn rootColumn, IPropertyPathSegment[] pathSegments, object childValue)
     {
         if (entry[rootColumn.Name] is not string jsonValue || string.IsNullOrEmpty(jsonValue))
@@ -705,6 +733,11 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         entry[column.Name] = SerializeJsonColumn(content, column);
         return true;
     }
+
+    static bool HoldsChild(DynamicReadModelEntity entry, ProjectedColumn column, ChildRemoval removal) =>
+        entry[column.Name] is string jsonValue
+        && !string.IsNullOrEmpty(jsonValue)
+        && RemoveChildrenFromPath(DeserializeJsonColumn(jsonValue), 1, removal);
 
     async Task<EntityEntry<DynamicReadModelEntity>> GetOrAttachEntity(DbContextScope<ReadModelDbContext> scope, string id, Key key)
     {

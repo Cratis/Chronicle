@@ -17,6 +17,7 @@ import { Recommendations } from "./Namespaces/Recommendations/Recommendations";
 import { Jobs } from './Namespaces/Jobs/Jobs';
 import { Identities } from './Namespaces/Identities/Identities';
 import { ClosedStreams } from './Namespaces/ClosedStreams/ClosedStreams';
+import { Constraints } from './Namespaces/Constraints/Constraints';
 import { Sequences as GeneralSequences } from './General/Sequences/Sequences';
 import { Sinks } from './General/Sinks/Sinks';
 import { Reducers } from './General/Reducers/Reducers';
@@ -68,6 +69,7 @@ export const EventStore = () => {
                 { label: strings.mainMenu.readModels, url: ':namespace/read-models', icon: mdIcons.MdTableView },
                 { label: strings.mainMenu.identities, url: ':namespace/identities', icon: mdIcons.MdPeople },
                 { label: strings.mainMenu.closedStreams, url: ':namespace/closed-streams', icon: mdIcons.MdLock },
+                { label: strings.mainMenu.constraints, url: ':namespace/constraints', icon: mdIcons.MdRule },
                 { label: strings.mainMenu.general.seedData, url: ':namespace/seed-data', icon: mdIcons.MdGrain },
             ]
         },
@@ -153,6 +155,7 @@ export const EventStore = () => {
                     <Route path={'projections'} element={<Projections />} />
                     <Route path={'identities'} element={<Identities />} />
                     <Route path={'closed-streams'} element={<ClosedStreams />} />
+                    <Route path={'constraints'} element={<Constraints />} />
                     <Route path={'seed-data'} element={<NamespacedEventsSeeding />} />
                 </Route>
             </Route>

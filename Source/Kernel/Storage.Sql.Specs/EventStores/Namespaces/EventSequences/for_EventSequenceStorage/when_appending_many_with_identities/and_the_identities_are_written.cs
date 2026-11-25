@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.EventSequences.for_EventSequenceStorage.when_appending_many_with_identities;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_the_identities_are_written : given.a_keyed_batch_storage
 {
     IReadOnlyDictionary<string, StoredEventPublication> _receipts;

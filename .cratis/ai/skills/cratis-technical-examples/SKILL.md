@@ -62,6 +62,14 @@ reader review must not be claimed as completed.
   and command-response wire type (for example `Guid` versus `string`) and keep
   one id type per concept across every page of a series. Shared frontend code
   that depends on those types must be backend-neutral or tabbed per backend.
+  Read the prose before and after every tab group as a claim about each tab:
+  scope a client-specific sentence to its tab, and fix any sentence a tab
+  contradicts. A note inside a tab ("not supported", "no equivalent") is also a
+  claim: check that client's source and show the real shape. Before changing a
+  repeated fact, grep the whole series for it and update every occurrence.
+  Check every snippet against the [concepts rule](../../rules/concepts.md)
+  even when copied from client docs; a primitive for a domain value is a defect
+  there too.
 - **Sample application:** one realistic domain, explicit prerequisites and
   relevant version constraints, a documented run command, a reproducible state to start
   from, and a visible result. Keep it minimal enough for a new reader to finish.

@@ -74,7 +74,12 @@ internal static class StoreCapabilityGuard
         var revoked = checks
             .SelectMany(_ => Observable.FromAsync(() => Permits(callContext, store, @namespace, access)))
             .Where(permitted => !permitted)
-            .SelectMany(_ => Observable.Throw<Unit>(SystemStoreGuard.RefusedException()));
+            .SelectMany(_ =>
+            {
+                var failure = SystemStoreGuard.RefusedException();
+                callContext.RecordFailure(failure);
+                return Observable.Throw<Unit>(failure);
+            });
         return stream.TakeUntil(revoked);
     }
 

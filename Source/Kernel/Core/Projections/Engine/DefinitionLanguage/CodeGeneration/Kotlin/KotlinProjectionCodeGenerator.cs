@@ -70,7 +70,7 @@ public class KotlinProjectionCodeGenerator : IProjectionCodeGenerator
     public string GenerateModelBound(ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
         throw new ProjectionCodeGenerationNotSupported(ProjectionCodeLanguage.Kotlin, ProjectionCodeStyle.ModelBound);
 
-    static void AppendFromBlocks(IDictionary<EventType, FromDefinition> fromBlocks, string readModelName, List<string> blocks)
+    static void AppendFromBlocks(IReadOnlyDictionary<EventType, FromDefinition> fromBlocks, string readModelName, List<string> blocks)
     {
         foreach (var (eventType, from) in fromBlocks)
         {
@@ -99,7 +99,7 @@ public class KotlinProjectionCodeGenerator : IProjectionCodeGenerator
         }
     }
 
-    static void AppendJoinBlocks(IDictionary<EventType, JoinDefinition> joinBlocks, string readModelName, List<string> blocks)
+    static void AppendJoinBlocks(IReadOnlyDictionary<EventType, JoinDefinition> joinBlocks, string readModelName, List<string> blocks)
     {
         foreach (var (eventType, join) in joinBlocks)
         {
@@ -146,7 +146,7 @@ public class KotlinProjectionCodeGenerator : IProjectionCodeGenerator
         }
     }
 
-    static void AppendRemovedWithBlocks(IDictionary<EventType, RemovedWithDefinition> removedWithBlocks, List<string> blocks)
+    static void AppendRemovedWithBlocks(IReadOnlyDictionary<EventType, RemovedWithDefinition> removedWithBlocks, List<string> blocks)
     {
         foreach (var eventType in removedWithBlocks.Keys)
         {

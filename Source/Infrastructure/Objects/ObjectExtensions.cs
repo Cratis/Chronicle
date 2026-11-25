@@ -8,7 +8,6 @@ using System.Text.Json;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Properties;
 using Cratis.Concepts;
-using Cratis.Reflection;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Objects;
@@ -126,26 +125,18 @@ public static class ObjectExtensions
     /// <param name="right">Right object to compare with.</param>
     /// <returns>True if the two are equal, false if not.</returns>
     /// <remarks>
-    /// This method recognizes <see cref="ExpandoObject"/> and will compare the key/value pairs.
-    /// If its not an <see cref="ExpandoObject"/>, it will use the <see cref="object.Equals(object)"/> method.
+    /// When either operand is an <see cref="ExpandoObject"/>, compares complete structural identities,
+    /// including child objects and materialized numeric and Guid values.
+    /// Otherwise, uses the <see cref="object.Equals(object)"/> method.
     /// </remarks>
     public static bool IsEqualTo(this object left, object right)
     {
         if (left is null && right is null) return true;
         if (left is null || right is null) return false;
 
-        if (left is ExpandoObject leftAsExpandoObject && right is ExpandoObject rightAsExpandoObject)
+        if (left is ExpandoObject || right is ExpandoObject)
         {
-            var leftKeyValuePairs = leftAsExpandoObject.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
-            var rightKeyValuePairs = rightAsExpandoObject.GetKeyValuePairs().ToDictionary(_ => _.Key, _ => _.Value);
-
-            foreach (var (key, value) in leftKeyValuePairs)
-            {
-                if (!rightKeyValuePairs.TryGetValue(key, out var rightValuePairValue)) return false;
-                if (!IsEqualTo(value, rightValuePairValue)) return false;
-            }
-
-            return true;
+            return StructuralKeyEquality.AreEqual(left, right);
         }
 
         return left.Equals(right);

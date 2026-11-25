@@ -84,6 +84,12 @@ Use a callback to compose the message dynamically from violation context:
 
 The Chronicle Kernel uses an index of claimed values to check the registered rule during append, regardless of which client writes the event. Event storage and the claim update are not crash-atomic. If an update cannot complete, the kernel marks the affected index as pending and refuses governed appends while it catches up. See [Constraint or decision read](../index.md#constraint-or-decision-read) for the enforcement limits.
 
+## Retrying while an index is unavailable
+
+A governed append refused with `ConstraintIndexUnavailable` has written none of that attempt's new events. In .NET, its append result exposes `IsRetryable` as `true` and `RetryAfter` as a suggested delay of one second. Wait before retrying the unchanged request; for keyed appends, keep the same idempotency keys. A successful durable-key replay is not a refusal, even while an index is pending.
+
+Retry metadata does not turn a uniqueness or concurrency violation into a transient failure. Older kernels that omit it yield `IsRetryable == false` and `RetryAfter == null` in the .NET client. The client does not automatically retry these refusals.
+
 ## Upgrading persisted claims
 
 Before upgrading to Chronicle 19.112.0 or later, back up every namespace database. The startup patch permanently deletes unique-constraint claim rows whose stored value is not exactly 64 lowercase hexadecimal characters (`^[0-9a-f]{64}$`). The comparison is case-sensitive even on SQL Server databases with case-insensitive collations, so uppercase values are deleted.
@@ -95,6 +101,8 @@ After cleanup, SQL value columns and indexes are repaired directly, even if a ru
 Downgrading does not undo the deletion. To roll back, stop the kernels and restore the backup taken before upgrading. Reindexing rebuilds claims using current hashes; it does not restore the deleted legacy rows.
 
 ## Rebuilding an index
+
+To rebuild an existing declaration without changing it, use the operator [Rebuild a constraint index](../../operations/rebuild-a-constraint-index.md) command. Select its registered name, namespace, and event sequence, then follow the returned job identifier.
 
 When a change to a property constraint requires reindexing, Chronicle rebuilds its index from the event sequence in log order. It clears all claims in each scope before replaying that scope's first event, so stale claims do not block historical values.
 

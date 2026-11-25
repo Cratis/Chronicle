@@ -32,11 +32,22 @@ internal static class SpecSerializationSetup
     /// </summary>
     internal static void Initialize() => _ = _initialization.Value;
 
+    /// <summary>
+    /// Configures the MongoDB builder the way the server does.
+    /// </summary>
+    /// <param name="builder">The <see cref="IMongoDBBuilder"/> to configure.</param>
+    /// <remarks>
+    /// Arc keeps the naming policy in process-wide state, and element names are decided from it whenever a class map is
+    /// first built. A specification that adds MongoDB without the server's policy would replace it for every class map built
+    /// after it, so specifications that add MongoDB use this.
+    /// </remarks>
+    internal static void ConfigureLikeTheServer(IMongoDBBuilder builder) => builder.WithCamelCaseNamingPolicy();
+
     static bool InitializeCore()
     {
         var services = new ServiceCollection();
         services.AddCratisArcCore();
-        services.AddCratisMongoDB(configureMongoDB: mongoDB => mongoDB.WithCamelCaseNamingPolicy());
+        services.AddCratisMongoDB(configureMongoDB: ConfigureLikeTheServer);
         BsonSerializer.RegisterSerializationProvider(new ConstraintDefinitionSerializationProvider());
         return true;
     }

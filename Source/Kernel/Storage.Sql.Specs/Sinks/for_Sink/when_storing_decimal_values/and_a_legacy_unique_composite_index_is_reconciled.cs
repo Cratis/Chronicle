@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_storing_decimal_values;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_a_legacy_unique_composite_index_is_reconciled : given.a_sqlite_ordered_decimal_index_sink
 {
     string[] _indexes;

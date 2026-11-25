@@ -1,0 +1,113 @@
+<!-- Copyright (c) Cratis. All rights reserved. -->
+<!-- Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
+
+# Chronicle chaos durability rig
+
+An opt-in, single-node durability probe against the **real Chronicle kernel**. This is no-release developer tooling, deliberately outside `Chronicle.slnx` and PR CI. It is not `Cratis.Chronicle.Testing`, an in-memory substitute, or a benchmark. Phase 1 covers single `AppendOnce` events only; network proxies, transactions, constraints, and multi-silo faults are future work.
+
+Resuming a Mongo fault also restores the kernel, which may have self-fenced during the storage outage. Recovery waits for kernel readiness before later worker starts and uses the existing workload deadline.
+
+The commands below require enough free disk space and an explicit release of any active disk hold. A completed smoke on one revision does not verify later changes to signal delivery, deadlines, or restart mappings.
+
+## Prerequisites
+
+- .NET 10, Bash, Docker with Linux containers, and the repository's normal package feeds.
+- macOS or Linux (child STOP/CONT signals are delivered directly through libc).
+- Local Docker and available loopback ports. The rig reserves three free ports once, then publishes explicit `127.0.0.1:<port>` mappings that remain fixed across container restarts. Reservations are released just before Docker binds; another process claiming a port in that interval causes startup to fail rather than silently choosing a new endpoint. Actual mappings are logged at startup and before/after restarts. Never point this rig at an existing stack or production database. It creates an isolated network and dedicated kernel, replica-set MongoDB, and independent side-ledger MongoDB containers. The rig explicitly disables kernel authentication and TLS; use only on an isolated development machine. Readiness probes use HTTP/2 cleartext on `/health/ready`.
+- Adequate disk space before publishing or starting Docker. On the shared development machine, stop below 25 GiB free; flag below 40 GiB.
+- A local slim kernel image. Through the required phase runner, run:
+
+```bash
+~/.pi/agent/bin/pi-phase run --kind build -- bash Chaos/build-kernel-image.sh
+```
+
+The script restores the server for the Linux RID, invokes `Integration/LocalKernelPublish.proj`'s `PublishKernel` target, then builds `Docker/LocalSlim/Dockerfile`. ARM64 hosts use `linux-arm64`. An existing `cratis/chronicle:local-development-slim` image is reused; pass `--force` to rebuild. Reuse does not prove it matches the checkout.
+
+## Run and reproduce
+
+The program command (route execution through the required local phase runner on shared machines):
+
+```bash
+dotnet run --project Chaos/ChaosRig -- run --seed 42 --duration 2m
+```
+
+It prints the seed, run ID, output directory, and planned fault times before starting infrastructure. Omit `--seed` to generate one. Replay the printed seed, duration and fault selection against the same checkout/image to reproduce the **schedule**. Real process scheduling and transport timing remain nondeterministic.
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--seed <integer>` | generated, printed | Deterministic fault selection and timing |
+| `--duration <s/m/h>` | `2m` | Chaos window, excluding startup and settle |
+| `--settle <s/m/h>` | `60s` | Bounded drain budget |
+| `--faults <list>` | `all` | Comma-separated names below, or `none` |
+| `--output <path>` | `Chaos/runs/<UTC>-<seed>` | Logs and snapshots; ignored by Git |
+| `--keep-containers` | off | Retain containers/network and data for inspection |
+| `--self-test-violation` | off | Remove one acknowledged event from the collected in-memory snapshot; must produce a dirty verdict and exit 1 |
+
+Durations must be positive. A window too short for a fault plus recovery has an empty fault schedule. `--faults none` is the baseline smoke run.
+
+Infrastructure and worker readiness share a three-minute startup budget. Once both workers are ready, an absolute `duration + settle` deadline includes faults, recovery, reader startup, and collection; individual operations cannot extend it. At the collection deadline, the last complete snapshot determines the outcome: actual durability/liveness findings exit **1**; a finding-free snapshot without the stable observation window is **inconclusive**, exits **2**, and records its reason in `verdict.json` and `failure.json`. Expiry before any complete snapshot also records `failure.json` and exits **2**. Docker control commands have a thirty-second limit. Child exit and output drainage are bounded separately, and cleanup has its own sixty-second budget. A stopped child receives CONT in scheduler recovery and before termination, independent of run cancellation. If cleanup times out, use the explicit cleanup command below.
+
+## Faults
+
+| Name | Action and purpose |
+| --- | --- |
+| `KillKernel` | SIGKILL, then restart the same container: crash across append/observer persistence |
+| `KillMongo` | SIGKILL the kernel database, then restart: persistence and reconnect behavior |
+| `StopKernel` | Docker pause/unpause of the whole container (including Chronicle behind tini): stale ownership and a frozen silo |
+| `StopMongo` | Docker pause/unpause: blocked database writes without process exit |
+| `KillProducer` | Kill/restart the producer process: resume a durable pending intention with the identical idempotency key and payload |
+| `StopProducer` | SIGSTOP/SIGCONT: outstanding append/reconnect timing |
+| `KillConsumer` | Kill/restart the consumer: re-registration and delivery progress |
+| `StopConsumer` | SIGSTOP/SIGCONT: an unavailable observer client and later recovery |
+
+Faults are globally serialized (thus never overlap on one target). Every fault has an explicit recovery inside the window. Holds last 16–21 seconds, crossing the kernel's explicitly configured **5-second single-writer lease TTL**. The independent ledger is never faulted. No artificial reactor exception is injected; redelivery after a crash is visible rather than hidden by deduplication.
+
+## Workload and oracle
+
+Before each append the producer durably journals a unique ledger ID, source, timestamp and numeric payload in the independent MongoDB container. It uses `AppendOnce` with that ID as the key. Success becomes `acked`; an ambiguous response or transport exception becomes `unknown`; abrupt termination can leave `intended`. Constraint and concurrency refusals become `failed`. An idempotency-key refusal becomes `conflict`, which is a violation but does not assert that an earlier append using that key was absent. A restarted producer retries only `intended` and `unknown` intentions with the original event and key. There is no lost-event assertion for an absent unknown/intended append: acknowledgement may never have happened.
+
+The consumer registers a reactor, active reducer, and projection. The reactor inserts **every delivery** into an external side-ledger using a fresh document ID; duplicates are deliberately not suppressed. Reactor redelivery is expected at-least-once behavior, not a durability violation or an exactly-once side-effect guarantee. `ReactorDuplicates` remains informational in `verdict.json` and the summary; it neither makes a verdict dirty nor prevents stabilization. The reducer and projection count and sum contributions per source.
+
+After the chaos window, recover targets, fence the producer by terminating it, and leave consumers running. The reader pages the actual event log, reads native observers/failures/jobs and materialized models through the client, and reads both independent ledgers. A narrow **read-only** BSON inspection of the kernel `observers` collections supplies `inFlightPartitions`, which the client API does not expose. It discovers databases instead of duplicating Chronicle's physical naming rules, matches the three exact observer IDs, and rejects missing/repeated documents or an absent/non-array field. It never writes kernel storage.
+
+A clean verdict requires three consecutive finding-free snapshots with **unchanged durable progress**: event-log tail, observer sequence positions/active state, and projection/reducer state (compared by identifier, independent of enumeration order). Every sample must have every acknowledged ID present, no definitively failed/rejected IDs present, no duplicate event IDs, no sequence holes/repeated positions, matching source/payload intentions, all three observers active and caught up to the observed tail with actual (not sentinel) sequence positions, no failed/in-flight partitions or incomplete jobs, exact model counts/sums, and at least one side-ledger delivery per logged ID with no unknown delivery IDs. Delivery counts are not compared; legitimate redeliveries do not reset the window. Collection errors and actual findings reset it. Empty workloads cannot pass. Unknown append IDs present once are allowed; twice in the event log are duplicates.
+
+A finding-free final snapshot without all three stable samples is **inconclusive**, not a defect and not a clean pass. It exits **2** with a clear reason; consider a larger `--settle` budget before drawing conclusions. A nonzero durability/liveness metric or content invariant failure at the deadline still exits **1**, even if the stability window was not observed. A transient clean sample cannot override final lag, failed partitions or other real findings.
+
+Example output:
+
+```text
+VERDICT: clean, 120 events checked, 3 observers checked (seed 42)
+VERDICT: clean, 120 events checked, 3 observers checked, 80 reactor duplicates (informational) (seed 42)
+VERDICT: 1 lost, 0 duplicated, 0 gaps, 0 observers behind, 0 projections behind, 0 reducers behind, 0 failed partitions, 0 reactor duplicates (seed 42)
+```
+
+Additional drain/content failures are printed as `VIOLATION:` and included in `verdict.json`, even if the fixed summary counters are zero.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Complete, clean verdict |
+| `1` | Complete snapshot with an actual durability/liveness or content violation |
+| `2` | Inconclusive stability window, bad arguments, cancellation, infrastructure failure, or no complete snapshot |
+
+These codes follow the repository contract: 0 ran clean, 1 found defects, 2 could not run. The self-test must exit 1.
+
+## Output and cleanup
+
+The output directory contains `options.json`, `schedule.json`, stdout/stderr logs per child generation and container, `snapshot.json`, and `verdict.json`. A self-test additionally writes its modified snapshot; the original remains unchanged. An incomplete run records `failure.json` with the seed, run ID, timeout/cancellation/infrastructure classification, diagnostic reason, and exit code 2. An inconclusive drain retains its complete `snapshot.json` and `verdict.json` (including `InconclusiveReason`) and additionally records `failure.json` with status `inconclusive` and exit code 2. Settle exceptions are logged separately. Do not commit run outputs; inspect/redact logs before sharing.
+
+Normal completion, exceptions and Ctrl-C terminate owned child processes and remove labeled containers, anonymous data volumes, and the network. `--keep-containers` retains Docker resources but still terminates child processes. If the driver itself is killed, clean up explicitly:
+
+```bash
+dotnet run --project Chaos/ChaosRig -- cleanup --run-id <printed-run-id>
+# Remove every rig-labeled run (destructive; includes retained data):
+dotnet run --project Chaos/ChaosRig -- cleanup
+```
+
+Cleanup selects only the `chronicle-chaos` label. It does not touch unlabeled local stacks. A forced driver kill may also leave child processes; only terminate PIDs you can verify belong to your run.
+
+## Verification and findings
+
+After the hold lifts, build with the repository's approved iterate profile and run the pure `ChaosRig.Specs` executable (no containers). Then run a no-fault smoke, `--self-test-violation`, and seeds 1, 2, 3 for two minutes each, through the prescribed phase runner. Run repository Tier 1/2 gates before declaring PR readiness. None has run during the hold.
+
+On a dirty verdict, preserve the seed, checkout/image version, flags, logs and snapshots. Reproduce with a smaller fault set/window, then report a minimized product issue with concrete expected/observed behavior and acceptance criteria. Do not fix Chronicle product code in this rig change. Distinguish at-least-once side-effect redelivery from acknowledged event loss. Never post raw connection details or sensitive logs. This phase does not add CI, publish images, or file findings automatically.

@@ -34,11 +34,9 @@ public class ReadModelInstanceVisibilities(EngineProjectionsManager projectionsM
         }
 
         var id = (ProjectionId)definition.ObserverIdentifier.Value;
-        var projection = projectionsManager.TryGet(eventStore, eventStoreNamespace, id, out var registered)
-            ? registered
-            : await projectionsManager.GetCurrent(eventStore, eventStoreNamespace, id);
+        var projection = await projectionsManager.GetDefinition(eventStore, id);
 
-        return projection is not null && ProjectionInitialization.IsChildOnly(projection)
+        return projection is not null && ProjectionDefinitionInitialization.IsChildOnly(projection)
             ? ReadModelInstanceVisibility.IncludeUninitialized
             : ReadModelInstanceVisibility.InitializedOnly;
     }

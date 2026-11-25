@@ -23,10 +23,10 @@ public class with_a_different_existing_identity : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
-        silo.AddNamespaceCasing();
+        silo.AddEventStoreStorage();
         silo.AddService(Substitute.For<ILocalSiloDetails>());
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         silo.AddProbe(_ => namespaces);
         _existingObserver = Substitute.For<IObserver>();
         _existingObserver.IsSubscribed().Returns(true);
@@ -38,7 +38,7 @@ public class with_a_different_existing_identity : Specification
             _requestedKeys.Add(key);
             return key == _existingKey.ToString() ? _existingObserver : _currentObserver;
         });
-        _manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>("consumer");
+        _manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>("consumer");
         await _manager.Add(new EventStoreSubscriptionDefinition("explicit", "producer", [new EventType("published", 1)]));
     }
 
@@ -49,7 +49,7 @@ public class with_a_different_existing_identity : Specification
     [Fact]
     void should_subscribe_the_current_identity() => _currentObserver.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(
         ObserverType.External,
-        Arg.Any<IEnumerable<EventType>>(),
+        Arg.Any<EventTypeSet>(),
         Arg.Any<SiloAddress>(),
         "consumer",
         Arg.Any<bool>(),

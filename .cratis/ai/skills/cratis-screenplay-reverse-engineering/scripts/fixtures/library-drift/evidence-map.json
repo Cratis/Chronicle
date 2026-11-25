@@ -1,0 +1,137 @@
+{
+  "watermarks": {
+    "from": {
+      "revision": "a1b2c3d",
+      "input": "Screenplay/Library.play",
+      "inputDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "to": {
+      "revision": "e4f5a6b",
+      "input": "Screenplay/Library.play",
+      "inputDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  },
+  "flows": [
+    {
+      "id": "Library/Books/RegisterBook",
+      "evidenceIds": [
+        "RE-E1"
+      ],
+      "modelLocator": "Screenplay/Library.play:6-20",
+      "paths": [
+        "Source/Library/Books/RegisterBook/**"
+      ]
+    },
+    {
+      "id": "Library/Books/RetireBook",
+      "evidenceIds": [
+        "RE-E2"
+      ],
+      "modelLocator": "Screenplay/Library.play:21-26",
+      "paths": [
+        "Source/Library/Books/RetireBook/**"
+      ]
+    },
+    {
+      "id": "Library/Books/Books",
+      "evidenceIds": [
+        "RE-E3"
+      ],
+      "modelLocator": "Screenplay/Library.play:27-52",
+      "paths": [
+        "Source/Library/Books/Books/**"
+      ]
+    },
+    {
+      "id": "Library/Members/EnrollMember",
+      "evidenceIds": [
+        "RE-E4"
+      ],
+      "modelLocator": "Screenplay/Library.play:53-70",
+      "paths": [
+        "Source/Library/Members/EnrollMember/**"
+      ]
+    },
+    {
+      "id": "Library/Members/SuspendMember",
+      "evidenceIds": [
+        "RE-E5"
+      ],
+      "modelLocator": "Screenplay/Library.play:71-77",
+      "paths": [
+        "Source/Library/Members/SuspendMember/**"
+      ]
+    },
+    {
+      "id": "Library/Members/Members",
+      "evidenceIds": [
+        "RE-E6"
+      ],
+      "modelLocator": "Screenplay/Library.play:78-99",
+      "paths": [
+        "Source/Library/Members/Members/**"
+      ]
+    },
+    {
+      "id": "Library/Loans/LendBook",
+      "evidenceIds": [
+        "RE-E7"
+      ],
+      "modelLocator": "Screenplay/Library.play:100-124",
+      "paths": [
+        "Source/Library/Loans/LendBook/**"
+      ]
+    },
+    {
+      "id": "Library/Loans/ReturnBook",
+      "evidenceIds": [
+        "RE-E8"
+      ],
+      "modelLocator": "Screenplay/Library.play:125-140",
+      "paths": [
+        "Source/Library/Loans/ReturnBook/**"
+      ]
+    },
+    {
+      "id": "Library/Loans/ExtendLoan",
+      "evidenceIds": [
+        "RE-E9"
+      ],
+      "modelLocator": "Screenplay/Library.play:141-155",
+      "paths": [
+        "Source/Library/Loans/ExtendLoan/**"
+      ]
+    },
+    {
+      "id": "Library/Loans/Loans",
+      "evidenceIds": [
+        "RE-E10"
+      ],
+      "modelLocator": "Screenplay/Library.play:156-180",
+      "paths": [
+        "Source/Library/Loans/Loans/**"
+      ]
+    },
+    {
+      "id": "Library/Fines/AssessFine",
+      "evidenceIds": [
+        "RE-E11"
+      ],
+      "modelLocator": "Screenplay/Library.play:181-199",
+      "paths": [
+        "Source/Library/Fines/AssessFine/**"
+      ]
+    },
+    {
+      "id": "Library/Fines/Fines",
+      "evidenceIds": [
+        "RE-E12"
+      ],
+      "modelLocator": "Screenplay/Library.play:200-221",
+      "paths": [
+        "Source/Library/Fines/Fines/**"
+      ]
+    }
+  ],
+  "$cratisAiManaged": "skills/cratis-screenplay-reverse-engineering/scripts/fixtures/library-drift/evidence-map.json"
+}

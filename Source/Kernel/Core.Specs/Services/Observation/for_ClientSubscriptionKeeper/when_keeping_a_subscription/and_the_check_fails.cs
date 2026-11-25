@@ -6,12 +6,14 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 public class and_the_check_fails : Specification
 {
     int _sent;
+    bool _intact;
 
-    async Task Because() => await ClientSubscriptionKeeper.KeepSubscription(() => Task.FromException<bool>(new InvalidOperationException("an older silo")), () =>
+    async Task Because() => _intact = await ClientSubscriptionKeeper.KeepSubscription(() => Task.FromException<bool>(new InvalidOperationException("an older silo")), () =>
     {
         _sent++;
         return Task.CompletedTask;
     });
 
     [Fact] void should_send_the_definition() => _sent.ShouldEqual(1);
+    [Fact] void should_not_report_it_intact() => _intact.ShouldBeFalse();
 }

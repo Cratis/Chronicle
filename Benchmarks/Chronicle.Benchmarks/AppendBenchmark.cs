@@ -18,6 +18,12 @@ public class AppendBenchmark : IDisposable, IAsyncDisposable
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets the observer set discovered before the container profile existed, so append numbers stay comparable.
     /// </summary>
     internal static IClientArtifactsProvider ArtifactsProvider => new ObserverScopedClientArtifactsProvider(

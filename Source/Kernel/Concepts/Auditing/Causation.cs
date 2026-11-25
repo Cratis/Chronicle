@@ -9,7 +9,9 @@ namespace Cratis.Chronicle.Concepts.Auditing;
 /// <param name="Occurred">When it occurred.</param>
 /// <param name="Type">Type of causation.</param>
 /// <param name="Properties">Any properties associated with the causation.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Auditing.Causation")]
 public record Causation(
-    DateTimeOffset Occurred,
-    CausationType Type,
-    IDictionary<string, string> Properties);
+    [Id(0)] DateTimeOffset Occurred,
+    [Id(1)] CausationType Type,
+    [Id(2)] IDictionary<string, string> Properties);

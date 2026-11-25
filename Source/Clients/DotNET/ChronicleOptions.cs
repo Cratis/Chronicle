@@ -248,6 +248,17 @@ public class ChronicleOptions(
     public int? MaxSendMessageSize { get; set; } = 100 * 1024 * 1024;
 
     /// <summary>
+    /// Gets or sets a value indicating whether every reactor and reducer is observed over one stream per connection
+    /// instead of one stream each. Defaults to <see langword="true"/>.
+    /// </summary>
+    /// <remarks>
+    /// It only takes effect against a kernel that advertises the capability; an older kernel always gets one stream
+    /// per reactor and reducer. Turn it off to keep per-observer streams, for example when a proxy between the client
+    /// and the kernel does not suit long-lived multiplexed streams.
+    /// </remarks>
+    public bool MultiplexObservation { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the claim type to use for claims-based namespace resolution.
     /// This is used by the <see cref="ClaimsBasedNamespaceResolver"/> when configured via the WithClaimsBasedNamespaceResolver extension method.
     /// </summary>
@@ -289,7 +300,10 @@ public class ChronicleOptions(
     /// </summary>
     public ReactorOptions Reactors
     {
-        get => _reactors;
+        get
+        {
+            return _reactors;
+        }
         set
         {
             ArgumentNullException.ThrowIfNull(value);
@@ -302,7 +316,10 @@ public class ChronicleOptions(
     /// </summary>
     public ReducerOptions Reducers
     {
-        get => _reducers;
+        get
+        {
+            return _reducers;
+        }
         set
         {
             ArgumentNullException.ThrowIfNull(value);

@@ -54,6 +54,7 @@ public class a_read_model_releaser : Specification
     public record MixedProtection([property: PII] string Notes, [property: Encrypted(EncryptionScope.Namespace)] string Secret);
 
     protected ILogger _logger;
+
     /// <summary>
     /// A composed read model with a nullable subject-scoped PII concept and no resolvable subject.
     /// </summary>

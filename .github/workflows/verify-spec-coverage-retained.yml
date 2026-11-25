@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # The check diffs the pull request against its base, so it needs both endpoints in the
           # local object database. The default shallow fetch has neither.

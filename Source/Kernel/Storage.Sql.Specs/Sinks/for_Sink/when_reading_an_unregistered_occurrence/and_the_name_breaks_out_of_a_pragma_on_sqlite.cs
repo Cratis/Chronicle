@@ -6,6 +6,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_reading_an_unregister
 /// <summary>
 /// The occurrence closes the quoted name of a SQLite PRAGMA and appends a statement dropping another table.
 /// </summary>
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_the_name_breaks_out_of_a_pragma_on_sqlite : given.a_read_model_with_a_canary<SqlSinkHarness>
 {
     const string Occurrence = "x\"); DROP TABLE canary; --";

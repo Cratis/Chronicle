@@ -1,0 +1,113 @@
+{
+  "watermarks": {
+    "from": {
+      "revision": "a1b2c3d",
+      "input": "Screenplay/Library.play",
+      "inputDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "to": {
+      "revision": "e4f5a6b",
+      "input": "Screenplay/Library.play",
+      "inputDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  },
+  "hunks": [
+    {
+      "path": "Source/Library/Loans/Loans/Loans.cs",
+      "before": "Source/Library/Loans/Loans/Loans.cs",
+      "hunk": "@@ -20,4 \u002B20,7 @@ public record Loan(Guid Id, string Title, DateOnly DueDate)",
+      "classification": "process",
+      "reason": "behavior source or unrecognized change; re-derive before deciding drift",
+      "flows": [
+        "Library/Loans/Loans"
+      ]
+    },
+    {
+      "path": "Source/Library/Books/Books/Books.cs",
+      "before": "Source/Library/Books/Books/Books.cs",
+      "hunk": "@@ -12,4 \u002B12,7 @@ public record Book(Guid Id, string Title, string Shelf)",
+      "classification": "process",
+      "reason": "behavior source or unrecognized change; re-derive before deciding drift",
+      "flows": [
+        "Library/Books/Books"
+      ]
+    },
+    {
+      "path": "Source/Library/Members/Members/Members.cs",
+      "before": "Source/Library/Members/Members/Members.cs",
+      "hunk": "@@ -8,3 \u002B8,3 @@ public record Member(Guid Id, string Name)",
+      "classification": "structure-only",
+      "reason": "indentation/blank-line change only",
+      "flows": []
+    },
+    {
+      "path": "Source/Library/Shelving/ShelfRules.cs",
+      "before": "Source/Library/Shelving/ShelfRules.cs",
+      "hunk": "@@ -0,0 \u002B1,31 @@",
+      "classification": "process",
+      "reason": "behavior source or unrecognized change; re-derive before deciding drift",
+      "flows": []
+    },
+    {
+      "path": "Source/Library/Loans/Loans/Loans.ts",
+      "before": "Source/Library/Loans/Loans/Loans.ts",
+      "hunk": "@@ -0,0 \u002B1,6 @@",
+      "classification": "structure-only",
+      "reason": "generated TypeScript proxy",
+      "flows": []
+    },
+    {
+      "path": "Source/yarn.lock",
+      "before": "Source/yarn.lock",
+      "hunk": "@@ -0,0 \u002B1,3 @@",
+      "classification": "structure-only",
+      "reason": "lockfile",
+      "flows": []
+    },
+    {
+      "path": "Source/scene.json",
+      "before": "Source/scene.json",
+      "hunk": "@@ -1 \u002B1 @@",
+      "classification": "structure-only",
+      "reason": "scene/build artifact",
+      "flows": []
+    },
+    {
+      "path": "Source/src/stage-scene.json",
+      "before": "Source/src/stage-scene.json",
+      "hunk": "@@ -1 \u002B1 @@",
+      "classification": "structure-only",
+      "reason": "scene/build artifact",
+      "flows": []
+    }
+  ],
+  "touchedFlows": [
+    "Library/Books/Books",
+    "Library/Loans/Loans"
+  ],
+  "untouchedFlows": [
+    "Library/Books/RegisterBook",
+    "Library/Books/RetireBook",
+    "Library/Fines/AssessFine",
+    "Library/Fines/Fines",
+    "Library/Loans/ExtendLoan",
+    "Library/Loans/LendBook",
+    "Library/Loans/ReturnBook",
+    "Library/Members/EnrollMember",
+    "Library/Members/Members",
+    "Library/Members/SuspendMember"
+  ],
+  "newFlowCandidates": [
+    {
+      "path": "Source/Library/Shelving/ShelfRules.cs",
+      "symbols": [
+        "IsReservable",
+        "IsShelfReady",
+        "NeedsReview"
+      ],
+      "reason": "unmapped source; intake a candidate flow (including deletions or unsupported changes)"
+    }
+  ],
+  "structureOnlyCount": 5,
+  "$cratisAiManaged": "skills/cratis-screenplay-reverse-engineering/scripts/fixtures/library-drift/expected.json"
+}

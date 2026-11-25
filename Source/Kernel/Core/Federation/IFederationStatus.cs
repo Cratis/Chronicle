@@ -30,6 +30,40 @@ public interface IFederationStatus
     FederationLinkStatus GetLink(string linkId);
 
     /// <summary>
+    /// Record events a dialer served to this kernel on the inbound direction of a hosted link.
+    /// </summary>
+    /// <param name="linkId">The link id.</param>
+    /// <param name="events">The number of events appended.</param>
+    /// <param name="bytes">The number of content bytes appended.</param>
+    void RecordInbound(string linkId, int events, long bytes);
+
+    /// <summary>
+    /// Get the inbound state of a hosted link.
+    /// </summary>
+    /// <param name="linkId">The link id.</param>
+    /// <returns>The state, with zeros when nothing has been recorded.</returns>
+    FederationInboundStatus GetInbound(string linkId);
+
+    /// <summary>
+    /// Record that a dialer session of a subject was opened on this silo.
+    /// </summary>
+    /// <param name="subject">The subject.</param>
+    void RecordSessionOpened(string subject);
+
+    /// <summary>
+    /// Record that a dialer session of a subject ended on this silo.
+    /// </summary>
+    /// <param name="subject">The subject.</param>
+    void RecordSessionClosed(string subject);
+
+    /// <summary>
+    /// Get whether a dialer session of a subject is open on this silo.
+    /// </summary>
+    /// <param name="subject">The subject.</param>
+    /// <returns>True when a session is open, otherwise false.</returns>
+    bool HasSession(string subject);
+
+    /// <summary>
     /// Record the consumer-side state of a binding.
     /// </summary>
     /// <param name="bindingId">The binding id.</param>
@@ -42,4 +76,32 @@ public interface IFederationStatus
     /// <param name="bindingId">The binding id.</param>
     /// <returns>The state, <see cref="FederationBindingStatus.Unknown"/> when nothing has been recorded.</returns>
     FederationBindingStatus GetBinding(string bindingId);
+
+    /// <summary>
+    /// Record that the dialer session to the authority carried a successful exchange: a pull was answered or an inbound batch was delivered.
+    /// The session is then connected, the last exchange is now and the last error is cleared.
+    /// </summary>
+    void RecordDialExchange();
+
+    /// <summary>
+    /// Record that this kernel renewed its certificate with the authority. Only the time of the last exchange moves; it says nothing about the session.
+    /// </summary>
+    void RecordDialRenewed();
+
+    /// <summary>
+    /// Record that the dialer session to the authority is no longer open. The last exchange and the last error are kept.
+    /// </summary>
+    void RecordDialClosed();
+
+    /// <summary>
+    /// Record that the dialer session to the authority failed. The session is no longer connected.
+    /// </summary>
+    /// <param name="error">The scrubbed error, never containing a secret.</param>
+    void RecordDialFailed(string error);
+
+    /// <summary>
+    /// Get the dialer-side state of the session to the authority.
+    /// </summary>
+    /// <returns>The state, <see cref="FederationDialStatus.None"/> when nothing has been recorded.</returns>
+    FederationDialStatus GetDial();
 }

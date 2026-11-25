@@ -1,6 +1,6 @@
 ---
 name: cratis-chronicle-hosting
-description: Use when deploying the Chronicle kernel, preparing production topology or diagnosing kernel startup, certificates and clustering. Not for application client wiring, Orleans grain implementation or live-store mutation.
+description: Use when deploying the Chronicle kernel, running a production readiness or go-live checklist, preparing topology, backup and restore, upgrades, or diagnosing startup, certificates and clustering. Not for application client wiring, Orleans grain implementation or live-store mutation.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/cratis-chronicle-hosting/SKILL.md -->
@@ -52,6 +52,13 @@ operator/kernel surface, not an application-profile layout rule.
 Read [storage resolution](references/storage-resolution.md) when choosing
 per-namespace destinations, schema/runtime identities, Azure authentication,
 SQL schemas, or disabling automatic creation.
+
+Read models and graphs can live apart from the events. The `sinks` section names
+sink configurations (`type` `MongoDB`, `SQL` or `Neo4j`, each with its own
+connection); `sinks.readModels` and `sinks.graphs` replace the defaults (the
+`storage` connection and the `neo4j` server), and clients choose a named sink with
+`[Sink("name")]`. Changing a sink replays the affected read models. Read
+[named sinks](references/sinks.md) before adding or changing the section.
 
 ## Supply certificates before starting production
 
@@ -150,6 +157,8 @@ independent retries, managed identity and **real-delivery** quarantine probes.
 Ordinary observer quarantine guidance does not imply webhooks stay silent.
 
 ## Verify
+
+Read [production checklist](references/production-checklist.md) when preparing, reviewing or auditing a Chronicle go-live, backup and restore drill or upgrade.
 
 - The build/image and intended environment agree; no default development
   application remains in reused production storage.

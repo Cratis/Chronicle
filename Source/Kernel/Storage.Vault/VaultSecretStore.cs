@@ -40,7 +40,7 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
     /// <inheritdoc/>
     public async Task<bool> RemoveVersionIfUnchanged(string path, VaultSecret expected, Func<Task<bool>> canRemove)
     {
-        if (await Read(path) is not { } current || current.Version != expected.Version || !VaultLegacyLayout.SameContent(expected, current) || !await canRemove())
+        if (!await IsUnchanged(path, expected) || !await canRemove())
         {
             return false;
         }
@@ -137,16 +137,22 @@ internal class VaultSecretStore(IVaultClient vaultClient, string? mountPointName
         _ => null
     };
 
+    static bool HasCurrentVersion(FullSecretMetadata metadata) =>
+        metadata.CurrentVersion > 0 &&
+        metadata.Versions is { Count: > 0 } versions &&
+        versions.ContainsKey(metadata.CurrentVersion.ToString(CultureInfo.InvariantCulture));
+
+    async Task<bool> IsUnchanged(string path, VaultSecret expected) =>
+        await Read(path) is { } current && current.Version == expected.Version && VaultLegacyLayout.SameContent(expected, current);
+
     async Task<bool> AllVersionsDeleted(string path, FullSecretMetadata metadata)
     {
-        if (metadata.CurrentVersion <= 0 ||
-            metadata.Versions is not { Count: > 0 } versions ||
-            !versions.ContainsKey(metadata.CurrentVersion.ToString(CultureInfo.InvariantCulture)))
+        if (!HasCurrentVersion(metadata))
         {
             return false;
         }
 
-        foreach (var (number, version) in versions)
+        foreach (var (number, version) in metadata.Versions)
         {
             if (!await IsDeletedOrDestroyed(path, number, version))
             {

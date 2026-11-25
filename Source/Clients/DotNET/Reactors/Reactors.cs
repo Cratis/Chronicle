@@ -290,14 +290,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
             var handler = CreateHandler(id, typeof(object), definition.EventSequenceId, definition.EventTypes);
 #pragma warning restore CA2000
-            var registration = new ReactorRegistration(
-                handler,
-                definition.IsReplayable,
-                [],
-                [],
-                EventSourceType.Unspecified,
-                EventStreamType.All,
-                handle);
+            var registration = new ReactorRegistration(handler, definition.IsReplayable)
+            {
+                Tags = [],
+                FilterTags = [],
+                EventSourceType = EventSourceType.Unspecified,
+                EventStreamType = EventStreamType.All,
+                Handle = handle
+            };
             AddRegistration(registration);
             return Task.FromResult<IReactorHandler>(handler);
         }
@@ -509,15 +509,15 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
             eventTypes);
 #pragma warning restore CA2000
         var eventSourceFilter = reactorType.GetEventSourceFilter(_eventStore.EventSources);
-        return new(
-            handler,
-            !reactorType.IsDefined(typeof(OnceOnlyAttribute), inherit: false),
-            [.. reactorType.GetTags()],
-            [.. reactorType.GetFilterTags()],
-            eventSourceFilter.EventSourceType,
-            eventSourceFilter.EventStreamType,
-            null,
-            reactorType.IsDefined(typeof(StartAtTailAttribute), inherit: false));
+        return new(handler, !reactorType.IsDefined(typeof(OnceOnlyAttribute), inherit: false))
+        {
+            Tags = [.. reactorType.GetTags()],
+            FilterTags = [.. reactorType.GetFilterTags()],
+            EventSourceType = eventSourceFilter.EventSourceType,
+            EventStreamType = eventSourceFilter.EventStreamType,
+            Handle = null,
+            StartAtTail = reactorType.IsDefined(typeof(StartAtTailAttribute), inherit: false)
+        };
     }
 
     ReactorRegistration CreateRegistrationFor(IReactorDefinition definition)
@@ -525,14 +525,14 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #pragma warning disable CA2000 // Ownership of the handler transfers to the registration.
         var handler = CreateHandler(definition.Id, typeof(object), definition.EventSequenceId, [.. definition.EventTypes]);
 #pragma warning restore CA2000
-        return new(
-            handler,
-            definition.IsReplayable,
-            [],
-            [],
-            EventSourceType.Unspecified,
-            EventStreamType.All,
-            CreateDispatcherFor(definition));
+        return new(handler, definition.IsReplayable)
+        {
+            Tags = [],
+            FilterTags = [],
+            EventSourceType = EventSourceType.Unspecified,
+            EventStreamType = EventStreamType.All,
+            Handle = CreateDispatcherFor(definition)
+        };
     }
 
     /// <summary>
@@ -638,6 +638,10 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     {
         var registrations = _handlers.Values.ToArray();
         DisconnectHandlers();
+        foreach (var registration in registrations)
+        {
+            _logger.ReactorDisconnected(registration.Handler.Id);
+        }
         _handlers = registrations.Select(RecreateRegistration).ToFrozenDictionary(_ => _.Handler.Id);
     }
 
@@ -667,6 +671,9 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
     bool IsCurrentHandler(ReactorHandler handler) =>
         _handlers.TryGetValue(handler.Id, out var current) && ReferenceEquals(current.Handler, handler);
 
+    bool IsStaleReconnect(ReactorHandler handler, CancellationToken cancellationToken) =>
+        cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler);
+
     void ReconnectIfCurrent(ReactorRegistration registration, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
@@ -676,7 +683,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         var services = _servicesAccessor.Services;
         lock (_registerLock)
         {
-            if (cancellationToken.IsCancellationRequested || _released || !IsCurrentHandler(handler))
+            if (IsStaleReconnect(handler, cancellationToken))
             {
                 _logger.SkippingStaleReactorReconnect(handler.Id);
                 return;
@@ -687,18 +694,45 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         }
     }
 
-    void RegisterReactor(ReactorRegistration registration, IServices services)
+    /// <summary>
+    /// Re-registers until it succeeds, is cancelled, replaced or released. A failed re-registration must not be
+    /// terminal: the connection can recover while this handler stays disconnected.
+    /// </summary>
+    /// <param name="registration">The <see cref="ReactorRegistration"/> to register again.</param>
+    /// <param name="backoff">The <see cref="ObservationReconnectBackoff"/> that paces the attempts.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> of the handler.</param>
+    /// <returns>An awaitable task.</returns>
+    async Task ReconnectUntilRegistered(ReactorRegistration registration, ObservationReconnectBackoff backoff, CancellationToken cancellationToken)
     {
         var handler = registration.Handler;
-        ThrowIfDeliveredOverHttp(handler);
-        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
-        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        while (true)
         {
-            GenerationDeliveryValidation.Validate(handler.EventTypes);
+            try
+            {
+                await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
+                ReconnectIfCurrent(registration, cancellationToken);
+                return;
+            }
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.ReactorReconnectFailed(handler.Id, ex);
+                if (IsStaleReconnect(handler, cancellationToken))
+                {
+                    return;
+                }
+            }
         }
+    }
 
-        _logger.RegisteringReactor(handler.Id);
-        var request = new RegisterReactor
+    RegisterReactor BuildRegisterRequest(ReactorRegistration registration)
+    {
+        var handler = registration.Handler;
+        return new RegisterReactor
         {
             ConnectionId = _eventStore.Connection.Lifecycle.ConnectionId,
             EventStore = _eventStore.Name,
@@ -722,6 +756,20 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 }
             }
         };
+    }
+
+    void RegisterReactor(ReactorRegistration registration, IServices services)
+    {
+        var handler = registration.Handler;
+        ThrowIfDeliveredOverHttp(handler);
+        ClientObserverHosting.ThrowIfUnavailable(_eventStore.Connection, "Reactor", () => handler.Id.Value);
+        if (GenerationDelivery == Observation.EventGenerationDelivery.Pinned)
+        {
+            GenerationDeliveryValidation.Validate(handler.EventTypes);
+        }
+
+        _logger.RegisteringReactor(handler.Id);
+        var request = BuildRegisterRequest(registration);
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
         var messages = new SerializedMessages<ReactorMessage>(new(new(request)));
@@ -735,7 +783,17 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
 #endif
         var backoff = _reconnectBackoffs.GetValue(handler, _ => new(ReconnectDelay, MaxReconnectDelay, HealthyStreamDuration, TimeProvider.System, ReconnectJitter));
         backoff.StreamOpened();
-        var eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
+        IObservable<EventsToObserve> eventsToObserve;
+        try
+        {
+            eventsToObserve = services.Reactors.Observe(messages.Messages, cancellationToken);
+        }
+        catch
+        {
+            messages.Dispose();
+            _ = scheduler.DrainAndDispose();
+            throw;
+        }
 
         // Re-establish the observation after the stream ends. A cross-store
         // (inbox) reactor's stream can be CLOSED by the kernel rather than tailed
@@ -755,17 +813,13 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                 try
                 {
                     await scheduler.DrainAndDispose();
-                    await WaitBeforeReconnect(backoff.NextDelay(), cancellationToken);
-                    ReconnectIfCurrent(registration, cancellationToken);
-                }
-                catch (OperationCanceledException ex)
-                {
-                    _logger.RegisteringReactorStreamCancelled(handler.Id, ex);
                 }
                 catch (Exception ex)
                 {
                     _logger.ReactorReconnectFailed(handler.Id, ex);
                 }
+
+                await ReconnectUntilRegistered(registration, backoff, cancellationToken);
             });
         }
 
@@ -845,6 +899,7 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
                     messages.Dispose();
                     ScheduleReconnect();
                 });
+        _logger.ReactorObservationSubscribed(handler.Id);
     }
 
 #if CHRONICLE_ROLLING_DIAGNOSTICS
@@ -855,16 +910,38 @@ public partial class Reactors : IReactors, IReactorPartitionRecovery
         _dispatcher.Dispatch(registration.Handler, registration.Handle, events, _eventStore.Namespace, result => messages.Publish(new(new(result))), cancellationToken);
 #endif
 
-    sealed record ReactorRegistration(
-        ReactorHandler Handler,
-        bool IsReplayable,
-        string[] Tags,
-        string[] FilterTags,
-        EventSourceType EventSourceType,
-        EventStreamType EventStreamType,
-        Func<ReactorEvent, CancellationToken, Task>? Handle,
-        bool StartAtTail = false)
+    sealed record ReactorRegistration(ReactorHandler Handler, bool IsReplayable)
     {
+        /// <summary>
+        /// Gets the tags attached to the reactor.
+        /// </summary>
+        public required string[] Tags { get; init; }
+
+        /// <summary>
+        /// Gets the tags used to filter events.
+        /// </summary>
+        public required string[] FilterTags { get; init; }
+
+        /// <summary>
+        /// Gets the event source type filter.
+        /// </summary>
+        public required EventSourceType EventSourceType { get; init; }
+
+        /// <summary>
+        /// Gets the event stream type filter.
+        /// </summary>
+        public required EventStreamType EventStreamType { get; init; }
+
+        /// <summary>
+        /// Gets the callback for a runtime registration.
+        /// </summary>
+        public Func<ReactorEvent, CancellationToken, Task>? Handle { get; init; }
+
+        /// <summary>
+        /// Gets whether observation starts at the tail.
+        /// </summary>
+        public bool StartAtTail { get; init; }
+
         /// <summary>
         /// Gets or sets whether the subscription has been sent on the current connection.
         /// </summary>

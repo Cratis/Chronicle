@@ -11,8 +11,9 @@ public class and_property_on_two_children : given.a_legacy_definition
 {
     void Establish()
     {
-        _definition.Children["others"] = Child();
-        _definition.Children["children"].Children["grandchildren"] = Child();
+        _definition = _definition
+            .WithChild("others", Child())
+            .WithChild("children", c1 => c1.WithChild("grandchildren", Child()));
         _definition = _definition with { Nested = new Dictionary<PropertyPath, ChildrenDefinition> { ["detail"] = Child() } };
         _schema = JsonSchema.FromJson("""
             {"type":"object","properties":{

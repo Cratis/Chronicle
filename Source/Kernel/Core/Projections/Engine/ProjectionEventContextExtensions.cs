@@ -6,10 +6,12 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Reflection;
@@ -88,6 +90,7 @@ public static class ProjectionEventContextExtensions
     /// <param name="eventCompliance">Optional handler for releasing a stored join event's compliance and security fields before projecting it.</param>
     /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
     /// <param name="releasePinnedEvent">Optional pinned-generation release boundary, replacing compatibility release.</param>
+    /// <param name="forProjection">Optional preparation of the released join event for the projection.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
@@ -97,7 +100,8 @@ public static class ProjectionEventContextExtensions
         ILogger logger,
         IEventCompliance? eventCompliance = null,
         JsonSchema? joinEventSchema = null,
-        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null)
+        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null,
+        Func<AppendedEvent, AppendedEvent>? forProjection = null)
     {
         // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the
         // synchronous Rx Subject pipeline. HandleEvent.Perform commits the changeset immediately
@@ -129,22 +133,8 @@ public static class ProjectionEventContextExtensions
                         maybeLastEvent =>
                         {
                             if (!maybeLastEvent.HasValue) return;
-                            var lastEvent = (AppendedEvent)maybeLastEvent;
-
-                            if (releasePinnedEvent is not null)
-                            {
-#pragma warning disable CA2007
-                                lastEvent = Task.Run(() => releasePinnedEvent(lastEvent)).GetAwaiter().GetResult();
-#pragma warning restore CA2007
-                            }
-                            else if (eventCompliance is not null && joinEventSchema is not null && lastEvent.Context.Subject?.IsSet == true)
-                            {
-                                // A retained own schema can predate classification. EventCompliance resolves
-                                // current effective protection for the stored generation; never gate on this hint.
-#pragma warning disable CA2007
-                                lastEvent = Task.Run(() => eventCompliance.Release(lastEvent, joinEventSchema)).GetAwaiter().GetResult();
-#pragma warning restore CA2007
-                            }
+                            var releasedEvent = ReleaseJoinEvent((AppendedEvent)maybeLastEvent, eventCompliance, joinEventSchema, releasePinnedEvent);
+                            var lastEvent = forProjection?.Invoke(releasedEvent) ?? releasedEvent;
 
                             var changeset = context.Changeset.ResolvedJoin(
                                 onModelProperty,
@@ -196,43 +186,7 @@ public static class ProjectionEventContextExtensions
         else
         {
             subscription = observable.Subscribe(context =>
-            {
-                if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
-                {
-                    return;
-                }
-
-                // The resolved key may target a collection deeper than this one (e.g. an event referenced at
-                // multiple levels of a self-referential model that resolved to a nested node). In that case the
-                // deeper-level projection applies it; applying here would wrongly mutate an ancestor node.
-                if (KeyTargetsDeeperCollection(context.Key.ArrayIndexers, childrenProperty))
-                {
-                    return;
-                }
-
-                var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty, context.Key.ArrayIndexers);
-                var childrenPropertyIndexer = context.Key.ArrayIndexers.GetFor(childrenProperty);
-                if (!context.IsJoin && (!identifiedByProperty.IsSet ||
-                                        !items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier)))
-                {
-                    // AddChild applies the property mappers itself - it has to, because the ChildAdded change it
-                    // records is what carries the new child's values all the way to the sink. Mapping again here
-                    // is invisible for a plain set (it writes the same value twice) but runs every accumulating
-                    // mapper a second time, so [AddFrom]/[SubtractFrom] on a child doubled on the very event that
-                    // created it (#3940).
-                    context.Changeset.AddChild<ExpandoObject>(
-                        childrenProperty,
-                        identifiedByProperty,
-                        childrenPropertyIndexer.Identifier,
-                        propertyMappers,
-                        context.Key.ArrayIndexers,
-                        childInitialState,
-                        ordering);
-                    return;
-                }
-
-                context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
-            });
+                ProjectToChild(context, childrenProperty, identifiedByProperty, propertyMappers, childInitialState, ordering));
         }
 
         subscriptions?.Add(subscription);
@@ -287,13 +241,14 @@ public static class ProjectionEventContextExtensions
     {
         return observable.Do(_ =>
         {
-            var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
-            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+            var resolvedChildrenProperty = ResolvedCollectionPath.ForChild(childrenProperty, _.Key.ArrayIndexers);
+            var items = _.Changeset.InitialState.EnsureCollection<object>(resolvedChildrenProperty, _.Key.ArrayIndexers);
+            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(resolvedChildrenProperty);
             if (identifiedByProperty.IsSet &&
                 items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
             {
                 _.Changeset.RemoveChild(
-                    childrenProperty,
+                    resolvedChildrenProperty,
                     identifiedByProperty,
                     childrenPropertyIndexer.Identifier,
                     _.Key.ArrayIndexers);
@@ -337,6 +292,112 @@ public static class ProjectionEventContextExtensions
         PropertyPath nestedProperty) =>
         observable.Do(_ => _.Changeset.ClearNested(nestedProperty, _.Key.ArrayIndexers));
 
+    static AppendedEvent ReleaseJoinEvent(
+        AppendedEvent lastEvent,
+        IEventCompliance? eventCompliance,
+        JsonSchema? joinEventSchema,
+        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent)
+    {
+        if (releasePinnedEvent is not null)
+        {
+#pragma warning disable CA2007
+            return Task.Run(() => releasePinnedEvent(lastEvent)).GetAwaiter().GetResult();
+#pragma warning restore CA2007
+        }
+
+        if (eventCompliance is null || joinEventSchema is null)
+        {
+            return lastEvent;
+        }
+
+        if (lastEvent.Context.Subject?.IsSet != true)
+        {
+            return lastEvent;
+        }
+
+        // A retained own schema can predate classification. EventCompliance resolves
+        // current effective protection for the stored generation; never gate on this hint.
+#pragma warning disable CA2007
+        return Task.Run(() => ReleaseJoinEventWithHistory(lastEvent, eventCompliance, joinEventSchema)).GetAwaiter().GetResult();
+#pragma warning restore CA2007
+    }
+
+    static async Task<AppendedEvent> ReleaseJoinEventWithHistory(AppendedEvent @event, IEventCompliance eventCompliance, JsonSchema schema)
+    {
+        using var releaseScope = ReleaseKeys.BeginScope();
+        var released = await eventCompliance.Release(@event, schema);
+        if (@event.GenerationalContent.Count == 0 && @event.OriginalContent.Length == 0 && !@event.Revisions.Any())
+        {
+            return released;
+        }
+
+        // A join without a pinned release callback only knows the stored generation's schema.
+        var schemas = new Dictionary<EventType, EventTypeSchema>
+        {
+            [@event.Context.EventType] = new(@event.Context.EventType, EventTypeOwner.Client, EventTypeSource.Code, schema)
+        };
+        released = await eventCompliance.ReleaseHistory(released, schemas);
+        return await ReleaseKeys.Complete(() => released);
+    }
+
+    static bool HasChild(ICollection<object> items, PropertyPath identifiedByProperty, object identifier) =>
+        identifiedByProperty.IsSet && items.Contains(identifiedByProperty, identifier);
+
+    static void ProjectToChild(
+        ProjectionEventContext context,
+        PropertyPath childrenProperty,
+        PropertyPath identifiedByProperty,
+        IEnumerable<PropertyMapper<AppendedEvent, ExpandoObject>> propertyMappers,
+        ExpandoObject? childInitialState,
+        ChildrenOrdering? ordering)
+    {
+        childrenProperty = ResolvedCollectionPath.ForChild(childrenProperty, context.Key.ArrayIndexers);
+        if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
+        {
+            return;
+        }
+
+        // The resolved key may target a collection deeper than this one (e.g. an event referenced at
+        // multiple levels of a self-referential model that resolved to a nested node). In that case the
+        // deeper-level projection applies it; applying here would wrongly mutate an ancestor node.
+        if (KeyTargetsDeeperCollection(context.Key.ArrayIndexers, childrenProperty))
+        {
+            return;
+        }
+
+        var items = context.Changeset.InitialState.EnsureCollection<object>(childrenProperty, context.Key.ArrayIndexers);
+        var childrenPropertyIndexer = context.Key.ArrayIndexers.GetFor(childrenProperty);
+        if (!context.IsJoin && !HasChild(items, identifiedByProperty, childrenPropertyIndexer.Identifier))
+        {
+            // AddChild applies the property mappers itself - it has to, because the ChildAdded change it
+            // records is what carries the new child's values all the way to the sink. Mapping again here
+            // is invisible for a plain set (it writes the same value twice) but runs every accumulating
+            // mapper a second time, so [AddFrom]/[SubtractFrom] on a child doubled on the very event that
+            // created it (#3940).
+            context.Changeset.AddChild<ExpandoObject>(
+                childrenProperty,
+                identifiedByProperty,
+                childrenPropertyIndexer.Identifier,
+                propertyMappers,
+                context.Key.ArrayIndexers,
+                childInitialState,
+                ordering);
+            return;
+        }
+
+        context.Changeset.SetProperties(propertyMappers, context.Key.ArrayIndexers);
+    }
+
+    static bool IsDeeperThan(IPropertyPathSegment[] indexerSegments, IPropertyPathSegment[] childSegments)
+    {
+        if (indexerSegments.Length <= childSegments.Length)
+        {
+            return false;
+        }
+
+        return !childSegments.Where((segment, index) => !Equals(indexerSegments[index].Value, segment.Value)).Any();
+    }
+
     /// <summary>
     /// Determines whether the resolved key targets a collection strictly deeper than <paramref name="childrenProperty"/>,
     /// meaning a deeper-level projection is responsible for applying the change.
@@ -347,29 +408,8 @@ public static class ProjectionEventContextExtensions
     static bool KeyTargetsDeeperCollection(ArrayIndexers arrayIndexers, PropertyPath childrenProperty)
     {
         var childSegments = childrenProperty.Segments.ToArray();
-        foreach (var indexerSegments in arrayIndexers.All.Select(_ => _.ArrayProperty.Segments.ToArray()))
-        {
-            if (indexerSegments.Length <= childSegments.Length)
-            {
-                continue;
-            }
-
-            var isDescendant = true;
-            for (var index = 0; index < childSegments.Length; index++)
-            {
-                if (!Equals(indexerSegments[index].Value, childSegments[index].Value))
-                {
-                    isDescendant = false;
-                    break;
-                }
-            }
-
-            if (isDescendant)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return arrayIndexers.All
+            .Select(_ => _.ArrayProperty.Segments.ToArray())
+            .Any(indexerSegments => IsDeeperThan(indexerSegments, childSegments));
     }
 }

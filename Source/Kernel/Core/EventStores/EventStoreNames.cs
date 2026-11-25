@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Subjects;
 using Cratis.Arc.Queries.ModelBound;
@@ -10,7 +11,7 @@ using Cratis.Chronicle.Storage;
 namespace Cratis.Chronicle.EventStores;
 
 /// <summary>
-/// Provides query access to the available event stores.
+/// Provides query access to the available event stores, respecting store entitlements when enforced.
 /// </summary>
 /// <param name="Id">The identity of the event store, which is its name.</param>
 /// <param name="Name">The name of the event store.</param>
@@ -28,16 +29,18 @@ public record EventStoreNames(string Id, string Name)
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to read event stores from.</param>
     /// <param name="initialization">The event store initialization service.</param>
+    /// <param name="services">The services of the caller.</param>
     /// <returns>A collection of event store names.</returns>
     /// <remarks>
     /// A caller asking for the current list needs a snapshot, not the first value of a subscription.
     /// Observing implicitly registers the event store, so answering a snapshot through the observable
     /// changes what it is reporting on.
     /// </remarks>
-    public static async Task<IEnumerable<EventStoreNames>> AllEventStores(IStorage storage, IEventStoreInitialization initialization)
+    public static async Task<IEnumerable<EventStoreNames>> AllEventStores(IStorage storage, IEventStoreInitialization initialization, IServiceProvider services)
     {
+        var access = new EventStoreListAccess(services);
         var eventStores = await initialization.EnsureAll(await storage.GetEventStores());
-        return [.. eventStores.Select(eventStore => new EventStoreNames(eventStore.Value, eventStore.Value))];
+        return await access.Filter([.. eventStores.Select(eventStore => new EventStoreNames(eventStore.Value, eventStore.Value))]);
     }
 
     /// <summary>
@@ -45,7 +48,13 @@ public record EventStoreNames(string Id, string Name)
     /// </summary>
     /// <param name="storage">The <see cref="IStorage"/> to observe event stores from.</param>
     /// <param name="initialization">The event store initialization service.</param>
+    /// <param name="services">The services of the caller.</param>
     /// <returns>An observable subject emitting collections of event store names.</returns>
-    public static ISubject<IEnumerable<EventStoreNames>> ObserveEventStores(IStorage storage, IEventStoreInitialization initialization) =>
-        LiveEventStoreNames.Observe(storage, initialization, Scheduler.Default);
+    public static ISubject<IEnumerable<EventStoreNames>> ObserveEventStores(IStorage storage, IEventStoreInitialization initialization, IServiceProvider services)
+    {
+        var access = new EventStoreListAccess(services);
+        return Subject.Create<IEnumerable<EventStoreNames>>(
+            Observer.Create<IEnumerable<EventStoreNames>>(_ => { }),
+            access.Observe(LiveEventStoreNames.Observe(storage, initialization, Scheduler.Default)));
+    }
 }

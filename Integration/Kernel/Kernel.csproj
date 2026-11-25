@@ -11,10 +11,14 @@
         <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
         <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
         <ProjectReference Include="../Clustering/Clustering.csproj" />
+        <ProjectReference Include="../../Source/Kernel/Core/Core.csproj">
+            <Aliases>global,KernelCore</Aliases>
+        </ProjectReference>
         <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
         <ProjectReference Include="../../Source/Kernel/Contracts/Contracts.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="../Shared/ReadinessWait.cs" Link="ReadinessWait.cs" />
         <PackageReference Include="Cratis.Arc.Core" />
         <PackageReference Include="Cratis.Arc.MongoDB" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />

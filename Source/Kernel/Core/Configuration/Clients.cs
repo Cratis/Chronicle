@@ -12,9 +12,35 @@ public class Clients
     /// Gets the interval in seconds between revisions of the connected clients state.
     /// </summary>
     /// <remarks>
-    /// The revision loop prunes stale clients and removes expired connection reservations.
+    /// The revision loop prunes stale clients and removes expired connection reservations. It is also the interval
+    /// between checks of a connected client's subscription that is not confirmed intact; those checks use at least one
+    /// second.
     /// </remarks>
     public int ReviseIntervalSeconds { get; init; } = 2;
+
+    /// <summary>
+    /// Gets the longest interval in seconds between checks of a connected client's subscription that is known to be intact.
+    /// </summary>
+    /// <remarks>
+    /// This is the safety net for a subscription lost without a silo leaving the cluster. Each wait is drawn between three
+    /// quarters of the interval and the whole interval, so subscriptions registered together are not checked together.
+    /// A subscription that is not confirmed intact - a new one, one that was just restored, one whose check failed - is
+    /// checked every <see cref="ReviseIntervalSeconds"/> instead, and so is every subscription for
+    /// <see cref="SubscriptionSettleSeconds"/> after a silo starts leaving the cluster. Values below
+    /// <see cref="ReviseIntervalSeconds"/> are raised to it.
+    /// </remarks>
+    public int SubscriptionCheckIntervalSeconds { get; init; } = 60;
+
+    /// <summary>
+    /// Gets the number of seconds after a silo starts shutting down, and again after it is declared dead, during which
+    /// every connected client's subscription on the remaining silos is checked every <see cref="ReviseIntervalSeconds"/>.
+    /// </summary>
+    /// <remarks>
+    /// A silo that leaves takes the observer activations it hosted with it, deactivating them while it shuts down
+    /// gracefully, and the surviving silos deactivate the activations whose directory entries it owned shortly after
+    /// it is declared dead. The windows cover both.
+    /// </remarks>
+    public int SubscriptionSettleSeconds { get; init; } = 30;
 
     /// <summary>
     /// Gets the number of seconds a connection reservation is kept before it expires.
@@ -42,4 +68,22 @@ public class Clients
     /// Gets the interval in seconds between keep-alive messages sent to a connected client.
     /// </summary>
     public int KeepAliveIntervalSeconds { get; init; } = 1;
+
+    /// <summary>
+    /// Gets how long in seconds a connect or a keep-alive waits for the kernel's own bookkeeping, which is done by grains,
+    /// before it answers anyway. The bookkeeping carries on in the background and is retried; it is never a reason to
+    /// leave a client without an answer. Defaults to 2.
+    /// </summary>
+    public int GraceSeconds { get; init; } = 2;
+
+    /// <summary>
+    /// Gets how the open stream of a client keeps its subscriptions in place.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ClientKeeperMode.SiloLocal"/> (the default) confirms a subscription from its durable subscription, a storage
+    /// read shared by every stream of a namespace, instead of asking the observer, so an observer released while
+    /// dormant is not woken by it. It applies only while dormant release
+    /// applies (see <c language="json">observers.durableSubscriptions</c>); <see cref="ClientKeeperMode.Legacy"/> restores the call per check.
+    /// </remarks>
+    public ClientKeeperMode KeeperMode { get; init; } = ClientKeeperMode.SiloLocal;
 }

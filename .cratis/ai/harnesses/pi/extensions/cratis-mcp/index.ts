@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
+import { createActivation, enabledText } from './activation.ts';
 import { ConnectionFailure } from './ConnectionFailure.ts';
 import { object, selectedServer } from './configuration.ts';
 import type { CorpusServer } from './CorpusServer.ts';
@@ -15,12 +16,19 @@ import { createServerBridge } from './ServerBridge.ts';
 import type { DiscoveredTool } from './DiscoveredTool.ts';
 import type { StdioConnection } from './StdioConnection.ts';
 
+type Selection = NonNullable<ReturnType<typeof selectedServer>>;
+
+/** One discovered tool bound to the connection it was discovered on. */
+interface NativeCall { tool: DiscoveredTool; activeConnection: StdioConnection; modelRoot: string }
+
 const extensionDirectory = dirname(fileURLToPath(import.meta.url));
 const bundledCorpus = resolve(extensionDirectory, '..', '..', '..', '..');
 
 /** Native tools go through Pi's tool_call restrictions and normal execution/result pipeline. */
 export function registerBridge(pi: ExtensionAPI, corpus: string, connect = startConnection, checkVersion = supportsNoModelStartup, connectServer: (project: string, server: CorpusServer) => StdioConnection = startServer): void {
-    const servers = createServerBridge(pi, corpus, connectServer);
+    const activation = createActivation(pi);
+    const servers = createServerBridge(pi, corpus, connectServer, undefined, activation);
+    const owner = 'screenplay';
     let connection: StdioConnection | undefined;
     let selectionKey: string | undefined;
     let attempted = false;
@@ -53,102 +61,158 @@ export function registerBridge(pi: ExtensionAPI, corpus: string, connect = start
         }
         if (!connection || connection.stopped) throw new Error('Screenplay connection is unavailable. No request was retried; explicitly reload after inspecting any uncertain mutation.');
     };
+    const activeNames = (): string[] => pi.getActiveTools().filter(name => registered.has(name));
+    const isLiveFor = (key: string): boolean => connection !== undefined && !connection.stopped && key === selectionKey;
+    const assertCertain = (): void => {
+        if (uncertain) throw new Error('Screenplay mutation outcome remains unknown. Explicitly reload, inspect workspace-state, and obtain authorization before any recovery.');
+    };
     const refresh = async (context: ExtensionContext, newSession = false): Promise<void> => {
         if (newSession) { startupSupported = undefined; unavailableReported = false; }
         const previouslyActive = new Set([...pi.getActiveTools(), ...paused]);
         let selection: ReturnType<typeof selectedServer>;
         try { selection = currentSelection(context); }
-        catch (error) { dispose(); throw error; }
+        catch (error) { dispose(); activation.publish(owner, new Map()); throw error; }
         const key = JSON.stringify(selection);
         if (!newSession && attempted && key === selectionKey) return;
         dispose();
         attempted = true;
         selectionKey = key;
         failures.clear();
+        activation.publish(owner, new Map());
         if (!selection) return;
-        if (uncertain) throw new Error('Screenplay mutation outcome remains unknown. Explicitly reload, inspect workspace-state, and obtain authorization before any recovery.');
-        const modelRoot = selection.root ?? "the project's Screenplay model";
-        let activeConnection: StdioConnection;
-        let tools: DiscoveredTool[];
+        assertCertain();
+        // Deferred by default: the tools are discovered and registered only when the model calls cratis_enable_mcp.
+        if (!selection.eager) { activation.publish(owner, new Map([['screenplay', enable]])); return; }
+        await activate(context, selection, previouslyActive, false);
+    };
+    /** On-demand start. Starts over when the selection changed since the last refresh; an unavailable CLI is an error here, not a notice. */
+    const enable = async (context: ExtensionContext): Promise<string> => {
+        let selection: ReturnType<typeof selectedServer>;
+        try { selection = currentSelection(context); }
+        catch (error) { dispose(); throw error; }
+        if (!selection) throw new Error('Screenplay MCP is not selected for this project.');
+        const key = JSON.stringify(selection);
+        if (isLiveFor(key)) return enabledText('Screenplay MCP', activeNames(), true);
+        assertCertain();
+        const previouslyActive = new Set([...pi.getActiveTools(), ...paused]);
+        dispose();
+        attempted = true;
+        selectionKey = key;
+        failures.clear();
+        await activate(context, selection, previouslyActive, true);
+        return enabledText('Screenplay MCP', activeNames(), false);
+    };
+    const connectAndDiscover = async (selection: Selection): Promise<{ activeConnection: StdioConnection; tools: DiscoveredTool[] }> => {
+        if (selection.composedOnly && !await (startupSupported ??= checkVersion(selection.project))) {
+            throw new Error('Screenplay optional startup requires Cratis CLI 3.46.1 or later.');
+        }
+        const activeConnection = connect(selection.project);
+        connection = activeConnection;
+        const tools = await discover(activeConnection);
+        if (connection !== activeConnection || activeConnection.stopped) throw new Error('Screenplay session ended during discovery.');
+        return { activeConnection, tools };
+    };
+    const reportUnavailable = (context: ExtensionContext): void => {
+        if (unavailableReported) return;
+        unavailableReported = true;
+        if (context.hasUI) context.ui.notify('Screenplay MCP is unavailable; install/update the Cratis CLI to 3.46.1 or later to enable it.', 'info');
+    };
+    const confirmationText = (parameters: Record<string, unknown>): string => {
+        const argumentsText = JSON.stringify(parameters);
+        if (argumentsText.length > 8192) throw new Error('Mutation confirmation arguments are too large; omit includeContent and use the proposal/operation identifiers.');
+        return argumentsText;
+    };
+    const confirmMutation = async (call: NativeCall, parameters: Record<string, unknown>, signal: AbortSignal | undefined, toolContext: ExtensionContext): Promise<void> => {
+        if (!toolContext.hasUI) throw new Error('Screenplay source mutation requires explicit user confirmation in Pi interactive/RPC mode.');
+        const argumentsText = confirmationText(parameters);
+        const approved = await toolContext.ui.confirm(`Screenplay ${call.tool.name}`, `Modify source under ${call.modelRoot}?\n${argumentsText}\nOnly approve the exact reviewed proposal or recovery operation.`, { timeout: 60_000, signal });
+        if (!approved || signal?.aborted) throw new Error('Screenplay source mutation was not approved.');
+        ensureCurrent(toolContext);
+    };
+    const isInvalidMutationResult = (call: NativeCall, response: unknown, toolCallId: string): boolean => call.tool.mutation && response !== undefined && !failures.has(toolCallId);
+    const recordFailure = (toolCallId: string, result: ReturnType<typeof mapResult>): never => {
+        if (failures.size >= 64) failures.delete(failures.keys().next().value!);
+        failures.set(toolCallId, failedResult(result));
+        throw new Error('Screenplay reported a failed tool call.');
+    };
+    const afterCallError = (call: NativeCall, response: unknown, toolCallId: string, error: unknown): never => {
+        if (isInvalidMutationResult(call, response, toolCallId)) {
+            uncertain = true;
+            dispose();
+            throw new ConnectionFailure('Screenplay mutation returned an invalid result.', true);
+        }
+        uncertain ||= call.activeConnection.outcomeUnknown;
+        if (call.activeConnection.stopped) deactivate();
+        throw error;
+    };
+    const forward = async (call: NativeCall, toolCallId: string, parameters: Record<string, unknown>, signal: AbortSignal | undefined) => {
+        let response: unknown;
         try {
-            if (selection.composedOnly && !await (startupSupported ??= checkVersion(selection.project))) {
-                throw new Error('Screenplay optional startup requires Cratis CLI 3.46.1 or later.');
-            }
-            activeConnection = connect(selection.project);
-            connection = activeConnection;
-            tools = await discover(activeConnection);
-            if (connection !== activeConnection || activeConnection.stopped) throw new Error('Screenplay session ended during discovery.');
+            response = await call.activeConnection.request('tools/call', { name: call.tool.name, arguments: parameters }, signal, call.tool.mutation);
+            const result = mapResult(response);
+            return result.details.isError ? recordFailure(toolCallId, result) : result;
         } catch (error) {
+            return afterCallError(call, response, toolCallId, error);
+        }
+    };
+    const assertCallable = (call: NativeCall, parameters: unknown, signal: AbortSignal | undefined, toolContext: ExtensionContext): Record<string, unknown> => {
+        ensureCurrent(toolContext);
+        if (connection !== call.activeConnection || !pi.getActiveTools().includes(call.tool.nativeName)) throw new Error('Screenplay tool is inactive in this session.');
+        if (!object(parameters)) throw new Error('Screenplay arguments must be an object.');
+        if (signal?.aborted) throw new Error('Screenplay call cancelled before sending.');
+        return parameters;
+    };
+    const registerNative = (call: NativeCall): void => {
+        const { tool } = call;
+        registered.add(tool.nativeName);
+        pi.registerTool({
+            name: tool.nativeName,
+            label: `Screenplay ${tool.name}`,
+            description: tool.description,
+            parameters: tool.parameters,
+            executionMode: 'sequential',
+            promptGuidelines: [
+                'Use the Screenplay model-authoring skill. Read/propose/review before applying; only a direct user request authorizes apply or recovery.',
+                'Use bounded pages. On an unknown mutation outcome, never retry or recover automatically; inspect workspace-state first.',
+            ],
+            async execute(toolCallId, parameters, signal, _onUpdate, toolContext) {
+                const checked = assertCallable(call, parameters, signal, toolContext);
+                if (tool.mutation) await confirmMutation(call, checked, signal, toolContext);
+                return forward(call, toolCallId, checked, signal);
+            },
+        });
+    };
+    /** Never re-enable a user-disabled tool. SDK allow/exclude restrictions still filter registration. */
+    const restoreActive = (tools: DiscoveredTool[], oldNames: Set<string>, previouslyActive: Set<string>): void => {
+        const discovered = new Set(tools.map(tool => tool.nativeName));
+        const next = pi.getActiveTools().filter(name => !registered.has(name) || (discovered.has(name) && (!oldNames.has(name) || previouslyActive.has(name))));
+        for (const name of discovered) if (oldNames.has(name) && previouslyActive.has(name)) next.push(name);
+        pi.setActiveTools([...new Set(next)]);
+        paused.clear();
+    };
+    const registerAll = (tools: DiscoveredTool[], activeConnection: StdioConnection, selection: Selection, previouslyActive: Set<string>): void => {
+        const existing = new Set(pi.getAllTools().map(tool => tool.name));
+        if (tools.some(tool => existing.has(tool.nativeName) && !registered.has(tool.nativeName))) throw new Error('Screenplay native tool name conflicts with another extension.');
+        const oldNames = new Set(registered);
+        const modelRoot = selection.root ?? "the project's Screenplay model";
+        tools.forEach(tool => registerNative({ tool, activeConnection, modelRoot }));
+        restoreActive(tools, oldNames, previouslyActive);
+    };
+    const activate = async (context: ExtensionContext, selection: Selection, previouslyActive: Set<string>, explicit: boolean): Promise<void> => {
+        let found: Awaited<ReturnType<typeof connectAndDiscover>>;
+        try { found = await connectAndDiscover(selection); }
+        catch (error) {
             dispose();
             // Application-only composition makes MCP optional. Independent profile/root errors and uncertain mutations still surface.
-            if (!selection.composedOnly || uncertain) throw error;
-            if (!unavailableReported) {
-                unavailableReported = true;
-                if (context.hasUI) context.ui.notify('Screenplay MCP is unavailable; install/update the Cratis CLI to 3.46.1 or later to enable it.', 'info');
-            }
+            const surfaces = explicit || uncertain;
+            if (surfaces || !selection.composedOnly) throw error;
+            reportUnavailable(context);
             return;
         }
-        try {
-            const existing = new Set(pi.getAllTools().map(tool => tool.name));
-            if (tools.some(tool => existing.has(tool.nativeName) && !registered.has(tool.nativeName))) throw new Error('Screenplay native tool name conflicts with another extension.');
-            const oldNames = new Set(registered);
-            for (const tool of tools) {
-                registered.add(tool.nativeName);
-                pi.registerTool({
-                    name: tool.nativeName,
-                    label: `Screenplay ${tool.name}`,
-                    description: tool.description,
-                    parameters: tool.parameters,
-                    executionMode: 'sequential',
-                    promptGuidelines: [
-                        'Use the Screenplay model-authoring skill. Read/propose/review before applying; only a direct user request authorizes apply or recovery.',
-                        'Use bounded pages. On an unknown mutation outcome, never retry or recover automatically; inspect workspace-state first.',
-                    ],
-                    async execute(toolCallId, parameters, signal, _onUpdate, toolContext) {
-                        ensureCurrent(toolContext);
-                        if (connection !== activeConnection || !pi.getActiveTools().includes(tool.nativeName)) throw new Error('Screenplay tool is inactive in this session.');
-                        if (!object(parameters)) throw new Error('Screenplay arguments must be an object.');
-                        if (signal?.aborted) throw new Error('Screenplay call cancelled before sending.');
-                        if (tool.mutation) {
-                            if (!toolContext.hasUI) throw new Error('Screenplay source mutation requires explicit user confirmation in Pi interactive/RPC mode.');
-                            const argumentsText = JSON.stringify(parameters);
-                            if (argumentsText.length > 8192) throw new Error('Mutation confirmation arguments are too large; omit includeContent and use the proposal/operation identifiers.');
-                            const approved = await toolContext.ui.confirm(`Screenplay ${tool.name}`, `Modify source under ${modelRoot}?\n${argumentsText}\nOnly approve the exact reviewed proposal or recovery operation.`, { timeout: 60_000, signal });
-                            if (!approved || signal?.aborted) throw new Error('Screenplay source mutation was not approved.');
-                            ensureCurrent(toolContext);
-                        }
-                        let response: unknown;
-                        try {
-                            response = await activeConnection.request('tools/call', { name: tool.name, arguments: parameters }, signal, tool.mutation);
-                            const result = mapResult(response);
-                            if (result.details.isError) {
-                                if (failures.size >= 64) failures.delete(failures.keys().next().value!);
-                                failures.set(toolCallId, failedResult(result));
-                                throw new Error('Screenplay reported a failed tool call.');
-                            }
-                            return result;
-                        } catch (error) {
-                            if (tool.mutation && response !== undefined && !failures.has(toolCallId)) {
-                                uncertain = true;
-                                dispose();
-                                throw new ConnectionFailure('Screenplay mutation returned an invalid result.', true);
-                            }
-                            uncertain ||= activeConnection.outcomeUnknown;
-                            if (activeConnection.stopped) deactivate();
-                            throw error;
-                        }
-                    },
-                });
-            }
-            // Never re-enable a user-disabled tool. SDK allow/exclude restrictions still filter registration.
-            const discovered = new Set(tools.map(tool => tool.nativeName));
-            const next = pi.getActiveTools().filter(name => !registered.has(name) || (discovered.has(name) && (!oldNames.has(name) || previouslyActive.has(name))));
-            for (const name of discovered) if (oldNames.has(name) && previouslyActive.has(name)) next.push(name);
-            pi.setActiveTools([...new Set(next)]);
-            paused.clear();
-        } catch (error) {
-            if (connection === activeConnection) dispose();
-            else activeConnection.dispose();
+        try { registerAll(found.tools, found.activeConnection, selection, previouslyActive); }
+        catch (error) {
+            if (connection === found.activeConnection) dispose();
+            else found.activeConnection.dispose();
             throw error;
         }
     };
@@ -161,7 +225,7 @@ export function registerBridge(pi: ExtensionAPI, corpus: string, connect = start
     };
     pi.on('session_start', (_event, context) => refreshAll(context, true));
     pi.on('before_agent_start', async (_event, context) => { await refreshAll(context, false); });
-    pi.on('session_shutdown', () => { dispose(); servers.dispose(); failures.clear(); });
+    pi.on('session_shutdown', () => { dispose(); servers.dispose(); failures.clear(); activation.publish(owner, new Map()); });
     pi.on('tool_result', event => {
         if (!registered.has(event.toolName)) return;
         const failure = failures.get(event.toolCallId);

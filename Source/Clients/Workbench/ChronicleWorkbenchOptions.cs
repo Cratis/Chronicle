@@ -21,6 +21,12 @@ public class ChronicleWorkbenchOptions
     public int Port { get; set; } = DefaultPort;
 
     /// <summary>
+    /// Gets or sets the address to bind the Workbench to. A null or empty value listens on all interfaces.
+    /// Use localhost to listen on both IPv4 and IPv6 loopback, or specify an IP address.
+    /// </summary>
+    public string? Address { get; set; }
+
+    /// <summary>
     /// Gets or sets the base path the Workbench. This is the base path that will serve the workbench.
     /// </summary>
     public string BasePath { get; set; } = "/";

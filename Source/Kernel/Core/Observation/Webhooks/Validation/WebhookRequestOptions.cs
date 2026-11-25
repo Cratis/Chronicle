@@ -16,6 +16,11 @@ public static class WebhookRequestOptions
     public static readonly HttpRequestOptionsKey<EventStoreName> EventStore = new("Chronicle.Webhooks.EventStore");
 
     /// <summary>
+    /// Re-signs the buffered delivery after authorization is refreshed for a retry.
+    /// </summary>
+    public static readonly HttpRequestOptionsKey<Func<HttpRequestMessage, CancellationToken, Task>> Resign = new("Chronicle.Webhooks.Resign");
+
+    /// <summary>
     /// Whether the validated request must use a connection that cannot be pooled for another request.
     /// </summary>
     internal static readonly HttpRequestOptionsKey<bool> DedicatedConnection = new("Chronicle.Webhooks.DedicatedConnection");

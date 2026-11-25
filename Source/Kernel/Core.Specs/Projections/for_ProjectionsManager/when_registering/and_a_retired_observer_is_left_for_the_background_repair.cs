@@ -27,10 +27,10 @@ public class and_a_retired_observer_is_left_for_the_background_repair : given.a_
         _definition = CreateDefinition("the-projection", "the-read-model") with { SubscribesToAllEvents = true };
 
         // The budget is already spent by the time the fan-out looks at it.
-        _eventStoreStorage.EventTypes.GetLatestForAllEventTypes().Returns(_ =>
+        _readModelsManager.GetDefinitions().Returns(_ =>
         {
             _clock.Advance(ProjectionsManager.RegistrationSubscribeBudget + TimeSpan.FromSeconds(1));
-            return [];
+            return Task.FromResult(_readModelDefinitions);
         });
 
         _observer = Substitute.For<Observation.IObserver>();

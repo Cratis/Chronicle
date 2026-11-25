@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -32,7 +33,7 @@ public class and_the_new_subscription_is_still_pending : given.a_projections_man
         _observerGrain.IsSubscriptionEstablished().Returns(_ => _subscription.Task.IsCompleted);
         _observerGrain.ReconcileSubscription<IProjectionObserverSubscriber>(
                 ObserverType.Projection,
-                Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
+                Arg.Any<EventTypeSet>(),
                 Arg.Any<SiloAddress>(),
                 true)
             .Returns(_ =>

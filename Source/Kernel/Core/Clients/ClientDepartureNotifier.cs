@@ -35,6 +35,13 @@ public class ClientDepartureNotifier(IGrainFactory grainFactory, ILogger<ClientD
     public Task Notify(ConnectionId connectionId, IReadOnlyCollection<ObserverKey> observers) =>
         Task.WhenAll(observers.Select(observer => NotifyObserver(connectionId, observer)));
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Nothing is swept: an observer without an activation holds its delivery target only as a hint, and validates it
+    /// against the connected clients when it is woken, so a departed connection costs it nothing until then.
+    /// </remarks>
+    public Task NotifyDormant(ConnectionId connectionId, IReadOnlyCollection<ObserverKey> alreadyNotified) => Task.CompletedTask;
+
     async Task NotifyObserver(ConnectionId connectionId, ObserverKey observer)
     {
         await _inFlight.WaitAsync();

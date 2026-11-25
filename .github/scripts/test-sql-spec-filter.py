@@ -28,6 +28,7 @@ class SqlSpecFilters(unittest.TestCase):
         self.write("server", "SqlServerCollection", "server_name")
         self.write("server_two", "SqlServerCollection", "server_name_two")
         self.write("server_three", "SqlServerCollection", "server_name_three")
+        self.write("server_four", "SqlServerCollection", "server_name_four")
 
     def write(self, file, collection, name):
         path = self.root / f"{file}.cs"
@@ -71,7 +72,7 @@ class SqlSpecFilters(unittest.TestCase):
 
     def test_generated_obj_sources_are_ignored(self):
         self.write("obj/generated", "AnotherCollection", "generated")
-        self.assertEqual(4, sum(map(len, filters.provider_classes(self.root)[0].values())))
+        self.assertEqual(5, sum(map(len, filters.provider_classes(self.root)[0].values())))
 
     def test_repository_collections_are_nonempty_and_disjoint(self):
         classes, _ = filters.provider_classes(filters.SPEC_ROOT)
@@ -87,7 +88,8 @@ class SqlSpecFilters(unittest.TestCase):
         self.assertEqual(len(classes["sqlserver"]), len({name for shard in shards for name in shard}))
 
     def test_shards_are_balanced_and_stable(self):
-        classes, weights = filters.provider_classes(filters.SPEC_ROOT)
+        classes, facts = filters.provider_classes(filters.SPEC_ROOT)
+        weights = filters.timed_weights(classes, facts, filters.load_timings())
         shards = filters.partition(classes["sqlserver"], weights, filters.SHARDS["sqlserver"])
         totals = [sum(weights[name] for name in shard) for shard in shards]
         heaviest = max(weights[name] for name in classes["sqlserver"])
@@ -101,8 +103,106 @@ class SqlSpecFilters(unittest.TestCase):
             filters.test_filter(classes, weights, "sqlserver-3")
 
     def test_the_matrix_lists_exactly_the_shards_the_script_accepts(self):
-        self.assertEqual(["postgresql", "sqlserver-1", "sqlserver-2", "sqlserver-3", "remaining"],
+        self.assertEqual(["postgresql", "sqlserver-1", "sqlserver-2", "sqlserver-3", "sqlserver-4", "remaining"],
                          filters.shard_names())
+        workflow = (Path(__file__).parents[1] / "workflows/dotnet-build.yml").read_text(encoding="utf-8")
+        self.assertIn(f"shard: [{', '.join(filters.shard_names())}]", workflow)
+
+    def test_measured_durations_decide_the_weights_and_unmeasured_classes_are_estimated(self):
+        classes = {"postgresql": ["Specs.a."], "sqlserver": ["Specs.b.", "Specs.c.", "Specs.new."]}
+        facts = {"Specs.a.": 4, "Specs.b.": 2, "Specs.c.": 2, "Specs.new.": 3}
+        weights = filters.timed_weights(classes, facts, {"Specs.b.": 300.0, "Specs.c.": 20.0})
+        self.assertEqual(300.0, weights["Specs.b."])
+        self.assertEqual(20.0, weights["Specs.c."])
+        self.assertEqual(3 * 320.0 / 4, weights["Specs.new."])
+        self.assertEqual(4, weights["Specs.a."])
+        shards = filters.partition(classes["sqlserver"], weights, 2)
+        self.assertEqual([["Specs.b."], ["Specs.new.", "Specs.c."]], shards)
+
+    def write_trx(self, rows, file="results.trx"):
+        trx = self.root / file
+        trx.write_text(f'<TestRun xmlns="{filters.TRX[1:-1]}"><Results>' + rows +
+                       '</Results></TestRun>', encoding="utf-8")
+        return trx
+
+    def test_timings_include_setup_gaps_and_order_classes_by_their_last_fact(self):
+        trx = self.write_trx(
+            '<UnitTestResult testName="Specs.server_name_two.should_a" duration="00:00:01" '
+            'startTime="2026-11-12T00:01:30+00:00" endTime="2026-11-12T00:01:31+00:00" />'
+            '<UnitTestResult testName="Specs.server_name.should_b(value: 1.5)" duration="00:00:01" '
+            'startTime="2026-11-12T00:01:00+00:00" endTime="2026-11-12T00:01:02.5+00:00" />'
+            '<UnitTestResult testName="Specs.server_name.should_a" duration="00:00:01" '
+            'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:01+00:00" />')
+        classes, _ = filters.provider_classes(self.root)
+        self.assertEqual({"Specs.server_name.": 62.5, "Specs.server_name_two.": 28.5},
+                         filters.measured_timings(classes, [trx]))
+
+    def test_each_trx_has_its_own_start_and_repeated_classes_are_summed(self):
+        rows = ('<UnitTestResult testName="Specs.server_name.should_a" '
+                'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:02+00:00" />')
+        first = self.write_trx(rows, "first.trx")
+        second = self.write_trx(rows.replace("00:00:02", "00:00:03"), "second.trx")
+        classes, _ = filters.provider_classes(self.root)
+        self.assertEqual({"Specs.server_name.": 5.0}, filters.measured_timings(classes, [first, second]))
+
+    def test_unowned_classes_bound_intervals_without_becoming_weights(self):
+        trx = self.write_trx(
+            '<UnitTestResult testName="Specs.sqlite.should_a" '
+            'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:10+00:00" />'
+            '<UnitTestResult testName="Specs.server_name.should_a" '
+            'startTime="2026-11-12T00:00:30+00:00" endTime="2026-11-12T00:00:31+00:00" />')
+        classes, _ = filters.provider_classes(self.root)
+        self.assertEqual({"Specs.server_name.": 21.0}, filters.measured_timings(classes, [trx]))
+
+    def test_missing_or_invalid_class_and_timestamp_data_fail_closed(self):
+        valid = ('<UnitTestResult testName="Specs.server_name.should_a" '
+                 'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:01+00:00" />')
+        classes, _ = filters.provider_classes(self.root)
+        for old, new in (('testName="Specs.server_name.should_a"', ''),
+                         ('Specs.server_name.should_a', 'should_a'),
+                         ('startTime=', 'missingStart='), ('endTime=', 'missingEnd='),
+                         ('00:00:00+00:00', 'invalid'), ('00:00:01+00:00', 'invalid'),
+                         ('00:00:01+00:00', '00:00:01'),
+                         ('00:00:00+00:00', '00:00:02+00:00')):
+            with self.subTest(old=old, new=new):
+                trx = self.write_trx(valid.replace(old, new))
+                with self.assertRaises(ValueError):
+                    filters.measured_timings(classes, [trx])
+
+    def test_empty_or_unowned_results_fail_closed(self):
+        classes, _ = filters.provider_classes(self.root)
+        with self.assertRaisesRegex(ValueError, "No test results"):
+            filters.measured_timings(classes, [self.write_trx("")])
+        trx = self.write_trx('<UnitTestResult testName="Specs.sqlite.should_a" '
+                             'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T00:00:01+00:00" />')
+        with self.assertRaisesRegex(ValueError, "No owned SQL spec timings"):
+            filters.measured_timings(classes, [trx])
+
+    def test_simultaneous_class_completions_keep_positive_rounded_weights(self):
+        rows = ('<UnitTestResult testName="Specs.server_name.should_a" '
+                'startTime="2026-11-12T00:00:00+00:00" endTime="2026-11-12T01:00:01+01:00" />')
+        trx = self.write_trx(rows + rows.replace("server_name.", "server_name_two."))
+        classes, _ = filters.provider_classes(self.root)
+        self.assertEqual({"Specs.server_name.": 1.0, "Specs.server_name_two.": 0.1},
+                         filters.measured_timings(classes, [trx]))
+
+    def test_invalid_timings_fail_instead_of_unbalancing_silently(self):
+        path = self.root / "timings.json"
+        for invalid in ("0", "-1", "true", "1e999", '"5"'):
+            path.write_text('{"seconds": {"Specs.server_name.": ' + invalid + '}}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "positive, finite number"):
+                filters.load_timings(path)
+        self.assertEqual({}, filters.load_timings(self.root / "absent.json"))
+
+    def test_repository_timings_measure_most_sql_server_specs_and_balance_the_shards(self):
+        classes, facts = filters.provider_classes(filters.SPEC_ROOT)
+        timings = filters.load_timings()
+        measured = [name for name in classes["sqlserver"] if name in timings]
+        self.assertGreaterEqual(len(measured), len(classes["sqlserver"]) * 3 // 4, "refresh sql-spec-timings.json")
+        weights = filters.timed_weights(classes, facts, timings)
+        shards = filters.partition(classes["sqlserver"], weights, filters.SHARDS["sqlserver"])
+        totals = [sum(weights[name] for name in shard) for shard in shards]
+        self.assertLessEqual(max(totals), 1.1 * sum(totals) / len(totals))
 
 
 if __name__ == "__main__":

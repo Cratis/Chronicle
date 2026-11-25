@@ -3,10 +3,12 @@
 
 import { spawn } from 'node:child_process';
 import { constants } from 'node:os';
+import { SpecHangWatchdog } from './spec-hang-watchdog.mjs';
 
 function killProcessGroup(pid) {
     if (!pid) return;
-    try { process.kill(-pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+    // A group whose members already exited: Linux reports ESRCH, macOS EPERM.
+    try { process.kill(-pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH' && error.code !== 'EPERM') throw error; }
 }
 
 // Own one child group and its complete deadline/signal/output lifecycle. No shell,
@@ -17,29 +19,40 @@ class ChildProcessGroup {
     expired = false;
     failure;
 
-    constructor(command, args, { cwd, timeout, capture }) {
+    constructor(command, args, { cwd, timeout, capture, specProgress }) {
         this.command = command;
-        this.child = spawn(command, args, { cwd, detached: true, stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' });
+        this.progress = specProgress ? new SpecHangWatchdog(specProgress) : undefined;
+        this.child = spawn(command, args, { cwd, detached: true, stdio: capture || specProgress ? ['ignore', 'pipe', 'pipe'] : 'inherit' });
+        this.progress?.watch(this.child.stdout, error => this.abort(error));
+        if (specProgress && !capture) this.child.stderr.on('data', data => process.stderr.write(data));
         this.onTerm = () => this.interrupt('SIGTERM');
         this.onInt = () => this.interrupt('SIGINT');
         process.once('SIGTERM', this.onTerm);
         process.once('SIGINT', this.onInt);
         this.timer = setTimeout(() => this.expire(), timeout);
-        this.capture(this.child.stdout, 'stdout');
-        this.capture(this.child.stderr, 'stderr');
+        if (capture) {
+            this.capture(this.child.stdout, 'stdout');
+            this.capture(this.child.stderr, 'stderr');
+        }
     }
 
     killTree() {
         try { killProcessGroup(this.child.pid); } catch (error) { this.failure = error; }
     }
 
-    interrupt(signal) {
-        this.failure = Object.assign(new Error(`Interrupted: ${signal}`), { exitCode: 128 + constants.signals[signal] });
+    abort(error) {
+        this.failure = error;
         this.killTree();
+    }
+
+    interrupt(signal) {
+        this.abort(Object.assign(new Error(`Interrupted: ${signal}`), { exitCode: 128 + constants.signals[signal] }));
     }
 
     expire() {
         this.expired = true;
+        try { this.progress?.summary('TestSessionTimeout exceeded; terminating process tree (exit 124)'); }
+        catch (error) { this.failure = error; }
         this.killTree();
     }
 
@@ -57,6 +70,7 @@ class ChildProcessGroup {
 
     close(code, signal, resolve, reject) {
         clearTimeout(this.timer);
+        this.progress?.stop();
         this.killTree();
         process.removeListener('SIGTERM', this.onTerm);
         process.removeListener('SIGINT', this.onInt);
@@ -71,9 +85,9 @@ class ChildProcessGroup {
     }
 }
 
-export function runProcess(command, args, { cwd, timeout = 1800000, capture = false } = {}) {
+export function runProcess(command, args, { cwd, timeout = 1800000, capture = false, specProgress } = {}) {
     return new Promise((resolve, reject) => {
         if (process.platform === 'win32') return reject(new Error('Process-tree deadlines require a POSIX runner'));
-        new ChildProcessGroup(command, args, { cwd, timeout, capture }).wait(resolve, reject);
+        new ChildProcessGroup(command, args, { cwd, timeout, capture, specProgress }).wait(resolve, reject);
     });
 }

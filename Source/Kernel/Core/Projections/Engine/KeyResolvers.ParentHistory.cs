@@ -16,6 +16,11 @@ public partial class KeyResolvers
         return await resolver(storage, sink, @event);
     };
 
+    static IEnumerable<EventType> ParentHierarchyEventTypes(IProjection projection) =>
+        projection.OwnEventTypes
+            .Concat(RecursiveChildProjections.Of(projection).SelectMany(child => child.OwnEventTypes))
+            .Distinct();
+
     /// <summary>
     /// Resolves ancestors strictly before the original child, or through the releasing parent event
     /// inclusive for deferred children. Later parent-key changes in a replay page are excluded.
@@ -32,7 +37,7 @@ public partial class KeyResolvers
         Storage.Sinks.ISink sink)
     {
         EventSourceId source = parentKey.Value?.ToString()!;
-        var types = parentProjection.OwnEventTypes.Select(type => type.Id).ToArray();
+        var types = ParentHierarchyEventTypes(parentProjection).Select(type => type.Id).ToArray();
         var from = ParentKeyResolutionScope.Current.SequenceNumber;
         var inclusive = ParentKeyResolutionScope.Current.Inclusive;
         while (inclusive || from > EventSequenceNumber.First)
@@ -58,8 +63,9 @@ public partial class KeyResolvers
         return Option<AppendedEvent>.None();
     }
 
-    async Task<Option<AppendedEvent>> TryResolveParentCandidate(IProjection projection, Storage.EventSequences.IEventSequenceStorage storage, Storage.Sinks.ISink sink, AppendedEvent candidate)
+    async Task<Option<AppendedEvent>> TryResolveParentCandidate(IProjection parentProjection, Storage.EventSequences.IEventSequenceStorage storage, Storage.Sinks.ISink sink, AppendedEvent candidate)
     {
+        var projection = RecursiveChildProjections.OwnerOf(parentProjection, candidate.Context.EventType.Id);
         var eventType = projection.EventTypes.FirstOrDefault(type => type.Id == candidate.Context.EventType.Id);
         if (eventType is null)
         {
@@ -69,6 +75,7 @@ public partial class KeyResolvers
         {
             candidate = await projection.ReleaseEvent(eventType, candidate);
         }
+        candidate = projection.ForProjection(candidate);
         var result = await projection.GetKeyResolverFor(eventType)(storage, sink, candidate);
         if (result is ResolvedKey)
         {

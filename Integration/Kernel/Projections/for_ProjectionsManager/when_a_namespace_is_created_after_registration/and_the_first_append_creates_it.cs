@@ -26,7 +26,7 @@ public class and_the_first_append_creates_it(context context) : Given<context>(c
         {
             // No client registration or explicit namespace command in this tenant: the first append creates it,
             // and broadcast plus timer reconciliation arrange subscriptions and catch-up from First.
-            var store = await ChronicleClient.GetEventStore(_storeName.Value, _newTenant.Value);
+            var store = await GetNewTenantStore();
             var append = await store.EventLog.Append("customer", new CustomerNamed("Later tenant"));
             append.IsSuccess.ShouldBeTrue();
             HandledFirstEvent = await _observerStorage.WaitForHandled(_observerKey, (KernelEventSequenceNumber)append.SequenceNumber.Value) == append.SequenceNumber.Value;

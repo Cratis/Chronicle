@@ -21,6 +21,57 @@ If you omit event types, the .NET builder uses all event types known to that cli
 A retried or replayed batch can arrive more than once. Make the receiver idempotent: processing the same event again must not repeat its side effect. A timeout or cancellation cannot undo work the receiver has already completed.
 :::
 
+## Custom header visibility
+
+Configure custom header values when registering a webhook. List and observable queries return `HeaderValuesSet`, a map of header names to whether a non-empty value is configured. Whitespace counts as a value; an empty string does not. The compatibility `Headers` map retains the names but contains only empty strings. Workbench shows names and value-set indicators without revealing values.
+
+Filtering happens when definitions are read, including definitions stored before the upgrade; no migration or replay is needed. Delivery still sends the configured values. The .NET `GetAll()` result exposes metadata on `Target.HeaderValuesSet` and only empty values on `Target.Headers`. It is not a registration snapshot: do not re-register a query result, since registration replaces configuration and the original values cannot be recovered from the result. Workbench header editing is not available in this version.
+
+Public event reads, exports, and event streams omit target header values from `WebhookAdded` and `TargetHeadersSetForWebhook`, including their original, revised, and generational content. Header names remain with empty values. Preview and snapshot reconstruction use the same public content. This applies in every event store, including its system sequence, and to events stored before the upgrade without a migration or replay. These public copies do not change stored event history or internal webhook replay and delivery configuration; this is read-time redaction, not encryption at rest.
+
+An older Kernel still returns legacy values until upgraded; upgrade every Kernel serving queries or streams. The updated .NET client discards any legacy response values after deriving presence metadata, but an old Kernel's wire response still carries those values until the Kernel is upgraded.
+
+## Signing
+
+Webhooks are unsigned by default. In the .NET registration callback, opt in with
+`WithSigning(WebhookSigningMode.Ed25519)`; the enum is in `Cratis.Chronicle.Webhooks`.
+Chronicle signs deliveries using Standard Webhooks. Receivers verify signatures with
+the event store's public keys; see [Verify signatures](./signature-verification.mdx). HMAC signing is not available yet. See [Signing keys](#signing-keys) for public-key retrieval and rotation.
+
+To disable signing, re-register the webhook with `WithSigning(WebhookSigningMode.None)`.
+
+## Signing keys
+
+In .NET, call `eventStore.Webhooks.GetSigningKeys()`. Other languages use the kernel query `WebhookSigningPublicKey.GetWebhookSigningKeys(eventStore)`
+(`GetWebhookSigningKeys` on the `Webhooks` gRPC service) to retrieve an event store's
+current Ed25519 public keys. Each result contains `KeyId`, `Algorithm`, `PublicKey`,
+`Status`, `CreatedAt`, and `OverlapEndsAt`. `PublicKey` uses `whpk_` followed by
+Base64-encoded Ed25519 public-key bytes. Private keys and HMAC secrets are never
+returned. The query adds no extra authorization policy beyond the host defaults
+and reads only the requested event store's ring.
+
+To rotate, submit the kernel command `RotateWebhookSigningKey` with `EventStore`
+and optional `UseSpecifiedOverlap` and `OverlapSeconds`. Rotation requires administrator rights. The command
+returns no key material: query `GetWebhookSigningKeys` again afterward to obtain the
+new public key, then make it available to receivers within the overlap window. Receivers
+load public keys themselves, as described in [Verify signatures](./signature-verification.mdx#get-the-public-keys); the kernel does not push them.
+
+Omit `UseSpecifiedOverlap` (or set it to `false`) for the default 24-hour overlap;
+`OverlapSeconds` is ignored in that case. Set `UseSpecifiedOverlap` to `true` to use
+`OverlapSeconds`, including zero. The maximum specified overlap is 30 days. During overlap, deliveries
+carry signatures from both keys and the query lists the new Active key and the
+previous Overlap key, including its `OverlapEndsAt`. For a compromised key, set
+`UseSpecifiedOverlap` to `true` and `OverlapSeconds` to zero to retire it immediately and distribute the replacement
+public key promptly. Expired overlap keys disappear from query results at read time;
+retired keys are not listed. Treat `Cratis-Key-Id` as an advisory hint, not an
+authorization or verification decision.
+
+This unreleased rotation API replaces its earlier nullable overlap input; prerelease
+clients must regenerate their contracts to use the explicit overlap selector.
+
+CLI retrieval and rotation commands will arrive in a separate CLI follow-up; use the
+kernel API for now. HMAC secret hand-off remains deferred and HMAC signing stays off.
+
 ## Delivery retries and timeouts
 
 The observer schedules recovery rather than making the HTTP client sleep and retry inline. The authentication handlers can resend a request once after a `401`, as described under [OAuth client credentials](#oauth-client-credentials) and [managed identity](#managed-identity).
@@ -272,4 +323,4 @@ for all configuration keys.
 
 ## Related topics
 
-To inspect and control long-running Kernel operations, continue with [Jobs](../jobs/). If the destination is another event store rather than an HTTP receiver, use [Subscriptions](../subscriptions/) instead.
+To write the endpoint that receives these requests, including what each request contains and how to handle the same event arriving twice, see [Webhook receivers](./receivers.md). To inspect and control long-running Kernel operations, continue with [Jobs](../jobs/). If the destination is another event store rather than an HTTP receiver, use [Subscriptions](../subscriptions/) instead.

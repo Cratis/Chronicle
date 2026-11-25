@@ -16,12 +16,12 @@ public class and_subscription_does_not_exist : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
-        silo.AddNamespaceCasing();
+        silo.AddEventStoreStorage();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         silo.AddService(localSiloDetails);
 
-        _manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
+        _manager = await silo.UsingObserverDefinitions().CreateGrainAsync<EventStoreSubscriptionsManager>(TargetEventStore);
     }
 
     async Task Because() =>

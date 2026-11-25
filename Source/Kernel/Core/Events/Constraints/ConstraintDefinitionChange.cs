@@ -11,7 +11,9 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <param name="Name">The name of the changed constraint.</param>
 /// <param name="RequiresReindex">Whether the change requires reindexing.</param>
 /// <param name="ChangeTypes">The specific change types.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Events.Constraints.ConstraintDefinitionChange")]
 public record ConstraintDefinitionChange(
-    ConstraintName Name,
-    bool RequiresReindex,
-    IReadOnlyCollection<ConstraintChangeType> ChangeTypes);
+    [Id(0)] ConstraintName Name,
+    [Id(1)] bool RequiresReindex,
+    [Id(2)] IReadOnlyCollection<ConstraintChangeType> ChangeTypes);

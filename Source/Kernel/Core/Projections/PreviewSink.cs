@@ -160,6 +160,18 @@ internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
     }
 
     /// <inheritdoc/>
+    public Task<Option<Key>> TryFindRootKeyByChildValueInRoot(PropertyPath childPropertyPath, object childValue, Key rootKey)
+    {
+        var found = _readModels.TryGetValue(rootKey.Value.ToString()!, out var root) &&
+            (childPropertyPath == identifierProperty
+                ? HasSameValue(root.KeyValue, childValue)
+                : FindValues(root.State, childPropertyPath.Segments.Select(_ => _.Value).ToArray(), 0, childValue).Any());
+        return Task.FromResult(found
+            ? new Option<Key>(new Key(root!.KeyValue, ArrayIndexers.NoIndexers))
+            : Option<Key>.None());
+    }
+
+    /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> ApplyChanges(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, EventSequenceNumber eventSequenceNumber) =>
         Task.FromResult<IEnumerable<FailedPartition>>([]);
 

@@ -85,6 +85,7 @@ message ExternalServiceResponse {
    string Database = 9;
    string Username = 10;
    map<string,string> Options = 11;
+   map<string,bool> HeaderValuesSet = 12;
 }
 message GetExternalServicesRequest {
    string EventStore = 1;

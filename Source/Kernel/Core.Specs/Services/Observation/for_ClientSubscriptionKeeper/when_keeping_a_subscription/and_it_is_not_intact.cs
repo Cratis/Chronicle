@@ -6,12 +6,14 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 public class and_it_is_not_intact : Specification
 {
     int _sent;
+    bool _intact;
 
-    async Task Because() => await ClientSubscriptionKeeper.KeepSubscription(() => Task.FromResult(false), () =>
+    async Task Because() => _intact = await ClientSubscriptionKeeper.KeepSubscription(() => Task.FromResult(false), () =>
     {
         _sent++;
         return Task.CompletedTask;
     });
 
     [Fact] void should_send_the_definition() => _sent.ShouldEqual(1);
+    [Fact] void should_not_report_it_intact() => _intact.ShouldBeFalse();
 }

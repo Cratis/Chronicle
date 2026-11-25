@@ -10,9 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Sink"/> that keeps the receipts of multi-write cycles.
-/// </summary>
+/// </content>
 /// <remarks>
 /// Every cycle whose execution strategy retries inserts a receipt on its first attempt, batched with its first write
 /// in the same transaction. That attempt skips the probe but pays for the write, index maintenance and amortized cleanup.

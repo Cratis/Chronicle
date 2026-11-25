@@ -76,12 +76,12 @@ internal static class ProjectionDefinitionNormalization
         return restored is ChildrenDefinition child ? child with { All = fromEvery } : restored;
     }
 
-    static Dictionary<PropertyPath, ChildrenDefinition> NormalizeChildren(IDictionary<PropertyPath, ChildrenDefinition> children, bool hasLegacyStorageFields) =>
+    static Dictionary<PropertyPath, ChildrenDefinition> NormalizeChildren(IReadOnlyDictionary<PropertyPath, ChildrenDefinition> children, bool hasLegacyStorageFields) =>
         children.ToDictionary(pair => pair.Key, pair => (ChildrenDefinition)ForComparison(pair.Value, hasLegacyStorageFields));
 
     static Dictionary<PropertyPath, ChildrenDefinition> RestoreChildren(
-        IDictionary<PropertyPath, ChildrenDefinition> incoming,
-        IDictionary<PropertyPath, ChildrenDefinition>? authoritative) =>
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition> incoming,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? authoritative) =>
         incoming.ToDictionary(
             pair => pair.Key,
             pair => authoritative is not null && authoritative.TryGetValue(pair.Key, out var known)

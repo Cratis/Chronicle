@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,8 +33,10 @@ public class CookieAntiforgeryMiddleware(RequestDelegate next)
     /// <returns>Awaitable task.</returns>
     public async Task InvokeAsync(HttpContext context, IAntiforgery antiforgery)
     {
+        // A user a trusted proxy authenticated is carried by the proxy's own browser session - just as ambient as
+        // Chronicle's cookie, so their state-changing requests need the same protection.
         var isAuthenticatedCookieRequest = context.User.Identity?.IsAuthenticated is true &&
-            context.Request.Cookies.ContainsKey(AuthenticationCookieName) &&
+            (context.Request.Cookies.ContainsKey(AuthenticationCookieName) || TrustedProxyUsers.Is(context.User)) &&
             !context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
         var ignoresAntiforgery = context.GetEndpoint()?.Metadata.GetMetadata<IgnoreAntiforgeryTokenAttribute>() is not null;
 

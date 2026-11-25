@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints.for_UniqueConstraintsStorage;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_removing_unhashed_values : Specification
 {
     const string SourceTable = "log_unique_constraint";
@@ -42,7 +43,7 @@ public class when_removing_unhashed_values : Specification
         (await Scalar("SELECT \"unique\" FROM pragma_index_list('log_unique_constraint') WHERE name = 'IX_log_unique_constraint_Value'")).ShouldEqual(0L);
         var database = Substitute.For<IDatabase>();
         database.Namespace("store", "namespace").Returns(_ => Task.FromResult(new DbContextScope<NamespaceDbContext>(
-            new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().Options), () => { })));
+            new(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite(_connection.ConnectionString).AddConceptAsSupport().IgnoringManyServiceProviders().Options), () => { })));
         _storage = new("store", "namespace", new EventSequenceId("log"), database);
     }
 

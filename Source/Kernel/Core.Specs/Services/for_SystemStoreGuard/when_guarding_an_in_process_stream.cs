@@ -6,6 +6,7 @@ using Cratis.Chronicle.Security;
 
 namespace Cratis.Chronicle.Services.for_SystemStoreGuard;
 
+[Collection("SystemStoreGuard")]
 public class when_guarding_an_in_process_stream : Specification
 {
     readonly IObservable<int> _source = Observable.Never<int>();

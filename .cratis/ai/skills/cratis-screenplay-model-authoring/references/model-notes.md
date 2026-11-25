@@ -8,6 +8,7 @@
 
 - Choose the artifact
 - Anchors and independent state
+- Link elements to issues
 - List with bounded, pinned reads
 - Propose, review, apply
 - Resolve by evidence, then carry the answer into the model
@@ -122,6 +123,32 @@ The file header uses `schema: "cratis.screenplay.notes"`, `schemaVersion: 1` and
 key order, LF plus a trailing newline, and one note object per line sorted by ID.
 Commit it with the model; never hand-author a sidecar to bypass proposals.
 
+## Link elements to issues
+
+An `issue` note links its anchored element (a slice, command or screen) to one or more issues in an
+external tracker. Requires Screenplay 6.7.0 or later (`screenplay --version`).
+
+```json
+{
+  "kind": "issue",
+  "text": "Build the cancellation flow",
+  "anchor": { "semanticId": "..." },
+  "refs": [
+    { "tracker": "github", "id": "Cratis/Shop#412", "url": "https://github.com/Cratis/Shop/issues/412" },
+    { "tracker": "jira", "id": "SHOP-77" }
+  ]
+}
+```
+
+- `tracker` is `github`, `jira`, `linear` or `other`; `id` is the issue key as the tracker shows
+  it; `url` is optional. An issue note needs at least one reference, and a reference without a
+  tracker is refused.
+- The note is anchored by stable identity, so the link survives renames and moves.
+- `list-model-notes` with `kind: "issue"` lists every link; `ref: "SHOP-77"` finds the elements an
+  issue covers.
+- The server never calls the tracker. Keeping the issue's status current is the tracker's job;
+  resolving the note records that the link no longer needs attention.
+
 ## List with bounded, pinned reads
 
 Open the workspace, inspect `notes` status and retain workspace/catalog revisions.
@@ -132,7 +159,7 @@ Open the workspace, inspect `notes` status and retain workspace/catalog revision
 | --- | --- |
 | `anchor` | `{ semanticId }`, including an orphan ID, or `{ address, kind }` |
 | `scope` | Dotted module/feature/slice; descendants and ancestor notes |
-| `kind` | `question`, `task`, `note`; omitted selects all |
+| `kind` | `question`, `task`, `note`, `issue`; omitted selects all |
 | `state` | `open` by default; `resolved`, `orphaned`, `all` |
 | `ref` | Exact identifier in `refs` or `resolution.ref`, e.g. `D123` |
 | `view` | `items` by default, or `findings` |

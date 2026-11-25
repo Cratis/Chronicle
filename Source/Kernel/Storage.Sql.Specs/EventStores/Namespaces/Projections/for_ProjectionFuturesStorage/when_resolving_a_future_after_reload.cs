@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Projections.for_ProjectionFuturesStorage;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_resolving_a_future_after_reload : given.a_futures_storage
 {
     readonly System.Reactive.Subjects.Subject<ProjectionEventContext> _childEvents = new();

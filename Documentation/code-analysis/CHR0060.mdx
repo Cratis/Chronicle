@@ -1,0 +1,22 @@
+---
+title: "CHR0060: Self reducer method must be unambiguous"
+description: "CHR0060 reports a self-reducing read model that declares several Reduce handlers for the same event type, because Chronicle cannot choose which to call."
+---
+
+## Rule description
+
+A self-reducing read model must have at most one valid `Reduce` handler for each event type. The rule reports the model when two or more valid `Reduce` methods take the same type as their first (event) parameter, because Chronicle cannot decide which one to call.
+
+The rule only checks the declarations on the model. Overlap through interfaces or base event types depends on the events registered at runtime, so it is not reported.
+
+## Severity
+
+Error
+
+## How to fix
+
+Remove or merge the duplicate handlers so that no event type has more than one `Reduce` method on the model.
+
+## Related topics
+
+- [Self-reducing read models](../reducers/self-reducing-read-models.mdx)

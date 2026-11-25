@@ -10,7 +10,7 @@ namespace Cratis.Chronicle.Storage.InMemory.Occurrences;
 /// </summary>
 public class TriggerDefinitionsStorage : ITriggerDefinitionsStorage
 {
-    readonly object _lock = new();
+    readonly Lock _lock = new();
     readonly Dictionary<TriggerId, TriggerDefinition> _definitions = [];
 
     /// <inheritdoc/>

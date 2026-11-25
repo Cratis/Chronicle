@@ -8,7 +8,9 @@ namespace Cratis.Chronicle.Imports;
 /// </summary>
 /// <param name="Outcomes">The outcome of every event in the chunk, when the chunk settled.</param>
 /// <param name="Errors">Why the chunk could not settle; empty when it did. A chunk that did not settle is tried again.</param>
-public record ImportChunkAppendResult(IEnumerable<ImportEventOutcome> Outcomes, IEnumerable<string> Errors)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportChunkAppendResult")]
+public record ImportChunkAppendResult([Id(0)] IEnumerable<ImportEventOutcome> Outcomes, [Id(1)] IEnumerable<string> Errors)
 {
     /// <summary>
     /// Gets a value indicating whether every event of the chunk settled.

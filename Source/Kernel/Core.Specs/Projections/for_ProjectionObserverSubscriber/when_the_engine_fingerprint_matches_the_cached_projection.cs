@@ -21,12 +21,10 @@ public class when_the_engine_fingerprint_matches_the_cached_projection : given.a
         _event = _event with { Context = _event.Context with { SequenceNumber = 42 } };
         _projection.DefinitionFingerprint.Returns("same");
 
-        var current = Substitute.For<Engine.IProjection>();
-        current.DefinitionFingerprint.Returns("same");
-        _engineProjections.TryGet(_key.EventStore, _key.Namespace, _key.ObserverId, out Arg.Any<Engine.IProjection?>())
-            .Returns(_ =>
+        _engineProjections.TryGetDefinitionFingerprint(_key.EventStore, _key.ObserverId, out Arg.Any<string?>())
+            .Returns(call =>
             {
-                _[3] = current;
+                call[2] = "same";
                 return true;
             });
         _cachedPipeline.Handle(_event).Returns(ProjectionEventContext.Empty(Substitute.For<Changes.IObjectComparer>(), _event));

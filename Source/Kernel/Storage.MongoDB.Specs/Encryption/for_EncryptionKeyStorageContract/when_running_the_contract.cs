@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Storage.Compliance;
 using Cratis.Chronicle.Storage.Compliance.for_EncryptionKeyStorageContract;
@@ -40,6 +41,35 @@ public class when_running_the_contract(ReplicaSetMongoDBFixture fixture) : Encry
         // The request archive and external fences are untyped collections; an auto-substitute would silently drop archive writes.
         namespaceDatabase.GetCollection<BsonDocument>(Arg.Any<string?>()).Returns(call => _mongo.GetCollection<BsonDocument>(call.Arg<string?>()));
         return new EncryptionKeyStorage(database);
+    }
+
+    protected override async Task SeedRequests(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, EncryptionKeyIdentifier identifier, int count)
+    {
+        var fences = _mongo.GetCollection<EncryptionKeyErasureForIdentifier>("encryption-key-erasures")
+            .WithWriteConcern(WriteConcern.WMajority).WithReadConcern(ReadConcern.Linearizable).WithReadPreference(ReadPreference.Primary);
+        var row = await fences.Find(_ => _.Id == identifier).SingleAsync();
+        var present = await _mongo.GetCollection<EncryptionKeyForIdentifier>("encryption-keys").Find(_ => _.Id.Identifier == identifier).ToListAsync();
+        var material = present.Select(_ => (_.Id.Revision, new EncryptionKey(_.PublicKey, _.PrivateKey))).ToArray();
+        var fence = row.ToFence();
+        var requests = fence.Requests!.ToList();
+        for (var index = 1; index <= count; index++)
+        {
+            fence = EncryptionKeyErasure.Covering(fence, material);
+            requests.Add(new($"request-{index}", fence.ErasedThrough, fence.Lifecycle, fence.ErasedKeyFingerprints));
+        }
+
+        var seeded = new EncryptionKeyErasureForIdentifier(
+            identifier,
+            fence.ErasedThrough,
+            fence.ErasedKeyFingerprints.ToArray(),
+            fence.NewKeyAllowed,
+            fence.Version,
+            fence.Lifecycle,
+            fence.ErasedLifecycle,
+            requests.ToArray(),
+            EncryptionKeyFenceUpdates.Seal(fence));
+        var result = await fences.ReplaceOneAsync(EncryptionKeyFenceUpdates.Observed(identifier, row.ToFence()), seeded);
+        result.ModifiedCount.ShouldEqual(1L);
     }
 
     protected override Task DuringPublication(Func<Task> write, Func<Task> competingOperation)

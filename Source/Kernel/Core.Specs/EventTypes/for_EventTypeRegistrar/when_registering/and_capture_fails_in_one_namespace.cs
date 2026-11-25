@@ -15,6 +15,7 @@ public class and_capture_fails_in_one_namespace : Patterns.for_PatternCapture.gi
     void Establish()
     {
         _eventTypes.GetAllDefinitions().Returns([]);
+        _eventTypes.RegisterIfAbsent(Arg.Any<EventTypeToRegister>()).Returns(new Cratis.Chronicle.Storage.EventTypes.EventTypeRegistrationResult(true, [EventTypeGeneration.First]));
         _eventTypes.Register(Arg.Any<IEnumerable<EventTypeToRegister>>()).Returns([new EventTypeId("CustomerNamed")]);
         _eventTypes.GetDefinition(Arg.Any<EventTypeId>()).Returns(call =>
             new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.Client, false, [], []));
@@ -30,6 +31,6 @@ public class and_capture_fails_in_one_namespace : Patterns.for_PatternCapture.gi
         _capture));
 
     [Fact] void should_complete_registration() => _error.ShouldBeNull();
-    [Fact] async Task should_have_attempted_the_failing_namespace() => await _failedObserver.Received(1).SubscribeAdditively<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), SiloAddress.Zero, isReplayable: false);
-    [Fact] async Task should_subscribe_the_remaining_namespace() => await _observer.Received(1).SubscribeAdditively<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<IEnumerable<EventType>>(), SiloAddress.Zero, isReplayable: false);
+    [Fact] async Task should_have_attempted_the_failing_namespace() => await _failedObserver.Received(1).SubscribeAdditively<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<EventTypeSet>(), SiloAddress.Zero, isReplayable: false);
+    [Fact] async Task should_subscribe_the_remaining_namespace() => await _observer.Received(1).SubscribeAdditively<IPatternCaptureSubscriber>(ObserverType.Reactor, Arg.Any<EventTypeSet>(), SiloAddress.Zero, isReplayable: false);
 }

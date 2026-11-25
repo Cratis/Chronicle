@@ -38,33 +38,6 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
     internal string Signature => IsGin ? $"gin:{Targets[0].Column.Name}:jsonb_path_ops" : Definition.Signature + JsonSerializer.Serialize(Targets.Select(target => new { target.Column.Name, target.JsonSegments, target.Type }));
 
     /// <summary>
-    /// Gets the deterministic provider index name.
-    /// </summary>
-    /// <param name="type">The database provider.</param>
-    /// <param name="table">The table name.</param>
-    /// <returns>The index name.</returns>
-    internal string Name(DatabaseType type, string table) => UsesDecimalOrderKey(type)
-        ? ReadModelIndexNames.ForSignature(type, table, Signature + DecimalOrderMarker)
-        : PreviousName(type, table);
-
-    /// <summary>
-    /// Gets the name used before SQLite composite decimal keys moved to the order key; identical to <see cref="Name"/> elsewhere.
-    /// </summary>
-    /// <param name="type">The database provider.</param>
-    /// <param name="table">The table name.</param>
-    /// <returns>The superseded index name.</returns>
-    internal string PreviousName(DatabaseType type, string table) => IsLegacy
-        ? ReadModelIndexNames.For(type, table, Targets[0].Column.Name)
-        : ReadModelIndexNames.ForSignature(type, table, Signature);
-
-    /// <summary>
-    /// Gets whether a SQLite composite index keys a top-level decimal by its order-preserving shadow column.
-    /// </summary>
-    /// <param name="type">The database provider.</param>
-    /// <returns>True when the plan is a SQLite composite containing a top-level decimal.</returns>
-    internal bool UsesDecimalOrderKey(DatabaseType type) => type == DatabaseType.Sqlite && Targets.Count > 1 && Targets.Any(IsDecimalOrderTarget);
-
-    /// <summary>
     /// Gets whether a target is a top-level decimal column.
     /// </summary>
     /// <param name="target">The resolved property.</param>
@@ -87,18 +60,6 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
         if (resolved.Any(target => target.IsArray) && (type != DatabaseType.PostgreSql || resolved.Length != 1)) return null;
         return new(definition, resolved);
     }
-
-    /// <summary>
-    /// Formats the ordered provider index keys.
-    /// </summary>
-    /// <param name="type">The database provider.</param>
-    /// <param name="helper">The provider SQL generation helper.</param>
-    /// <returns>The SQL key list.</returns>
-    internal string Keys(DatabaseType type, ISqlGenerationHelper helper) => string.Join(", ", Targets.Select(target =>
-    {
-        var expression = Expression(target, type, helper);
-        return IsGin ? $"{expression} jsonb_path_ops" : $"{expression}{(target.Descending ? " DESC" : " ASC")}";
-    }));
 
     /// <summary>
     /// Formats one provider key expression.
@@ -135,6 +96,45 @@ internal sealed record ReadModelIndexPlan(IndexDefinition Definition, IReadOnlyL
     /// <returns>The SQL expression.</returns>
     internal static string SqlServerExpression(ReadModelIndexTarget target, ISqlGenerationHelper helper) =>
         $"CAST(JSON_VALUE({helper.DelimitIdentifier(target.Column.Name)}, N{Literal(JsonPath(target))}) AS nvarchar(450))";
+
+    /// <summary>
+    /// Gets the deterministic provider index name.
+    /// </summary>
+    /// <param name="type">The database provider.</param>
+    /// <param name="table">The table name.</param>
+    /// <returns>The index name.</returns>
+    internal string Name(DatabaseType type, string table) => UsesDecimalOrderKey(type)
+        ? ReadModelIndexNames.ForSignature(type, table, Signature + DecimalOrderMarker)
+        : PreviousName(type, table);
+
+    /// <summary>
+    /// Gets the name used before SQLite composite decimal keys moved to the order key; identical to <see cref="Name"/> elsewhere.
+    /// </summary>
+    /// <param name="type">The database provider.</param>
+    /// <param name="table">The table name.</param>
+    /// <returns>The superseded index name.</returns>
+    internal string PreviousName(DatabaseType type, string table) => IsLegacy
+        ? ReadModelIndexNames.For(type, table, Targets[0].Column.Name)
+        : ReadModelIndexNames.ForSignature(type, table, Signature);
+
+    /// <summary>
+    /// Gets whether a SQLite composite index keys a top-level decimal by its order-preserving shadow column.
+    /// </summary>
+    /// <param name="type">The database provider.</param>
+    /// <returns>True when the plan is a SQLite composite containing a top-level decimal.</returns>
+    internal bool UsesDecimalOrderKey(DatabaseType type) => type == DatabaseType.Sqlite && Targets.Count > 1 && Targets.Any(IsDecimalOrderTarget);
+
+    /// <summary>
+    /// Formats the ordered provider index keys.
+    /// </summary>
+    /// <param name="type">The database provider.</param>
+    /// <param name="helper">The provider SQL generation helper.</param>
+    /// <returns>The SQL key list.</returns>
+    internal string Keys(DatabaseType type, ISqlGenerationHelper helper) => string.Join(", ", Targets.Select(target =>
+    {
+        var expression = Expression(target, type, helper);
+        return IsGin ? $"{expression} jsonb_path_ops" : $"{expression}{(target.Descending ? " DESC" : " ASC")}";
+    }));
 
     static string JsonPath(ReadModelIndexTarget target) => "$" + string.Concat(target.JsonSegments.Select(segment => "." + JsonSerializer.Serialize(segment, _pathOptions)));
     static string Literal(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";

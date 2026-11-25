@@ -10,4 +10,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// </summary>
 /// <param name="SubscriberType">The assembly-qualified subscriber type name.</param>
 /// <param name="Filters">The registration's filters.</param>
-public record ObserverCompatibilityContract(string SubscriberType, ObserverFilters Filters);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverCompatibilityContract")]
+public record ObserverCompatibilityContract([Id(0)] string SubscriberType, [Id(1)] ObserverFilters Filters);

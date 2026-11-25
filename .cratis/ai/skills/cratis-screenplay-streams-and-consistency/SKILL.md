@@ -172,6 +172,8 @@ Requires Chronicle 19.59.6 or later (19.59.3 for the InMemory provider) for the 
 
 **Review questions** (findings only with a domain consequence): read [references/review-questions.md](references/review-questions.md) for the stream, race, optional-property, boundary and eventual-consistency questions (decision tree and red flags for collection- or log-shaped streams are in `references/stream-patterns.md`).
 
+Availability is not a consistency boundary. Events, projections and reactions run whether or not a slice is available (a reaction is never gated), so a gate never needs a replay; `provide` values are read per request and are no part of a command's decision reads. See `cratis-screenplay-availability`.
+
 ## Gate
 Do not report done until all hold; otherwise report what is open:
 - Every identifier has its identity sentence, the event-membership table and a justified decision.

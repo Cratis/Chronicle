@@ -24,6 +24,7 @@ using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Identities;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -53,6 +54,7 @@ public class an_event_sequence : Specification
 
     protected IStorage _storage;
     protected IReservedEventSequenceIds _reservedEventSequenceIds = Substitute.For<IReservedEventSequenceIds>();
+    protected ISiloSupervisor _supervisor = Substitute.For<ISiloSupervisor>();
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventStoreNamespaceStorage _namespaceStorage;
     protected IEventSequenceStorage _eventSequenceStorage;
@@ -88,6 +90,13 @@ public class an_event_sequence : Specification
     protected virtual TimeSpan ConstraintsVersionCheckInterval => TimeSpan.Zero;
     protected virtual Configuration.ConstraintIndexRepairOptions ConstraintIndexRepairConfiguration => new();
 
+    static IEventTypesStorage EventTypesWithCachedDefinitions()
+    {
+        var storage = Substitute.For<IEventTypesStorage>();
+        storage.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
+        return storage;
+    }
+
     async Task Establish()
     {
         _eventSequenceKey = new EventSequenceKey(SequenceId, EventStore, EventStoreNamespace);
@@ -101,7 +110,7 @@ public class an_event_sequence : Specification
         _eventStoreStorage = Substitute.For<IEventStoreStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
-        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventTypesStorage = EventTypesWithCachedDefinitions();
         _identityStorage = Substitute.For<IIdentityStorage>();
         _constraintValidationFactory = Substitute.For<IConstraintValidationFactory>();
         _constraintValidation = Substitute.For<IConstraintValidation>();
@@ -185,6 +194,7 @@ public class an_event_sequence : Specification
 
         _namespaces = Substitute.For<INamespaces>();
         _namespaces.EnsureCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => _.Arg<EventStoreNamespaceName>());
+        _namespaces.GetCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => (EventStoreNamespaceName?)_.Arg<EventStoreNamespaceName>());
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
 
         _registeredConstraints = [];
@@ -209,6 +219,7 @@ public class an_event_sequence : Specification
         var cache = Substitute.For<IEventTypeSchemaCache>();
         cache.ReturnsForAll<ValueTask<JsonSchema>>(async call => await _schemaCache.GetProtectionSchemaFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventTypeId>(1), call.ArgAt<EventTypeGeneration>(2), call.ArgAt<JsonSchema>(3)));
         _silo.AddService(cache);
+        _silo.AddService(_supervisor);
         _silo.AddService(EventTimeProvider);
         _silo.AddService(_storage);
         _silo.AddService(_reservedEventSequenceIds);

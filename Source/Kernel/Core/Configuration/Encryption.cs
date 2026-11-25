@@ -50,4 +50,13 @@ public class Encryption
     /// Defaults to <see cref="LegacyKeyHandling.Warn"/>.
     /// </summary>
     public LegacyKeyHandling LegacyKeyHandling { get; init; } = LegacyKeyHandling.Warn;
+
+    /// <summary>
+    /// Gets the event stores and namespaces that hold encryption keys stored under earlier names. Required to migrate an Azure Key Vault key store.
+    /// </summary>
+    /// <remarks>
+    /// Earlier names are lowercased and reduced to letters, digits and hyphens, so the scopes cannot be read off them. The migration ties a name to an
+    /// address only through this list, and every listed scope must have entries.
+    /// </remarks>
+    public IReadOnlyList<LegacyKeyScope> LegacyKeyScopes { get; init; } = [];
 }

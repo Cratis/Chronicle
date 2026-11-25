@@ -36,7 +36,20 @@ For releases without a compatibility exception, use this table:
 | From 19.111 or later (19.115.1 or later for SQL Server) | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
 | From a 19.x release before 19.111 | Yes | Stop every node, then start the new version. Older releases lack the patch-manager handover or have incompatible grain calls. |
 | From a release before 19.123.1 to 19.123.1 or later | No | Stop every node, then start the new version. The serializers were renamed from `Cratis.Orleans` to `Cratis.Choreography` in 19.123.1, and a node of either side cannot read a concept value written by the other. Replacing nodes one at a time crash-loops the new node and fills the old nodes with grain errors. A new node that finds such a release in the cluster logs a critical message and stops. |
+| To a release whose notes say `requires a stop-start deploy` | No | Stop every node, then start the new version. The release changes a grain contract, so it cannot share a cluster with the one before it. See [Stop-start releases](#stop-start-releases). |
 | To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
+
+### Stop-start releases
+
+A minor or patch release can change a kernel-internal grain contract. When it does, its release notes carry exactly this sentence, so you can search for it:
+
+```text
+Requires a stop-start deploy: this release cannot share a cluster with <previous release>.
+```
+
+The client gRPC contract and the stored data stay compatible, so clients and storage need nothing special. Only the nodes cannot overlap. Make your deploy tooling treat such a release as stop-start: no overlap and no rolling replace. The repository records the same fact for tooling in `.github/grain-compatibility-waivers.txt`, which names the earlier release each such release cannot share a cluster with.
+
+The procedure is the one below: stop every node, then start the new version.
 
 To stop every node in Kubernetes, scale the deployment to zero and back, or use the `Recreate` strategy for that one upgrade. In Azure Container Apps, use single revision mode with no overlap. Stopping the old nodes first is safe; it is the overlap that fails.
 
@@ -92,9 +105,11 @@ Database locks serialize migrations: `sp_getapplock` on SQL Server and `pg_advis
 
 Event store and namespace databases migrate on first access rather than all at startup. The first request that touches a database needing migration can therefore perform schema work while the cluster is serving traffic. To apply versioned migrations before that point, use the separate migration step described below.
 
-Once the silo is active, `ChronicleServerStartupTask` registers event types, reactors and projections, and reactivates observers. Transient failures get up to five attempts, with waits of 2, 4, 8 and 16 seconds between attempts in addition to Orleans' response timeout. Most exhausted startup steps stop the host. Kernel projection registration can instead defer transient failures to background retries; incompatible-release failures still stop startup.
+Once the silo is active, `ChronicleServerStartupTask` registers event types, the system reactors and the kernel projections, resumes persisted jobs, and bootstraps the administrator and clients. Kernel projection registration and job resumption each have a shared budget of one minute and 30 seconds respectively; what is not done when a budget ends continues in the background. These are the steps that decide whether the node serves requests correctly, so they are the only ones the node waits for before it reports ready. Each logs one line with its duration, and one line gives the total. Transient failures get up to five attempts, with waits of 2, 4, 8 and 16 seconds between attempts in addition to Orleans' response timeout. Most exhausted startup steps stop the host. Kernel projection registration can instead defer transient failures to background retries; incompatible-release failures still stop startup.
 
 A call that times out against this node itself, or against a sibling the cluster reports as active, is not counted as an attempt. That node is up and busy catching up, and restarting would only restart the same backlog, so the step waits for it: the node stays running and not ready, and logs every wait. The wait ends when the call succeeds, at shutdown, or once `startup.busySiloWaitLimit` (two hours by default) has passed. After the limit the step stops the host like any exhausted step. See [Busy silos at startup](configuration/root-properties.md#busy-silos-at-startup).
+
+Work that only warms grains, which may be hosted on other nodes, runs in the background after the node is ready: reconciling lifecycle occurrences, restoring client subscriptions, ensuring read models, webhooks and captures, registering persisted projection definitions, and rehydrating event sequences and observers for every namespace, plus any jobs not resumed within the budget. Namespaces are processed four at a time. A step that fails, for instance by timing out against a busy node, is retried in later passes with waits of 5 seconds doubling up to 2 minutes, for at most six passes. The log records progress for each event store and one summary line with the duration. Grains activate and repair themselves on first use, and the engine compiles a projection from storage when it is first needed, so a request that arrives before this work finishes is served correctly; the work only makes it faster. Every step is idempotent, so two nodes doing it at once is harmless, and shutdown stops it without waiting for pending calls. If it gives up, a warning says so and the next restart repeats it.
 
 ## Roll out the new version
 

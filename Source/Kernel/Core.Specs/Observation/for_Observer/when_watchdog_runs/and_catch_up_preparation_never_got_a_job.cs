@@ -43,5 +43,5 @@ public class and_catch_up_preparation_never_got_a_job : given.an_observer_with_c
 
     [Fact] void should_re_route_the_observer_back_onto_its_queue() => _appendedEventsQueues
         .Received(1)
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

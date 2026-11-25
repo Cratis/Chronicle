@@ -132,7 +132,7 @@ public partial class Sink(
     /// </summary>
     const int MaxBulkSizeInBytes = 48 * 1024 * 1024;
 
-    readonly object _bulkLock = new();
+    readonly Lock _bulkLock = new();
     readonly CancellationTokenSource _bulkCancellation = new();
     readonly List<WriteModel<BsonDocument>> _bulkOperations = [];
     readonly HashSet<BsonValue> _bulkDestinations = [];
@@ -148,10 +148,10 @@ public partial class Sink(
     /// Highest event sequence number known to be applied to each document while a bulk window is open.
     /// </summary>
     /// <remarks>
-    /// Bulk mode answers <see cref="FindOrDefault"/> from <see cref="_bulkStateCache"/>, so a guarded write that
+    /// Bulk mode answers <see cref="FindOrDefault(Key)"/> from <see cref="_bulkStateCache"/>, so a guarded write that
     /// the server rejects must not leave its recomputed state in that cache — the next event for the same key
     /// would read the doubled state and persist it. Seeded from the document the first uncached
-    /// <see cref="FindOrDefault"/> reads (no extra round trip) and advanced by every write queued in the window,
+    /// <see cref="FindOrDefault(Key)"/> reads (no extra round trip) and advanced by every write queued in the window,
     /// so an already applied event is recognized before its state is cached at all.
     /// </remarks>
     readonly ConcurrentDictionary<string, ulong> _bulkWatermarks = new();
@@ -160,7 +160,7 @@ public partial class Sink(
     /// Documents whose delete is queued in the open bulk window but has not reached the server yet.
     /// </summary>
     /// <remarks>
-    /// The server still holds such a document, so an uncached <see cref="FindOrDefault"/> would report it as
+    /// The server still holds such a document, so an uncached <see cref="FindOrDefault(Key)"/> would report it as
     /// present and the caller would treat the next event as an update of a live instance. On a document whose
     /// write is guarded that is fatal: a guarded write never inserts, so the queued delete runs first and the
     /// re-creating update matches nothing, losing the read model. Reporting the document as already gone restores
@@ -402,6 +402,11 @@ public partial class Sink(
     {
         _bulkCancellation.Token.ThrowIfCancellationRequested();
         options = options with { Partition = PartitionFor(key, changeset) };
+        if (options.Mode == SinkWriteMode.FencedGlobal)
+        {
+            return await ApplyFencedGlobal(key, changeset, eventSequenceNumber);
+        }
+
         var plan = PlanWrite(key, changeset);
 
         if (changeset.HasBeenRemoved())
@@ -424,17 +429,27 @@ public partial class Sink(
         // Its outcome is claimed only on a returning path: an exception leaves it in the ledger for the next drain or EndBulk.
         InvalidatePrefetchBeforeJoin(changeset);
         var joinBatch = await FlushBeforeJoin(changeset, options);
-        IEnumerable<FailedPartition> failures;
+        var failures = await WriteTranslatingFailures(key, changeset, eventSequenceNumber, guardedPlan, options);
+        return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
+    }
+
+    async Task<IEnumerable<FailedPartition>> WriteTranslatingFailures(
+        Key key,
+        IChangeset<AppendedEvent, ExpandoObject> changeset,
+        EventSequenceNumber eventSequenceNumber,
+        WritePlan guardedPlan,
+        SinkWriteOptions options)
+    {
         try
         {
-            failures = WriteDirectlyInOneBatch(changeset, options)
+            return WriteDirectlyInOneBatch(changeset, options)
                 ? await writes.InBatch(() => WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options))
                 : await WriteAfterJoin(key, changeset, eventSequenceNumber, guardedPlan, options);
         }
         catch (MongoWriteException exception) when (options.Mode == SinkWriteMode.GuardedUpsert && IsDuplicateId(exception))
         {
             EvictBulkState(key);
-            failures = [];
+            return [];
         }
         catch (NonIdempotentWriteCannotBeSplit error)
         {
@@ -442,7 +457,6 @@ public partial class Sink(
             logger.RefusedOversizedChangesetSplit(readModel.Identifier, key.ToString(), partition.ToString(), error.Collection, error.MaxBatchSize, string.Join(", ", error.Operations));
             throw new OversizedChangesetCannotBeSplit(readModel.Identifier, key, partition, error);
         }
-        return joinBatch is null ? failures : TakeBulkFailures([joinBatch]).Concat(failures).ToArray();
     }
 
     /// <summary>
@@ -480,8 +494,11 @@ public partial class Sink(
         WritePlan plan,
         SinkWriteOptions options)
     {
-        // Converting runs the joins, which are matched by what the documents hold now. A join on a child this changeset
-        // removes from all has to find the documents still holding it, so the children are removed only afterwards.
+        if (changeset.HasJoined() && changesetConverter is IChangesetConverterWithDirectWrites orderedConverter)
+        {
+            return await WriteInOrder(changeset, orderedConverter, new OrderedWrite(key, eventSequenceNumber, plan, options));
+        }
+
         UpdateDefinitionAndArrayFilters converted;
         if (changesetConverter is IChangesetConverterWithDirectWrites converterWithDirectWrites)
         {
@@ -510,7 +527,7 @@ public partial class Sink(
             await UnsetNullParents(write, options);
         }
 
-        return await WriteUpdate(write, changeset, options);
+        return (await WriteUpdate(write, changeset, options)).Failures;
     }
 
     async Task<BulkBatch?> FlushBeforeJoin(IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
@@ -578,9 +595,9 @@ public partial class Sink(
         // against a Guid-keyed model) cannot be converted to the _id type and throws "Unrecognized Guid
         // format", freezing the partition — even though that value is never used to key a document here.
         var usesJoinTargetsOnlyFilter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin;
-        var filter = usesJoinTargetsOnlyFilter ?
-            FilterDefinition<BsonDocument>.Empty :
-            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+        var filter = usesJoinTargetsOnlyFilter
+            ? FilterDefinition<BsonDocument>.Empty
+            : Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
 
         // A ROOT-level join (no array indexers) never CONSTRUCTS a root document — it only enriches an
         // existing root matched by the join column; the root's own key is set by its From/[FromEvent] source.
@@ -722,14 +739,14 @@ public partial class Sink(
         return await AddToBulk(operation, write.Key, options.PartitionOr(write.Key), write.EventSequenceNumber);
     }
 
-    async Task<IEnumerable<FailedPartition>> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
+    async Task<(IEnumerable<FailedPartition> Failures, UpdateResult? Result)> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
         if (await TryBufferUpdate(write, changeset, options) is { } failures)
         {
-            return failures;
+            return (failures, null);
         }
 
-        await writes.UpdateOne(
+        var result = await writes.UpdateOne(
             Collection,
             write.Filter,
             write.Converted.UpdateDefinition,
@@ -740,7 +757,7 @@ public partial class Sink(
             });
         CacheImmediateWrite(write, changeset, options);
 
-        return [];
+        return ([], result);
     }
 
     async Task<IEnumerable<FailedPartition>?> TryBufferUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
@@ -1206,6 +1223,49 @@ public partial class Sink(
         }
 
         return Option<Key>.None();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved)
+    {
+        await SettleGuardedBulkReads();
+        var keys = new HashSet<Key>(FindBulkKeysHoldingChild(childRemoved));
+
+        var names = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments)
+            .Select(segment => segment.Value.ToMongoDBPropertyName());
+        var filter = Builders<BsonDocument>.Filter.Eq(string.Join('.', names), childRemoved.Key.ToBsonValue());
+
+        using var cursor = await Collection.FindAsync(
+            filter,
+            new FindOptions<BsonDocument> { Projection = Builders<BsonDocument>.Projection.Include("_id") });
+
+        foreach (var document in await cursor.ToListAsync())
+        {
+            if (document.TryGetValue("_id", out var idValue))
+            {
+                keys.Add(new Key(idValue.IsGuid ? idValue.AsGuid : idValue.ToString()!, ArrayIndexers.NoIndexers));
+            }
+        }
+
+        return keys;
+    }
+
+    IEnumerable<Key> FindBulkKeysHoldingChild(ChildRemovedFromAll childRemoved)
+    {
+        if (!_isBulkMode)
+        {
+            yield break;
+        }
+
+        var pathSegments = childRemoved.ChildrenProperty.Segments.Concat(childRemoved.IdentifiedByProperty.Segments).ToArray();
+        foreach (var (cacheKey, cachedState) in _bulkStateCache)
+        {
+            if (TryFindValueInDocument(cachedState, pathSegments, 0, childRemoved.Key) && _bulkKeysByCacheKey.TryGetValue(cacheKey, out var cachedKey))
+            {
+                // The cached write key may carry child array indexers; the parent document is identified by its root key only.
+                yield return cachedKey with { ArrayIndexers = ArrayIndexers.NoIndexers };
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -1730,7 +1790,7 @@ public partial class Sink(
 
             // Only the marks that exist now can belong to operations in this snapshot; a mark added afterwards
             // belongs to a delete still queued and must survive the flush.
-            var batch = new BulkBatch([.._bulkOperations], new(_bulkOperationMetadata), [.._bulkPendingDeletes], _inFlight.Select(batch => batch.Completion.Task).ToArray(), new HashSet<WriteModel<BsonDocument>>(_guardedBulkUpserts));
+            var batch = new BulkBatch([.. _bulkOperations], new(_bulkOperationMetadata), [.. _bulkPendingDeletes], _inFlight.Select(batch => batch.Completion.Task).ToArray(), new HashSet<WriteModel<BsonDocument>>(_guardedBulkUpserts));
             ClearBulkOperations();
             _inFlight.Add(batch);
             return batch;
@@ -2010,6 +2070,18 @@ public partial class Sink(
         var childFilter = Builders<BsonDocument>.Filter.Eq(identifiedByProperty, childRemoved.Key.ToBsonValue());
         var update = Builders<BsonDocument>.Update.PullFilter(string.Join('.', path), childFilter);
         await DirectWrites.UpdateManyAsync(filter, update, new UpdateOptions { ArrayFilters = arrayFilters.Count == 0 ? null : arrayFilters });
+
+        if (_isBulkMode && !_bulkStateCache.IsEmpty)
+        {
+            lock (_bulkLock)
+            {
+                // Dirty parents own queued writes that MongoDB cannot answer yet; preserve their state in place.
+                foreach (var state in _bulkStateCache.Values)
+                {
+                    CachedChildRemoval.Remove(state, childRemoved);
+                }
+            }
+        }
     }
 
     static (List<string> Path, List<BsonDocumentArrayFilterDefinition<BsonDocument>> ArrayFilters, FilterDefinition<BsonDocument> Filter) BuildChildPath(IPropertyPathSegment[] segments)

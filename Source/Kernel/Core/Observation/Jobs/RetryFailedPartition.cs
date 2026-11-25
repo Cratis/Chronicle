@@ -6,6 +6,7 @@ using System.Text.Json;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
@@ -33,8 +34,16 @@ public class RetryFailedPartition(
     protected override bool KeepAfterCompletedWithFailures => false;
 
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "retry_failed_partition");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "retry_failed_partition", State.Progress);
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (Request.EpisodeId is not null && !await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId)) return;

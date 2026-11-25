@@ -1,17 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
+using Cratis.Metrics;
+using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Projections.Engine.for_ProjectionsManager.given;
 
@@ -27,16 +30,22 @@ public class a_projections_manager : Specification
     protected ProjectionDefinition _secondDefinition;
     protected ReadModelDefinition _firstReadModelDefinition;
     protected ReadModelDefinition _secondReadModelDefinition;
+    protected Meter _actualMeter;
+
+    void Destroy() => _actualMeter.Dispose();
 
     void Establish()
     {
         _projectionFactory = Substitute.For<IProjectionFactory>();
-        _projectionFactory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>())
+        _projectionFactory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>())
             .Returns(callInfo => Substitute.For<IProjection>());
 
         _storage = Substitute.For<IStorage>();
         _grainFactory = Substitute.For<IGrainFactory>();
-        _manager = new ProjectionsManager(_projectionFactory, _storage, _grainFactory);
+        _actualMeter = new Meter("projection-cache-specs");
+        var meter = Substitute.For<IMeter<ProjectionsManager>>();
+        meter.ActualMeter.Returns(_actualMeter);
+        _manager = new ProjectionsManager(_projectionFactory, _storage, _grainFactory, meter, Options.Create(new ChronicleOptions()));
         _eventStore = "event-store";
         _namespace = "namespace";
 

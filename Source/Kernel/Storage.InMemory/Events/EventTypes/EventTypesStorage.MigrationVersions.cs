@@ -31,7 +31,8 @@ public partial class EventTypesStorage
         {
             return Task.FromResult<IReadOnlyDictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>>>(
                 _migrationVersions.TryGetValue(eventTypeId, out var versions)
-                    ? versions.ToDictionary(_ => _.Key, _ => (IEnumerable<EventTypeMigrationDefinition>)CloneMigrations(_.Value)) : new Dictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>>());
+                    ? versions.ToDictionary(_ => _.Key, _ => (IEnumerable<EventTypeMigrationDefinition>)CloneMigrations(_.Value))
+                    : new Dictionary<EventTypeMigrationsVersion, IEnumerable<EventTypeMigrationDefinition>>());
         }
     }
 

@@ -69,6 +69,12 @@ public interface IEventStoreNamespaceDatabase
     Task<bool> HasAnyCollections();
 
     /// <summary>
+    /// Checks existing event collections for a persisted event without creating storage or reading payloads.
+    /// </summary>
+    /// <returns>Whether any event collection contains an event.</returns>
+    Task<bool> HasEvents();
+
+    /// <summary>
     /// Checks for the exact requested database name, without resolving casing or creating data.
     /// </summary>
     /// <returns>Whether the exact database exists.</returns>

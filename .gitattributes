@@ -5,6 +5,7 @@
 *.gif   binary
 *.dll   binary
 *.exe   binary
+*.jar   binary
 *.ttf   binary
 # The canonical wire descriptor set. Without this, the catch-all "* text eol=lf" above rewrites line endings
 # inside a serialized FileDescriptorSet and every checkout gets a file protobuf refuses to read.
@@ -12,3 +13,4 @@
 
 *.cs diff=csharp
 *.sln text eol=crlf
+*.bat text eol=crlf

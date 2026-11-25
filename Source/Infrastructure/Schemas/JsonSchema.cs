@@ -72,6 +72,7 @@ public partial class JsonSchema
     {
         Node = node;
         _root = root;
+        _resourceBase = root is null ? null : ResourceId(node, root.ResourceBase);
     }
 
     /// <summary>
@@ -80,7 +81,10 @@ public partial class JsonSchema
     public JsonObjectType Type
     {
         // Read for every value converted, and parsing it walks the node each time.
-        get => (_typeCache ??= new Cached<JsonObjectType>(ParseTypeFromNode(Node))).Value;
+        get
+        {
+            return (_typeCache ??= new Cached<JsonObjectType>(ParseTypeFromNode(Node))).Value;
+        }
         set
         {
             _typeCache = null;
@@ -94,7 +98,10 @@ public partial class JsonSchema
     public string? Format
     {
         // Read for every value converted, and reading it from the node allocates a string each time.
-        get => (_formatCache ??= new Cached<string?>(Node["format"]?.GetValue<string>())).Value;
+        get
+        {
+            return (_formatCache ??= new Cached<string?>(Node["format"]?.GetValue<string>())).Value;
+        }
         set
         {
             _formatCache = null;
@@ -114,7 +121,10 @@ public partial class JsonSchema
     /// </summary>
     public string? Title
     {
-        get => Node["title"]?.GetValue<string>();
+        get
+        {
+            return Node["title"]?.GetValue<string>();
+        }
         set
         {
             if (value is null)
@@ -133,7 +143,10 @@ public partial class JsonSchema
     /// </summary>
     public string? Description
     {
-        get => Node["description"]?.GetValue<string>();
+        get
+        {
+            return Node["description"]?.GetValue<string>();
+        }
         set
         {
             if (value is null)
@@ -170,7 +183,7 @@ public partial class JsonSchema
                     if (value is JsonObject propObj)
                     {
                         var propNode = (JsonObject)propObj.DeepClone();
-                        var prop = new JsonSchemaProperty(key, propNode, Root);
+                        var prop = CreateChildProperty(key, propNode);
                         properties.LoadWithoutSync(key, prop);
                     }
                 }
@@ -244,7 +257,7 @@ public partial class JsonSchema
             }
 
             var resolved = Node["items"] is JsonObject itemNode
-                ? new JsonSchemaProperty(string.Empty, (JsonObject)itemNode.DeepClone(), Root)
+                ? CreateChildProperty(string.Empty, (JsonObject)itemNode.DeepClone())
                 : null;
             return (_itemCache = new Cached<JsonSchema?>(resolved)).Value;
         }
@@ -286,7 +299,7 @@ public partial class JsonSchema
                 {
                     if (value is JsonObject defObj)
                     {
-                        definitions[key] = new JsonSchema((JsonObject)defObj.DeepClone(), this);
+                        definitions[key] = CreateChildSchema((JsonObject)defObj.DeepClone());
                     }
                 }
             }
@@ -304,7 +317,7 @@ public partial class JsonSchema
         {
             if (Node["additionalProperties"] is JsonObject addlObj)
             {
-                return new JsonSchema((JsonObject)addlObj.DeepClone(), Root);
+                return CreateChildSchema((JsonObject)addlObj.DeepClone());
             }
             return null;
         }
@@ -380,14 +393,14 @@ public partial class JsonSchema
         {
             if (HasReference)
             {
-                return Reference ?? this;
+                return ResolvedReference;
             }
 
             var allOf = AllOf;
             if (allOf.Count > 0)
             {
                 return allOf.FirstOrDefault(s => !s.HasReference && s.Node["properties"] is not null)
-                    ?? (allOf[0].HasReference ? allOf[0].Reference ?? this : allOf[0]);
+                    ?? allOf[0].ResolveTypeReference(this);
             }
 
             var anyOf = AnyOf;
@@ -398,7 +411,7 @@ public partial class JsonSchema
                     !(s.HasReference && s.Reference?.Type == JsonObjectType.Null));
                 if (nonNull is not null)
                 {
-                    return nonNull.HasReference ? (nonNull.Reference ?? nonNull) : nonNull;
+                    return nonNull.ResolvedReference;
                 }
 
                 return this;
@@ -418,7 +431,10 @@ public partial class JsonSchema
     /// </summary>
     public IDictionary<string, object?>? ExtensionData
     {
-        get => _extensionDataCache ??= new ExtensionDataDictionary(Node);
+        get
+        {
+            return _extensionDataCache ??= new ExtensionDataDictionary(Node);
+        }
         set
         {
             if (value is null) return;
@@ -866,7 +882,7 @@ public partial class JsonSchema
     /// An unresolvable <c language="csharp">$ref</c> falls back to the referencing node, which declares no type of its own and therefore
     /// constrains nothing - a reference that cannot be followed must not become a rejection.
     /// </remarks>
-    static JsonSchema Effective(JsonSchema schema) => schema.HasReference ? schema.Reference ?? schema : schema;
+    static JsonSchema Effective(JsonSchema schema) => schema.ResolvedReference;
 
     static IReadOnlyList<JsonSchema> UnionBranches(JsonSchema schema)
     {
@@ -925,7 +941,7 @@ public partial class JsonSchema
             {
                 if (item is JsonObject obj)
                 {
-                    list.Add(new JsonSchema((JsonObject)obj.DeepClone(), Root));
+                    list.Add(CreateChildSchema((JsonObject)obj.DeepClone()));
                 }
             }
         }
@@ -976,7 +992,7 @@ public partial class JsonSchema
     {
         var refValue = Node["$ref"]?.GetValue<string>();
         if (refValue is null) return null;
-        return ResolveRootRef(refValue) ?? ResolveResourceRef(refValue);
+        return ResolveScopedRef(refValue);
     }
 
     JsonSchema? ResolveRootRef(string refValue)
@@ -1009,7 +1025,7 @@ public partial class JsonSchema
             }
         }
 
-        return current is JsonObject resolved ? new JsonSchema((JsonObject)resolved.DeepClone(), root) : null;
+        return current is JsonObject resolved ? CreateResolvedSchema(resolved) : null;
     }
 
     void ValidateRequiredProperties(JsonObject content, List<JsonSchemaValidationError> errors)
@@ -1075,7 +1091,10 @@ public partial class JsonSchema
     {
         public new JsonSchemaProperty this[string key]
         {
-            get => base[key];
+            get
+            {
+                return base[key];
+            }
             set
             {
                 base[key] = value;
@@ -1152,7 +1171,10 @@ public partial class JsonSchema
                 }
                 return null;
             }
-            set => node[key] = SerializeValue(value);
+            set
+            {
+                node[key] = SerializeValue(value);
+            }
         }
 
         public void Add(string key, object? value) => this[key] = value;

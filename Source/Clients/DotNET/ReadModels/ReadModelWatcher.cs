@@ -5,6 +5,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Events;
+using Cratis.Chronicle.EventSequences;
 using ContractReadModels = Cratis.Chronicle.Contracts.ReadModels;
 
 namespace Cratis.Chronicle.ReadModels;
@@ -19,12 +20,13 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     readonly IEventStore _eventStore;
     readonly IChronicleServicesAccessor _servicesAccessor;
     readonly JsonSerializerOptions _jsonSerializerOptions;
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     TaskCompletionSource _subscribedTcs;
     Action? _stopped;
     IObservable<ContractReadModels.ReadModelChangeset>? _serverObservable;
     IDisposable? _serverSubscription;
     bool _started;
+    bool _isReducer;
     bool _disposed;
 
     /// <summary>
@@ -62,6 +64,10 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
             _disposed = true;
             subscription = _serverSubscription;
             _serverSubscription = null;
+            if (_isReducer)
+            {
+                _subscribedTcs.TrySetCanceled();
+            }
         }
 
         subscription?.Dispose();
@@ -74,6 +80,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
     public void Start()
     {
         IDisposable? prior;
+        TaskCompletionSource subscribed;
         lock (_sync)
         {
             if (_disposed || _started)
@@ -87,6 +94,7 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
                 _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             }
 
+            subscribed = _subscribedTcs;
             prior = _serverSubscription;
             _serverSubscription = null;
         }
@@ -95,59 +103,16 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         // never leaks the subscription established for the previous connection.
         prior?.Dispose();
 
-        var request = new ContractReadModels.WatchRequest
+        var isReducer = _eventStore.Reducers.HasFor<TReadModel>();
+        _isReducer = isReducer;
+        try
         {
-            EventStore = _eventStore.Name,
-            Namespace = _eventStore.Namespace,
-            ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
-            EventSequenceId = EventSequences.EventSequenceId.Log
-        };
-        _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
-        var subscription = _serverObservable.Subscribe(
-            changeset =>
-            {
-                if (changeset.Subscribed)
-                {
-                    _subscribedTcs.TrySetResult();
-                    return;
-                }
-
-                var readModel = JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions);
-                var changeContext = EventContext.From(
-                    _eventStore.Name,
-                    changeset.Namespace,
-                    EventType.Unknown,
-                    EventSourceType.Default,
-                    changeset.ModelKey,
-                    EventStreamType.All,
-                    EventStreamId.Default,
-                    changeset.EventSequenceNumber,
-                    changeset.CorrelationId,
-                    changeset.Occurred);
-
-                _observable.OnNext(new ReadModelChangeset<TReadModel>(
-                    changeset.Namespace,
-                    changeset.ModelKey,
-                    readModel,
-                    changeset.Removed,
-                    ToChangeType(changeset.ChangeType),
-                    changeContext));
-            },
-            _ => ResetForReconnect(),
-            ResetForReconnect);
-
-        // The stream is kept in a local until it is published, so a disposal that ran while it was being
-        // created closes it here instead of leaking it. The services are never reached under the lock.
-        lock (_sync)
-        {
-            if (!_disposed)
-            {
-                _serverSubscription = subscription;
-                return;
-            }
+            SubscribeToServer(isReducer, subscribed);
         }
-
-        subscription.Dispose();
+        catch (Exception error) when (isReducer)
+        {
+            StreamEnded(subscribed, error);
+        }
     }
 
     /// <inheritdoc/>
@@ -165,6 +130,76 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         _ => ReadModelChangeType.Modified
     };
 
+    void SubscribeToServer(bool isReducer, TaskCompletionSource subscribed)
+    {
+        var eventSequenceId = isReducer
+            ? _eventStore.Reducers.GetHandlerForReadModelType(typeof(TReadModel)).EventSequenceId
+            : EventSequenceId.Log;
+        var request = new ContractReadModels.WatchRequest
+        {
+            EventStore = _eventStore.Name,
+            Namespace = _eventStore.Namespace,
+            ReadModelIdentifier = typeof(TReadModel).GetReadModelIdentifier(),
+            EventSequenceId = eventSequenceId
+        };
+        _serverObservable = _servicesAccessor.Services.ReadModels.Watch(request);
+        var subscription = _serverObservable.Subscribe(
+            changeset => OnServerChangeset(changeset, isReducer, subscribed),
+            error => StreamEnded(subscribed, error),
+            () => StreamEnded(subscribed));
+
+        // The stream is kept in a local until it is published, so a disposal that ran while it was being
+        // created closes it here instead of leaking it. The services are never reached under the lock.
+        lock (_sync)
+        {
+            if (CanPublish(subscribed))
+            {
+                _serverSubscription = subscription;
+                return;
+            }
+        }
+
+        subscription.Dispose();
+    }
+
+    void OnServerChangeset(ContractReadModels.ReadModelChangeset changeset, bool isReducer, TaskCompletionSource subscribed)
+    {
+        if (changeset.Subscribed)
+        {
+            subscribed.TrySetResult();
+            return;
+        }
+
+        _observable.OnNext(ToChangeset(changeset, isReducer));
+    }
+
+    void StreamEnded(TaskCompletionSource subscribed, Exception? error = null) => ResetForReconnect(subscribed, error: error);
+
+    bool CanPublish(TaskCompletionSource subscribed)
+    {
+        if (_disposed) return false;
+        if (!_isReducer) return true;
+        return _started && ReferenceEquals(subscribed, _subscribedTcs);
+    }
+
+    ReadModelChangeset<TReadModel> ToChangeset(ContractReadModels.ReadModelChangeset changeset, bool isReducer) => new(
+        changeset.Namespace,
+        changeset.ModelKey,
+        isReducer && changeset.Removed ? default : JsonSerializer.Deserialize<TReadModel>(changeset.ReadModel, _jsonSerializerOptions),
+        changeset.Removed,
+        ToChangeType(changeset.ChangeType),
+        EventContext.From(
+            _eventStore.Name,
+            changeset.Namespace,
+            EventType.Unknown,
+            EventSourceType.Default,
+            changeset.ModelKey,
+            EventStreamType.All,
+            EventStreamId.Default,
+            changeset.EventSequenceNumber,
+            changeset.CorrelationId,
+            changeset.Occurred));
+
     Task ClientConnected()
     {
         Start();
@@ -173,11 +208,11 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
 
     Task ClientDisconnected()
     {
-        ResetForReconnect();
+        ResetForReconnect(renewReadiness: true);
         return Task.CompletedTask;
     }
 
-    void ResetForReconnect()
+    void ResetForReconnect(TaskCompletionSource? endedSubscription = null, bool renewReadiness = false, Exception? error = null)
     {
         // Tear down the current server stream and clear the started latch so the next
         // OnConnected re-subscribes. Reached both on disconnect and on a stream fault or
@@ -185,11 +220,30 @@ public class ReadModelWatcher<TReadModel> : IReadModelWatcher<TReadModel>, IDisp
         IDisposable? subscription;
         lock (_sync)
         {
+            if (endedSubscription is not null && !ReferenceEquals(endedSubscription, _subscribedTcs)) return;
             subscription = _serverSubscription;
             _serverSubscription = null;
             _started = false;
+            EndReadiness(endedSubscription, renewReadiness, error);
         }
 
         subscription?.Dispose();
+    }
+
+    void EndReadiness(TaskCompletionSource? endedSubscription, bool renewReadiness, Exception? error)
+    {
+        if (!_isReducer || _disposed) return;
+        if (endedSubscription is not null && _subscribedTcs.Task.IsCompletedSuccessfully)
+        {
+            _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        if (error is not null) _subscribedTcs.TrySetException(error);
+        else _subscribedTcs.TrySetCanceled();
+
+        if (renewReadiness)
+        {
+            _subscribedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
     }
 }

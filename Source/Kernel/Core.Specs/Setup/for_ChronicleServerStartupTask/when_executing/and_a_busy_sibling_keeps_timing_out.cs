@@ -21,7 +21,7 @@ public class and_a_busy_sibling_keeps_timing_out : given.a_startup_task
     void Establish()
     {
         _busySilos.FindBusySilo(Arg.Any<Exception>()).Returns(new BusySilo(Sibling, false));
-        _readModelsManager.Ensure().Returns(_ => ++_calls <= TimesOut
+        _systemNamespaces.EnsureDefault().Returns(_ => ++_calls <= TimesOut
             ? Task.FromException(new TimeoutException("Response did not arrive on time"))
             : Task.CompletedTask);
     }

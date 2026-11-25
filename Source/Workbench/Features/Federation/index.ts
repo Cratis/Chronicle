@@ -1,14 +1,36 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 export * from './AllBindings';
+export * from './AllEnrollments';
 export * from './AllGrants';
+export * from './AllIssuedCertificates';
+export * from './AllPolicies';
+export * from './AllSubjectLinks';
 export * from './BindFederationPeer';
+export * from './CreateFederationEnrollment';
+export * from './CurrentEnrollmentStatus';
 export * from './FederatedEvent';
 export * from './FederatedEventBatch';
 export * from './FederationBinding';
+export * from './FederationDirection';
+export * from './FederationEnrollment';
+export * from './FederationEnrollmentCreatedResult';
+export * from './FederationEnrollmentStatus';
 export * from './FederationGrantInformation';
+export * from './FederationIssuedCertificate';
+export * from './FederationPolicy';
+export * from './FederationPolicyEntry';
+export * from './FederationPolicyStatus';
+export * from './FederationRedemption';
+export * from './FederationSubjectLink';
 export * from './Pull';
+export * from './RedeemFederationEnrollment';
+export * from './ResumeFederationPolicy';
+export * from './RevokeFederationEnrollment';
 export * from './RevokeFederationLink';
+export * from './RevokeFederationPolicy';
+export * from './RevokeFederationPolicyDirection';
 export * from './SetFederationGrant';
+export * from './SetFederationPolicy';
+export * from './SuspendFederationPolicy';
 export * from './UnbindFederationPeer';

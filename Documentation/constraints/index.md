@@ -73,6 +73,35 @@ Know the limits of what a constraint covers:
 - The index that records a claim is updated after the event is durable; the event and index update are not crash-atomic. If the update cannot complete, the kernel marks the affected index as pending and refuses governed appends with `ConstraintIndexUnavailable` while it catches up.
 - It is not checked again when the kernel renumbers an append after a duplicate sequence number.
 
+## Rebuilding constraint indexes
+
+A reindex reads only the event types that contribute to the selected constraints, across all their stored generations. For uniqueness, this includes claiming and removal events. For stream closure, it includes closing, reopening, and redaction events. A missing schema for one of those governed types still fails the rebuild; an unrelated type with a missing schema does not prevent it.
+
+Unscoped unique indexes are cleared even when no governed events remain. Scoped unique indexes are cleared as their scopes are encountered in governed history; a scope containing no governed events is left untouched. Reindex progress follows the last governed event processed, not the end of unrelated history. If an index was cleared without processing an event, completion leaves progress unknown so catch-up can establish it safely.
+
+For an operator recovery procedure, see [Rebuild a constraint index](../operations/rebuild-a-constraint-index.md).
+
+### Request an explicit rebuild
+
+The operator command `ReindexConstraints` starts the existing durable reindex job without changing any registered definitions. It is protected by `AdministratorOperations`. For the System store and kernel scope, destructive-operation enforcement requires an administrator even when the broader operations policy is in audit mode. Ordinary event stores retain their own authorization rules.
+
+Send an authenticated `POST` to `/api/events/constraints/operator/reindex-constraints` with this body:
+
+```json
+{
+  "eventStore": "example-store",
+  "namespace": "default",
+  "eventSequenceId": "event-log",
+  "constraintNames": []
+}
+```
+
+An empty `constraintNames` array selects all registered unique and closing constraints that apply to that sequence. To rebuild a subset, supply their names. Unknown names, non-indexed constraint kinds, named constraints that do not apply to the sequence, and an empty applicable selection are validation errors. An outstanding reindex job for the same sequence also refuses the request. A successful command result carries the job identifier in `response`; it means the job was started, not that the rebuild has completed. Follow that identifier in the Jobs view or the Jobs queries to check completion or failure.
+
+The generated gRPC equivalent is `Cratis.Chronicle.Contracts.Events.Constraints.Operator.ConstraintIndexes/ReindexConstraints`, with `EventStore`, `Namespace`, `EventSequenceId`, and `ConstraintNames` request fields. It runs the same command pipeline and returns the job identifier in the command result.
+
+Rebuilding closing constraints is explicitly retroactive: historical closing and reopening events determine the persisted closures after the job completes. Registration alone remains non-retroactive. Rebuilds preserve manual closures and closure rows owned by other constraints; use a narrow name selection when repairing one declaration.
+
 ## Topics
 
 - [Declarative](declarative/toc.yml): define a dedicated rule with builder calls.

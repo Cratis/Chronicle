@@ -53,7 +53,7 @@ models in the graph sink (Neo4j).
 - Properties an event shares by name with a node or edge are mapped automatically, as for a model-bound graph.
 - An `every` block is applied to each `from` of its block, so a rendered declaration writes the mappings out
   under every `from` instead of in an `every`.
-- Previewing a graph projection is not supported.
+- The `Preview` request of the projections service does not preview a graph projection. The Workbench previews one in memory, see [Graph projections](../graph-projections.mdx#preview-in-the-workbench).
 - Rendering a registered graph projection, whichever client registered it, produces a declaration that
   saves unchanged.
 
@@ -106,6 +106,51 @@ An `every` block inside `children` applies its mappings to descendant events too
 For stored declarations created before this behavior was corrected, re-save the original PDL that
 uses `every` inside `children`, then replay if recommended. A kernel upgrade or replay alone does
 not recompile stored definitions.
+
+## Set-once, dictionary removal, ordering, and arithmetic
+
+Chronicle supports the following Screenplay projection statements:
+
+```screenplay
+projection OrderTotals => MyApp.ReadModels.OrderTotals
+  from ItemAdded
+    set once openedAt = $eventContext.occurred
+    add total by quantity * unitPrice
+  from ItemRemoved
+    remove items.$eventContent.itemId
+  children lines identified by id
+    sort by position ascending
+    from LineAdded key lineId
+      parent orderId
+      position = position
+```
+
+`set once` writes when the target is missing or null. Later events do not replace a non-null
+value: zero, false, and an empty string count as already set. A dynamic dictionary target applies
+this rule independently to each entry.
+
+`remove` deletes one dictionary entry, rather than assigning null or removing the read model.
+The container must be a dictionary in the registered read-model schema. Address its entry with
+`.$eventContent.path`, `.$eventContext.path`, or `.$causedBy.subject`, `.name`, or `.userName`.
+An absent entry or container is a no-op, and other entries are retained. Static targets and unknown
+key paths are rejected.
+
+Children append by default (`insert last`). Use `insert first` to prepend, or `sort by` with
+`ascending` or `descending` and a scalar child property, including dotted paths. New children
+with equal values retain insertion order. Missing and null values come first ascending and last
+descending. Updating an existing child never moves it, even when its sort value changes.
+
+`add` and `subtract` accept one optional multiplication after `by`. Chronicle multiplies the two
+numeric operands as decimals before converting the product to the target type. Missing, null,
+nonnumeric operands and overflow fail processing; they do not silently become zero. This is not
+a general arithmetic-expression language, and division is not supported.
+
+Generated PDL preserves these operations and child ordering; the default append order may omit
+its ordering line. Upgrade every kernel that will process the projection before saving or
+replaying a declaration that uses arithmetic factors: older kernels cannot execute the new
+stored product expressions. This delivery adds no SQL-specific sink functionality. Untyped
+composite keys and flat composite identities are not yet supported; typed composite keys retain
+their existing behavior.
 
 ## What remains here
 

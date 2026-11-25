@@ -11,6 +11,32 @@ A client registers the definitions its code declares on every connect. Unchanged
 trigger replay. Before a deployment, check the mapping change, the client's software version, and
 whether its full set still declares every projection you intend to keep.
 
+## When a read-model container changes
+
+Ordinary read-model registration refuses a different container name for an already registered
+read-model identifier, including a case-only difference or a new schema generation. The whole
+read-model batch is rejected before any of its definitions are changed. The error names the read
+model, its stored container, and the requested container; gRPC callers receive `FailedPrecondition`.
+This protects existing data from writes being silently redirected when clients use different naming policies.
+
+After upgrading, keep each existing identifier's container mapping consistent across clients.
+If registration fails unexpectedly, restore the naming policy or explicit container mapping that
+produced the stored name. A newly registered identifier can still use a different default container.
+
+For an intentional container change:
+
+1. Coordinate all clients and direct readers and writers so they agree on the destination.
+2. Use the existing `UpdateDefinition` operation to change the definition explicitly. Saving an
+   existing read model in the Workbench also uses this explicit update path.
+3. Deploy matching client definitions and plan any required rebuild or replay separately before
+   relying on the new destination's contents.
+
+An explicit update changes metadata and routing; it does not rename a table or collection, move
+existing rows, or automatically rebuild data for a container-only change. A schema-generation bump
+is not independent container publication. Clients that still register the old container are refused
+rather than silently reversing the update. This guard does not repair rows stranded by an earlier
+implicit change.
+
 ## When a definition changes
 
 A changed definition — including one that *removes* a child collection — is stored and pushed to the
@@ -112,6 +138,39 @@ a failed kernel registration is reported to the caller and can continue retrying
 until it succeeds or disconnects. Local preparation failures and identity drift stop that retry path;
 they need correction instead. Do not treat an exhausted foreground retry as proof that no artifacts
 registered, or repeatedly restart the host to make it catch up.
+
+## Global projections and concurrent writers
+
+A globally scoped projection writes one read model that every namespace shares, so several namespaces can update the
+same instance at the same time. Each namespace's observer reads the instance, computes the change and writes it back;
+without protection the last writer silently overwrites the other's update.
+
+On the MongoDB sink Chronicle protects a global projection with an **optimistic revision check** when the projection only
+maps event properties onto the read model (for example a counter or a latest-value projection):
+
+- Every instance carries a `__revision`, an `__incarnation` and a `__lastHandled` map with the last handled event
+  sequence number per namespace. The write is applied only when the instance still has the revision it was read with.
+- When another namespace wrote in between, nothing is written. The observer reads the instance again, recomputes the
+  change from what it finds and retries, a bounded number of times, before the partition is reported as failed.
+- Instances that existed before are stamped with an incarnation and revision 0 the first time they are written, so
+  no migration is needed. A deleted and recreated instance is a new incarnation and never matches a write computed
+  against the old one.
+- A redelivered event is applied once per namespace; the sequence numbers of different namespaces are tracked
+  independently and never reject each other.
+- The bookkeeping properties are Chronicle's own and are not part of your read model.
+
+A projection that joins events, has children or removes with events is **not** protected, because those write several
+documents or several parts of one document in separate operations that one revision cannot cover. Chronicle logs a
+single warning per projection registration on each silo, naming the projection and the reason:
+
+```text
+Globally scoped projection <projection> is written without revision checks because <reason>; concurrent namespaces can lose updates to a shared instance
+```
+
+The reason is one of `it joins events`, `it has children`, `it removes with events` or `it targets a graph`. To get the
+protection, split the projection so the shared instance only holds properties set directly from events, or keep the
+projection namespaced. A projection that is protected cannot also hold persisted futures; Chronicle fails the write
+rather than store them unprotected.
 
 ## When a projection is no longer registered — retirement
 

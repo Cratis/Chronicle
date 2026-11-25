@@ -16,6 +16,21 @@ internal static partial class KernelLogMessages
     [LoggerMessage(LogLevel.Information, "TLS certificate loaded successfully. Server will use HTTPS")]
     internal static partial void TlsCertificateLoaded(this ILogger<Kernel> logger);
 
+    [LoggerMessage(LogLevel.Information, "Silo and gateway traffic is encrypted and authenticated with the TLS certificate")]
+    internal static partial void ClusterTrafficEncrypted(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Warning, "Silo and gateway traffic is not encrypted because no TLS certificate file is configured (Tls:CertificatePath)")]
+    internal static partial void ClusterTrafficNotEncrypted(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Information, "Silo and gateway traffic is not encrypted by Chronicle because Clustering:TlsEnabled is false")]
+    internal static partial void ClusterTrafficTlsDisabled(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Information, "TLS certificate reloaded from disk. Subject {Subject}, thumbprint {Thumbprint}, valid until {NotAfter}")]
+    internal static partial void TlsCertificateReloaded(this ILogger<Kernel> logger, string subject, string thumbprint, DateTimeOffset notAfter);
+
+    [LoggerMessage(LogLevel.Error, "The TLS certificate file changed but could not be loaded. Keeping the current certificate")]
+    internal static partial void TlsCertificateReloadFailed(this ILogger<Kernel> logger, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "No TLS certificate configured. Generated a self-signed development certificate (Development mode only)")]
     internal static partial void DevelopmentCertificateGenerated(this ILogger<Kernel> logger);
 
@@ -54,6 +69,21 @@ internal static partial class KernelLogMessages
 
     [LoggerMessage(LogLevel.Information, "Shutdown was requested while the server was still starting. Stopping gracefully instead of continuing to bind")]
     internal static partial void ServerShutdownDuringStartup(this ILogger<Kernel> logger);
+
+    [LoggerMessage(LogLevel.Information, "Chronicle Server stopped. Exiting with code {ExitCode}")]
+    internal static partial void ServerStopped(this ILogger<Kernel> logger, int exitCode);
+
+    [LoggerMessage(LogLevel.Warning, "Chronicle Server stopped. Exiting with code {ExitCode}, which the server requested")]
+    internal static partial void ServerStoppedWithRequestedExitCode(this ILogger<Kernel> logger, int exitCode);
+
+    [LoggerMessage(LogLevel.Critical, "Chronicle Server did not stop within the host shutdown timeout of {ShutdownTimeout}; the stop took {StopDuration}. Exiting with code {ExitCode}")]
+    internal static partial void ServerStopTimedOut(this ILogger<Kernel> logger, Exception? exception, TimeSpan shutdownTimeout, TimeSpan stopDuration, int exitCode);
+
+    [LoggerMessage(LogLevel.Critical, "Chronicle Server failed while stopping. Exiting with code {ExitCode}")]
+    internal static partial void ServerStopFailed(this ILogger<Kernel> logger, Exception? exception, int exitCode);
+
+    [LoggerMessage(LogLevel.Critical, "Chronicle Server stopped, but releasing its services afterwards failed. Exiting with code {ExitCode}")]
+    internal static partial void ServerDisposeFailed(this ILogger<Kernel> logger, Exception? exception, int exitCode);
 
     [LoggerMessage(LogLevel.Warning, "The Workbench feature is enabled but the Workbench UI was not found - it is neither embedded in this build nor present in the web root '{WebRoot}' - the server runs without serving the Workbench UI")]
     internal static partial void WorkbenchUINotAvailable(this ILogger<Kernel> logger, string webRoot);

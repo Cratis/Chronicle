@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Storage.InMemory.EventSequences.Mutations;
 /// </summary>
 sealed class EventSequenceMutationRegistryState
 {
-    readonly object _gate = new();
+    readonly Lock _gate = new();
     readonly Dictionary<EventSequenceMutationId, EventSequenceMutationRegistration> _registrations = [];
     readonly Dictionary<EventSequenceIdentityKey, EventSequenceMutationHead> _heads = [];
     readonly Dictionary<EventSequenceMutationId, EventSequenceMutationHistoryEntry> _historiesById = [];

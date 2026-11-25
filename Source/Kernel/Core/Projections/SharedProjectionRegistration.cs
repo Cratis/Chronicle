@@ -21,12 +21,13 @@ internal static class SharedProjectionRegistration
     /// <param name="fullSetOwner">The owner of the full set, if any.</param>
     /// <param name="registrant">The registering application, if any.</param>
     /// <param name="version">The application version, if any.</param>
+    /// <param name="cancellation">Cancelled when the caller has stopped waiting, if it can say so.</param>
     /// <returns>The registration task.</returns>
-    internal static async Task Register(IProjectionsManager manager, string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null)
+    internal static async Task Register(IProjectionsManager manager, string signature, IEnumerable<ProjectionDefinition> definitions, ProjectionOwner? fullSetOwner = null, string? registrant = null, string? version = null, GrainCancellationToken? cancellation = null)
     {
         try
         {
-            await manager.RegisterShared(signature, definitions, fullSetOwner, registrant, version);
+            await manager.RegisterShared(signature, definitions, fullSetOwner, registrant, version, cancellation);
         }
         catch (Exception exception) when (IncompatibleSiloRelease.IsLikely(exception))
         {

@@ -13,7 +13,8 @@ public class a_startup_task_with_an_empty_namespace : a_startup_task
     void Establish()
     {
         var emptyStorage = Substitute.For<IEventStoreNamespaceStorage>();
-        emptyStorage.HasData().Returns(false);
+        emptyStorage.HasData().Returns(true);
+        emptyStorage.HasPersistedState().Returns(false);
         _eventStoreStorage.GetNamespace(_emptyNamespace).Returns(emptyStorage);
         _namespaces.GetAll().Returns([_emptyNamespace, _namespace]);
     }

@@ -10,11 +10,11 @@ namespace Orleans.Hosting.for_ChronicleServerStartupTask.when_executing;
 /// </summary>
 public class and_the_namespace_has_no_data : given.a_startup_task
 {
-    void Establish() => _namespaceStorage.HasData().Returns(Task.FromResult(false));
+    void Establish() => _namespaceStorage.HasPersistedState().Returns(Task.FromResult(false));
 
     Task Because() => Execute();
 
-    [Fact] void should_check_whether_the_namespace_has_data() => _namespaceStorage.Received(1).HasData();
+    [Fact] void should_check_whether_the_namespace_has_data_for_job_recovery_and_for_the_background_work() => _namespaceStorage.Received(2).HasPersistedState();
     [Fact] void should_not_discover_and_register_reactors_for_the_namespace() => _reactors.DidNotReceive().DiscoverAndRegister(_eventStore, _namespace);
     [Fact] void should_subscribe_pattern_capture_for_the_first_append() => _patternCapture.Received(1).Subscribe(_eventStore, _namespace);
     [Fact] void should_not_rehydrate_jobs() => _jobsManager.DidNotReceive().Rehydrate();

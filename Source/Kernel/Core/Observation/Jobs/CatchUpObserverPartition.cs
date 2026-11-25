@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Jobs;
 using Microsoft.Extensions.Logging;
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -18,8 +19,16 @@ public class CatchUpObserverPartition(
     ILogger<CatchUpObserverPartition> logger) : Job<CatchUpObserverPartitionRequest, JobStateWithLastHandledEvent>, ICatchUpObserverPartition
 {
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "catch_up_partition");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "catch_up_partition", State.Progress);
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })

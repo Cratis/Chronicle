@@ -25,13 +25,15 @@ public class and_an_event_is_missing_its_event_source : Specification
         "some-event-store",
         "some-namespace",
         "event-log",
-        [new EventForEventSourceId(
-            string.Empty,
-            "Default",
-            "All",
-            "Default",
-            new EventType("SomeEvent", 1, false),
-            "{}")]));
+        [
+            new EventForEventSourceId(
+               string.Empty,
+               "Default",
+               "All",
+               "Default",
+               new EventType("SomeEvent", 1, false),
+               "{}")
+        ]));
 
     [Fact] void should_not_be_successful() => _result.ShouldNotBeSuccessful();
     [Fact] void should_have_validation_errors() => _result.ShouldHaveValidationErrors();

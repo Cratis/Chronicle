@@ -38,5 +38,5 @@ public class and_in_flight_catchup_failed_to_start_and_quarantined_the_observer 
     [Fact] void should_keep_the_unstarted_partition() => _stateStorage.State.CatchingUpPartitions.ShouldContain(_partition);
     [Fact] void should_not_start_replacement_catchup() => _jobsManager.DidNotReceive().Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());
     [Fact] void should_not_retry_partition_catchup() => CheckDidNotStartCatchupJob();
-    [Fact] void should_not_resubscribe() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_not_resubscribe() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

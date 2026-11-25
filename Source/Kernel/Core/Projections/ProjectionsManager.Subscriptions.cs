@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -86,6 +87,15 @@ public partial class ProjectionsManager
             try
             {
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
+
+                // An observer released while dormant is subscribed: its durable subscription and its queue entry hold the
+                // subscription, and asking it would wake it. Starting, a silo leaving and the timers all pass here.
+                if (await IsHeldByDurableSubscription(definition, @namespace))
+                {
+                    _subscribed.TryAdd((definition.Identifier, @namespace), default);
+                    return;
+                }
+
                 if (reconcile && await observer.IsSubscriptionEstablished())
                 {
                     _subscribed.TryAdd((definition.Identifier, @namespace), default);
@@ -112,29 +122,34 @@ public partial class ProjectionsManager
             }
         }));
 
-        if (!missing.IsEmpty || _failedNamespaceSetups.Contains(@namespace))
-        {
-            await EnsureEngineNamespace(@namespace);
-        }
-
+        // The projection engine needs no setup per namespace: it compiles a projection for a namespace the first time an
+        // observer of that namespace asks for it, once per silo, and shares the compiled plan between namespaces.
         if (!missing.IsEmpty)
         {
             await SubscribeMissingInNamespace(@namespace, missing, reconcile);
         }
     }
 
-    async Task EnsureEngineNamespace(EventStoreNamespaceName @namespace)
+    async Task<bool> IsHeldByDurableSubscription(ProjectionDefinition definition, EventStoreNamespaceName @namespace)
     {
+        if (dormantObservers is null || _pendingRevival.ContainsKey((definition.Identifier, @namespace)))
+        {
+            return false;
+        }
+
         try
         {
-            // Engine setup must be retried even if subscriptions succeeded on the failed pass.
-            await projectionsService.NamespaceAdded(_eventStoreName, @namespace);
-            _failedNamespaceSetups.Remove(@namespace);
+            // Dormant is the queue's word that the record and its entry are the subscription. A resident observer that lost its
+            // live subscription with its silo has a record too, and is exactly what this manager repairs.
+            return await dormantObservers.Find(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId)) is
+            {
+                Kind: ObserverSubscriptionKind.Projection or ObserverSubscriptionKind.CollapsingProjection
+            };
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            _failedNamespaceSetups.Add(@namespace);
-            logger.FailedEnsuringSubscriptionsInNamespace(exception, @namespace);
+            // Without the answer the observer is asked, as it was before it could be released.
+            return false;
         }
     }
 
@@ -142,7 +157,6 @@ public partial class ProjectionsManager
     {
         var readModels = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
             .ToDictionary(readModel => readModel.Identifier);
-        var schemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
         await Task.WhenAll(definitions.Select(async definition =>
         {
             try
@@ -158,7 +172,7 @@ public partial class ProjectionsManager
 
                 // Reviving takes a fresh subscription: a reconciling one cannot end a retirement.
                 var revive = _pendingRevival.ContainsKey((definition.Identifier, @namespace));
-                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: revive, reconcile: reconcile && !revive);
+                await SubscribeIfNotSubscribed(definition, readModel, @namespace, reactivateRetired: revive, reconcile: reconcile && !revive);
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
                 if (!await observer.IsSubscriptionEstablished())
                 {
@@ -222,7 +236,7 @@ public partial class ProjectionsManager
         // After a silo departure the cache cannot be trusted: a pass that started before it can have re-added entries.
         var reconcileAll = _reconcileAllNamespaces;
         _reconcileAllNamespaces = false;
-        var missingNamespaces = namespaces.Where(namespaceName => reconcileAll || _failedNamespaceSetups.Contains(namespaceName) ||
+        var missingNamespaces = namespaces.Where(namespaceName => reconcileAll ||
             activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
         await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
         {
@@ -239,7 +253,7 @@ public partial class ProjectionsManager
     }
 
     bool IsCurrentActiveDefinition(ProjectionDefinition definition) =>
-        !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
+        !definition.UsesUnsupportedEventSequence() && !_removingProjections.Contains(definition.Identifier) && definition.IsActive && State.Projections.Contains(definition) && !IsBeingReplaced(definition);
 
     bool IsBeingReplaced(ProjectionDefinition definition)
     {

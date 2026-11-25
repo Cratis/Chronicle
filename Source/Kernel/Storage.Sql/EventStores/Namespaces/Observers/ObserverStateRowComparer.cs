@@ -47,7 +47,8 @@ public sealed class ObserverStateRowComparer : IEqualityComparer<ObserverState>,
         x.Id == y.Id &&
         x.Owner == y.Owner &&
         x.OwnershipRevision == y.OwnershipRevision &&
-        x.RunningStateChangedAt == y.RunningStateChangedAt;
+        x.RunningStateChangedAt == y.RunningStateChangedAt &&
+        x.LastSeenAt == y.LastSeenAt;
 
     static bool SameSerializedColumns(ObserverState x, ObserverState y) =>
         x.PartitionClaims == y.PartitionClaims &&
@@ -55,7 +56,8 @@ public sealed class ObserverStateRowComparer : IEqualityComparer<ObserverState>,
         x.TypeSetControl == y.TypeSetControl &&
         x.Initialization == y.Initialization &&
         x.DeliveryFences == y.DeliveryFences &&
-        x.WebhookProbe == y.WebhookProbe;
+        x.WebhookProbe == y.WebhookProbe &&
+        x.DurableSubscription == y.DurableSubscription;
 
     static bool SameAlert(ObserverState x, ObserverState y) =>
         x.AlertLifecycleId == y.AlertLifecycleId &&

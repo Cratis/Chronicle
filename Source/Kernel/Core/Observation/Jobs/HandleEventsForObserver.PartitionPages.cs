@@ -10,9 +10,9 @@ using OneOf.Types;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
-/// <summary>
+/// <content>
 /// Partial for walking the event sequence once for an observer that takes pages spanning partitions, and settling each partition on its own.
-/// </summary>
+/// </content>
 public partial class HandleEventsForObserver
 {
     async Task<(JobStepResult? Result, EventSequenceNumber LastSuccessfullyHandledEventSequenceNumber)> HandlePartitionPage(
@@ -113,7 +113,8 @@ public partial class HandleEventsForObserver
 
             var target = subscriberSelector.Select(_subscription, batches[0].Partition);
             var subscriber = (IObserverPartitionPageSubscriber)grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(ObserverSubscriberKey.AllPartitions, target.SiloAddress));
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }.WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }
+                .WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
             _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, ObserverSubscriberKey.AllPartitions, target, subscriberContext);
             onDispatch();
             var result = await subscriber.OnNextPartitionsWithin(subscriberTimeout, decrypted, subscriberContext);

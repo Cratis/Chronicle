@@ -7,6 +7,7 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnCoercion;
 using static Cratis.Chronicle.Storage.Sql.Sinks.JsonColumnDocuments;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
@@ -49,9 +50,9 @@ public partial class Sink
     {
         var unwrapped = UnwrapConceptValue(value);
 
-        // CompareLoose also permits object/collection ToString matches. Those exotic targets
-        // cannot safely be narrowed to JSON scalar nodes.
-        if (unwrapped is null || unwrapped.ToString()?.StartsWith("System.", StringComparison.Ordinal) == true) return context.Entries;
+        // Structural identities cannot safely be narrowed to JSON scalar nodes.
+        // Keep the existing broad handling of null and exotic System.* targets as well.
+        if (ChildKeyComparison.RequiresJsonScan(unwrapped)) return context.Entries;
         var helper = context.GetService<ISqlGenerationHelper>();
         var name = helper.DelimitIdentifier(column.Name);
         var table = helper.DelimitIdentifier(context.TableName);

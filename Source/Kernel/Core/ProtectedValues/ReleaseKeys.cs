@@ -43,20 +43,8 @@ public static class ReleaseKeys
     /// <returns>The usable key, or null when erased.</returns>
     public static async Task<EncryptionKey?> TryGetForRelease(IEncryptionKeyStorage storage, EventStoreName eventStore, EventStoreNamespaceName ns, EncryptionKeyIdentifier identifier, CancellationToken cancellationToken = default)
     {
-        var memo = _current.Value ?? new Memo(TimeProvider.System, _grace);
-        var attempt = memo.BeginAttempt(cancellationToken);
-        attempt.Check();
-        var pair = await attempt.Wait(storage.TryGetLatestFor(eventStore, ns, identifier));
-        var key = new FenceKey(storage, eventStore, ns, identifier);
-        while (true)
-        {
-            var snapshot = await memo.Read(key, attempt);
-            attempt.Check();
-            if (!memo.IsFresh(snapshot)) continue;
-            if (pair is null || snapshot.Fence.Covers(pair)) return null;
-            memo.Uses[(key, pair)] = true;
-            return pair.Key;
-        }
+        var pair = await TryGetPairForRelease(storage, (eventStore, ns, identifier), cancellationToken: cancellationToken);
+        return pair?.Key;
     }
 
     /// <summary>Get a key, reporting an unavailable fence as an empty protected value.</summary>
@@ -92,8 +80,9 @@ public static class ReleaseKeys
         var fence = (await memo.Read(new(storage, eventStore, ns, identifier), memo.BeginAttempt(cancellationToken))).Fence;
 
         // A protocol authority initializes an empty fence for provisioning; that is not evidence of erasure.
-        return fence is { NewKeyAllowed: true, Lifecycle: 1, ErasedLifecycle: 0 } &&
-            fence.ErasedThrough.Value == 0 && fence.ErasedKeyFingerprints.Count == 0 ? null : fence;
+        var isEmptyFence = fence is { NewKeyAllowed: true, Lifecycle: 1, ErasedLifecycle: 0 } &&
+            fence.ErasedThrough.Value == 0 && fence.ErasedKeyFingerprints.Count == 0;
+        return isEmptyFence ? null : fence;
     }
 
     /// <summary>Revalidate all material immediately before the synchronous hand-off.</summary>
@@ -108,27 +97,28 @@ public static class ReleaseKeys
         var memo = _current.Value;
         if (memo is null) return handoff();
         var attempt = memo.BeginAttempt(cancellationToken);
+        var stalePasses = 0;
         while (true)
         {
             attempt.Check();
-            List<Snapshot> checkedReads = [];
-            foreach (var (use, _) in memo.Uses)
+            var uses = memo.Uses.Keys.ToArray();
+            var observations = memo.Observations?.ToArray() ?? [];
+            var checkedReads = await memo.ReadAll(uses.Select(use => use.Key).Concat(observations.Select(observation => observation.Key)), attempt, refreshAll: stalePasses >= 2);
+            foreach (var use in uses)
             {
-                var snapshot = await memo.Read(use.Key, attempt);
+                var snapshot = checkedReads[use.Key];
                 if (snapshot.Fence.Covers(use.Pair)) throw new EncryptionKeyErased(use.Key.Identifier, snapshot.Fence!);
-                checkedReads.Add(snapshot);
             }
 
-            foreach (var (key, observe) in memo.Observations?.AsEnumerable() ?? [])
+            foreach (var (key, observe) in observations)
             {
-                var snapshot = await memo.Read(key, attempt);
-                observe(snapshot.Fence);
-                checkedReads.Add(snapshot);
+                observe(checkedReads[key].Fence);
             }
 
             // Refresh can itself stall. All reads must still be inside the lease at the actual hand-off.
             attempt.Check();
-            if (checkedReads.TrueForAll(memo.IsFresh)) return handoff();
+            if (checkedReads.Values.All(memo.IsFresh)) return handoff();
+            stalePasses++;
         }
     }
 
@@ -154,6 +144,46 @@ public static class ReleaseKeys
         (memo.Observations ??= []).Add((new(storage, address.EventStore, address.Namespace, address.Identifier), observe));
     }
 
+    /// <summary>Reads an allowed key pair and registers it for release-time lease validation.</summary>
+    /// <param name="storage">The key storage.</param>
+    /// <param name="address">The key identity.</param>
+    /// <param name="revision">A recorded or fallback revision, or null for latest.</param>
+    /// <param name="cancellationToken">Cancellation of the read.</param>
+    /// <returns>The pair, or null when absent or erased.</returns>
+    internal static async Task<EncryptionKeyAtRevision?> TryGetPairForRelease(
+        IEncryptionKeyStorage storage,
+        (EventStoreName EventStore, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier) address,
+        EncryptionKeyRevision? revision = null,
+        CancellationToken cancellationToken = default)
+    {
+        var memo = _current.Value ?? new Memo(TimeProvider.System, _grace);
+        var attempt = memo.BeginAttempt(cancellationToken);
+        var key = new FenceKey(storage, address.EventStore, address.Namespace, address.Identifier);
+        var before = await memo.Read(key, attempt);
+        if (IsErased(revision, before.Fence)) return null;
+        attempt.Check();
+        var pair = await attempt.Wait(revision is null
+            ? storage.TryGetLatestFor(address.EventStore, address.Namespace, address.Identifier)
+            : storage.TryGetAtRevisionFor(address.EventStore, address.Namespace, address.Identifier, revision));
+        return await TrackPair(memo, key, pair, attempt);
+    }
+
+    static async Task<EncryptionKeyAtRevision?> TrackPair(Memo memo, FenceKey key, EncryptionKeyAtRevision? pair, ReleaseAttempt attempt)
+    {
+        while (true)
+        {
+            var snapshot = await memo.Read(key, attempt);
+            attempt.Check();
+            if (!memo.IsFresh(snapshot)) continue;
+            if (pair is null || snapshot.Fence.Covers(pair)) return null;
+            memo.Uses[(key, pair)] = true;
+            return pair;
+        }
+    }
+
+    static bool IsErased(EncryptionKeyRevision? revision, EncryptionKeyErasure? fence) =>
+        revision is not null && revision.Value <= (fence?.ErasedThrough.Value ?? 0);
+
     sealed record FenceKey(IEncryptionKeyStorage Storage, EventStoreName EventStore, EventStoreNamespaceName Namespace, EncryptionKeyIdentifier Identifier);
     sealed record Snapshot(EncryptionKeyErasure? Fence, ulong Version, long Started, DateTimeOffset WallStarted);
 
@@ -174,6 +204,20 @@ public static class ReleaseKeys
         /// <param name="cancellationToken">Cancellation of the release.</param>
         /// <returns>The bounded validation attempt.</returns>
         public ReleaseAttempt BeginAttempt(CancellationToken cancellationToken) => new(clock, grace * 3, cancellationToken);
+
+        public Task<Dictionary<FenceKey, Snapshot>> ReadAll(IEnumerable<FenceKey> keys, ReleaseAttempt attempt, bool refreshAll)
+        {
+            const int maxConcurrentReads = 32;
+            var distinctKeys = keys.Distinct(new FenceKeyComparer()).ToArray();
+            if (refreshAll)
+            {
+                // Batched retries could not keep every fence fresh; align all read starts in one wave.
+                foreach (var key in distinctKeys) _reads.TryRemove(key, out _);
+            }
+
+            var batches = distinctKeys.Chunk(refreshAll ? int.MaxValue : maxConcurrentReads);
+            return ReadBatches(batches, attempt);
+        }
 
         public async Task<Snapshot> Read(FenceKey key, ReleaseAttempt attempt)
         {
@@ -197,6 +241,21 @@ public static class ReleaseKeys
                 if (IsFresh(snapshot)) return snapshot;
                 _reads.TryRemove(new KeyValuePair<FenceKey, Lazy<Task<Snapshot>>>(key, pending));
             }
+        }
+
+        async Task<Dictionary<FenceKey, Snapshot>> ReadBatches(IEnumerable<FenceKey[]> batches, ReleaseAttempt attempt)
+        {
+            var snapshots = new Dictionary<FenceKey, Snapshot>(new FenceKeyComparer());
+            foreach (var batch in batches)
+            {
+                var reads = await Task.WhenAll(batch.Select(key => Read(key, attempt)));
+                for (var index = 0; index < batch.Length; index++)
+                {
+                    snapshots.Add(batch[index], reads[index]);
+                }
+            }
+
+            return snapshots;
         }
 
         async Task<Snapshot> ReadFresh(FenceKey key)

@@ -20,17 +20,24 @@ internal static class FailedPartitionGroupConverters
     /// </summary>
     /// <param name="partitions">The failed partitions to group.</param>
     /// <returns>The groups, largest first and then most recently failed first.</returns>
-    internal static IEnumerable<FailedPartitionGroup> ToGroups(this IEnumerable<Concepts.Observation.FailedPartition> partitions) =>
-        [.. partitions
+    internal static IEnumerable<FailedPartitionGroup> ToGroups(this IEnumerable<Concepts.Observation.FailedPartition> partitions)
+    {
+        var groups = partitions
             .Where(partition => !partition.IsResolved)
             .GroupBy(partition => (partition.ObserverId, partition.LastAttempt.Kind))
             .Select(group => ToGroup(group.Key.ObserverId, group.Key.Kind, [.. group]))
             .OrderByDescending(group => group.PartitionCount)
-            .ThenByDescending(group => group.LastObserved)];
+            .ThenByDescending(group => group.LastObserved);
+        return [.. groups];
+    }
 
     static FailedPartitionGroup ToGroup(ObserverId observerId, FailureKind kind, IReadOnlyList<Concepts.Observation.FailedPartition> partitions)
     {
         var withAttempts = partitions.Where(partition => partition.Attempts.Any()).ToArray();
+        var examples = partitions
+            .OrderByDescending(partition => partition.Attempts.Any() ? partition.LastAttempt.Occurred : DateTimeOffset.MinValue)
+            .Take(MaximumExamples)
+            .Select(partition => partition.Partition.ToString());
 
         return new(
             $"{observerId}/{kind}",
@@ -40,9 +47,6 @@ internal static class FailedPartitionGroupConverters
             partitions.Count(partition => partition.IsQuarantined),
             withAttempts.Length == 0 ? null : withAttempts.Min(partition => partition.Attempts.First().Occurred),
             withAttempts.Length == 0 ? null : withAttempts.Max(partition => partition.LastAttempt.Occurred),
-            [.. partitions
-                .OrderByDescending(partition => partition.Attempts.Any() ? partition.LastAttempt.Occurred : DateTimeOffset.MinValue)
-                .Take(MaximumExamples)
-                .Select(partition => partition.Partition.ToString())]);
+            [.. examples]);
     }
 }

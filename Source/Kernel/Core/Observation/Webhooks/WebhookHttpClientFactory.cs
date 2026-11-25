@@ -3,6 +3,7 @@
 
 using System.Net.Http.Headers;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 
 namespace Cratis.Chronicle.Observation.Webhooks;
@@ -64,7 +65,7 @@ public class WebhookHttpClientFactory(IHttpClientFactory httpClientFactory, IOAu
 
         foreach (var header in webhookTarget.Headers)
         {
-            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+            CustomHttpHeaders.Add(client.DefaultRequestHeaders, header.Key, header.Value);
         }
 
         return client;

@@ -23,8 +23,8 @@ public class and_the_first_pass_fails : given.an_event_sequence
         await _silo.TimerRegistry.FireAllAsync();
     }
 
-    Task Because() => _silo.TimerRegistry.FireAllAsync();
+    Task Because() => _eventSequence.ReconcileSubscriptions();
 
-    [Fact] async Task should_retry_projections_on_the_next_tick() => await _projections.Received(2).EnsureSubscribedIn(EventStoreNamespace);
-    [Fact] async Task should_retry_captures_on_the_next_tick() => await _captures.Received(2).EnsureSubscribedIn(EventStoreNamespace);
+    [Fact] async Task should_retry_projections_on_the_next_pass() => await _projections.Received(2).EnsureSubscribedIn(EventStoreNamespace);
+    [Fact] async Task should_retry_captures_on_the_next_pass() => await _captures.Received(2).EnsureSubscribedIn(EventStoreNamespace);
 }

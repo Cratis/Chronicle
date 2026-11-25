@@ -71,7 +71,6 @@ internal static class ReadModelDefinitionConverters
             {
                 { (ReadModelGeneration)contract.Type.Generation, schema }
             },
-            indexes
-        );
+            indexes);
     }
 }

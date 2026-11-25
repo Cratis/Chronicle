@@ -55,6 +55,7 @@ public class when_capturing_the_enabled_transport : Specification
         EmitEvent(0); // Warm the actual source-generated logger/provider/callback path outside measurement.
         for (ulong sequence = 1; sequence <= 20; sequence++)
         {
+            // Task.Delay: time-behavior; pace the allocation/rate benchmark at twenty events per second.
             await Task.Delay(TimeSpan.FromMilliseconds(50));
             var baselineAllocated = GC.GetAllocatedBytesForCurrentThread();
             var baselineStarted = Stopwatch.GetTimestamp();
@@ -93,7 +94,11 @@ public class when_capturing_the_enabled_transport : Specification
         _scope = beginScope(_logger, _stream, 1);
         _activitySource = new ActivitySource(ClusterLoadDeliveryDiagnosticsLogging.Category);
         var traces = typeof(ChronicleClient).Assembly.GetType("Cratis.Chronicle.Reactors.ReactorTraces")!;
-        _span = (IDisposable)traces.GetMethod("Handle", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [new TraceSource(_activitySource), "synthetic-store", "synthetic-namespace", "synthetic-sequence", "cluster-integrity"])!;
+        var contextType = typeof(ChronicleClient).Assembly.GetType("Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing.ObserverSpanContext", throwOnError: true)!;
+        var handle = traces.GetMethod("Handle", BindingFlags.NonPublic | BindingFlags.Static, [typeof(IActivitySource<ReactorService>), contextType, typeof(ClientSpanNames)])
+            ?? throw new MissingMethodException(traces.FullName, "Handle(IActivitySource<Reactors>, ObserverSpanContext, ClientSpanNames)");
+        var context = Activator.CreateInstance(contextType, "synthetic-store", "synthetic-namespace", "synthetic-sequence", "cluster-integrity")!;
+        _span = (IDisposable)handle.Invoke(null, [new TraceSource(_activitySource), context, ClientSpanNames.Legacy])!;
     }
 
     async Task MeasureArm(Type? type, string samplePath)
@@ -115,6 +120,8 @@ public class when_capturing_the_enabled_transport : Specification
         {
             // Absolute scheduling avoids accumulating callback duration into the 20/s cadence.
             var delay = TimeSpan.FromMilliseconds(sequence * 50) - window.Elapsed;
+
+            // Task.Delay: time-behavior; preserve the benchmark's absolute twenty-per-second emission cadence.
             if (delay > TimeSpan.Zero) await Task.Delay(delay);
             var allocated = GC.GetAllocatedBytesForCurrentThread();
             var started = Stopwatch.GetTimestamp();

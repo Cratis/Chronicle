@@ -52,13 +52,13 @@ Keep the `.Contracts` project focused on event definitions and the dependencies 
 
 ### Project File Configuration
 
-Set the package identity and metadata in the `.Contracts` project file. The example uses placeholder package versions; choose versions that match your application:
+Set the package identity and metadata in the `.Contracts` project file. Assembly-level `[EventStore]` requires `Cratis.Chronicle` 15.12.7 or later; the example references 19.162.0, a published release. The contracts project's own `PackageVersion` is a placeholder for your package:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>FulfillmentService.Events.Contracts</AssemblyName>
     <PackageId>FulfillmentService.Events.Contracts</PackageId>
     <PackageVersion>1.0.0</PackageVersion>
@@ -70,7 +70,7 @@ Set the package identity and metadata in the `.Contracts` project file. The exam
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cratis.Chronicle" Version="1.0.0" />
+    <PackageReference Include="Cratis.Chronicle" Version="19.162.0" />
   </ItemGroup>
 
 </Project>

@@ -55,6 +55,14 @@ Choose the authorization type expected by the API:
 
 OAuth uses the application's credentials, without an interactive user sign-in. Its discovery and token requests follow the HTTP capture destination policy below, so include the identity and token hosts when configuring host approvals.
 
+## Custom header visibility
+
+Custom header values are write-only: configure them when registering an HTTP service. List and observable queries return `HeaderValuesSet`, a map of header names to whether a non-empty value is configured. Whitespace counts as a value; an empty string does not. The compatibility `Headers` map retains the names but contains only empty strings. Workbench shows these names and value-set indicators, never the values.
+
+This filtering applies when a definition is read, including definitions stored before the upgrade; no migration or replay is needed. HTTP delivery still uses the configured values. Registration remains a full replacement, not a header patch: do not re-register a query result as configuration, since redacted values cannot restore the originals. Workbench header editing is not available in this version.
+
+An older Kernel still returns legacy header values until upgraded. Upgrade every Kernel serving queries to protect list and observable responses during a rolling deployment.
+
 ## HTTP capture destination policy
 
 Before polling an HTTP service, configure which destinations the Kernel may call. HTTP captures use the `ExternalServices` destination policy, independently of `Webhooks`: approving a webhook host does not approve a capture source or its OAuth hosts.

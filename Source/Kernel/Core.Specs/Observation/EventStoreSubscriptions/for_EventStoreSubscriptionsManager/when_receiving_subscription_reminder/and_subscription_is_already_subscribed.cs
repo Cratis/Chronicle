@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Namespaces;
+using Cratis.Chronicle.Storage.Observation;
 using Orleans.TestKit;
 
 namespace Cratis.Chronicle.Observation.EventStoreSubscriptions.for_EventStoreSubscriptionsManager.when_receiving_subscription_reminder;
@@ -19,23 +20,25 @@ public class and_subscription_is_already_subscribed : Specification
     TestKitSilo _silo;
     EventStoreSubscriptionsManager _manager;
     IObserver _observer;
+    IObserverDefinitionsStorage _definitions;
 
     async Task Establish()
     {
         _silo = new TestKitSilo();
-        _silo.AddNamespaceCasing();
+        _definitions = _silo.AddObserverDefinitions();
 
         var localSiloDetails = Substitute.For<ILocalSiloDetails>();
         _silo.AddService(localSiloDetails);
 
         var namespaces = Substitute.For<INamespaces>();
-        namespaces.GetAll().Returns([EventStoreNamespaceName.Default]);
+        namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
         _silo.AddProbe(_ => namespaces);
 
         var eventType = new EventType("5db7cfa2-0fcb-4791-b174-83ff2806d654", EventTypeGeneration.First);
 
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(true);
+        _definitions.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty with { EventTypes = [eventType] });
         _observer.GetEventTypes().Returns([eventType]);
         _silo.AddProbe(_ => _observer);
 
@@ -51,12 +54,14 @@ public class and_subscription_is_already_subscribed : Specification
     async Task Because() => await _manager.ReceiveReminder(ReminderName, default);
 
     [Fact] void should_not_unsubscribe() => _observer.DidNotReceive().Unsubscribe();
+    [Fact] void should_read_the_event_types_from_the_definition_registry() => _definitions.Received(1).Get(new ObserverId($"{SourceEventStore}->{TargetEventStore}"));
+    [Fact] void should_not_ask_for_the_event_types_separately() => _observer.DidNotReceive().GetEventTypes();
 
     [Fact]
     void should_not_subscribe_again() =>
         _observer.DidNotReceive().Subscribe<IEventStoreSubscriptionObserverSubscriber>(
             Arg.Any<ObserverType>(),
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<object?>(),
             Arg.Any<bool>(),

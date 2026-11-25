@@ -12,9 +12,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Sink"/> that runs a multi-write cycle in one database transaction.
-/// </summary>
+/// </content>
 /// <remarks>
 /// A cycle with a single write keeps its single command and its own implicit transaction. A cycle with two or more
 /// writes (joins, child removals and the direct change) is rerun as a whole when it fails and nothing else is kep
@@ -78,7 +78,16 @@ public partial class Sink
     async Task<bool> ApplyJoinsThenDirectChanges(CycleWrite write, Change[] nonJoinedChanges)
     {
         var scope = write.Scope;
-        await ApplyJoinsAndChildRemovals(scope, write.Changeset, write.SequenceNumber, write.Key.ArrayIndexers);
+        var order = OrderWrites(write.Changeset.Changes);
+        await ApplyJoinsAndChildRemovals(scope, order.Leading, write.SequenceNumber, write.Key.ArrayIndexers);
+        var wroteDirect = await TryApplyFirstDirectRun(write, nonJoinedChanges, order.FirstDirect);
+        await ApplyTrailingRuns(scope, write.Key, write.Id, write.SequenceNumber, order.Trailing, wroteDirect);
+        return wroteDirect;
+    }
+
+    async Task<bool> TryApplyFirstDirectRun(CycleWrite write, Change[] nonJoinedChanges, Change[] firstDirect)
+    {
+        var scope = write.Scope;
         if (nonJoinedChanges.Length == 0 || !await ShouldWriteDirectChanges(scope, write.Id, write.Changeset, nonJoinedChanges))
         {
             return false;
@@ -91,9 +100,9 @@ public partial class Sink
             return false;
         }
 
-        ApplyChangesToEntity(entry, nonJoinedChanges, write.Key.ArrayIndexers);
+        ApplyChangesToEntity(entry, firstDirect, write.Key.ArrayIndexers);
         AdvanceLastHandledSequenceNumber(entry, write.SequenceNumber);
-        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, nonJoinedChanges, write.SequenceNumber, write.Key.ArrayIndexers));
+        await SaveRecoveringFromInsertRace(scope, entry, new PendingWrite(write.Id, firstDirect, write.SequenceNumber, write.Key.ArrayIndexers));
         return true;
     }
 

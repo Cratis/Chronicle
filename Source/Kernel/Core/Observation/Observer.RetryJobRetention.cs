@@ -8,9 +8,9 @@ using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Dropping stopped retry jobs that can never resume.
-/// </summary>
+/// </content>
 /// <remarks>
 /// A stopped retry job that was never prepared is refused when resumed, and one that belongs to an old failure episode
 /// or deferral is refused by the retry job itself. Neither is terminal, so nothing ever removes them: the first kind

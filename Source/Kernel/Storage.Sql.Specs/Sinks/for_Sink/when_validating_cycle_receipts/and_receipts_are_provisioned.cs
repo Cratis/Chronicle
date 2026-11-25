@@ -7,6 +7,7 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_validating_cycle_rece
 /// Verify against receipts provisioned by Migrate: one read-only validation per sink, then none while warm.
 /// </summary>
 /// <typeparam name="THarness">The database.</typeparam>
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public abstract class and_receipts_are_provisioned<THarness> : given.a_receipt_cycle<THarness>
     where THarness : ISqlSinkHarness
 {

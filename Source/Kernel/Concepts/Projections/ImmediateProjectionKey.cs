@@ -34,40 +34,6 @@ public record ImmediateProjectionKey(
     /// <param name="key"><see cref="ImmediateProjectionKey"/> to convert from.</param>
     public static implicit operator string(ImmediateProjectionKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString()
-    {
-        if (StreamScope is not null)
-        {
-            return KeyHelper.Combine(
-                ProjectionId,
-                EventStore,
-                Namespace,
-                EventSequenceId,
-                StreamScopeMarker,
-                Uri.EscapeDataString(StreamScope.EventSourceId.Value),
-                Uri.EscapeDataString(StreamScope.EventSourceType?.Value ?? string.Empty),
-                Uri.EscapeDataString(StreamScope.EventStreamType.Value),
-                Uri.EscapeDataString(StreamScope.EventStreamId.Value),
-                SessionId?.ToString() ?? string.Empty,
-                ReadModelKey);
-        }
-
-        if (ReadModelKey.Value.Contains(KeyHelper.Separator))
-        {
-            // Mark the new layout so a key with one separator cannot be mistaken for an older key with a session.
-            // The read-model key is last and can therefore absorb all remaining fragments when parsed.
-            return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKeyMarker, SessionId?.ToString() ?? string.Empty, ReadModelKey);
-        }
-
-        if (SessionId != default)
-        {
-            return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKey, SessionId);
-        }
-
-        return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKey);
-    }
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
@@ -104,5 +70,39 @@ public record ImmediateProjectionKey(
         }
 
         return KeyHelper.Parse<ImmediateProjectionKey>(key);
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        if (StreamScope is not null)
+        {
+            return KeyHelper.Combine(
+                ProjectionId,
+                EventStore,
+                Namespace,
+                EventSequenceId,
+                StreamScopeMarker,
+                Uri.EscapeDataString(StreamScope.EventSourceId.Value),
+                Uri.EscapeDataString(StreamScope.EventSourceType?.Value ?? string.Empty),
+                Uri.EscapeDataString(StreamScope.EventStreamType.Value),
+                Uri.EscapeDataString(StreamScope.EventStreamId.Value),
+                SessionId?.ToString() ?? string.Empty,
+                ReadModelKey);
+        }
+
+        if (ReadModelKey.Value.Contains(KeyHelper.Separator))
+        {
+            // Mark the new layout so a key with one separator cannot be mistaken for an older key with a session.
+            // The read-model key is last and can therefore absorb all remaining fragments when parsed.
+            return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKeyMarker, SessionId?.ToString() ?? string.Empty, ReadModelKey);
+        }
+
+        if (SessionId != default)
+        {
+            return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKey, SessionId);
+        }
+
+        return KeyHelper.Combine(ProjectionId, EventStore, Namespace, EventSequenceId, ReadModelKey);
     }
 }

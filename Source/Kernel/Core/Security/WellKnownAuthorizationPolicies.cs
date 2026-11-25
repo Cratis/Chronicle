@@ -17,4 +17,14 @@ public static class WellKnownAuthorizationPolicies
     /// Authorizes System-store operational recovery, in audit mode by default.
     /// </summary>
     public const string AdministratorOperations = "Chronicle.Administrator.Operations";
+
+    /// <summary>
+    /// Authorizes redeeming a federation enrollment code and reading the enrollment status of this kernel.
+    /// </summary>
+    public const string FederationEnrollment = "Chronicle.Federation.Enroll";
+
+    /// <summary>
+    /// Authorizes managing the hosted federation this kernel is the authority for: enrollments, issued certificates, subject policies and links.
+    /// </summary>
+    public const string FederationManagement = "Chronicle.Federation.Manage";
 }

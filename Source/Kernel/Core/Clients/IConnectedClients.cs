@@ -18,9 +18,19 @@ namespace Cratis.Chronicle.Clients;
 /// that silo, making the tracking local per silo. Use
 /// <see cref="ConnectedClientsGrainFactoryExtensions.GetConnectedClients"/> to get the grain for a silo.
 /// </remarks>
-[Version(2)]
+[Version(3)]
 public interface IConnectedClients : IGrainWithStringKey
 {
+    /// <summary>
+    /// Drop reservations that expired and disconnect clients that have not been seen within the stale threshold.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Run by the <see cref="Supervision.ISiloSupervisor"/> of the silo as the safety net for a client that vanished without
+    /// its connection reporting it. A connection that closes is reported through <see cref="OnClientDisconnected"/> at once.
+    /// </remarks>
+    Task Revise();
+
     /// <summary>
     /// Report that a client was connected.
     /// </summary>

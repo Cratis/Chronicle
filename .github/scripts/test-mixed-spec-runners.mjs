@@ -11,8 +11,12 @@ import { v3Projects, shippingProjects, shippingRunners, ordinaryFilter, childCom
 import { collectorArgs, verifyExit, verifyDeadline, main as verifyCollector } from './verify-mixed-specs-collector.mjs';
 import './spec-project-contracts.mjs';
 import { benchmarkProject, inventory, ordinaryProjects, validateSolutionProjects } from './mixed-specs-selection.mjs';
-import { sourcePlan } from './spec-shards.mjs';
+import { ORDINARY_SHARDS, ordinaryShardIds, sourcePlan } from './spec-shards.mjs';
+import { coreSpecFixture } from './core-spec-fixture.mjs';
+import { coreUnitId } from './core-spec-partition.mjs';
 import { selectProducerArtifacts, loadProducerEvidence } from './run-mixed-specs.mjs';
+import { receiptFor, verifyReceipts } from './spec-shards.mjs';
+import { SpecHangWatchdog } from './spec-hang-watchdog.mjs';
 
 const scratch = path.resolve('.ai-work/chronicle-spec5-runners/mock-contracts');
 async function fixture() {
@@ -45,10 +49,10 @@ function graph(projectPath = v3Projects[0]) {
     };
 }
 
-test('exact 33 executable v3 + 3 shipping boundary, not a Storage prefix heuristic', () => {
-    assert.equal(v3Projects.length, 33);
+test('exact 35 executable v3 + 3 shipping boundary, not a Storage prefix heuristic', () => {
+    assert.equal(v3Projects.length, 35);
     assert.deepEqual(Object.values(shippingRunners), ['none', 'v2', 'v3']);
-    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 36);
+    assert.equal(new Set([...v3Projects, ...shippingProjects]).size, 38);
     assert.ok(v3Projects.includes(benchmarkProject));
     for (const name of ['Aspire', 'Storage.Vault', 'Storage.AzureKeyVault']) assert.ok(v3Projects.some(x => x.endsWith(`/${name}.Specs.csproj`)));
     assert.equal(v3Projects.filter(x => x.startsWith('Integration/')).length, 7);
@@ -142,10 +146,10 @@ test('selection rejects mixed cores, missing assets, stale versions and local fl
 test('documented collector grammar has one child argument with a bare executable and quoted arguments', () => {
     const info = { runner: 'v3', dll: '/a folder/Different.Assembly.dll' };
     const filter = 'FullyQualifiedName~a&FullyQualifiedName!~b|Name="quoted"';
-    const call = invocation(info, { root: '/repo', directory: '/fresh output', filter, timeout: 123 });
+    const call = invocation(info, { root: '/repo', directory: '/fresh output', filter, timeout: 123, classWatchdog: true });
     assert.deepEqual(call.args.slice(0, 9), ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', '/fresh output/coverage.cobertura.xml']);
     assert.equal(call.args.length, 10);
-    assert.equal(call.args[9], 'dotnet "/a folder/Different.Assembly.dll" "-filterVSTest" "FullyQualifiedName~a&FullyQualifiedName!~b|Name=\\"quoted\\"" "-result-trx" "/fresh output/results.trx"');
+    assert.equal(call.args[9], 'dotnet "/a folder/Different.Assembly.dll" "-filterVSTest" "FullyQualifiedName~a&FullyQualifiedName!~b|Name=\\"quoted\\"" "-result-trx" "/fresh output/results.trx" "-noAutoReporters" "-noColor" "-reporter" "json" "-diagnostics" "-longRunning" "120"');
     assert.equal(childCommand('dotnet', ['a\\', 'a\\"b', '$(touch evil);&|']), 'dotnet "a\\\\" "a\\\\\\"b" "$(touch evil);&|"');
     assert.throws(() => childCommand('dotnet', ['line\nbreak']));
     for (const executable of ['"dotnet"', '/a folder/dotnet', 'dotnet;rm', '']) assert.throws(() => childCommand(executable, []), /plain path/);
@@ -196,19 +200,32 @@ test('benchmark production hits are allowed only for the benchmark selection, ne
     }
 });
 
-test('MOCK collector nonzero 37 is exact; missing output cannot rescue or replace it', async () => {
+test('MOCK collector nonzero 37 is exact and project progress is streamed before launch and after exit', async t => {
     const options = await fixture();
     const info = { project: v3Projects[0], runner: 'v3', dll: options.dll };
+    const lines = [];
+    t.mock.method(console, 'log', line => lines.push(line));
     let calls = 0;
-    await assert.rejects(runProject(info, options, async () => { calls++; return { code: 37 }; }), error => error.exitCode === 37);
+    await assert.rejects(runProject(info, options, async (command, args, execution) => {
+        assert.deepEqual(execution, { cwd: options.root, timeout: options.timeout });
+        calls++;
+        assert.deepEqual(lines, [`[specs] start project=${info.project} elapsed=0ms exit=pending`]);
+        return { code: 37 };
+    }), error => error.exitCode === 37);
     assert.equal(calls, 1);
+    assert.equal(lines.length, 2);
+    assert.ok(lines[1].startsWith(`[specs] finish project=${info.project} elapsed=`));
+    assert.match(lines[1], /elapsed=\d+ms exit=37$/);
     assert.equal((await runProcess(process.execPath, ['-e', 'process.exit(37)'], { timeout: 2000, capture: true })).code, 37);
 });
 
-test('MOCK success requires both fresh TRX and real source hits, once per invocation', async () => {
+test('MOCK success requires both fresh TRX and real source hits, once per invocation', async t => {
+    let lines;
+    t.mock.method(console, 'log', line => lines.push(line));
     for (const mode of ['valid', 'no-trx', 'no-coverage', 'empty-coverage', 'failed-trx']) {
         const options = await fixture();
         const info = { project: v3Projects[0], runner: 'v3', dll: options.dll };
+        lines = [];
         const execute = async () => {
             if (mode !== 'no-trx') await writeFile(path.join(options.directory, 'results.trx'), trx(mode === 'failed-trx' ? 'Failed' : 'Passed'));
             if (mode !== 'no-coverage') await writeFile(path.join(options.directory, 'coverage.cobertura.xml'), mode === 'empty-coverage' ? '<coverage><packages /></coverage>' : coverage());
@@ -216,6 +233,9 @@ test('MOCK success requires both fresh TRX and real source hits, once per invoca
         };
         if (mode === 'valid') await runProject(info, options, execute);
         else await assert.rejects(runProject(info, options, execute));
+        const progress = lines.filter(line => line.startsWith('[specs]'));
+        assert.equal(progress.length, 2);
+        assert.ok(progress[1].endsWith(`exit=${mode === 'valid' ? 0 : 1}`));
     }
 });
 
@@ -226,7 +246,7 @@ test('MOCK stale results are rejected before launch', async () => {
 });
 
 const retryContext = { sha: 'merge-sha', runId: '123', runAttempt: '2' };
-function producerFixture(attempts = [1, 1]) {
+function producerFixture(attempts = Array(ORDINARY_SHARDS).fill(1)) {
     const jobs = attempts.flatMap((attempt, index) => Array.from({ length: attempt }, (_, i) => ({
         id: (index + 1) * 10 + i, name: `specs-other (${index + 1})`, run_id: 123, run_attempt: i + 1,
         head_sha: 'head-sha', status: 'completed', conclusion: 'success',
@@ -238,19 +258,29 @@ function producerFixture(attempts = [1, 1]) {
     }));
     return [[{ jobs, total_count: jobs.length }], [{ artifacts, total_count: artifacts.length }]];
 }
+function producerEndpoints([jobs, pages]) {
+    const artifacts = pages.flatMap(page => page.artifacts);
+    const endpoints = { 'jobs?filter=latest&per_page=30': jobs };
+    for (const shard of ordinaryShardIds()) {
+        const name = `coverage-results-specs-other-${shard}`;
+        const matches = artifacts.filter(artifact => artifact.name === name);
+        endpoints[`artifacts?name=${name}&per_page=30`] = [{ artifacts: matches, total_count: matches.length }];
+    }
+    return endpoints;
+}
 test('API evidence selects retained and mixed successful producer attempts, not aggregate attempt', () => {
-    for (const attempts of [[1, 1], [1, 2], [2, 1], [2, 2]]) {
+    for (const attempts of [[1, 1, 1, 1], [1, 2, 1, 2], [2, 1, 2, 1], [2, 2, 2, 2]]) {
         const pages = producerFixture(attempts);
         for (const job of pages[0][0].jobs) {
             if (job.run_attempt < attempts[Number(job.name.match(/\d/)[0]) - 1]) job.conclusion = 'failure';
         }
         const evidence = selectProducerArtifacts(...pages, retryContext);
         assert.deepEqual(evidence.producers.map(p => p.runAttempt), attempts.map(String));
-        assert.deepEqual(evidence.producers.map(p => p.artifactId), [100, 101]);
+        assert.deepEqual(evidence.producers.map(p => p.artifactId), [100, 101, 102, 103]);
     }
 });
 test('API evidence accepts reusable workflow caller names, including retained and mixed attempts', () => {
-    for (const attempts of [[1, 1], [1, 2]]) {
+    for (const attempts of [[1, 1, 1, 1], [1, 2, 2, 1]]) {
         const [jobs, artifacts] = producerFixture(attempts);
         for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
         assert.deepEqual(selectProducerArtifacts(jobs, artifacts, retryContext).producers.map(p => p.runAttempt), attempts.map(String));
@@ -258,7 +288,7 @@ test('API evidence accepts reusable workflow caller names, including retained an
 });
 test('API evidence rejects ambiguous caller prefixes, including direct/reusable and disjoint attempts', () => {
     for (const prefix of ['', 'other-caller / ']) {
-        const [jobs, artifacts] = producerFixture([1, 2]);
+        const [jobs, artifacts] = producerFixture([1, 2, 1, 1]);
         const duplicate = { ...jobs[0].jobs[0], id: 999, name: `${prefix}specs-other (1)`, run_attempt: 2 };
         for (const job of jobs[0].jobs) job.name = `requested-integration-5501 / ${job.name}`;
         jobs[0].jobs.push(duplicate);
@@ -273,12 +303,16 @@ test('API evidence does not match unrelated job-name suffixes', () => {
 });
 test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, incomplete or duplicate provenance', () => {
     const reject = mutate => {
-        const [jobs, artifacts] = producerFixture([1, 2]);
+        const [jobs, artifacts] = producerFixture([1, 2, 2, 1]);
         mutate(jobs[0], artifacts[0]);
         assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), /producer/i);
     };
     for (const conclusion of ['failure', 'cancelled', 'skipped', null]) reject(j => { j.jobs[2].conclusion = conclusion; });
     reject(j => { j.jobs[2].status = 'in_progress'; });
+    for (const conclusion of ['failure', 'cancelled', 'skipped', null]) reject(j => { j.jobs[4].conclusion = conclusion; });
+    reject((j, a) => { a.artifacts[2].created_at = '2026-11-01T00:01:15Z'; });
+    reject(j => { j.jobs = j.jobs.filter(job => job.name !== 'specs-other (4)'); j.total_count = j.jobs.length; });
+    reject((j, a) => { a.artifacts.push({ ...a.artifacts[2], name: `coverage-results-specs-other-${ORDINARY_SHARDS + 1}` }); a.total_count++; });
     reject(j => { j.jobs[2].run_attempt = 3; });
     reject(j => { j.jobs[0].run_id = 999; });
     reject((j, a) => { a.artifacts[0].workflow_run.id = 999; });
@@ -293,25 +327,298 @@ test('API evidence rejects unsuccessful latest jobs and stale, wrong-run/SHA, in
     reject(j => { j.jobs.push({ ...j.jobs[0], id: 999 }); j.total_count++; });
     reject((j, a) => { a.artifacts.push({ ...a.artifacts[0], id: 999 }); a.total_count++; });
 });
-test('producer API acquisition paginates all attempts and propagates unavailable/malformed evidence', async () => {
-    const pages = producerFixture([1, 2]);
+test('API identity failures name the offending ids, records and attempts', () => {
+    const [jobs, artifacts] = producerFixture();
+    const twin = { ...artifacts[0].artifacts[0], run_attempt: 2 };
+    artifacts[0].artifacts.push(twin);
+    artifacts[0].total_count++;
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext),
+        /Invalid\/duplicate producer API identities: artifacts .*duplicate id 100 \(coverage-results-specs-other-1 attempt n\/a, coverage-results-specs-other-1 attempt 2\)/);
+    const [badJobs, goodArtifacts] = producerFixture();
+    badJobs[0].jobs[0].id = -5;
+    assert.throws(() => selectProducerArtifacts(badJobs, goodArtifacts, retryContext),
+        /jobs .*invalid id -5 \(specs-other \(1\) attempt 1\)/);
+});
+test('API identity failures format malformed JSON values safely and cap the list', () => {
+    for (const mutate of [job => { job.id = -1; job.name = { toString: null }; }, job => { job.id = { toString: null }; }]) {
+        const [jobs, artifacts] = producerFixture();
+        mutate(jobs[0].jobs[0]);
+        assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext),
+            error => !(error instanceof TypeError) && /^Invalid\/duplicate producer API identities: jobs/.test(error.message));
+    }
+    const [jobs, artifacts] = producerFixture();
+    jobs[0].jobs.forEach(job => { job.id = -job.id; });
+    for (let i = jobs[0].jobs.length; i < 12; i++) jobs[0].jobs.push({ id: -(i + 1000), name: `extra-${i}`, run_attempt: 1 });
+    jobs[0].total_count = jobs[0].jobs.length;
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), error => {
+        assert.equal(error.message.split('; ').length, 11);
+        return error.message.endsWith('; +2 more') && (error.message.match(/invalid id/g) ?? []).length === 10;
+    });
+});
+test('API identity validation accepts failed-job re-run artifacts with distinct ids', () => {
+    const [jobs, artifacts] = producerFixture([1, 2, 1, 1]);
+    artifacts[0].artifacts.push({ ...artifacts[0].artifacts[1], id: 900, created_at: '2026-11-01T00:01:15Z' });
+    artifacts[0].total_count++;
+    // Identity validation passes; the later per-shard artifact rules still reject the extra same-name artifact.
+    assert.throws(() => selectProducerArtifacts(jobs, artifacts, retryContext), error => !/identities/.test(error.message) && /producer artifact/i.test(error.message));
+});
+test('producer API acquisition paginates latest attempts and exact names and propagates unavailable/malformed evidence', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const pages = producerFixture();
     const jobs = pages[0][0].jobs;
-    pages[0] = [{ jobs: jobs.slice(0, 1), total_count: 3 }, { jobs: jobs.slice(1), total_count: 3 }];
+    pages[0] = [{ jobs: jobs.slice(0, 1), total_count: jobs.length }, { jobs: jobs.slice(1), total_count: jobs.length }];
+    const endpoints = producerEndpoints(pages);
+    const options = carriedProducerOptions({ context, endpoints });
+    assert.equal((await loadProducerEvidence(context, options)).producers[1].runAttempt, '1');
+    assert.deepEqual(options.calls, Object.keys(endpoints));
+    await assert.rejects(loadProducerEvidence(context, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
+    await assert.rejects(loadProducerEvidence(context, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
+});
+test('producer API exact-name queries ignore unrelated artifacts shifting and repeating across run pages', async () => {
+    const [jobs, pages] = producerFixture();
+    const artifacts = pages[0].artifacts;
+    const unrelated = { id: 900, name: 'coverage-results-integration-mongo' };
+    const unfiltered = [
+        { artifacts: [unrelated, ...artifacts.slice(0, 2)], total_count: 6 },
+        { artifacts: [unrelated, ...artifacts.slice(2)], total_count: 6 }
+    ];
+    const fixture = { context: { ...retryContext, runAttempt: '1' }, endpoints: producerEndpoints([jobs, unfiltered]) };
+    fixture.endpoints['artifacts?per_page=30'] = unfiltered;
+    const options = carriedProducerOptions(fixture);
+    const execute = async (...args) => {
+        // Integration uploads keep shifting the unfiltered pages, including unrelated id collisions.
+        unfiltered[0].artifacts.unshift({ id: 100, name: `coverage-results-integration-${options.calls.length}` });
+        for (const page of unfiltered) page.total_count = unfiltered.reduce((count, entry) => count + entry.artifacts.length, 0);
+        return options.execute(...args);
+    };
+    const evidence = await loadProducerEvidence(fixture.context, { ...options, execute });
+    assert.deepEqual(evidence.producers.map(producer => producer.artifactId), [100, 101, 102, 103]);
+    assert.deepEqual(options.calls, Object.keys(fixture.endpoints).filter(endpoint => endpoint !== 'artifacts?per_page=30'));
+});
+test('producer API still rejects a missing exact-name artifact', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const endpoints = producerEndpoints(producerFixture());
+    endpoints['artifacts?name=coverage-results-specs-other-4&per_page=30'] = [{ artifacts: [], total_count: 0 }];
+    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), /Expected exactly 4 producer artifacts/);
+});
+test('producer API validates each exact-name pagination count before combining artifacts', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const endpoints = producerEndpoints(producerFixture());
+    endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'][0].total_count = 2;
+    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), /Incomplete producer API pagination: artifacts/);
+});
+test('producer API still names invalid producer artifact ids', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const endpoints = producerEndpoints(producerFixture());
+    endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'][0].artifacts[0].id = -5;
+    await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })),
+        /Invalid\/duplicate producer API identities: artifacts .*invalid id -5 \(coverage-results-specs-other-1 attempt n\/a\)/);
+});
+test('producer API still names duplicate producer ids within and across exact-name listings', async () => {
+    for (const sameName of [true, false]) {
+        const context = { ...retryContext, runAttempt: '1' };
+        const endpoints = producerEndpoints(producerFixture());
+        const first = endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'][0];
+        if (sameName) {
+            first.total_count = 2;
+            endpoints['artifacts?name=coverage-results-specs-other-1&per_page=30'].push({
+                artifacts: [{ ...first.artifacts[0], run_attempt: 2 }], total_count: 2
+            });
+        } else endpoints['artifacts?name=coverage-results-specs-other-2&per_page=30'][0].artifacts[0].id = 100;
+        const pattern = sameName
+            ? /duplicate id 100 \(coverage-results-specs-other-1 attempt n\/a, coverage-results-specs-other-1 attempt 2\)/
+            : /duplicate id 100 \(coverage-results-specs-other-1 attempt n\/a, coverage-results-specs-other-2 attempt n\/a\)/;
+        await assert.rejects(loadProducerEvidence(context, carriedProducerOptions({ context, endpoints })), pattern);
+    }
+});
+test('producer API preserves rejection of older same-name rerun artifacts, including expired ones', async () => {
+    for (const expired of [false, true]) {
+        const fixture = carriedProducerFixture();
+        const page = fixture.endpoints['artifacts?name=coverage-results-specs-other-2&per_page=30'][0];
+        page.artifacts.push({ ...page.artifacts[0], id: 900, expired, created_at: '2026-11-18T12:59:00Z' });
+        page.total_count++;
+        await assert.rejects(loadProducerEvidence(fixture.context, carriedProducerOptions(fixture)), /Expected exactly 4 producer artifacts/);
+    }
+});
+test('producer API retries a server error on a page, then reports the captured response', async () => {
+    const context = { ...retryContext, runAttempt: '1' };
+    const options = carriedProducerOptions({ context, endpoints: producerEndpoints(producerFixture()) });
+    const serverError = { code: 1, stdout: '', stderr: 'gh: Server Error (HTTP 502)' };
+    const env = { GITHUB_REPOSITORY: 'Cratis/Chronicle' };
     let calls = 0;
-    const options = { env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
+    const waits = [];
+    const wait = async milliseconds => { waits.push(milliseconds); };
+    const recovering = async (...args) => calls++ === 0 ? serverError : options.execute(...args);
+    assert.equal((await loadProducerEvidence(context, { env, wait, execute: recovering })).producers[1].runAttempt, '1');
+    assert.equal(calls, ORDINARY_SHARDS + 2);
+    assert.deepEqual(waits, [5000]);
+
+    let failing = 0;
+    waits.length = 0;
+    await assert.rejects(loadProducerEvidence(context, { env, wait, execute: async () => { failing++; return serverError; } }),
+        /API failed \(1\): gh: Server Error \(HTTP 502\)/);
+    assert.equal(failing, 3);
+    assert.deepEqual(waits, [5000, 10000]);
+
+    const long = `gh: Server Error (HTTP 503) ${'x'.repeat(3000)}`;
+    await assert.rejects(loadProducerEvidence(context, { env, wait, execute: async () => ({ code: 1, stderr: long }) }),
+        error => error.message.endsWith(long.slice(-2000)) && !error.message.includes('HTTP 503'));
+
+    let clock = 0;
+    const timeouts = [];
+    let slow = 0;
+    const slowServer = async (command, args, options) => { slow++; timeouts.push(options.timeout); clock += 145000; return serverError; };
+    await assert.rejects(loadProducerEvidence(context, { env, wait, now: () => clock, execute: slowServer }), /HTTP 502/);
+    assert.equal(slow, 1, 'no retry once the shared acquisition budget is spent');
+    assert.deepEqual(timeouts, [60000]);
+
+    let forbidden = 0;
+    await assert.rejects(loadProducerEvidence(context, { env, wait, execute: async () => { forbidden++; return { code: 1, stderr: 'gh: Forbidden (HTTP 403)' }; } }),
+        /API failed \(1\): gh: Forbidden \(HTTP 403\)/);
+    assert.equal(forbidden, 1);
+});
+
+// Projected from run 44301164153 attempts 1/2: retained jobs have new ids and
+// run_attempt values, but preserve BOTH execution timestamps (unlike producerFixture).
+function carriedProducerFixture({ sqlOnly = false, allCarried = false } = {}) {
+    const context = { sha: '6fdcc813d9242b82a5a4c4127f5706c1bf894ab9', runId: '44301164153', runAttempt: allCarried ? '3' : '2' };
+    const executions = [
+        [134793518341, '12:13:49', '12:20:18'], [134793518352, '12:13:48', '13:01:49'],
+        [134793518329, '12:13:48', '12:18:01'], [134793518350, '12:13:49', '12:19:30']
+    ];
+    const first = executions.map(([id, start, end], index) => ({
+        id, name: `specs-other (${index + 1})`, run_id: Number(context.runId), run_attempt: 1,
+        head_sha: context.sha, status: 'completed', conclusion: index === 1 && !sqlOnly ? 'failure' : 'success',
+        started_at: `2026-11-18T${start}Z`, completed_at: `2026-11-18T${end}Z`
+    }));
+    const copiedIds = [134822580502, 134822578447, 134822581075, 134822582522];
+    const second = first.map((job, index) => ({ ...job, id: copiedIds[index], run_attempt: 2 }));
+    if (!sqlOnly) Object.assign(second[1], { started_at: '2026-11-18T13:06:32Z', completed_at: '2026-11-18T13:12:45Z', conclusion: 'success' });
+    // Model a further failed-jobs/SQL-only rerun retaining every ordinary execution.
+    const latest = allCarried ? second.map((job, index) => ({ ...job, id: 134830278864 + index, run_attempt: 3 })) : second;
+    const page = (key, records) => [{ [key]: records, total_count: records.length }];
+    const artifacts = second.map((job, index) => ({
+        id: index + 100, name: `coverage-results-specs-other-${index + 1}`, expired: false,
+        created_at: new Date(Date.parse(job.completed_at) - 1000).toISOString(),
+        workflow_run: { id: Number(context.runId), head_sha: context.sha }
+    }));
+    const endpoints = {
+        ...producerEndpoints([page('jobs', latest), page('artifacts', artifacts)]),
+        'attempts/1/jobs?per_page=30': page('jobs', first), 'attempts/2/jobs?per_page=30': page('jobs', second)
+    };
+    return { context, endpoints };
+}
+function carriedProducerOptions(fixture) {
+    const calls = [];
+    return { calls, env: { GITHUB_REPOSITORY: 'Cratis/Chronicle' }, execute: async (command, args) => {
         assert.equal(command, 'gh');
         assert.deepEqual(args.slice(0, 3), ['api', '--paginate', '--slurp']);
-        if (calls === 0) assert.ok(args[3].endsWith('/123/jobs?filter=all&per_page=100'));
-        return { code: 0, stdout: JSON.stringify(pages[calls++]) };
+        const endpoint = args[3].split(`/runs/${fixture.context.runId}/`)[1];
+        calls.push(endpoint);
+        assert.ok(fixture.endpoints[endpoint], `Unexpected endpoint: ${endpoint}`);
+        return { code: 0, stdout: JSON.stringify(fixture.endpoints[endpoint]) };
     } };
-    assert.equal((await loadProducerEvidence(retryContext, options)).producers[1].runAttempt, '2');
-    assert.equal(calls, 2);
-    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 1 }) }), /API failed/);
-    await assert.rejects(loadProducerEvidence(retryContext, { ...options, execute: async () => ({ code: 0, stdout: '{}' }) }), /pages/);
+}
+for (const [name, settings, expected] of [
+    ['mixed failed-jobs retry', {}, ['1', '2', '1', '1']],
+    ['all ordinary jobs carried forward again', { allCarried: true }, ['1', '2', '1', '1']],
+    ['SQL-only retry', { sqlOnly: true }, ['1', '1', '1', '1']]
+]) {
+    test(`producer acquisition resolves actual execution attempts: ${name}`, async () => {
+        const fixture = carriedProducerFixture(settings);
+        const options = carriedProducerOptions(fixture);
+        const evidence = await loadProducerEvidence(fixture.context, options);
+        assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), expected);
+        assert.deepEqual(evidence.producers.map(producer => producer.artifactId), [100, 101, 102, 103]);
+        assert.deepEqual(options.calls.filter(endpoint => endpoint.startsWith('artifacts?')),
+            ordinaryShardIds().map(shard => `artifacts?name=coverage-results-specs-other-${shard}&per_page=30`));
+        assert.deepEqual(options.calls.slice(ORDINARY_SHARDS + 1), settings.allCarried
+            ? ['attempts/2/jobs?per_page=30', 'attempts/1/jobs?per_page=30'] : ['attempts/1/jobs?per_page=30']);
+        const plan = evidence.producers.map(({ shard }) => ({ shard, projects: [v3Projects[shard - 1]] }));
+        const receipts = plan.map((shard, index) => receiptFor(shard, shard.projects, { ...fixture.context, runAttempt: expected[index] }));
+        assert.doesNotThrow(() => verifyReceipts(receipts, plan, fixture.context, evidence.producers));
+        const wrongAttempt = structuredClone(receipts);
+        wrongAttempt[0].context.runAttempt = fixture.context.runAttempt;
+        assert.throws(() => verifyReceipts(wrongAttempt, plan, fixture.context, evidence.producers), /context/);
+    });
+}
+test('producer acquisition accepts a rerun after an upstream build left the matrix unexpanded', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    const page = fixture.endpoints['attempts/2/jobs?per_page=30'][0];
+    const job = page.jobs[0];
+    page.jobs = [
+        { ...job, name: 'build', conclusion: 'failure' },
+        { ...job, id: 999, name: 'specs-other', conclusion: 'skipped', started_at: null, completed_at: null }
+    ];
+    page.total_count = page.jobs.length;
+    const options = carriedProducerOptions(fixture);
+    const evidence = await loadProducerEvidence(fixture.context, options);
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
+    assert.deepEqual(options.calls.slice(ORDINARY_SHARDS + 1), ['attempts/2/jobs?per_page=30']);
+});
+test('producer acquisition resolves an attempt-2 execution carried into 3 but absent from 1', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    const page = fixture.endpoints['attempts/1/jobs?per_page=30'][0];
+    page.jobs.splice(1, 1);
+    page.total_count--;
+    const evidence = await loadProducerEvidence(fixture.context, carriedProducerOptions(fixture));
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['1', '2', '1', '1']);
+    assert.equal(evidence.producers[1].artifactId, 101);
+});
+test('producer acquisition stops fetching history once every shard has a different execution', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    for (const job of fixture.endpoints['attempts/2/jobs?per_page=30'][0].jobs) {
+        job.started_at = new Date(Date.parse(job.started_at) + 1000).toISOString();
+    }
+    const options = carriedProducerOptions(fixture);
+    const evidence = await loadProducerEvidence(fixture.context, options);
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['3', '3', '3', '3']);
+    assert.deepEqual(options.calls.slice(ORDINARY_SHARDS + 1), ['attempts/2/jobs?per_page=30']);
+});
+test('producer acquisition does not inspect older records for an already resolved shard', async () => {
+    const fixture = carriedProducerFixture({ allCarried: true });
+    fixture.endpoints['attempts/2/jobs?per_page=30'][0].jobs[1].started_at = '2026-11-18T13:06:33Z';
+    const page = fixture.endpoints['attempts/1/jobs?per_page=30'][0];
+    page.jobs[1].run_id = 999;
+    page.jobs.push({ ...page.jobs[1], id: 999 });
+    page.total_count++;
+    const evidence = await loadProducerEvidence(fixture.context, carriedProducerOptions(fixture));
+    assert.deepEqual(evidence.producers.map(producer => producer.runAttempt), ['1', '3', '1', '1']);
+});
+test('producer acquisition fails closed for unavailable, incomplete or inconsistent attempt history', async () => {
+    const reject = async (mutate, pattern = /producing attempt|producer/i) => {
+        const fixture = carriedProducerFixture();
+        mutate(fixture.endpoints['attempts/1/jobs?per_page=30'][0]);
+        await assert.rejects(loadProducerEvidence(fixture.context, carriedProducerOptions(fixture)), pattern);
+    };
+    await reject(page => { page.jobs.pop(); }, /pagination/);
+    await reject(page => { page.jobs.push({ ...page.jobs[0], id: 999 }); page.total_count++; }, /duplicate job/);
+    for (const patch of [{ run_id: 999 }, { run_attempt: 2 }, { head_sha: 'wrong-sha' }, { name: 'caller / specs-other (1)' },
+        { status: 'in_progress' }, { conclusion: 'failure' }]) {
+        await reject(page => { Object.assign(page.jobs[0], patch); });
+    }
+    const fixture = carriedProducerFixture();
+    const options = carriedProducerOptions(fixture);
+    const execute = async (command, args) => args[3].includes('/attempts/')
+        ? { code: 1, stderr: 'gh: Not Found (HTTP 404)' } : options.execute(command, args);
+    await assert.rejects(loadProducerEvidence(fixture.context, { ...options, execute }), /API failed.*404/);
+});
+test('producer history cannot run past the shared acquisition budget', async () => {
+    const fixture = carriedProducerFixture();
+    const options = carriedProducerOptions(fixture);
+    let clock = 0;
+    const execute = async (...args) => {
+        const result = await options.execute(...args);
+        clock += 150000 / (ORDINARY_SHARDS + 1);
+        return result;
+    };
+    await assert.rejects(loadProducerEvidence(fixture.context, { ...options, execute, now: () => clock }), /budget exhausted/);
+    assert.equal(options.calls.length, ORDINARY_SHARDS + 1);
 });
 
 async function ordinaryDispatch(mode) {
     const { root } = await fixture();
+    await coreSpecFixture(root);
     await writeFile(path.join(root, 'Chronicle.slnx'), `<Solution>${v3Projects.filter(project => !project.includes('Storage.AzureKeyVault.Specs/')).map(project => `<Project Path="${project}" />`).join('')}</Solution>`);
     await mkdir(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering'), { recursive: true });
     await writeFile(path.join(root, 'Benchmarks/Chronicle.Benchmarks.Clustering/RebuildBaselineMath.cs'), '// mock benchmark production source');
@@ -332,11 +639,13 @@ async function ordinaryDispatch(mode) {
             await writeFile(assets, JSON.stringify(g.assets));
             return { code: 0, stdout: JSON.stringify(g.evaluated) };
         }
-        assert.equal(queried.length, 36, 'validate every selection before any child');
+        assert.equal(queried.length, 38, 'validate every selection before any child');
         launched.push(args);
+        const directory = path.dirname(args[8]);
+        assert.deepEqual(options.specProgress, { directory });
+        assert.ok(args[9].endsWith('"-noAutoReporters" "-noColor" "-reporter" "json" "-diagnostics" "-longRunning" "120"'));
         if (mode === 'failed-shard') return { code: 7 };
         assert.equal(options.timeout, 1234);
-        const directory = path.dirname(args[8]);
         const filter = args[9];
         assert.ok(filter.includes(ordinaryFilter));
         assert.ok(filter.includes('Name!~excluded&Name!~also'));
@@ -345,8 +654,8 @@ async function ordinaryDispatch(mode) {
         await writeFile(path.join(directory, 'coverage.cobertura.xml'), coverage(source));
         return { code: 0 };
     };
-    const shardId = mode === 'shard-2' ? 2 : 1;
-    const args = mode === 'whole' ? [] : ['--shard', String(shardId), '--shards', '2'];
+    const shardId = mode.startsWith('shard-') ? Number(mode.slice(-1)) : 1;
+    const args = mode === 'whole' ? [] : ['--shard', String(shardId), '--shards', String(ORDINARY_SHARDS)];
     const receiptPath = path.join(root, 'coverage-results', 'shard-receipt.json');
     if (mode === 'failed-shard') {
         await mkdir(path.dirname(receiptPath), { recursive: true });
@@ -360,7 +669,15 @@ async function ordinaryDispatch(mode) {
     assert.deepEqual(queried, [...v3Projects, ...shippingProjects]);
     const shard = (await sourcePlan(root)).find(s => s.shard === shardId);
     const expectedProjects = mode === 'whole' ? ordinaryProjects(queried.map(project => ({ project }))).map(x => x.project) : shard.projects;
-    const actualProjects = launched.map(args => queried.find((project, index) => args[9].includes(path.join(root, `Assembly${index + 1}.dll`))));
+    const actualProjects = launched.map(args => {
+        const project = queried.find((project, index) => args[9].includes(path.join(root, `Assembly${index + 1}.dll`)));
+        const part = args[8].match(/-core-part-(\d)\//)?.[1];
+        if (part) {
+            assert.ok(args[9].includes('FullyQualifiedName~'));
+            assert.ok(args[9].includes('&('));
+        }
+        return part ? coreUnitId(Number(part)) : project;
+    });
     assert.deepEqual([...actualProjects].sort(), [...expectedProjects].sort());
     const expected = expectedProjects.length;
     assert.equal(launched.length, expected);
@@ -373,8 +690,8 @@ async function ordinaryDispatch(mode) {
         assert.deepEqual(receipt.projects, shard.projects);
     }
 }
-for (const mode of ['whole', 'shard-1', 'shard-2', 'failed-shard']) {
-    test(`MOCK ${mode} dispatch validates all 36 before children and preserves coverage guards`, () => ordinaryDispatch(mode));
+for (const mode of ['whole', 'shard-1', 'shard-2', 'shard-3', 'shard-4', 'failed-shard']) {
+    test(`MOCK ${mode} dispatch validates all 38 before children and preserves coverage guards`, () => ordinaryDispatch(mode));
 }
 
 test('MOCK missing executable and missing DLL never succeed', async () => {
@@ -396,6 +713,152 @@ test('MOCK external deadline kills collector/child group and rejects incomplete 
     }
     assert.equal(live, false, `MOCK descendant ${pid} still live`);
     await assert.rejects(readFile(path.join(options.directory, 'coverage.cobertura.xml')));
+});
+
+// Native xUnit JSON uses $type and PascalCase metadata; finish messages only
+// carry IDs. In particular a shared fixture can hang before any test-starting.
+const classStarting = (id = 'class-1', name = 'Specs.when_shared_fixture_hangs') => ({
+    $type: 'test-class-starting', TestClassUniqueID: id, TestClassName: name
+});
+const classFinished = (id = 'class-1') => ({ $type: 'test-class-finished', TestClassUniqueID: id });
+const testStarting = { $type: 'test-starting', TestClassUniqueID: 'class-1', TestUniqueID: 'test-1', TestDisplayName: 'Specs.should_finish' };
+const testFinished = { $type: 'test-finished', TestClassUniqueID: 'class-1', TestUniqueID: 'test-1' };
+
+async function watchdogFixture(env = {}) {
+    const options = await fixture();
+    const lines = [];
+    const specProgress = { directory: options.directory, env, report: line => lines.push(line) };
+    return { ...options, lines, specProgress };
+}
+async function fakeRunner(options, messages, ending = 'process.exit(0);') {
+    const script = path.join(options.root, 'fake-runner.mjs');
+    await writeFile(script, `for (const line of ${JSON.stringify(messages)}) console.log(line);\n${ending}\n`);
+    return runProcess(process.execPath, [script], { timeout: options.timeout, specProgress: options.specProgress });
+}
+
+test('watchdog matches concurrent classes/tests by ID, warns once, and ignores completed classes', async () => {
+    const options = await watchdogFixture();
+    let now = 0;
+    const watcher = new SpecHangWatchdog({ ...options.specProgress, now: () => now });
+    const consume = message => watcher.consume(JSON.stringify(message));
+    consume(classStarting());
+    consume(testStarting);
+    consume(classStarting('class-2', 'Specs.other'));
+    now = 119999;
+    watcher.check(() => assert.fail('too early'));
+    assert.equal(options.lines.some(line => line.startsWith('::warning::')), false);
+    now = 120000;
+    watcher.check(() => assert.fail('warning must not kill'));
+    watcher.check(() => assert.fail('warning must not kill'));
+    assert.equal(options.lines.filter(line => line.startsWith('::warning::')).length, 2);
+    assert.match(options.lines.join('\n'), /::warning::Long-running spec class Specs.when_shared_fixture_hangs/);
+    consume(testFinished);
+    consume(classFinished());
+    consume(classFinished('class-2'));
+    now = 600000;
+    watcher.check(() => assert.fail('finished class must not kill'));
+    assert.equal(watcher.classes.size, 0);
+    assert.equal(watcher.tests.size, 0);
+    const progress = await readFile(path.join(options.directory, 'class-progress.log'), 'utf8');
+    assert.match(progress, /class finish Specs.when_shared_fixture_hangs elapsed=120.0s/);
+});
+
+test('JSON reporter keeps diagnostics, failures, captured output and unknown messages visible', async () => {
+    const options = await watchdogFixture();
+    const watcher = new SpecHangWatchdog(options.specProgress);
+    watcher.consume(JSON.stringify(testStarting));
+    const messages = [
+        { $type: 'diagnostic-message', Message: 'fixture diagnostic\nsecond line' },
+        { $type: 'internal-diagnostic-message', Message: 'runner diagnostic' },
+        { $type: 'error', Messages: ['runner error'], StackTraces: ['runner stack'] },
+        { $type: 'test-failed', TestUniqueID: 'test-1', Messages: ['assertion failed'], StackTraces: ['test stack'], Output: 'failure output' },
+        { $type: 'test-output', TestUniqueID: 'test-1', Output: 'captured\noutput' },
+        { $type: 'future-message', Value: 'preserve unknown payload' }
+    ];
+    for (const message of messages) watcher.consume(JSON.stringify(message));
+    watcher.consume('collector stderr-style output');
+    assert.deepEqual(options.lines, [
+        '[diagnostic-message]\nfixture diagnostic\nsecond line',
+        '[internal-diagnostic-message]\nrunner diagnostic',
+        '[error]\nrunner error\nrunner stack',
+        '[test-failed] Specs.should_finish\nassertion failed\ntest stack\nfailure output',
+        '[test-output] Specs.should_finish\ncaptured\noutput',
+        JSON.stringify(messages.at(-1)),
+        'collector stderr-style output'
+    ]);
+});
+
+test('watchdog rejects invalid timeout configuration before launching', async () => {
+    for (const value of ['0', '-1', 'no', 'Infinity', '']) {
+        const options = await watchdogFixture({ SPEC_CLASS_HANG_TIMEOUT_SECONDS: value });
+        await assert.rejects(fakeRunner(options, []), /SPEC_CLASS_HANG_TIMEOUT_SECONDS must be a positive number/);
+    }
+});
+
+test('LOCAL fake JSON runner completes without a kill, passes non-JSON through, and preserves exit codes', async () => {
+    for (const exitCode of [0, 37]) {
+        const options = await watchdogFixture({ SPEC_CLASS_HANG_TIMEOUT_SECONDS: '0.2' });
+        const messages = ['collector output', '{not json}', ...[classStarting(), testStarting, testFinished, classFinished()].map(JSON.stringify)];
+        const result = await fakeRunner(options, messages, `process.exitCode = ${exitCode};`);
+        assert.equal(result.code, exitCode);
+        assert.deepEqual(options.lines.slice(0, 2), ['collector output', '{not json}']);
+        assert.match(options.lines.join('\n'), /class finish Specs.when_shared_fixture_hangs/);
+        assert.equal(options.lines.some(line => line.startsWith('::error::')), false);
+        await assert.rejects(readFile(path.join(options.directory, 'spec-hang-summary.txt')), { code: 'ENOENT' });
+    }
+});
+
+test('LOCAL fake JSON runner hang names every open class/test, saves partial progress, and kills the tree with 125', async () => {
+    const options = await watchdogFixture({ SPEC_CLASS_HANG_TIMEOUT_SECONDS: '0.2', SPEC_CLASS_HANG_WARN_SECONDS: '0.05' });
+    options.timeout = 3000;
+    const pidFile = path.join(options.root, 'hang-descendant.pid');
+    const ending = `const { spawn } = await import('node:child_process');
+        const { writeFileSync } = await import('node:fs');
+        const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'inherit' });
+        writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+        setInterval(() => {}, 1000);`;
+    const started = performance.now();
+    const messages = [classStarting(), classStarting('class-2', 'Specs.also_open'), testStarting].map(JSON.stringify);
+    await assert.rejects(fakeRunner(options, messages, ending), error => error.exitCode === 125);
+    assert.ok(performance.now() - started < 2000, 'watchdog must beat the outer deadline');
+    const summary = await readFile(path.join(options.directory, 'spec-hang-summary.txt'), 'utf8');
+    for (const name of ['Specs.when_shared_fixture_hangs', 'Specs.also_open', 'Specs.should_finish']) {
+        assert.ok(summary.includes(name));
+        assert.ok(options.lines.some(line => line.startsWith('::error::') && line.includes(name)));
+    }
+    assert.match(summary, /elapsed=0.[2-9]s/);
+    assert.ok(options.lines.some(line => line.startsWith('::warning::')));
+    assert.match(await readFile(path.join(options.directory, 'class-progress.log'), 'utf8'), /class start Specs.when_shared_fixture_hangs/);
+    const pid = Number(await readFile(pidFile, 'utf8'));
+    let live = true;
+    for (let attempt = 0; attempt < 30 && live; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        try { process.kill(pid, 0); } catch (error) { assert.equal(error.code, 'ESRCH'); live = false; }
+    }
+    assert.equal(live, false, `hang descendant ${pid} still live`);
+});
+
+test('watchdog identifies a shared fixture hang with no running test', async () => {
+    const options = await watchdogFixture();
+    let now = 0;
+    const watcher = new SpecHangWatchdog({ ...options.specProgress, now: () => now });
+    watcher.consume(JSON.stringify(classStarting()));
+    now = 300000;
+    let failure;
+    watcher.check(error => { failure = error; });
+    assert.equal(failure.exitCode, 125);
+    assert.match(await readFile(path.join(options.directory, 'spec-hang-summary.txt'), 'utf8'), /Specs.when_shared_fixture_hangs elapsed=300.0s/);
+});
+
+test('LOCAL outer session timeout keeps exit 124 and persists open classes and tests', async () => {
+    const options = await watchdogFixture();
+    options.timeout = 500;
+    await assert.rejects(fakeRunner(options, [classStarting(), testStarting].map(JSON.stringify), 'setInterval(() => {}, 1000);'), error => error.exitCode === 124);
+    const summary = await readFile(path.join(options.directory, 'spec-hang-summary.txt'), 'utf8');
+    assert.match(summary, /TestSessionTimeout exceeded/);
+    assert.match(summary, /Specs.when_shared_fixture_hangs/);
+    assert.match(summary, /Specs.should_finish/);
+    assert.match(await readFile(path.join(options.directory, 'class-progress.log'), 'utf8'), /class start/);
 });
 
 const probeScript = path.resolve('.github/scripts/verify-mixed-specs-collector.mjs');

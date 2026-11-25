@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationAdmission.when_admitting_a_legacy_database;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(SqlServerCollection.Name)]
 public class on_sqlserver(SqlServerFixture fixture) : given.a_sqlserver_provider(fixture)
 {
@@ -29,7 +30,7 @@ public class on_sqlserver(SqlServerFixture fixture) : given.a_sqlserver_provider
     async Task Because()
     {
         await Admit();
-        await using var context = new EventStores.EventStoreDbContext(new DbContextOptionsBuilder<EventStores.EventStoreDbContext>().UseSqlServer(_eventStoreConnection).AddConceptAsSupport().Options);
+        await using var context = new EventStores.EventStoreDbContext(new DbContextOptionsBuilder<EventStores.EventStoreDbContext>().UseSqlServer(_eventStoreConnection).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
         _after = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
     }
 

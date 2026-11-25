@@ -26,7 +26,9 @@ public class a_performing_job_step_with_observer_filters : a_performing_job_step
         _succeeded = stepResult.TryGetFullResult(out _result, out _, new JsonSerializerOptions());
     }
 
-    void Establish() =>
+    void Establish()
+    {
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _observer.GetSubscription().Returns(new ObserverSubscription(
             "observer-id",
             new ObserverKey("observer-id", "event-store", "event-store-namespace", EventSequenceId.Log),
@@ -34,4 +36,5 @@ public class a_performing_job_step_with_observer_filters : a_performing_job_step
             typeof(ISomeObserverType),
             SiloAddress.Zero,
             Filters: new ObserverFilters(["audited"])));
+    }
 }

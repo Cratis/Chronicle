@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Projections.Definitions;
+
 namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 
 /// <summary>
@@ -12,14 +14,29 @@ namespace Cratis.Chronicle.Concepts.Projections.Graphs;
 /// Event types are written as "id+generation", the form produced by "EventType.ToString()", and property
 /// paths as their string form, so the definition serializes the same way everywhere it is stored.
 /// </remarks>
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Graphs.GraphProjectionDefinition")]
 public record GraphProjectionDefinition(
-    IDictionary<string, GraphNodeProjectionDefinition> Nodes,
-    IDictionary<string, GraphEdgeProjectionDefinition> Edges)
+    IReadOnlyDictionary<string, GraphNodeProjectionDefinition> Nodes,
+    IReadOnlyDictionary<string, GraphEdgeProjectionDefinition> Edges)
 {
     /// <summary>
     /// Gets a definition without any mappings.
     /// </summary>
     public static readonly GraphProjectionDefinition Empty = new(new Dictionary<string, GraphNodeProjectionDefinition>(), new Dictionary<string, GraphEdgeProjectionDefinition>());
+
+    /// <summary>
+    /// Gets the mappings per node label.
+    /// </summary>
+    [Id(0)]
+    public IReadOnlyDictionary<string, GraphNodeProjectionDefinition> Nodes { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(Nodes);
+
+    /// <summary>
+    /// Gets the mappings per edge type.
+    /// </summary>
+    [Id(1)]
+    public IReadOnlyDictionary<string, GraphEdgeProjectionDefinition> Edges { get; init => field = ImmutableDefinitions.Snapshot(value); } = ImmutableDefinitions.Snapshot(Edges);
 
     /// <summary>
     /// Gets whether the definition maps any event.

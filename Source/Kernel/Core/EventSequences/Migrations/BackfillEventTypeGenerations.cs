@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Choreography.Jobs;
+using Cratis.Chronicle.Jobs;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences.Migrations;
@@ -21,8 +22,16 @@ public class BackfillEventTypeGenerations(ILogger<BackfillEventTypeGenerations> 
     protected override JobDetails GetJobDetails() => $"Backfill generations for type {Request.EventTypeId}";
 
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "backfill_event_type_generations");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "backfill_event_type_generations", State.Progress);
         if (AllStepsCompletedSuccessfully)
         {
             logger.BackfillCompleted(Request.EventTypeId);

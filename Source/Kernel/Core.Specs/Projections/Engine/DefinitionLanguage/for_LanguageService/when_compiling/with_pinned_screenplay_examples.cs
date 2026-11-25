@@ -13,6 +13,8 @@ public class with_pinned_screenplay_examples : for_LanguageService.given.a_langu
     static readonly string _corpus = Path.Combine(AppContext.BaseDirectory, "Projections", "Engine", "DefinitionLanguage", "ScreenplayExamples");
     static readonly IReadOnlyDictionary<string, string> _rejected = new Dictionary<string, string>
     {
+        ["Documentation/screenplay/projections/keys.md:102"] = "An untyped composite key has no declaration-language lowering; Chronicle requires the composite key type name",
+        ["Documentation/screenplay/projections/removal.md:49"] = "An untyped composite removal key has no declaration-language lowering; Chronicle requires the composite key type name",
         ["Documentation/screenplay/projections/removal.md:88"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
         ["Documentation/screenplay/projections/removal.md:106"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",
         ["Documentation/screenplay/projections/removal.md:178"] = "A root-level remove via join violates Chronicle's ProjectionValidator level restriction; join removal is only supported in children",

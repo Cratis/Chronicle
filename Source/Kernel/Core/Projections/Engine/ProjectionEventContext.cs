@@ -32,6 +32,7 @@ public record ProjectionEventContext(
     readonly List<FailedPartition> _failedPartitions = [];
     readonly List<PendingFutureSave> _pendingFutureSaves = [];
     readonly Dictionary<KeyResolver, KeyResolverResult> _resolvedKeys = [];
+    List<Key>? _affectedParentKeys;
     bool _isKeyUnresolvable;
 
     /// <summary>
@@ -39,6 +40,18 @@ public record ProjectionEventContext(
     /// and is therefore being created for the first time.
     /// </summary>
     public bool IsNewInstance { get; set; }
+
+    /// <summary>
+    /// Gets or sets the read model document as the protection step handed it to the sink: protected values encrypted
+    /// (or emptied for an erased subject) and the subject lineage attached.
+    /// </summary>
+    /// <remarks>
+    /// Notification-only. Change notifications publish this document so Watch releases it exactly once, instead of
+    /// releasing the plaintext <see cref="IChangeset{TSource, TTarget}.CurrentState"/> a second time. It is never fed
+    /// back into the changeset: the plaintext current state stays the starting point for the next event. Null when
+    /// the read model declares no protected values or the protection step did not run for this event.
+    /// </remarks>
+    public ExpandoObject? ProtectedState { get; set; }
 
     /// <summary>
     /// Gets the generation policy used to distinguish deferred clause identities.
@@ -70,6 +83,11 @@ public record ProjectionEventContext(
     /// Gets the collection of pending future saves that must be applied after the main changeset save.
     /// </summary>
     public IEnumerable<PendingFutureSave> PendingFutureSaves => _pendingFutureSaves;
+
+    /// <summary>
+    /// Gets the keys of the parents that held a child this event removed from every parent. Recorded only while the projection is watched.
+    /// </summary>
+    public IReadOnlyList<Key> AffectedParentKeys => _affectedParentKeys ?? (IReadOnlyList<Key>)[];
 
     /// <summary>
     /// Gets the <see cref="EventType"/> of the <see cref="Event"/>.
@@ -105,6 +123,25 @@ public record ProjectionEventContext(
     /// properties - or one whose values all match the initial state - still brings its read model into existence.
     /// </remarks>
     public bool CreatesInstance => !IsJoin && !ChildrenAffected;
+
+    /// <summary>
+    /// Gets whether any pending future saves must be applied.
+    /// </summary>
+    internal bool HasPendingFutureSaves => _pendingFutureSaves.Count > 0;
+
+    /// <summary>
+    /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
+    /// <see cref="AppendedEvent"/>.
+    /// </summary>
+    /// <param name="comparer">The <see cref="IObjectComparer"/>.</param>
+    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
+    /// <returns>The <see cref="ProjectionEventContext"/>.</returns>
+    public static ProjectionEventContext Empty(IObjectComparer comparer, AppendedEvent @event) => new(
+        Key.Undefined,
+        @event,
+        new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
+        ProjectionOperationType.None,
+        false);
 
     /// <summary>
     /// Adds a deferred future to the context.
@@ -158,6 +195,22 @@ public record ProjectionEventContext(
     public void AddFailedPartition(FailedPartition failedPartition) => _failedPartitions.Add(failedPartition);
 
     /// <summary>
+    /// Records parents that held a child this event removed from every parent.
+    /// </summary>
+    /// <param name="keys">The keys of the affected parents.</param>
+    public void AddAffectedParentKeys(IEnumerable<Key> keys)
+    {
+        _affectedParentKeys ??= [];
+        foreach (var key in keys)
+        {
+            if (!_affectedParentKeys.Contains(key))
+            {
+                _affectedParentKeys.Add(key);
+            }
+        }
+    }
+
+    /// <summary>
     /// Adds a pending future save that will be applied after the main changeset is saved.
     /// </summary>
     /// <param name="key">The key to use when applying the changeset.</param>
@@ -173,18 +226,4 @@ public record ProjectionEventContext(
     /// <param name="futureId">The identity of the persisted future.</param>
     public void AddPendingFutureSave(Key key, IChangeset<AppendedEvent, ExpandoObject> changeset, ProjectionFutureId futureId) =>
         _pendingFutureSaves.Add(new PendingFutureSave(key, changeset) { FutureId = futureId });
-
-    /// <summary>
-    /// Creates a new empty <see cref="ProjectionEventContext"/> with the given <see cref="IObjectComparer"/> and
-    /// <see cref="AppendedEvent"/>.
-    /// </summary>
-    /// <param name="comparer">The <see cref="IObjectComparer"/>.</param>
-    /// <param name="event">The <see cref="AppendedEvent"/>.</param>
-    /// <returns>The <see cref="ProjectionEventContext"/>.</returns>
-    public static ProjectionEventContext Empty(IObjectComparer comparer, AppendedEvent @event) => new(
-        Key.Undefined,
-        @event,
-        new Changeset<AppendedEvent, ExpandoObject>(comparer, @event, new ExpandoObject()),
-        ProjectionOperationType.None,
-        false);
 }

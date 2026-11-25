@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.Testing;
 /// </summary>
 public sealed class DropReplyInterceptor
 {
-    readonly object _sync = new();
+    readonly Lock _sync = new();
     readonly Dictionary<DroppedReply, int> _pending = [];
     int _dropped;
 

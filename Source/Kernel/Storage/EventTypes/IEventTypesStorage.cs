@@ -14,6 +14,25 @@ namespace Cratis.Chronicle.Storage.EventTypes;
 public interface IEventTypesStorage
 {
     /// <summary>
+    /// Replaces only the schema of an existing generation, preserving all other event type data.
+    /// </summary>
+    /// <param name="eventTypeId">The event type identifier.</param>
+    /// <param name="generation">The existing generation.</param>
+    /// <param name="schema">The replacement schema.</param>
+    /// <returns>Whether an existing schema changed. Missing types or generations are not created.</returns>
+    Task<bool> ReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema schema);
+
+    /// <summary>
+    /// Replaces a generation only if its current schema is exactly the expected schema.
+    /// </summary>
+    /// <param name="eventTypeId">The registered event type.</param>
+    /// <param name="generation">The registered generation.</param>
+    /// <param name="expected">The schema used to make the evolution decision.</param>
+    /// <param name="schema">The replacement schema.</param>
+    /// <returns>Whether the conditional replacement succeeded.</returns>
+    Task<bool> TryReplaceSchema(EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema expected, JsonSchema schema) => Task.FromResult(false);
+
+    /// <summary>
     /// Register a <see cref="JsonSchema"/> for a specific <see cref="EventType"/>.
     /// </summary>
     /// <param name="type"><see cref="EventType"/> to register for.</param>
@@ -29,6 +48,17 @@ public interface IEventTypesStorage
     /// generation with identical metadata returns false, so routine reconnect re-registrations do not fan out.
     /// </remarks>
     Task<bool> Register(EventType type, JsonSchema schema, EventTypeOwner owner = EventTypeOwner.Client, EventTypeSource source = EventTypeSource.Code, EventTypeVisibility visibility = EventTypeVisibility.Unspecified, string origin = "");
+
+    /// <summary>
+    /// Atomically registers generations expected to be absent, without replacing any existing schema.
+    /// </summary>
+    /// <param name="eventType">The registration containing only generations observed absent by the caller.</param>
+    /// <returns>The mutation, inserted generations, or conflicting generation. Equivalent existing schemas succeed.</returns>
+    /// <remarks>
+    /// A conflict does not change this event type. The absence check and write must be atomic across storage
+    /// instances. Metadata and migrations retain ordinary registration semantics; unrelated generations are preserved.
+    /// </remarks>
+    Task<EventTypeRegistrationResult> RegisterIfAbsent(EventTypeToRegister eventType);
 
     /// <summary>
     /// Register a complete <see cref="EventTypeDefinition"/> with all generations and migrations.
@@ -166,13 +196,16 @@ public interface IEventTypesStorage
     Task<IEnumerable<EventTypeSchema>> GetFor(IEnumerable<EventType> eventTypes);
 
     /// <summary>
-    /// Evict any cached schema and definition information held for a specific <see cref="EventTypeId"/>.
+    /// Tell the storage that an event type changed elsewhere in the cluster, so anything it holds on to for the event
+    /// type is reloaded on next use.
     /// </summary>
-    /// <param name="eventTypeId">The <see cref="EventTypeId"/> to evict.</param>
+    /// <param name="eventTypeId">The <see cref="EventTypeId"/> that changed.</param>
     /// <remarks>
-    /// Called locally after a registration and on every silo when an event type is registered elsewhere in the
-    /// cluster, so a peer cannot keep serving a stale definition after a new generation is added. Implementations
-    /// without an in-memory cache treat this as a no-op.
+    /// The storage providers are plain reads and writes and keep nothing, so for them this does nothing. It is
+    /// honored by <see cref="EventTypeRegistry"/>, which is what <see cref="IEventStoreStorage.EventTypes"/> hands out and
+    /// which is called locally after a registration and on every silo when an event type is registered elsewhere in the cluster.
     /// </remarks>
-    void Invalidate(EventTypeId eventTypeId);
+    void Invalidate(EventTypeId eventTypeId)
+    {
+    }
 }

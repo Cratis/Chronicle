@@ -1,12 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,7 +22,8 @@ namespace Cratis.Chronicle.Services.Observation.Reactors.for_Reactors.given;
 public class a_registration : Specification
 {
     protected IGrainFactory _grainFactory;
-    protected IReactor _client;
+    protected IClientReactorSubscriptions _subscriptions;
+    protected IClientReactorSubscription _client;
     protected IObserverRegistrationGate _gate;
     protected IDisposable _lease;
     protected readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -29,12 +34,14 @@ public class a_registration : Specification
     readonly List<IDisposable> _connections = [];
     Reactors _reactors;
     protected Subject<ReactorMessage> _messages;
+    protected TaskCompletionSource _messagesReleased;
 
     void Establish()
     {
         _grainFactory = Substitute.For<IGrainFactory>();
-        _client = Substitute.For<IReactor>();
-        _grainFactory.GetGrain<IReactor>(Arg.Any<string>()).Returns(_client);
+        _client = Substitute.For<IClientReactorSubscription>();
+        _subscriptions = Substitute.For<IClientReactorSubscriptions>();
+        _subscriptions.Create(Arg.Any<ConnectedObserverKey>()).Returns(_client);
         _gate = Substitute.For<IObserverRegistrationGate>();
         _lease = Substitute.For<IDisposable>();
         _lease.When(_ => _.Dispose()).Do(_ => _released.TrySetResult());
@@ -43,6 +50,7 @@ public class a_registration : Specification
 #pragma warning restore CA2012
         _reactors = new(
             _grainFactory,
+            _subscriptions,
             CreateMediator(),
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
@@ -51,7 +59,8 @@ public class a_registration : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reactors>.Instance,
             _gate,
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloSupervisor.Instance);
         _grainFactory.ClearReceivedCalls();
         _client.ClearReceivedCalls();
         _gate.ClearReceivedCalls();
@@ -66,8 +75,18 @@ public class a_registration : Specification
     protected void Connect(string connectionId = "connection", CallContext? callContext = null, CancellationToken cancellationToken = default)
     {
         var messages = _messages = new Subject<ReactorMessage>();
+        var released = _messagesReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observed = Observable.Create<ReactorMessage>(observer =>
+        {
+            var subscription = messages.Subscribe(observer);
+            return Disposable.Create(() =>
+            {
+                subscription.Dispose();
+                released.TrySetResult();
+            });
+        });
         _connections.Add(messages);
-        _connections.Add(_reactors.Observe(messages, callContext ?? new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
+        _connections.Add(_reactors.Observe(observed, callContext ?? new CallContext(new CallOptions(cancellationToken: cancellationToken))).Subscribe(_ => { }, error => _error.TrySetResult(error)));
         messages.OnNext(new(new(new RegisterReactor
         {
             ConnectionId = connectionId,

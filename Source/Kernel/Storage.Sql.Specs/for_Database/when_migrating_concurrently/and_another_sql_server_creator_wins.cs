@@ -25,12 +25,12 @@ public class and_another_sql_server_creator_wins(SqlServerFixture fixture) : giv
     {
         _connectionString = await Fixture.CreateDatabase();
         await Fixture.DropDatabase(_connectionString);
-        _context = new(new DbContextOptionsBuilder<ClusterDbContext>().UseSqlServer(_connectionString).AddConceptAsSupport().Options);
+        _context = new(new DbContextOptionsBuilder<ClusterDbContext>().UseSqlServer(_connectionString).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
         _initiallyExisted = await _context.GetService<IRelationalDatabaseCreator>().ExistsAsync();
 
         // Another kernel creates it without clearing this kernel's cached missing-database login failure.
         var unpooled = new SqlConnectionStringBuilder(_connectionString) { Pooling = false }.ConnectionString;
-        await using var winner = new ClusterDbContext(new DbContextOptionsBuilder<ClusterDbContext>().UseSqlServer(unpooled).AddConceptAsSupport().Options);
+        await using var winner = new ClusterDbContext(new DbContextOptionsBuilder<ClusterDbContext>().UseSqlServer(unpooled).AddConceptAsSupport().WithoutServiceProviderCaching().Options);
         await winner.GetService<IRelationalDatabaseCreator>().CreateAsync();
     }
 

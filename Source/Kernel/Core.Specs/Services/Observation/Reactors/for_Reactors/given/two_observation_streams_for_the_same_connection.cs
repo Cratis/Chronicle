@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Clients;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Reactors;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation;
@@ -14,6 +15,7 @@ using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -32,7 +34,7 @@ public class two_observation_streams_for_the_same_connection : Specification
     protected readonly List<EventsToObserve> _earlierDeliveries = [];
     protected readonly List<EventsToObserve> _laterDeliveries = [];
     protected readonly TaskCompletionSource _unsubscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    protected IReactor _reactor;
+    protected IClientReactorSubscription _reactor;
     protected ReactorMediator _mediator;
     protected SignallingMediator _signals;
     protected RecordingLogger _logger;
@@ -42,16 +44,18 @@ public class two_observation_streams_for_the_same_connection : Specification
 
     async Task Establish()
     {
-        _reactor = Substitute.For<IReactor>();
+        _reactor = Substitute.For<IClientReactorSubscription>();
         _reactor.When(_ => _.Unsubscribe()).Do(_ => _unsubscribed.TrySetResult());
         var grainFactory = Substitute.For<IGrainFactory>();
-        grainFactory.GetGrain<IReactor>(Arg.Any<string>(), Arg.Any<string>()).Returns(_reactor);
+        var subscriptions = Substitute.For<IClientReactorSubscriptions>();
+        subscriptions.Create(Arg.Any<ConnectedObserverKey>()).Returns(_reactor);
 
         _mediator = new ReactorMediator();
         _signals = new SignallingMediator(_mediator);
         _logger = new RecordingLogger();
         _reactors = new Reactors(
             grainFactory,
+            subscriptions,
             _signals,
             Substitute.For<IStorage>(),
             new JsonSerializerOptions(),
@@ -60,7 +64,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             AllowingConnectionOwnership.Create(),
             _logger,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloSupervisor.Instance);
 
         _earlierSubscription = _reactors.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());

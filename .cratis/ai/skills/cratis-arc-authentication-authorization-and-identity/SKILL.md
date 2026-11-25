@@ -14,7 +14,7 @@ told about them. Each has its own extension point.
 
 ## Verified product sources
 
-Read [references/product-sources.md](references/product-sources.md) when you need the owning package for an identity type.
+Read [product sources](references/product-sources.md) for packages; [command identity](references/command-identity.md) for actor injection, caller-keyed reads and Chronicle attribution.
 
 Authorization capabilities arrived over time: named policies, schemes, fallback baselines, guest policies and Microsoft-attribute enforcement all need a recent Arc. [authorization](references/authorization.md) lists the requirements; check them if you run an older version.
 
@@ -111,6 +111,13 @@ Current behavior:
   The context carries `Principal`, `Target`, `Resource` and `ReceivedAt`.
   The old synchronous `IAuthorizationEvaluator.IsAuthorized` rejects policy-bearing
   declarations.
+- **Policies that decide from recorded state.** Derive from
+  `StateAwareAuthorizationPolicy<TState>` (implement `GetKey`, `Read`, `Decide`) and
+  register it like any named policy. It fails closed: a missing key, absent state, a
+  failed read and a rejecting decision all deny and none throws. It is the hand-written
+  counterpart of a Screenplay policy with `reads`. Admission only: later state changes
+  do not revoke. Requires Arc 22.181.0. Read
+  [authorization](references/authorization.md#policies-that-decide-from-recorded-state).
 - **Schemes.** `AuthenticationSchemes` is honored on the ASP.NET Core host and
   rejected at startup on the standalone Core host.
 - **Composition.** Stacked attributes **AND**; only a role list is OR. A method's
@@ -164,7 +171,7 @@ Authorization runs before validation, so a caller who may not act never reaches 
 validator. Express who may act through policies, roles and `[Authorize]`, not a
 validator. A state rule ("the order is still open") belongs in a
 `CommandValidator<T>` with the read model as a constructor parameter; under read
-protection `On` that read guards the append, under `Off` (the default) it is a
+protection `On` that read guards the append, under `Off` (set explicitly, or the Arc 22 behavior) it is a
 hint, and in an `[Unprotected]` command it is advisory. A state-dependent
 permission or ownership rule (this member owns the order) may sit there too, with
 the same limit. Under `[ProtectedDecision]` without `On`, only a parameterless
@@ -212,6 +219,13 @@ behavior.
 
 Arc tenancy is request-scoped tenant *resolution*. It is not Chronicle's tenant
 namespace isolation — that is separate guidance.
+
+## Headless reusable modules
+
+A reusable module that must work in any host ships backend contracts only:
+commands, queries, events and the identity/claims integration. It has no pages,
+routes, styling or UI components. Sign-in, consent and profile UI belong to the
+host application, which composes the module's endpoints.
 
 ## Frontend
 
@@ -284,6 +298,5 @@ To run locally with an identity, supply the forwarded headers yourself — see
 
 - Rejecting a command's input or state: `cratis-arc-command-validation` scope
   (validators are not the place for state-dependent permission rules).
-- Chronicle tenant namespaces and per-tenant event stores: the Chronicle
-  multi-tenancy guidance.
+- Tenant namespaces and per-tenant event stores: Chronicle multi-tenancy.
 - Building the React page that consumes identity: the Arc React guidance.

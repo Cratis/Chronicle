@@ -13,7 +13,7 @@ namespace Cratis.Chronicle.Occurrences;
 
 public partial class Occurrences : IDisposable, IAsyncDisposable
 {
-    readonly object _workerSync = new();
+    readonly Lock _workerSync = new();
     readonly Channel<bool> _scopeChanges = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
     readonly HashSet<string> _lifecycleNamespaces = new(StringComparer.Ordinal);
     Func<Type, Type, OccurrenceDeliveryScope?, OccurrenceAttempt>? _attemptFactory;

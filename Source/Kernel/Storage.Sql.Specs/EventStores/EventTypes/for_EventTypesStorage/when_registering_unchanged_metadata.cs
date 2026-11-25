@@ -5,6 +5,7 @@ using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.EventTypes.for_EventTypesStorage;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_registering_unchanged_metadata : given.a_populated_migration_chain
 {
     EventType _after;
@@ -19,7 +20,6 @@ public class when_registering_unchanged_metadata : given.a_populated_migration_c
     }
 
     [Fact] void should_not_report_a_change() => _changed.ShouldBeFalse();
-    [Fact] async Task should_not_evict_the_definition() => (await _storage.GetDefinition(_chain.Id)).ShouldBeSame(_warm);
     [Fact] async Task should_keep_the_warmed_latest_schema() => (await _storage.GetFor(_chain.Id, 3)).Schema.ToJson().ShouldEqual(_warmSchema.Schema.ToJson());
     [Fact] void should_keep_the_explicit_visibility_when_unspecified() => _after.Visibility.ShouldEqual(EventTypeVisibility.Public);
     [Fact] void should_not_rewrite_migrations() => _after.MigrationsJson.ShouldEqual(_before.MigrationsJson);

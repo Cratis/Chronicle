@@ -11,7 +11,7 @@ public class with_the_webhook_grain_blocked_by_replay : given.a_webhook_delivery
 
     void Establish() => _webhook.GetDefinition().Returns(_blockedDefinition.Task);
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null)).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
 
     [Fact] void should_deliver_without_waiting_for_the_webhook_grain() => _receiver.Payloads.Single().ShouldEqual(Fixture("pinned"));
     [Fact] async Task should_not_call_back_to_the_replaying_webhook() => await _webhook.DidNotReceive().GetDefinition();

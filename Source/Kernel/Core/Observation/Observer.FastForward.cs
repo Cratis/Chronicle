@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Alerts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
@@ -22,20 +23,15 @@ public partial class Observer
         ThrowIfSealed();
         await ThrowIfKeyDoesNotOwnDefinition();
         var previous = State.NextEventSequenceNumber;
-        if (IsRetired || _removed)
+        if (GetUnavailableOutcome() is { } unavailable)
         {
-            return new(FastForwardOutcome.NotAvailable, previous, previous);
-        }
-
-        if (State.RunningState == ObserverRunningState.Replaying || State.IsReplaying)
-        {
-            return new(FastForwardOutcome.Replaying, previous, previous);
+            return new(unavailable, previous, previous);
         }
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
 
         var tail = await _eventSequence.GetTailSequenceNumber();
-        if (!tail.IsActualValue || (previous.IsActualValue && previous > tail && State.CatchingUpPartitions.Count == 0 && !Failures.HasFailedPartitions))
+        if (IsAlreadyAtTail(previous, tail))
         {
             return new(FastForwardOutcome.AlreadyAtTail, previous, previous);
         }
@@ -47,13 +43,7 @@ public partial class Observer
             await DiscardFailedPartitions(AlertClearedReason.Cleared);
         }
 
-        State.CatchingUpPartitions.Clear();
-        _isPreparingCatchup = false;
-        State = State with
-        {
-            NextEventSequenceNumber = next,
-            TailEventSequenceNumber = tail
-        };
+        ApplyFastForwardState(next, tail);
         await WriteStateAsync();
 
         if (!IsQuarantined)
@@ -62,6 +52,43 @@ public partial class Observer
         }
 
         return new(FastForwardOutcome.FastForwarded, previous, next);
+    }
+
+    FastForwardOutcome? GetUnavailableOutcome()
+    {
+        if (IsRetired || _removed)
+        {
+            return FastForwardOutcome.NotAvailable;
+        }
+
+        if (State.RunningState == ObserverRunningState.Replaying || State.IsReplaying)
+        {
+            return FastForwardOutcome.Replaying;
+        }
+
+        return null;
+    }
+
+    bool IsAlreadyAtTail(EventSequenceNumber previous, EventSequenceNumber tail)
+    {
+        if (!tail.IsActualValue)
+        {
+            return true;
+        }
+
+        var hasPendingWork = State.CatchingUpPartitions.Count != 0 || Failures.HasFailedPartitions;
+        return previous.IsActualValue && previous > tail && !hasPendingWork;
+    }
+
+    void ApplyFastForwardState(EventSequenceNumber next, EventSequenceNumber tail)
+    {
+        State.CatchingUpPartitions.Clear();
+        _isPreparingCatchup = false;
+        State = State with
+        {
+            NextEventSequenceNumber = next,
+            TailEventSequenceNumber = tail
+        };
     }
 
     async Task DropJobsSkippedByFastForward()

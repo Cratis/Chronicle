@@ -32,13 +32,19 @@ internal sealed class RunningGraph
 
     readonly KernelProjectionEngine::Graphs.GraphChangesetBuilder _builder;
 
-    RunningGraph(KernelGraphs::GraphDefinition definition, KernelProjections::ProjectionId owner, InMemoryGraphSink sink, KernelProjectionEngine::Graphs.GraphChangesetBuilder builder)
+    RunningGraph(string name, KernelGraphs::GraphDefinition definition, KernelProjections::ProjectionId owner, InMemoryGraphSink sink, KernelProjectionEngine::Graphs.GraphChangesetBuilder builder)
     {
+        Name = name;
         Definition = definition;
         Owner = owner;
         Sink = sink;
         _builder = builder;
     }
+
+    /// <summary>
+    /// Gets the name of the graph.
+    /// </summary>
+    public string Name { get; }
 
     /// <summary>
     /// Gets the definition of the graph.
@@ -69,7 +75,7 @@ internal sealed class RunningGraph
             KernelProjections::ProjectionOwner.Client);
         var plan = new KernelProjectionEngine::Graphs.GraphProjectionPlanFactory(_properties, _eventValues).Create(projection.Identifier, projection.Graph!, definition);
         var sink = new InMemoryGraphSink(definition);
-        return new(definition, projection.Identifier, sink, new(plan, sink, projection.Identifier));
+        return new(registration.GraphName, definition, projection.Identifier, sink, new(plan, sink, projection.Identifier));
     }
 
     /// <summary>

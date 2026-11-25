@@ -16,13 +16,13 @@ public record WebhookKey(WebhookId WebhookId, EventStoreName EventStore)
     /// <param name="key"><see cref="WebhookKey"/> to convert from.</param>
     public static implicit operator string(WebhookKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(WebhookId, EventStore);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="WebhookKey"/> instance.</returns>
     public static WebhookKey Parse(string key) => KeyHelper.Parse<WebhookKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(WebhookId, EventStore);
 }

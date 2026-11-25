@@ -17,7 +17,7 @@ You record a fact by **appending** it to an [event sequence](../concepts/event-s
 That first argument is the [event source id](../concepts/event-source.md) — the identity of the thing this fact is about, like a primary key. Every event you append against `bookId` becomes part of *that book's* stream of history.
 
 > [!TIP]
-> We use a raw generated id here to keep the quickstart short. In C#, real code would wrap it in a strongly-typed `BookId` so the compiler can't confuse a book's id with a member's — the [tutorial](/chronicle/tutorial/) shows exactly that. Kotlin, Elixir, and TypeScript event source ids are plain strings; those clients don't currently have an equivalent typed-id wrapper.
+> We use a raw generated id here to keep the quickstart short. In C#, real code would wrap it in a strongly-typed `BookId` so the compiler can't confuse a book's id with a member's — the [tutorial](/chronicle/tutorial/) shows exactly that. Kotlin, Elixir, and TypeScript event source ids are plain strings.
 
 Run your app, then open the <a href="https://localhost:35000" target="_blank" rel="noopener">workbench</a>, pick your event store, and select **Sequences** — your `GetStartedBookAdded` is sitting there, permanent and in order. In a fresh event store the first event is at sequence number `0`.
 
@@ -35,13 +35,13 @@ Events are the **write** side — the source of truth. To *read* current state y
 Read the attributes as a sentence: a book comes into the view from `BookAdded`; `OnLoan` is `false` when it's added, `true` when borrowed, `false` again when returned; `BorrowedBy` is whoever borrowed it. You're *declaring* how facts map onto the view — Chronicle replays the events in order and applies the mapping.
 
 > [!NOTE]
-> The class-level `[FromEvent<GetStartedBookAdded>]` maps event properties onto read model properties **by naming convention** — `Title` and `Isbn` flow across without a single per-property attribute. You only reach for `[SetFrom<T>]` when the names differ, the way `GetStartedBookBorrowed.MemberName` feeds `BorrowedBy` here. Setting a literal value per event type (like `OnLoan` here) isn't currently supported in Kotlin or Java's model-bound projections — only event-property mappings are.
+> The class-level `[FromEvent<GetStartedBookAdded>]` maps event properties onto read model properties **by naming convention** — `Title` and `Isbn` flow across without a single per-property attribute. You only reach for `[SetFrom<T>]` when the names differ, the way `GetStartedBookBorrowed.MemberName` feeds `BorrowedBy` here.
 
 One view rarely answers every question. The librarian's next one is "what's out on loan right now?" — and rather than filtering `GetStartedBook`, you declare a second, purpose-built read model whose very *existence* tracks the loan:
 
 <ChronicleClientTabs snippet="get-started/common/borrowed-book-read-model" />
 
-The moment a `GetStartedBookBorrowed` lands, a `GetStartedBorrowedBook` instance appears — keyed by the book's id, its `MemberName` mapped by the same naming convention. When the matching `GetStartedBookReturned` arrives, `[RemovedWith<GetStartedBookReturned>]` removes the instance from the view again. The collection always holds exactly the books that are out *right now* — no flag to maintain, no filter to remember, no cleanup job. Kotlin and Java don't currently have an equivalent to `[RemovedWith<T>]`.
+The moment a `GetStartedBookBorrowed` lands, a `GetStartedBorrowedBook` instance appears — keyed by the book's id, its `MemberName` mapped by the same naming convention. When the matching `GetStartedBookReturned` arrives, `[RemovedWith<GetStartedBookReturned>]` removes the instance from the view again. The collection always holds exactly the books that are out *right now* — no flag to maintain, no filter to remember, no cleanup job.
 
 ## Query the read models
 
@@ -55,9 +55,9 @@ Materialization happens in the background as events arrive, so these reads are *
 
 When a read has to include the event you just appended, you have two tools. Mark the read model **passive**, and Chronicle keeps it out of the sink and computes it from its events on every read. Or keep it materialized and wait for the append's observers to catch up before reading. [Read model consistency](../read-models/consistency.md) compares the two.
 
-[Getting a collection of instances](../read-models/getting-collection-instances) covers the details, including the event count you can pass to replay a read model from the beginning instead. Kotlin and Java currently only support fetching a single instance by key (`getInstanceByKey`) — fetching every instance of a read model isn't available yet.
+[Getting a collection of instances](../read-models/getting-collection-instances) covers the details, including the event count you can pass to replay a read model from the beginning instead.
 
-`GetInstances` returns every stored instance at once. The `Materialized` API reads the same stored instances back a page at a time. Kotlin and Java don't currently have a materialized/paging query API at all; Elixir's equivalent pages by page number rather than skip/take:
+`GetInstances` returns every stored instance at once. The `Materialized` API reads the same stored instances back a page at a time. Elixir's equivalent pages by page number rather than skip/take:
 
 <ChronicleClientTabs snippet="get-started/common/materialized-paging" />
 

@@ -3,10 +3,7 @@
 
 using System.Collections;
 using System.Dynamic;
-using Cratis.Chronicle.Objects;
 using Cratis.Chronicle.Properties;
-using Cratis.Concepts;
-using Cratis.Reflection;
 using Cratis.Strings;
 
 namespace Cratis.Chronicle.Dynamic;
@@ -28,69 +25,12 @@ public static class ExpandoObjectExtensions
     public static ExpandoObject Clone(this ExpandoObject original)
     {
         var clone = new ExpandoObject();
-
         var originalAsDictionary = original as IDictionary<string, object>;
         var cloneAsDictionary = clone as IDictionary<string, object>;
-        List<KeyValuePair<string, object>> safeCopy;
 
-        // Note: Since our internals are not necessarily thread safe, we need to reduce the risk of conflicts
-        // when copying the key-value pairs. This is a best effort to avoid exceptions due to concurrent modifications.
-        try
+        foreach (var (key, value) in ExpandoObjectCloning.Snapshot(originalAsDictionary))
         {
-            // Attempt to copy key-value pairs safely
-            safeCopy = new List<KeyValuePair<string, object>>(originalAsDictionary);
-        }
-        catch (InvalidOperationException)
-        {
-            // Handle modification issue by retrying, could still fail - so this is a best effort fallback mechanism
-            safeCopy = originalAsDictionary.ToList();
-        }
-
-        foreach (var (key, value) in safeCopy)
-        {
-            if (value is null)
-            {
-                cloneAsDictionary.Add(key, null!);
-                continue;
-            }
-
-            if (value is ExpandoObject nested)
-            {
-                cloneAsDictionary.Add(key, nested.Clone());
-                continue;
-            }
-
-            var valueType = value.GetType();
-
-            // A dictionary is also an IEnumerable<KeyValuePair<,>>, so it must be cloned key-by-key before
-            // the generic enumerable branch below gets a chance at it - that branch iterates any IEnumerable
-            // into a List<T>, which for a dictionary would silently replace it with a
-            // List<KeyValuePair<TKey, TValue>>, losing the dictionary shape entirely.
-            if (valueType.IsDictionary())
-            {
-                cloneAsDictionary.Add(key, CloneDictionary(value, valueType));
-                continue;
-            }
-
-            if (!valueType.IsPrimitive &&
-                valueType != typeof(string) &&
-                valueType != typeof(Guid) &&
-                valueType != typeof(byte[]) &&
-                !valueType.IsConcept() &&
-                value is IEnumerable enumerableValue)
-            {
-                var elementType = valueType.GetEnumerableElementType();
-                var list = (Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType)) as IList)!;
-                foreach (var element in enumerableValue)
-                {
-                    list.Add(element is ExpandoObject child ? child.Clone() : element.Clone());
-                }
-                cloneAsDictionary.Add(key, list);
-            }
-            else
-            {
-                cloneAsDictionary.Add(key, value.Clone());
-            }
+            cloneAsDictionary.Add(key, ExpandoObjectCloning.CloneValue(value)!);
         }
 
         return clone;
@@ -115,7 +55,7 @@ public static class ExpandoObjectExtensions
             var value = property.GetValue(original, null);
             if (value != null)
             {
-                value = GetActualValueFrom(value, camelCaseProperties);
+                value = ExpandoObjectConversion.GetActualValueFrom(value, camelCaseProperties);
             }
             expandoAsDictionary[propertyName] = value!;
         }
@@ -137,18 +77,7 @@ public static class ExpandoObjectExtensions
 
         foreach (var (key, value) in rightAsDictionary)
         {
-            var rightValue = value;
-            if (resultAsDictionary.TryGetValue(key, out var leftValue) && leftValue is ExpandoObject leftValueExpandoObject &&
-                value is ExpandoObject valueAsExpandoObject)
-            {
-                rightValue = leftValueExpandoObject.MergeWith(valueAsExpandoObject);
-            }
-            else if (rightValue is ExpandoObject rightValueAsExpandoObject)
-            {
-                rightValue = rightValueAsExpandoObject.Clone();
-            }
-
-            resultAsDictionary[key] = rightValue;
+            resultAsDictionary[key] = MergeValue(resultAsDictionary, key, value);
         }
 
         return result;
@@ -163,95 +92,8 @@ public static class ExpandoObjectExtensions
     /// <returns><see cref="ExpandoObject"/> at property.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the current target unexpectedly becomes null while traversing array properties.</exception>
     /// <exception cref="SegmentValueIsNotCollection">Thrown if a segment value should be expando object.</exception>
-    public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, ArrayIndexers arrayIndexers)
-    {
-        var currentTarget = target as IDictionary<string, object>;
-        var segments = property.Segments.ToArray();
-        var currentPath = PropertyPath.Root;
-
-        for (var propertyIndex = 0; propertyIndex < segments.Length - 1; propertyIndex++)
-        {
-            var segment = segments[propertyIndex];
-            currentPath += segment;
-            switch (segment)
-            {
-                case PropertyName propertyName:
-                    {
-                        if (!currentTarget.TryGetValue(propertyName.Value, out var nestedValue) || nestedValue is null)
-                        {
-                            var nested = new ExpandoObject();
-                            currentTarget[segment.Value] = nested;
-                            currentTarget = nested!;
-                        }
-                        else
-                        {
-                            currentTarget = ((ExpandoObject)nestedValue)!;
-                        }
-                    }
-                    break;
-
-                case ArrayProperty arrayProperty:
-                    {
-                        var matchingIndexers = arrayIndexers.All
-                            .Where(indexer => indexer.ArrayProperty == currentPath)
-                            .ToArray();
-
-                        if (matchingIndexers.Length == 0)
-                        {
-                            matchingIndexers = [arrayIndexers.GetFor(currentPath)];
-                        }
-
-                        foreach (var indexer in matchingIndexers)
-                        {
-                            if (currentTarget is null)
-                            {
-                                throw new InvalidOperationException("Current target cannot be null while processing array properties.");
-                            }
-
-                            IEnumerable<ExpandoObject> collection;
-                            if (!currentTarget.ContainsKey(arrayProperty.Value))
-                            {
-                                collection = [];
-                                currentTarget[segment.Value] = collection;
-                            }
-                            else
-                            {
-                                if (currentTarget[segment.Value] is not IEnumerable enumerable)
-                                {
-                                    throw new SegmentValueIsNotCollection(property, segment);
-                                }
-                                collection = ((IEnumerable)currentTarget[segment.Value]).OfType<ExpandoObject>().ToList();
-                            }
-
-                            var element =
-                                !indexer.IdentifierProperty.IsSet &&
-                                indexer.Identifier is int index &&
-                                collection.Count() > index
-                                    ? collection.ToArray()[index]!
-                                    : collection
-                                        .Cast<IDictionary<string, object>>()
-                                        .SingleOrDefault(item =>
-                                            ChildIdentity.TryGetValue(item, indexer.IdentifierProperty, out var identifierValue) &&
-                                            identifierValue!.IsEqualTo(indexer.Identifier));
-
-                            if (element == default)
-                            {
-                                element = new ExpandoObject()!;
-                                if (indexer.IdentifierProperty.IsSet)
-                                {
-                                    indexer.IdentifierProperty.SetValue(element, indexer.Identifier, ArrayIndexers.NoIndexers);
-                                }
-                                currentTarget[segment.Value] = collection.Append((element as ExpandoObject)!).ToList();
-                            }
-                            currentTarget = (element as ExpandoObject)!;
-                        }
-                    }
-                    break;
-            }
-        }
-
-        return (currentTarget as ExpandoObject)!;
-    }
+    public static ExpandoObject EnsurePath(this ExpandoObject target, PropertyPath property, ArrayIndexers arrayIndexers) =>
+        ExpandoObjectPaths.EnsurePath(target, property, arrayIndexers);
 
     /// <summary>
     /// Ensures that a collection exists for a specific <see cref="PropertyPath"/>.
@@ -264,7 +106,7 @@ public static class ExpandoObjectExtensions
     /// <exception cref="ChildrenPropertyIsNotEnumerable">Thrown if there is an existing property and it is not enumerable.</exception>
     public static ICollection<TChild> EnsureCollection<TChild>(this ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
-        var inner = target.EnsurePath(childrenProperty, arrayIndexers) as IDictionary<string, object>;
+        var inner = EnsureCollectionParent(target, childrenProperty, arrayIndexers) as IDictionary<string, object>;
         if (!inner.TryGetValue(childrenProperty.LastSegment.Value, out var value) || value is null)
         {
             value = new List<TChild>();
@@ -293,11 +135,7 @@ public static class ExpandoObjectExtensions
     /// <param name="key">The key value to check for.</param>
     /// <returns>True if there is an item, false if not.</returns>
     public static bool Contains(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key) =>
-        items!.Any((IDictionary<string, object> _) =>
-        {
-            if (!ChildIdentity.TryGetValue(_, identityProperty, out var itemValue) || itemValue is null) return false;
-            return KeyValueEquality.AreEqual(itemValue, key);
-        });
+        items!.Any((IDictionary<string, object> item) => HasIdentity(item, identityProperty, key));
 
     /// <summary>
     /// Get an item with a specific key in a collection of <see cref="ExpandoObject"/> items.
@@ -308,11 +146,7 @@ public static class ExpandoObjectExtensions
     /// <returns>The item or null if not found.</returns>
     public static ExpandoObject? GetItem(this IEnumerable<ExpandoObject> items, PropertyPath identityProperty, object key)
     {
-        var item = items!.SingleOrDefault((IDictionary<string, object> _) =>
-        {
-            if (!ChildIdentity.TryGetValue(_, identityProperty, out var itemValue) || itemValue is null) return false;
-            return KeyValueEquality.AreEqual(itemValue, key);
-        });
+        var item = items!.SingleOrDefault((IDictionary<string, object> candidate) => HasIdentity(candidate, identityProperty, key));
         return item is not null ? item as ExpandoObject : null;
     }
 
@@ -336,86 +170,31 @@ public static class ExpandoObjectExtensions
         }
     }
 
-    /// <summary>
-    /// Deep clone a dictionary value while preserving its key and value types.
-    /// </summary>
-    /// <param name="value">The dictionary instance to clone.</param>
-    /// <param name="dictionaryType">The runtime <see cref="Type"/> of <paramref name="value"/>.</param>
-    /// <returns>A cloned <see cref="IDictionary"/> with the same key and value types as <paramref name="dictionaryType"/>.</returns>
-    static IDictionary CloneDictionary(object value, Type dictionaryType)
+    static ExpandoObject EnsureCollectionParent(ExpandoObject target, PropertyPath childrenProperty, ArrayIndexers arrayIndexers)
     {
-        var keyType = dictionaryType.GetKeyType();
-        var valueType = dictionaryType.GetValueType();
-        var clone = (Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType)) as IDictionary)!;
-
-        var keyValuePairType = typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType);
-        var keyProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Key))!;
-        var valueProperty = keyValuePairType.GetProperty(nameof(KeyValuePair<object, object>.Value))!;
-
-        foreach (var keyValuePair in (IEnumerable)value)
+        var indexers = arrayIndexers.All.ToArray();
+        var childIndex = Array.FindLastIndex(indexers, indexer => indexer.ArrayProperty == childrenProperty);
+        if (!indexers.Take(childIndex).Any(indexer => indexer.ArrayProperty == childrenProperty))
         {
-            var entryKey = keyProperty.GetValue(keyValuePair)!;
-            var entryValue = valueProperty.GetValue(keyValuePair);
-            clone[entryKey] = entryValue is ExpandoObject nestedEntry ? nestedEntry.Clone() : entryValue?.Clone();
+            return target.EnsurePath(childrenProperty, arrayIndexers);
         }
 
-        return clone;
+        // EnsurePath skips the final segment. Traverse every recursive ancestor, but not the addressed child.
+        var parentIndexers = new ArrayIndexers(indexers.Where((_, index) => index != childIndex));
+        return target.EnsurePath(childrenProperty + childrenProperty.LastSegment, parentIndexers);
     }
 
-    static object GetActualValueFrom(object value, bool camelCaseProperties = false)
+    static object MergeValue(IDictionary<string, object> result, string key, object value)
     {
-        var valueType = value.GetType();
+        if (value is not ExpandoObject rightExpando) return value;
 
-        // A dictionary is also an IEnumerable<KeyValuePair<,>>, so it must be converted key-by-key before
-        // the generic enumerable branch below gets a chance at it - that branch would otherwise iterate
-        // its KeyValuePair<,> entries as plain elements, turning the dictionary into a list of
-        // { Key, Value } objects instead of preserving it as a dictionary.
-        if (valueType.IsDictionary())
-        {
-            return ConvertDictionaryValue(value, camelCaseProperties);
-        }
-
-        if (!valueType.IsPrimitive &&
-            !valueType.IsEnum &&
-            valueType != typeof(string) &&
-            valueType != typeof(Guid) &&
-            valueType != typeof(decimal) &&
-            valueType != typeof(DateOnly) &&
-            valueType != typeof(DateTime) &&
-            valueType != typeof(DateTimeOffset) &&
-            valueType != typeof(TimeOnly) &&
-            valueType != typeof(TimeSpan) &&
-            valueType != typeof(byte[]) &&
-            !valueType.IsConcept())
-        {
-            if (value is IEnumerable enumerableValue)
-            {
-                var list = new List<object>();
-
-                foreach (var element in enumerableValue)
-                {
-                    list.Add(GetActualValueFrom(element, camelCaseProperties));
-                }
-
-                value = list.ToArray();
-            }
-            else
-            {
-                value = value.AsExpandoObject(camelCaseProperties);
-            }
-        }
-
-        return value;
+        return result.TryGetValue(key, out var leftValue) && leftValue is ExpandoObject leftExpando
+            ? leftExpando.MergeWith(rightExpando)
+            : rightExpando.Clone();
     }
 
-    static Dictionary<object, object> ConvertDictionaryValue(object value, bool camelCaseProperties)
-    {
-        var result = new Dictionary<object, object>();
-        foreach (var entry in ((IEnumerable)value).GetKeyValuePairs())
-        {
-            result[entry.Key] = GetActualValueFrom(entry.Value, camelCaseProperties);
-        }
-
-        return result;
-    }
+    static bool HasIdentity(IDictionary<string, object> item, PropertyPath identityProperty, object key) =>
+        ChildIdentity.TryGetValue(item, identityProperty, out var itemValue) &&
+        itemValue is not null &&
+        KeyValueEquality.AreEqual(itemValue, key);
 }

@@ -28,9 +28,6 @@ public record EventSeedingKey(
     /// <param name="key"><see cref="EventSeedingKey"/> to convert from.</param>
     public static implicit operator string(EventSeedingKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
@@ -52,4 +49,7 @@ public record EventSeedingKey(
     /// <param name="namespace">The namespace name.</param>
     /// <returns>A namespace-specific event seeding key.</returns>
     public static EventSeedingKey ForNamespace(EventStoreName eventStore, EventStoreNamespaceName @namespace) => new(eventStore, @namespace);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 }

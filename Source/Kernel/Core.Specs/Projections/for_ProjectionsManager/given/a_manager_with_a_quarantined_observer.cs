@@ -23,8 +23,8 @@ public class a_manager_with_a_quarantined_observer : a_manager_recovering_a_reti
         var state = _managerSilo.StorageManager.GetStorage<ProjectionsManagerState>(typeof(ProjectionsManager).FullName);
         _projectionDefinition = _projectionDefinition with { SubscribesToAllEvents = AllEvents };
         state.State.Projections = [_projectionDefinition];
-        _managedObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<bool>())
-            .Returns(call => _observer.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, call.Arg<IEnumerable<EventType>>(), SiloAddress.Zero, call.Arg<bool>()));
+        _managedObserver.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<bool>())
+            .Returns(call => _observer.ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, call.Arg<EventTypeSet>(), SiloAddress.Zero, call.Arg<bool>()));
         var channel = Substitute.For<IBroadcastChannelSubscription>();
         channel.ChannelId.Returns(ChannelId.Create("namespaces", _observerKey.EventStore.Value));
         channel.When(_ => _.Attach(Arg.Any<Func<NamespaceAdded, Task>>(), Arg.Any<Func<Exception, Task>>()))

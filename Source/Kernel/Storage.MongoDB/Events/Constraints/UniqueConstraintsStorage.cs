@@ -124,7 +124,7 @@ public partial class UniqueConstraintsStorage(
     {
         if (definition.Mode != UniqueConstraintMode.PerValue)
         {
-            await SavePerEventSource(eventSourceId, definition.Name, sequenceNumber, value, scopeKey, subject, cancellationToken);
+            await SavePerEventSource(eventSourceId, definition.Name, scopeKey, new UniqueConstraintIndex(eventSourceId, value, sequenceNumber, subject?.Value), cancellationToken);
             return;
         }
 
@@ -326,7 +326,7 @@ public partial class UniqueConstraintsStorage(
         await foreach (var value in Drain(cursor, row => row.Value, cancellationToken)) yield return value;
     }
 
-    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, EventSequenceNumber sequenceNumber, UniqueConstraintValue value, string scopeKey, Subject? subject, CancellationToken cancellationToken)
+    async Task SavePerEventSource(EventSourceId eventSourceId, ConstraintName name, string scopeKey, UniqueConstraintIndex claim, CancellationToken cancellationToken)
     {
         var collection = GetCollectionFor(name, scopeKey);
         await EnsureIndex(collection, cancellationToken).ConfigureAwait(false);
@@ -334,7 +334,7 @@ public partial class UniqueConstraintsStorage(
         {
             await collection.ReplaceOneAsync(
                 u => u.EventSourceId == eventSourceId,
-                new UniqueConstraintIndex(eventSourceId, value, sequenceNumber, subject?.Value),
+                claim,
                 new ReplaceOptions { IsUpsert = true },
                 cancellationToken);
         }
@@ -351,25 +351,7 @@ public partial class UniqueConstraintsStorage(
 
     async Task EnsureOwnerIndex(IMongoCollection<UniqueConstraintValueIndex> collection, CancellationToken cancellationToken = default)
     {
-        if (_ensuredIndexes.ContainsKey(collection.CollectionNamespace.FullName))
-        {
-            return;
-        }
-
-        try
-        {
-            await EnsureOwnerIndexes(collection, cancellationToken);
-            _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
-        }
-        catch (MongoCommandException exception) when (exception.Code is 13 or 8000)
-        {
-            if (_ensuredIndexes.TryAdd($"denied:{collection.CollectionNamespace.FullName}", 0))
-            {
-                logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
-            }
-
-            throw;
-        }
+        await EnsureOnce(collection.CollectionNamespace.FullName, () => EnsureOwnerIndexes(collection, cancellationToken));
     }
 
     IMongoCollection<UniqueConstraintIndex> GetCollectionFor(ConstraintName constraintName, string scopeKey = "")
@@ -382,21 +364,26 @@ public partial class UniqueConstraintsStorage(
 
     async Task EnsureIndex(IMongoCollection<UniqueConstraintIndex> collection, CancellationToken cancellationToken = default)
     {
-        if (_ensuredIndexes.ContainsKey(collection.CollectionNamespace.FullName))
+        await EnsureOnce(collection.CollectionNamespace.FullName, () => EnsureValueIndexes(collection, logger, cancellationToken));
+    }
+
+    async Task EnsureOnce(string collectionName, Func<Task> ensure)
+    {
+        if (_ensuredIndexes.ContainsKey(collectionName))
         {
             return;
         }
 
         try
         {
-            await EnsureValueIndexes(collection, logger, cancellationToken);
-            _ensuredIndexes.TryAdd(collection.CollectionNamespace.FullName, 0);
+            await ensure();
+            _ensuredIndexes.TryAdd(collectionName, 0);
         }
         catch (MongoCommandException exception) when (exception.Code is 13 or 8000)
         {
-            if (_ensuredIndexes.TryAdd($"denied:{collection.CollectionNamespace.FullName}", 0))
+            if (_ensuredIndexes.TryAdd($"denied:{collectionName}", 0))
             {
-                logger.ConstraintIndexDenied(collection.CollectionNamespace.FullName, exception);
+                logger.ConstraintIndexDenied(collectionName, exception);
             }
 
             throw;

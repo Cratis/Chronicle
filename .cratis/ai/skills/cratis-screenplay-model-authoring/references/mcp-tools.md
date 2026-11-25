@@ -26,7 +26,7 @@
 - Formatting and recovery limits
 - Code attachments
 
-The standalone MCP server lists 46 tools from Screenplay 4.228.0 (including the MCP-Apps visualization tool); `tools/list` is the authority for the installed server, and the CLI-bundled MCP (`cratis screenplay mcp`) can be an older Screenplay that lacks newer tools.
+The standalone MCP server lists the tools in the pinned contract (including the MCP-Apps visualization tool, `migrate` and `list-storylines`); `tools/list` is the authority for the installed server, and the CLI-bundled MCP (`cratis screenplay mcp`) can be an older Screenplay that lacks newer tools.
 
 The supported CLI launch is `cratis screenplay mcp <model-root>`, or `cratis screenplay mcp`
 alone inside a project, where the CLI reuses existing model/workspace roots.
@@ -67,14 +67,17 @@ the [MCP loop](mcp-loop.md).
 
 | Group | Tools | Intent |
 | --- | --- | --- |
-| Understanding | `describe-application`, `search-declarations`, `find-declaration`, `declaration-details` | Navigate logical hierarchy and inspect bounded details |
-| References and examples | `find-references`, `dependencies`, `dependency-graph`, `find-fixtures`, `find-assertion-gaps`, `find-specification-obligations`, `find-modeling-smells`, `trace-lineage`, `semantic-diff` | Inspect declared relationships and authored examples, not executed coverage |
-| Source and validation | `diagnostics`, `ui-profiles`, `read-document`, `merged-document`, `syntax-schema` | Read exact source or typed structure and diagnose problems |
+| Understanding | `describe-application`, `search-declarations`, `find-declaration`, `declaration-details`, `list-storylines` (one optional argument) | Navigate logical hierarchy, inspect bounded details and list storylines |
+| References and examples | `list-storylines`, `find-references`, `dependencies`, `dependency-graph`, `find-fixtures`, `find-assertion-gaps`, `find-specification-obligations`, `find-modeling-smells`, `trace-lineage`, `semantic-diff` | Inspect declared relationships and authored examples, not executed coverage |
+| Source and validation | `diagnostics`, `ui-profiles` (also the design system, themes and resolved values per mode), `read-document`, `merged-document`, `syntax-schema` | Read exact source or typed structure and diagnose problems |
 | Workspace inspection | `open-workspace`, `read-workspace`, `read-ast`, `workspace-state`, `export-workspace`, `repair-capabilities` | Obtain current identities, handles, readiness, code attachment requirements, source-map locations, durable-state status and the repair catalog |
 | Visual (MCP-Apps hosts only) | `visualize-model` | Draw the board for the model or a `proposalId`; its `sketch` argument previews a what-if of whole documents. Reads only |
 | Planning | `propose-source`, `propose-ast`, `propose-rename`, `propose-move`, `propose-repair`, `propose-property`, `propose-number-enum-members`, `propose-extract-inline-event`, `propose-inline-event`, `propose`, `recommend-layout`, `expand-layout` | Produce validated, reviewable candidates without writing them |
 | Review | `read-proposal`, `discard-proposal` | Inspect exact changes, dropped comments and proposed attachments, or abandon a connection-local proposal |
 | Reference execution | `run-specifications` | Run the workspace or a retained proposal candidate read-only; not attached code or target tests |
+
+`propose-ast` node kinds for the design (Screenplay with design systems): `DesignSystemSyntax`, `DesignTokenCategorySyntax`, `DesignTokenSyntax`, `DesignComponentSyntax`, `DesignVariantSyntax`, `DesignStateSyntax`, `DesignAssignmentSyntax`, `DesignWordsSyntax`, `DesignContrastRuleSyntax`, `ThemeModeValuesSyntax`; `ThemeSyntax` gains `implements`, `palette`, `values` and `modeValues`. The tool count is unchanged: `ui-profiles` carries the read.
+| Version migration | `migrate` | Read-only: report what `screenplay migrate --from <major> [--to <major>]` rewrites and, for a named `document`, its migrated source to write through a proposal (`cratis-screenplay-modeling-lifecycle`) |
 | Effects | `apply`, `recover-workspace` | Apply an accepted plan or explicitly recover an interrupted write |
 
 `propose-move` moves a slice to another feature, a feature to another module or feature, or a single command, event, read model, projection, query, reaction or capture to another slice, keeping identities: copy the `target` and `newParent` `{kind, parts}` addresses from the identity inventory (`newParent` is the destination slice for a declaration) and pass `expectedRevision` and `expectedCatalogRevision`. It repairs qualified references and `depends on`, and refuses identity loss, collisions, descendant destinations, name capture (a reference that would resolve to a different declaration), inherited authorization or screen-interaction changes and glob imports; review `moveReport` (`identityMigrations`, `referenceRepairs`, `fragmentsMoved`, and `specificationsCarried` for a declaration). It does not rename events, change pins or move files. Use it for legacy re-slicing instead of retyping declarations. Its report document fields are plain strings, not nested identity objects.
@@ -394,7 +397,7 @@ leave the event standalone; never work around it with text edits.
 
 Requires Screenplay 4.223.0 (`screenplay --version`) for `trace-lineage`.
 
-`trace-lineage` takes a read-model property `address` and returns a paged tree
+Requires Screenplay 6.6.0 or later (`screenplay --version`) for `direction` and for command, event and screen-field addresses. `trace-lineage` takes a property `address` (a command, event or read-model property: the owner's address and the member; or a screen field: the screen's or form's address and the bound property) and a `direction` (`upstream`, `downstream` or `both`, the default). Downstream a command property goes to the event properties its productions set, to the read-model properties its projections set (and the command properties a reaction's `invokes` sets), then to the queries and screens that show it; a form input field has only downstream hops and a shown field only upstream ones; a command with a `handler` stops at `opaque`. Hops carry `id`, `parent`, `depth`, `direction`, `role`, `status`, `kind`, `address`, `location` (and, for projections, `mode` and `block`). It returns a paged tree
 (`limit`, `offset`) from the property through projection or reducer mappings, joins and
 child mappings to the event property, then to the producing command property or capture
 source. A broken hop is reported where the chain breaks, several sources appear as
@@ -402,6 +405,16 @@ branches and code the model cannot see into is marked opaque. It is read-only an
 advisory.
 
 Requires Screenplay 4.153.0 or later (`screenplay --version`) for `propose-rename` to consult release-baseline mutability; before it, `propose-rename` pins the previous effective name without a baseline.
+
+`read-workspace` with `view: "executable-model"` and `screens: true` admits screens (ESM v42; Screenplay 6.8.0 or later); a reference the model does not hold is refused with `ScreensRefused`.
+
+`read-workspace` also pages `view: "api-description"` (OpenAPI 3.1) and `view: "ui-contract"` (`screenplay-ui/1`) like `executable-model`; `api-description` is unavailable (`available: false`) without an executable model (Screenplay 6.5.0 or later).
+
+`semantic-diff` results carry `slices`, the per-slice change summary (`slices`, `modelWide`, `affectedSlices`; Screenplay 6.2.0 or later); the tool count is unchanged.
+
+`syntax-schema` exposes graph query collects as `GraphQuerySyntax.collects` (`GraphCollectSyntax` with `property`, `from`, `hop`, `returns`; Screenplay 6.29.0 or later, `screenplay --version`); `propose-ast` adds, replaces and removes them through the ordinary typed operations, and the member is omitted when a query collects nothing.
+
+`screenplay rename` is the scriptable, identity-preserving alternative to `propose-rename` plus `apply` (Screenplay 6.1.0 or later; see [export, compare and rename](../../cratis-screenplay-toolchain/references/model-export-diff-rename.md)).
 
 `propose-rename` consults release-baseline mutability: without a
 baseline it conservatively pins the previous effective name; an unadmitted event
@@ -485,7 +498,7 @@ cannot rename a part through `propose-rename`. Operations and
 exact numeric mode remain unadmitted. Check installed schemas, especially when
 the CLI bundle predates the standalone tool.
 
-Systems/operations remain authoring-only (PLAY0268). Sources/streams and their
+Operations remain authoring-only (PLAY0268), as do systems when no system declares an ability; any ability admits every system at ESM v50. Sources/streams and their
 routes are admitted v8, not syntax-only; see toolchain `references/sources-and-streams.md`.
 `generated` properties and `returns` responses are admitted as ESM v7 and bind. The server reads and edits them: `declaration-details` exposes `isGenerated`
 and a command `response` view, `route` and `streams` views; `read-workspace` offers
@@ -833,6 +846,16 @@ one with path, line, column and text. Disclose non-zero counts before applying.
 Untouched files remain byte-identical.
 
 ## Code attachments
+
+`read-workspace` and `read-proposal` also accept `view: "typed-contexts"`. Inspect this beside
+`implementation-requirements` from the same compilation/revision before building a wrapper.
+Since Screenplay 4.257.0, handler descriptors add optional `resultVersion` and `result`
+(with its own `resultVersion` and `entries`). Each `result.entries` item exposes `eventContract`,
+`eventName`, `eventRevision`, `payload`, `destinationKind`, `destinationProperty` and
+`destinationType`: use declared event identities, payload shapes and scalar/one-of destinations,
+not guessed names or invented wrapper signatures. Older/legacy descriptors omit both additions;
+absence is not permission to infer a result contract. `isWrapperReady`, types and hashes are
+inspection evidence, not execution or target admission.
 
 `read-workspace` and `read-proposal` accept `view: "implementation-requirements"`.
 Each entry names the role, owner, requirement id, required capability,

@@ -14,8 +14,8 @@ namespace Cratis.Chronicle.Testing.Events;
 /// </summary>
 internal sealed class ApplicationMetadata
 {
-    readonly object _eventTypesSync = new();
-    readonly object _seedSync = new();
+    readonly Lock _eventTypesSync = new();
+    readonly Lock _seedSync = new();
     EventTypesDiscovery? _eventTypes;
     IReadOnlyList<KernelEvents::EventTypeDefinition>? _seedDefinitions;
 

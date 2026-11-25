@@ -50,6 +50,9 @@ Validates the TypeScript package.
 5. Install TypeScript dependencies
 6. Generate TypeScript files from proto definitions using ts-proto
 7. Build TypeScript package
+8. Check packed TypeScript consumers (`yarn check:consumers`)
+
+The consumer check runs the declaration-import test, then `check-consumers.mjs`. That script packs the already-built package without its `prepare` hook, so it checks the built output rather than rebuilding, and verifies the packed package from a temporary consumer project. The publish workflow runs the same check.
 
 #### Publish Workflow (`.github/workflows/publish.yml`)
 

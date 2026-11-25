@@ -31,14 +31,14 @@ public class and_a_child_sets_a_value_once : given.a_child_collection_projection
               }}}
             }}
             """);
-        _definition.Children["notes"].From[_noteWritten] = new(
+        _definition = _definition.WithChild("notes", c1 => c1.WithFrom(_noteWritten, new(
             new Dictionary<PropertyPath, string>
             {
                 ["firstAuthor"] = $"{WellKnownExpressions.SetOnce}(author)",
                 ["text"] = "text"
             },
             "noteId",
-            "$eventSourceId");
+            "$eventSourceId")));
     }
 
     async Task Because()

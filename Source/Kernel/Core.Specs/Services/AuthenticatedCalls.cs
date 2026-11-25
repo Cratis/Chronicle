@@ -27,6 +27,19 @@ public static class AuthenticatedCalls
     public static ConnectionOwner OwnerOf(string subject) => new("issuer", subject);
 
     /// <summary>
+    /// Creates the application services the server authorizes callers with once their request has ended: the subject "admin" is an administrator.
+    /// </summary>
+    /// <returns>The <see cref="IServiceProvider"/>.</returns>
+    public static IServiceProvider ApplicationServices()
+    {
+        var authorization = Substitute.For<IAuthorizationService>();
+        authorization
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object?>(), Arg.Any<string>())
+            .Returns(call => call.Arg<ClaimsPrincipal>().HasClaim("sub", "admin") ? AuthorizationResult.Success() : AuthorizationResult.Failed());
+        return new ServiceCollection().AddSingleton(authorization).BuildServiceProvider();
+    }
+
+    /// <summary>
     /// Creates the context of a call made by an authenticated caller.
     /// </summary>
     /// <param name="subject">The subject of the caller.</param>

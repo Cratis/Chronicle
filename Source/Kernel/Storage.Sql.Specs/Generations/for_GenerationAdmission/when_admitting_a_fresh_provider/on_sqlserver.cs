@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationAdmission.when_admitting_a_fresh_provider;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(SqlServerCollection.Name)]
 public class on_sqlserver(SqlServerFixture fixture) : given.a_sqlserver_provider(fixture)
 {
@@ -15,7 +16,7 @@ public class on_sqlserver(SqlServerFixture fixture) : given.a_sqlserver_provider
     async Task Because()
     {
         await Admit();
-        await using var context = new Cluster.ClusterDbContext(new DbContextOptionsBuilder<Cluster.ClusterDbContext>().UseSqlServer(OptionsForProvider.Value.Storage.ConnectionDetails).AddConceptAsSupport().Options);
+        await using var context = new Cluster.ClusterDbContext(new DbContextOptionsBuilder<Cluster.ClusterDbContext>().UseSqlServer(OptionsForProvider.Value.Storage.ConnectionDetails).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
         _migrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
     }
 

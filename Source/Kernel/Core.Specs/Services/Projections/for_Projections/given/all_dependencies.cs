@@ -150,12 +150,13 @@ public class all_dependencies : Observation.given.a_connection_held_on_another_s
         _service = new Projections(
             _grainFactory,
             _expandoObjectConverter,
+            Cratis.Chronicle.Events.for_PublicEventContentRedactor.given.header_events.Options,
             _languageService,
             services.BuildServiceProvider(),
             _readModelsCompliance,
             _localSiloDetails,
             CreateOwnership(),
-            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }),
+            Microsoft.Extensions.Options.Options.Create(new Cratis.Chronicle.Configuration.ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) }, Registration = new() { AcceptAsynchronously = false } }),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Projections>.Instance,
             NamespaceCasingContext.Create());
     }

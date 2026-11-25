@@ -93,8 +93,7 @@ public class a_pinned_projection_grain : Specification
             Arg.Any<EventStoreName>(),
             Arg.Any<EventStoreNamespaceName>(),
             Arg.Any<ProjectionDefinition>(),
-            Arg.Any<ReadModelDefinition>(),
-            Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>()).Returns(call =>
+            Arg.Any<ReadModelDefinition>()).Returns(call =>
         {
             _engineDefinition = call.Arg<ProjectionDefinition>();
             return _projection;

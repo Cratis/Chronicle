@@ -8,7 +8,7 @@ namespace Cratis.Chronicle.Occurrences;
 /// </summary>
 internal sealed class OccurrenceAttemptLifetime : IAsyncDisposable
 {
-    readonly object _gate = new();
+    readonly Lock _gate = new();
     readonly TimeProvider _clock;
     readonly CancellationToken _session;
     readonly CancellationTokenSource _lifetime = new();

@@ -16,10 +16,18 @@ public class and_all_values_are_configured : Specification
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Cratis:Chronicle:ConnectedClients:ReviseIntervalSeconds"] = "11",
+                ["Cratis:Chronicle:ConnectedClients:SubscriptionCheckIntervalSeconds"] = "120",
+                ["Cratis:Chronicle:ConnectedClients:SubscriptionSettleSeconds"] = "45",
                 ["Cratis:Chronicle:ConnectedClients:ReservationTtlSeconds"] = "42",
                 ["Cratis:Chronicle:ConnectedClients:StaleThresholdSeconds"] = "9",
                 ["Cratis:Chronicle:ConnectedClients:ObserveIntervalSeconds"] = "3",
                 ["Cratis:Chronicle:ConnectedClients:KeepAliveIntervalSeconds"] = "4",
+                ["Cratis:Chronicle:ConnectedClients:GraceSeconds"] = "6",
+                ["Cratis:Chronicle:Overload:Enabled"] = "false",
+                ["Cratis:Chronicle:Overload:MaxOldestPendingCallAgeSeconds"] = "8",
+                ["Cratis:Chronicle:Overload:MaxPendingCalls"] = "12",
+                ["Cratis:Chronicle:Overload:MaxRunningCalls"] = "13",
+                ["Cratis:Chronicle:Overload:RecoverySeconds"] = "14",
                 ["Cratis:Chronicle:Webhooks:RetryDelaySeconds"] = "7",
                 ["Cratis:Chronicle:Webhooks:CircuitBreakerSamplingDurationSeconds"] = "45",
                 ["Cratis:Chronicle:Webhooks:CircuitBreakerBreakDurationSeconds"] = "20",
@@ -46,10 +54,18 @@ public class and_all_values_are_configured : Specification
     }
 
     [Fact] void should_bind_the_revise_interval() => _options.ConnectedClients.ReviseIntervalSeconds.ShouldEqual(11);
+    [Fact] void should_bind_the_subscription_check_interval() => _options.ConnectedClients.SubscriptionCheckIntervalSeconds.ShouldEqual(120);
+    [Fact] void should_bind_the_subscription_settle_window() => _options.ConnectedClients.SubscriptionSettleSeconds.ShouldEqual(45);
     [Fact] void should_bind_the_reservation_ttl() => _options.ConnectedClients.ReservationTtlSeconds.ShouldEqual(42);
     [Fact] void should_bind_the_stale_threshold() => _options.ConnectedClients.StaleThresholdSeconds.ShouldEqual(9);
     [Fact] void should_bind_the_observe_interval() => _options.ConnectedClients.ObserveIntervalSeconds.ShouldEqual(3);
     [Fact] void should_bind_the_keep_alive_interval() => _options.ConnectedClients.KeepAliveIntervalSeconds.ShouldEqual(4);
+    [Fact] void should_bind_the_grace() => _options.ConnectedClients.GraceSeconds.ShouldEqual(6);
+    [Fact] void should_bind_overload_enabled() => _options.Overload.Enabled.ShouldBeFalse();
+    [Fact] void should_bind_the_oldest_pending_call_age() => _options.Overload.MaxOldestPendingCallAgeSeconds.ShouldEqual(8);
+    [Fact] void should_bind_the_pending_calls() => _options.Overload.MaxPendingCalls.ShouldEqual(12);
+    [Fact] void should_bind_the_running_calls() => _options.Overload.MaxRunningCalls.ShouldEqual(13);
+    [Fact] void should_bind_the_recovery() => _options.Overload.RecoverySeconds.ShouldEqual(14);
     [Fact] void should_bind_the_retry_delay() => _options.Webhooks.RetryDelaySeconds.ShouldEqual(7);
     [Fact] void should_bind_the_circuit_breaker_sampling_duration() => _options.Webhooks.CircuitBreakerSamplingDurationSeconds.ShouldEqual(45);
     [Fact] void should_bind_the_circuit_breaker_break_duration() => _options.Webhooks.CircuitBreakerBreakDurationSeconds.ShouldEqual(20);

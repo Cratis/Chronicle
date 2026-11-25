@@ -6,5 +6,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Replaying;
 /// <summary>
 /// Represents a reason for a replay candidate when reactor definition have changed.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.Replaying.ReactorDefinitionChangedReplayCandidateReason")]
 public record ReactorDefinitionChangedReplayCandidateReason()
     : ReplayCandidateReason(ReplayCandidateReasonType.ReactorDefinitionChanged);

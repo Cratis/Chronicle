@@ -25,6 +25,7 @@ public class an_ordered_bulk_write : Specification
     protected const int OperationCount = 1000;
     protected int[] _failureIndexes = [];
     protected bool _writeConcernFailure;
+    protected bool _nonGenericFailure;
     protected int _missingMetadataIndex = -1;
     protected List<int[]> _attempts = [];
     protected FailedPartition[] _failedPartitions = [];
@@ -102,6 +103,8 @@ public class an_ordered_bulk_write : Specification
 
     protected virtual Key KeyFor(int index) => new($"key-{index}", ArrayIndexers.NoIndexers);
 
+    protected virtual bool WriteConcernFailureFor(int attempt) => _writeConcernFailure;
+
     protected bool Sent(params (int Start, int End)[] ranges) => SentExcluding([], ranges);
 
     protected bool SentExcluding(int[][] excluded, params (int Start, int End)[] ranges) =>
@@ -126,12 +129,18 @@ public class an_ordered_bulk_write : Specification
         var ids = attempt.Select(operation => Array.IndexOf(_initialOperations, operation)).ToArray();
         _attempts.Add(ids);
         var failureIndex = Array.FindIndex(ids, _failureIndexes.Contains);
-        if (_writeConcernFailure || failureIndex >= 0)
+        var writeConcernFailure = WriteConcernFailureFor(_attempts.Count);
+        if (writeConcernFailure || failureIndex >= 0)
         {
-            var processed = _writeConcernFailure ? attempt : attempt[..(failureIndex + 1)];
+            var processed = writeConcernFailure ? attempt : attempt[..(failureIndex + 1)];
             var result = new BulkWriteResult<BsonDocument>.Acknowledged(attempt.Length, 0, 0, 0, 0, processed, []);
             var error = failureIndex >= 0 ? new[] { Create<BulkWriteError>(failureIndex, ServerErrorCategory.DuplicateKey, 11000, WriteErrorMessage, new BsonDocument("value", DocumentContent)) } : [];
-            var concern = _writeConcernFailure ? Create<WriteConcernError>(64, "WriteConcernFailed", WriteConcernErrorMessage, new BsonDocument("value", DocumentContent), Array.Empty<string>()) : null;
+            var concern = writeConcernFailure ? Create<WriteConcernError>(64, "WriteConcernFailed", WriteConcernErrorMessage, new BsonDocument("value", DocumentContent), Array.Empty<string>()) : null;
+            if (_nonGenericFailure)
+            {
+                throw new NonGenericBulkWriteException(_connectionId, error, concern);
+            }
+
             throw new MongoBulkWriteException<BsonDocument>(_connectionId, result, error, concern, attempt[processed.Length..]);
         }
 
@@ -141,4 +150,13 @@ public class an_ordered_bulk_write : Specification
 
     static T Create<T>(params object[] arguments) =>
         (T)Activator.CreateInstance(typeof(T), BindingFlags.Instance | BindingFlags.NonPublic, null, arguments, null)!;
+
+    /// <summary>
+    /// Exercises the abstract base-type catch without a generic result.
+    /// </summary>
+    /// <param name="connectionId">The simulated server connection.</param>
+    /// <param name="errors">The reported write errors.</param>
+    /// <param name="concern">The reported write concern error.</param>
+    sealed class NonGenericBulkWriteException(ConnectionId connectionId, IEnumerable<BulkWriteError> errors, WriteConcernError concern)
+        : MongoBulkWriteException(connectionId, errors, concern);
 }

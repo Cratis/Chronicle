@@ -161,7 +161,7 @@ public class a_two_silo_cluster : Specification
             new ConnectedClientsQuery(grainFactory, options),
             new OpenConnections(),
             ownership,
-            new ConnectedClientsVisibility(options, ownership, new HttpContextAccessor()),
+            new ConnectedClientsVisibility(options, ownership, new HttpContextAccessor(), AuthenticatedCalls.ApplicationServices()),
             NullLogger<KernelConnectionService>.Instance,
             options);
         return (service, ownership);

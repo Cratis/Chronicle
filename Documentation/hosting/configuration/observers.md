@@ -24,8 +24,18 @@ Observer configuration controls retry behavior, timeouts, watchdog monitoring, a
     "definitionEvolution": "Automatic",
     "watchdogInterval": 60,
     "idleDeactivationAfter": 900,
+    "durableSubscriptions": "Release",
+    "dormantAfter": 900,
+    "dormantSafetyNet": 900,
+    "maxConcurrentWakes": 0,
+    "maxConcurrentCatchUpJobs": 16,
+    "durableSubscriptionCheckInterval": "00:15:00",
+    "unseenRemovalEnabled": false,
+    "unseenRemovalAfter": "7.00:00:00",
+    "unseenRemovalSweepInterval": "01:00:00",
+    "unseenRemovalBatchSize": 100,
     "maxConcurrentPartitions": 32,
-    "maxConcurrentRegistrations": 0,
+    "maxConcurrentRegistrations": 16,
     "maxConcurrentSubscriptions": 0,
     "fanOutStrategy": "round-robin",
     "subscriptionReadyTimeout": 5,
@@ -56,11 +66,24 @@ The example shows the defaults of a production build. The `-development` image s
 | maximumBackoffDelay | number | 600 | Maximum backoff delay in seconds |
 | definitionEvolution | string | Automatic | Controls whether projection and reducer definition changes apply `Automatic`, `PartialOnly`, or `Manual` evolution. See [Definition evolution](#definition-evolution) |
 | replayOnDefinitionChange | boolean | false | Controls automatic replay for reactors and webhooks. Projection and reducer changes use `definitionEvolution` |
-| watchdogInterval | number | 60 | Interval in seconds between watchdog checks; the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
+| watchdogInterval | number | 60 | Interval in seconds between watchdog checks, run for every resident observer by the silo's supervisor (see [The supervisor](#the-supervisor)); the watchdog verifies connected clients are still active, running jobs (replay and catch-up) are still progressing, and `NextEventSequenceNumber` is up-to-date |
 | idleDeactivationAfter | number | 900 | Seconds an observer with no subscription and no pending work stays in memory before it is released. A subscribed observer always stays in memory. `0` keeps every observer in memory. See [Releasing idle observers](#releasing-idle-observers) |
+| durableSubscriptions | string | `Release` | Whether an observer records its subscription (what serves it, its filters and, for client observers, the connections it delivers to) in its own state, and what is done with the record. `Release` records it and releases a subscribed observer that has nothing to do, then wakes it from the record. `Shadow` records it without releasing anything. `Off` records nothing, clears what is stored and keeps every subscribed observer in memory. See [Releasing dormant observers](#releasing-dormant-observers) and [Recording subscriptions](#recording-subscriptions) |
+| durableSubscriptionCheckInterval | timespan | `00:15:00` | No longer used: the appended events queues no longer compare recorded subscriptions with their live ones. Kept so existing configuration still loads |
+| dormantAfter | number | 900 | Seconds a subscribed client reactor, client reducer or projection with nothing to do stays in memory before it is released. `0` keeps every subscribed observer in memory. Applies only while `durableSubscriptions` is `Release` and every silo of the cluster supports it. See [Releasing dormant observers](#releasing-dormant-observers) |
+| dormantKinds | array | empty (client reactors, client reducers, projections, collapsing projections, event store subscriptions and pattern capture) | The kinds of observer that are released when dormant. When set, only the listed kinds (`ClientReactor`, `ClientReducer`, `Projection`, `CollapsingProjection`, `EventStoreSubscription`, `PatternCapture`) are released and the others stay in memory. Kernel reactors and webhooks are never released. Applies only while `dormantAfter` is above `0`. |
+| dormantSafetyNet | number | 900 | Most seconds that pass before the safety net of an appended events queue looks at the observers it holds no live subscription for and wakes those that have an event waiting, which bounds how long a lost wake-up can delay delivery. Each queue's interval is jittered between 60% and 90% of this value. Values below `1` use the default |
+| dormantSafetyNetFullWake | number | 3600 | Most seconds between two wake-ups of an observer that stays without a live subscription after it was woken, such as one whose client is gone. The first repeat waits a minute and each one after it waits twice as long, up to this value. Values below `1` use the default |
+| maxConcurrentWakes | number | 0 (automatic) | How many dormant observers one silo wakes at the same time. `0` or less selects two per processor, at least 4 and at most 16. The others wait for a place |
+| maxConcurrentCatchUpJobs | number | 16 | How many catch-up jobs run at the same time in one event store namespace. Past it, an observer that needs a catch-up job stays behind and tries again after a few seconds. `0` or less lifts the limit. See [Catch-up when clients return](#catch-up-when-clients-return) |
+| dormantResumeMaxEvents | number | 1000 | Most events a woken observer reads and delivers from its cursor itself. A larger gap falls back to a catch-up job. Values below `1` use the default |
+| unseenRemovalEnabled | boolean | `false` | Turns on the removal of client reactors and reducers that no client has used for `unseenRemovalAfter`. Off by default: nothing is removed unless you turn it on. **A removed observer replays from the start if its client returns.** See [Removing observers no client has used](#removing-observers-no-client-has-used) |
+| unseenRemovalAfter | timespan | `7.00:00:00` | How long a client reactor or reducer can go without any client subscribed to it, in every namespace, before Chronicle removes it and its records, when `unseenRemovalEnabled` is on. Seven days is the recommended period; a zero or negative value uses it. Has no effect while the removal is off |
+| unseenRemovalSweepInterval | timespan | `01:00:00` | How often each silo looks for observers that have not been seen for `unseenRemovalAfter`, when `unseenRemovalEnabled` is on. The sweep reads storage and only activates an observer that is a candidate for removal |
+| unseenRemovalBatchSize | number | 100 | How many observers one storage read of that sweep covers. A value below `1` uses the default |
 | maxCatchupRecoveryAttempts | number | 5 | How many watchdog checks in a row may retry a stuck catch-up preparation, or a recovery that failed after quarantine was cleared, before the watchdog quarantines the observer. `0` or less quarantines on the first retry. See [Ending quarantine](#ending-quarantine) |
 | maxConcurrentPartitions | number | 32 | Upper bound on how many job steps (replay and catch-up work) run in parallel. The effective limit is the smaller of this value and `jobs.maxParallelSteps`. Despite the name it does not limit live event delivery. See [Job throttling](job-throttling.md) |
-| maxConcurrentRegistrations | number | 0 (unlimited) | Maximum gRPC reactor and reducer registrations running concurrently on each silo. When configured above 0, excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
+| maxConcurrentRegistrations | number | 16 | Maximum gRPC reactor and reducer registrations running concurrently on each silo. Excess registrations wait before any registration grain or read-model lookup. Values below 1 disable the gate. Does not limit event append or observer delivery. See [Registration concurrency](#registration-concurrency) |
 | maxConcurrentSubscriptions | number | 0 (automatic) | Maximum projection subscriptions and failed-partition recovery batches running concurrently on each silo, shared by every event store. `0` or less selects two per processor, at least 4 and at most 16. See [Subscription concurrency](#subscription-concurrency) |
 | fanOutStrategy | string | round-robin | Strategy for distributing events across multiple connected instances of the same client. `round-robin` distributes deterministically by partition key, keeping every partition sticky to one instance and preserving per-partition ordering. `random` picks a random instance per delivery |
 | subscriptionReadyTimeout | number | 5 | Seconds the Kernel waits for an event store subscription to become ready before it returns to the client. The wait keeps events from being missed when the client starts appending right away. When it elapses the subscription can still activate afterwards and the client is not blocked further. Raise it only when clients report subscriptions that are not ready on a slow or busy cluster |
@@ -69,6 +92,21 @@ The example shows the defaults of a production build. The `-development` image s
 | generationPromotion | string | OnCatchUp | How a new projection generation is promoted. `OnCatchUp` promotes automatically once catch-up and readiness are proven, `Operator` waits for an explicit operator request, `Deployment` waits until the connected declaring clients meet the required version, and `Gated` holds promotion until the gate is released. Applies only when `features.projectionGenerations` is enabled. See [Read models](read-models.md) |
 | deploymentConditionGracePeriod | timespan | `00:01:00` | How long the `Deployment` condition must hold before the generation is promoted. Applies only when `features.projectionGenerations` is enabled |
 | pendingGenerationAlertAfter | timespan | `1.00:00:00` | How long a generation can stay pending before Chronicle raises an alert. Applies only when `features.projectionGenerations` is enabled |
+
+`BackoffScheduleSeconds` (empty by default) and `RetryBudget` (`00:00:00` by default) belong to the shared retry options type but are used only under `webhooks.retry`, not for ordinary observers. Webhooks supply their own schedule and budget defaults; see [Delivery retry policy](../../configuration/chronicle-options.mdx#delivery-retry-policy).
+
+## The supervisor
+
+Each silo runs one supervisor that carries out the periodic duties of the grains resident on it. A resident observer registers with it when it activates and leaves it when it deactivates, and the supervisor runs the observer's watchdog through the grain every `watchdogInterval` seconds, so the duties still run one at a time in a turn of the observer. The event log of each namespace, the captures manager of each event store and the connected clients registry of each silo register the same way.
+
+This replaces the grain timers those grains used to arm, so the number of timers on a silo no longer grows with the number of observers or namespaces. The supervisor looks at its registry once a second and starts the watchdog of every observer that is due; an observer whose watchdog is still running is skipped, and its next one is due an interval after the last one finished.
+
+An activation that is alive no longer notices by itself that something is wrong. Two events cover for that:
+
+- **A silo leaves the cluster.** For `connectedClients.subscriptionSettleSeconds` after a departure, the supervisor asks every resident observer, once every `connectedClients.reviseIntervalSeconds`, to verify that its appended-events queue still holds its subscription, and to re-route when it does not. It also reconciles the projection, capture and pattern-capture subscriptions of every namespace and re-checks the subscriptions kept for connected clients. The asks are spread over each interval in batches rather than all at once.
+- **A client disconnects.** The connection reports it at once, and the observers it served are told without waiting for a watchdog tick. The connected clients registry only revises on a slow interval, at least `connectedClients.staleThresholdSeconds`, to catch a client that vanished without closing its connection.
+
+A namespace is reconciled when its event log activates and after a silo departure. A pass that fails is retried every `watchdogInterval` seconds until one succeeds; a healthy namespace costs nothing between departures.
 
 ## Releasing idle observers
 
@@ -88,9 +126,128 @@ When anything calls a released observer again, for example a client that reconne
 
 Set `idleDeactivationAfter` to `0` to keep every observer in memory. The release is checked on every watchdog tick, so an idle observer is released between `idleDeactivationAfter` and `idleDeactivationAfter` + `watchdogInterval` seconds after it became idle.
 
+## Recording subscriptions
+
+A subscription exists in memory: in the observer's activation and in the appended events queue it subscribed to. With `durableSubscriptions` set to `Release` (the default) or `Shadow` the observer also records the facts of its subscription in its own state document, in the same write that records the subscription: what serves it (client reactor, client reducer, projection, kernel reactor, webhook or event store subscription), whether it delivers pages, its filters and, for client observers, the connection identifier and silo of every client it delivers to and, when a service has several replicas that registered different definitions of the observer, the registrations of the replicas that do not hold the subscription (its standbys, with the definition each registered). It clears the record when it unsubscribes or is deactivated; a silo that shuts down leaves it as it is.
+
+The record does not change how a resident observer delivers events. With `durableSubscriptions` set to `Release` (the default) it is what an observer is released and woken from (see [Releasing dormant observers](#releasing-dormant-observers)). The observer also tells its supervisor, the one grain per event store and observer that every namespace shares, which connection serves it; the supervisor holds that in memory only, and an observer that wakes without a record of its own resumes from it. Set `durableSubscriptions` to `Off` to stop recording and to clear the stored records.
+
+The record is one optional field, so a rolling upgrade needs nothing special: an older silo ignores it. SQL stores add a nullable `DurableSubscription` column to the observer table.
+
+## Releasing dormant observers
+
+A client reactor, client reducer, projection or event store subscription that is subscribed and has nothing to do still holds a grain activation and its state in memory. With thousands of observers that is most of the memory a kernel uses, and almost all of it belongs to observers that are idle. Chronicle releases such an observer after it has been dormant for `dormantAfter` seconds (15 minutes by default) and wakes it when it has work again.
+
+**What dormant means.** An observer is dormant when it is subscribed, active and owes nothing: no event is being delivered, no partition has failed, no catch-up, replay or job is running, it is not quarantined, and no delivery fence is open. Its subscription does not go away. It stays recorded in the observer's state (see [Recording subscriptions](#recording-subscriptions)). The appended events queue keeps nothing for it: each silo holds a routing table of which observers take which event types, and the queue knows the observers of its namespace from their stored positions. An observer that keeps standby registrations for the other replicas of a service is dormant like any other, because the record names them. A listing or an inspection of observers reports a dormant observer as subscribed, and reading it, or its connected clients, does not wake it.
+
+**What wakes it.** The queue wakes a dormant observer when an event it observes is appended. The observer reads its cursor, finds the events appended since, handles them in order and exactly once, and goes dormant again after `dormantAfter` seconds. Events of types it does not observe never wake it. If more events arrived than `dormantResumeMaxEvents`, the observer resumes through a catch-up job instead of delivering inside its activation. At most `maxConcurrentWakes` observers wake at the same time on a silo, so an event that many observers watch becomes a short queue instead of a spike of activations.
+
+**The safety net.** A wake-up can be lost, for example while a silo is restarting. Each queue therefore looks at the observers it holds no live subscription for once every `dormantSafetyNet` seconds, drawn per queue between 60% and 90% of that value so the queues do not line up. A check compares each observer's persisted cursor with the tail of the event types it observes, reading the cursors once per event sequence, and wakes the observer only when an event is waiting for it. An observer that is up to date is not activated. An observer whose tail cannot be read is woken, so a check that cannot tell errs toward waking. The safety net bounds the delay of a lost wake-up to 15 minutes by default, and costs nothing for an observer that has nothing waiting. It is driven from the queue, so no timer is held for a dormant observer.
+
+An observer that stays without a live subscription after it was woken, such as one whose client is gone, is not woken for every event: the queue waits a minute before it wakes it again, then twice as long each time, up to `dormantSafetyNetFullWake` seconds (an hour by default).
+
+**Clients that leave.** A record that names a client that is gone is repaired when the observer wakes: every client it names is checked against the clients connected at that moment, so nothing is swept while the observer is dormant. When the client that held the subscription is the one that is gone, the observer promotes the most recent standby whose client is still connected, under the definition that standby registered, and skips the standbys that have left; with none left it is disconnected until a client registers it again. None of this keeps anything in memory for a dormant observer. A client that is gone starts the clock of [removing unseen observers](#removing-observers-no-client-has-used) at the moment it left, and a dormant observer is never removed while a record names a client, because that is a client holding it.
+
+**The keeper of a client stream.** The open stream of a client confirms that its subscriptions are intact. With `connectedClients.keeperMode` set to `SiloLocal` (the default) a dormant observer whose recorded subscription names this client on this silo is confirmed without being asked, so the check does not wake it. The queue that holds the observer as dormant is what says the record is its subscription: an observer that is resident, has no record, or has a record naming another connection or silo is asked, which restores whatever was lost, including the live subscription of an observer whose silo was lost. Projections that are dormant are not asked when the kernel starts or a silo leaves either. Set `connectedClients.keeperMode` to `Legacy` to ask the observer on every check, as earlier releases did.
+
+**What is not released.** Observers that are replaying, catching up or quarantined, have failed partitions or unfinished jobs, or serve a webhook, stay resident. So does an event store subscription that pins a generation of its event types. Which kinds are released is set with `observers.dormantKinds`. So does an observer in a cluster where any silo runs a release before 19.173.0, or that has not yet published its release: dormant release applies only while every silo of the cluster supports it, and is evaluated again at every decision, so a rolling upgrade is safe in both directions.
+
+**A new observer.** An observer is not released until its alert reminder has ticked once, which Orleans schedules between one and two minutes after it subscribed, and then removed itself. Expect an observer to become dormant a few minutes after it subscribes.
+
+### Turning it off
+
+| To | Set |
+| --- | --- |
+| Keep every subscribed observer in memory, as before | `observers.dormantAfter` to `0` |
+| Keep event store subscriptions in memory | `observers.dormantKinds` to the other kinds, for example `ClientReactor`, `ClientReducer`, `Projection` and `CollapsingProjection` |
+| Stop recording subscriptions and clear the stored records | `observers.durableSubscriptions` to `Off` |
+| Record and compare, without releasing | `observers.durableSubscriptions` to `Shadow` |
+| Ask the observer on every check of a stream | `connectedClients.keeperMode` to `Legacy` |
+| Make wakes less bursty | lower `observers.maxConcurrentWakes` |
+
+### Catch-up when clients return
+
+When a client application drops and returns, every observer it owns needs a catch-up job. Two rules keep that from becoming a burst of kernel work:
+
+- An observer owned by a client with no connected instance starts no catch-up, partition catch-up or retry job. Such a job can only fail. The observer stays behind and catches up when its client subscribes again.
+- At most `maxConcurrentCatchUpJobs` catch-up jobs run at once in a namespace. An observer past the limit settles and tries again after five to ten seconds. A place that comes free goes to the observer furthest behind its event sequence (the one that has waited longest among equals), so a burst drains the largest backlogs first. An observer that already has a catch-up job is never held back.
+
+Both are counted in `cratis.chronicle.observer.catch_up_deferrals`, by `cratis.chronicle.observer.catch_up_deferral_reason`: `no_client` or `capacity`. A persistently high `capacity` count means the limit is lower than your reconnect bursts need; `no_client` is expected while a client application is down.
+
+### Metrics to watch
+
+| Metric | Reports |
+| --- | --- |
+| `cratis.chronicle.observer.dormant` | Observers held as dormant on the silo, per event store and namespace. Drops back to `0` rather than disappearing |
+| `cratis.chronicle.observer.resident` | Observers that hold an activation. Falls as `observer.dormant` rises |
+| `cratis.chronicle.observer.dormant_releases` | Observers released while dormant |
+| `cratis.chronicle.observer.dormant_wakes` | Dormant observers woken, by `cratis.chronicle.observer.wake_cause`: `event` or `safety_net` |
+| `cratis.chronicle.observer.dormant_safety_net_checks` | Dormant observers the safety net looked at, by `cratis.chronicle.observer.safety_net_outcome`: `up_to_date` (nothing waiting, not activated), `behind` (an event is waiting, woken), `unverified` (the cursor or tail could not be read, woken) or `full_wake` (due for the unconditional wake, woken). Most checks should be `up_to_date` |
+| `cratis.chronicle.observer.dormant_wakes_delayed` | Wakes that had to wait for a place under `maxConcurrentWakes`. Persistently high means the limit is too low for your bursts |
+| `cratis.chronicle.observer.catch_up_deferrals` | Catch-ups that did not start a job, by `cratis.chronicle.observer.catch_up_deferral_reason`: `no_client` (the client is not connected) or `capacity` (`maxConcurrentCatchUpJobs` jobs are already running) |
+| `cratis.chronicle.observer.dormant_resumes` | Woken observers by `cratis.chronicle.observer.resume_outcome`: `cursor` (read and delivered by the observer), `catch_up` (the gap was larger than `dormantResumeMaxEvents`) or `stale_record` (the record named a client that is gone) |
+
+A dormant observer is not a stuck observer: it reports as subscribed and its running state stays `Active`. If delivery to an observer stalls, look at its failed partitions and its last handled event sequence number as before. Many `behind` checks, rather than `event` wakes, mean wake-ups are being lost.
+
+### Upgrading
+
+Upgrading changes behavior without any configuration: observers are released after fifteen minutes of having nothing to do, and the keeper of a client stream stops asking dormant observers. The memory of the kernel falls by what idle observers held, and the first event for a released observer pays one activation, usually a millisecond or two. A kernel that must keep every observer in memory sets `observers.dormantAfter` to `0`.
+
+During a rolling upgrade nothing is released until every silo runs the release that supports it, and an older silo neither writes nor clears the record, so the observers it hosts are never released. The grain interfaces of the release that removed the per-connection client reactor and reducer grains no longer match those of earlier releases, so that release is a stop-start deploy: stop every silo, then start the new release. The clients keep the same stream and reconnect on their own, and the stored subscriptions and definitions are unchanged.
+
+## What serves a connected client
+
+A client reactor or reducer is served by the open stream of its connection. The stream subscribes the observer, keeps the subscription in place, and unsubscribes it when the stream ends, so a connected client holds no grain activation of its own: with thousands of connected observers the kernel has the observers and nothing per connection beside them. Events are delivered to the client through the observer's subscriber, in the order the observer delivers them, as before.
+
+### One stream for every observer of a connection
+
+A client that supports it observes with every reactor and reducer of a connection over **one** HTTP/2 stream instead of one stream each. The kernel advertises this as the `multiplexed-observation` capability when a client connects, and a client uses it only when it sees that capability. A client that does not (an older client, or one with multiplexing turned off) keeps one stream per reactor and reducer, and the kernel serves both kinds side by side: nothing in the kernel needs configuring, and a rolling deploy is safe in both directions.
+
+On a shared stream:
+
+- Each reactor or reducer is a *sub-stream* with an identifier chosen by the client. The kernel serves it with the same code that serves a per-observer stream, so registration, the registration gate, the subscription checks and the disconnect handling are the ones described above and below.
+- Registrations travel together. A client that has many observers to register, at start-up or after a reconnect, sends them in one write, and the kernel starts them as it would have started the separate calls. The [registration concurrency](#registration-concurrency) limit still applies per silo.
+- A sub-stream that fails or ends reports its own gRPC status and leaves the others alone. When the connection itself ends, every sub-stream on it ends, exactly as every per-observer stream of a lost connection does, and the client re-registers.
+- Ordering and flow control are per observer. Messages of one sub-stream arrive in the order the observer produced them (each carries a sequence number), and the delivery acknowledgment bounds what a client can owe: the kernel does not hand an observer the next delivery for a partition before the client answered the last. A client that is slow to take one observer's events holds up that observer only.
+
+Open HTTP/2 streams drop from one per observer to one per connection. Measured on loopback (`--client-streams`, 11 000 observers), the transport state of the open streams was about 200 MB (about 19 KB per stream, client and server together) with one stream per observer and about 0.3 MB with one shared stream. The kernel still keeps its per-observer state (the observer and the sub-stream's registration), which this does not change.
+
+### HTTP/2 stream limits
+
+The kernel listener allows 100 concurrent HTTP/2 streams per connection. A client with many observers opens further connections as needed, and measuring on loopback showed that this limit does not make a reconnect of thousands of observers slow or fail: 11 000 per-observer streams over a real Kestrel listener were established in about 0.5 s with the default limit (and in about 0.6 s with the limit raised above the stream count, over one connection). Raising the limit therefore buys nothing and the default stays. A client that may not open a second connection stalls at the limit instead, which is one more reason to use the multiplexed stream. If a reconnect still fails with `ENHANCE_YOUR_CALM` or `ResourceExhausted`, look at what sits between the client and the kernel (a proxy or ingress with its own stream or rate limits) and at the [registration concurrency](#registration-concurrency) of the silo; the numbers above are reproducible with `--client-streams` in the kernel benchmarks.
+
+## Removing observers no client has used
+
+When you rename or delete a reactor or reducer in application code, the observer it registered stays in Chronicle: its definition, its state in every namespace, its failed partitions, jobs and reminders. Chronicle can remove such an observer once no client has been subscribed to it for `unseenRemovalAfter`. **This is off by default.** Nothing is ever removed unless you set `unseenRemovalEnabled` to `true`; the period is seven days, which is the recommended one, and you only change `unseenRemovalAfter` to pick another.
+
+```json
+{
+  "observers": {
+    "unseenRemovalEnabled": true
+  }
+}
+```
+
+> [!WARNING]
+> **A removed observer replays from the start when its client returns.** If the client connects again after the observer was removed, Chronicle registers it as a new observer and it handles the whole event history again. For a reactor that means its side effects, such as sending email or calling another system, run again for every event. Turn the removal on only when you accept that. If a client can be away for longer than seven days and its reactors must not run again, raise `unseenRemovalAfter` above the longest absence you expect, or leave the removal off.
+
+"Seen" means a client held a subscription to the observer. Chronicle records the time when a client subscribes and when the last client unsubscribes or disconnects, and refreshes it at most once an hour while a client stays subscribed. An observer subscribed for months is therefore never mistaken for an unseen one. The time is recorded whether or not the removal is on, so turning it on later does not start every clock from zero.
+
+While the removal is off the sweep does nothing: it reads no storage and removes nothing. When it is on, the sweep runs on every silo, once per `unseenRemovalSweepInterval`. It finds candidates by reading storage, without activating observers, in batches of `unseenRemovalBatchSize`. It is safe to run on several silos at once: a candidate that two silos reach in the same instant is removed once, though both may log it and count it.
+
+What is removed and what is not:
+
+- Chronicle removes the observer's definition, its state in every namespace, its failed partitions, handled counts, in-flight events, jobs and reminders, the same records as the `RemoveObserver` command.
+- A reducer's read model data is not deleted.
+- Only reactors and reducers declared by clients are removed. Projections, webhooks, event store subscriptions and kernel observers never are.
+- An observer is never removed while a client is subscribed to it, while it is replaying, catching up or quarantined, while it has failed partitions or unfinished jobs, or when a client has been seen in any namespace within the period.
+- Each removal is logged at `Information` level with the event store, namespace and observer id, and counted by the `chronicle.observers.unseen_removed` metric.
+
+An observer that has no recorded time, for example one created before the kernel recorded it, is not removed on the first sweep after you turn the removal on: the sweep records the current time as its clock start, and the observer is removed only after a full `unseenRemovalAfter` from then. Upgrading to a release with this setting therefore removes nothing, and turning it on removes nothing for the first period for observers without a recorded time. During a rolling upgrade, older silos do not record the time; a subscribed observer is never removed because of that, and the new silo records the time when it finds the observer subscribed. These are server-level settings and cannot be overridden per observer.
+
 ## Registration concurrency
 
-`maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `0` (unlimited); values below `1` disable the gate. With the gate disabled, no semaphore is created and registration does not wait. Set a positive limit to opt in: excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
+`maxConcurrentRegistrations` limits registration work from gRPC reactors and reducers together on each silo. It defaults to `16`, so a client that registers thousands of observers at once is admitted gradually instead of overwhelming the observers it subscribes. Values below `1` disable the gate: no semaphore is created and registration does not wait. Excess registrations wait before their first grain or read-model lookup, and waiting ends if the client disconnects.
 
 A permit covers the registration lookups and subscription, not the lifetime of the connection. Once registration succeeds or fails, the permit is released. A disconnect cancels a queued registration; work already in flight retains its permit until it finishes. Reconnecting clients acquire a new permit. When subscribing times out because the observer is busy, the registration gives its permit back and queues for a new one before it asks again, so a busy observer does not keep other registrations out for every attempt it makes. Event append, observer delivery and subscription maintenance do not acquire permits. This is a per-silo limit, not a cluster-wide limit, and is independent of `maxConcurrentPartitions`.
 

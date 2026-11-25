@@ -22,6 +22,18 @@ public static class PropertyMappers
 {
     const string RoundTripDateTimeKeyFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss','fffffffK";
 
+    static readonly Dictionary<Type, NumericOperations> _numericOperations = new()
+    {
+        [typeof(TimeSpan)] = new((current, operand) => (TimeSpan)current + (TimeSpan)operand, (current, operand) => (TimeSpan)current - (TimeSpan)operand),
+        [typeof(double)] = NumericOperationsFor(CoerceTo<double>),
+        [typeof(float)] = NumericOperationsFor(CoerceTo<float>),
+        [typeof(decimal)] = NumericOperationsFor(ToDecimal),
+        [typeof(long)] = NumericOperationsFor(CoerceTo<long>),
+        [typeof(int)] = NumericOperationsFor(CoerceTo<int>),
+        [typeof(short)] = NumericOperationsFor(CoerceTo<short>),
+        [typeof(byte)] = NumericOperationsFor(CoerceTo<byte>)
+    };
+
     /// <summary>
     /// Create a <see cref="PropertyMapper{Event, ExpandoObject}"/> that can copies content provided by a <see cref="ValueProvider{Event}"/> to a target property.
     /// </summary>
@@ -30,9 +42,10 @@ public static class PropertyMappers
     /// <returns>A new <see cref="PropertyMapper{Event, ExpandoObject}"/>.</returns>
     public static PropertyMapper<AppendedEvent, ExpandoObject> FromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
         return (@event, target, arrayIndexers) =>
         {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+            if (resolveProperty(@event) is not { } resolvedProperty)
             {
                 return NoChange(targetProperty, arrayIndexers);
             }
@@ -58,9 +71,10 @@ public static class PropertyMappers
     /// </remarks>
     public static PropertyMapper<AppendedEvent, ExpandoObject> SetOnceFromEventValueProvider(PropertyPath targetProperty, ValueProvider<AppendedEvent> eventValueProvider)
     {
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
         return (@event, target, arrayIndexers) =>
         {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+            if (resolveProperty(@event) is not { } resolvedProperty)
             {
                 return NoChange(targetProperty, arrayIndexers);
             }
@@ -89,17 +103,8 @@ public static class PropertyMappers
     /// </remarks>
     public static PropertyMapper<AppendedEvent, ExpandoObject> Remove(PropertyPath targetProperty)
     {
-        return (@event, target, arrayIndexers) =>
-        {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty ||
-                target.TryGetExistingPath(resolvedProperty, arrayIndexers) is not IDictionary<string, object?> parent ||
-                !parent.Remove(resolvedProperty.LastSegment.Value, out var original))
-            {
-                return NoChange(targetProperty, arrayIndexers);
-            }
-
-            return PropertyDifference.Removal(resolvedProperty, original, arrayIndexers);
-        };
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
+        return (@event, target, arrayIndexers) => RemoveDynamicKey(targetProperty, resolveProperty(@event), target, arrayIndexers);
     }
 
     /// <summary>
@@ -113,7 +118,8 @@ public static class PropertyMappers
     public static PropertyMapper<AppendedEvent, ExpandoObject> AddWithEventValueProvider(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, ValueProvider<AppendedEvent> eventValueProvider)
     {
         var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(double);
-        return Accumulate(targetProperty, targetType, (current, @event) => PerformAdd(targetType, current, eventValueProvider(@event)));
+        var operations = ResolveNumericOperations(targetType);
+        return Accumulate(targetProperty, targetType, (current, @event) => operations.Add(current, eventValueProvider(@event)));
     }
 
     /// <summary>
@@ -127,7 +133,8 @@ public static class PropertyMappers
     public static PropertyMapper<AppendedEvent, ExpandoObject> SubtractWithEventValueProvider(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema, ValueProvider<AppendedEvent> eventValueProvider)
     {
         var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(double);
-        return Accumulate(targetProperty, targetType, (current, @event) => PerformSubtract(targetType, current, eventValueProvider(@event)));
+        var operations = ResolveNumericOperations(targetType);
+        return Accumulate(targetProperty, targetType, (current, @event) => operations.Subtract(current, eventValueProvider(@event)));
     }
 
     /// <summary>
@@ -140,7 +147,8 @@ public static class PropertyMappers
     public static PropertyMapper<AppendedEvent, ExpandoObject> Count(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
     {
         var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(int);
-        return Accumulate(targetProperty, targetType, (current, _) => PerformAdd(targetType, current, 1));
+        var operations = ResolveNumericOperations(targetType);
+        return Accumulate(targetProperty, targetType, (current, _) => operations.Add(current, 1));
     }
 
     /// <summary>
@@ -153,7 +161,8 @@ public static class PropertyMappers
     public static PropertyMapper<AppendedEvent, ExpandoObject> Increment(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
     {
         var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(int);
-        return Accumulate(targetProperty, targetType, (current, _) => PerformAdd(targetType, current, 1));
+        var operations = ResolveNumericOperations(targetType);
+        return Accumulate(targetProperty, targetType, (current, _) => operations.Add(current, 1));
     }
 
     /// <summary>
@@ -166,14 +175,16 @@ public static class PropertyMappers
     public static PropertyMapper<AppendedEvent, ExpandoObject> Decrement(ITypeFormats typeFormats, PropertyPath targetProperty, JsonSchemaProperty targetPropertySchema)
     {
         var targetType = targetPropertySchema.GetTargetTypeForJsonSchemaProperty(typeFormats) ?? typeof(int);
-        return Accumulate(targetProperty, targetType, (current, _) => PerformSubtract(targetType, current, 1));
+        var operations = ResolveNumericOperations(targetType);
+        return Accumulate(targetProperty, targetType, (current, _) => operations.Subtract(current, 1));
     }
 
     static PropertyMapper<AppendedEvent, ExpandoObject> Accumulate(PropertyPath targetProperty, Type targetType, Func<object, AppendedEvent, object> accumulate)
     {
+        var resolveProperty = PreparePropertyPathResolver(targetProperty);
         return (@event, target, arrayIndexers) =>
         {
-            if (ResolveDynamicPropertyPath(targetProperty, @event) is not { } resolvedProperty)
+            if (resolveProperty(@event) is not { } resolvedProperty)
             {
                 return NoChange(targetProperty, arrayIndexers);
             }
@@ -194,66 +205,61 @@ public static class PropertyMappers
 
     static PropertyDifference NoChange(PropertyPath propertyPath, ArrayIndexers arrayIndexers) => new(propertyPath, null, null, arrayIndexers);
 
-    static object PerformAdd(Type targetType, object currentValue, object valueToAdd)
+    static PropertyDifference RemoveDynamicKey(PropertyPath targetProperty, PropertyPath? resolvedProperty, ExpandoObject target, ArrayIndexers arrayIndexers)
     {
-        return targetType switch
+        if (resolvedProperty is null)
         {
-            _ when targetType == typeof(TimeSpan) => (TimeSpan)currentValue + (TimeSpan)valueToAdd,
-            _ when targetType == typeof(double) => Add((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToAdd, typeof(double))),
-            _ when targetType == typeof(float) => Add((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToAdd, typeof(float))),
-            _ when targetType == typeof(decimal) => Add(ToDecimal(currentValue), ToDecimal(valueToAdd)),
-            _ when targetType == typeof(long) => Add((long)Convert.ChangeType(currentValue, typeof(long)), (long)Convert.ChangeType(valueToAdd, typeof(long))),
-            _ when targetType == typeof(int) => Add((int)Convert.ChangeType(currentValue, typeof(int)), (int)Convert.ChangeType(valueToAdd, typeof(int))),
-            _ when targetType == typeof(short) => Add((short)Convert.ChangeType(currentValue, typeof(short)), (short)Convert.ChangeType(valueToAdd, typeof(short))),
-            _ when targetType == typeof(byte) => Add((byte)Convert.ChangeType(currentValue, typeof(byte)), (byte)Convert.ChangeType(valueToAdd, typeof(byte))),
-            _ => TypeConversion.Convert(targetType, Add((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToAdd, typeof(double))))
-        };
+            return NoChange(targetProperty, arrayIndexers);
+        }
+
+        return TryRemoveKey(target, resolvedProperty, arrayIndexers, out var original)
+            ? PropertyDifference.Removal(resolvedProperty, original, arrayIndexers)
+            : NoChange(targetProperty, arrayIndexers);
     }
 
-    static object PerformSubtract(Type targetType, object currentValue, object valueToSubtract)
+    static bool TryRemoveKey(ExpandoObject target, PropertyPath path, ArrayIndexers arrayIndexers, out object? original)
     {
-        return targetType switch
-        {
-            _ when targetType == typeof(TimeSpan) => (TimeSpan)currentValue - (TimeSpan)valueToSubtract,
-            _ when targetType == typeof(double) => Subtract((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToSubtract, typeof(double))),
-            _ when targetType == typeof(float) => Subtract((float)Convert.ChangeType(currentValue, typeof(float)), (float)Convert.ChangeType(valueToSubtract, typeof(float))),
-            _ when targetType == typeof(decimal) => Subtract(ToDecimal(currentValue), ToDecimal(valueToSubtract)),
-            _ when targetType == typeof(long) => Subtract((long)Convert.ChangeType(currentValue, typeof(long)), (long)Convert.ChangeType(valueToSubtract, typeof(long))),
-            _ when targetType == typeof(int) => Subtract((int)Convert.ChangeType(currentValue, typeof(int)), (int)Convert.ChangeType(valueToSubtract, typeof(int))),
-            _ when targetType == typeof(short) => Subtract((short)Convert.ChangeType(currentValue, typeof(short)), (short)Convert.ChangeType(valueToSubtract, typeof(short))),
-            _ when targetType == typeof(byte) => Subtract((byte)Convert.ChangeType(currentValue, typeof(byte)), (byte)Convert.ChangeType(valueToSubtract, typeof(byte))),
-            _ => TypeConversion.Convert(targetType, Subtract((double)Convert.ChangeType(currentValue, typeof(double)), (double)Convert.ChangeType(valueToSubtract, typeof(double))))
-        };
+        original = null;
+        return target.TryGetExistingPath(path, arrayIndexers) is IDictionary<string, object?> parent &&
+            parent.Remove(path.LastSegment.Value, out original);
     }
+
+    static NumericOperations ResolveNumericOperations(Type targetType)
+    {
+        if (_numericOperations.TryGetValue(targetType, out var operations))
+        {
+            return operations;
+        }
+
+        var viaDouble = NumericOperationsFor(CoerceTo<double>);
+        return new(
+            (current, operand) => TypeConversion.Convert(targetType, viaDouble.Add(current, operand)),
+            (current, operand) => TypeConversion.Convert(targetType, viaDouble.Subtract(current, operand)));
+    }
+
+    static NumericOperations NumericOperationsFor<T>(Func<object, T> coerce)
+        where T : INumber<T> => new(
+            (current, operand) => coerce(current) + coerce(operand),
+            (current, operand) => coerce(current) - coerce(operand));
+
+    static T CoerceTo<T>(object value) => (T)Convert.ChangeType(value, typeof(T));
 
     static decimal ToDecimal(object value) => value is double or float
         ? DecimalValues.ToDecimal(value)
         : (decimal)Convert.ChangeType(value, typeof(decimal));
 
-    static T Add<T>(T left, T right)
-        where T : INumber<T> => left + right;
-
-    static T Subtract<T>(T left, T right)
-        where T : INumber<T> => left - right;
-
     /// <summary>
-    /// Resolve a property path that may contain a dynamic, expression-based segment (e.g. eventCountByType.$eventContext.eventType.id)
-    /// into a concrete <see cref="PropertyPath"/> for the current <see cref="AppendedEvent"/>.
+    /// Prepare the immutable path parsing and provider lookup once, leaving event-specific resolution for invocation.
     /// </summary>
-    /// <param name="propertyPath">The property path that may contain a .$eventContext.&lt;path&gt;, .$eventContent.&lt;path&gt; or .$causedBy.&lt;property&gt; segment.</param>
-    /// <param name="event">The event to evaluate the dynamic segment against.</param>
-    /// <returns>
-    /// The resolved property path, with the dynamic segment replaced by its runtime value. Returns <paramref name="propertyPath"/> unchanged when it has no dynamic segment.
-    /// Returns null when a key read from the event content is missing or null - the operation is then skipped rather than written under an empty key.
-    /// </returns>
-    /// <exception cref="UnsupportedDynamicPropertyPathExpression">Thrown when the dynamic segment does not reference a well-known expression this method knows how to resolve.</exception>
-    static PropertyPath? ResolveDynamicPropertyPath(PropertyPath propertyPath, AppendedEvent @event)
+    /// <param name="propertyPath">The target path, optionally holding an event-content, event-context or causing-identity expression.</param>
+    /// <returns>A resolver that retains static paths, resolves dynamic keys per event and defers unsupported-path failures until invocation.</returns>
+    static Func<AppendedEvent, PropertyPath?> PreparePropertyPathResolver(PropertyPath propertyPath)
     {
         var pathString = propertyPath.Path;
         var markerIndex = pathString.IndexOf(".$", StringComparison.Ordinal);
         if (markerIndex < 0)
         {
-            return propertyPath;
+            return _ => propertyPath;
         }
 
         var staticPrefix = pathString[..markerIndex];
@@ -261,29 +267,67 @@ public static class PropertyMappers
         var propertyStart = pathString.IndexOf('.', expressionStart);
         if (propertyStart < 0 || propertyStart == pathString.Length - 1)
         {
-            throw new UnsupportedDynamicPropertyPathExpression(propertyPath);
+            return UnsupportedPathResolver(propertyPath);
         }
 
         var expression = pathString[expressionStart..propertyStart];
         var property = pathString[(propertyStart + 1)..];
         if (expression == WellKnownExpressions.EventContent)
         {
-            var key = ReadExistingEventContentValue(@event.Content, new PropertyPath(property));
-            return key is null ? null : new PropertyPath($"{staticPrefix}.{EventContentDictionaryKeyFor(propertyPath, key)}");
+            return PrepareEventContentResolver(propertyPath, staticPrefix, property);
         }
 
-        var contextPath = expression switch
-        {
-            WellKnownExpressions.EventContext => property,
-            WellKnownExpressions.CausedBy when property.Equals("subject", StringComparison.Ordinal) || property.Equals("name", StringComparison.Ordinal) || property.Equals("userName", StringComparison.Ordinal) => $"causedBy.{property}",
-            _ => throw new UnsupportedDynamicPropertyPathExpression(propertyPath)
-        };
-        var resolvedValue = EventValueProviders.EventContext(new PropertyPath(contextPath))(@event);
-
-        // Keys from the event context and the causing identity predate key validation: keep forming them the way they
-        // always have, so existing read models keep their keys and a name holding a '.' does not start failing events.
-        return resolvedValue is null ? null : new PropertyPath($"{staticPrefix}.{FormatEventContextKeyValue(resolvedValue)}");
+        var contextPath = EventContextPathFor(expression, property);
+        return contextPath is null
+            ? UnsupportedPathResolver(propertyPath)
+            : PrepareEventContextResolver(staticPrefix, contextPath);
     }
+
+    /// <summary>Prepare an event-content subpath without snapshotting its event-specific value.</summary>
+    /// <param name="propertyPath">The original target path, used to report invalid dictionary keys.</param>
+    /// <param name="staticPrefix">The target prefix before the dynamic key.</param>
+    /// <param name="property">The event-content subpath.</param>
+    /// <returns>A resolver that reads and validates the key for each event without mutating its content.</returns>
+    static Func<AppendedEvent, PropertyPath?> PrepareEventContentResolver(PropertyPath propertyPath, string staticPrefix, string property)
+    {
+        var contentPath = new PropertyPath(property);
+        return @event =>
+        {
+            var key = ReadExistingEventContentValue(@event.Content, contentPath);
+            return key is null ? null : new PropertyPath($"{staticPrefix}.{EventContentDictionaryKeyFor(propertyPath, key)}");
+        };
+    }
+
+    /// <summary>Prepare the event-context provider without snapshotting an event's key.</summary>
+    /// <param name="staticPrefix">The target prefix before the dynamic key.</param>
+    /// <param name="contextPath">The path within the event context.</param>
+    /// <returns>A resolver preserving historical context-key formatting, including keys containing dots.</returns>
+    static Func<AppendedEvent, PropertyPath?> PrepareEventContextResolver(string staticPrefix, string contextPath)
+    {
+        var valueProvider = EventValueProviders.EventContext(new PropertyPath(contextPath));
+        return @event =>
+        {
+            var resolvedValue = valueProvider(@event);
+            return resolvedValue is null ? null : new PropertyPath($"{staticPrefix}.{FormatEventContextKeyValue(resolvedValue)}");
+        };
+    }
+
+    static string? EventContextPathFor(string expression, string property) => expression switch
+    {
+        WellKnownExpressions.EventContext => property,
+        WellKnownExpressions.CausedBy when IsCausingIdentityProperty(property) => $"causedBy.{property}",
+        _ => null
+    };
+
+    static bool IsCausingIdentityProperty(string property) => property.Equals("subject", StringComparison.Ordinal) ||
+        property.Equals("name", StringComparison.Ordinal) || property.Equals("userName", StringComparison.Ordinal);
+
+    /// <summary>Defer the failure for an unsupported expression until its mapper is invoked.</summary>
+    /// <param name="propertyPath">The unsupported target path.</param>
+    /// <returns>A resolver that creates the original failure only when invoked.</returns>
+    /// <exception cref="UnsupportedDynamicPropertyPathExpression">Thrown when the returned resolver is invoked.</exception>
+    static Func<AppendedEvent, PropertyPath?> UnsupportedPathResolver(PropertyPath propertyPath) =>
+        _ => throw new UnsupportedDynamicPropertyPathExpression(propertyPath);
 
     /// <summary>
     /// Format a resolved event-context value as a dictionary key the way it has always been formatted.
@@ -311,13 +355,15 @@ public static class PropertyMappers
     static string EventContentDictionaryKeyFor(PropertyPath propertyPath, object? value)
     {
         var key = FormatDynamicKeyValue(value);
-        if (key.Length == 0 || key.AsSpan().IndexOfAny(".[]\0") >= 0 || key.StartsWith('$'))
+        if (IsInvalidDictionaryKey(key))
         {
             throw new InvalidDictionaryKey(propertyPath, key);
         }
 
         return key;
     }
+
+    static bool IsInvalidDictionaryKey(string key) => key.Length == 0 || key.AsSpan().IndexOfAny(".[]\0") >= 0 || key.StartsWith('$');
 
     /// <summary>
     /// Read a value from the event content without creating anything along the path - the content is shared and must not be changed.
@@ -346,11 +392,16 @@ public static class PropertyMappers
     {
         null => string.Empty,
         _ when value.IsConcept() => FormatDynamicKeyValue(value.GetConceptValue()),
+        DateTimeOffset or DateTime or DateOnly or TimeOnly => FormatTemporalKeyValue(value),
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+        _ => value.ToString() ?? string.Empty
+    };
+
+    static string FormatTemporalKeyValue(object value) => value switch
+    {
         DateTimeOffset dateTimeOffset => dateTimeOffset.ToString(RoundTripDateTimeKeyFormat, CultureInfo.InvariantCulture),
         DateTime dateTime => dateTime.ToString(RoundTripDateTimeKeyFormat, CultureInfo.InvariantCulture),
         DateOnly dateOnly => dateOnly.ToString("O", CultureInfo.InvariantCulture),
-        TimeOnly timeOnly => timeOnly.ToString("HH':'mm':'ss','fffffff", CultureInfo.InvariantCulture),
-        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-        _ => value.ToString() ?? string.Empty
+        _ => ((TimeOnly)value).ToString("HH':'mm':'ss','fffffff", CultureInfo.InvariantCulture)
     };
 }

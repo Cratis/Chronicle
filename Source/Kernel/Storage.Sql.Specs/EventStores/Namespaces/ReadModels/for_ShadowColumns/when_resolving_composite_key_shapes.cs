@@ -31,7 +31,7 @@ public class when_resolving_composite_key_shapes : Specification
 
     static int Count(string schema)
     {
-        using var context = new ReadModelDbContext(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite("Data Source=:memory:").Options, "shapes", ProjectedColumns.ForSchema(JsonSchema.FromJson(schema)), Substitute.For<IReadModelMigrator>());
+        using var context = new ReadModelDbContext(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite("Data Source=:memory:").IgnoringManyServiceProviders().Options, "shapes", ProjectedColumns.ForSchema(JsonSchema.FromJson(schema)), Substitute.For<IReadModelMigrator>());
         return ShadowColumns.For(context).Count;
     }
 }

@@ -41,4 +41,12 @@ public class EventStoreSubscriptionDefinition
     /// </summary>
     [ProtoMember(5)]
     public IList<NamedTag> NamedTags { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the retired source namespace restriction. The kernel ignores it: a subscription observes every namespace its
+    /// source event store has and never creates one. It stays declared only because a field cannot leave the wire contract within
+    /// a major release; clients written against earlier releases still send it. Remove it in the next major release.
+    /// </summary>
+    [ProtoMember(6)]
+    public IList<string> SourceNamespaces { get; set; } = [];
 }

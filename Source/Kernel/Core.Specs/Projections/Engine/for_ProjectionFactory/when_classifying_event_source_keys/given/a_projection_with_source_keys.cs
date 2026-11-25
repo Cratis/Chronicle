@@ -38,7 +38,7 @@ public class a_projection_with_source_keys : when_creating.given.a_child_collect
         ];
     }
 
-    protected void SetKey(PropertyExpression key) => _definition.From[_first] = _definition.From[_first] with { Key = key };
+    protected void SetKey(PropertyExpression key) => _definition = _definition.WithFrom(_first, _definition.From[_first] with { Key = key });
 
     protected async Task<object> ResolveKey(EventSourceId source)
     {

@@ -5,6 +5,7 @@ using Cratis.Chronicle.Storage.Occurrences;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Occurrences.for_OccurrencesStorage.when_expiring_leases;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class with_two_workers : given.an_occurrence_storage
 {
     OccurrenceId _other;

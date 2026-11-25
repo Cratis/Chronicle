@@ -11,4 +11,6 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 /// <param name="Partition">The <see cref="Key"/> of the partition.</param>
 /// <param name="Events">The events of the partition, in sequence order.</param>
-public record ObserverPartitionBatch(Key Partition, IReadOnlyList<AppendedEvent> Events);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverPartitionBatch")]
+public record ObserverPartitionBatch([Id(0)] Key Partition, [Id(1)] IReadOnlyList<AppendedEvent> Events);

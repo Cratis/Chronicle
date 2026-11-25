@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Chronicle.Events;
 
 namespace Cratis.Chronicle.Sequences;
 
@@ -16,15 +17,19 @@ internal static class AppendedEventConverters
     /// <param name="appendedEvent">The storage appended event to convert.</param>
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> the content is serialized with.</param>
     /// <returns>The converted appended event.</returns>
-    public static AppendedEvent ToApi(this Concepts.Events.AppendedEvent appendedEvent, JsonSerializerOptions jsonSerializerOptions) => new(
-        appendedEvent.Context.SequenceNumber.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        appendedEvent.Context.ToApi(),
-        JsonSerializer.Serialize(appendedEvent.Content, jsonSerializerOptions),
-        appendedEvent.OriginalContent,
-        appendedEvent.Revisions.Select(r => r.ToApi()).ToArray(),
-        appendedEvent.GenerationalContent.Select(kvp => new KeyValuePair<int, string>(kvp.Key, kvp.Value)).ToArray(),
-        (appendedEvent.RevisedGeneration ?? appendedEvent.Revisions.LastOrDefault()?.EventTypeGeneration)?.Value,
-        appendedEvent.ErasedProperties);
+    public static AppendedEvent ToApi(this Concepts.Events.AppendedEvent appendedEvent, JsonSerializerOptions jsonSerializerOptions)
+    {
+        var publicEvent = PublicEventContentRedactor.Redact(appendedEvent, jsonSerializerOptions);
+        return new(
+            publicEvent.Context.SequenceNumber.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            publicEvent.Context.ToApi(),
+            JsonSerializer.Serialize(publicEvent.Content, jsonSerializerOptions),
+            publicEvent.OriginalContent,
+            publicEvent.Revisions.Select(r => r.ToApi()).ToArray(),
+            publicEvent.GenerationalContent.Select(kvp => new KeyValuePair<int, string>(kvp.Key, kvp.Value)).ToArray(),
+            (publicEvent.RevisedGeneration ?? publicEvent.Revisions.LastOrDefault()?.EventTypeGeneration)?.Value,
+            publicEvent.ErasedProperties);
+    }
 
     /// <summary>
     /// Converts a collection of storage <see cref="Concepts.Events.AppendedEvent"/> to a collection of <see cref="AppendedEvent"/>.

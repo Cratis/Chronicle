@@ -87,10 +87,9 @@ test('single project runner preserves filter composition, deadline, coverage and
         evaluate: evaluatedProject(directory, project),
         execute: async (command, args, options) => {
             assert.equal(command, 'dotnet');
-            assert.equal(options.timeout, 1000);
+            assert.deepEqual(options, { cwd: directory, timeout: 1000 });
             assert.deepEqual(args.slice(0, 9), ['tool', 'run', 'dotnet-coverage', '--', 'collect', '-f', 'cobertura', '-o', path.join(directory, 'results/coverage.cobertura.xml')]);
-            assert.match(args[9], /dotnet.*Spec\.dll.*-filterVSTest/);
-            assert.ok(args[9].includes(`(${filter})&(Name!~excluded&Name!~other)`));
+            assert.equal(args[9], `dotnet "${path.join(directory, 'Spec.dll')}" "-filterVSTest" "(${filter})&(Name!~excluded&Name!~other)" "-result-trx" "${path.join(directory, 'results/results.trx')}"`);
             await writeFile(path.join(directory, 'results/results.trx'), trx());
             await writeFile(path.join(directory, 'results/coverage.cobertura.xml'), coverage);
             return { code: 0 };
@@ -110,8 +109,9 @@ test('single project runner rejects zero tests and propagates child failure', as
         await assert.rejects(main(['--project', 'Integration/SqlClustering/SqlClustering.csproj', '--results-directory', 'results'], {
             root: directory,
             evaluate: async () => ({ runner: 'v3', dll: path.join(directory, 'Spec.dll') }),
-            execute: async (_command, args) => {
+            execute: async (_command, args, options) => {
                 assert.deepEqual(args, [path.join(directory, 'Spec.dll'), '-result-trx', path.join(directory, 'results/results.trx')]);
+                assert.deepEqual(options, { cwd: directory, timeout: 1800000 });
                 await writeFile(path.join(directory, 'results/results.trx'), '<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"/>');
                 return { code };
             }

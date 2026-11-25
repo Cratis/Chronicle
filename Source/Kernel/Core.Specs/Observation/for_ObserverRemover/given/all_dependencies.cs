@@ -35,6 +35,7 @@ public class all_dependencies : Specification
     protected IObserver _observerInSecondNamespace;
 
     protected ObserverRemover _remover;
+    protected IObserverDefinitionsCacheClient _definitionsCacheClient;
 
     void Establish()
     {
@@ -65,7 +66,8 @@ public class all_dependencies : Specification
         _observerDefinitions.Has(_observerId).Returns(true);
         _projectionDefinitions.Has(Arg.Any<ProjectionId>()).Returns(false);
 
-        _remover = new ObserverRemover(_grainFactory, _storage, NullLogger<ObserverRemover>.Instance);
+        _definitionsCacheClient = Substitute.For<IObserverDefinitionsCacheClient>();
+        _remover = new ObserverRemover(_grainFactory, _storage, NullLogger<ObserverRemover>.Instance, _definitionsCacheClient);
     }
 
     protected void ObserverIs(IObserver observer, ObserverRunningState runningState, bool isSubscribed)

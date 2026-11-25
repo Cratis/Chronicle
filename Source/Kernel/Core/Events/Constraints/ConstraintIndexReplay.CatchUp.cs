@@ -61,6 +61,8 @@ public partial class ConstraintIndexReplay
         return claims.TryAdd(new(difference.Name, difference.ScopeKey, value), difference);
     }
 
+    static bool IsDependant(CatchUpGroup group) => group.Claim is { Release: not null } claim && !ReferenceEquals(group.Release, claim);
+
     void AdvanceSegment()
     {
         if (_remainingCatchUpSegments is { } remaining)
@@ -100,10 +102,10 @@ public partial class ConstraintIndexReplay
     {
         await barrier.Refuse(_differences.Select(difference => difference.Name).Distinct(), budget);
         await ReleaseDifferences(budget);
-        if (Interrupted() || budget.IsCancellationRequested) return false;
+        if (StopsTurn(budget)) return false;
         await ClaimDifferences(budget);
-        if (Interrupted() || budget.IsCancellationRequested) return false;
-        if (_differences.Exists(difference => CanWrite(difference) && (!difference.Released || !difference.Claimed))) return false;
+        if (StopsTurn(budget)) return false;
+        if (_differences.Exists(HasPendingWrite)) return false;
         if (_segment >= _segments && (!_needsRetryPass || _retryPass))
         {
             await barrier.Allow(CancellationToken.None);
@@ -123,7 +125,7 @@ public partial class ConstraintIndexReplay
             if (!await WriteCatchUpGroup(_catchUpGroups[_catchUpGroupIndex], barrier)) return false;
             _catchUpGroupIndex++;
         }
-        if (_catchUpGroups.Exists(group => group.Release?.Released == true && group.Claim is { Claimed: false } claim && CanWrite(claim))) return false;
+        if (_catchUpGroups.Exists(HasWritableClaimAfterRelease)) return false;
         await barrier.Allow(CancellationToken.None);
         return _catchUpGroupIndex == _catchUpGroups.Count;
     }
@@ -132,27 +134,36 @@ public partial class ConstraintIndexReplay
     {
         // Once started, a group finishes independently of the soft turn budget. Each of its
         // at most two writes is attempted once under its own one-second deadline.
-        if (group.Release is { } release && !release.Released && CanWrite(release))
-        {
-            release.Released = await Write(release, release.Release!, CancellationToken.None);
-            if (!release.Released)
-            {
-                barrier.UnderRefusal = true;
-                return false;
-            }
-        }
-        if (group.Claim is { } claim && !claim.Claimed && CanWrite(claim))
-        {
-            claim.Claimed = await Write(claim, claim.Claim!, CancellationToken.None);
-            if (!claim.Claimed)
-            {
-                barrier.UnderRefusal = true;
-                return false;
-            }
-        }
-
-        return true;
+        return await WriteGroupRelease(group.Release, barrier) && await WriteGroupClaim(group.Claim, barrier);
     }
+
+    async Task<bool> WriteGroupRelease(ConstraintIndexReplayDifference? difference, ConstraintIndexCatchUpWriting barrier)
+    {
+        if (difference is not { } release || release.Released || !CanWrite(release)) return true;
+
+        release.Released = await Write(release, release.Release!, CancellationToken.None);
+        if (release.Released) return true;
+
+        barrier.UnderRefusal = true;
+        return false;
+    }
+
+    async Task<bool> WriteGroupClaim(ConstraintIndexReplayDifference? difference, ConstraintIndexCatchUpWriting barrier)
+    {
+        if (difference is not { } claim || claim.Claimed || !CanWrite(claim)) return true;
+
+        claim.Claimed = await Write(claim, claim.Claim!, CancellationToken.None);
+        if (claim.Claimed) return true;
+
+        barrier.UnderRefusal = true;
+        return false;
+    }
+
+    bool StopsTurn(CancellationToken budget) => Interrupted() || budget.IsCancellationRequested;
+
+    bool HasPendingWrite(ConstraintIndexReplayDifference difference) => CanWrite(difference) && (!difference.Released || !difference.Claimed);
+
+    bool HasWritableClaimAfterRelease(CatchUpGroup group) => group.Release?.Released == true && group.Claim is { Claimed: false } claim && CanWrite(claim);
 
     List<CatchUpGroup> PlanCatchUpGroups(CancellationToken budget)
     {
@@ -185,8 +196,8 @@ public partial class ConstraintIndexReplay
         foreach (var group in groups)
         {
             budget.ThrowIfCancellationRequested();
-            if (group.Claim is not { Release: not null } claim || ReferenceEquals(group.Release, claim)) ready.Enqueue(group);
-            else dependants[claim] = group;
+            if (!IsDependant(group)) ready.Enqueue(group);
+            else dependants[group.Claim!] = group;
         }
         var ordered = new List<CatchUpGroup>(groups.Count);
         while (ready.TryDequeue(out var group))

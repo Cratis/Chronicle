@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
@@ -68,13 +69,16 @@ public class Observing(
         // exist yet - so subscribing it by that empty list would deliver it nothing at all while it is observing.
         _subscription = state.SubscribesToAllEvents
             ? await appendedEventsQueues.SubscribeToAllEventTypes(key, subscription.Filters)
-            : await appendedEventsQueues.Subscribe(key, definitionState.State.EventTypes, subscription.Filters);
+            : await appendedEventsQueues.Subscribe(key, EventTypeSet.From(definitionState.State.EventTypes), subscription.Filters);
 
         // Only check for missed events when there is no active catch-up in progress and no failed partitions.
         // When partitions are being caught up, the catch-up job handles historical events
         // while the queue subscription handles new events arriving in real time.
         // When there are failed partitions, the retry-failed-partition job handles recovery.
-        if (state.CatchingUpPartitions.Count == 0 && !await Observer.IsPreparingCatchup() && !await Observer.IsCatchUpBackedOff() && !await Observer.HasFailedPartitions())
+        // An observer waking from a durable subscription reads and delivers what is waiting after its cursor itself, right after
+        // it entered this state and with the queue subscription already taken, so it is not sent back to routing for it here.
+        var isResumingFromDormancy = StateMachine is Observer { IsResumingFromDormancy: true };
+        if (!isResumingFromDormancy && state.CatchingUpPartitions.Count == 0 && !await Observer.IsPreparingCatchup() && !await Observer.IsCatchUpBackedOff() && !await Observer.HasFailedPartitions())
         {
             var tailSequenceNumber = await eventSequence.GetTailSequenceNumber();
             if (tailSequenceNumber.IsActualValue && state.NextEventSequenceNumber.IsActualValue && state.NextEventSequenceNumber <= tailSequenceNumber)

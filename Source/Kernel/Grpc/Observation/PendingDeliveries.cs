@@ -38,7 +38,9 @@ internal sealed class PendingDeliveries<TResult>
                     ids = new LinkedList<ulong>();
                     _byPartition.Add(partition, ids);
                 }
-                _byId.Add(id, new Pending(partition, ids.AddLast(id), completion));
+                var pending = new Pending(partition, ids.AddLast(id), completion);
+                _byId.Add(id, pending);
+                _ = completion.Task.ContinueWith(_ => Remove(id, pending), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 return id;
             }
         }
@@ -60,6 +62,10 @@ internal sealed class PendingDeliveries<TResult>
             if (!_disconnected)
             {
                 _pages.Add(id, new Dictionary<EventSourceId, TaskCompletionSource<TResult>>(completions));
+                foreach (var (partition, completion) in completions)
+                {
+                    _ = completion.Task.ContinueWith(_ => RemoveFromPage(id, partition, completion), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                }
                 return id;
             }
         }
@@ -109,13 +115,7 @@ internal sealed class PendingDeliveries<TResult>
                 return false;
             }
 
-            _byId.Remove(id);
-            var partitionIds = _byPartition[pending.Partition];
-            partitionIds.Remove(pending.Node);
-            if (partitionIds.Count == 0)
-            {
-                _byPartition.Remove(pending.Partition);
-            }
+            Remove(id, pending);
         }
 
         // Remove before waking the caller: its continuation can register another delivery immediately.
@@ -148,6 +148,42 @@ internal sealed class PendingDeliveries<TResult>
         foreach (var completion in pages)
         {
             completion.TrySetResult(result);
+        }
+    }
+
+    void Remove(ulong id, Pending pending)
+    {
+        lock (_lock)
+        {
+            if (!_byId.TryGetValue(id, out var current) || !ReferenceEquals(current, pending))
+            {
+                return;
+            }
+
+            _byId.Remove(id);
+            var partitionIds = _byPartition[pending.Partition];
+            partitionIds.Remove(pending.Node);
+            if (partitionIds.Count == 0)
+            {
+                _byPartition.Remove(pending.Partition);
+            }
+        }
+    }
+
+    void RemoveFromPage(ulong id, EventSourceId partition, TaskCompletionSource<TResult> completion)
+    {
+        lock (_lock)
+        {
+            if (!_pages.TryGetValue(id, out var page) || !page.TryGetValue(partition, out var current) || !ReferenceEquals(current, completion))
+            {
+                return;
+            }
+
+            page.Remove(partition);
+            if (page.Count == 0)
+            {
+                _pages.Remove(id);
+            }
         }
     }
 

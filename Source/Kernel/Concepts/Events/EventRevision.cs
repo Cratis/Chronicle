@@ -15,10 +15,12 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="CausedBy">The <see cref="Identity"/> that caused the revision.</param>
 /// <param name="Occurred">When the revision occurred.</param>
 /// <param name="Content">The revising content as a JSON string.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.EventRevision")]
 public record EventRevision(
-    EventTypeGeneration EventTypeGeneration,
-    CorrelationId CorrelationId,
-    IEnumerable<Causation> Causation,
-    Identity CausedBy,
-    DateTimeOffset Occurred,
-    string Content = "");
+    [Id(0)] EventTypeGeneration EventTypeGeneration,
+    [Id(1)] CorrelationId CorrelationId,
+    [Id(2)] IEnumerable<Causation> Causation,
+    [Id(3)] Identity CausedBy,
+    [Id(4)] DateTimeOffset Occurred,
+    [Id(5)] string Content = "");

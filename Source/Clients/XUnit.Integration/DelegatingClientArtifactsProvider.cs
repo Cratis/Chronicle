@@ -6,11 +6,11 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// <summary>
 /// Wraps an <see cref="IClientArtifactsProvider"/> and delegates to a mutable
 /// reference so that the shared silo can serve artifacts from the current test fixture.
+/// There is one per shared silo: silos of different fixture types run side by side and must not steer each other's artifacts.
 /// </summary>
 /// <param name="initial">The initial <see cref="IClientArtifactsProvider"/> to delegate to.</param>
 internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initial) : IClientArtifactsProvider
 {
-    static readonly object _lock = new();
     volatile IClientArtifactsProvider _current = initial;
 
     /// <inheritdoc/>
@@ -27,6 +27,9 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
 
     /// <inheritdoc/>
     public IEnumerable<Type> GraphProjections => _current.GraphProjections;
+
+    /// <inheritdoc/>
+    public IEnumerable<Type> GraphViews => _current.GraphViews;
 
     /// <inheritdoc/>
     public IEnumerable<Type> Reactors => _current.Reactors;
@@ -75,25 +78,6 @@ internal class DelegatingClientArtifactsProvider(IClientArtifactsProvider initia
 
     /// <inheritdoc/>
     public IEnumerable<Type> EventSources => _current.EventSources;
-
-    /// <summary>
-    /// Gets or sets the singleton instance created during factory construction.
-    /// </summary>
-    internal static DelegatingClientArtifactsProvider? Instance { get; set; }
-
-    /// <summary>
-    /// Gets the existing singleton instance or creates it with the provided initial provider.
-    /// </summary>
-    /// <param name="initial">The initial <see cref="IClientArtifactsProvider"/>.</param>
-    /// <returns>The shared <see cref="DelegatingClientArtifactsProvider"/> instance.</returns>
-    internal static DelegatingClientArtifactsProvider GetOrCreate(IClientArtifactsProvider initial)
-    {
-        lock (_lock)
-        {
-            Instance ??= new(initial);
-            return Instance;
-        }
-    }
 
     /// <summary>
     /// Points the delegate at a new provider (typically the current test fixture).

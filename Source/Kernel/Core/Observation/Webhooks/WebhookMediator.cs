@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
@@ -11,6 +12,8 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Events;
+using Cratis.Chronicle.Observation.Webhooks.Signing;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.DependencyInjection;
 using Cratis.Monads;
@@ -28,26 +31,24 @@ namespace Cratis.Chronicle.Observation.Webhooks;
 /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/>.</param>
 /// <param name="options">Webhook delivery defaults.</param>
 /// <param name="logger">Delivery logging.</param>
+/// <param name="signer">The delivery signer.</param>
+/// <param name="timeProvider">The attempt clock.</param>
 [Singleton]
-public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory, JsonSerializerOptions jsonSerializerOptions, IOptions<ChronicleOptions>? options = null, ILogger<WebhookMediator>? logger = null) : IWebhookMediator
+public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory, JsonSerializerOptions jsonSerializerOptions, IOptions<ChronicleOptions>? options = null, ILogger<WebhookMediator>? logger = null, IWebhookDeliverySigner? signer = null, TimeProvider? timeProvider = null) : IWebhookMediator
 {
     readonly WebhookDeliveryMetrics _metrics = new(options?.Value?.Telemetry.MetricNames ?? MetricNames.Legacy);
 
     /// <inheritdoc/>
     public async Task<Catch> OnNext(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
-        var result = await Deliver(eventStore, webhookTarget, partition, events, accessToken, timeout, cancellationToken);
+        var result = await Deliver(eventStore, webhookTarget, partition, events, accessToken, timeout, cancellationToken: cancellationToken);
         return result.IsSuccess ? Catch.Success() : Catch.Failed(result.Error!);
     }
 
     /// <inheritdoc/>
-    public async Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    public async Task<WebhookDeliveryResult> Deliver(EventStoreName? eventStore, WebhookTarget webhookTarget, Key partition, IEnumerable<AppendedEvent> events, string? accessToken = null, TimeSpan? timeout = null, WebhookMessageIdentity? signingIdentity = null, CancellationToken cancellationToken = default)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeout is { } duration && duration > TimeSpan.Zero)
-        {
-            deadline.CancelAfter(duration);
-        }
+        using var deadline = CreateDeadline(timeout, cancellationToken);
 
         var batch = events.ToArray();
         try
@@ -55,10 +56,15 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             var httpClient = webhookHttpClientFactory.Create(webhookTarget, accessToken);
             using var request = new HttpRequestMessage(HttpMethod.Post, string.Empty)
             {
-                Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch), options: jsonSerializerOptions)
+                Content = JsonContent.Create(new EventsToObserve(partition.ToString(), batch.Select(@event => PublicEventContentRedactor.Redact(@event, jsonSerializerOptions)).ToArray()), options: jsonSerializerOptions)
             };
             if (eventStore is not null) request.Options.Set(WebhookRequestOptions.EventStore, eventStore);
+            if (signingIdentity is not null) await SignRequest(request, eventStore, signingIdentity, deadline.Token);
             using var response = await httpClient.SendAsync(request, deadline.Token);
+            if (IsSignedRedirect(signingIdentity, response))
+            {
+                return WebhookDeliveryErrors.FromException(webhookTarget, new WebhookSigningUnavailable(), null);
+            }
             if (!response.IsSuccessStatusCode)
             {
                 return DeliveryRejected(response, webhookTarget, batch);
@@ -68,12 +74,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         }
         catch (BrokenCircuitException error)
         {
-            var now = DateTimeOffset.UtcNow;
-            var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
-            var authority = WebhookDiagnostics.Authority(webhookTarget.Url);
-            _metrics.CircuitRejected(authority);
-            (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
-            return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
+            return CircuitOpen(webhookTarget, error, batch);
         }
         catch (Exception error)
         {
@@ -106,6 +107,29 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         return null;
     }
 
+    static CancellationTokenSource CreateDeadline(TimeSpan? timeout, CancellationToken cancellationToken)
+    {
+        var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (timeout is { } duration && duration > TimeSpan.Zero)
+        {
+            deadline.CancelAfter(duration);
+        }
+
+        return deadline;
+    }
+
+    static bool IsConfigurationRejection(HttpStatusCode statusCode) =>
+        (int)statusCode is >= 400 and < 500 && statusCode is not HttpStatusCode.RequestTimeout and not HttpStatusCode.TooManyRequests;
+
+    static bool IsSignedRedirect(WebhookMessageIdentity? identity, HttpResponseMessage response) =>
+        identity is not null && (int)response.StatusCode is >= 300 and < 400;
+
+    static void SetSigningHeader(HttpRequestMessage request, string name, string value)
+    {
+        request.Headers.Remove(name);
+        request.Headers.Add(name, value);
+    }
+
     static WebhookTargetRejected? FindTargetRejection(Exception error)
     {
         if (error is WebhookTargetRejected rejection) return rejection;
@@ -117,12 +141,75 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
         return error.InnerException is { } inner ? FindTargetRejection(inner) : null;
     }
 
+    async Task SignRequest(HttpRequestMessage request, EventStoreName? eventStore, WebhookMessageIdentity identity, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var signingStore = eventStore ?? throw new WebhookSigningUnavailable();
+            if (signingStore != identity.EventStore) throw new WebhookSigningUnavailable();
+
+            // Buffer once, sign those bytes, and send that same buffer without another serialization.
+            var body = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+            request.Content.Dispose();
+            request.Content = new ByteArrayContent(body);
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+            var messageId = WebhookMessageIds.For(identity);
+            await ApplySignature(request, signingStore, messageId, body, cancellationToken);
+            request.Options.Set(WebhookRequestOptions.Resign, (retry, token) => ApplySignature(retry, signingStore, messageId, body, token));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            throw new WebhookSigningUnavailable();
+        }
+    }
+
+    async Task ApplySignature(HttpRequestMessage request, EventStoreName eventStore, string messageId, byte[] body, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deliverySigner = signer ?? throw new WebhookSigningUnavailable();
+            var timestamp = (timeProvider ?? TimeProvider.System).GetUtcNow().ToUnixTimeSeconds();
+            var signature = await deliverySigner.Sign(eventStore, messageId, timestamp, body, cancellationToken);
+            SetSigningHeader(request, "webhook-id", signature.Id);
+            SetSigningHeader(request, "webhook-timestamp", signature.Timestamp);
+            SetSigningHeader(request, "webhook-signature", signature.Signature);
+            SetSigningHeader(request, "Cratis-Key-Id", signature.KeyId);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            throw new WebhookSigningUnavailable();
+        }
+    }
+
+    WebhookDeliveryResult CircuitOpen(WebhookTarget webhookTarget, BrokenCircuitException error, AppendedEvent[] batch)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var delay = error.RetryAfter ?? TimeSpan.FromSeconds(options?.Value.Webhooks.CircuitBreakerBreakDurationSeconds ?? 15);
+        var authority = WebhookDiagnostics.Authority(webhookTarget.Url);
+        _metrics.CircuitRejected(authority);
+        (logger ?? NullLogger<WebhookMediator>.Instance).TargetUnavailable(authority, now + delay);
+        return new(EventSequenceNumber.Unavailable, WebhookDeliveryErrors.SafeError(webhookTarget, error), new(Guid.NewGuid(), PartitionDeferralReason.CircuitOpen, now, now + delay, batch.FirstOrDefault()?.Context.SequenceNumber ?? EventSequenceNumber.First));
+    }
+
+    DateTimeOffset? GetDeferralDeadline(HttpResponseMessage response) =>
+        response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable
+            ? GetRetryAfter(response, options?.Value.Webhooks.MaximumRetryAfterSeconds ?? 24 * 60 * 60)
+            : null;
+
     WebhookDeliveryResult DeliveryRejected(HttpResponseMessage response, WebhookTarget target, AppendedEvent[] batch)
     {
         var error = WebhookDeliveryErrors.ForResponse(target, response);
         var authority = WebhookDiagnostics.Authority(target.Url);
         var deliveryLogger = logger ?? NullLogger<WebhookMediator>.Instance;
-        if ((response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable) && GetRetryAfter(response, options?.Value.Webhooks.MaximumRetryAfterSeconds ?? 24 * 60 * 60) is { } until)
+        if (GetDeferralDeadline(response) is { } until)
         {
             var now = DateTimeOffset.UtcNow;
             deliveryLogger.TargetRateLimited(authority, (int)response.StatusCode, until);
@@ -135,7 +222,7 @@ public class WebhookMediator(IWebhookHttpClientFactory webhookHttpClientFactory,
             return new(EventSequenceNumber.Unavailable, error) { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition };
         }
 
-        if ((int)response.StatusCode is >= 400 and < 500 && response.StatusCode is not HttpStatusCode.RequestTimeout and not HttpStatusCode.TooManyRequests)
+        if (IsConfigurationRejection(response.StatusCode))
         {
             deliveryLogger.TargetConfigurationRejected(authority, (int)response.StatusCode);
             return new(EventSequenceNumber.Unavailable, error) { FailurePolicy = WebhookDeliveryFailurePolicy.PauseObserver };

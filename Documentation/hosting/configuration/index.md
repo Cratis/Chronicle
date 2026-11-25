@@ -32,7 +32,7 @@ Start with [Configuration File](configuration-file.md) to place the file, or [Do
 | Memory | Memory budget for work with a large footprint |
 | Jobs | Parallel job step throttling |
 | Authentication | External authority, default admin, and initial admin user bootstrap |
-| TLS | TLS certificate configuration for the Chronicle port |
+| TLS | Every certificate the kernel uses, with required usages, for the Chronicle port and cluster traffic |
 | Encryption certificate | Certificate protecting OAuth keys, webhook credentials, and Data Protection keys |
 | Health | Dedicated port for the health endpoint |
 | Identity Provider Certificate | Ignored legacy setting; migrate to the shared TLS certificate |
@@ -48,15 +48,17 @@ If your deployment provisions storage before starting replicas, use [SQL schema 
 - [Root Properties](root-properties.md) - Ports and health check settings.
 - [Features](features.md) - Toggle API, Workbench, and OAuth authority.
 - [Storage](storage) - Configure the storage provider and connection details.
+- [MongoDB Permissions](mongodb-permissions.md) - Databases Chronicle uses and the MongoDB roles it needs.
 - [Compliance Storage](compliance-storage.md) - Give compliance encryption keys their own storage backend.
 - [Clustering](clustering.md) - Orleans clustering provider, cluster identity, and silo/gateway ports.
 - [Observers](observers.md) - Retry and timeout settings for observer subscriptions.
+- [Registration](registration.md) - How the kernel accepts and applies client registrations, and how it answers a busy kernel.
 - [Read Models](read-models.md) - Configure replay retention for replay-generated read model versions.
 - [Sinks](sinks.md) - Name the sinks read models and graphs are stored in, independent of the event storage.
 - [Events](events.md) - Configure event queues.
 - [Memory](memory.md) - Memory budget and memory metrics.
 - [Authentication](authentication.md) - External authority and default admin settings.
-- [TLS](tls.md) - Configure the TLS certificate for the Chronicle port.
+- [TLS](tls.md) - Configure the TLS certificate for the Chronicle port and cluster traffic, which needs both server and client authentication usages.
 - [Data Protection Key Encryption](../encryption-certificate.md) - Configure the encryption certificate, required in production.
 - [Health Endpoint](health-endpoint.md) - Expose the health endpoint on a dedicated port with optional TLS.
 - [Workbench](workbench.md) - Serve the Workbench under a path when a reverse proxy routes by path.

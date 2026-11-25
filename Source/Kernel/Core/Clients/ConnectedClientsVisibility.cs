@@ -18,11 +18,13 @@ namespace Cratis.Chronicle.Clients;
 /// <param name="options">The server configuration.</param>
 /// <param name="ownership">The <see cref="IConnectionOwnership"/> telling who opened each connection.</param>
 /// <param name="httpContextAccessor">The <see cref="IHttpContextAccessor"/> for the current request.</param>
+/// <param name="services">The application <see cref="IServiceProvider"/>, used to authorize callers after their request has ended. Without it no caller is an administrator.</param>
 [Singleton]
 public class ConnectedClientsVisibility(
     IOptions<ChronicleOptions> options,
     IConnectionOwnership ownership,
-    IHttpContextAccessor httpContextAccessor) : IConnectedClientsVisibility
+    IHttpContextAccessor httpContextAccessor,
+    IServiceProvider? services = null) : IConnectedClientsVisibility
 {
     /// <inheritdoc/>
     public ConnectionCaller CurrentCaller() =>
@@ -42,12 +44,18 @@ public class ConnectedClientsVisibility(
     public Task<IEnumerable<ConnectedClient>> FilterForCurrentRequest(IEnumerable<ConnectedClient> clients) =>
         Filter(clients, CurrentCaller());
 
-    static async Task<bool> IsAdministrator(ConnectionCaller caller)
+    async Task<bool> IsAdministrator(ConnectionCaller caller)
     {
-        if (caller.Principal is null || caller.RequestServices is null) return false;
+        if (caller.Principal is null || services is null) return false;
 
-        var authorization = caller.RequestServices.GetRequiredService<IAuthorizationService>();
-        var result = await authorization.AuthorizeAsync(caller.Principal, WellKnownAuthorizationPolicies.Administrator);
+        // An observable query keeps filtering long after the request that opened it has ended, and its scoped services are disposed by
+        // then. The caller's identity is all that is needed, so authorize in a scope of our own.
+        await using var scope = services.CreateAsyncScope();
+        var authorization = scope.ServiceProvider.GetRequiredService<IAuthorizationService>();
+
+        // The administrator decision reads the caller's services from the resource it is asked about, and denies without them.
+        var resource = new DefaultHttpContext { User = caller.Principal, RequestServices = scope.ServiceProvider };
+        var result = await authorization.AuthorizeAsync(caller.Principal, resource, WellKnownAuthorizationPolicies.Administrator);
         return result.Succeeded;
     }
 }

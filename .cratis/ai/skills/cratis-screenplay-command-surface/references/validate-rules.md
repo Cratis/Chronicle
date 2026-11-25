@@ -5,6 +5,8 @@
 
 - Rule vocabulary
 - `require` message
+- A `rule <predicate>` outside `validate`
+- Code bodies
 - Date and DateTime comparisons
 - `not empty` means non-blank text
 - Rules whose logic is code
@@ -42,6 +44,20 @@ validate
   require to >= from
     message "The end must not be before the start"
 ```
+
+## A `rule <predicate>` outside `validate`
+
+A predicate rule such as `rule not empty` or `rule > 0` written directly in a command or concept body is
+rejected: rules live beneath `validate`. The rejection appends a
+hint to declare `validate` and indent the rule beneath it (`<property> <predicate>` in a command, the bare
+predicate in a concept). The hint is guidance, not a repair: the parser still rejects the line until you move
+it. A named `rule <Name>` and other unknown directives keep the generic diagnostic.
+
+## Code bodies
+
+Built-in inline languages are `csharp`, `typescript`, `react`, `html`, `sql` and `java`;
+the body is opaque and travels unchanged, and the Cratis render target refuses `java` bodies
+(Requires Screenplay 4.244.0, `screenplay --version`).
 
 ## Date and DateTime comparisons
 
@@ -97,10 +113,24 @@ validate
     file Validations/BeAValidOrganizationNumber.cs
 ```
 
+A concept or command-property imperative `validate` body can also live in a file instead of a fence
+(compiled with the pinned 6.26.0 tool; the shipped version is not tag-verified, so no minimum is
+stated). The path is relative to the model root and stays inside it; the file holds the body that
+would sit inside the fence, including its `yield return` lines:
+
+```text
+concept EmailAddress : String pii
+  validate
+    file Validations/AllowedEmailDomain.cs
+```
+
+A missing or refused path reports the attachment diagnostics `PLAY0432` or `PLAY0430`; consumers
+see the same opaque requirement with file provenance instead of an inline span.
+
 A bodied rule or fenced block on a validation, rule or policy binds as opaque code
 (ESM v3): the reference runner reports it unsupported, and a target must supply the
-implementation. Attached command handlers bind beside unconditional `produces` with a
-resolved body (Screenplay 4.250.0) and otherwise refuse PLAY0800; `file` constraints
+implementation. Attached command handlers bind beside unconditional `produces` (Screenplay 4.250.0) or a
+`may produce` block (ESM v35) with a resolved body, and otherwise refuse PLAY0800; `file` constraints
 retain PLAY0268 (only `unique` constraints bind). Pending and attached command handlers
 beside unconditional `produces` share the v23 result contract; see
 [described handlers](described-handlers.md).

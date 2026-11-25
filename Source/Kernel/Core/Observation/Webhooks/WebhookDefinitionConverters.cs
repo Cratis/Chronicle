@@ -32,7 +32,8 @@ internal static class WebhookDefinitionConverters
             webhookDefinition.IsReplayable && !webhookDefinition.IsNotReplayable,
             webhookDefinition.IsActive && !webhookDefinition.IsInactive)
         {
-            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery
+            GenerationDelivery = (EventGenerationDelivery)webhookDefinition.GenerationDelivery,
+            Signing = webhookDefinition.Signing.ToChronicle()
         };
 
     /// <summary>
@@ -45,6 +46,7 @@ internal static class WebhookDefinitionConverters
         {
             Identifier = webhookDefinition.Identifier,
             GenerationDelivery = (Contracts.Observation.EventGenerationDelivery)webhookDefinition.GenerationDelivery,
+            Signing = webhookDefinition.Signing.ToContract(),
             EventSequenceId = webhookDefinition.EventSequenceId,
             EventTypes = webhookDefinition.EventTypes.Select(type => type.ToContract()).ToList(),
             IsActive = webhookDefinition.IsActive,
@@ -61,19 +63,26 @@ internal static class WebhookDefinitionConverters
     /// <returns>Converted <see cref="WebhookTarget"/>.</returns>
     internal static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
     {
-        var authorization = target.ManagedIdentity is not null
-            ? WebhookAuthorization.FromT4(new ManagedIdentityAuthorization(target.ManagedIdentity.ClientId, target.ManagedIdentity.Scope))
-            : target.Authorization switch
+        WebhookAuthorization authorization;
+        if (target.ManagedIdentity is not null)
         {
-            null => WebhookAuthorization.None,
-            var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
-            var auth when auth.Value1 is not null => new BearerTokenAuthorization(auth.Value1.Token),
-            var auth when auth.Value2 is not null => new OAuthAuthorization(
-                auth.Value2.Authority,
-                auth.Value2.ClientId,
-                auth.Value2.ClientSecret) { Scope = auth.Value2.Scope },
-            _ => WebhookAuthorization.None
-        };
+            authorization = WebhookAuthorization.FromT4(new ManagedIdentityAuthorization(target.ManagedIdentity.ClientId, target.ManagedIdentity.Scope));
+        }
+        else
+        {
+            authorization = target.Authorization switch
+            {
+                null => WebhookAuthorization.None,
+                var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
+                var auth when auth.Value1 is not null => new BearerTokenAuthorization(auth.Value1.Token),
+                var auth when auth.Value2 is not null => new OAuthAuthorization(
+                    auth.Value2.Authority,
+                    auth.Value2.ClientId,
+                    auth.Value2.ClientSecret) { Scope = auth.Value2.Scope },
+                _ => WebhookAuthorization.None
+            };
+        }
+
         return new(
             target.Url,
             authorization,
@@ -135,21 +144,47 @@ internal static class WebhookDefinitionConverters
     /// <returns>The definition as a read model.</returns>
     internal static WebhookDetails ToReadModel(this Concepts.Observation.Webhooks.WebhookDefinition definition)
     {
-        var contract = definition.ToContract();
         return new WebhookDetails(
-            contract.Identifier,
-            contract.Identifier,
-            contract.Target.Url,
-            contract.EventSequenceId,
-            contract.EventTypes,
+            definition.Identifier,
+            definition.Identifier,
+            definition.Target.Url,
+            definition.EventSequenceId,
+            definition.EventTypes.Select(type => type.ToContract()).ToList(),
             definition.Target.Authorization.ToAuthorizationType(),
-            contract.Target.Headers,
-            contract.IsReplayable,
-            contract.IsActive)
-        {
-            GenerationDelivery = definition.GenerationDelivery
-        };
+            definition.Target.Headers.ToDictionary(_ => _.Key, _ => string.Empty),
+            definition.IsReplayable,
+            definition.IsActive,
+            definition.GenerationDelivery,
+            definition.Signing.ToContract(),
+            definition.Target.Headers.ToDictionary(_ => _.Key, _ => !string.IsNullOrEmpty(_.Value)));
     }
+
+    /// <summary>
+    /// Maps an omitted registration policy to unsigned delivery.
+    /// </summary>
+    /// <param name="signing">The registration policy.</param>
+    /// <returns>The kernel signing policy.</returns>
+    /// <exception cref="WebhookSigningNotSupported">The requested signing policy is not supported.</exception>
+    internal static WebhookSigningMode ToChronicle(this Contracts.Observation.Webhooks.WebhookSigningMode signing) => signing switch
+    {
+        Contracts.Observation.Webhooks.WebhookSigningMode.Unspecified => WebhookSigningMode.None,
+        Contracts.Observation.Webhooks.WebhookSigningMode.Disabled => WebhookSigningMode.None,
+        Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519 => WebhookSigningMode.Ed25519,
+        _ => throw new WebhookSigningNotSupported(signing)
+    };
+
+    /// <summary>
+    /// Maps an effective policy to its explicit registration value.
+    /// </summary>
+    /// <param name="signing">The effective policy.</param>
+    /// <returns>The explicit registration policy.</returns>
+    /// <exception cref="WebhookSigningNotSupported">The effective signing policy is not supported.</exception>
+    internal static Contracts.Observation.Webhooks.WebhookSigningMode ToContract(this WebhookSigningMode signing) => signing switch
+    {
+        WebhookSigningMode.None => Contracts.Observation.Webhooks.WebhookSigningMode.Disabled,
+        WebhookSigningMode.Ed25519 => Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519,
+        _ => throw new WebhookSigningNotSupported((Contracts.Observation.Webhooks.WebhookSigningMode)signing)
+    };
 
     /// <summary>
     /// Resolves which kind of authorization a webhook target carries.

@@ -130,7 +130,7 @@ Intended for short-lived processes such as command line tools, functions and job
 
 ### RegistrationMode
 
-Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Only has an effect when `AutoDiscoverAndRegister` is enabled. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
+Controls what the client registers when it connects: `Inline` (everything discovered, the default), `EventTypesOnly` or `AtDeployment` (nothing). Applies to automatic registration and to an explicit `RegisterAll()` call. See [Short-lived processes](../clients/dotnet/short-lived-processes.md).
 
 ### Serverless
 
@@ -141,9 +141,56 @@ Settings for running the .NET client in a function or another scaled-to-zero hos
 | Type | `ChronicleServerlessOptions` |
 | Default | `Mode` is `Off` |
 
+| Nested property | Type | Default | When to change |
+|---|---|---|---|
+| `Mode` | `ServerlessMode` | `Off` | Select `Serverless` for scaled-to-zero hosts. |
+| `ReceiverUrl` | `Uri?` | `null` | Supply an absolute receiver base URL; HTTPS is required outside Development. |
+| `ReceiverPath` | `string` | `/chronicle/deliveries` | Change the relative receiver endpoint path. |
+| `Registration` | `ServerlessRegistration` | `Deploy` | Choose when definitions are registered. |
+| `DefaultDelivery` | `ObserverDelivery` | `Http` | Select observer delivery when no override exists. |
+| `DeploymentGeneration` | `ulong` | `0` | Set the deployed generation; nonzero is required with Deploy outside Development. |
+| `CheckArtifactFingerprint` | `bool` | `true` | Disable the advisory metadata query and fingerprint computation. |
+| `AllowOnColdStartOutsideDevelopment` | `bool` | `false` | Explicit acknowledgement required for OnColdStart outside Development. |
+| `Auth.Type` | `ReceiverAuthenticationType` | `Signature` | Choose receiver authentication. |
+| `Auth.AllowUnauthenticated` | `bool` | `false` | Required with `Auth.Type=None`; do not enable for public receivers. |
+| `Delivery.Timeout` | `TimeSpan` | `00:00:30` | Positive delivery timeout. |
+| `Observers` | `IDictionary<string, ServerlessObserverOptions>` | Empty | Per-observer nullable `Delivery` override, which takes precedence over its attribute; IDs containing `:` cannot be keys. |
+
+For example, under `Cratis:Chronicle`, set `"ProgramIdentifier": "orders"` and `"Serverless": { "Mode": "Serverless", "Registration": "Deploy", "DeploymentGeneration": 42 }` for definitions deployed at generation 42. Mode requires a stable, nonblank `ProgramIdentifier`, not `"[N/A]"`. Undefined mode, registration, authentication and default-delivery values fail validation. Messages name the `Cratis:Chronicle:Serverless:*` key (or `Cratis:Chronicle:ProgramIdentifier`) to change. Consult the serverless guide before enabling a receiver; these options do not imply support for every delivery combination.
+
 Set `Mode` to `Serverless` to skip keep-alive and validate the serverless configuration at start. HTTP delivery is not available yet, so an observer that resolves to it fails at startup. `Delivery:Timeout` (30 seconds by default, must be greater than zero) is the delivery timeout for HTTP reactors and reducers; it has no effect until HTTP delivery ships and does not change the kernel's 60 second webhook timeout. See [Serverless mode](../clients/dotnet/serverless-mode.md).
 
 `Serverless:CheckArtifactFingerprint` defaults to `true`. In serverless `Deploy` mode only, it schedules one background deployment-metadata query and a local prepared-definition fingerprint comparison per client and event-store name, shared across namespaces. It warns about missing or stale deployment metadata without blocking callers, registering artifacts or changing readiness. A nonzero `DeploymentGeneration` is compared too; zero leaves only the fingerprint comparison. Set `Cratis:Chronicle:Serverless:CheckArtifactFingerprint` to `false` to avoid the query and computation. This is a best-effort diagnostic, not enforcement or automatic repair; manual discovery mode checks only current prepared artifacts. Deployment tooling remains responsible for [registering definitions](../clients/dotnet/explicit-artifacts.md), and non-native registries retain their existing empty fingerprint contribution.
+
+### ActivationId, ActivationScope and LifecycleScope
+
+These settings select the identity and delivery boundary for lifecycle occurrence handlers.
+
+| Property | Type | Default | When to change |
+|---|---|---|---|
+| `ActivationId` | `ActivationId?` | `null` | Supply a stable rollout identity shared by instances when lifecycle handlers are used with application activation scope |
+| `ActivationScope` | `ActivationScope` | `Application` | Opt into `PerProcess` for a fresh identity per process and a shutdown attempt during `ApplicationStopping` |
+| `LifecycleScope` | `LifecycleScope` | `Application` | Select `AllNamespaces` to record lifecycle delivery per namespace existing when intent is recorded |
+
+For example, set `"ActivationId": "orders-rollout-42"`, `"ActivationScope": "Application"`, and `"LifecycleScope": "Application"` under `Cratis:Chronicle`. These are not connection readiness switches. See [Lifecycle occurrences](../concepts/effect-receipts.md).
+
+### ExplicitArtifacts
+
+The read-only `ExplicitArtifacts` collection starts empty. Populate it in code before creating stores when declarations cannot be discovered from markers; configuration binding is not a replacement for executable definitions. See [Explicit artifacts](index.mdx#explicit-artifacts) for an example and snapshot behavior.
+
+### LoadBalancerStrategy
+
+An optional code-only `ILoadBalancerStrategy` instance, `null` by default. When unset, the connection string selects the strategy, defaulting to round-robin. Supply a custom strategy through `configureOptions` only when the built-in endpoint selection policies do not fit. See [Connection string options](../connection-strings/configuration.mdx).
+
+### DefaultSinkName, DefaultGraphSinkTypeId and DefaultGraphSinkName
+
+| Property | Type | Default | When to change |
+|---|---|---|---|
+| `DefaultSinkName` | `string` | Empty | Select a named kernel sink for read models without a `Sink` attribute; empty delegates to the kernel's default or its storage |
+| `DefaultGraphSinkTypeId` | `SinkTypeId` | `WellKnownSinkTypes.Neo4j` | Use `WellKnownSinkTypes.InMemoryGraph` for development/test graph projections |
+| `DefaultGraphSinkName` | `string` | Empty | Select a named graph sink; empty delegates to the kernel's graph default or Neo4j server |
+
+For example, set `"DefaultSinkName": "reporting"` and `"DefaultGraphSinkName": "relationships"` under `Cratis:Chronicle` after configuring those named sinks on the kernel. See [Sinks](../sinks/).
 
 ### DefaultSinkTypeId
 
@@ -179,6 +226,10 @@ Maximum gRPC message sizes in bytes. See [gRPC Message Size](grpc-message-size) 
 |---|---|
 | Type | `int?` |
 | Default | `104857600` (100 MB) |
+
+### MultiplexObservation
+
+Whether every reactor and reducer of the client is observed over one stream per connection instead of one stream each. It defaults to `true` and takes effect only against a kernel that advertises the `multiplexed-observation` capability; against an older kernel every reactor and reducer keeps its own stream whatever this is set to. Turn it off to keep per-observer streams, for example when a proxy between the client and the kernel does not suit long-lived multiplexed streams.
 
 ### ProgramIdentifier
 
@@ -231,13 +282,7 @@ How registering the client's artifacts is retried when the Kernel does not accep
 | `InitialDelay` | `TimeSpan` | `00:00:02` | Wait after the first failed attempt. Each further attempt doubles it, jittered |
 | `MaximumDelay` | `TimeSpan` | `00:00:30` | Upper bound for the wait between attempts |
 
-Registration runs on the way up, so a registration that fails takes the host with it. A Kernel that is
-merely busy — catching a newly added read model up over a large event log, say — answers late rather
-than wrongly, and a host that dies on that answer comes back and asks again, adding its whole
-registration to the queue it was already waiting on. Retrying in place lets the client wait out a busy
-Kernel instead. Registration is idempotent, so a retry costs the Kernel only the comparison it already
-does; a Kernel that is genuinely refusing the definitions keeps failing and the host still ends up
-down, just after the attempts are spent rather than on the first.
+Registration retries let a client wait out a busy kernel rather than immediately repeating the whole startup. Registration is idempotent. In a hosted application the eager connection runs in the background: exhausted retries are logged and readiness remains unhealthy, rather than stopping the host. Direct callers still observe registration failures. See [Startup and readiness](index.mdx#startup-and-readiness).
 
 In `appsettings.json`:
 
@@ -364,12 +409,12 @@ Server certificate validation is separate: `SkipCertificateValidation` defaults 
 | Type | `Tls` |
 | Default | TLS enabled, no client certificate configured, server certificate validation skipped |
 
-| Nested property | Type | Description |
-|---|---|---|
-| `CertificatePath` | `string?` | Path to a PFX client certificate file |
-| `CertificatePassword` | `string?` | Password for the client certificate file |
-| `CaCertificatePath` | `string?` | Path to a PEM or PKCS#7 file with the certificate authorities the server certificate must chain to when validation is enabled; see [TLS](tls#trusting-a-private-certificate-authority) |
-| `SkipCertificateValidation` | `bool` | Skip server certificate validation; defaults to `true` |
+| Nested property | Type | Default | Description |
+|---|---|---|---|
+| `CertificatePath` | `string?` | `null` | Path to a PFX client certificate file |
+| `CertificatePassword` | `string?` | `null` | Password for the client certificate file |
+| `CaCertificatePath` | `string?` | `null` | Path to a PEM or PKCS#7 file with the certificate authorities the server certificate must chain to when validation is enabled; see [TLS](tls#trusting-a-private-certificate-authority) |
+| `SkipCertificateValidation` | `bool` | `true` | Skip server certificate validation |
 
 ### Occurrences
 
@@ -427,7 +472,7 @@ Optional external-provider example. Leave `Authentication` out to keep requestin
 }
 ```
 
-These options apply only to client credentials, so API key and `auth=none` connections ignore them. `Authority` and `TokenEndpoint` must be absolute `https` URLs without user info, and the .NET client always validates the certificate of an external authority. The connection string must carry its own client credentials, because the development credentials are never sent to an external authority. `AddCratisChronicleConnection` and the other SDKs don't support these options yet.
+These options apply only to client credentials, so API key and `auth=none` connections ignore them. `Authority` and `TokenEndpoint` must be absolute `https` URLs without user info, and the .NET client always validates the certificate of an external authority. The connection string must carry its own client credentials, because the development credentials are never sent to an external authority.
 
 ## ChronicleClientOptions properties
 
@@ -435,12 +480,17 @@ These options apply only to client credentials, so API key and `auth=none` conne
 
 ### EventStore
 
-The name of the event store the client connects to. Required.
+The name of the event store the client connects to. Hosted registration derives it when no nonblank name is configured.
 
 | | |
 |---|---|
 | Type | `EventStoreName` |
-| Default | *(none — must be set)* |
+| Hosted default | Normalized `ProgramIdentifier` when nonblank and not `"[N/A]"`; otherwise the normalized entry assembly name |
+| Direct options default | Empty; direct `ChronicleClient` construction does not apply hosted binding or this fallback. Pass a name to `GetEventStore` |
+
+The derived name is trimmed, control characters and `/`, `\\`, `.`, space, `"`, `$`, `*`, `<`, `>`, `:`, `\|`, `?`, `+` become `-`, repeated separators collapse and leading/trailing `-` are removed. It is capped at 32 UTF-8 bytes without splitting a surrogate pair. An explicitly configured name is not normalized. For example, an entry assembly named `Orders.Api` yields `Orders-Api`.
+
+Override it to share a store across applications or keep a stable name when renaming an assembly. Set `Cratis:Chronicle:EventStore` (`Cratis__Chronicle__EventStore`) or `configureOptions.EventStore`. If the selected fallback source cannot yield a name, startup options validation names that key and the callback remedy:
 
 ```json
 { "Cratis": { "Chronicle": { "EventStore": "my-store" } } }
@@ -514,7 +564,11 @@ options above. Set these keys under `webhooks` in the Kernel's `chronicle.json`,
 | `AllowInsecureHttp` | `false` | Permit HTTP in Development. Ignored with a startup warning outside Development. Loopback HTTP is automatically permitted in Development. |
 | `AllowedHosts` | `[]` | Exact receiver/OAuth hosts or wildcard subdomains such as `*.example.com`. In Enforce mode unlisted hosts are rejected; approving a host also permits its private addresses. |
 | `EventStoreAllowedHosts` | `{}` | Map of event-store names to host arrays. An entry replaces the global array, including when empty. Requests without an event-store option use the global list. |
-| `TestTimeoutSeconds` | `30` | Timeout for the registration reachability probe. |
+| `TestTimeoutSeconds` | `10` | Timeout in seconds for the registration reachability probe. |
+| `RequestTimeoutSeconds` | `60` | Deadline for one delivery HTTP attempt. |
+| `CircuitBreakerSamplingDurationSeconds` | `30` | Failure sampling window for each receiver authority. |
+| `CircuitBreakerBreakDurationSeconds` | `15` | How long an opened circuit defers delivery. |
+| `RetryDelaySeconds` | `2` | Retained legacy setting; the current HTTP pipeline performs one attempt and durable retry delays come from `Webhooks:Retry`, not this value. |
 
 ### Managed identity approval
 
@@ -548,8 +602,8 @@ retain their existing retry and quarantine defaults.
 
 Either exhausted retry limit parks the partition. Schedule deadlines and the first failure's
 timestamp survive reactivation; jitter is not resampled. Valid receiver/circuit deferrals do
-not consume attempts or count toward quarantine. There is no automatic quarantined-observer
-probe scheduler yet; recovery requires operator action.
+not consume attempts or count toward quarantine. Eligible quarantined webhooks can recover through
+the [quarantine probe policy](#quarantine-probe-policy); operators can also recover them manually.
 
 `MaximumRetryAfterSeconds` bounds receiver-provided `Retry-After` delays on `429` and
 `503` responses. Its default is `86400` seconds (24 hours). Invalid or expired headers

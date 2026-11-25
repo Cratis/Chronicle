@@ -63,17 +63,20 @@ public class UniqueConstraintValidator(
         // a SHA-256 hash of every constrained property concatenated, computed to keep the value itself out of the
         // index, so it is neither this property's value nor readable. A callback rendering it produced 64
         // characters of hex where the documented example promised the name the caller had just tried to use.
-        return isAllowed ?
-            ConstraintValidationResult.Success :
-            new()
-            {
-                Violations = propertiesWithValues.Select(pv =>
-                    this.CreateViolation(
-                        context,
-                        sequenceNumber,
-                        $"Event '{context.EventTypeId}' on member '{pv.Property}' violated a unique constraint on sequence number {sequenceNumber}",
-                        new() { { WellKnownConstraintDetailKeys.PropertyName, pv.Property }, { WellKnownConstraintDetailKeys.PropertyValue, pv.Value } })).ToImmutableList()
-            };
+        if (isAllowed)
+        {
+            return ConstraintValidationResult.Success;
+        }
+
+        return new()
+        {
+            Violations = propertiesWithValues.Select(pv =>
+                this.CreateViolation(
+                    context,
+                    sequenceNumber,
+                    $"Event '{context.EventTypeId}' on member '{pv.Property}' violated a unique constraint on sequence number {sequenceNumber}",
+                    new() { { WellKnownConstraintDetailKeys.PropertyName, pv.Property }, { WellKnownConstraintDetailKeys.PropertyValue, pv.Value } })).ToImmutableList()
+        };
     }
 
     /// <summary>

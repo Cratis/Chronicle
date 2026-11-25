@@ -18,7 +18,7 @@ public class and_the_current_definition_cannot_build : given.a_subscriber_with_a
         _projection.Accepts(_event.Context.EventType).Returns(false);
         var updated = _definition with { IsRewindable = false };
         _storage.GetEventStore(_key.EventStore).Projections.Get(_key.ObserverId).Returns(updated);
-        _factory.Create(_key.EventStore, _key.Namespace, updated, Arg.Any<Concepts.ReadModels.ReadModelDefinition>(), Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>())
+        _factory.Create(_key.EventStore, _key.Namespace, updated, Arg.Any<Concepts.ReadModels.ReadModelDefinition>())
             .Returns(Task.FromException<Engine.IProjection>(new MissingKeyResolverForEventType(_event.Context.EventType)));
     }
 

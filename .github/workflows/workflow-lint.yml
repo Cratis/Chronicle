@@ -12,6 +12,21 @@ on:
       - .github/scripts/nightly-build-health-policy.mjs
       - .github/scripts/nightly-build-health.mjs
       - .github/scripts/test-nightly-build-health.mjs
+      - .github/quarantine.json
+      - .github/scripts/last-green-watchdog.mjs
+      - .github/scripts/test-last-green-watchdog.mjs
+      - .github/scripts/failed-spec-record.mjs
+      - .github/scripts/test-failed-spec-record.mjs
+      - .github/scripts/quarantine.mjs
+      - .github/scripts/test-quarantine.mjs
+      - .github/scripts/run-tests-with-retry.sh
+      - .github/scripts/resolve-previous-release-image.mjs
+      - .github/scripts/test-previous-release-image.mjs
+      - .github/scripts/assert-image-push-permissions.py
+      - .github/scripts/test-assert-image-push-permissions.py
+      - .github/scripts/test-pr-prerelease-security.mjs
+      - .github/scripts/test-action-upgrade-compatibility.mjs
+      - .github/scripts/test-download-artifact-handoff.mjs
 
 permissions:
   contents: read
@@ -32,8 +47,22 @@ jobs:
       contents: read
     steps:
       - name: Check out policy fixtures
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Test scheduled nightly health policy
-        run: node --test .github/scripts/test-nightly-build-health.mjs
+        run: node --test .github/scripts/test-nightly-build-health.mjs .github/scripts/test-last-green-watchdog.mjs .github/scripts/test-failed-spec-record.mjs .github/scripts/test-quarantine.mjs .github/scripts/test-previous-release-image.mjs
+      - name: Test PR prerelease security boundary
+        run: node --test .github/scripts/test-pr-prerelease-security.mjs
+      - name: Test action upgrade compatibility
+        run: node --test .github/scripts/test-action-upgrade-compatibility.mjs
+      - name: Test download artifact handoff
+        run: node --test .github/scripts/test-download-artifact-handoff.mjs
+      - name: Reject expired quarantine entries
+        run: node .github/scripts/quarantine.mjs lint
+      - name: Install workflow parser
+        run: python3 -m pip install PyYAML==6.0.3
+      - name: Test image-push permission assertion
+        run: python3 -B .github/scripts/test-assert-image-push-permissions.py
+      - name: Require package-write permission for image pushes
+        run: python3 .github/scripts/assert-image-push-permissions.py

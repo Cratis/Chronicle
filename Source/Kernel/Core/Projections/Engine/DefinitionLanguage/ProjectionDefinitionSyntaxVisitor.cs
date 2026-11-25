@@ -130,17 +130,18 @@ public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IE
     {
         if (isChildContext)
         {
-            context.Every = context.Every with { IncludeChildren = every.IncludeChildren };
-            var properties = (Dictionary<PropertyPath, string>)context.Every.Properties;
+            var properties = new Dictionary<PropertyPath, string>(context.Every.Properties);
             foreach (var (property, expression) in ProcessMappings(every.Mappings))
             {
                 properties[property] = expression;
             }
 
-            if (every.AutoMap != AutoMapMode.Inherit)
+            context.Every = context.Every with
             {
-                context.Every.AutoMap = GetAutoMapValue(every.AutoMap);
-            }
+                IncludeChildren = every.IncludeChildren,
+                Properties = properties,
+                AutoMap = every.AutoMap != AutoMapMode.Inherit ? GetAutoMapValue(every.AutoMap) : context.Every.AutoMap
+            };
 
             return;
         }
@@ -176,8 +177,16 @@ public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IE
             context.RemovedWith,
             context.RemovedWithJoin,
             AutoMap: GetAutoMapValue(children.AutoMap),
-            Nested: context.Nested.Count > 0 ? context.Nested : null);
+            Nested: context.Nested.Count > 0 ? context.Nested : null,
+            Ordering: ConvertOrdering(children.Ordering));
     }
+
+    Cratis.Chronicle.Changes.ChildrenOrdering? ConvertOrdering(ChildrenOrderingSyntax? ordering) => ordering switch
+    {
+        null or { Placement: ChildrenPlacement.Append } => null,
+        { Placement: ChildrenPlacement.Prepend } => new(Cratis.Chronicle.Changes.ChildrenPlacement.Prepend, PropertyPath.NotSet),
+        _ => new(Cratis.Chronicle.Changes.ChildrenPlacement.Sorted, new PropertyPath(ordering.SortBy!), ordering.Direction == ChildrenSortDirection.Descending ? Cratis.Chronicle.Changes.SortDirection.Descending : Cratis.Chronicle.Changes.SortDirection.Ascending)
+    };
 
     /// <summary>
     /// Process a nested object block and emit a <see cref="ChildrenDefinition"/> with <see cref="PropertyPath.NotSet"/>
@@ -224,9 +233,11 @@ public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IE
             properties[property] = mapping switch
             {
                 SetMappingSyntax set => ConvertSetSource(set.Source),
+                SetOnceMappingSyntax set => $"{WellKnownExpressions.SetOnce}({ConvertSetSource(set.Source)})",
+                RemoveKeyMappingSyntax => WellKnownExpressions.Remove,
                 ClearMappingSyntax => WellKnownExpressions.Null,
-                AddMappingSyntax add => $"{WellKnownExpressions.Add}({ConvertExpressionToString(add.Value)})",
-                SubtractMappingSyntax subtract => $"{WellKnownExpressions.Subtract}({ConvertExpressionToString(subtract.Value)})",
+                AddMappingSyntax add => $"{WellKnownExpressions.Add}({ConvertArithmetic(add.Value, add.Factor)})",
+                SubtractMappingSyntax subtract => $"{WellKnownExpressions.Subtract}({ConvertArithmetic(subtract.Value, subtract.Factor)})",
                 IncrementMappingSyntax => WellKnownExpressions.Increment,
                 DecrementMappingSyntax => WellKnownExpressions.Decrement,
                 CountMappingSyntax => WellKnownExpressions.Count,
@@ -274,6 +285,10 @@ public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IE
             LiteralExpressionSyntax { Value: string value } => new PropertyExpression($"{WellKnownExpressions.Value}({value})"),
             _ => new PropertyExpression(ConvertExpressionToString(expression))
         };
+
+    string ConvertArithmetic(ExpressionSyntax value, ExpressionSyntax? factor) => factor is null
+        ? ConvertExpressionToString(value)
+        : $"{ConvertExpressionToString(value)} * {ConvertExpressionToString(factor)}";
 
     string ConvertExpressionToString(ExpressionSyntax expression) =>
         expression switch

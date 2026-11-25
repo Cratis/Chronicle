@@ -3,6 +3,7 @@
 
 namespace Cratis.Chronicle.Storage.Sql.for_ComposedStartup;
 
+[PerFactSpecificationLifecycle] // Facts run startup themselves; the cancellation fact changes how the lock attempt behaves.
 public class when_a_schema_lock_is_not_acquired : given.a_schema_lock_startup_step
 {
     [Theory]

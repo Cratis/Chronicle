@@ -9,6 +9,7 @@ using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -30,6 +31,7 @@ public class when_a_reducer_registers_for_the_system_store : Specification
         var mediator = Substitute.For<IReducerMediator>();
         var reducers = new Reducers(
             grainFactory,
+            Substitute.For<IClientReducerSubscriptions>(),
             mediator,
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
@@ -38,7 +40,8 @@ public class when_a_reducer_registers_for_the_system_store : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloSupervisor.Instance);
         using var messages = new Subject<ReducerMessage>();
         var observed = reducers.Observe(messages).ToTask();
 

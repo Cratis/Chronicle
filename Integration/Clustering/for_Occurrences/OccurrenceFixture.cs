@@ -23,10 +23,16 @@ public class OccurrenceFixture : ClusteringFixture
             var storage = descriptor.ImplementationInstance as IStorage
                 ?? descriptor.ImplementationFactory?.Invoke(provider) as IStorage
                 ?? (IStorage)ActivatorUtilities.CreateInstance(provider, descriptor.ImplementationType!);
-            return StorageObservationProxy.Wrap(storage, (name, value) => name == nameof(IStorage.GetEventStore)
-                ? StorageObservationProxy.Wrap((IEventStoreStorage)value!, (member, result) => member == "get_LifecycleFanOut"
-                    ? FanOut.Decorate((ILifecycleFanOutStorage)result!) : result)
-                : value);
+            return StorageObservationProxy.Wrap(storage, (name, value) =>
+            {
+                if (name != nameof(IStorage.GetEventStore))
+                {
+                    return value;
+                }
+
+                return StorageObservationProxy.Wrap((IEventStoreStorage)value!, (member, result) =>
+                    member == "get_LifecycleFanOut" ? FanOut.Decorate((ILifecycleFanOutStorage)result!) : result);
+            });
         });
 
         // The legacy in-process composite predates this generated service. Use the actual implementation,

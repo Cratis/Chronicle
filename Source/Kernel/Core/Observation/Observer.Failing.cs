@@ -111,7 +111,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task<PartitionRecoveryOutcome> TryStartRecoverJobForFailedPartition(Key partition)
     {
-        var (outcome, startFailed) = await TryRecoverFailedPartition(partition);
+        var (outcome, startFailed) = await TryRecoverFailedPartitionForOperator(partition);
         if (startFailed)
         {
             throw new FailedPartitionRecoveryCouldNotStart(partition, _observerKey);
@@ -228,7 +228,7 @@ public partial class Observer
     static TimeSpan GetRetryReminderPeriod(TimeSpan retryDelay) =>
         retryDelay > _minimumRetryReminderPeriod ? retryDelay : _minimumRetryReminderPeriod;
 
-    async Task<(PartitionRecoveryOutcome Outcome, bool StartFailed)> TryRecoverFailedPartition(Key partition)
+    async Task<(PartitionRecoveryOutcome Outcome, bool StartFailed)> TryRecoverFailedPartition(Key partition, Action? onJobStarted = null)
     {
         ThrowIfSealed();
         await ThrowIfKeyDoesNotOwnDefinition();
@@ -275,6 +275,7 @@ public partial class Observer
         {
             return (PartitionRecoveryOutcome.Started, ReportJobNotStarted());
         }
+        onJobStarted?.Invoke();
         return (PartitionRecoveryOutcome.Started, false);
 
         bool ReportJobNotStarted()
@@ -345,8 +346,8 @@ public partial class Observer
 
             if (!IsQuarantined)
             {
-                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : ShouldQuarantineObserver(config);
-                if (webhook && context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
+                quarantineObserver = webhook ? context.Policy == WebhookDeliveryFailurePolicy.PauseObserver : context.Policy != WebhookDeliveryFailurePolicy.ParkPartition && ShouldQuarantineObserver(config);
+                if (context.Policy == WebhookDeliveryFailurePolicy.ParkPartition)
                 {
                     logger.QuarantiningFailedPartition(partition);
                     failures.State.Quarantine(partition);
@@ -601,6 +602,12 @@ public partial class Observer
         if (IsQuarantined)
         {
             logger.SkippingFailedPartitionRecoveryBecauseObserverIsQuarantined();
+            return Cratis.Choreography.Jobs.JobId.NotSet;
+        }
+
+        if (IsWithoutClient)
+        {
+            DeferringRecoveryWithoutClient(logger, failedPartition.Partition);
             return Cratis.Choreography.Jobs.JobId.NotSet;
         }
 

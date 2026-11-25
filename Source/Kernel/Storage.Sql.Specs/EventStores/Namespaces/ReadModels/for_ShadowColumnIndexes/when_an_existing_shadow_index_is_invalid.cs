@@ -22,7 +22,7 @@ public class when_an_existing_shadow_index_is_invalid : for_ReadModelMigrator.gi
         await using var old = CreateContext("invalid_shadow", columns.Select(column => column with { IsCompositeKey = false }).ToArray());
         await old.EnsureTableExists();
         await old.Database.ExecuteSqlRawAsync("ALTER TABLE invalid_shadow ADD COLUMN __compositeKey TEXT; CREATE INDEX chronicle_shx_invalid ON invalid_shadow(__compositeKey)");
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(old.Database.GetConnectionString()).AddInterceptors(_commands).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(old.Database.GetConnectionString()).AddInterceptors(_commands).IgnoringManyServiceProviders().Options;
         _context = new ReadModelDbContext(options, old.TableName, columns, _migrator);
         _context.Database.SetCommandTimeout(19);
     }

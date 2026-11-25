@@ -46,7 +46,7 @@ Stop-and-fix signals during implementation and review:
 - [ ] Reused existing primitives/wrappers instead of duplicating.
 - [ ] No smell guard above is triggered without a short, intentional reason.
 - [ ] File read past its final `};` — no orphaned code.
-- [ ] New/changed reusable or stateful components have Storybook stories.
+- [ ] New/changed reusable or stateful components have Storybook stories, except live slice pages wired directly to Arc hooks or a backend ([storybook.md](./storybook.md)); verify those through behavior specs and the running app.
 - [ ] New/changed view-model/helper behavior has BDD specs (see [frontend-testing.md](./frontend-testing.md)).
 - [ ] Lint, conditional test, and build pass (the project's frontend gates).
 

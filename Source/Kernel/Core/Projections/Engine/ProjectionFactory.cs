@@ -88,57 +88,34 @@ public class ProjectionFactory(
         }
     };
 
-    static readonly string[] _aggregateExpressions =
-    [
-        WellKnownExpressions.Count,
-        WellKnownExpressions.Increment,
-        WellKnownExpressions.Decrement,
-        WellKnownExpressions.Add,
-        WellKnownExpressions.Subtract
-    ];
+    readonly ProjectionPlanCache _plans = new();
+
+    /// <summary>
+    /// Gets the number of plans held, one per compiled projection however many namespaces run it.
+    /// </summary>
+    internal int CachedPlanCount => _plans.Count;
+
+    /// <inheritdoc/>
+    public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition) =>
+        await Create(eventStore, @namespace, await GetPlan(eventStore, definition, readModelDefinition));
 
     /// <inheritdoc/>
     public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, IEnumerable<EventTypeSchema> eventTypeSchemas)
     {
-        if (readModelDefinition?.Sink is null)
-        {
-            throw new ReadModels.ReadModelNotFound(definition.ReadModel);
-        }
+        ValidateReadModel(definition, readModelDefinition);
+        var schemas = ParticipatingEventTypes.SchemasFor(definition, AsList(eventTypeSchemas));
+        return await Create(eventStore, @namespace, CreatePlan(eventStore, definition, readModelDefinition, DefinitionFingerprintFor(definition), schemas));
+    }
 
-        readModelDefinition.Sink.EnsureReadModelSupported();
+    /// <inheritdoc/>
+    public async Task<IProjection> Create(EventStoreName eventStore, EventStoreNamespaceName @namespace, ProjectionPlan plan)
+    {
+        var definition = plan.Definition;
+        var readModelDefinition = plan.ReadModel;
         if (definition.Graph is not null)
         {
-            if (definition.GenerationDelivery == EventGenerationDelivery.Pinned || graphProjectionFactory is null)
-            {
-                throw new EventGenerationDeliveryNotSupported();
-            }
-
-            return graphProjectionFactory.Create(definition, readModelDefinition, DefinitionFingerprintFor(definition));
+            return graphProjectionFactory!.Create(definition, readModelDefinition, plan.Fingerprint, plan.Schemas);
         }
-
-        ProjectionGenerationDeliveryValidation.Validate(definition);
-        if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
-            (eventGenerationRelease is null || definition.SubscribesToAllEvents))
-        {
-            throw new EventGenerationDeliveryNotSupported();
-        }
-
-        // The fingerprint identifies the stored definition; ProjectionsManager compares it against the stored definition.
-        var fingerprint = DefinitionFingerprintFor(definition);
-        var schemas = eventTypeSchemas as IReadOnlyList<EventTypeSchema> ?? [.. eventTypeSchemas];
-        var rewrittenEventTypes = new List<EventType>();
-        definition = LegacyEventSourceIdKeys.Normalize(definition, schemas, rewrittenEventTypes);
-        foreach (var eventType in rewrittenEventTypes.Distinct())
-        {
-            LegacyEventSourceIdKeys.LogRewritten(logger, definition.Identifier.Value, eventType.Id.Value);
-        }
-
-        var normalizedDefinition = LegacyChildEveryEventMappings.Normalize(definition, readModelDefinition.GetTargetSchema());
-        foreach (var property in definition.FromEvery.Properties.Keys.Except(normalizedDefinition.FromEvery.Properties.Keys))
-        {
-            LegacyChildEveryEventMappings.LogMoved(logger, definition.Identifier.Value, property.Path);
-        }
-        definition = normalizedDefinition;
 
         var eventSequenceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(definition.EventSequenceId);
 
@@ -146,13 +123,28 @@ public class ProjectionFactory(
         var eventTypesStorage = eventCompliance is null && definition.GenerationDelivery != EventGenerationDelivery.Pinned ? null : storage.GetEventStore(eventStore).EventTypes;
         var projection = (Projection)await CreateProjectionFrom(
             eventStore,
-            new(eventSequenceStorage, eventTypesStorage, schemas, readModelDefinition),
+            new(plan, eventSequenceStorage, eventTypesStorage, plan.Schemas, readModelDefinition),
             new(definition, readModelDefinition.GetTargetSchema(), PropertyPath.Root, PropertyPath.Root),
             ProjectionPath.GetRootFor(definition.Identifier),
             false);
         WarnUnsupportedRootJoinKey(projection, definition);
-        projection.DefinitionFingerprint = fingerprint;
+        projection.DefinitionFingerprint = plan.Fingerprint;
         return projection;
+    }
+
+    /// <inheritdoc/>
+    public void Evict(EventStoreName eventStore, ProjectionId id) => _plans.Remove(eventStore, id);
+
+    /// <summary>
+    /// Fingerprints a read model definition, content and schemas alike.
+    /// </summary>
+    /// <param name="definition">The <see cref="ReadModelDefinition"/>.</param>
+    /// <returns>The fingerprint.</returns>
+    internal static string ReadModelFingerprintFor(ReadModelDefinition definition)
+    {
+        var content = JsonSerializer.Serialize(definition with { Schemas = new Dictionary<ReadModelGeneration, JsonSchema>() }, FingerprintOptions) +
+            string.Join(';', definition.Schemas.OrderBy(entry => entry.Key.Value).Select(entry => $"{entry.Key.Value}:{entry.Value.ToJson()}"));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
     }
 
     /// <summary>
@@ -203,37 +195,7 @@ public class ProjectionFactory(
         AutoMap autoMap,
         IReadOnlySet<string> noAutoMapProperties,
         IEnumerable<EventTypeSchema> eventTypeSchemas)
-    {
-        // The silent-empty failure only happens when AutoMap is expected to wire the property by name. With
-        // AutoMap disabled the developer has taken over mapping, so an unmapped collection is intentional.
-        if (autoMap != AutoMap.Enabled || currentReadModelSchema is null)
-        {
-            return [];
-        }
-
-        if (projectionDefinition.From.Count == 0)
-        {
-            return [];
-        }
-
-        var schemaList = eventTypeSchemas as IReadOnlyList<EventTypeSchema> ?? eventTypeSchemas.ToList();
-        var covered = CollectCoveredPropertyNames(projectionDefinition, currentReadModelSchema, schemaList, new AutoMapSettings(autoMap, noAutoMapProperties));
-
-        // Child and nested collections are materialized as their own projection structures, not by name-AutoMap.
-        var structural = new HashSet<string>(
-            projectionDefinition.Children.Keys.Concat(projectionDefinition.Nested?.Keys ?? []).Select(key => key.LastSegment.Value),
-            StringComparer.OrdinalIgnoreCase);
-
-        var eventTypeNames = string.Join(", ", projectionDefinition.From.Keys.Select(_ => _.Id.Value));
-
-        return currentReadModelSchema.Properties.Values
-            .Where(property => property.IsArray &&
-                               !covered.Contains(property.Name) &&
-                               !structural.Contains(property.Name) &&
-                               !noAutoMapProperties.Contains(property.Name))
-            .Select(property => new UnmappedCollectionProperty(property.Name, eventTypeNames))
-            .ToList();
-    }
+        => UnmappedCollectionFinder.Find(projectionDefinition, currentReadModelSchema, new AutoMapSettings(autoMap, noAutoMapProperties), eventTypeSchemas);
 
     /// <summary>Combines explicit join mappings with matching event properties when AutoMap permits them.</summary>
     /// <param name="joinDefinition">The event-specific join definition.</param>
@@ -243,35 +205,61 @@ public class ProjectionFactory(
     /// <param name="noAutoMapProperties">Properties excluded from automatic mapping.</param>
     /// <returns>The effective join property mappings.</returns>
     internal static List<KeyValuePair<PropertyPath, string>> GetMergedJoinProperties(JoinDefinition joinDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
+        => AutoMapMerging.MergeJoin(joinDefinition, currentReadModelSchema, eventSchema, new AutoMapSettings(autoMap, noAutoMapProperties));
+
+    /// <summary>Combines explicit from mappings with matching event properties when AutoMap permits them.</summary>
+    /// <param name="fromDefinition">The from definition.</param>
+    /// <param name="currentReadModelSchema">The schema being projected into.</param>
+    /// <param name="eventSchema">The event schema, if known.</param>
+    /// <param name="autoMap">The effective AutoMap setting.</param>
+    /// <param name="noAutoMapProperties">Properties excluded from automatic mapping.</param>
+    /// <returns>The effective from property mappings.</returns>
+    internal static List<KeyValuePair<PropertyPath, string>> GetMergedFromProperties(FromDefinition fromDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
+        => AutoMapMerging.MergeFrom(fromDefinition, currentReadModelSchema, eventSchema, new AutoMapSettings(autoMap, noAutoMapProperties));
+
+    /// <summary>
+    /// Gets the number of plans held for one projection.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the projection belongs to.</param>
+    /// <param name="id">The <see cref="ProjectionId"/> of the projection.</param>
+    /// <returns>The number of plans.</returns>
+    internal int CachedPlanCountFor(EventStoreName eventStore, ProjectionId id) => _plans.CountFor(eventStore, id);
+
+    /// <summary>
+    /// Gets the plan of a projection, the part of it that every namespace shares, compiling it when no valid one is held.
+    /// </summary>
+    /// <param name="eventStore">The <see cref="EventStoreName"/> the projection belongs to.</param>
+    /// <param name="definition">The <see cref="ProjectionDefinition"/>.</param>
+    /// <param name="readModelDefinition">The <see cref="ReadModelDefinition"/> the projection targets.</param>
+    /// <returns>The shared <see cref="ProjectionPlan"/>.</returns>
+    internal async Task<ProjectionPlan> GetPlan(EventStoreName eventStore, ProjectionDefinition definition, ReadModelDefinition readModelDefinition)
     {
-        var merged = joinDefinition.Properties.ToList();
-        autoMap = joinDefinition.AutoMap == AutoMap.Inherit ? autoMap : joinDefinition.AutoMap;
+        ValidateReadModel(definition, readModelDefinition);
+        var fingerprint = DefinitionFingerprintFor(definition);
+        var eventTypes = storage.GetEventStore(eventStore).EventTypes;
+        return await _plans.GetOrCompile(
+            eventStore,
+            definition.Identifier,
+            fingerprint,
+            ReadModelFingerprintFor(readModelDefinition),
+            await RevisionOf(eventTypes),
+            async () => ParticipatingEventTypes.SchemasFor(definition, AsList(await eventTypes.GetLatestForAllEventTypes())),
+            schemas => CreatePlan(eventStore, definition, readModelDefinition, fingerprint, schemas));
+    }
 
-        if (autoMap == AutoMap.Disabled)
+    static IReadOnlyList<EventTypeSchema> AsList(IEnumerable<EventTypeSchema> schemas) => schemas as IReadOnlyList<EventTypeSchema> ?? [.. schemas];
+
+    static async ValueTask<long?> RevisionOf(IEventTypesStorage eventTypes) =>
+        eventTypes is EventTypeRegistry registry ? (await registry.GetSnapshot()).Revision : null;
+
+    static void ValidateReadModel(ProjectionDefinition definition, ReadModelDefinition? readModelDefinition)
+    {
+        if (readModelDefinition?.Sink is null)
         {
-            return merged;
+            throw new ReadModels.ReadModelNotFound(definition.ReadModel);
         }
 
-        if (eventSchema is null || currentReadModelSchema is null)
-        {
-            return merged;
-        }
-
-        var existingReadModelProperties = new HashSet<string>(merged.Select(_ => _.Key.LastSegment.Value), StringComparer.OrdinalIgnoreCase);
-        var existingEventProperties = new HashSet<string>(merged.Select(_ => _.Value), StringComparer.OrdinalIgnoreCase);
-
-        foreach (var eventProperty in eventSchema.Properties.Values.Where(property => !existingReadModelProperties.Contains(property.Name) && !existingEventProperties.Contains(property.Name)))
-        {
-            var matchingReadModelProperty = FindAutoMapTarget(eventProperty, currentReadModelSchema, noAutoMapProperties);
-            if (matchingReadModelProperty is not null)
-            {
-                merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
-                existingReadModelProperties.Add(matchingReadModelProperty.Name);
-                existingEventProperties.Add(eventProperty.Name);
-            }
-        }
-
-        return merged;
+        readModelDefinition.Sink.EnsureReadModelSupported();
     }
 
     static JsonNode? Canonicalize(JsonNode? node) => node switch
@@ -283,117 +271,6 @@ public class ProjectionFactory(
         _ => node.DeepClone()
     };
 
-    /// <summary>
-    /// Finds the read model property an event property auto-maps onto. A property flagged with [NoAutoMap] is only
-    /// ever set from its explicit mapping, so an event carrying an identically named property must not auto-map onto it.
-    /// </summary>
-    /// <param name="eventProperty">The event property to find a target for.</param>
-    /// <param name="currentReadModelSchema">The schema being projected into.</param>
-    /// <param name="noAutoMapProperties">Properties excluded from automatic mapping.</param>
-    /// <returns>The matching read model property, or null when there is none or it is excluded.</returns>
-    static JsonSchemaProperty? FindAutoMapTarget(JsonSchemaProperty eventProperty, JsonSchema currentReadModelSchema, IReadOnlySet<string> noAutoMapProperties)
-    {
-        var matchingReadModelProperty = currentReadModelSchema.Properties.Values
-            .FirstOrDefault(rmp => rmp.Name.Equals(eventProperty.Name, StringComparison.OrdinalIgnoreCase));
-
-        return matchingReadModelProperty is not null && !noAutoMapProperties.Contains(matchingReadModelProperty.Name) ? matchingReadModelProperty : null;
-    }
-
-    static HashSet<string> CollectCoveredPropertyNames(
-        ProjectionDefinition projectionDefinition,
-        JsonSchema currentReadModelSchema,
-        IReadOnlyList<EventTypeSchema> schemaList,
-        AutoMapSettings autoMap)
-    {
-        var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        void CoverFrom(FromDefinition fromDefinition, EventType eventType)
-        {
-            var eventSchema = schemaList.SchemaFor(eventType, projectionDefinition.GenerationDelivery)?.Schema;
-            foreach (var mapping in GetMergedFromProperties(fromDefinition, currentReadModelSchema, eventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties))
-            {
-                covered.Add(mapping.Key.LastSegment.Value);
-            }
-        }
-
-        foreach (var (eventType, fromDefinition) in projectionDefinition.From)
-        {
-            CoverFrom(fromDefinition, eventType);
-        }
-
-        foreach (var (eventType, joinDefinition) in projectionDefinition.Join)
-        {
-            var eventSchema = schemaList.SchemaFor(eventType, projectionDefinition.GenerationDelivery)?.Schema;
-            foreach (var mapping in GetMergedJoinProperties(joinDefinition, currentReadModelSchema, eventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties))
-            {
-                covered.Add(mapping.Key.LastSegment.Value);
-            }
-        }
-
-        foreach (var mapping in projectionDefinition.FromEvery.Properties)
-        {
-            covered.Add(mapping.Key.LastSegment.Value);
-        }
-
-        var derivedFroms = (projectionDefinition.FromDerivatives ?? []).SelectMany(derivative => derivative.EventTypes.Select(eventType => (EventType: eventType, derivative.From)));
-        foreach (var (eventType, fromDefinition) in derivedFroms)
-        {
-            CoverFrom(fromDefinition, eventType);
-        }
-
-        return covered;
-    }
-
-    /// <summary>
-    /// Determines whether an event is subscribed only to be aggregated — every property it maps is a
-    /// <c language="csharp">[Count]</c>/<c language="csharp">[Increment]</c>/<c language="csharp">[Decrement]</c>/<c language="csharp">[Add]</c>/<c language="csharp">[Subtract]</c> operation and
-    /// nothing else. The developer pulled the event in to aggregate it, not to copy values off it, so its
-    /// other properties must not be name-AutoMapped onto the read model.
-    /// </summary>
-    /// <param name="fromDefinition">The <see cref="FromDefinition"/> to inspect.</param>
-    /// <returns><see langword="true"/> if the event is subscribed only for an aggregate; otherwise <see langword="false"/>.</returns>
-    static bool IsAggregateOnly(FromDefinition fromDefinition) =>
-        fromDefinition.Properties.Count > 0 &&
-        fromDefinition.Properties.Values.All(expression =>
-            _aggregateExpressions.Any(aggregate => expression.StartsWith(aggregate, StringComparison.Ordinal)));
-
-    static List<KeyValuePair<PropertyPath, string>> GetMergedFromProperties(FromDefinition fromDefinition, JsonSchema currentReadModelSchema, JsonSchema? eventSchema, AutoMap autoMap, IReadOnlySet<string> noAutoMapProperties)
-    {
-        var merged = fromDefinition.Properties.ToList();
-
-        if (autoMap == AutoMap.Disabled)
-        {
-            return merged;
-        }
-
-        if (eventSchema is null || currentReadModelSchema is null)
-        {
-            return merged;
-        }
-
-        // An event subscribed only to be aggregated does not name-AutoMap its other properties, so an
-        // unrelated same-named property cannot silently overwrite an explicitly sourced one. The developer
-        // can still opt a specific property out of AutoMap for the non-aggregate cases with [NoAutoMap].
-        if (IsAggregateOnly(fromDefinition))
-        {
-            return merged;
-        }
-
-        var existing = new HashSet<string>(merged.Select(_ => _.Key.LastSegment.Value), StringComparer.OrdinalIgnoreCase);
-
-        foreach (var eventProperty in eventSchema.Properties.Values.Where(property => !existing.Contains(property.Name)))
-        {
-            var matchingReadModelProperty = FindAutoMapTarget(eventProperty, currentReadModelSchema, noAutoMapProperties);
-            if (matchingReadModelProperty is not null)
-            {
-                merged.Add(new(new PropertyPath(matchingReadModelProperty.Name), eventProperty.Name));
-                existing.Add(matchingReadModelProperty.Name);
-            }
-        }
-
-        return merged;
-    }
-
     static void SetParentOnAllChildProjections(Projection projection, IProjection[] childProjections)
     {
         foreach (var child in childProjections)
@@ -402,52 +279,20 @@ public class ProjectionFactory(
         }
     }
 
-    static void ValidateChildrenOrdering(ProjectionId projectionId, PropertyPath childrenProperty, ChildrenOrdering? ordering, JsonSchema? childSchema)
+    static async Task<EventTypeSchema> ResolvePinnedSchema(EventType pin, EventTypeSchema[] available, IEventTypesStorage eventTypesStorage)
     {
-        if (ordering is null)
+        var schema = available.SchemaFor(pin, EventGenerationDelivery.Pinned);
+        if (schema is null)
         {
-            return;
+            if (!await eventTypesStorage.HasFor(pin.Id, pin.Generation))
+            {
+                throw new PinnedEventTypeGenerationUnavailable(pin);
+            }
+
+            schema = (await eventTypesStorage.GetFor([pin])).SchemaFor(pin, EventGenerationDelivery.Pinned);
         }
 
-        if (!Enum.IsDefined(ordering.Placement))
-        {
-            throw new InvalidChildrenOrdering(projectionId, childrenProperty, $"'{(int)ordering.Placement}' is not a known placement - expected one of {string.Join(", ", Enum.GetNames<ChildrenPlacement>())}.");
-        }
-
-        if (!Enum.IsDefined(ordering.Direction))
-        {
-            throw new InvalidChildrenOrdering(projectionId, childrenProperty, $"'{(int)ordering.Direction}' is not a known sort direction - expected one of {string.Join(", ", Enum.GetNames<SortDirection>())}.");
-        }
-
-        if (ordering.Placement != ChildrenPlacement.Sorted)
-        {
-            return;
-        }
-
-        if (ordering.SortBy?.IsSet != true)
-        {
-            throw new InvalidChildrenOrdering(projectionId, childrenProperty, "a sorted ordering needs a child property to sort by.");
-        }
-
-        var childProperties = childSchema?.GetFlattenedProperties().Select(_ => _.Name).ToArray() ?? [];
-        if (childProperties.Length == 0)
-        {
-            return;
-        }
-
-        var sortProperty = childSchema!.GetSchemaPropertyForPropertyPath(ordering.SortBy) ?? throw new InvalidChildrenOrdering(
-            projectionId,
-            childrenProperty,
-            $"the children are sorted by '{ordering.SortBy}', which the child read model does not have (available properties: {string.Join(", ", childProperties)}).");
-
-        var sortType = sortProperty.ActualTypeSchema.Type;
-        if (sortType.HasFlag(JsonObjectType.Object) || sortType.HasFlag(JsonObjectType.Array))
-        {
-            throw new InvalidChildrenOrdering(
-                projectionId,
-                childrenProperty,
-                $"the children are sorted by '{ordering.SortBy}', which is {(sortType.HasFlag(JsonObjectType.Array) ? "a collection" : "an object")} - children can only be sorted by a single value such as a number, string, date, Guid or boolean.");
-        }
+        return schema ?? throw new PinnedEventTypeGenerationUnavailable(pin);
     }
 
     static JsonSchemaProperty GetChildCollectionProperty(ProjectionId projectionId, ReadModelDefinition rootReadModel, JsonSchema currentReadModelSchema, PropertyPath childrenProperty)
@@ -499,9 +344,9 @@ public class ProjectionFactory(
     }
 
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
-        projectionDefinition.InitialModelState.Count == 0 ?
-            CreateInitialState(readModelSchema) :
-            expandoObjectConverter.ToExpandoObject(projectionDefinition.InitialModelState, readModelSchema);
+        projectionDefinition.InitialModelState.ToJsonObject() is { Count: > 0 } initialModelState
+            ? expandoObjectConverter.ToExpandoObject(initialModelState, readModelSchema)
+            : CreateInitialState(readModelSchema);
 
     static ExpandoObject CreateInitialState(JsonSchema readModelSchema)
     {
@@ -634,7 +479,7 @@ public class ProjectionFactory(
     {
         var marker = $".{Concepts.WellKnownExpressions.EventContent}.";
         var markerIndex = propertyPath.Path.IndexOf(marker, StringComparison.Ordinal);
-        if (markerIndex < 0 || eventType is null || eventSchema?.GetFlattenedProperties().Any() != true)
+        if (markerIndex < 0 || !HasDeclaredProperties(eventSchema) || eventType is null)
         {
             return;
         }
@@ -645,6 +490,8 @@ public class ProjectionFactory(
             throw new EventContentKeyNotInEvent(propertyPath, eventType, keyPath);
         }
     }
+
+    static bool HasDeclaredProperties([NotNullWhen(true)] JsonSchema? schema) => schema?.GetFlattenedProperties().Any() == true;
 
     /// <summary>
     /// Check that every segment of a path names a property of the event schema exactly as written.
@@ -685,8 +532,7 @@ public class ProjectionFactory(
 
         var basePropertyPath = propertyPathString[..propertyPathString.IndexOf(".$", StringComparison.Ordinal)];
         var baseSchema = projection.TargetReadModelSchema.GetSchemaPropertyForPropertyPath(new PropertyPath(basePropertyPath));
-        if (baseSchema?.ActualTypeSchema.AdditionalPropertiesSchema?.ActualSchema is { } valueSchema &&
-            (valueSchema.Type != JsonObjectType.None || valueSchema.Format is not null))
+        if (baseSchema?.ActualTypeSchema.AdditionalPropertiesSchema?.ActualSchema is { } valueSchema && IsTypedValueSchema(valueSchema))
         {
             var valueSchemaProperty = new JsonSchemaProperty
             {
@@ -704,6 +550,9 @@ public class ProjectionFactory(
 
         return new JsonSchemaProperty { Type = JsonObjectType.None };
     }
+
+    static bool IsTypedValueSchema(JsonSchema valueSchema) =>
+        valueSchema.Type != JsonObjectType.None || valueSchema.Format is not null;
 
     static ChildrenOrdering? ChildrenOrderingFor(ProjectionLevel level) =>
         level.IsChild && !level.IsNested && level.Definition is ChildrenDefinition children ? children.Ordering : null;
@@ -727,6 +576,42 @@ public class ProjectionFactory(
         return projectionDefinition.FromEventProperty is null
             ? derivatives
             : derivatives.Concat([(EventType: projectionDefinition.FromEventProperty.Event, Op: ProjectionOperationType.From)]);
+    }
+
+    ProjectionPlan CreatePlan(EventStoreName eventStore, ProjectionDefinition definition, ReadModelDefinition readModelDefinition, string fingerprint, IReadOnlyList<EventTypeSchema> schemas)
+    {
+        var readModelFingerprint = ReadModelFingerprintFor(readModelDefinition);
+        if (definition.Graph is not null)
+        {
+            if (definition.GenerationDelivery == EventGenerationDelivery.Pinned || graphProjectionFactory is null)
+            {
+                throw new EventGenerationDeliveryNotSupported();
+            }
+
+            return new(eventStore, definition, readModelDefinition, fingerprint, readModelFingerprint, schemas);
+        }
+
+        ProjectionGenerationDeliveryValidation.Validate(definition);
+        if (definition.GenerationDelivery == EventGenerationDelivery.Pinned &&
+            (eventGenerationRelease is null || definition.SubscribesToAllEvents))
+        {
+            throw new EventGenerationDeliveryNotSupported();
+        }
+
+        var rewrittenEventTypes = new List<EventType>();
+        definition = LegacyEventSourceIdKeys.Normalize(definition, schemas, rewrittenEventTypes);
+        foreach (var eventType in rewrittenEventTypes.Distinct())
+        {
+            LegacyEventSourceIdKeys.LogRewritten(logger, definition.Identifier.Value, eventType.Id.Value);
+        }
+
+        var normalizedDefinition = LegacyChildEveryEventMappings.Normalize(definition, readModelDefinition.GetTargetSchema());
+        foreach (var property in definition.FromEvery.Properties.Keys.Except(normalizedDefinition.FromEvery.Properties.Keys))
+        {
+            LegacyChildEveryEventMappings.LogMoved(logger, definition.Identifier.Value, property.Path);
+        }
+
+        return new(eventStore, normalizedDefinition, readModelDefinition, fingerprint, readModelFingerprint, schemas);
     }
 
     void SetupRemovedWithJoin(ProjectionLevel level)
@@ -755,7 +640,7 @@ public class ProjectionFactory(
 
     async Task<IProjection> CreateProjectionFrom(EventStoreName eventStore, SubscriptionContext context, ProjectionTarget target, ProjectionPath path, bool isChild)
     {
-        IDictionary<EventType, EventTypeSchema> pinnedSchemas = new Dictionary<EventType, EventTypeSchema>();
+        var pinnedSchemas = context.Plan.PinnedSchemas;
         async Task<AppendedEvent> ReleaseStoredEvent(EventType pin, AppendedEvent storedEvent) =>
             (await eventGenerationRelease!.Release(eventStore, [pin], pinnedSchemas, [storedEvent])).Single();
 
@@ -776,21 +661,14 @@ public class ProjectionFactory(
             var available = context.EventTypeSchemas.ToArray();
             foreach (var pin in projection.EventTypes.Distinct())
             {
-                var schema = available.SchemaFor(pin, EventGenerationDelivery.Pinned);
-                if (schema is null)
+                // The plan keeps what it resolved, so the next namespace to run it does not read the schema again.
+                if (!pinnedSchemas.ContainsKey(pin))
                 {
-                    if (!await context.EventTypesStorage!.HasFor(pin.Id, pin.Generation))
-                    {
-                        throw new PinnedEventTypeGenerationUnavailable(pin);
-                    }
-
-                    schema = (await context.EventTypesStorage.GetFor([pin])).SchemaFor(pin, EventGenerationDelivery.Pinned);
+                    pinnedSchemas[pin] = await ResolvePinnedSchema(pin, available, context.EventTypesStorage!);
                 }
-
-                pinnedSchemas[pin] = schema ?? throw new PinnedEventTypeGenerationUnavailable(pin);
             }
 
-            context = context with { EventTypeSchemas = pinnedSchemas.Values };
+            context = context with { EventTypeSchemas = pinnedSchemas.Values.ToArray() };
         }
 
         // Phase 3: Setup subscriptions for all projections (root and children)
@@ -818,9 +696,9 @@ public class ProjectionFactory(
     void SetupChildSubscriptions(ProjectionLevel level, KeyValuePair<PropertyPath, ChildrenDefinition> childEntry, Projection childProjection, SubscriptionContext context)
     {
         var childDefinition = childEntry.Value;
-        var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
-            childProjection.IdentifiedByProperty :
-            childDefinition.IdentifiedBy;
+        var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot
+            ? childProjection.IdentifiedByProperty
+            : childDefinition.IdentifiedBy;
         var childrenProperty = GetChildCollectionProperty(level.Projection.Identifier, context.RootReadModel, level.Schema, childEntry.Key);
         var childSchema = childrenProperty.Item?.ActualSchema ?? level.Schema;
 
@@ -941,7 +819,7 @@ public class ProjectionFactory(
         var childProjectionTasks = projectionDefinition.Children.Select(async kvp =>
         {
             var childrenProperty = GetChildCollectionProperty(projectionId, rootReadModel, currentReadModelSchema, kvp.Key);
-            ValidateChildrenOrdering(projectionId, kvp.Key, kvp.Value.Ordering, childrenProperty.Item?.ActualSchema);
+            ChildrenOrderingValidation.Validate(projectionId, kvp.Key, kvp.Value.Ordering, childrenProperty.Item?.ActualSchema);
             return await CreateProjectionStructure(
                 context,
                 projectionId,
@@ -977,7 +855,9 @@ public class ProjectionFactory(
             projectionDefinition.Scope)
         {
             GenerationDelivery = generationDelivery,
-            ReleaseStoredEvent = releaseStoredEvent
+            ReleaseStoredEvent = releaseStoredEvent,
+            DateTimes = context.Plan.DateTimes,
+            FencedGlobalDefinitionIneligibility = FencedGlobalEligibility.ReasonFor(projectionDefinition)
         };
 
         // Set parent relationships immediately after creation
@@ -996,9 +876,9 @@ public class ProjectionFactory(
             if (childEntry.child is Projection childProjection)
             {
                 var childDefinition = childEntry.kvp.Value;
-                var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
-                    childProjection.IdentifiedByProperty :
-                    childDefinition.IdentifiedBy;
+                var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot
+                    ? childProjection.IdentifiedByProperty
+                    : childDefinition.IdentifiedBy;
 
                 ResolveEventsRecursively(
                     childProjection,
@@ -1197,7 +1077,8 @@ public class ProjectionFactory(
         var joinEventSchema = context.EventTypeSchemas.SchemaFor(joinEventType, level.Projection.GenerationDelivery)?.Schema;
         var mergedJoinProperties = GetMergedJoinProperties(joinDefinition, level.Schema, joinEventSchema, autoMap.AutoMap, autoMap.NoAutoMapProperties);
         var joinPropertyMappers = mergedJoinProperties.Select(kvp => ResolvePropertyMapper(level.Projection, level.AccessorPath + kvp.Key, kvp.Value, joinEventType, joinEventSchema)).ToArray();
-        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null);
+        Func<AppendedEvent, Task<AppendedEvent>>? releaseEvent = level.Projection.GenerationDelivery == EventGenerationDelivery.Pinned ? storedEvent => level.Projection.ReleaseEvent(joinEventType, storedEvent) : null;
+        var resolvedJoin = fromObservable.ResolveJoin(context.EventSequenceStorage, joinEventType, level.AccessorPath + joinDefinition.On, logger, eventCompliance, joinEventSchema, releaseEvent, level.Projection.DateTimes.ForProjection);
         ProjectJoined(level, resolvedJoin, joinPropertyMappers);
     }
 
@@ -1229,7 +1110,10 @@ public class ProjectionFactory(
             MarkBasePropertyAsDynamic(projection, propertyPath, propertyPathString);
         }
 
-        return propertyMapperExpressionResolvers.Resolve(propertyPath, schemaProperty, expression);
+        return ResolvedCollectionPath.Mapper(
+            projection,
+            propertyPath,
+            path => propertyMapperExpressionResolvers.Resolve(path, schemaProperty, expression));
     }
 
     void ResolveEventsForProjection(Projection projection, IProjection[] childProjections, ProjectionDefinition projectionDefinition, PropertyPath actualIdentifiedByProperty, bool hasParent)
@@ -1323,7 +1207,7 @@ public class ProjectionFactory(
 
     List<(EventTypeWithKeyResolver Event, ProjectionOperationType Operation)> CollectNestedEventTypes(
         Projection projection,
-        IDictionary<PropertyPath, ChildrenDefinition>? nested,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? nested,
         PropertyPath actualIdentifiedByProperty,
         bool hasParent,
         PropertyPath parentPath)
@@ -1468,19 +1352,18 @@ public class ProjectionFactory(
 
     sealed record ProjectionTarget(ProjectionDefinition Definition, JsonSchema Schema, PropertyPath AccessorPath, PropertyPath IdentifiedBy);
 
-    sealed class FingerprintEventDefinitionsConverter<TDefinition> : DictionaryJsonConverter<EventType, TDefinition>
+    sealed class FingerprintEventDefinitionsConverter<TDefinition> : ReadOnlyDictionaryJsonConverter<EventType, TDefinition>
     {
         protected override EventType GetKeyFromString(string key) => EventType.Parse(key);
         protected override string GetKeyString(EventType key) => key.ToString();
     }
 
     sealed record SubscriptionContext(
+        ProjectionPlan Plan,
         IEventSequenceStorage EventSequenceStorage,
         IEventTypesStorage? EventTypesStorage,
         IEnumerable<EventTypeSchema> EventTypeSchemas,
         ReadModelDefinition RootReadModel);
-
-    sealed record AutoMapSettings(AutoMap AutoMap, IReadOnlySet<string> NoAutoMapProperties);
 
     sealed record ProjectionLevel(
         Projection Projection,

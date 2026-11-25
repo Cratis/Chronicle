@@ -117,6 +117,10 @@ public class ReactorObserverSubscriber(
             logger.OnNextException(taskCanceledException, _key.ObserverId, _key.EventStore, _key.Namespace);
             return ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled");
         }
+        finally
+        {
+            tcs.TrySetCanceled();
+        }
     }
 
     async Task<ObserverPageResult> DeliverPartitions(IReadOnlyList<ObserverPartitionBatch> batches, ObserverSubscriberContext context)
@@ -158,6 +162,13 @@ public class ReactorObserverSubscriber(
         {
             logger.OnNextException(taskCanceledException, _key.ObserverId, _key.EventStore, _key.Namespace);
             return Settled(batches, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "Task was cancelled"));
+        }
+        finally
+        {
+            foreach (var completion in completions.Values)
+            {
+                completion.TrySetCanceled();
+            }
         }
     }
 }

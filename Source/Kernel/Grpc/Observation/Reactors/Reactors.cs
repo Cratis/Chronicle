@@ -18,6 +18,7 @@ using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Services.Events;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// Initializes a new instance of the <see cref="Observers"/> class.
 /// </remarks>
 /// <param name="grainFactory"><see cref="IGrainFactory"/> for creating grains.</param>
+/// <param name="clientReactorSubscriptions"><see cref="IClientReactorSubscriptions"/> for the subscription of each connected client reactor.</param>
 /// <param name="reactorMediator"><see cref="IReactorMediator"/> for observing actual events as they are made available.</param>
 /// <param name="storage"><see cref="IStorage"/> for accessing storage.</param>
 /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> for serialization.</param>
@@ -44,8 +46,11 @@ namespace Cratis.Chronicle.Services.Observation.Reactors;
 /// <param name="logger"><see cref="ILogger"/> for logging.</param>
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
+/// <param name="siloSupervisor">The <see cref="ISiloSupervisor"/> that runs the checks of client subscriptions.</param>
+/// <param name="dormantObservers">The <see cref="IDormantObservers"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
 internal sealed class Reactors(
     IGrainFactory grainFactory,
+    IClientReactorSubscriptions clientReactorSubscriptions,
     IReactorMediator reactorMediator,
     IStorage storage,
     JsonSerializerOptions jsonSerializerOptions,
@@ -54,7 +59,9 @@ internal sealed class Reactors(
     IConnectionOwnership connectionOwnership,
     ILogger<Reactors> logger,
     IObserverRegistrationGate registrationGate,
-    INamespaceCasing namespaceCasing) : IReactors
+    INamespaceCasing namespaceCasing,
+    ISiloSupervisor siloSupervisor,
+    IDormantObservers? dormantObservers = null) : IReactors
 {
     /// <inheritdoc/>
     public IObservable<EventsToObserve> Observe(IObservable<ReactorMessage> messages, CallContext context = default)
@@ -64,7 +71,7 @@ internal sealed class Reactors(
 
         var registrationTcs = new TaskCompletionSource<RegisterReactor>(TaskCreationOptions.RunContinuationsAsynchronously);
         var pendingDeliveries = new PendingDeliveries<ObserverSubscriberResult>();
-        IReactor clientObserver = null!;
+        IClientReactorSubscription clientObserver = null!;
 
         var messagesSubscription = messages.Subscribe(message =>
         {
@@ -211,7 +218,7 @@ internal sealed class Reactors(
                     {
                         using var span = activitySource.Register();
                         span?.Activity?.Tag(key, ObserverType.Reactor);
-                        clientObserver = grainFactory.GetGrain<IReactor>(key);
+                        clientObserver = clientReactorSubscriptions.Create(key);
                         var reactor = clientObserver;
                         await ObserverRegistrationEstablishment.Establish(
                             () => reactor.SetDefinitionAndSubscribe(definition),
@@ -225,9 +232,16 @@ internal sealed class Reactors(
                     }
                 }
 
+                var observerGrain = grainFactory.GetGrain<IObserver>(new ObserverKey(key.ObserverId, key.EventStore, key.Namespace, key.EventSequenceId));
                 await ClientSubscriptionKeeper.KeepWhileConnected(
-                    () => ClientSubscriptionKeeper.KeepSubscription(clientObserver.IsSubscriptionIntact, () => clientObserver.KeepSubscription(definition)),
-                    TimeSpan.FromSeconds(options.Value.ConnectedClients.ReviseIntervalSeconds),
+                    () => ClientSubscriptionKeeper.KeepSubscription(
+                        ClientSubscriptionKeeper.ConfirmFromDurableSubscription(
+                            ClientSubscriptionKeeper.ConfirmFromObserver(clientObserver.IsSubscriptionIntact, observerGrain, registration.ConnectionId),
+                            dormantObservers,
+                            key),
+                        () => clientObserver.KeepSubscription(definition)),
+                    SubscriptionCheckSchedule.From(options.Value),
+                    siloSupervisor,
                     registration.ConnectionId,
                     logger,
                     cancellation.Token);
@@ -346,7 +360,7 @@ internal sealed class Reactors(
         ReactorReplayObserver? replay) =>
         deliver is null || replay is null || reactorMediator.Disconnected(key.ObserverId, key.ConnectionId, key.EventStore, key.Namespace, deliver, replay);
 
-    async Task ReleaseRegistration(IReactor? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
+    async Task ReleaseRegistration(IClientReactorSubscription? clientObserver, ObserverId observerId, ConnectionId connectionId, bool ownsRegistration)
     {
         if (clientObserver is null)
         {

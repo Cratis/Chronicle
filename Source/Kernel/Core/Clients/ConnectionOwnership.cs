@@ -77,6 +77,23 @@ public sealed class ConnectionOwnership(TimeProvider? timeProvider = null) : ICo
     }
 
     /// <inheritdoc/>
+    public void Revoke(ConnectionId connectionId, ConnectionOwner owner)
+    {
+        string id = connectionId;
+
+        while (_entries.TryGetValue(id, out var current) && current.Owner.Equals(owner) && current.Streams > 0)
+        {
+            if (current.Streams == 1)
+            {
+                if (_entries.TryRemove(new KeyValuePair<string, Entry>(id, current))) return;
+                continue;
+            }
+
+            if (_entries.TryUpdate(id, current with { Streams = current.Streams - 1 }, current)) return;
+        }
+    }
+
+    /// <inheritdoc/>
     public bool IsOwnedBy(string connectionId, ConnectionOwner owner) =>
         !owner.IsUnidentified &&
         !string.IsNullOrEmpty(connectionId) &&

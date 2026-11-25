@@ -406,6 +406,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 
     JsonNode TransformReadModelNode(JsonSchemaExporterContext context, JsonNode schema)
     {
+        RestoreConceptDictionaryValueSchema(context.TypeInfo.Type, context.PropertyInfo?.AttributeProvider, schema);
         var transformed = TransformNode(context, schema, restorePropertiesWithDefaultValues: true, preserveUnformattedNullability: true);
         var attributes = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(true) ?? [];
         var lengths = attributes.Select(attribute => attribute switch
@@ -433,6 +434,12 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         }
 
         if (schema is not JsonObject schemaObj) return schema;
+
+        // .NET 11 adds these annotations: deprecated for obsolete types and properties, and
+        // contentEncoding for byte arrays. Keep the .NET 10 shape for precise and legacy events
+        // (including older kernels) and read models.
+        schemaObj.Remove("deprecated");
+        schemaObj.Remove("contentEncoding");
 
         // Polymorphic base types (those that have registered derived types via [DerivedType]) are
         // stored verbatim. System.Text.Json's schema exporter only describes the abstract base's
@@ -724,18 +731,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
 
         if (PropertyIsNullable(declaredType, attributeProvider))
         {
-            if (representedSchemaObject.TryGetPropertyValue("format", out var format))
-            {
-                var formatValue = format!.GetValue<string>();
-                if (!formatValue.EndsWith('?'))
-                {
-                    representedSchemaObject["format"] = formatValue + "?";
-                }
-            }
-            else if (preserveUnformattedNullability && representedSchemaObject["type"] is JsonValue type)
-            {
-                representedSchemaObject["type"] = new JsonArray(type.DeepClone(), "null");
-            }
+            MakeSchemaNullable(representedSchemaObject, preserveUnformattedNullability);
         }
 
         return representedSchema;

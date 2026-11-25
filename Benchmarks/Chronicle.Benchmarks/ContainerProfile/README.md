@@ -23,7 +23,8 @@ on/off, ConserveMemory=0, heap hard-limit=75%, and Workstation GC. Defaults are 
 untraced repetitions, three stores, five namespaces each, 200 seed and 30,000 measured
 events per pair, batches of 100, and four concurrent appenders. Override these with
 `--stores`, `--namespaces`, `--seed-events`, `--events`, `--batch-size`, `--appenders`,
-`--repetitions`, or comma-separated substring filters in `--cells`.
+`--repetitions`, or comma-separated substring filters in `--cells`. `--cpus 1,2,4` and
+`--memory 512m,1g,2g,4g` replace the CPU quotas and memory limits the matrix covers.
 
 The following commands **build images or start containers**; run them only on a quiet
 host with explicit permission. All output defaults to the ignored

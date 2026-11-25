@@ -14,8 +14,10 @@ namespace Cratis.Chronicle.EventSequences.Copy;
 /// <param name="SourceId">The event source to copy events from.</param>
 /// <param name="TargetId">The event source to append the copies to.</param>
 /// <param name="EventTypes">The event types to copy. When empty, events of every type are copied.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.Copy.CopyEventSourceEventsRequest")]
 public record CopyEventSourceEventsRequest(
-    EventSequenceId EventSequenceId,
-    EventSourceId SourceId,
-    EventSourceId TargetId,
-    IReadOnlyCollection<EventTypeId> EventTypes) : IJobRequest;
+    [Id(0)] EventSequenceId EventSequenceId,
+    [Id(1)] EventSourceId SourceId,
+    [Id(2)] EventSourceId TargetId,
+    [Id(3)] IReadOnlyCollection<EventTypeId> EventTypes) : IJobRequest;

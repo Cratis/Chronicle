@@ -40,6 +40,8 @@ export default defineConfig({
     },
     test: {
         globals: true,
+        // BDD specs assert on calls made in beforeAll; Vitest 5 clears those calls by default.
+        clearMocks: false,
         environment: 'node',
         isolate: false,
         fileParallelism: false,

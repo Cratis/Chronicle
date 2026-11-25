@@ -171,6 +171,14 @@ Every path written by this version starts with the root `k1`, so it can never be
 
 Each revision is an independent secret, which means individual revisions can be deleted without affecting others (for example, when rotating keys or when the full key history is required for a limited time).
 
+The kernel's own secrets, such as the hosted federation authority key and the secret mutation receipts are keyed from, are stored apart from encryption keys, at:
+
+```text
+secret/k1/~internal/<event-store>/<purpose>
+```
+
+No event store segment can be `~internal`, so no encryption key address reaches them, and the compliance surface can neither read nor erase them. Each is written once and never replaced. The policy below already covers them.
+
 Each of `<event-store>`, `<namespace>` and `<identifier>` is a single path segment. Letters, digits and `- _ . @ + = , : $` are kept as they are. Every other character, including `/`, `~` and every non-ASCII character, is written as `~XX` for each of its UTF-8 bytes in uppercase hexadecimal, and so is a trailing `.`. Ordinary identifiers such as GUIDs are therefore unchanged. A segment must not be empty and is at most 1,024 bytes of UTF-8.
 
 Keys stored by earlier versions, at `secret/<event-store>/<namespace>/<identifier>/<revision>`, are still read, and removed together with the key, when each of the three parts is made of the characters that are kept as they are, `~`, and letters, marks and digits outside ASCII, and does not end in `.`. A path of that kind has exactly three segments, so it belongs to one address only. For any other address, an earlier key is not read: see [Upgrading keys stored under earlier names](#upgrading-keys-stored-under-earlier-names). New keys are always written under `k1`.
@@ -317,7 +325,32 @@ Besides the policy above, the token needs read and list on the earlier paths, an
 
 Chronicle connects to Vault at the `connectionDetails` address as given. Use an `https://` address to protect keys in transit; there is no further TLS configuration for Vault in this version.
 
-Keys stored in Azure Key Vault under earlier names are not migrated by this command.
+### Migrating Azure Key Vault keys to their new names
+
+The startup inventory reports unresolved entries when earlier names are malformed, fall outside the configured `legacyKeyScopes`, or match more than one scope. This count is a subset of the earlier key and erasure counts, not an additional total. Reports contain counts only, never secret names or values.
+
+For Azure Key Vault, the same `--migrate-encryption-keys`, `--dry-run` and `--remove-migrated-legacy-keys` options copy keys stored under earlier names to their current names, with the same exit codes. Earlier names are lowercased and reduced to letters, digits and hyphens, so the event store and namespace cannot be read off them. List them under `compliance.encryption.legacyKeyScopes`, each with the exact `eventStore` and `namespace`:
+
+```json
+{
+  "compliance": {
+    "encryption": {
+      "legacyKeyScopes": [
+        { "eventStore": "MyStore", "namespace": "Default" }
+      ]
+    }
+  }
+}
+```
+
+- The list is required. Without it nothing is migrated and the command fails.
+- A listed scope with no entries under earlier names is an error. Chronicle compares the list with the event stores and namespaces it knows of and reports the ones that are missing; it never adds them.
+- A name is migrated only when exactly one address built from the listed scopes produces it. Other names are left alone and counted for review.
+- An entry with an expiry, a not-before time, a content type, tags, a disabled version or more than one version is not copied or removed. It is counted and left for review.
+- Nothing is written over an existing secret or over a name held by a deleted secret that can still be recovered.
+- Key Vault has no conditional write, so stop every node before migrating. Removed earlier secrets are purged when the vault allows it; the report counts the ones it still holds as recoverable.
+
+The identity needs get, list, set and delete on secrets, and purge when `--remove-migrated-legacy-keys` is used. `legacyKeyHandling` set to `refuse` stops a normal start while keys under earlier names remain, as for Vault.
 
 ### Proving the migration on a staging copy
 

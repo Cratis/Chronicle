@@ -89,12 +89,19 @@ public static class BsonValueExtensions
 
         if (targetType is not null)
         {
-            input = (Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(decimal) ? input switch
+            if ((Nullable.GetUnderlyingType(targetType) ?? targetType) == typeof(decimal))
             {
-                double value => DecimalValues.FromDouble(value),
-                float value => DecimalValues.FromSingle(value),
-                _ => TypeConversion.Convert(targetType, input)
-            } : TypeConversion.Convert(targetType, input);
+                input = input switch
+                {
+                    double value => DecimalValues.FromDouble(value),
+                    float value => DecimalValues.FromSingle(value),
+                    _ => TypeConversion.Convert(targetType, input)
+                };
+            }
+            else
+            {
+                input = TypeConversion.Convert(targetType, input);
+            }
         }
 
         if (inputType.IsEnum)
@@ -351,9 +358,9 @@ public static class BsonValueExtensions
             return BsonNull.Value;
         }
 
-        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                    schemaProperty.Reference!.Type :
-                    schemaProperty.Type;
+        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference)
+                    ? schemaProperty.Reference!.Type
+                    : schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Array) && value is IEnumerable enumerable)
         {

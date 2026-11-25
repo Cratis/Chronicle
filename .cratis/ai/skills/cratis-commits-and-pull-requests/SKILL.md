@@ -21,8 +21,9 @@ Loading this skill grants no permission to push, publish, merge or mutate issues
    when staging, writing a message or deciding when to commit. Stage specific
    files and inspect `git diff --cached`; never commit an unbuildable unit.
 2. Read [references/pr-description.md](references/pr-description.md) when writing
-   or editing a PR or manual release note. Write consumer-facing bullets, not a
-   work report. Only fully delivered issues get a closing delivery reference.
+   or editing a PR or manual release note. Write product-focused summaries and
+   bullets, not author narration or a work report. Only fully delivered issues
+   get a closing delivery reference.
 3. Read [references/pr-labels-and-release.md](references/pr-labels-and-release.md)
    when choosing or swapping a label, grouping related work, checking gates or
    handling a release-action window. Confirm publication effects before applying

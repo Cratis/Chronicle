@@ -121,10 +121,22 @@ dotnet_diagnostic.IDE0008.severity = none
 dotnet_diagnostic.IDE0022.severity = none
 dotnet_diagnostic.IDE0055.severity = none
 
+# Modern syntax is advisory; surfaced as suggestions, never build failures
+dotnet_diagnostic.IDE0028.severity = suggestion
+dotnet_diagnostic.IDE0300.severity = suggestion
+dotnet_diagnostic.IDE0301.severity = suggestion
+dotnet_diagnostic.IDE0302.severity = suggestion
+dotnet_diagnostic.IDE0303.severity = suggestion
+dotnet_diagnostic.IDE0304.severity = suggestion
+dotnet_diagnostic.IDE0305.severity = suggestion
+dotnet_diagnostic.IDE0306.severity = suggestion
+dotnet_diagnostic.IDE0410.severity = suggestion
+
 # prefere brace indentation when creating objects etc
 csharp_indent_braces = false
 
-[{**/*.Specs/**/*.cs,Integration/**/*.cs}]
+# Roslyn requires **.cs to cover both direct and nested files; **/*.cs requires a subfolder.
+[{**.Specs/**.cs,**/for_*/**.cs,Integration/**.cs,**/when_*/**.cs,**/given/**.cs,**/and_*/**.cs,**/when_*.cs}]
 dotnet_diagnostic.CA1001.severity = none
 dotnet_diagnostic.CA1008.severity = none
 dotnet_diagnostic.CA1024.severity = none
@@ -197,6 +209,39 @@ dotnet_diagnostic.MA0097.severity = none
 dotnet_diagnostic.MA0132.severity = none
 dotnet_diagnostic.MA0134.severity = none
 dotnet_diagnostic.MA0136.severity = none
+
+# Cratis/Chronicle#5971: expensive analyzers that do not guard spec correctness.
+# Spec fixtures intentionally exercise unsafe inputs, hard-coded keys and certificates (taint/security data-flow).
+dotnet_diagnostic.CA3001.severity = none
+dotnet_diagnostic.CA3002.severity = none
+dotnet_diagnostic.CA3003.severity = none
+dotnet_diagnostic.CA3004.severity = none
+dotnet_diagnostic.CA3005.severity = none
+dotnet_diagnostic.CA3006.severity = none
+dotnet_diagnostic.CA3007.severity = none
+dotnet_diagnostic.CA3008.severity = none
+dotnet_diagnostic.CA3009.severity = none
+dotnet_diagnostic.CA3010.severity = none
+dotnet_diagnostic.CA3011.severity = none
+dotnet_diagnostic.CA3012.severity = none
+dotnet_diagnostic.CA5390.severity = none
+dotnet_diagnostic.CA5403.severity = none
+# Constant arrange/assert conditions are intentional in specs.
+dotnet_diagnostic.CA1508.severity = none
+# Cancellation propagation: every descriptor of this analyzer.
+dotnet_diagnostic.MA0032.severity = none
+dotnet_diagnostic.MA0040.severity = none
+dotnet_diagnostic.MA0079.severity = none
+dotnet_diagnostic.MA0080.severity = none
+# Style, dead-store and async-blocking analysis that does not guard spec correctness.
+dotnet_diagnostic.SA1121.severity = none
+dotnet_diagnostic.IDE0370.severity = none
+dotnet_diagnostic.IDE0059.severity = none
+dotnet_diagnostic.MA0042.severity = none
+dotnet_diagnostic.MA0045.severity = none
+dotnet_diagnostic.RCS1020.severity = none
+dotnet_diagnostic.IDE0320.severity = none
+dotnet_diagnostic.SA1625.severity = none
 
 # ORLEANS0010 suggests adding [Alias] to grain interfaces and their methods. Acting on it is a
 # breaking wire change and must not be done piecemeal. Orleans identifies an invokable by a

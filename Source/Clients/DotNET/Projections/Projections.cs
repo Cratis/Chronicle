@@ -17,6 +17,7 @@ using Cratis.Chronicle.Registrations;
 using Cratis.Chronicle.Transactions;
 using Cratis.Monads;
 using Cratis.Serialization;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Projections;
@@ -43,6 +44,11 @@ public class Projections(
     JsonSerializerOptions jsonSerializerOptions,
     ILogger<Projections> logger) : IProjections, IKnowPassiveProjections, IKnowReadModelContainerNames
 {
+    /// <summary>
+    /// How long registration waits for the kernel to apply what it accepted before it carries on.
+    /// </summary>
+    static readonly TimeSpan _maxWaitForAcceptedRegistration = TimeSpan.FromMinutes(5);
+
     readonly IChronicleServicesAccessor _servicesAccessor = (eventStore.Connection as IChronicleServicesAccessor)!;
     readonly Lock _explicitLock = new();
     readonly Dictionary<Type, IExplicitProjection> _explicitProjections = [];
@@ -211,9 +217,7 @@ public class Projections(
             .GroupBy(d => d.EventSequenceId[EventSequenceId.InboxPrefix.Length..])
             .Select(g => (
                 EventStoreName: g.Key,
-                EventTypeIds: g.SelectMany(d => d.From.Keys
-                    .Concat(d.Join.Keys)
-                    .Select(et => new EventTypeId(et.Id)))
+                EventTypeIds: g.SelectMany(ProjectionSubscriptionEventTypes.For)
                     .Distinct()
                     .AsEnumerable()))
             .ToList();
@@ -310,7 +314,65 @@ public class Projections(
     internal async Task RegisterPrepared(RegisterRequest request)
     {
         await _servicesAccessor.Services.Projections.Register(request);
+        await WaitForAcceptedRegistration(request.Registrant);
         Registered?.Invoke();
+    }
+
+    /// <summary>
+    /// Waits until the kernel has applied what it accepted from this registrant.
+    /// </summary>
+    /// <param name="registrant">The registrant the registration was made as.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="ProjectionRegistrationNotApplied">The kernel accepted the registration but could not apply it.</exception>
+    /// <remarks>
+    /// The kernel accepts a registration and answers at once; applying it happens in the background. Waiting here with
+    /// short calls, instead of one long call, is what keeps a busy kernel from timing the client out: the wait is
+    /// bounded and, when it ends, the registration is still the kernel's to apply. A kernel that does not accept
+    /// registrations answers after applying them, and has no status to wait for.
+    /// </remarks>
+    internal async Task WaitForAcceptedRegistration(string registrant)
+    {
+        if (string.IsNullOrEmpty(registrant))
+        {
+            return;
+        }
+
+        var delay = TimeSpan.FromMilliseconds(50);
+        var started = TimeProvider.System.GetTimestamp();
+        while (true)
+        {
+            RegistrationStatus status;
+            try
+            {
+                status = await _servicesAccessor.Services.Projections.GetRegistrationStatus(new() { EventStore = eventStore.Name, Registrant = registrant });
+            }
+            catch (RpcException exception) when (exception.StatusCode == StatusCode.Unimplemented)
+            {
+                return;
+            }
+
+            if (status is null)
+            {
+                return;
+            }
+
+            switch (status.State)
+            {
+                case RegistrationState.Applied:
+                    return;
+                case RegistrationState.Failed:
+                    throw new ProjectionRegistrationNotApplied(registrant, status.Failure ?? string.Empty);
+            }
+
+            if (TimeProvider.System.GetElapsedTime(started) > _maxWaitForAcceptedRegistration)
+            {
+                logger.RegistrationStillBeingApplied(registrant, _maxWaitForAcceptedRegistration);
+                return;
+            }
+
+            await Task.Delay(delay);
+            delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 2000));
+        }
     }
 
     /// <summary>
@@ -417,29 +479,7 @@ public class Projections(
         // addressable only if it has a type of its own - and a model-bound one does not. Both are still registered and
         // both still write to the read model, which is the part worth knowing about; say so rather than resolving it
         // silently by declaration order.
-        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
-        var claimedBy = new Dictionary<Type, string>();
-
-        foreach (var kvp in handlersByType)
-        {
-            var readModelType = kvp.Key.GetReadModelType();
-            if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
-            {
-                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
-            }
-            else
-            {
-                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
-            }
-        }
-
-        foreach (var kvp in modelBoundHandlers)
-        {
-            if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
-            {
-                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
-            }
-        }
+        var discoveredHandlersByModelType = ClaimReadModels(handlersByType, modelBoundHandlers);
 
         lock (_explicitLock)
         {
@@ -476,6 +516,37 @@ public class Projections(
 
         _discovered = true;
         return Task.CompletedTask;
+    }
+
+    Dictionary<Type, IProjectionHandler> ClaimReadModels(
+        Dictionary<Type, IProjectionHandler> handlersByType,
+        Dictionary<Type, IProjectionHandler> modelBoundHandlers)
+    {
+        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
+        var claimedBy = new Dictionary<Type, string>();
+
+        foreach (var kvp in handlersByType)
+        {
+            var readModelType = kvp.Key.GetReadModelType();
+            if (discoveredHandlersByModelType.TryAdd(readModelType, kvp.Value))
+            {
+                claimedBy[readModelType] = kvp.Key.FullName ?? kvp.Key.Name;
+            }
+            else
+            {
+                logger.MoreThanOneProjectionForReadModel(readModelType, kvp.Key.FullName ?? kvp.Key.Name, claimedBy[readModelType]);
+            }
+        }
+
+        foreach (var kvp in modelBoundHandlers)
+        {
+            if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
+            {
+                logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
+            }
+        }
+
+        return discoveredHandlersByModelType;
     }
 
     async Task<IProjectionHandler> RegisterExplicit<TReadModel>(IExplicitProjection projection)
@@ -521,16 +592,18 @@ public class Projections(
         {
             // Read models are registered before the projections that maintain them, as the full registration pass does.
             await eventStore.ReadModels.Register<TReadModel>();
+            var registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty;
             await _servicesAccessor.Services.Projections.Register(new()
             {
                 EventStore = eventStore.Name,
                 Owner = ProjectionOwner.Client,
                 Projections = [registration.Definition],
-                Registrant = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty,
+                Registrant = registrant,
                 Version = SoftwareVersion,
                 ConnectionId = CurrentConnectionId,
                 FullSet = false
             });
+            await WaitForAcceptedRegistration(registrant);
             Registered?.Invoke();
         }
 
@@ -574,14 +647,14 @@ public class Projections(
         var failures = onlyPending ? new Dictionary<Type, Exception>(_explicitFailures) : new Dictionary<Type, Exception>();
         foreach (var (readModelType, projection) in _explicitProjections)
         {
-            if (onlyPending && (registrations.ContainsKey(readModelType) || failures.ContainsKey(readModelType)))
+            if (onlyPending && IsAlreadyStaged(readModelType, registrations, failures))
             {
                 continue;
             }
 
             if (discoveredHandlers.TryGetValue(readModelType, out var discovered))
             {
-                if (!(projection.IsModelBound && discovered.Id == projection.Id))
+                if (!IsSameModelBoundProjection(projection, discovered))
                 {
                     failures[readModelType] = new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
                     logger.FailedToCreateExplicitProjectionDefinition(readModelType, failures[readModelType]);
@@ -605,6 +678,12 @@ public class Projections(
 
         return (registrations, failures);
     }
+
+    bool IsAlreadyStaged(Type readModelType, Dictionary<Type, ExplicitProjectionRegistration> registrations, Dictionary<Type, Exception> failures) =>
+        registrations.ContainsKey(readModelType) || failures.ContainsKey(readModelType);
+
+    bool IsSameModelBoundProjection(IExplicitProjection projection, IProjectionHandler discovered) =>
+        projection.IsModelBound && discovered.Id == projection.Id;
 
     void WarnAboutRootRemovalViaJoin(Type readModelType, ProjectionDefinition definition)
     {

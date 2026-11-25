@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Primitives;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -33,6 +34,7 @@ public class and_get_definition_fails : Specification
 
         _reducers = new Reducers(
             grainFactory,
+            Substitute.For<IClientReducerSubscriptions>(),
             Substitute.For<IReducerMediator>(),
             Substitute.For<IExpandoObjectConverter>(),
             new JsonSerializerOptions(),
@@ -41,7 +43,8 @@ public class and_get_definition_fails : Specification
             AllowingConnectionOwnership.Create(),
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            NoSiloSupervisor.Instance);
 
         _messages = new Subject<ReducerMessage>();
     }

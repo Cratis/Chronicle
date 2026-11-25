@@ -8,6 +8,7 @@ using Orleans.Configuration;
 
 namespace Cratis.Chronicle.Storage.Sql.Cluster.for_SqlMembershipTable;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_using_sqlite : Specification
 {
     SqlMembershipTable _table;
@@ -15,7 +16,7 @@ public class when_using_sqlite : Specification
 
     void Establish()
     {
-        var options = new DbContextOptionsBuilder<ClusterDbContext>().UseSqlite("Data Source=:memory:").Options;
+        var options = new DbContextOptionsBuilder<ClusterDbContext>().UseSqlite("Data Source=:memory:").IgnoringManyServiceProviders().Options;
         var database = Substitute.For<IDatabase>();
         database.Cluster().Returns(_ => Task.FromResult(new DbContextScope<ClusterDbContext>(new ClusterDbContext(options), () => { })));
         _table = new SqlMembershipTable(database, Options.Create(new ClusterOptions { ClusterId = "sqlite-spec" }));

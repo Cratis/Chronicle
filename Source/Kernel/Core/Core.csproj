@@ -28,7 +28,9 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Chronicle.Core.Specs" />
+        <InternalsVisibleTo Include="Cratis.Chronicle.Kernel.Integration" />
         <InternalsVisibleTo Include="Chronicle.Benchmarks.Kernel" />
+        <InternalsVisibleTo Include="Chronicle.Benchmarks.HotPaths" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains" />
         <InternalsVisibleTo Include="Cratis.Chronicle.Grains.Interfaces" />
         <InternalsVisibleTo Include="Cratis.Chronicle.InProcess" />
@@ -144,7 +146,6 @@
         <PackageReference Include="Cratis.Choreography.Storage.MongoDB" />
         <PackageReference Include="Microsoft.Orleans.Server" />
         <PackageReference Include="Microsoft.Orleans.Reminders" />
-        <PackageReference Include="Microsoft.Orleans.Streaming" />
         <PackageReference Include="Microsoft.Orleans.Serialization.SystemTextJson" />
         <PackageReference Include="JsonCons.JmesPath" />
         <PackageReference Include="OpenTelemetry" />

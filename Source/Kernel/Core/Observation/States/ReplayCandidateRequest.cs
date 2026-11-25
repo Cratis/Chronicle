@@ -12,25 +12,44 @@ namespace Cratis.Chronicle.Observation.States;
 /// Represents the request for a replay candidate.
 /// </summary>
 [DerivedType("08ff4094-0684-420e-8f9a-60b0d838ea86")]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.States.ReplayCandidateRequest")]
 public class ReplayCandidateRequest : IRecommendationRequest
 {
     /// <summary>
     /// Gets or sets the <see cref="ObserverId"/> for the observer.
     /// </summary>
+    [Id(0)]
     public ObserverId ObserverId { get; set; } = ObserverId.Unspecified;
 
     /// <summary>
     /// Gets or sets the <see cref="ObserverKey"/> for the observer.
     /// </summary>
+    [Id(1)]
     public ObserverKey ObserverKey { get; set; } = ObserverKey.NotSet;
 
     /// <summary>
     /// Gets or sets the <see cref="ObserverType"/> for the observer.
     /// </summary>
+    [Id(2)]
     public ObserverType ObserverType { get; set; } = ObserverType.Unknown;
 
     /// <summary>
     /// Gets or sets the reasons for why this is a replay candidate.
     /// </summary>
+    [Id(3)]
     public IEnumerable<ReplayCandidateReason> Reasons { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the identity of the specific definition change this request was raised for.
+    /// </summary>
+    /// <remarks>
+    /// Empty for requests raised before this property existed or for causes that carry their own identity.
+    /// Stored rows and payloads without this property deserialize with an empty identity and still suppress
+    /// identical empty-identity requests. A request with a real identity is not suppressed by a legacy ignored
+    /// row; it supersedes that row when the observer key and reason types match. Older silos ignore the additive
+    /// property, so a rolling upgrade may raise one extra recommendation.
+    /// </remarks>
+    [Id(4)]
+    public string ChangeId { get; set; } = string.Empty;
 }

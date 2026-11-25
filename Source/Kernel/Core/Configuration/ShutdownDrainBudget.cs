@@ -27,7 +27,7 @@ public class ShutdownDrainBudget : IShutdownDrainBudget, IDisposable
     /// <param name="logger">The logger.</param>
     public ShutdownDrainBudget(IOptions<ChronicleOptions> options, IOptions<HostOptions> hostOptions, IHostApplicationLifetime lifetime, ILogger<ShutdownDrainBudget> logger)
     {
-        Timeout = EffectiveTimeout(options.Value.Shutdown.DrainTimeout, hostOptions.Value.ShutdownTimeout);
+        Timeout = EffectiveTimeout(options.Value.Shutdown.DrainTimeout, hostOptions.Value.ShutdownTimeout, options.Value.Shutdown.HostShutdownReserve);
         logger.EffectiveDrainBudget(Timeout);
         _stopping = lifetime.ApplicationStopping.Register(() => Begin());
     }
@@ -60,11 +60,12 @@ public class ShutdownDrainBudget : IShutdownDrainBudget, IDisposable
     }
 
     /// <summary>
-    /// Computes the budget while reserving two seconds for host shutdown.
+    /// Computes the budget while preserving the configured host shutdown reserve.
     /// </summary>
     /// <param name="configured">The configured drain timeout.</param>
     /// <param name="hostTimeout">The host shutdown timeout.</param>
+    /// <param name="hostShutdownReserve">The time reserved for host shutdown after draining.</param>
     /// <returns>The nonnegative effective timeout.</returns>
-    internal static TimeSpan EffectiveTimeout(TimeSpan configured, TimeSpan hostTimeout) =>
-        TimeSpan.FromTicks(Math.Max(0, Math.Min(configured.Ticks, hostTimeout.Ticks - TimeSpan.FromSeconds(2).Ticks)));
+    internal static TimeSpan EffectiveTimeout(TimeSpan configured, TimeSpan hostTimeout, TimeSpan hostShutdownReserve) =>
+        TimeSpan.FromTicks(Math.Max(0, Math.Min(configured.Ticks, hostTimeout.Ticks - hostShutdownReserve.Ticks)));
 }

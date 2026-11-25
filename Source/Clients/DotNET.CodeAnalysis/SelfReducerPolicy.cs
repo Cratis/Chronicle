@@ -43,7 +43,23 @@ internal static class SelfReducerPolicy
     /// <param name="compilation">The owning compilation.</param>
     /// <returns>Whether the type is structurally a self reducer.</returns>
     internal static bool IsSelf(INamedTypeSymbol type, Compilation compilation) =>
-        CanBeSelf(type, compilation) && Methods(type).Any(method => IsValid(method, type, compilation) || IsValidBatch(method, type, compilation));
+        WellKnownSymbols.For(compilation).IsSelf(type);
+
+    /// <summary>
+    /// Enumerates only transition-named methods before inspecting their signatures or interfaces.
+    /// </summary>
+    /// <param name="type">The candidate model.</param>
+    /// <returns>Ordinary Reduce declarations throughout the hierarchy.</returns>
+    internal static IEnumerable<IMethodSymbol> ReduceMethods(INamedTypeSymbol type)
+    {
+        for (var current = type; current is not null && current.SpecialType != SpecialType.System_Object; current = current.BaseType)
+        {
+            foreach (var method in current.GetMembers("Reduce").OfType<IMethodSymbol>().Where(method => method.MethodKind == MethodKind.Ordinary))
+            {
+                yield return method;
+            }
+        }
+    }
 
     /// <summary>
     /// Checks the runtime shape of a static batch transition: <c language="csharp">Reduce(EventBatch, TModel?, ...)</c> returning the model.
@@ -77,11 +93,7 @@ internal static class SelfReducerPolicy
     /// <returns>Whether the method satisfies the structural signal.</returns>
     internal static bool IsValid(IMethodSymbol method, INamedTypeSymbol model, Compilation compilation) =>
         method.Name == "Reduce" && method is { IsStatic: true, DeclaredAccessibility: Accessibility.Public, IsGenericMethod: false } &&
-        method.Parameters.Length is 2 or 3 && method.Parameters.All(IsPlainParameter) &&
-        method.Parameters[0].Type is { TypeKind: TypeKind.Class or TypeKind.Interface, SpecialType: not SpecialType.System_Object } &&
-        Equal(method.Parameters[1].Type, model) && method.Parameters[1].NullableAnnotation != NullableAnnotation.NotAnnotated &&
-        (method.Parameters.Length == 2 || Equal(method.Parameters[2].Type, compilation.GetTypeByMetadataName(WellKnownTypes.EventContextName))) &&
-        ReturnsModel(method, model, compilation);
+        HasTransitionParameters(method, model, compilation) && ReturnsModel(method, model, compilation);
 
     /// <summary>
     /// Checks synchronous and asynchronous model results.
@@ -93,7 +105,7 @@ internal static class SelfReducerPolicy
     internal static bool ReturnsModel(IMethodSymbol method, INamedTypeSymbol model, Compilation compilation) =>
         Equal(method.ReturnType, model) ||
         (method.ReturnType is INamedTypeSymbol { IsGenericType: true } task &&
-         Equal(task.OriginalDefinition, compilation.GetTypeByMetadataName("System.Threading.Tasks.Task`1")) && Equal(task.TypeArguments[0], model));
+         Equal(task.OriginalDefinition, WellKnownSymbols.For(compilation).Get("System.Threading.Tasks.Task`1")) && Equal(task.TypeArguments[0], model));
 
     /// <summary>
     /// Rejects by-ref, optional and params arguments.
@@ -154,8 +166,7 @@ internal static class SelfReducerPolicy
         for (var current = attribute; current is not null; current = current.BaseType)
         {
             var name = current.ToDisplayString();
-            if (name == WellKnownTypes.ClientEventTypeAttributeName || name == WellKnownTypes.KernelEventTypeAttributeName ||
-                name == "Cratis.Chronicle.Events.EventTypeGenerationForAttribute")
+            if (IsEventDeclarationName(name))
             {
                 return true;
             }
@@ -163,6 +174,16 @@ internal static class SelfReducerPolicy
 
         return false;
     }
+
+    static bool HasTransitionParameters(IMethodSymbol method, INamedTypeSymbol model, Compilation compilation) =>
+        method.Parameters.Length is 2 or 3 && method.Parameters.All(IsPlainParameter) &&
+        method.Parameters[0].Type is { TypeKind: TypeKind.Class or TypeKind.Interface, SpecialType: not SpecialType.System_Object } &&
+        Equal(method.Parameters[1].Type, model) && method.Parameters[1].NullableAnnotation != NullableAnnotation.NotAnnotated &&
+        (method.Parameters.Length == 2 || Equal(method.Parameters[2].Type, WellKnownSymbols.For(compilation).Get(WellKnownTypes.EventContextName)));
+
+    static bool IsEventDeclarationName(string name) =>
+        name == WellKnownTypes.ClientEventTypeAttributeName || name == WellKnownTypes.KernelEventTypeAttributeName ||
+        name == "Cratis.Chronicle.Events.EventTypeGenerationForAttribute";
 
     static bool IsInherited(INamedTypeSymbol? attribute)
     {

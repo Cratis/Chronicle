@@ -21,7 +21,8 @@ public class a_reactors_reactor : Specification
         _eventTypes = Substitute.For<IEventTypes>();
         _storage = Substitute.For<IStorage>();
         _namespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
-        _namespaceStorage.HasData().Returns(Task.FromResult(true));
+        _namespaceStorage.HasData().Returns(Task.FromResult(false));
+        _namespaceStorage.HasPersistedState().Returns(Task.FromResult(true));
 
         var eventStoreStorage = Substitute.For<IEventStoreStorage>();
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);

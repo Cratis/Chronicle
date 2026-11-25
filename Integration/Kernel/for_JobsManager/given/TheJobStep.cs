@@ -7,7 +7,6 @@ using Cratis.Monads;
 namespace Cratis.Chronicle.Integration.Specifications.for_JobsManager.given;
 
 public class TheJobStep(
-    TheJobStepProcessor jobStepProcessor,
     [PersistentState(nameof(JobStepState), Cratis.Choreography.WellKnownGrainStorageProviders.JobSteps)]
     IPersistentState<TheJobStepState> state,
     IJobStepThrottle throttle,
@@ -24,7 +23,7 @@ public class TheJobStep(
 
     protected override Task<Result<PrepareJobStepError>> PrepareStep(TheJobStepRequest request)
     {
-        jobStepProcessor.JobStepPrepared(JobId, JobStepId, this.GetGrainType());
+        TheJobStepProcessor.Current.JobStepPrepared(JobId, JobStepId, this.GetGrainType());
         return Task.FromResult(Result<PrepareJobStepError>.Success());
     }
 
@@ -43,10 +42,11 @@ public class TheJobStep(
         try
         {
             await _selfGrainReference.IncrementPerformCalled();
-            jobStepProcessor.PerformJobStep(JobId, JobStepId, currentState);
-            await jobStepProcessor.WaitForStart();
+            TheJobStepProcessor.Current.PerformJobStep(JobId, JobStepId, currentState);
+            await TheJobStepProcessor.Current.WaitForStart();
             if (currentState.WaitCount >= currentState.NumTimesPerformCalled)
             {
+                // Task.Delay: time-behavior; simulate a running job step so cancellation and failure can race it.
                 await Task.Delay(currentState.WaitTime, cancellationToken);
             }
             if (cancellationToken.IsCancellationRequested)
@@ -58,7 +58,7 @@ public class TheJobStep(
                 throw new Exception("Should fail");
             }
 
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Choreography.Jobs.JobStepStatus.CompletedSuccessfully);
+            TheJobStepProcessor.Current.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Choreography.Jobs.JobStepStatus.CompletedSuccessfully);
             return JobStepResult.Succeeded(new TheJobStepResult());
         }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
@@ -67,14 +67,14 @@ public class TheJobStep(
         }
         catch (Exception ex)
         {
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Choreography.Jobs.JobStepStatus.CompletedWithFailure);
+            TheJobStepProcessor.Current.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Choreography.Jobs.JobStepStatus.CompletedWithFailure);
             return JobStepResult.Failed(PerformJobStepError.Failed(ex));
         }
 
         async Task<Catch<JobStepResult>> HandleStopped()
         {
             await _selfGrainReference.IncrementStopped();
-            jobStepProcessor.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Choreography.Jobs.JobStepStatus.Stopped);
+            TheJobStepProcessor.Current.JobStepCompleted(JobId, JobStepId, currentState, Cratis.Choreography.Jobs.JobStepStatus.Stopped);
             return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
         }
     }

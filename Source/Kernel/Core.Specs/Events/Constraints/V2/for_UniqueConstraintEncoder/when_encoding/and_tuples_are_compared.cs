@@ -41,5 +41,5 @@ public class and_tuples_are_compared : Specification
     [Fact] void should_be_keyed() => _otherKey.ShouldNotEqual(_values["tuple"]);
     [Fact] void should_use_version_two() => UniqueConstraintEncoder.Version.Value.ShouldEqual(2);
     [Fact] void should_return_a_full_sha256_digest() => _values["tuple"].Length.ShouldEqual(64);
-    [Fact] void should_return_lowercase_hex() => _values["tuple"].All(_ => _ is >= '0' and <= '9' or >= 'a' and <= 'f').ShouldBeTrue();
+    [Fact] void should_return_lowercase_hex() => _values["tuple"].All(_ => _ is (>= '0' and <= '9') or (>= 'a' and <= 'f')).ShouldBeTrue();
 }

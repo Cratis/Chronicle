@@ -8,7 +8,7 @@ Configure the storage backend for Chronicle Server.
 
 | Type | Description |
 | --- | --- |
-| `MongoDB` | MongoDB (default) |
+| `MongoDB` | MongoDB |
 | `PostgreSql` | PostgreSQL |
 | `MsSql` | Microsoft SQL Server |
 | `Sqlite` | SQLite (embedded, file-based) |
@@ -64,8 +64,8 @@ connection attempts** per pool.
   still activates those observers together while their reminders fire one last time, so a
   `minPoolSize` helps most for that start.
 
-Registration admission is unlimited by default (`observers.maxConcurrentRegistrations: 0`). If you opt
-into a positive cap, size the pool with headroom above that cap for appends, observer delivery and
+Registration admission is capped by default (`observers.maxConcurrentRegistrations: 16`). If you
+raise the cap, size the pool with headroom above that cap for appends, observer delivery and
 background jobs. With a cap, registration concurrency across the cluster is approximately
 `maxConcurrentRegistrations` × the number of silos; pools are per client and server, not shared across
 silos. Account for all these pools against MongoDB's connection limit. Increasing the registration
@@ -98,6 +98,8 @@ The prefix is prepended verbatim to every database name, including the global `c
 The default is an empty string: existing database names remain unchanged. Changing the prefix selects different databases; it does not rename or migrate existing data. The complete name, including the prefix, must satisfy MongoDB's naming rules and 63-byte limit. Choose a short prefix without spaces or MongoDB's forbidden characters.
 
 For environment-variable configuration, use `Cratis__Chronicle__Storage__DatabaseNamePrefix`. The development-only kernel reset preserves the global cluster database and, when a prefix is set, drops only other databases starting with that exact, case-sensitive prefix. Use a unique prefix when sharing a server; a prefix is a naming boundary, not a substitute for database permissions.
+
+For the databases Chronicle uses and the permissions it needs, including on managed tiers such as MongoDB Atlas Flex, see [MongoDB permissions](mongodb-permissions.md).
 
 ### System event store database name
 
@@ -295,8 +297,8 @@ When you host Chronicle programmatically, select the in-memory backend with the 
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
-| type | string | Yes | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory` |
-| connectionDetails | string | Conditional | Connection string for the chosen storage backend. Required for all backends except `InMemory`, which ignores it |
+| type | string | Conditional | Storage type: `MongoDB`, `PostgreSql`, `MsSql`, `Sqlite`, or `InMemory`. Unset by default; inferred from recognized connection details. Set `Cratis__Chronicle__Storage__Type` explicitly when inference is not possible |
+| connectionDetails | string | Conditional | Connection string for the chosen storage backend. Supply this or `connectionDetailsFile` for persistent storage; `InMemory` is exempt |
 | connectionDetailsFile | string | No | Path of a file holding the connection string, such as a mounted Kubernetes Secret. Read once at startup and trimmed of a trailing newline. Set either this or `connectionDetails`, not both |
 | databaseNamePrefix | string | No | Prefix prepended to every MongoDB database name. Defaults to empty; ignored by other storage backends |
 | systemDatabaseName | string | No | Name the System event store's MongoDB databases are named by. Defaults to `_system`; ignored by other storage backends |

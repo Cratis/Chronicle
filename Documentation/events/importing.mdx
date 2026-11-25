@@ -1,6 +1,6 @@
 ---
 title: Importing events into Chronicle in bulk
-description: Bring existing history into a Chronicle event sequence through a resumable import session that validates every event before committing any and commits without locking the sequence.
+description: Bring existing history into a Chronicle event sequence through a resumable import session that validates every event before it commits anything.
 ---
 An import brings existing history into an event sequence: a migration from another event store or a CRUD system, a copy of an event store between environments, or fixtures for a load test. It is built for hundreds of thousands of events, far more than one [batch append](./appending-many.mdx) can carry.
 

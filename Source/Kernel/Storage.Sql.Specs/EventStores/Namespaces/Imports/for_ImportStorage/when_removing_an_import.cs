@@ -6,6 +6,7 @@ using Cratis.Chronicle.Storage.Imports;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Imports.for_ImportStorage;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class when_removing_an_import : given.an_import_storage
 {
     async Task Because()

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.Encryption.for_EncryptionKeyStorage.when_getting_or_adding;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class and_the_insert_fails_without_a_winner : Namespaces.given.a_migrated_namespace_database
 {
     EncryptionKeyStorage _storage;

@@ -11,6 +11,7 @@ using KernelCore::Cratis.Chronicle.Namespaces;
 using KernelCore::Cratis.Chronicle.Observation.Reactors.Kernel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Cratis.Chronicle.XUnit.Integration;
 
@@ -42,7 +43,7 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
         // The silo is reused across tests. Point the artifacts provider at the current
         // fixture so that DiscoverAll picks up this test's event types, reactors, etc.
-        DelegatingClientArtifactsProvider.Instance?.SetCurrent(this);
+        SharedArtifactsProvider.SetCurrent(this);
 
         // Bootstrap before the first client registration as well as after every storage reset.
         if (CurrentWebApplicationFactory is null)
@@ -94,9 +95,10 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         var sharedEventStore = Services.GetRequiredService<IEventStore>();
         connection.Lifecycle.OnConnected += sharedEventStore.RegisterAll;
 
-        // Stop KeepAlive delivery before the first wipe: activation collection does not reach these grains, and
-        // their background queues must settle before either storage or projection pipelines can be reset.
-        await KernelCore::Cratis.Chronicle.DevelopmentTools.KeepAliveGrainReset.Reset(GrainFactory);
+        // Drain KeepAlive delivery and deactivate ordinary grains before touching storage or projection pipelines.
+        // The previous fixture's work must release its SQL locks, and OnDeactivateAsync must flush dirty state
+        // while the old database is still intact, rather than competing with the first wipe.
+        await DeactivateAllGrains();
 
         // 2. Evict all cached projection pipelines. The ProjectionPipelineManager is a singleton
         //    service whose cache persists across test classes. Without this, a test that registers
@@ -105,15 +107,11 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //    happens to resolve to the same pipeline key.
         Services.GetRequiredService<KernelCore::Cratis.Chronicle.Projections.Engine.Pipelines.IProjectionPipelineManager>().Clear();
 
-        // 3. Wipe storage BEFORE deactivating grains. The order matters: wiping first truncates
-        //    the OrleansReminders table so reminders cannot re-activate grains while we are
-        //    deactivating, and it also truncates every Chronicle table so any in-flight grain
-        //    that writes via OnDeactivateAsync (step 4) writes into a known-empty database. If
-        //    we deactivated first, reminders would race the wipe by re-activating grains
-        //    (notably EventStoreSubscriptionsManager, which schedules a 1-minute reminder),
-        //    leaving their in-memory State populated from the previous test class — and that
-        //    state would then be re-persisted on next WriteStateAsync, recreating rows the
-        //    wipe was supposed to remove.
+        // 3. Wipe storage only after the previous fixture's grains have deactivated. This also
+        //    truncates OrleansReminders, preventing reminders from re-activating grains during
+        //    the final deactivation sweep below. Keep that sweep: a reminder can re-activate
+        //    a grain between the initial drain and this wipe (notably EventStoreSubscriptionsManager,
+        //    which schedules a 1-minute reminder), retaining state from the previous test class.
         //
         //    For out-of-process mode this resets the OOP container's backing store via gRPC
         //    (the OOP-container-side ICanPerformKernelStateReset wipes the kernel's files /
@@ -327,6 +325,13 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
 
     async Task BootstrapKernelCore()
     {
+        // The client connects and registers in the background once the host has started. Wait for that first, so the
+        // kernel bootstrap below cannot create namespace storage while event types and constraints are still registering.
+        foreach (var startup in Services.GetServices<IHostedService>().OfType<ChronicleClientStartup>())
+        {
+            await startup.Completion.WaitAsync(TimeSpan.FromMinutes(2));
+        }
+
         var grainFactory = Services.GetRequiredService<IGrainFactory>();
         var eventTypes = Services.GetRequiredService<KernelCore::Cratis.Chronicle.EventTypes.IEventTypes>();
         var kernelReactors = Services.GetRequiredService<IReactors>();

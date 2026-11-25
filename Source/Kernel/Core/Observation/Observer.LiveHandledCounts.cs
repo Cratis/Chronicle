@@ -6,9 +6,9 @@ using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Coalesces the per-partition handled-event counts of live deliveries.
-/// </summary>
+/// </content>
 /// <remarks>
 /// A live delivery adds its counts to the observer's running totals straight away; those travel with the observer
 /// state write the delivery makes anyway. Only the per-partition breakdown, which is one more storage write for every
@@ -77,10 +77,7 @@ public partial class Observer
                 var countsStorage = GetObserverHandledCountsStorage();
                 foreach (var chunk in pending.Chunk(MaxPendingHandledCountPartitions))
                 {
-                    await countsStorage.Increment(_observerId, chunk
-                        .Select(_ => new KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(_.Key, _.Value))
-                        .ToArray());
-                    written.UnionWith(chunk.Select(_ => _.Key));
+                    await PersistHandledCountChunk(countsStorage, chunk, written, updateRunningTotals: false);
                 }
             }
             catch

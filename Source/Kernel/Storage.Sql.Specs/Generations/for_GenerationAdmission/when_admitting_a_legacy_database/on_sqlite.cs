@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Cratis.Chronicle.Storage.Sql.Generations.for_GenerationAdmission.when_admitting_a_legacy_database;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 public class on_sqlite : given.a_sqlite_provider
 {
     string _eventStoreConnection;
@@ -27,7 +28,7 @@ public class on_sqlite : given.a_sqlite_provider
     async Task Because()
     {
         await Admit();
-        await using var context = new EventStores.EventStoreDbContext(new DbContextOptionsBuilder<EventStores.EventStoreDbContext>().UseSqlite(_eventStoreConnection).AddConceptAsSupport().Options);
+        await using var context = new EventStores.EventStoreDbContext(new DbContextOptionsBuilder<EventStores.EventStoreDbContext>().UseSqlite(_eventStoreConnection).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
         _after = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
     }
 

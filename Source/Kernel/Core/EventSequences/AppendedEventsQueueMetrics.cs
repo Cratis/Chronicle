@@ -20,6 +20,14 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _undelivered = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEvents, WellKnownMetricNames.AppendedEventsQueueSuspectedUndeliveredEventsUnit, "Number of event deliveries to an observer whose dispatch failed; one event can count once per observer", WellKnownTelemetryAttributes.ObserverId);
     readonly MetricInstrument<int, CounterMetricRecorder<int>> _observersSpilled = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueObserverSpills, WellKnownMetricNames.AppendedEventsQueueObserverSpillsUnit, "Number of times an observer was moved from live delivery to catch-up, by reason", WellKnownTelemetryAttributes.ObserverId, WellKnownTelemetryAttributes.ObserverSpillReason);
 
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _durableSubscriptionDisagreements = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueDurableSubscriptionDisagreements, WellKnownMetricNames.AppendedEventsQueueDurableSubscriptionDisagreementsUnit, "Number of durable subscriptions that disagreed with the live subscriptions of the queue, by kind of disagreement", WellKnownTelemetryAttributes.DurableSubscriptionDisagreement);
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _shadowRoutingDisagreements = metrics.Counter<int>(WellKnownMetricNames.AppendedEventsQueueShadowRoutingDisagreements, WellKnownMetricNames.AppendedEventsQueueShadowRoutingDisagreementsUnit, "Number of observers the silo-local routing table and the subscriptions of the queue disagreed on for a dispatched batch, by kind of disagreement", WellKnownTelemetryAttributes.ShadowRoutingDisagreement);
+
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantReleases = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantReleases, WellKnownMetricNames.ObserverDormantReleasesUnit, "Number of observers released while dormant");
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantWakes = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantWakes, WellKnownMetricNames.ObserverDormantWakesUnit, "Number of dormant observers woken, by what woke them", WellKnownTelemetryAttributes.ObserverWakeCause);
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantSafetyNetChecks = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantSafetyNetChecks, WellKnownMetricNames.ObserverDormantSafetyNetChecksUnit, "Number of dormant observers the safety net looked at, by what it found", WellKnownTelemetryAttributes.ObserverSafetyNetOutcome);
+    readonly MetricInstrument<int, CounterMetricRecorder<int>> _dormantWakesDelayed = metrics.Counter<int>(WellKnownMetricNames.ObserverDormantWakesDelayed, WellKnownMetricNames.ObserverDormantWakesDelayedUnit, "Number of dormant observer wakes that waited for a place under the wake admission of the silo");
+
     public void Dispose()
     {
         // Instruments belong to the injected meter, not to a queue.
@@ -32,5 +40,26 @@ internal sealed class AppendedEventsQueueMetrics(MetricSet metrics) : IDisposabl
     internal void CatchupTriggerBudgetExceeded() => _budgetExceeded.Record(1);
 
     internal void EventsSuspectedUndelivered(int numberOfEvents, ObserverId observerId) => _undelivered.Record(numberOfEvents, observerId);
+    internal void DurableSubscriptionsDisagreed(string kind, int count) => _durableSubscriptionDisagreements.Record(count, kind);
+    internal void ShadowRoutingDisagreed(string kind, int count)
+    {
+        if (count > 0)
+        {
+            _shadowRoutingDisagreements.Record(count, kind);
+        }
+    }
+
     internal void ObserverSpilledToCatchup(ObserverId observerId, string reason) => _observersSpilled.Record(1, observerId, reason);
+
+    internal void ObserverReleasedWhileDormant() => _dormantReleases.Record(1);
+    internal void DormantObserverWoken(string cause) => _dormantWakes.Record(1, cause);
+    internal void DormantSafetyNetChecked(string outcome, int count)
+    {
+        if (count > 0)
+        {
+            _dormantSafetyNetChecks.Record(count, outcome);
+        }
+    }
+
+    internal void DormantWakeDelayed() => _dormantWakesDelayed.Record(1);
 }

@@ -45,27 +45,8 @@ internal sealed class ConstraintIndexCatchUpKeys
     internal void Include(UniqueConstraintDefinition definition, ConstraintValidationContext context)
     {
         var scope = definition.Scope.BuildScopeKey(context.EventSourceType, context.EventStreamType, context.EventStreamId);
-        if (definition.RemovedWith.Contains(context.EventTypeId))
-        {
-            var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
-            if (definition.Mode == UniqueConstraintMode.PerValue && removal?.Properties.Any() == true)
-            {
-                var properties = removal.GetPropertiesAndValues(context).ToArray();
-                if (properties.Length > 0) Add(definition, scope, context.EventSourceId, new(properties.GetValue(definition.IgnoreCasing)));
-            }
-            else
-            {
-                Add(definition, scope, context.EventSourceId, null);
-            }
-        }
-        else if (definition.SupportsEventType(context.EventTypeId))
-        {
-            var properties = definition.GetPropertiesAndValues(context).ToArray();
-            if (definition.Mode == UniqueConstraintMode.PerEventSource || properties.Length > 0)
-            {
-                Add(definition, scope, context.EventSourceId, properties.Length == 0 ? null : new(properties.GetValue(definition.IgnoreCasing)));
-            }
-        }
+        if (definition.RemovedWith.Contains(context.EventTypeId)) IncludeRemoval(definition, context, scope);
+        else if (definition.SupportsEventType(context.EventTypeId)) IncludeClaim(definition, context, scope);
     }
 
     /// <summary>
@@ -87,6 +68,29 @@ internal sealed class ConstraintIndexCatchUpKeys
         var input = string.Concat(components.Select(component => component is null ? "-1:" : $"{component.Length}:{component}"));
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
         return new(BitConverter.ToUInt64(hash, 0), BitConverter.ToUInt64(hash, 8), BitConverter.ToUInt64(hash, 16), BitConverter.ToUInt64(hash, 24));
+    }
+
+    void IncludeRemoval(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope)
+    {
+        var removal = definition.RemovalEventDefinitions.SingleOrDefault(item => item.EventTypeId == context.EventTypeId);
+        if (definition.Mode == UniqueConstraintMode.PerValue && removal?.Properties.Any() == true)
+        {
+            var properties = removal.GetPropertiesAndValues(context).ToArray();
+            if (properties.Length > 0) Add(definition, scope, context.EventSourceId, new(properties.GetValue(definition.IgnoreCasing)));
+        }
+        else
+        {
+            Add(definition, scope, context.EventSourceId, null);
+        }
+    }
+
+    void IncludeClaim(UniqueConstraintDefinition definition, ConstraintValidationContext context, string scope)
+    {
+        var properties = definition.GetPropertiesAndValues(context).ToArray();
+        if (definition.Mode == UniqueConstraintMode.PerEventSource || properties.Length > 0)
+        {
+            Add(definition, scope, context.EventSourceId, properties.Length == 0 ? null : new(properties.GetValue(definition.IgnoreCasing)));
+        }
     }
 
     void Add(UniqueConstraintDefinition definition, string scope, EventSourceId source, UniqueConstraintValue? value) =>

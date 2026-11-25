@@ -26,6 +26,9 @@ internal static partial class EncryptionKeyFenceProtocolLogging
     [LoggerMessage(LogLevel.Warning, "Encryption key protocol publication is unavailable; no durable protocol record was acknowledged.")]
     internal static partial void ProtocolPublicationFailed(this ILogger<EncryptionKeyFenceProtocol> logger);
 
+    [LoggerMessage(LogLevel.Warning, "The last encryption key protocol heartbeat was still publishing when the silo stop token fired; it was abandoned.")]
+    internal static partial void HeartbeatStopAbandoned(this ILogger<EncryptionKeyFenceProtocol> logger);
+
     [LoggerMessage(LogLevel.Warning, "The configured encryption key fence authority does not support durable protocol records.")]
     internal static partial void MissingProtocolAuthority(this ILogger<EncryptionKeyFenceProtocol> logger);
 }

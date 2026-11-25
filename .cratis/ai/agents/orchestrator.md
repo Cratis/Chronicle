@@ -98,7 +98,7 @@ When you receive a goal:
 6. **Output a team plan** — always as a structured markdown checklist with agent assignments and phase labels.
 7. **Return or execute the plan** — default to a parent handoff; delegate only under the explicit large-scope contract.
 8. **Track overall progress** — after each phase, report what was completed and what remains.
-9. **Open the PR yourself, once** — sub-agents deliver verified branches and never open or push to PRs. Verify locally first, then open one PR for the whole scope with `--assignee @me`; do not open it early or keep pushing to it (see `pull-requests.md`).
+9. **Open the PR yourself, once** — tell every sub-agent in its brief to build and test locally, commit to the shared branch and never push or open a PR; one consolidated PR per repository keeps CI/CD load down. Do not rely on CI to verify; verify the combined result locally first, then open one PR for the whole scope with `--assignee @me`; do not open it early or keep pushing to it (see `pull-requests.md`).
 10. **Enforce scoped quality gates** — require relevant changed-lane evidence, not an unrelated full-code matrix.
 
 ---

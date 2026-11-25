@@ -115,6 +115,7 @@ public class ServiceImplementationGenerator(int skipNamespaceSegments, string co
     {
         var parameters = context.Dependencies.All
             .Select(dependency => $"    {QualifiedTypeName.For(dependency.Type)} {dependency.Name}")
+            .Concat(context.Dependencies.Named.Select(dependency => $"    {dependency.Key} {dependency.Value}"))
             .ToList();
 
         // The logger only appears when something can actually fail through QueryExecutor; an unused primary

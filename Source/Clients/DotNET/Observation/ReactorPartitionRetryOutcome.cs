@@ -31,5 +31,10 @@ public enum ReactorPartitionRetryOutcome
     /// <summary>
     /// The partition is quarantined and cannot be retried until cleared.
     /// </summary>
-    PartitionQuarantined = 4
+    PartitionQuarantined = 4,
+
+    /// <summary>
+    /// The retry was accepted as a job and is carried out when the observer can serve it; the job reports what became of it.
+    /// </summary>
+    Accepted = 5
 }

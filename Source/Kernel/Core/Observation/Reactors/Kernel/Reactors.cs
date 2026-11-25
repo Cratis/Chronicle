@@ -39,7 +39,7 @@ public class Reactors(
     readonly IEnumerable<Type> _reactorTypes = types.FindMultiple<IReactor>().Where(t => t != typeof(Reactor)).ToArray();
     readonly SemaphoreSlim _definitionWrites = new(1, 1);
     readonly CancellationTokenSource _shutdown = new();
-    readonly object _disposal = new();
+    readonly Lock _disposal = new();
     Task? _disposeTask;
 
     /// <inheritdoc/>
@@ -146,7 +146,7 @@ public class Reactors(
             observer,
             () => observer.Subscribe<IReactorObserverSubscriber<TReactor>>(
                 ObserverType.Reactor,
-                reactorType.GetEventTypes(),
+                EventTypeSet.From(reactorType.GetEventTypes()),
                 localSiloDetails.SiloAddress,
                 null,
                 false),

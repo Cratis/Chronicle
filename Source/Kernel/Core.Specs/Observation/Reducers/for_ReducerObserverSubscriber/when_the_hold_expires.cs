@@ -12,9 +12,10 @@ public class when_the_hold_expires : given.a_dispatching_subscriber
         var delivery = _subscriber.OnNext("partition", [], _context);
         _clock.Advance(TimeSpan.FromSeconds(331));
         _result = await delivery;
-        _completion.SetResult(new(ObserverSubscriberResult.Ok(42), new()));
+        _completion.TrySetResult(new(ObserverSubscriberResult.Ok(42), new()));
     }
 
     [Fact] void should_discard_the_abandoned_result() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_not_reach_the_sink_write() => _sinkReached.ShouldBeFalse();
+    [Fact] void should_cancel_the_abandoned_wait() => _completion.Task.IsCanceled.ShouldBeTrue();
 }

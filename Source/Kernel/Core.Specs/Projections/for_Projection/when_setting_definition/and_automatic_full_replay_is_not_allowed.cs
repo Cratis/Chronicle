@@ -48,6 +48,7 @@ public class and_automatic_full_replay_is_not_allowed : given.a_projection_addin
         _observer.ReceivedCalls().ShouldBeEmpty();
         await _recommendations.Received(1).Add<IReplayCandidateRecommendation, ReplayCandidateRequest>(
             Arg.Any<RecommendationDescription>(),
-            Arg.Is<ReplayCandidateRequest>(request => request.ObserverId.Value == _candidate.Identifier.Value));
+            Arg.Is<ReplayCandidateRequest>(request => request.ObserverId.Value == _candidate.Identifier.Value &&
+                request.ChangeId.Length > 0 && request.ChangeId == DefinitionChangeIdentity.For(_candidate)));
     }
 }

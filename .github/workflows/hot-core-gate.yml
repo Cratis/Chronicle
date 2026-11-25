@@ -2,13 +2,20 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 # Detect hot-core changes on every PR push; fail the gate until requested integration passes
-# for the head commit. The refresh workflow re-runs the same gate without another push.
+# for the head commit. A pull request that already carries run-integration runs Requested Integration
+# in this same run (job `requested`), so the gate reads its verdict through `needs` without polling.
+# The refresh workflow still re-runs the gate when the evidence arrives from another run (a label added
+# after the push, or the ordinary build's specs) without another push.
 # This workflow has no paths filter so detection covers documentation-only PRs too.
 
 name: Hot Core Gate
+run-name: "Hot Core Gate - PR #${{ github.event.pull_request.number || github.ref }} @ ${{ github.event.pull_request.head.sha || github.sha }} base ${{ github.event.pull_request.base.sha }}"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # The called workflows inherit this github.workflow and github.ref: dotnet-build.yml's group is
+  # "<workflow>-<ref>", so this caller's key must differ (PR number and suffix) or the nested build
+  # cancels this run while it waits. A new push still supersedes the caller and everything it called.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-gate
   cancel-in-progress: true
 
 on:
@@ -27,41 +34,117 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     outputs:
       touched: ${{ steps.detect.outputs.touched }}
+      build-triggered: ${{ steps.detect.outputs.build-triggered }}
 
     steps:
       # The full history is what makes the diff against the base commit possible; the default
       # shallow fetch does not contain it.
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
+
+      # The PR checkout supplies diff data; executable gate tools come from the base revision.
+      # Isolated Python loads sibling modules only from the trusted scripts directory.
+      - name: Materialise gate tools
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/gate-tools"
+          rm -rf "$tools"
+          mkdir -p "$tools"
+          git -C "$tools" init
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          default_revision() {
+            local ref="refs/heads/$DEFAULT_BRANCH" listing sha
+            if ! listing="$(git ls-remote --refs "$remote" "$ref")"; then
+              echo "::error::Cannot resolve trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            sha="${listing%%$'\t'*}"
+            if [[ ! "$sha" =~ ^[0-9a-fA-F]{40}$ || "$listing" != "$sha"$'\t'"$ref" ]]; then
+              echo "::error::Invalid trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            printf '%s\n' "$sha"
+          }
+          revision="$BASE_SHA"
+          if [ -z "$revision" ]; then
+            revision="$(default_revision)"
+          fi
+          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
+          required=(.github/scripts/detect-hot-core-changes.py .github/scripts/evaluate-hot-core-gate.py
+                    .github/scripts/assert-build-affecting-paths.py .github/scripts/integration_lane_exclusions.py
+                    .github/scripts/test-detect-hot-core-changes.py .github/scripts/test-evaluate-hot-core-gate.py
+                    .github/scripts/test-evaluate-hot-core-gate-jobs.py
+                    .github/hot-core-paths.txt .github/build-affecting-paths.txt .github/CODEOWNERS)
+          missing_tool() {
+            for path in "${required[@]}"; do
+              if ! git -C "$tools" cat-file -e "$revision:$path" 2>/dev/null; then
+                echo "$path"
+                return
+              fi
+            done
+            if ! git -C "$tools" show "$revision:.github/scripts/detect-hot-core-changes.py" | grep -F -- '--policy-root' > /dev/null; then
+              echo '.github/scripts/detect-hot-core-changes.py (--policy-root)'
+            fi
+          }
+          missing="$(missing_tool)"
+          if [ -n "$missing" ]; then
+            echo "::notice::Base lacks $missing; checking the default branch."
+            revision="$(default_revision)"
+            git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
+            missing="$(missing_tool)"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Trusted gate tools missing: $missing"
+            exit 1
+          fi
+          git -C "$tools" archive "$revision" .github | tar -x -C "$tools"
+          # Keep a base Git root for trusted self-tests from earlier revisions.
+          git -C "$tools" reset --mixed "$revision"
+          echo "::notice::Gate tools revision: $revision"
+          echo "GATE_TOOLS=$tools" >> "$GITHUB_ENV"
 
       # Runs on every pull request, hot core or not, because a pattern that has stopped matching any
       # file - a rename - disarms the gate without failing anything, and a pattern with no owner
       # disarms the review half the same way.
       - name: Assert the hot-core contract is intact
         run: |
-          python3 .github/scripts/test-detect-hot-core-changes.py
-          python3 .github/scripts/test-evaluate-hot-core-gate.py
-          python3 .github/scripts/detect-hot-core-changes.py --verify
+          trusted_python() {
+            python3 -I -c 'import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); runpy.run_path(sys.argv.pop(1), run_name="__main__")' "$GATE_TOOLS/.github/scripts" "$@"
+          }
+          trusted_python "$GATE_TOOLS"/.github/scripts/test-detect-hot-core-changes.py
+          trusted_python "$GATE_TOOLS"/.github/scripts/test-evaluate-hot-core-gate.py
+          trusted_python "$GATE_TOOLS"/.github/scripts/test-evaluate-hot-core-gate-jobs.py
+          trusted_python "$GATE_TOOLS"/.github/scripts/detect-hot-core-changes.py --policy-root "$GATE_TOOLS" --verify
 
       # Prints every matched path and, on ordinary pushes, how to request integration.
       - name: Detect hot-core changes
         id: detect
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_INTEGRATION: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
+          trusted_python() {
+            python3 -I -c 'import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); runpy.run_path(sys.argv.pop(1), run_name="__main__")' "$GATE_TOOLS/.github/scripts" "$@"
+          }
+          trusted_python "$GATE_TOOLS"/.github/scripts/evaluate-hot-core-gate.py detect-build --base "$BASE_SHA" --head "$HEAD_SHA"
           if [ -z "$BASE_SHA" ]; then
             echo "Manual run - there is no pull request to diff, so the full matrix runs unconditionally."
             echo "touched=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          python3 .github/scripts/detect-hot-core-changes.py --base "$BASE_SHA" --head "$HEAD_SHA"
+          trusted_python "$GATE_TOOLS"/.github/scripts/detect-hot-core-changes.py --policy-root "$GATE_TOOLS" --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Manual dispatch retains its all-provider hot-core matrix; ordinary pushes do not build it.
   # integration.yml applies reviewed lane exclusions visibly; the gate also reports their reasons.
@@ -78,23 +161,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
         with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-
+          mode: restore
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           # Package-aware key, as in `.NET Build & Integration`: a dependency bump must not restore
           # an obj cache built against a different package set.
@@ -104,7 +186,7 @@ jobs:
             hot-core-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -148,7 +230,7 @@ jobs:
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0' -cf hot-core-build-output.tar.zst -T -
 
       - name: Upload hot-core build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hot-core-build-output
           path: hot-core-build-output.tar.zst
@@ -174,9 +256,23 @@ jobs:
       chronicle-image: ${{ needs.build.outputs.chronicle-image }}
       all-providers: true
 
+  # Same-run requested integration for pull requests that already carry the label. It runs in parallel
+  # with detect and reports a proven verdict the gate reads below. Label-after-push and fork pull requests
+  # do not reach it; the standalone Requested Integration workflow and the refresh keep covering them.
+  requested:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'run-integration')
+    # Same permissions as the standalone caller: the called build pushes the image consumed by its shards.
+    permissions:
+      contents: read
+      packages: write
+      issues: read
+      actions: read
+    uses: ./.github/workflows/requested-integration.yml
+    secrets: inherit
+
   # Keep this ordinary PR check name stable; label events never create a newer skipped check.
   hot-core-gate:
-    needs: [detect, build, full-out-of-process-matrix]
+    needs: [detect, build, full-out-of-process-matrix, requested]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -187,21 +283,80 @@ jobs:
 
     steps:
       # Re-run-failed-jobs reuses detect's outputs and re-evaluates evidence in this job.
-      - name: Checkout gate script
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: .github/scripts
+      # needs.requested holds the same-run verdict until the called workflow finishes; skipped means not requested.
+      # Exact-head ordinary specs keep only the existing bounded wait. Out-of-run Requested Integration
+      # and exhausted specs waits return a notice and non-zero (never a pending success), without polling
+      # integration or creating a check-run. Completion refresh re-derives the verdict from finished jobs.
+      - name: Materialise gate tools
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/gate-tools"
+          rm -rf "$tools"
+          mkdir -p "$tools"
+          git -C "$tools" init
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          default_revision() {
+            local ref="refs/heads/$DEFAULT_BRANCH" listing sha
+            if ! listing="$(git ls-remote --refs "$remote" "$ref")"; then
+              echo "::error::Cannot resolve trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            sha="${listing%%$'\t'*}"
+            if [[ ! "$sha" =~ ^[0-9a-fA-F]{40}$ || "$listing" != "$sha"$'\t'"$ref" ]]; then
+              echo "::error::Invalid trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            printf '%s\n' "$sha"
+          }
+          revision="$BASE_SHA"
+          if [ -z "$revision" ]; then
+            revision="$(default_revision)"
+          fi
+          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
+          required=(.github/scripts/evaluate-hot-core-gate.py .github/scripts/integration_lane_exclusions.py)
+          missing_tool() {
+            for path in "${required[@]}"; do
+              if ! git -C "$tools" cat-file -e "$revision:$path" 2>/dev/null; then
+                echo "$path"
+                return
+              fi
+            done
+          }
+          missing="$(missing_tool)"
+          if [ -n "$missing" ]; then
+            echo "::notice::Base lacks $missing; checking the default branch."
+            revision="$(default_revision)"
+            git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
+            missing="$(missing_tool)"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Trusted gate tools missing: $missing"
+            exit 1
+          fi
+          git -C "$tools" archive "$revision" .github | tar -x -C "$tools"
+          echo "::notice::Gate tools revision: $revision"
+          echo "GATE_TOOLS=$tools" >> "$GITHUB_ENV"
       - name: Decide
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           DETECT: ${{ needs.detect.result }}
           TOUCHED: ${{ needs.detect.outputs.touched }}
+          BUILD_TRIGGERED: ${{ needs.detect.outputs.build-triggered }}
           BUILD: ${{ needs.build.result }}
           MATRIX: ${{ needs.full-out-of-process-matrix.result }}
+          # Same-run proof from the called Requested Integration; only trusted while the label is still on the PR head.
+          REQUESTED: ${{ needs.requested.result }}
+          REQUESTED_PROVEN: ${{ needs.requested.outputs.proven }}
+          REQUESTED_TOUCHED: ${{ needs.requested.outputs.touched }}
+          REQUESTED_ALL_PROVIDERS: ${{ needs.requested.outputs.all_providers }}
           DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
           RUN_INTEGRATION: ${{ contains(github.event.pull_request.labels.*.name, 'run-integration') }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python3 .github/scripts/evaluate-hot-core-gate.py gate
+        run: |
+          python3 -I -c 'import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); runpy.run_path(sys.argv.pop(1), run_name="__main__")' "$GATE_TOOLS/.github/scripts" "$GATE_TOOLS"/.github/scripts/evaluate-hot-core-gate.py gate

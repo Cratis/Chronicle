@@ -13,7 +13,7 @@ public class when_fingerprinting_definitions : when_creating.given.a_child_colle
 {
     readonly EventType _eventType = new("event", 1);
 
-    void Establish() => _definition.From[_eventType] = new(new Dictionary<PropertyPath, string> { ["name"] = "name", ["value"] = "value" }, "$eventSourceId", null);
+    void Establish() => _definition = _definition.WithFrom(_eventType, new(new Dictionary<PropertyPath, string> { ["name"] = "name", ["value"] = "value" }, "$eventSourceId", null));
 
     [Theory]
     [InlineData("metadata")]

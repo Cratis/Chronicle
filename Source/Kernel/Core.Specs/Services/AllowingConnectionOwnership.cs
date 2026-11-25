@@ -21,7 +21,7 @@ public static class AllowingConnectionOwnership
     /// <param name="ownership">The <see cref="IConnectionOwnership"/> to use.</param>
     /// <returns>The <see cref="IConnectedClientsVisibility"/>.</returns>
     public static IConnectedClientsVisibility VisibilityFor(IOptions<ChronicleOptions> options, IConnectionOwnership ownership) =>
-        new ConnectedClientsVisibility(options, ownership, new HttpContextAccessor());
+        new ConnectedClientsVisibility(options, ownership, new HttpContextAccessor(), AuthenticatedCalls.ApplicationServices());
 
     /// <summary>
     /// Makes the cluster report only the given silos as active, so no connection is registered on another silo.

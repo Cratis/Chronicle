@@ -68,17 +68,26 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
         .Select(property => $"{error.GetType().FullName}:{property.Name}:{property.Code}")
         .FirstOrDefault();
 
+    bool IsCountable(ConstraintIndexReplayFailure failure, bool storageSucceeded, out EventSequenceNumber position)
+    {
+        position = default!;
+        if (!storageSucceeded || failure.Position is not { } failedAt) return false;
+
+        position = failedAt;
+        return !classifier.IsTransient(failure.Error);
+    }
+
     bool RecordFailure(ConstraintName name, ConstraintIndexReplayFailure failure, bool storageSucceeded, int threshold)
     {
         // Returns true when the failure has now repeated enough to be settled as poison.
-        if (!storageSucceeded || failure.Position is not { } position || classifier.IsTransient(failure.Error))
+        if (!IsCountable(failure, storageSucceeded, out var position))
         {
             _runs.Remove(name);
             return false;
         }
         var type = failure.Error.GetType();
         var identity = FailureIdentity(failure.Error);
-        var count = _runs.TryGetValue(name, out var previous) && previous.Position == position && previous.ErrorType == type && previous.Identity == identity ? previous.Count + 1 : 1;
+        var count = _runs.TryGetValue(name, out var previous) && previous.Repeats(position, type, identity) ? previous.Count + 1 : 1;
         _runs[name] = new(position, type, identity, count);
         if (count < threshold) return false;
         _settled.Add((name, position));
@@ -86,5 +95,8 @@ internal sealed class ConstraintIndexPoisonTracker(IStorageErrorClassifier class
         return true;
     }
 
-    sealed record FailureRun(EventSequenceNumber Position, Type ErrorType, string Identity, int Count);
+    sealed record FailureRun(EventSequenceNumber Position, Type ErrorType, string Identity, int Count)
+    {
+        public bool Repeats(EventSequenceNumber position, Type errorType, string identity) => Position == position && ErrorType == errorType && Identity == identity;
+    }
 }

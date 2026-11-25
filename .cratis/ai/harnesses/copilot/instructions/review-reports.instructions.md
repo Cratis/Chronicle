@@ -44,6 +44,9 @@ not measured: code-shape inspection is not a benchmark, a build is not behaviora
 proof, and an unexamined surface is not verified. State `None` only when the entire
 declared scope was examined; otherwise give concrete limits and remaining checks.
 
+- **[contract]** A security reviewer's NOT PASS is blocking, never advisory. Resolve it with a fix plus re-review, or an explicit, recorded decision by the person who owns the risk; never downgrade it to advisory.
+- **[contract]** A review report, and any reviewer notes posted on a PR, lists only the commit ranges actually reviewed. Name unreviewed deltas as unreviewed; never imply they are covered.
+
 ## Verdict vocabulary
 
 | Verdict | Meaning |
@@ -81,6 +84,13 @@ not reset it. Record failed attempts. Silence, failure, cancellation, missing ch
 and exhaustion never imply approval. Verify cancellation before replacement; escalate
 unresolved disputes instead of looping. Suggestions alone do not justify another round.
 See `cratis-engineering-review-rounds` for dispatch and writer-pause mechanics.
+
+An uncited behavior change on a trust-boundary or wire/protocol surface is a blocker (`published-contracts.md`).
+
+Code Health (`code-health.md`) never earns a round of its own: flag a touched file below
+9.5 with no reported reason only together with the round's other findings. A file below 9.5
+with a reason and an uplift entry is closed; a second Code Health round is a finding that
+names its cause.
 
 ## Reviewer independence
 

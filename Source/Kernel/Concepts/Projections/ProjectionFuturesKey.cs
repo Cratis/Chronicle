@@ -17,13 +17,13 @@ public record ProjectionFuturesKey(ProjectionId ProjectionId, EventStoreName Eve
     /// <param name="key"><see cref="ProjectionFuturesKey"/> to convert from.</param>
     public static implicit operator string(ProjectionFuturesKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ProjectionId, EventStore, Namespace);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ProjectionFuturesKey"/> instance.</returns>
     public static ProjectionFuturesKey Parse(string key) => KeyHelper.Parse<ProjectionFuturesKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ProjectionId, EventStore, Namespace);
 }

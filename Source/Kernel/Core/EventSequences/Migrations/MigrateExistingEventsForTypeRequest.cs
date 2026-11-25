@@ -11,4 +11,6 @@ namespace Cratis.Chronicle.EventSequences.Migrations;
 /// when a new generation has been added.
 /// </summary>
 /// <param name="EventTypeId">The <see cref="Concepts.Events.EventTypeId"/> of the event type to migrate.</param>
-public record MigrateExistingEventsForTypeRequest(EventTypeId EventTypeId) : IJobRequest;
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.Migrations.MigrateExistingEventsForTypeRequest")]
+public record MigrateExistingEventsForTypeRequest([Id(0)] EventTypeId EventTypeId) : IJobRequest;

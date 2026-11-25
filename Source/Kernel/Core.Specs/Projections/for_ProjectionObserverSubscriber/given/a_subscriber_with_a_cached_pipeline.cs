@@ -4,7 +4,6 @@
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -27,6 +26,7 @@ namespace Cratis.Chronicle.Projections.for_ProjectionObserverSubscriber.given;
 
 public class a_subscriber_with_a_cached_pipeline : Specification
 {
+    protected TestKitSilo _silo;
     protected ProjectionObserverSubscriber _subscriber;
     protected IObserver _observer;
     protected IProjectionChangesetNotifier _notifier;
@@ -46,7 +46,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
 
     async Task Establish()
     {
-        var silo = new TestKitSilo();
+        var silo = _silo = new TestKitSilo();
         _definition = CreateDefinition();
         _stateStorage = Substitute.For<IStorage<ProjectionDefinition>>();
         _stateStorage.State = _definition;
@@ -87,7 +87,7 @@ public class a_subscriber_with_a_cached_pipeline : Specification
         // The subscriber skips an event the current definition does not take part in, so a substitute left at
         // its default of false would silently skip everything. Specifications about skipping override this.
         _projection.Accepts(Arg.Any<EventType>()).Returns(true);
-        _factory.Create(_key.EventStore, _key.Namespace, Arg.Any<ProjectionDefinition>(), readModel, Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(_projection);
+        _factory.Create(_key.EventStore, _key.Namespace, Arg.Any<ProjectionDefinition>(), readModel).Returns(_projection);
         silo.AddService(_factory);
         _engineProjections = Substitute.For<EngineProjectionsManager>();
         silo.AddService(_engineProjections);

@@ -83,7 +83,7 @@ public class a_projection_to_generate : Specification
     protected static ProjectionDefinition CreateProjectionDefinition(
         string projectionName,
         ReadModelIdentifier readModel,
-        IDictionary<EventType, FromDefinition> from) =>
+        IReadOnlyDictionary<EventType, FromDefinition> from) =>
         new(
             ProjectionOwner.Client,
             EventSequenceId.Log,
@@ -113,7 +113,7 @@ public class a_projection_to_generate : Specification
     protected static ProjectionDefinition CreateProjectionDefinitionWithFromEvery(
         string projectionName,
         ReadModelIdentifier readModel,
-        IDictionary<EventType, FromDefinition> from,
+        IReadOnlyDictionary<EventType, FromDefinition> from,
         FromEveryDefinition fromEvery,
         bool subscribesToAllEvents = false) =>
         new(

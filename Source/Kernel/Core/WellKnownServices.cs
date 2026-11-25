@@ -39,6 +39,11 @@ public static class WellKnownServices
     public const string Jobs = "Jobs";
 
     /// <summary>
+    /// The service for explicit constraint index recovery.
+    /// </summary>
+    public const string ConstraintIndexes = "ConstraintIndexes";
+
+    /// <summary>
     /// The name of the Observers service.
     /// </summary>
     public const string Observers = "Observers";
@@ -153,4 +158,9 @@ public static class WellKnownServices
     /// The narrow service served on the dedicated federation listener that peers pull events from.
     /// </summary>
     public const string FederationPull = "FederationPull";
+
+    /// <summary>
+    /// The service for diagnosing what the kernel is busy with.
+    /// </summary>
+    public const string Diagnostics = "Diagnostics";
 }

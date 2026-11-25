@@ -4,6 +4,7 @@
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Compliance;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -43,7 +44,15 @@ public static class AzureKeyVaultChronicleBuilderExtensions
         }
 
         builder.Services.AddSingleton<IEncryptionKeyStoreUpgradeCheck>(_ =>
-            new Storage.AzureKeyVault.AzureKeyVaultKeyStoreUpgradeCheck(CreateSecretClient(complianceStorage.ConnectionDetails)));
+            new Storage.AzureKeyVault.AzureKeyVaultKeyStoreUpgradeCheck(
+                new Storage.AzureKeyVault.SecretClientVault(CreateSecretClient(complianceStorage.ConnectionDetails)),
+                [.. options.Compliance.Encryption.LegacyKeyScopes.Select(scope => new Storage.AzureKeyVault.LegacyScope(scope.EventStore, scope.Namespace))]));
+        builder.Services.AddSingleton<IEncryptionKeyStoreMigrator>(serviceProvider =>
+            new Storage.AzureKeyVault.AzureKeyVaultKeyStoreMigrator(
+                new Storage.AzureKeyVault.SecretClientVault(CreateSecretClient(complianceStorage.ConnectionDetails)),
+                [.. options.Compliance.Encryption.LegacyKeyScopes.Select(scope => new Storage.AzureKeyVault.LegacyScope(scope.EventStore, scope.Namespace))],
+                serviceProvider.GetService<IStorage>() is { } storage ? new Storage.AzureKeyVault.StorageScopeCatalog(storage) : null,
+                serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<Storage.AzureKeyVault.AzureKeyVaultKeyStoreMigrator>()));
 
         return builder.WithComplianceEncryptionKeyStorage(options, (serviceProvider, authority) =>
             new CacheEncryptionKeyStorage(

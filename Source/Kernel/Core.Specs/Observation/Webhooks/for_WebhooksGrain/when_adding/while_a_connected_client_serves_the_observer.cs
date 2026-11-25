@@ -19,7 +19,7 @@ public class while_a_connected_client_serves_the_observer : given.a_webhooks_man
         _definition = new("the-webhook", WebhookOwner.Kernel, EventSequenceId.Log, [], new("https://example.com/webhook", WebhookAuthorization.None, new Dictionary<string, string>()));
         _namespacesGrain.GetAll().Returns(["the-namespace"]);
         var observer = Substitute.For<IObserver>();
-        observer.Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
+        observer.Subscribe<IWebhookObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>(), Arg.Any<bool>(), Arg.Any<bool>())
             .Returns(_ => throw new ObserverServedByAnotherTransport(new ObserverKey(_definition.Identifier, "test-event-store", "the-namespace", EventSequenceId.Log)));
         _silo.AddProbe(_ => observer);
     }

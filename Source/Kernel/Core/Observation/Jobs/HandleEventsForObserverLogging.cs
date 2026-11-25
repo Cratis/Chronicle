@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Observation.Jobs;
 
 internal static partial class HandleEventsForObserverLogging
 {
+    [LoggerMessage(LogLevel.Warning, "Failing job {JobId} step {JobStepId}: the prepared job step state was missing its observer key")]
+    internal static partial void MissingObserverKey(this ILogger<HandleEventsForObserver> logger, JobId jobId, JobStepId jobStepId);
+
     [LoggerMessage(LogLevel.Debug, "Delivering a page of {EventCount} events across {PartitionCount} partitions")]
     internal static partial void DeliveringPage(this ILogger<HandleEventsForObserver> logger, int eventCount, int partitionCount);
 

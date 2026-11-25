@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events.Constraints;
+using Cratis.Chronicle.Concepts.EventSequences;
 
 namespace Cratis.Chronicle.Events.Constraints;
 
@@ -11,6 +13,16 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// </summary>
 public interface IConstraintIndexes
 {
+    /// <summary>
+    /// Refreshes constraint validation and starts an explicit durable index rebuild.
+    /// </summary>
+    /// <param name="eventStore">The event store holding the registered definitions.</param>
+    /// <param name="namespace">The namespace whose indexes are rebuilt.</param>
+    /// <param name="eventSequenceId">The event sequence to replay.</param>
+    /// <param name="changes">The selected constraints requiring reindexing.</param>
+    /// <returns>The identifier of the started job.</returns>
+    Task<JobId> Reindex(EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, IReadOnlyCollection<ConstraintDefinitionChange> changes);
+
     /// <summary>
     /// Start rebuilding the indexes that a change of the registered definitions has made stale.
     /// </summary>

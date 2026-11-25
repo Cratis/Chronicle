@@ -136,10 +136,13 @@ public record GraphSnapshot(IReadOnlyList<GraphNode> Nodes, IReadOnlyList<GraphE
     /// Describe the graph in a stable, comparable form: every node and edge on a line of its own with its properties sorted by name.
     /// </summary>
     /// <returns>The lines, sorted.</returns>
-    public IReadOnlyList<string> Describe() =>
-        [.. Nodes.Select(_ => $"node {_.Label} {Properties(_.Properties)}")
+    public IReadOnlyList<string> Describe()
+    {
+        var lines = Nodes.Select(_ => $"node {_.Label} {Properties(_.Properties)}")
             .Concat(Edges.Select(_ => $"edge {_.Type} ({_.Source.Label} {Properties(_.Source.Properties)}) -> ({_.Target.Label} {Properties(_.Target.Properties)}) {Properties(_.Properties)}"))
-            .Order(StringComparer.Ordinal)];
+            .Order(StringComparer.Ordinal);
+        return [.. lines];
+    }
 
     static string Properties(IReadOnlyDictionary<string, object?> properties) =>
         "{" + string.Join(", ", properties.OrderBy(_ => _.Key, StringComparer.Ordinal).Select(_ => $"{_.Key}: {Format(_.Value)}")) + "}";

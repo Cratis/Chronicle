@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_ensuring_indexes;
 
+[PerFactSpecificationLifecycle] // Facts run their own asynchronous operations, so each fact gets its own context.
 [Collection(SqlServerCollection.Name)]
 public class and_nested_numbers_use_exponent_notation_on_sql_server(SqlServerFixture fixture) : Specification
 {
@@ -40,7 +41,7 @@ public class and_nested_numbers_use_exponent_notation_on_sql_server(SqlServerFix
         await _sink.IndexBuildCompletion.WaitAsync(TimeSpan.FromSeconds(30));
         _logger.Errors.ShouldBeEmpty();
         _logger.Warnings.ShouldBeEmpty();
-        _context = new(new DbContextOptionsBuilder().UseDatabaseFromConnectionString(_harness.ConnectionString).Options);
+        _context = new(new DbContextOptionsBuilder().UseDatabaseFromConnectionString(_harness.ConnectionString).IgnoringManyServiceProviders().Options);
         _indexName = ReadModelIndexPlan.Resolve(definition.Indexes.Single(), schema, ProjectedColumns.ForSchema(schema), DatabaseType.SqlServer)!.Name(DatabaseType.SqlServer, Table);
         (await _context.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM sys.indexes WHERE object_id=OBJECT_ID({Table}) AND name={_indexName} AND is_disabled=0").SingleAsync()).ShouldEqual(1);
     }

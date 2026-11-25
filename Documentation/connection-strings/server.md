@@ -90,6 +90,35 @@ chronicle+srv://cluster.example.com
 For the example above, the client queries the SRV records for
 `_chronicle._tcp.cluster.example.com`.
 
+### Credentials and SRV targets
+
+With client credentials and no external token endpoint, the client requests its token from the server it
+connects to: `https://<target>:<port>/connect/token`. With SRV discovery, `<target>` is the host the SRV
+record returned, so the client id and secret are sent to whichever host DNS names. Whoever controls the
+SRV records for the domain therefore controls where the credentials go. Only use `chronicle+srv://` with
+a domain whose DNS you trust, ideally DNSSEC-protected, or configure an explicit external token endpoint
+so credentials always go to a fixed destination. Credentials are only sent over TLS.
+
+### Token cache
+
+Short-lived clients, such as command line tools, can cache tokens between runs with
+`FileSystemCachingTokenProvider`, which stores them in a file at a path the host application chooses (keep
+it in the user's own profile). The cache path must be unique per server and client identity. Prefer the
+four-parameter overload `(innerProvider, cacheFilePath, tokenLifetime, cacheScope)`, supplying a scope
+that combines the server address and client id. Only the scope's SHA-256 hash is stored; entries with a
+missing or different hash are ignored and replaced. The original overload does not check a scope, so the
+caller remains responsible for keeping its cache path unique.
+
+The file is created readable and writable by the current user only (mode `0600` on Unix, in a directory
+with mode `0700`) and replaced atomically. Existing Unix directories owned by the current user are also
+restricted to `0700`; cache files owned by another user or accessible to group or others are not trusted.
+On Windows the directory and temporary file are created with protected access control lists granting
+FullControl only to the current user. The replacement retains the temporary file's protection.
+
+A cached token is reused for at most the configured lifetime (55 minutes by default). A JWT's issuer
+expiry (`exp`) less a 30-second safety margin can shorten that lifetime, but never extend it. Delete the
+file to force a new token request.
+
 ## Authentication modes
 
 Chronicle supports multiple authentication modes. The mode is determined by the credentials present in the connection string:

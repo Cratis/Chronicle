@@ -26,10 +26,15 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </para>
 /// </remarks>
 [method: JsonConstructor]
-public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, IEnumerable<EventTypeId> RemovedWith = null!, bool IgnoreCasing = false, ConstraintScope? Scope = default) : IConstraintDefinition
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.UniqueConstraintDefinition")]
+public record UniqueConstraintDefinition([Id(0)] ConstraintName Name, [Id(1)] IEnumerable<UniqueConstraintEventDefinition> EventDefinitions, [Id(2)] IEnumerable<EventTypeId> RemovedWith = null!, [Id(3)] bool IgnoreCasing = false, [Id(4)] ConstraintScope? Scope = default) : IConstraintDefinition
 {
+    [NonSerialized]
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+    [Id(7)]
     readonly IEnumerable<EventSequenceId>? _eventSequences;
+    [Id(6)]
     readonly IEnumerable<UniqueConstraintEventDefinition>? _removalEventDefinitions;
 
     /// <summary>
@@ -59,6 +64,7 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
     /// <summary>
     /// Gets how claimed values are retained. The default keeps one value per event source.
     /// </summary>
+    [Id(5)]
     public UniqueConstraintMode Mode { get; init; }
 
     /// <summary>
@@ -132,12 +138,8 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
     public virtual bool Equals(UniqueConstraintDefinition? other) =>
         other is not null &&
         Name == other.Name &&
-        IgnoreCasing == other.IgnoreCasing &&
-        Mode == other.Mode &&
-        RemovalEventDefinitions.SequenceEqual(other.RemovalEventDefinitions) &&
-        Scope == other.Scope &&
-        EventDefinitions.SequenceEqual(other.EventDefinitions) &&
-        RemovedWith.SequenceEqual(other.RemovedWith) &&
+        !ClaimsDifferFrom(other) &&
+        EventDefinitions.Canonical().SequenceEqual(other.EventDefinitions.Canonical()) &&
         EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
@@ -147,18 +149,18 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         hashCode.Add(Name);
         hashCode.Add(IgnoreCasing);
         hashCode.Add(Mode);
-        foreach (var removalEventDefinition in RemovalEventDefinitions)
+        foreach (var removalEventDefinition in RemovalEventDefinitions.Canonical())
         {
             hashCode.Add(removalEventDefinition);
         }
 
-        hashCode.Add(Scope);
-        foreach (var eventDefinition in EventDefinitions)
+        hashCode.Add(Scope.Canonical());
+        foreach (var eventDefinition in EventDefinitions.Canonical())
         {
             hashCode.Add(eventDefinition);
         }
 
-        foreach (var removalEventTypeId in RemovedWith)
+        foreach (var removalEventTypeId in RemovedWith.Canonical())
         {
             hashCode.Add(removalEventTypeId);
         }
@@ -166,6 +168,19 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         hashCode.AddEventSequences(EventSequences);
         return hashCode.ToHashCode();
     }
+
+    /// <summary>
+    /// Get this definition in its canonical form, see <see cref="ConstraintNormalization"/>.
+    /// </summary>
+    /// <returns>An equal definition whose collections are distinct and ordered, and whose empty scope is absent.</returns>
+    public UniqueConstraintDefinition Normalized() => this with
+    {
+        EventDefinitions = EventDefinitions.Canonical(),
+        RemovedWith = RemovedWith.Canonical(),
+        RemovalEventDefinitions = RemovalEventDefinitions.Canonical(),
+        EventSequences = EventSequences.Canonical(),
+        Scope = Scope.Canonical()
+    };
 
     /// <inheritdoc/>
     public ConstraintChange CompareWith(IConstraintDefinition existing)
@@ -176,8 +191,28 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
         }
 
         var changes = new HashSet<ConstraintChangeType>();
-        var existingEventDefinitions = existingDefinition.EventDefinitions.ToArray();
-        var newEventDefinitions = EventDefinitions.ToArray();
+        CollectEventChanges(existingDefinition, changes);
+
+        if (ClaimsDifferFrom(existingDefinition))
+        {
+            changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
+        }
+
+        // Narrowing needs no reindex: only newly covered sequences need their indexes rebuilt.
+        if (EventSequences.CoversMoreThan(existingDefinition.EventSequences))
+        {
+            changes.Add(ConstraintChangeType.EventSequencesChanged);
+        }
+
+        return changes.Count == 0
+            ? ConstraintChange.None
+            : new ConstraintChange(true, changes.ToArray());
+    }
+
+    void CollectEventChanges(UniqueConstraintDefinition existingDefinition, HashSet<ConstraintChangeType> changes)
+    {
+        var existingEventDefinitions = existingDefinition.EventDefinitions.Canonical();
+        var newEventDefinitions = EventDefinitions.Canonical();
 
         var existingEventTypes = existingEventDefinitions.Select(_ => _.EventTypeId).ToHashSet();
         var newEventTypes = newEventDefinitions.Select(_ => _.EventTypeId).ToHashSet();
@@ -203,26 +238,12 @@ public record UniqueConstraintDefinition(ConstraintName Name, IEnumerable<Unique
                 break;
             }
         }
-
-        if (!RemovedWith.SequenceEqual(existingDefinition.RemovedWith) ||
-            !RemovalEventDefinitions.SequenceEqual(existingDefinition.RemovalEventDefinitions) ||
-            Mode != existingDefinition.Mode || IgnoreCasing != existingDefinition.IgnoreCasing || Scope != existingDefinition.Scope)
-        {
-            changes.Add(ConstraintChangeType.IndexedPropertiesChanged);
-        }
-
-        // Narrowing the event sequences needs no reindex: validation and indexing stop for a sequence the constraint
-        // no longer applies to, so its index is simply no longer read. Widening is reported as a change requiring one,
-        // because the index of a newly covered sequence was never maintained, or has been stale since the constraint
-        // last stopped applying to it. Only the newly covered sequences are reindexed - which ones those are is decided
-        // per sequence when the definitions are registered, not here.
-        if (EventSequences.CoversMoreThan(existingDefinition.EventSequences))
-        {
-            changes.Add(ConstraintChangeType.EventSequencesChanged);
-        }
-
-        return changes.Count == 0
-            ? ConstraintChange.None
-            : new ConstraintChange(true, changes.ToArray());
     }
+
+    bool ClaimsDifferFrom(UniqueConstraintDefinition existingDefinition) =>
+        !RemovedWith.SameSetAs(existingDefinition.RemovedWith) ||
+        !RemovalEventDefinitions.Canonical().SequenceEqual(existingDefinition.RemovalEventDefinitions.Canonical()) ||
+        Mode != existingDefinition.Mode ||
+        IgnoreCasing != existingDefinition.IgnoreCasing ||
+        Scope.Canonical() != existingDefinition.Scope.Canonical();
 }

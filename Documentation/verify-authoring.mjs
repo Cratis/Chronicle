@@ -4,6 +4,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findClientCapabilityClaims, selfTestClientCapabilityClaims, validateCapabilityBaseline } from './verify-client-capability-claims.mjs';
 
 const documentationRoot = path.dirname(fileURLToPath(import.meta.url));
 const validAsideVariants = new Set(['note', 'tip', 'caution', 'danger']);
@@ -38,6 +39,8 @@ function isSharedPage(file) {
     const firstDirectory = path.relative(documentationRoot, file).split(path.sep)[0];
     return firstDirectory !== 'client-snippets' && firstDirectory !== 'clients';
 }
+
+const capabilityBaselinePath = path.join(documentationRoot, '../.github/scripts/docs-verification/client-capability-claims-baseline.json');
 
 async function loadPageDetectors() {
     try {
@@ -310,6 +313,7 @@ const { directClientFenceLines, snippetReferences } = await loadPageDetectors();
 if (process.argv[2] === '--self-test') {
     selfTestClientFences(directClientFenceLines);
     selfTestSnippetReferences(snippetReferences);
+    selfTestClientCapabilityClaims(file => isSharedPage(path.join(documentationRoot, file)));
     process.exit(0);
 }
 
@@ -320,6 +324,7 @@ if (sharedPages.length === 0) errors.push('No shared Chronicle pages found; clie
 if (snippetFiles.every(file => path.relative(path.join(documentationRoot, 'client-snippets'), file).split(path.sep)[0] === 'legacy')) {
     errors.push('No non-legacy Chronicle client snippets found; unused snippet audit cannot run.');
 }
+const claimsByFile = {};
 const referencedIds = new Set();
 const tocFiles = await filesBelow(documentationRoot, name => /^toc\.ya?ml$/i.test(name));
 for (const file of markdownFiles) {
@@ -333,6 +338,7 @@ for (const file of markdownFiles) {
         errors.push(`${relative(file)}:${error.line ?? 1}: Could not parse page for client snippet references: ${error.reason ?? error.message}`);
     }
     if (!isSharedPage(file)) continue;
+    claimsByFile[relative(file)] = findClientCapabilityClaims(content, isMdx);
     try {
         for (const line of directClientFenceLines(content, isMdx)) {
             errors.push(`${relative(file)}:${line}: Direct client-language fence in a shared page; use <ChronicleClientTabs> in .mdx.`);
@@ -344,6 +350,7 @@ for (const file of markdownFiles) {
 for (const file of unusedClientSnippets(snippetFiles, referencedIds)) {
     errors.push(`${relative(file)}: Client snippet is not referenced by any ChronicleClientTabs snippet attribute on a page.`);
 }
+await validateCapabilityBaseline(claimsByFile, capabilityBaselinePath, errors);
 await validateLandingCollisions(markdownFiles);
 const references = await validateTocs(tocFiles);
 validateOrphans(markdownFiles, references);

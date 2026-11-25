@@ -18,6 +18,7 @@ internal sealed class ReadModelExplorer(
     global::Cratis.Chronicle.Events.IEventCompliance eventCompliance,
     global::Cratis.Chronicle.Json.IExpandoObjectConverter expandoObjectConverter,
     global::System.Text.Json.JsonSerializerOptions jsonSerializerOptions,
+    global::Cratis.Chronicle.Namespaces.INamespaceCasing namespaceCasing,
     global::Microsoft.Extensions.Logging.ILogger<global::Cratis.Chronicle.Services.ReadModelExplorer.ReadModelExplorer> logger) : global::Cratis.Chronicle.Contracts.ReadModelExplorer.IReadModelExplorer
 {
     /// <inheritdoc/>
@@ -27,6 +28,10 @@ internal sealed class ReadModelExplorer(
             new global::Cratis.Chronicle.Services.QueryRouting(request.EventStore, Namespace: request.Namespace, First: request.ReadModel, Second: request.EventSequenceId),
             async () =>
             {
+                if (!string.IsNullOrEmpty(request.Namespace))
+                {
+                    request.Namespace = (await namespaceCasing.Canonicalize(request.EventStore, request.Namespace)).Value;
+                }
                 var result = await global::Cratis.Chronicle.ReadModelExplorer.ReadModelSnapshot.AllSnapshotsForReadModel(grainFactory, storage, eventCompliance, expandoObjectConverter, jsonSerializerOptions, (global::Cratis.Chronicle.Concepts.EventStoreName)request.EventStore, (global::Cratis.Chronicle.Concepts.EventStoreNamespaceName)request.Namespace, request.ReadModel, request.ReadModelKey, request.EventSequenceId, request.Grouping);
                 return result.Select(ToReadModelSnapshotResponse).ToList();
             },
