@@ -522,9 +522,15 @@ public class Projections(
         Dictionary<Type, IProjectionHandler> handlersByType,
         Dictionary<Type, IProjectionHandler> modelBoundHandlers)
     {
-        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
         var claimedBy = new Dictionary<Type, string>();
+        var discoveredHandlersByModelType = ClaimDiscoveredReadModels(handlersByType, claimedBy);
+        ClaimModelBoundReadModels(modelBoundHandlers, discoveredHandlersByModelType, claimedBy);
+        return discoveredHandlersByModelType;
+    }
 
+    Dictionary<Type, IProjectionHandler> ClaimDiscoveredReadModels(Dictionary<Type, IProjectionHandler> handlersByType, Dictionary<Type, string> claimedBy)
+    {
+        var discoveredHandlersByModelType = new Dictionary<Type, IProjectionHandler>();
         foreach (var kvp in handlersByType)
         {
             var readModelType = kvp.Key.GetReadModelType();
@@ -538,6 +544,11 @@ public class Projections(
             }
         }
 
+        return discoveredHandlersByModelType;
+    }
+
+    void ClaimModelBoundReadModels(Dictionary<Type, IProjectionHandler> modelBoundHandlers, Dictionary<Type, IProjectionHandler> discoveredHandlersByModelType, Dictionary<Type, string> claimedBy)
+    {
         foreach (var kvp in modelBoundHandlers)
         {
             if (!discoveredHandlersByModelType.TryAdd(kvp.Key, kvp.Value))
@@ -545,8 +556,6 @@ public class Projections(
                 logger.MoreThanOneProjectionForReadModel(kvp.Key, $"the model-bound projection on {kvp.Key.Name}", claimedBy[kvp.Key]);
             }
         }
-
-        return discoveredHandlersByModelType;
     }
 
     async Task<IProjectionHandler> RegisterExplicit<TReadModel>(IExplicitProjection projection)
@@ -652,14 +661,8 @@ public class Projections(
                 continue;
             }
 
-            if (discoveredHandlers.TryGetValue(readModelType, out var discovered))
+            if (IsDiscoveredProjection(readModelType, projection, discoveredHandlers, failures))
             {
-                if (!IsSameModelBoundProjection(projection, discovered))
-                {
-                    failures[readModelType] = new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
-                    logger.FailedToCreateExplicitProjectionDefinition(readModelType, failures[readModelType]);
-                }
-
                 continue;
             }
 
@@ -677,6 +680,19 @@ public class Projections(
         }
 
         return (registrations, failures);
+    }
+
+    bool IsDiscoveredProjection(Type readModelType, IExplicitProjection projection, Dictionary<Type, IProjectionHandler> discoveredHandlers, Dictionary<Type, Exception> failures)
+    {
+        if (!discoveredHandlers.TryGetValue(readModelType, out var discovered)) return false;
+
+        if (!IsSameModelBoundProjection(projection, discovered))
+        {
+            failures[readModelType] = new ReadModelAlreadyHasProjection(readModelType, discovered.Id, projection.Id);
+            logger.FailedToCreateExplicitProjectionDefinition(readModelType, failures[readModelType]);
+        }
+
+        return true;
     }
 
     bool IsAlreadyStaged(Type readModelType, Dictionary<Type, ExplicitProjectionRegistration> registrations, Dictionary<Type, Exception> failures) =>

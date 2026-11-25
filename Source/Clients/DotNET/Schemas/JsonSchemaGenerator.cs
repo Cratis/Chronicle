@@ -459,6 +459,34 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
             return schemaObj;
         }
 
+        AddLeafTypeShape(schemaObj, formatType);
+        AddKnownTypeFormat(schemaObj, type, context.PropertyInfo?.AttributeProvider);
+        AddTypeMetadata(schemaObj, type);
+        AddPropertyMetadata(schemaObj, context.PropertyInfo?.AttributeProvider);
+
+        // Preserve the CLR name on nested object schemas too. Composite Ids are emitted inline by the
+        // serializer, so declaration generation needs the title to recover the key type from the Id schema.
+        if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
+        {
+            if (restorePropertiesWithDefaultValues)
+            {
+                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj, recordCompensation, preserveUnformattedNullability);
+            }
+
+            AddObjectTitle(context, schemaObj, formatType);
+        }
+
+        // Compensation metadata only applies to the top-level type schema.
+        if (context.PropertyInfo is null)
+        {
+            AddCompensationMetadata(schemaObj, type, recordCompensation);
+        }
+
+        return schema;
+    }
+
+    void AddLeafTypeShape(JsonObject schemaObj, Type formatType)
+    {
         // Geospatial types serialize as GeoJSON via their own converters and are materialized as the
         // typed CLR value by the schema-aware ExpandoObject converters using the format metadata
         // (set from the registered type formats in the "known types" block below). Emit a leaf schema
@@ -480,8 +508,11 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
             schemaObj["enum"] = new JsonArray([.. enumValues.Select(v => (JsonNode?)JsonValue.Create(v))]);
             schemaObj["x-enumNames"] = new JsonArray([.. enumNames.Select(n => (JsonNode?)JsonValue.Create(n))]);
         }
+    }
 
-        // Add format for known types
+    void AddKnownTypeFormat(JsonObject schemaObj, Type type, ICustomAttributeProvider? attributeProvider)
+    {
+        var formatType = Nullable.GetUnderlyingType(type) ?? type;
         if (_typeFormats.IsKnown(formatType))
         {
             var format = _typeFormats.GetFormatForType(formatType);
@@ -492,69 +523,57 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
             // GetDefaultValue() synthesize a type-default sentinel (e.g. 0001-01-01 for DateTimeOffset) for an
             // unset optional at read time. Appending '?' makes IsNullable() return true so the value
             // materializes as null/absent instead. Symmetric with the nullable-concept handling above.
-            if (PropertyIsNullable(type, context.PropertyInfo?.AttributeProvider) && !format.EndsWith('?'))
+            if (PropertyIsNullable(type, attributeProvider) && !format.EndsWith('?'))
             {
                 format += "?";
             }
 
             schemaObj["format"] = format;
         }
+    }
 
-        // Add compliance metadata for the type
+    void AddObjectTitle(JsonSchemaExporterContext context, JsonObject schema, Type formatType)
+    {
+        if (context.PropertyInfo is null || schema["properties"] is JsonObject)
+        {
+            schema["title"] = context.PropertyInfo is null ? context.TypeInfo.Type.Name : formatType.Name;
+        }
+        else if (schema["oneOf"] is JsonArray alternatives)
+        {
+            foreach (var alternative in alternatives.OfType<JsonObject>().Where(_ => _["properties"] is JsonObject))
+            {
+                alternative["title"] = formatType.Name;
+            }
+        }
+    }
+
+    void AddCompensationMetadata(JsonObject schema, Type type, Action<JsonObject, Type>? recordCompensation)
+    {
+        var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
+        if (compensationAttribute is null) return;
+
+        if (recordCompensation is not null)
+        {
+            recordCompensation(schema, compensationAttribute.CompensatedEventType);
+        }
+        else
+        {
+            var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
+            schema[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
+        }
+    }
+
+    void AddTypeMetadata(JsonObject schema, Type type)
+    {
         if (_metadataResolver.HasMetadataFor(type))
         {
-            AddComplianceMetadata(schemaObj, _metadataResolver.GetMetadataFor(type));
+            AddComplianceMetadata(schema, _metadataResolver.GetMetadataFor(type));
         }
 
-        // Add security metadata for the type
         if (_securityMetadataResolver.HasMetadataFor(type))
         {
-            AddSecurityMetadata(schemaObj, _securityMetadataResolver.GetMetadataFor(type));
+            AddSecurityMetadata(schema, _securityMetadataResolver.GetMetadataFor(type));
         }
-
-        AddPropertyMetadata(schemaObj, context.PropertyInfo?.AttributeProvider);
-
-        // Preserve the CLR name on nested object schemas too. Composite Ids are emitted inline by the
-        // serializer, so declaration generation needs the title to recover the key type from the Id schema.
-        if (context.TypeInfo.Kind == JsonTypeInfoKind.Object)
-        {
-            if (restorePropertiesWithDefaultValues)
-            {
-                RestorePropertySchemasReplacedByDefaultValues(context.TypeInfo, schemaObj, recordCompensation, preserveUnformattedNullability);
-            }
-
-            if (context.PropertyInfo is null || schemaObj["properties"] is JsonObject)
-            {
-                schemaObj["title"] = context.PropertyInfo is null ? type.Name : formatType.Name;
-            }
-            else if (schemaObj["oneOf"] is JsonArray alternatives)
-            {
-                foreach (var alternative in alternatives.OfType<JsonObject>().Where(_ => _["properties"] is JsonObject))
-                {
-                    alternative["title"] = formatType.Name;
-                }
-            }
-        }
-
-        // Compensation metadata only applies to the top-level type schema.
-        if (context.PropertyInfo is null)
-        {
-            var compensationAttribute = type.GetCustomAttribute<CompensationForAttribute>();
-            if (compensationAttribute is not null)
-            {
-                if (recordCompensation is not null)
-                {
-                    recordCompensation(schemaObj, compensationAttribute.CompensatedEventType);
-                }
-                else
-                {
-                    var compensatedEventType = compensationAttribute.CompensatedEventType.GetEventType();
-                    schemaObj[CompensationJsonSchemaExtensions.CompensationForKey] = compensatedEventType.Id.Value;
-                }
-            }
-        }
-
-        return schema;
     }
 
     void AddPropertyMetadata(JsonObject schema, ICustomAttributeProvider? attributeProvider)
@@ -655,38 +674,34 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
             var elementType = GetUnwrappedEnumerableElementType(type);
             if (elementType?.IsConcept() == true)
             {
-                var underlyingItemType = elementType.GetConceptValueType();
-                var itemSchema = _serializerOptions.GetJsonSchemaAsNode(underlyingItemType, StructuralOptionsFor(recordCompensation, preserveUnformattedNullability));
-
-                // The element concept's own schema metadata has to be carried onto the item schema. This
-                // branch bypasses the scalar-concept path above, so without it a [PII] or [Encrypted] concept
-                // loses its classification the moment it is put in a list — and a value that is encrypted as a
-                // scalar would be persisted in the clear as a list element.
-                if (itemSchema is JsonObject itemSchemaObject)
-                {
-                    if (_metadataResolver.HasMetadataFor(elementType))
-                    {
-                        AddComplianceMetadata(itemSchemaObject, _metadataResolver.GetMetadataFor(elementType));
-                    }
-
-                    if (_securityMetadataResolver.HasMetadataFor(elementType))
-                    {
-                        AddSecurityMetadata(itemSchemaObject, _securityMetadataResolver.GetMetadataFor(elementType));
-                    }
-                }
-
-                var arraySchema = new JsonObject
-                {
-                    ["type"] = "array",
-                    ["items"] = itemSchema
-                };
-                AddPropertyMetadata(arraySchema, attributeProvider);
-
-                return arraySchema;
+                return RepresentConceptCollection(elementType, attributeProvider, recordCompensation, preserveUnformattedNullability);
             }
         }
 
         return null;
+    }
+
+    JsonObject RepresentConceptCollection(Type elementType, ICustomAttributeProvider? attributeProvider, Action<JsonObject, Type>? recordCompensation, bool preserveUnformattedNullability)
+    {
+        var underlyingItemType = elementType.GetConceptValueType();
+        var itemSchema = _serializerOptions.GetJsonSchemaAsNode(underlyingItemType, StructuralOptionsFor(recordCompensation, preserveUnformattedNullability));
+
+        // The element concept's own schema metadata has to be carried onto the item schema. This
+        // branch bypasses the scalar-concept path, so without it a [PII] or [Encrypted] concept
+        // loses its classification the moment it is put in a list — and a value that is encrypted as a
+        // scalar would be persisted in the clear as a list element.
+        if (itemSchema is JsonObject itemSchemaObject)
+        {
+            AddTypeMetadata(itemSchemaObject, elementType);
+        }
+
+        var arraySchema = new JsonObject
+        {
+            ["type"] = "array",
+            ["items"] = itemSchema
+        };
+        AddPropertyMetadata(arraySchema, attributeProvider);
+        return arraySchema;
     }
 
     /// <summary>
@@ -717,15 +732,7 @@ public partial class JsonSchemaGenerator : IJsonSchemaGenerator
         var representedSchema = _serializerOptions.GetJsonSchemaAsNode(representedAs, StructuralOptionsFor(recordCompensation, preserveUnformattedNullability));
         if (representedSchema is not JsonObject representedSchemaObject) return representedSchema;
 
-        if (_metadataResolver.HasMetadataFor(declaredType))
-        {
-            AddComplianceMetadata(representedSchemaObject, _metadataResolver.GetMetadataFor(declaredType));
-        }
-
-        if (_securityMetadataResolver.HasMetadataFor(declaredType))
-        {
-            AddSecurityMetadata(representedSchemaObject, _securityMetadataResolver.GetMetadataFor(declaredType));
-        }
+        AddTypeMetadata(representedSchemaObject, declaredType);
 
         AddPropertyMetadata(representedSchemaObject, attributeProvider);
 

@@ -535,20 +535,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
 
         try
         {
-            if (Options.AutoDiscoverAndRegister)
-            {
-                await eventStore.DiscoverAll();
-            }
-
-            ReportServerlessStartup(eventStore);
-            await _connection.Connect();
-            if (Options.AutoDiscoverAndRegister && _connection.Lifecycle.IsConnected && !eventStore.Registration.HasRun)
-            {
-                // Only a connected transport can register; the first connect may still be waiting on its watchdog.
-                // Connect may have reused an already-connected transport without firing the new store's callback.
-                await eventStore.RegisterAll();
-            }
-
+            await DiscoverConnectAndRegister(eventStore);
             ScheduleDeploymentFingerprintCheck(eventStore);
             return eventStore;
         }
@@ -556,6 +543,23 @@ public class ChronicleClient : IChronicleClient, IDisposable
         {
             eventStore.ReleaseAfterFailedCreation();
             throw;
+        }
+    }
+
+    async Task DiscoverConnectAndRegister(EventStore eventStore)
+    {
+        if (Options.AutoDiscoverAndRegister)
+        {
+            await eventStore.DiscoverAll();
+        }
+
+        ReportServerlessStartup(eventStore);
+        await _connection.Connect();
+        if (Options.AutoDiscoverAndRegister && _connection.Lifecycle.IsConnected && !eventStore.Registration.HasRun)
+        {
+            // Only a connected transport can register; the first connect may still be waiting on its watchdog.
+            // Connect may have reused an already-connected transport without firing the new store's callback.
+            await eventStore.RegisterAll();
         }
     }
 

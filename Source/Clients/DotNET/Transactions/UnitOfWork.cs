@@ -462,6 +462,8 @@ public partial class UnitOfWork : IUnitOfWork
     static bool HasSamePredicateButDiffers(ConcurrencyScope first, ConcurrencyScope second) =>
         DefinitionConcurrencyScopeResolver.SamePredicate(first, second) && !ConcurrencyScopesAreSemanticallyEqual(first, second);
 
+    bool RequiresRollbackOwner() => IsEnforcingReadProtection || HasClaimedDecisionReads;
+
     bool IsClaimedBy(DecisionReadCommitOwner? owner) => _commitOwner is not null && ReferenceEquals(owner, _commitOwner);
 
     Task RollbackCore(DecisionReadCommitOwner? owner, bool fromOwner, ImmediateAppendRefusal? appendOwner = null)
@@ -473,16 +475,28 @@ public partial class UnitOfWork : IUnitOfWork
         {
             ThrowIfMutatedDuringEnrollment();
             RequireImmediateAppendOwner(appendOwner);
-            if (appendOwner is null && fromOwner && !IsClaimedBy(owner)) throw new ProtectedUnitOfWorkRequiresOwner();
+            ThrowIfRollbackOwnerIsRequired(owner, fromOwner, appendOwner);
             ThrowIfUnitOfWorkIsCompleted();
-            if (_completing && (IsCompletionStrict || fromOwner || HasClaimedDecisionReads)) throw new UnitOfWorkIsCompleting(CorrelationId);
-            if ((IsEnforcingReadProtection || HasClaimedDecisionReads) && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
+            ThrowIfRollbackIsBlocked(fromOwner);
             CompleteRollback();
         }
 
         _onCompleted(this);
         return Task.CompletedTask;
     }
+
+    void ThrowIfRollbackOwnerIsRequired(DecisionReadCommitOwner? owner, bool fromOwner, ImmediateAppendRefusal? appendOwner)
+    {
+        if (appendOwner is null && fromOwner && !IsClaimedBy(owner)) throw new ProtectedUnitOfWorkRequiresOwner();
+    }
+
+    void ThrowIfRollbackIsBlocked(bool fromOwner)
+    {
+        if (_completing && RequiresOwnedRollback(fromOwner)) throw new UnitOfWorkIsCompleting(CorrelationId);
+        if (RequiresRollbackOwner() && !fromOwner) throw new ProtectedUnitOfWorkRequiresOwner();
+    }
+
+    bool RequiresOwnedRollback(bool fromOwner) => IsCompletionStrict || fromOwner || HasClaimedDecisionReads;
 
     void CompleteRollback()
     {

@@ -359,12 +359,12 @@ public class ReactorInvoker(
             return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet(), batchMethods);
         }
 
-        // A public method shaped like a handler (its first parameter is a known event type) but with
-        // an unrecognized return type is almost always a mistake. Left unchecked it is silently
-        // skipped, leaving the reactor subscribed to nothing and never observing events. Fail loudly
-        // at registration instead.
         static void ThrowIfMisshapedHandler(Type targetType, MethodInfo method, IEnumerable<Type> eventTypes)
         {
+            // A public method shaped like a handler (its first parameter is a known event type) but with
+            // an unrecognized return type is almost always a mistake. Left unchecked it is silently
+            // skipped, leaving the reactor subscribed to nothing and never observing events. Fail loudly
+            // at registration instead.
             if (method.IsPublic && method.HasEventHandlerShape(eventTypes))
             {
                 throw new InvalidReactorHandlerReturnType(targetType, method.Name, method.ReturnType);
