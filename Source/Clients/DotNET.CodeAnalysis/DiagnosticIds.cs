@@ -418,4 +418,9 @@ public static class DiagnosticIds
     /// An otherwise eligible reactor handler returns async void.
     /// </summary>
     public const string ReactorMethodMustNotBeAsyncVoid = "CHR0083";
+
+    /// <summary>
+    /// An event type at generation 2 or higher is missing a migrator for one or more of its generation steps.
+    /// </summary>
+    public const string EventTypeGenerationMustHaveMigrator = "CHR0084";
 }
