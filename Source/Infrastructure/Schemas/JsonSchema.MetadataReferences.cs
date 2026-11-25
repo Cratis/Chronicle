@@ -44,13 +44,21 @@ public partial class JsonSchema
         : AnyOf.Where(candidate => candidate.Type != JsonObjectType.Null &&
             !(candidate.HasReference && candidate.Reference?.Type == JsonObjectType.Null)).Take(1);
 
-    MetadataReach MetadataEdges()
+    MetadataReach MetadataEdges(bool contextual)
     {
         var reach = new MetadataReach();
-        if (Node["$ref"] is not null && ResolveScopedRef(Node["$ref"]!.GetValue<string>()) is { } reference) reach.Schemas.Add(reference);
+        AddStaticTarget(reach, contextual);
         if (Node.ContainsKey("$dynamicRef")) AddDynamicTargets(reach);
         if (Node.ContainsKey("$recursiveRef")) AddRecursiveTargets(reach);
         return reach;
+    }
+
+    void AddStaticTarget(MetadataReach reach, bool contextual)
+    {
+        if (Node["$ref"] is null) return;
+        var reference = ResolveScopedRef(Node["$ref"]!.GetValue<string>());
+        if (reference is null) reach.Indeterminate |= contextual;
+        else reach.Schemas.Add(reference);
     }
 
     JsonSchema? InitialContextualTarget(string key, MetadataReach reach)
@@ -164,7 +172,7 @@ public partial class JsonSchema
 
         void Expand(MetadataStep step)
         {
-            var edges = step.Schema.MetadataEdges();
+            var edges = step.Schema.MetadataEdges(step.Contextual);
             _reach.Indeterminate |= edges.Indeterminate;
             var children = includeChildren ? step.Schema.MetadataChildren(step.Contextual) : [];
             var next = edges.Schemas.Concat(children).ToArray();

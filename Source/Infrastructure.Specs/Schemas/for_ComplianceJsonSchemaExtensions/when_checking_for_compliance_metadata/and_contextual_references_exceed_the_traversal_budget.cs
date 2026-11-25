@@ -30,5 +30,6 @@ public class and_contextual_references_exceed_the_traversal_budget : Specificati
 
     [Fact] void should_not_claim_the_unexplored_graph_is_plain() => _property.HasComplianceMetadata().ShouldBeTrue();
     [Fact] void should_preserve_protection_during_conversion() => ConverterSchemas.HasProtectedValueMetadata(_property).ShouldBeTrue();
-    [Fact] void should_not_manufacture_a_handler_type() => _property.HasSchemaMetadata(SchemaMetadataCategory.Compliance, _ => true).ShouldBeFalse();
+    [Fact] void should_treat_unexplored_compliance_as_protected() => _property.HasSchemaMetadata(SchemaMetadataCategory.Compliance, _ => true).ShouldBeTrue();
+    [Fact] void should_not_manufacture_a_handler_type() => _property.GetComplianceMetadata().ShouldBeEmpty();
 }

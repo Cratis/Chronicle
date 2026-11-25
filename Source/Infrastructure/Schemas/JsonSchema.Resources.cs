@@ -89,15 +89,23 @@ public partial class JsonSchema
         var scope = ResourceId(node, inherited);
         context.Scopes.Add(node, scope);
         if (depth == 0 || scope != inherited) context.Roots.TryAdd(scope.AbsoluteUri, node);
-        if (node["$anchor"] is JsonValue value && value.TryGetValue<string>(out var anchor))
-        {
-            context.Anchors.TryAdd((scope.AbsoluteUri, anchor), node);
-        }
+        IndexAnchor(node, scope, context);
         IndexDynamicAnchor(node, scope, context);
         foreach (var child in ResourceSchemaChildren(node))
         {
             IndexResources(child, scope, context, depth + 1);
         }
+    }
+
+    static void IndexAnchor(JsonObject node, Uri resource, ResourceIndexContext context)
+    {
+        if (node["$anchor"] is not JsonValue value || !value.TryGetValue<string>(out var anchor)) return;
+        var key = (resource.AbsoluteUri, anchor);
+        if (context.DynamicAnchors.TryGetValue(key, out var dynamicAnchor) && !ReferenceEquals(dynamicAnchor, node))
+        {
+            context.IndeterminateResources.Add(resource.AbsoluteUri);
+        }
+        context.Anchors.TryAdd(key, node);
     }
 
     static IEnumerable<JsonObject> ResourceSchemaChildren(JsonObject node)

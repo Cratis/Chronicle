@@ -12,9 +12,9 @@ public partial class JsonSchema
     /// </summary>
     internal bool HasContextualReference => Node.ContainsKey("$dynamicRef") || Node.ContainsKey("$recursiveRef");
 
-    bool HasReferenceKeyword => Node["$ref"] is not null || HasContextualReference;
+    bool HasReferenceKeyword => Node["$ref"] is not null;
 
-    string? ReferenceValue => Node["$ref"]?.GetValue<string>() ?? StringValue(Node, "$dynamicRef") ?? StringValue(Node, "$recursiveRef");
+    string? ReferenceValue => Node["$ref"]?.GetValue<string>();
 
     ResolutionContext ResolutionScope => _resolutionContext ?? new(ResourceBase, Node.GetPath(), [ResourceBase], Node);
 

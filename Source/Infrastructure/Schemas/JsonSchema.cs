@@ -221,14 +221,14 @@ public partial class JsonSchema
     public IList<JsonSchema> OneOf => _oneOfCache ??= BuildSchemaList("oneOf");
 
     /// <summary>
-    /// Gets whether this schema has a reference keyword.
+    /// Gets whether this schema has an ordinary $ref keyword.
     /// </summary>
     public bool HasReference => HasReferenceKeyword;
 
     /// <summary>
-    /// Gets the statically resolved target of the first reference keyword ($ref, $dynamicRef, $recursiveRef).
+    /// Gets the statically resolved target of the ordinary $ref keyword.
     /// </summary>
-    /// <remarks>Type selection uses this deterministic fallback; metadata classification separately includes contextual bindings.</remarks>
+    /// <remarks>Contextual references are considered separately for metadata classification, not type navigation.</remarks>
     public JsonSchema? Reference
     {
         get

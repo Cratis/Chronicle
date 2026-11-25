@@ -46,7 +46,8 @@ public class and_contextual_references_are_invalid_or_ineligible : Specification
     [Fact] void should_fail_closed_for_an_invalid_value() => _invalid.HasComplianceMetadata().ShouldBeTrue();
     [Fact] void should_fail_closed_for_a_missing_anchor() => _missing.HasSecurityMetadata().ShouldBeTrue();
     [Fact] void should_fail_closed_for_an_unsupported_recursive_shape() => ConverterSchemas.HasProtectedValueMetadata(_unsupported).ShouldBeTrue();
-    [Fact] void should_not_invent_metadata_for_invalid_values() => _invalid.HasSchemaMetadata(SchemaMetadataCategory.Compliance, _ => true).ShouldBeFalse();
+    [Fact] void should_treat_invalid_values_as_indeterminate_compliance() => _invalid.HasSchemaMetadata(SchemaMetadataCategory.Compliance, _ => true).ShouldBeTrue();
+    [Fact] void should_not_invent_metadata_for_invalid_values() => _invalid.GetComplianceMetadata().ShouldBeEmpty();
     [Fact] void should_not_skip_static_metadata_when_the_root_is_not_recursive() => _protectedNonRecursive.HasSchemaMetadata(SchemaMetadataCategory.Compliance, type => type == "PII").ShouldBeTrue();
     [Fact] void should_not_skip_static_metadata_when_the_recursive_anchor_is_missing() => _protectedWithoutAnchor.HasSchemaMetadata(SchemaMetadataCategory.Compliance, type => type == "PII").ShouldBeTrue();
     [Fact] void should_leave_a_proven_plain_root_without_an_anchor_plain() => _plainWithoutAnchor.HasComplianceMetadata().ShouldBeFalse();
