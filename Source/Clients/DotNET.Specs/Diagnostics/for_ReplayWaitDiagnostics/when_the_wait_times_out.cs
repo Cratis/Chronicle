@@ -12,6 +12,7 @@ namespace Cratis.Chronicle.Diagnostics.for_ReplayWaitDiagnostics;
 public class when_the_wait_times_out : Specification
 {
     readonly Exception _original = new TimeoutException("timed out");
+    readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     int _waits;
     Exception? _error;
 
@@ -26,9 +27,12 @@ public class when_the_wait_times_out : Specification
             "SomeProjection",
             () => Task.FromResult(new ProjectionState(ObserverRunningState.Suspended, false, 7UL, 8UL, 9UL)));
 
+        var run = ReplayWaitDiagnostics.Run(OriginalWait, sources);
+        _release.SetResult();
+
         try
         {
-            await ReplayWaitDiagnostics.Run(OriginalWait, sources);
+            await run;
         }
         catch (Exception exception)
         {
@@ -39,7 +43,7 @@ public class when_the_wait_times_out : Specification
     async Task OriginalWait()
     {
         _waits++;
-        await Task.Yield();
+        await _release.Task;
         await ThrowOriginal();
     }
 

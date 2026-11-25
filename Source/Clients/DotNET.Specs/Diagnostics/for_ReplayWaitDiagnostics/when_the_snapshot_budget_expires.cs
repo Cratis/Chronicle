@@ -42,7 +42,7 @@ public class when_the_snapshot_budget_expires : Specification
 
         _messageBeforeLateFailure = _error!.Message;
         _jobs.SetException(new InvalidOperationException("late"));
-        await Task.Yield();
+        await Catch.Exception(() => _jobs.Task);
     }
 
     [Fact] void should_mark_the_incomplete_reader_as_timed_out() => _messageBeforeLateFailure.ShouldContain("snapshot timed out");
