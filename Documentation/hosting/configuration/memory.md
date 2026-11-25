@@ -58,6 +58,10 @@ Chronicle reports these through [OpenTelemetry](open-telemetry.md) on the `Crati
 | `cratis.chronicle.memory.working_set` | Working set of the process. |
 | `cratis.chronicle.memory.allocated` | Bytes allocated. |
 | `cratis.chronicle.memory.gen2_collections` | Full collections. |
+| `cratis.chronicle.memory.generation_size` | Bytes each heap generation holds after the last collection, with a `generation` attribute of `gen0`, `gen1`, `gen2`, `loh` or `poh`. Compare `gen2` with `committed` to tell live data from memory the collector keeps. |
+| `cratis.chronicle.memory.generation_fragmentation` | Bytes of each heap generation lost to fragmentation after the last collection, by `generation`. |
+| `cratis.chronicle.memory.pause_duration` | Total time, in seconds, the process has spent paused for garbage collection. Its rate is the pause time per second. |
+| `cratis.chronicle.memory.collections` | Garbage collections, with a `generation` attribute of `gen0`, `gen1` or `gen2`. |
 | `cratis.chronicle.memory.budget.capacity` | Current capacity of the budget. |
 | `cratis.chronicle.memory.budget.reserved` | Memory currently reserved. |
 | `cratis.chronicle.memory.budget.waiting` | Reservations waiting for room. |

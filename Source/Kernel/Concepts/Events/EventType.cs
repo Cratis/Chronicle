@@ -9,7 +9,10 @@ namespace Cratis.Chronicle.Concepts.Events;
 /// <param name="Id"><see cref="EventTypeId">Unique identifier</see>.</param>
 /// <param name="Generation"><see cref="EventTypeGeneration">Generation</see> of the event.</param>
 /// <param name="Tombstone">Whether or not the event is a tombstone event, default false.</param>
-public record EventType(EventTypeId Id, EventTypeGeneration Generation, bool Tombstone = false)
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.EventType")]
+public record EventType([Id(0)] EventTypeId Id, [Id(1)] EventTypeGeneration Generation, [Id(2)] bool Tombstone = false)
 {
     /// <summary>
     /// Represents an unknown event type.
@@ -27,12 +30,6 @@ public record EventType(EventTypeId Id, EventTypeGeneration Generation, bool Tom
     /// </summary>
     /// <param name="value">String representation.</param>
     public static implicit operator EventType(string value) => Parse(value);
-
-    /// <inheritdoc/>
-    public override string ToString()
-    {
-        return $"{Id.Value}+{Generation.Value}";
-    }
 
     /// <summary>
     /// Parse from a string representation of event type to actual type.
@@ -55,5 +52,11 @@ public record EventType(EventTypeId Id, EventTypeGeneration Generation, bool Tom
             return new(segments[0], uint.Parse(segments[1]), false);
         }
         return new(segments[0], uint.Parse(segments[1]), bool.Parse(segments[2]));
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"{Id.Value}+{Generation.Value}";
     }
 }

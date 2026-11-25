@@ -22,11 +22,20 @@ internal static class ObserverExtensions
     /// <param name="storage">The storage containing observer definitions.</param>
     /// <param name="namespaceCasing">The namespace casing resolver, when called from an entry point.</param>
     /// <returns>An instance of the observer.</returns>
-    public static async Task<IObserver> GetObserver(this IGrainFactory grainFactory, IObserverCommand command, IStorage storage, INamespaceCasing? namespaceCasing = null)
+    public static async Task<IObserver> GetObserver(this IGrainFactory grainFactory, IObserverCommand command, IStorage storage, INamespaceCasing? namespaceCasing = null) =>
+        grainFactory.GetGrain<IObserver>(await GetObserverKey(command, storage, namespaceCasing));
+
+    /// <summary>
+    /// Get the key of the observer for a specific command.
+    /// </summary>
+    /// <param name="command"><see cref="IObserverCommand"/> to get the observer key for.</param>
+    /// <param name="storage">The storage containing observer definitions.</param>
+    /// <param name="namespaceCasing">The namespace casing resolver, when called from an entry point.</param>
+    /// <returns>The <see cref="ObserverKey"/> of the observer.</returns>
+    public static async Task<ObserverKey> GetObserverKey(IObserverCommand command, IStorage storage, INamespaceCasing? namespaceCasing = null)
     {
         var @namespace = namespaceCasing is null ? (Concepts.EventStoreNamespaceName)command.Namespace : await namespaceCasing.Canonicalize(command.EventStore, command.Namespace);
         var eventSequenceId = await ObserverEventSequenceResolver.Resolve(storage, command.EventStore, command.ObserverId, command.EventSequenceId);
-        var key = new ObserverKey(command.ObserverId, command.EventStore, @namespace, eventSequenceId);
-        return grainFactory.GetGrain<IObserver>(key);
+        return new ObserverKey(command.ObserverId, command.EventStore, @namespace, eventSequenceId);
     }
 }

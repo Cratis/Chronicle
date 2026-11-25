@@ -399,6 +399,7 @@ public partial class ProjectionPipelineManager(
             new SetInitialState(sink, loggerFactory.CreateLogger<SetInitialState>()),
             new DecryptInitialState(readModelsCompliance, eventStore, @namespace),
             new HandleEvent(replayScopedStorage, sink, loggerFactory.CreateLogger<HandleEvent>()),
+            new VerifyFlatCompositeKey(),
             encryptChangeset,
             new StoreFutures(futuresTracker, projectionFutures, loggerFactory.CreateLogger<StoreFutures>()),
             resolveFuturesStep,

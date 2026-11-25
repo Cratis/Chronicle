@@ -19,7 +19,7 @@ public class and_the_definition_changed_without_notification : given.a_subscribe
         _projection.Accepts(_event.Context.EventType).Returns(false);
         var updated = _definition with { IsRewindable = false };
         _storage.GetEventStore(_key.EventStore).Projections.Get(_key.ObserverId).Returns(updated);
-        _factory.Create(_key.EventStore, _key.Namespace, updated, Arg.Any<Concepts.ReadModels.ReadModelDefinition>(), Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>())
+        _factory.Create(_key.EventStore, _key.Namespace, updated, Arg.Any<Concepts.ReadModels.ReadModelDefinition>())
             .Returns(_ =>
             {
                 _projection.Accepts(_event.Context.EventType).Returns(true);

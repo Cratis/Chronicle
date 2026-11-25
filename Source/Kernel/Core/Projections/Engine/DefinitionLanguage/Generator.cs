@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.EventValues;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
+using Cratis.Chronicle.Projections.Engine.Expressions.ReadModelProperties;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.Schemas;
 
@@ -170,7 +171,8 @@ public partial class Generator : IGenerator
         var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
         var hasConstantKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
         var isDefaultKey = from.Key.IsSet() && from.Key.Value == WellKnownExpressions.EventSourceId;
-        var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !isDefaultKey;
+        var hasFlatCompositeKey = from.Key.IsSet() && FlatCompositeKeyExpression.IsFlatComposite(from.Key.Value);
+        var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !hasFlatCompositeKey && !isDefaultKey;
 
         // Build from statement with optional inline key (skip if it's the default $eventSourceId)
         if (useInlineKey)
@@ -193,6 +195,11 @@ public partial class Generator : IGenerator
             {
                 sb.AppendLine($"{Indent(indent + 2)}{EscapePropertyPath(property)} = {ConvertExpressionForOutput(expression)}");
             }
+        }
+
+        if (hasFlatCompositeKey)
+        {
+            GenerateFlatCompositeKeyParts(sb, from.Key.Value, indent + 1);
         }
 
         // Parent key if present (skip if it's the default $eventSourceId)
@@ -286,6 +293,14 @@ public partial class Generator : IGenerator
             sb.AppendLine($"{Indent(indent + 1)}automap");
         }
 
+        if (!isNested && children.Ordering is { } ordering && !ordering.IsAppend())
+        {
+            var instruction = ordering.Placement == Cratis.Chronicle.Changes.ChildrenPlacement.Prepend
+                ? "insert first"
+                : $"sort by {ordering.SortBy.Path} {(ordering.Direction == Cratis.Chronicle.Changes.SortDirection.Descending ? "descending" : "ascending")}";
+            sb.AppendLine($"{Indent(indent + 1)}{instruction}");
+        }
+
         // FromEvery for children
         if (children.All.Properties.Count > 0)
         {
@@ -342,9 +357,14 @@ public partial class Generator : IGenerator
     {
         sb.Append($"{Indent(indent)}remove with {eventTypeName}");
 
-        // Inline key if present
-        if (removedWith.Key.IsSet())
+        if (removedWith.Key.IsSet() && FlatCompositeKeyExpression.IsFlatComposite(removedWith.Key.Value))
         {
+            sb.AppendLine();
+            GenerateFlatCompositeKeyParts(sb, removedWith.Key.Value, indent + 1);
+        }
+        else if (removedWith.Key.IsSet())
+        {
+            // Inline key
             var keyOutput = removedWith.Key.Value.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && removedWith.Key.Value.EndsWith(')')
                 ? ConvertConstantKeyForOutput(removedWith.Key.Value)
                 : removedWith.Key.Value;
@@ -358,6 +378,15 @@ public partial class Generator : IGenerator
         if (removedWith.ParentKey?.IsSet() == true)
         {
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(removedWith.ParentKey.Value)}");
+        }
+    }
+
+    void GenerateFlatCompositeKeyParts(StringBuilder sb, string expression, int indent)
+    {
+        sb.AppendLine($"{Indent(indent)}key");
+        foreach (var (property, value) in FlatCompositeKeyExpression.Parse(expression).Parts)
+        {
+            sb.AppendLine($"{Indent(indent + 1)}{EscapePropertyPath(property)} = {ConvertExpressionForOutput(value)}");
         }
     }
 
@@ -394,14 +423,27 @@ public partial class Generator : IGenerator
         if (normalizedExpression.StartsWith($"{WellKnownExpressions.Add}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
             var innerExpression = normalizedExpression[(WellKnownExpressions.Add.Length + 1)..^1];
-            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
+            sb.AppendLine($"{Indent(indent)}add {propertyName} by {ArithmeticOperand.Format(innerExpression, ConvertExpressionForOutput)}");
             return;
         }
 
         if (normalizedExpression.StartsWith($"{WellKnownExpressions.Subtract}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
         {
             var innerExpression = normalizedExpression[(WellKnownExpressions.Subtract.Length + 1)..^1];
-            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ConvertExpressionForOutput(innerExpression)}");
+            sb.AppendLine($"{Indent(indent)}subtract {propertyName} by {ArithmeticOperand.Format(innerExpression, ConvertExpressionForOutput)}");
+            return;
+        }
+
+        if (normalizedExpression.StartsWith($"{WellKnownExpressions.SetOnce}(", StringComparison.Ordinal) && normalizedExpression.EndsWith(')'))
+        {
+            var source = normalizedExpression[(WellKnownExpressions.SetOnce.Length + 1)..^1];
+            sb.AppendLine($"{Indent(indent)}set once {propertyName} = {(source == WellKnownExpressions.Null ? "null" : ConvertExpressionForOutput(source))}");
+            return;
+        }
+
+        if (normalizedExpression == WellKnownExpressions.Remove)
+        {
+            sb.AppendLine($"{Indent(indent)}remove {propertyName}");
             return;
         }
 

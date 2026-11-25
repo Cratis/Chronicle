@@ -29,7 +29,7 @@ public class and_the_projections_are_built_for_many_pairs_at_once : given.a_proj
         _incoming = [.. Enumerable.Range(0, DefinitionCount).Select(index => CreateDefinition($"the-projection-{index}", "the-read-model"))];
 
         _projectionFactory
-            .Create(default!, default!, default!, default!, default!)
+            .Create(default!, default!, default!, default!)
             .ReturnsForAnyArgs(async _ =>
             {
                 int inFlight;
@@ -63,6 +63,6 @@ public class and_the_projections_are_built_for_many_pairs_at_once : given.a_proj
         await registering;
     }
 
-    [Fact] void should_have_built_a_projection_for_every_definition() => _projectionFactory.ReceivedWithAnyArgs(DefinitionCount).Create(default!, default!, default!, default!, default!);
+    [Fact] void should_have_built_a_projection_for_every_definition() => _projectionFactory.ReceivedWithAnyArgs(DefinitionCount).Create(default!, default!, default!, default!);
     [Fact] void should_never_build_more_at_once_than_the_subscribe_bound() => _maxObservedConcurrency.ShouldEqual(SubscribeBound);
 }

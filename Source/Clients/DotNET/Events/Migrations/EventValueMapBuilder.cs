@@ -60,10 +60,13 @@ public class EventValueMapBuilder<TUpgrade, TPrevious> : IEventValueMapBuilder<T
     /// a target value is the one that gets to represent it going back. A migration that needs a different answer
     /// states the reverse map itself in its <c language="csharp">Downcast</c>, which overrides what is derived here.
     /// </remarks>
-    static ValueMapping[] Invert(IEnumerable<ValueMapping> mappings) =>
-        [.. mappings
+    static ValueMapping[] Invert(IEnumerable<ValueMapping> mappings)
+    {
+        var inverted = mappings
             .GroupBy(mapping => mapping.To)
-            .Select(group => new ValueMapping(group.Key, group.First().From))];
+            .Select(group => new ValueMapping(group.Key, group.First().From));
+        return [.. inverted];
+    }
 
     /// <summary>
     /// Represents one declared value map, tying the two generations' properties to the values that change meaning.

@@ -9,11 +9,9 @@ public class and_every_event_mappings_include_nested_child_only_events : given.a
 {
     void Establish()
     {
-        var notes = _definition.Children["notes"];
-        _definition.Children["notes"] = notes with { FromEvery = new(new Dictionary<PropertyPath, string> { ["count"] = "$count" }, true) };
-        var replies = Child();
-        replies.From[_replyUpdated] = new(new Dictionary<PropertyPath, string>(), "replyId", "noteId");
-        notes.Children["replies"] = replies;
+        var replies = Child().WithFrom(_replyUpdated, new(new Dictionary<PropertyPath, string>(), "replyId", "noteId"));
+        _definition = _definition.WithChild("notes", notes => (notes with { FromEvery = new(new Dictionary<PropertyPath, string> { ["count"] = "$count" }, true) })
+            .WithChild("replies", replies));
     }
 
     Task Because() => ProjectChildEvent(nested: true);

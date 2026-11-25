@@ -54,6 +54,9 @@ public sealed class a_provider_without_key_storage : IEventStoreStorage
     public Storage.SequenceQueries.ISequenceQueryStorage SequenceQueries => throw new NotSupportedException();
 
     /// <inheritdoc/>
+    public Storage.Registrations.IRegistrationIntentStorage RegistrationIntents => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public Storage.Captures.ICapturesStorage Captures => throw new NotSupportedException();
 
     /// <inheritdoc/>

@@ -16,9 +16,9 @@ using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Database"/> that reaches storage that already exists, without ever provisioning anything.
-/// </summary>
+/// </content>
 /// <remarks>
 /// Nothing here creates a database file, a database, a schema, a table, an index, a migration history or a
 /// <c language="csharp">DatabaseNames</c> binding. Storage that is missing is reported as absent.

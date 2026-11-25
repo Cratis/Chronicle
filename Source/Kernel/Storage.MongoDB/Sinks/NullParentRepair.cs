@@ -22,6 +22,17 @@ internal record NullParentRepair(string Path, IReadOnlyList<BsonDocumentArrayFil
             ? Builders<BsonDocument>.Filter.Type(Path, BsonType.Null)
             : ToNullArrayParentFilter();
 
+    static BsonDocument ToPredicate(BsonDocument filter, string identifier)
+    {
+        var predicate = new BsonDocument();
+        foreach (var field in filter.Elements)
+        {
+            predicate.Add(field.Name[(identifier.Length + 1)..], field.Value);
+        }
+
+        return predicate;
+    }
+
     FilterDefinition<BsonDocument> ToNullArrayParentFilter()
     {
         // Reuse the element identifiers and null type check from the positional update filters,
@@ -48,16 +59,5 @@ internal record NullParentRepair(string Path, IReadOnlyList<BsonDocumentArrayFil
 
         var arrayPath = string.Join('.', segments.Take(childMarkerIndex));
         return new BsonDocument(arrayPath, new BsonDocument("$elemMatch", elementMatch));
-    }
-
-    static BsonDocument ToPredicate(BsonDocument filter, string identifier)
-    {
-        var predicate = new BsonDocument();
-        foreach (var field in filter.Elements)
-        {
-            predicate.Add(field.Name[(identifier.Length + 1)..], field.Value);
-        }
-
-        return predicate;
     }
 }

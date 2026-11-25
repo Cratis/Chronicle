@@ -6,5 +6,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Replaying;
 /// <summary>
 /// Represents a reason for a replay candidate when projection definition has changed.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.Replaying.ProjectionDefinitionChangedReplayCandidateReason")]
 public record ProjectionDefinitionChangedReplayCandidateReason()
     : ReplayCandidateReason(ReplayCandidateReasonType.ProjectionDefinitionChanged);

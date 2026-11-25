@@ -10,7 +10,7 @@ public class and_nested_child_paths_are_camel_case_with_a_pascal_case_schema : g
 {
     IProjection _projection;
 
-    void Establish() => _definition.Children["notes"].Children["replies"] = Child();
+    void Establish() => _definition = _definition.WithChild("notes", c1 => c1.WithChild("replies", Child()));
 
     async Task Because() => _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, []);
 

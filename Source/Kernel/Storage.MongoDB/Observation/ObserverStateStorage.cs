@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using MongoDB.Driver;
+using EventSequenceNumber = Cratis.Chronicle.Concepts.Events.EventSequenceNumber;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 
@@ -199,6 +200,18 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             .Project(_ => new { _.Id, _.DurableSubscription })
             .ToListAsync().ConfigureAwait(false);
         return recorded.ToDictionary(_ => _.Id, _ => _.DurableSubscription!);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, EventSequenceNumber>> GetNextEventSequenceNumbers(EventSequenceId owner)
+    {
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Owner, owner) &
+            Builders<ObserverState>.Filter.Ne(_ => _.DurableSubscription, null);
+        var recorded = await _collection
+            .Find(filter)
+            .Project(_ => new { _.Id, _.NextEventSequenceNumber })
+            .ToListAsync().ConfigureAwait(false);
+        return recorded.ToDictionary(_ => _.Id, _ => _.NextEventSequenceNumber);
     }
 
     /// <inheritdoc/>

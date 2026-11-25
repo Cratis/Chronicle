@@ -36,7 +36,7 @@ public interface IAppendedEventsQueue : IGrainWithIntegerCompoundKey
     /// <param name="eventTypes">Collection of <see cref="EventType"/> to subscribe to.</param>
     /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when dispatching events.</param>
     /// <returns>Awaitable task.</returns>
-    Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null);
+    Task Subscribe(ObserverKey observerKey, EventTypeSet eventTypes, ObserverFilters? filters = null);
 
     /// <summary>
     /// Subscribe an observer to every event appended to the queue, whatever its type - including event types that do

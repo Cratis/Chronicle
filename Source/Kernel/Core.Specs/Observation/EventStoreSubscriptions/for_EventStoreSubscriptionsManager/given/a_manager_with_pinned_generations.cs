@@ -15,6 +15,7 @@ public class a_manager_with_pinned_generations : Specification
 {
     protected EventStoreSubscriptionsManager _manager;
     protected IObserver _observer;
+    protected IObserverDefinitionsStorage _definitions;
     protected EventGenerationDelivery _currentMode = EventGenerationDelivery.Pinned;
     protected EventType[] _currentPins = [new("customer", 3)];
     protected EventStoreSubscriptionDefinition _definition;
@@ -22,7 +23,7 @@ public class a_manager_with_pinned_generations : Specification
     async Task Establish()
     {
         var silo = new TestKitSilo();
-        silo.AddEventStoreStorage();
+        _definitions = silo.AddObserverDefinitions();
         silo.AddService(Substitute.For<ILocalSiloDetails>());
         var namespaces = Substitute.For<INamespaces>();
         namespaces.HasEveryNamespace().GetAll().Returns([EventStoreNamespaceName.Default]);
@@ -30,7 +31,7 @@ public class a_manager_with_pinned_generations : Specification
         _observer = Substitute.For<IObserver>();
         _observer.IsSubscribed().Returns(true);
         _observer.GetEventTypes().Returns(_ => _currentPins);
-        _observer.GetDefinition().Returns(_ => ObserverDefinition.Empty with { GenerationDelivery = _currentMode, EventTypes = _currentPins });
+        _definitions.Get(Arg.Any<ObserverId>()).Returns(_ => ObserverDefinition.Empty with { GenerationDelivery = _currentMode, EventTypes = _currentPins });
         silo.AddProbe(_ => _observer);
         _manager = await silo.CreateGrainAsync<EventStoreSubscriptionsManager>("Lobby");
         _definition = new("subscription", "Admin", [new EventType("customer", 3)]) { GenerationDelivery = EventGenerationDelivery.Pinned };
@@ -38,5 +39,5 @@ public class a_manager_with_pinned_generations : Specification
     }
 
     protected void ShouldSubscribePinned() => _observer.Received(1).SubscribeWithGenerationDelivery<IEventStoreSubscriptionObserverSubscriber>(
-        ObserverType.External, Arg.Is<IEnumerable<EventType>>(pins => pins.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, "Lobby", true, Arg.Any<ObserverFilters?>(), true, automatic: true);
+        ObserverType.External, Arg.Is<EventTypeSet>(pins => pins.Single() == new EventType("customer", 3)), Arg.Any<SiloAddress>(), EventGenerationDelivery.Pinned, "Lobby", true, Arg.Any<ObserverFilters?>(), true, automatic: true);
 }

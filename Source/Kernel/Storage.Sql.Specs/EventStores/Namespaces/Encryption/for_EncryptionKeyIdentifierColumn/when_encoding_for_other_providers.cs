@@ -14,7 +14,7 @@ public class when_encoding_for_other_providers : Specification
 
     void Because()
     {
-        using var sqlite = new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite("DataSource=:memory:").Options);
+        using var sqlite = new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>().UseSqlite("DataSource=:memory:").IgnoringManyServiceProviders().Options);
         using var postgresql = new NamespaceDbContext(new DbContextOptionsBuilder<NamespaceDbContext>().UseNpgsql("Host=localhost;Database=encoding").Options);
         _sqlite = [.. _identifiers.Select(_ => EncryptionKeyIdentifierColumn.Value(sqlite, new EncryptionKeyIdentifier(_)))];
         _postgresql = [.. _identifiers.Select(_ => EncryptionKeyIdentifierColumn.Value(postgresql, new EncryptionKeyIdentifier(_)))];

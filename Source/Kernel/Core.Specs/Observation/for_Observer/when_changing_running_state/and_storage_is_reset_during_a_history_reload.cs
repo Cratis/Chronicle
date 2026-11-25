@@ -11,23 +11,24 @@ public class and_storage_is_reset_during_a_history_reload : given.an_observer_wi
     async Task Because()
     {
         _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(_observerId).Returns(_ => _history.Invoke());
-        _definition.SuspendNextRead = true;
         var older = Subscribe();
-        Task? resetting = null;
         try
         {
             await _history.WaitForStart();
             await _writes.ClearStateAsync();
-            resetting = Subscribe();
-            await _definition.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         }
         finally
         {
             _history.Complete(_now.AddDays(-3));
-            _definition.ReleaseRead.TrySetResult();
         }
+
         await older.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
-        if (resetting is not null) await resetting.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+
+        // Subscribe is not interleaved, so a silo runs the subscription that follows the reset only after the older one
+        // returned. Running both at once pushes two subscriptions through the state machine in parallel, which the
+        // Choreography guard against transitions during OnLeave rejects, and which a silo never does.
+        _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(_observerId).Returns(Task.FromResult<DateTimeOffset?>(null));
+        await Subscribe().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         _observedTimestamp = (await _observer.GetInformation()).RunningStateChangedAt;
     }
 

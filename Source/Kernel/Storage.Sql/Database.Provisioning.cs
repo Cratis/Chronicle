@@ -16,9 +16,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Database"/> that creates databases and schemas and keeps their tables migrated.
-/// </summary>
+/// </content>
 public partial class Database
 {
     static async Task Execute(System.Data.Common.DbConnection connection, string sql)

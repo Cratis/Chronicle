@@ -57,6 +57,12 @@ public class a_reactor_whose_stream_completes : all_dependencies
         _firstStream.OnCompleted();
     }
 
+    protected void FailTheFirstStream(Exception error)
+    {
+        _firstStreamCompleted = true;
+        _firstStream.OnError(error);
+    }
+
     protected virtual IObservable<EventsToObserve> ReRegister()
     {
         _registrationsAfterCompletion++;

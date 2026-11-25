@@ -19,9 +19,4 @@ public class OwnGenerationSchemaCache : IEventTypeSchemaCache
 
     /// <inheritdoc/>
     public string GetSchemaJsonFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation) => throw new NotSupportedException();
-
-    /// <inheritdoc/>
-    public void Invalidate(EventStoreName eventStore, EventTypeId eventTypeId)
-    {
-    }
 }

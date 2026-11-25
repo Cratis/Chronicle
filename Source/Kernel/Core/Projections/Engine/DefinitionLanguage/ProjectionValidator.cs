@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
@@ -93,6 +94,17 @@ public class ProjectionValidator(
         foreach (var (name, (type, format)) in aggregatedEventProperties)
         {
             schema.Properties[name] = new JsonSchemaProperty { Type = type, Format = format };
+        }
+
+        ValidateFlatCompositeKeys(projection, errors);
+        foreach (var key in RootFlatKeys(projection))
+        {
+            ValidateFlatCompositeKey(key, schema, errors);
+        }
+
+        if (projection.Key is CompositeKeySyntax { Type.Length: 0 } flatKey)
+        {
+            ValidateFlatCompositeKey(flatKey, schema, errors);
         }
 
         return schema;
@@ -184,6 +196,50 @@ public class ProjectionValidator(
         return char.ToLowerInvariant(value[0]) + value[1..];
     }
 
+    static bool IsFlat(CompositeKeySyntax? key) => key is { Type.Length: 0 };
+
+    static IEnumerable<CompositeKeySyntax> RootFlatKeys(ProjectionSyntax projection) =>
+        projection.Blocks.SelectMany<ProjectionBlockSyntax, CompositeKeySyntax?>(block => block switch
+        {
+            FromSyntax from => [from.Key as CompositeKeySyntax],
+            RemoveWithSyntax removeWith => [removeWith.PartsKey],
+            _ => []
+        }).Where(IsFlat)!;
+
+    static IEnumerable<CompositeKeySyntax> FlatKeysBelowRoot(IEnumerable<ProjectionBlockSyntax> blocks) =>
+        blocks.SelectMany(block => block switch
+        {
+            ChildrenSyntax children => FlatKeysIn(children.Blocks),
+            NestedSyntax nested => FlatKeysIn(nested.Blocks),
+            _ => []
+        });
+
+    static IEnumerable<CompositeKeySyntax> FlatKeysIn(IEnumerable<ProjectionBlockSyntax> blocks) =>
+        blocks.SelectMany<ProjectionBlockSyntax, CompositeKeySyntax?>(block => block switch
+        {
+            FromSyntax from => [from.Key as CompositeKeySyntax],
+            RemoveWithSyntax removeWith => [removeWith.PartsKey],
+            _ => []
+        }).Where(IsFlat).Cast<CompositeKeySyntax>().Concat(FlatKeysBelowRoot(blocks));
+
+    static string? FlatKeyPropertyError(JsonSchema readModelSchema, string name)
+    {
+        var property = readModelSchema.Properties.FirstOrDefault(_ => _.Key.Equals(name, StringComparison.Ordinal)).Value;
+        if (property is null)
+        {
+            return $"Property '{name}' not found in the read model{CompilerErrorSuggestions.ForProperty(name, readModelSchema)}";
+        }
+
+        if (FlatCompositeKeyDefinition.IsProtectedProperty(property))
+        {
+            return $"Flat composite key part '{name}' cannot carry compliance or security metadata";
+        }
+
+        return FlatCompositeKeyDefinition.IsScalarProperty(property)
+            ? null
+            : $"Flat composite key part '{name}' must be a scalar property of the read model";
+    }
+
     static void CheckDuplicateEvent(string eventName, SourceLocation location, HashSet<string> seenEvents, CompilerErrors errors)
     {
         if (!seenEvents.Add(eventName))
@@ -196,8 +252,10 @@ public class ProjectionValidator(
     {
         if (projection.Key is CompositeKeySyntax projectionCompositeKey)
         {
-            ValidateCompositeKey(projectionCompositeKey, readModelSchema, errors);
+            ValidateAnyCompositeKey(projectionCompositeKey, readModelSchema, errors);
         }
+
+        ValidateFlatCompositeKeys(projection, errors);
 
         foreach (var block in projection.Blocks)
         {
@@ -245,7 +303,7 @@ public class ProjectionValidator(
     {
         if (from.Key is CompositeKeySyntax compositeKey)
         {
-            ValidateCompositeKey(compositeKey, readModelSchema, errors);
+            ValidateAnyCompositeKey(compositeKey, readModelSchema, errors);
         }
 
         foreach (var eventSpec in from.Events)
@@ -301,6 +359,15 @@ public class ProjectionValidator(
             return;
         }
 
+        try
+        {
+            ChildrenOrderingValidation.Validate(new ProjectionId("declaration"), collectionPath, ConvertOrdering(children.Ordering), itemSchema);
+        }
+        catch (InvalidChildrenOrdering error)
+        {
+            errors.Add(error.Message, children.Location.Line, children.Location.Column);
+        }
+
         foreach (var block in children.Blocks)
         {
             switch (block)
@@ -335,19 +402,24 @@ public class ProjectionValidator(
     {
         foreach (var mapping in mappings)
         {
+            ValidateDynamicKey(mapping, eventSchema, errors);
             switch (mapping)
             {
-                case SetMappingSyntax set:
-                    ValidateSetMapping(set, targetSchema, eventSchema, errors);
+                case SetMappingSyntax:
+                case SetOnceMappingSyntax:
+                    ValidateSetMapping(mapping, targetSchema, eventSchema, errors);
                     break;
                 case AddMappingSyntax add:
                     ValidatePropertyExists(add.Property, targetSchema, errors, add);
                     ValidateEventPropertyExists(add.Value, eventSchema, errors);
+                    ValidateFactor(add.Value, add.Factor, eventSchema, errors);
                     break;
                 case SubtractMappingSyntax subtract:
                     ValidatePropertyExists(subtract.Property, targetSchema, errors, subtract);
                     ValidateEventPropertyExists(subtract.Value, eventSchema, errors);
+                    ValidateFactor(subtract.Value, subtract.Factor, eventSchema, errors);
                     break;
+                case RemoveKeyMappingSyntax:
                 case ClearMappingSyntax:
                 case CountMappingSyntax:
                 case IncrementMappingSyntax:
@@ -374,6 +446,51 @@ public class ProjectionValidator(
         }
     }
 
+    Cratis.Chronicle.Changes.ChildrenOrdering? ConvertOrdering(ChildrenOrderingSyntax? ordering) => ordering is { Placement: ChildrenPlacement.Sorted }
+        ? new(Cratis.Chronicle.Changes.ChildrenPlacement.Sorted, new PropertyPath(ordering.SortBy!), ordering.Direction == ChildrenSortDirection.Descending ? Cratis.Chronicle.Changes.SortDirection.Descending : Cratis.Chronicle.Changes.SortDirection.Ascending)
+        : null;
+
+    bool TryResolveDictionaryValue(JsonSchema schema, string path, out JsonSchemaProperty property)
+    {
+        property = null!;
+        if (!DynamicMappingTarget.TryRead(path, out var container, out _, out _)) return false;
+        if (!TryResolveProperty(schema, container, out var dictionary)) return false;
+        if (dictionary.ActualSchema.AdditionalPropertiesSchema is not { } valueSchema) return false;
+
+        property = valueSchema as JsonSchemaProperty ?? new JsonSchemaProperty { Type = valueSchema.ActualSchema.Type, Format = valueSchema.ActualSchema.Format };
+        return true;
+    }
+
+    void ValidateDynamicKey(MappingSyntax mapping, JsonSchema eventSchema, CompilerErrors errors)
+    {
+        if (!DynamicMappingTarget.TryRead(mapping.Property, out _, out var source, out var key)) return;
+        if (source != "$eventContent") return;
+        if (!TryResolveProperty(eventSchema, key, out _))
+        {
+            errors.Add($"Event property '{key}' not found", mapping.Location.Line, mapping.Location.Column);
+        }
+    }
+
+    void ValidateFactor(ExpressionSyntax value, ExpressionSyntax? factor, JsonSchema eventSchema, CompilerErrors errors)
+    {
+        if (factor is null) return;
+        ValidateNumericOperand(value, eventSchema, errors);
+        ValidateNumericOperand(factor, eventSchema, errors);
+    }
+
+    void ValidateNumericOperand(ExpressionSyntax value, JsonSchema eventSchema, CompilerErrors errors)
+    {
+        ValidateEventPropertyExists(value, eventSchema, errors);
+        var isNumeric = value switch
+        {
+            PathExpressionSyntax path => TryResolveProperty(eventSchema, path.Path, out var property) &&
+                (property.ActualSchema.Type & (JsonObjectType.Integer | JsonObjectType.Number)) != JsonObjectType.None,
+            LiteralExpressionSyntax literal => literal.Value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal,
+            _ => true
+        };
+        if (!isNumeric) errors.Add("Arithmetic factors require numeric operands", value.Location.Line, value.Location.Column);
+    }
+
     void ValidateEventPropertyExists(ExpressionSyntax value, JsonSchema eventSchema, CompilerErrors errors)
     {
         if (value is PathExpressionSyntax path && !TryResolveProperty(eventSchema, path.Path, out _))
@@ -382,8 +499,14 @@ public class ProjectionValidator(
         }
     }
 
-    void ValidateSetMapping(SetMappingSyntax set, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
+    void ValidateSetMapping(MappingSyntax set, JsonSchema targetSchema, JsonSchema eventSchema, CompilerErrors errors)
     {
+        var source = set switch
+        {
+            SetMappingSyntax mapping => mapping.Source,
+            SetOnceMappingSyntax mapping => mapping.Source,
+            _ => throw new UnsupportedProjectionSyntax(set)
+        };
         var targetPath = set.Property;
 
         if (!TryResolveProperty(targetSchema, targetPath, out var targetProperty))
@@ -393,7 +516,7 @@ public class ProjectionValidator(
         }
 
         // Validate the source expression and type compatibility
-        if (set.Source is PathExpressionSyntax path)
+        if (source is PathExpressionSyntax path)
         {
             var sourcePath = path.Path;
 
@@ -403,7 +526,7 @@ public class ProjectionValidator(
                 return;
             }
 
-            if (!AreTypesCompatible(targetProperty.Type, sourceProperty.Type))
+            if (!AreTypesCompatible(targetProperty.ActualSchema.Type, sourceProperty.ActualSchema.Type))
             {
                 errors.Add($"Type mismatch: Cannot assign '{sourcePath}' of type '{sourceProperty.Type}' to '{targetPath}' of type '{targetProperty.Type}'", set.Location.Line, set.Location.Column);
             }
@@ -413,6 +536,11 @@ public class ProjectionValidator(
     bool TryResolveProperty(JsonSchema schema, string path, out JsonSchemaProperty property)
     {
         property = null!;
+        if (path.Contains(".$", StringComparison.Ordinal))
+        {
+            return TryResolveDictionaryValue(schema, path, out property);
+        }
+
         var parts = path.Split('.');
         var currentSchema = schema;
 
@@ -442,6 +570,94 @@ public class ProjectionValidator(
         }
 
         return true;
+    }
+
+    void ValidateAnyCompositeKey(CompositeKeySyntax compositeKey, JsonSchema readModelSchema, CompilerErrors errors)
+    {
+        if (IsFlat(compositeKey))
+        {
+            ValidateFlatCompositeKey(compositeKey, readModelSchema, errors);
+        }
+        else
+        {
+            ValidateCompositeKey(compositeKey, readModelSchema, errors);
+        }
+    }
+
+    void ValidateFlatCompositeKeys(ProjectionSyntax projection, CompilerErrors errors)
+    {
+        foreach (var below in FlatKeysBelowRoot(projection.Blocks))
+        {
+            errors.Add("A flat composite key identifies the root read model; it cannot be used in children, joins or nested scopes", below.Location.Line, below.Location.Column);
+        }
+
+        var rootKeys = RootFlatKeys(projection).ToArray();
+        var isFlat = rootKeys.Length > 0 || IsFlat(projection.Key as CompositeKeySyntax);
+        if (!isFlat)
+        {
+            return;
+        }
+
+        var expected = rootKeys.FirstOrDefault();
+        foreach (var other in rootKeys.Skip(1))
+        {
+            if (!other.Parts.Select(_ => _.Property).ToHashSet(StringComparer.Ordinal).SetEquals(expected!.Parts.Select(_ => _.Property)))
+            {
+                errors.Add("Every root handler of a flat composite key must supply the same parts", other.Location.Line, other.Location.Column);
+            }
+        }
+
+        foreach (var block in projection.Blocks)
+        {
+            switch (block)
+            {
+                case FromSyntax { Key: not CompositeKeySyntax { Type.Length: 0 } } from:
+                    errors.Add("A projection identified by a flat composite key needs the key parts in every root from", from.Location.Line, from.Location.Column);
+                    break;
+                case RemoveWithSyntax { PartsKey: null } removeWith:
+                    errors.Add("A projection identified by a flat composite key needs the key parts in every root remove with", removeWith.Location.Line, removeWith.Location.Column);
+                    break;
+                case RemoveViaJoinSyntax or ClearWithSyntax or JoinSyntax or ChildrenSyntax or NestedSyntax or EverySyntax or AllSyntax:
+                    errors.Add($"'{block.GetType().Name}' is not supported in a projection identified by a flat composite key", block.Location.Line, block.Location.Column);
+                    break;
+            }
+        }
+    }
+
+    void ValidateFlatCompositeKey(CompositeKeySyntax compositeKey, JsonSchema readModelSchema, CompilerErrors errors)
+    {
+        var parts = compositeKey.Parts.ToArray();
+        if (parts.Length < FlatCompositeKeyExpression.MinimumParts)
+        {
+            errors.Add($"A flat composite key needs at least {FlatCompositeKeyExpression.MinimumParts} parts", compositeKey.Location.Line, compositeKey.Location.Column);
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var part in parts)
+        {
+            if (!seen.Add(part.Property))
+            {
+                errors.Add($"Key part '{part.Property}' is given more than once", part.Location.Line, part.Location.Column);
+                continue;
+            }
+
+            if (part.Property.StartsWith('_') || part.Property.Equals("id", StringComparison.OrdinalIgnoreCase) || part.Property.Contains('.'))
+            {
+                errors.Add($"'{part.Property}' is not supported as a flat composite key part; use a simple root property name that is not 'id' and does not start with '_'", part.Location.Line, part.Location.Column);
+                continue;
+            }
+
+            if (FlatKeyPropertyError(readModelSchema, part.Property) is { } propertyError)
+            {
+                errors.Add(propertyError, part.Location.Line, part.Location.Column);
+                continue;
+            }
+
+            if (part.Expression is not (PathExpressionSyntax or EventContextExpressionSyntax or EventSourceIdExpressionSyntax or CausedByExpressionSyntax or LiteralExpressionSyntax))
+            {
+                errors.Add($"Expression type '{part.Expression.GetType().Name}' is not supported in composite keys", part.Location.Line, part.Location.Column);
+            }
+        }
     }
 
     void ValidateCompositeKey(CompositeKeySyntax compositeKey, JsonSchema readModelSchema, CompilerErrors errors)

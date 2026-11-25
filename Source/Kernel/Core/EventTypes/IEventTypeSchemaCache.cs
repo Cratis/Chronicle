@@ -8,7 +8,7 @@ using Cratis.Chronicle.Schemas;
 namespace Cratis.Chronicle.EventTypes;
 
 /// <summary>
-/// Defines a per-silo cache of event type schemas in their JSON form, as carried alongside an
+/// Defines a silo-wide view over the event type registry that hands out schemas in their JSON form, as carried alongside an
 /// <see cref="AppendedEvent"/> when it crosses a silo boundary.
 /// </summary>
 public interface IEventTypeSchemaCache
@@ -21,8 +21,7 @@ public interface IEventTypeSchemaCache
     /// <param name="generation">The <see cref="EventTypeGeneration"/> to get the schema for.</param>
     /// <returns>The schema as JSON.</returns>
     /// <exception cref="Exception">
-    /// Propagates whatever the underlying event type storage lookup throws. A failed lookup is not cached, so
-    /// the next call retries it.
+    /// Propagates whatever the event type lookup throws for a type the registry does not hold.
     /// </exception>
     string GetSchemaJsonFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation);
 
@@ -35,15 +34,4 @@ public interface IEventTypeSchemaCache
     /// <param name="ownSchema">The caller's own generation schema. It never decides the result, which always comes from the definition snapshot.</param>
     /// <returns>The effective protection schema.</returns>
     ValueTask<JsonSchema> GetProtectionSchemaFor(EventStoreName eventStore, EventTypeId eventTypeId, EventTypeGeneration generation, JsonSchema ownSchema);
-
-    /// <summary>
-    /// Evict every cached generation of a specific <see cref="EventTypeId"/> within one event store.
-    /// </summary>
-    /// <param name="eventStore">The <see cref="EventStoreName"/> the event type belongs to.</param>
-    /// <param name="eventTypeId">The <see cref="EventTypeId"/> to evict.</param>
-    /// <remarks>
-    /// Scoped to <paramref name="eventStore"/> - the same <see cref="EventTypeId"/> in another event store is
-    /// a distinct schema and stays cached.
-    /// </remarks>
-    void Invalidate(EventStoreName eventStore, EventTypeId eventTypeId);
 }

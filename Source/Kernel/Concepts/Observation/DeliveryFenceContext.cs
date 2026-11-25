@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// </summary>
 /// <param name="ReleaseBy">The latest time the abandoned call is held.</param>
 /// <param name="Targets">The original delivery targets, never replacement subscription targets.</param>
-public record DeliveryFenceContext(DateTimeOffset? ReleaseBy, IReadOnlyList<DeliveryFenceTarget>? Targets);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.DeliveryFenceContext")]
+public record DeliveryFenceContext([Id(0)] DateTimeOffset? ReleaseBy, [Id(1)] IReadOnlyList<DeliveryFenceTarget>? Targets);

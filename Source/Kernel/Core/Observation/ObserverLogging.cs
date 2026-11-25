@@ -227,6 +227,9 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Warning, "Observer deactivation did not finish before the runtime stopped waiting for it; the remaining teardown was abandoned")]
     internal static partial void DeactivationOutlivedItsTimeout(this ILogger<Observer> logger, Exception exception);
 
+    [LoggerMessage(LogLevel.Warning, "Activation of observer {ObserverId} was cancelled by the runtime after {Elapsed}; the last step it completed was '{LastStep}'")]
+    internal static partial void ActivationCancelled(this ILogger<Observer> logger, ObserverId observerId, TimeSpan elapsed, string lastStep);
+
     [LoggerMessage(LogLevel.Information, "Restoring the subscription of client {ConnectionId}, which this observer activation does not know about")]
     internal static partial void RestoringClientSubscription(this ILogger<Observer> logger, ConnectionId connectionId);
 
@@ -262,12 +265,6 @@ internal static partial class ObserverLogMessages
 
     [LoggerMessage(LogLevel.Warning, "A silo left the cluster and the appended-events queue no longer holds the live subscription of the observer at {NextEventSequenceNumber}. Re-routing observer.")]
     internal static partial void RestoringLiveSubscriptionAfterSiloDeparture(this ILogger<Observer> logger, EventSequenceNumber nextEventSequenceNumber);
-
-    [LoggerMessage(LogLevel.Debug, "Verifying the live subscription after a silo left the cluster failed; checking again on the next tick")]
-    internal static partial void VerifyingLiveSubscriptionFailed(this ILogger<Observer> logger, Exception exception);
-
-    [LoggerMessage(LogLevel.Warning, "Scheduling live subscription checks after a silo left the cluster failed")]
-    internal static partial void OpeningDepartureChecksFailed(this ILogger<Observer> logger, Exception exception);
 
     [LoggerMessage(LogLevel.Warning, "Watchdog detected that the observer is preparing catch-up with no catch-up job to finish the preparation. Clearing the preparation and re-routing observer.")]
     internal static partial void WatchdogRescuingStrandedCatchupPreparation(this ILogger<Observer> logger);

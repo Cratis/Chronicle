@@ -36,5 +36,5 @@ public class and_the_observer_is_unsubscribed_before_cleanup_finishes : given.an
     [Fact] void should_not_retry_failed_partitions() => _jobsManager.DidNotReceive().Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>());
     [Fact] void should_not_start_in_flight_catchup() => CheckDidNotStartCatchupJob();
     [Fact] async Task should_not_renew_quarantine() => (await _observer.IsObserverQuarantined()).ShouldBeFalse();
-    [Fact] void should_not_rejoin_the_queue() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_not_rejoin_the_queue() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

@@ -190,7 +190,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
             serverAddressResolver: null,
             loadBalancerStrategy: options.LoadBalancerStrategy,
             timeProvider: null,
-            certificateAuthorities: certificateAuthorities);
+            certificateAuthorities: certificateAuthorities)
+        {
+            MultiplexObservation = options.MultiplexObservation
+        };
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
@@ -469,6 +472,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _deploymentCheckCancellation ??= new();
             var token = _deploymentCheckCancellation.Token;
             var generation = Options.Serverless.DeploymentGeneration;
+            var loggerFactory = _loggerFactory;
             var check = _deploymentChecks.GetOrAdd(
                 eventStore.Name,
                 static (_, state) => new(
@@ -487,7 +491,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                         return task;
                     },
                     LazyThreadSafetyMode.ExecutionAndPublication),
-                (eventStore, generation, loggerFactory: _loggerFactory, token));
+                (eventStore, generation, loggerFactory, token));
             _ = check.Value;
         }
     }

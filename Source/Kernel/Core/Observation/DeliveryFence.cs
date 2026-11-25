@@ -12,4 +12,6 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="Partition">The partition.</param>
 /// <param name="ReleaseBy">The release deadline, also used to reject stale releases.</param>
 /// <param name="Targets">The captured original targets; empty means hold conservatively.</param>
-public record DeliveryFence(Key Partition, DateTimeOffset ReleaseBy, IReadOnlyList<DeliveryFenceTarget> Targets);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.DeliveryFence")]
+public record DeliveryFence([Id(0)] Key Partition, [Id(1)] DateTimeOffset ReleaseBy, [Id(2)] IReadOnlyList<DeliveryFenceTarget> Targets);

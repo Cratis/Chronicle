@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Projections.Generations;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Configuration;
 
@@ -14,6 +15,16 @@ public class Observers
     /// The recommended period, and the one used when <see cref="UnseenRemovalAfter"/> is not a positive value.
     /// </summary>
     public static readonly TimeSpan DefaultUnseenRemovalAfter = TimeSpan.FromDays(7);
+
+    static readonly ObserverSubscriptionKind[] _defaultDormantKinds =
+    [
+        ObserverSubscriptionKind.ClientReactor,
+        ObserverSubscriptionKind.ClientReducer,
+        ObserverSubscriptionKind.Projection,
+        ObserverSubscriptionKind.CollapsingProjection,
+        ObserverSubscriptionKind.EventStoreSubscription,
+        ObserverSubscriptionKind.PatternCapture
+    ];
 
     /// <summary>
     /// Gets the upper bound on how many job steps run in parallel.
@@ -29,8 +40,8 @@ public class Observers
     /// <summary>
     /// Gets the maximum number of gRPC reactor and reducer registrations running concurrently on a silo.
     /// </summary>
-    /// <remarks>Defaults to 0 (unlimited). Values below 1 disable the gate. Does not limit event append or observer delivery.</remarks>
-    public int MaxConcurrentRegistrations { get; init; }
+    /// <remarks>Defaults to 16, so a client registering thousands of observers at once is admitted gradually. Values below 1 disable the gate. Does not limit event append or observer delivery.</remarks>
+    public int MaxConcurrentRegistrations { get; init; } = 16;
 
     /// <summary>
     /// Gets the maximum number of projection subscriptions and failed-partition recoveries running concurrently on a silo.
@@ -237,23 +248,51 @@ public class Observers
     /// <remarks>
     /// Defaults to 900 seconds (15 minutes), the same as <see cref="IdleDeactivationAfter"/>; 0 keeps every subscribed
     /// observer resident. A released observer is woken by the appended events queue when an event it observes arrives,
-    /// and by the safety net (<see cref="DormantSafetyNet"/>). Applies to client reactors, client reducers and
-    /// projections only, and only while <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Release"/>
+    /// and by the safety net (<see cref="DormantSafetyNet"/>). Applies to client reactors, client reducers,
+    /// projections, event store subscriptions and pattern capture only, and only while <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Release"/>
     /// and every silo of the cluster runs the same release, which supports it. An observer resumes from its persisted
     /// cursor when it wakes (decision 0034). A server-level setting.
     /// </remarks>
     public int DormantAfter { get; init; } = 900;
 
     /// <summary>
-    /// Gets how many seconds pass at most before a dormant observer is woken, whether or not an event arrived.
+    /// Gets the kinds of subscription whose observer is released when dormant and woken from its durable record.
     /// </summary>
     /// <remarks>
-    /// Defaults to 900 seconds (15 minutes). Each observer's interval is jittered so wake-ups do not line up. It bounds
-    /// how long a lost wake-up can delay delivery to a dormant observer, and costs about one activation per dormant
-    /// observer per interval. The wake-ups are driven by the appended events queue, so no timer or activation is held
-    /// for a dormant observer. Values below 1 select the default. A server-level setting (decision 0034).
+    /// Empty by default, which selects client reactors, client reducers, projections, collapsing projections, event
+    /// store subscriptions and pattern capture (see <see cref="EffectiveDormantKinds"/>). When set, only the listed kinds are released and the
+    /// others stay resident. Kinds that cannot be woken from a record (kernel reactors, webhooks) are never released,
+    /// whatever is listed. Only takes effect while <see cref="DormantAfter"/> is above zero. A server-level setting.
+    /// </remarks>
+    public IReadOnlyList<ObserverSubscriptionKind> DormantKinds { get; init; } = [];
+
+    /// <summary>
+    /// Gets the kinds released when dormant: <see cref="DormantKinds"/> when set, otherwise every kind that can be.
+    /// </summary>
+    public IReadOnlyList<ObserverSubscriptionKind> EffectiveDormantKinds => DormantKinds.Count > 0 ? DormantKinds : _defaultDormantKinds;
+
+    /// <summary>
+    /// Gets how many seconds pass at most before the safety net of an appended events queue looks for observers it holds no
+    /// live subscription for that have an event waiting.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 900 seconds (15 minutes). Each queue's interval is jittered so passes do not line up. It bounds how long
+    /// a lost wake-up can delay delivery to an observer without an activation. A pass compares the persisted cursor of each
+    /// such observer with the tail of the event types it observes and wakes it only when an event is waiting, or when the
+    /// tail cannot be read. The passes are driven by the queue, so no timer or activation is held for a dormant observer.
+    /// Values below 1 select the default. A server-level setting.
     /// </remarks>
     public int DormantSafetyNet { get; init; } = 900;
+
+    /// <summary>
+    /// Gets the most seconds between two wake-ups of an observer that stays without a live subscription after it was woken.
+    /// </summary>
+    /// <remarks>
+    /// An observer whose client is gone cannot take its subscription again, so it is not woken for every event: the first
+    /// repeat waits a minute and each one after it twice as long, up to this value. Defaults to 3600 seconds (60 minutes).
+    /// Values below 1 select the default. A server-level setting.
+    /// </remarks>
+    public int DormantSafetyNetFullWake { get; init; } = 3600;
 
     /// <summary>
     /// Gets how many dormant observers one silo wakes at the same time.
@@ -268,6 +307,17 @@ public class Observers
     public int MaxConcurrentWakes { get; init; }
 
     /// <summary>
+    /// Gets how many catch-up jobs run at the same time in one event store namespace.
+    /// </summary>
+    /// <remarks>
+    /// When a client application returns, every observer it owns would start a catch-up job at once. Past this number an
+    /// observer that needs a catch-up job waits: it stays behind, tries again after a short, randomized delay and counts the
+    /// wait as a deferral in <c language="text">cratis.chronicle.observer.catch_up_deferrals</c>. An observer that already has a catch-up job
+    /// is never held back. Defaults to 16. Values of 0 or less lift the limit.
+    /// </remarks>
+    public int MaxConcurrentCatchUpJobs { get; init; } = 16;
+
+    /// <summary>
     /// Gets how many events a woken observer may read and deliver from its cursor before the wake falls back to a catch-up job.
     /// </summary>
     /// <remarks>
@@ -278,13 +328,11 @@ public class Observers
     public int DormantResumeMaxEvents { get; init; } = 1000;
 
     /// <summary>
-    /// Gets how often each appended events queue compares its live subscriptions with the stored durable ones.
+    /// Gets how often each appended events queue compared its live subscriptions with the stored durable ones.
     /// </summary>
     /// <remarks>
-    /// Defaults to 15 minutes. The comparison reads the observer states of the queue's event store and namespace once
-    /// per interval and only counts disagreements; it never changes a subscription. It runs only while
-    /// <see cref="DurableSubscriptions"/> is <see cref="DurableSubscriptionMode.Shadow"/>. A zero or negative value
-    /// falls back to the default.
+    /// No longer used: the queues no longer compare recorded subscriptions with their live ones. Kept so existing
+    /// configuration still loads.
     /// </remarks>
     public TimeSpan DurableSubscriptionCheckInterval { get; init; } = TimeSpan.FromMinutes(15);
 

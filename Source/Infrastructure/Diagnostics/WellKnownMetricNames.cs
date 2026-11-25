@@ -62,6 +62,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="ObserverZeroWorkCatchUps"/>.</summary>
     public const string ObserverZeroWorkCatchUpsUnit = "{catch_up}";
 
+    /// <summary>Number of catch-ups that were deferred instead of starting a catch-up job.</summary>
+    public const string ObserverCatchUpDeferrals = "cratis.chronicle.observer.catch_up_deferrals";
+
+    /// <summary>Unit of <see cref="ObserverCatchUpDeferrals"/>.</summary>
+    public const string ObserverCatchUpDeferralsUnit = "{catch_up}";
+
     /// <summary>Number of shadow claim divergences.</summary>
     public const string ObserverClaimDivergences = "cratis.chronicle.observer.claim_divergences";
 
@@ -254,6 +260,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="AppendedEventsQueueDurableSubscriptionDisagreements"/>.</summary>
     public const string AppendedEventsQueueDurableSubscriptionDisagreementsUnit = "{subscription}";
 
+    /// <summary>Number of observers the silo-local routing table and the subscriptions of an appended events queue disagreed on for a dispatched batch.</summary>
+    public const string AppendedEventsQueueShadowRoutingDisagreements = "cratis.chronicle.appended_events_queue.shadow_routing_disagreements";
+
+    /// <summary>Unit of <see cref="AppendedEventsQueueShadowRoutingDisagreements"/>.</summary>
+    public const string AppendedEventsQueueShadowRoutingDisagreementsUnit = "{observer}";
+
     /// <summary>Number of observers held as dormant by the appended events queues of a silo: subscribed, with no activation.</summary>
     public const string ObserverDormant = "cratis.chronicle.observer.dormant";
 
@@ -277,6 +289,12 @@ public static class WellKnownMetricNames
 
     /// <summary>Unit of <see cref="ObserverDormantWakesDelayed"/>.</summary>
     public const string ObserverDormantWakesDelayedUnit = "{wake}";
+
+    /// <summary>Number of dormant observers the safety net looked at, by what it found: up to date, behind, not comparable, or due for the unconditional wake.</summary>
+    public const string ObserverDormantSafetyNetChecks = "cratis.chronicle.observer.dormant_safety_net_checks";
+
+    /// <summary>Unit of <see cref="ObserverDormantSafetyNetChecks"/>.</summary>
+    public const string ObserverDormantSafetyNetChecksUnit = "{check}";
 
     /// <summary>Number of woken observers that resumed from their cursor or fell back to catch-up, by outcome.</summary>
     public const string ObserverDormantResumes = "cratis.chronicle.observer.dormant_resumes";
@@ -403,6 +421,54 @@ public static class WellKnownMetricNames
 
     /// <summary>Unit of <see cref="ObserverJobTotalSteps"/>.</summary>
     public const string ObserverJobTotalStepsUnit = "{step}";
+
+    /// <summary>Number of calls to grains running on this silo, interleaved or not.</summary>
+    public const string GrainCallsRunning = "cratis.chronicle.grain.calls.running";
+
+    /// <summary>Unit of <see cref="GrainCallsRunning"/>.</summary>
+    public const string GrainCallsRunningUnit = "{call}";
+
+    /// <summary>Number of calls this silo has made to grains that have not been answered: running or queued at the grain.</summary>
+    public const string GrainCallsPending = "cratis.chronicle.grain.calls.pending";
+
+    /// <summary>Unit of <see cref="GrainCallsPending"/>.</summary>
+    public const string GrainCallsPendingUnit = "{call}";
+
+    /// <summary>How long the oldest unanswered call this silo made to a grain has been waiting.</summary>
+    public const string GrainCallsOldestPendingAge = "cratis.chronicle.grain.calls.oldest_pending_age";
+
+    /// <summary>Unit of <see cref="GrainCallsOldestPendingAge"/>.</summary>
+    public const string GrainCallsOldestPendingAgeUnit = "s";
+
+    /// <summary>The load status of this silo: 0 accepting, 1 degraded, 2 recovering.</summary>
+    public const string KernelLoadStatus = "cratis.chronicle.kernel.load_status";
+
+    /// <summary>Unit of <see cref="KernelLoadStatus"/>.</summary>
+    public const string KernelLoadStatusUnit = "1";
+
+    /// <summary>Number of gRPC streaming calls this silo is serving.</summary>
+    public const string GrpcStreamsOpen = "cratis.chronicle.grpc.streams.open";
+
+    /// <summary>Unit of <see cref="GrpcStreamsOpen"/>.</summary>
+    public const string GrpcStreamsOpenUnit = "{stream}";
+
+    /// <summary>Number of accepted registrations that have not been applied yet.</summary>
+    public const string RegistrationPending = "cratis.chronicle.registration.pending";
+
+    /// <summary>Unit of <see cref="RegistrationPending"/>.</summary>
+    public const string RegistrationPendingUnit = "{registration}";
+
+    /// <summary>How long the oldest accepted registration that has not been applied has been waiting.</summary>
+    public const string RegistrationOldestPendingAge = "cratis.chronicle.registration.oldest_pending_age";
+
+    /// <summary>Unit of <see cref="RegistrationOldestPendingAge"/>.</summary>
+    public const string RegistrationOldestPendingAgeUnit = "s";
+
+    /// <summary>Number of jobs that ended with failures, or could not prepare their steps.</summary>
+    public const string JobFailed = "cratis.chronicle.job.failed";
+
+    /// <summary>Unit of <see cref="JobFailed"/>.</summary>
+    public const string JobFailedUnit = "{job}";
 
     /// <summary>Duration of an append to an event sequence.</summary>
     public const string EventSequenceAppendDuration = "cratis.chronicle.event_sequence.append.duration";

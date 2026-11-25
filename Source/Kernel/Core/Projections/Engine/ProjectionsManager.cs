@@ -170,6 +170,7 @@ public partial class ProjectionsManager(
             _evictionRevision++;
             _registrations.TryRemove((eventStore, id), out _);
             _cache.Remove(eventStore, id);
+            projectionFactory.Evict(eventStore, id);
         }
     }
 
@@ -215,8 +216,8 @@ public partial class ProjectionsManager(
         IProjection? validated = null;
         if (validationNamespace is not null)
         {
-            var schemas = await storage.GetEventStore(eventStore).EventTypes.GetLatestForAllEventTypes();
-            validated = await projectionFactory.Create(eventStore, validationNamespace, definition, readModel, schemas);
+            // Compiling reports invalid expressions and schemas, and leaves the plan behind for every namespace to share.
+            validated = await projectionFactory.Create(eventStore, validationNamespace, definition, readModel);
         }
 
         lock (_publication)
@@ -244,8 +245,7 @@ public partial class ProjectionsManager(
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
         await provenance.EnsureReadable(eventStore, definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace, readModel);
         if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
-        var schemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-        var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, schemas);
+        var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
         lock (_publication)
         {
             if (revision != _evictionRevision) return projection;

@@ -7,9 +7,11 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Observation.States;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +33,7 @@ public partial class Observer
     int _dormantResumeMaxEvents = 1000;
     bool _resumingFromDormancy;
     bool _repairDurableSubscriptionPending;
+    bool _promoteStandbyAfterWake;
 
     /// <summary>
     /// Gets whether the observer was activated from a durable subscription and is still resuming from its cursor.
@@ -66,10 +69,17 @@ public partial class Observer
     /// </remarks>
     async Task RestoreFromDurableSubscription()
     {
-        if (State.DurableSubscription is not { } record ||
+        // Without a record of its own, the binding its supervisor holds in memory is the hint the observer resumes from.
+        var record = State.DurableSubscription;
+        if (record is null && _observerExists && !_subscription.IsSubscribed && DormantReleaseAllowed && IsResumableState)
+        {
+            record = await BindingFromSupervisor();
+        }
+
+        if (record is null ||
             !_observerExists ||
             _subscription.IsSubscribed ||
-            !record.Kind.CanBeReleasedWhenDormant() ||
+            !record.Kind.IsReleasedWhenDormant(_dormantKinds) ||
             !DormantReleaseAllowed ||
             CannotReconcileSubscription())
         {
@@ -109,6 +119,8 @@ public partial class Observer
             ObserverSubscriptionKind.ClientReducer => await RestoreClientTargets<IReducerObserverSubscriber>(record, eventTypes, filters),
             ObserverSubscriptionKind.CollapsingProjection => RestoreKernelSubscription<ICollapsingProjectionObserverSubscriber>(eventTypes, filters),
             ObserverSubscriptionKind.Projection => RestoreKernelSubscription<IProjectionObserverSubscriber>(eventTypes, filters),
+            ObserverSubscriptionKind.EventStoreSubscription => RestoreEventStoreSubscription(eventTypes, filters),
+            ObserverSubscriptionKind.PatternCapture => RestoreKernelSubscription<IPatternCaptureSubscriber>(eventTypes, filters),
             _ => false
         };
 
@@ -139,7 +151,33 @@ public partial class Observer
             restored = true;
         }
 
+        // The clients the subscription replaced wait for the one that holds it to leave. When none of the targets is left
+        // the observer promotes one of them as soon as it has woken, which the state machine needs to have entered its state for.
+        RestoreSupersededRegistrations(record);
+        _promoteStandbyAfterWake = !restored && _supersededRegistrations.Count > 0;
         return restored;
+    }
+
+    /// <summary>
+    /// Restores the subscription of an event store subscription, whose subscriber needs the event store it forwards to.
+    /// </summary>
+    /// <remarks>
+    /// The target is part of the observer id (see <see cref="EventStoreSubscriptionObserverIds"/>), so the record names nothing more.
+    /// An id that names no target is not restorable, which drops the record and leaves the subscription manager to resubscribe.
+    /// </remarks>
+    /// <param name="eventTypes">The event types the observer observes.</param>
+    /// <param name="filters">The filters of the subscription, if any.</param>
+    /// <returns>True when the subscription was restored; false when the id names no target.</returns>
+    bool RestoreEventStoreSubscription(EventType[] eventTypes, ObserverFilters? filters)
+    {
+        if (!EventStoreSubscriptionObserverIds.TryGetTargetEventStore(_observerId, out var target))
+        {
+            return false;
+        }
+
+        var silo = ServiceProvider.GetService<ILocalSiloDetails>()?.SiloAddress ?? SiloAddress.Zero;
+        ApplySubscription<IEventStoreSubscriptionObserverSubscriber>(eventTypes, silo, target.Value, Definition.IsReplayable, filters, Definition.GenerationDelivery);
+        return true;
     }
 
     bool RestoreKernelSubscription<TSubscriber>(EventType[] eventTypes, ObserverFilters? filters)
@@ -166,6 +204,12 @@ public partial class Observer
         {
             _repairDurableSubscriptionPending = false;
             await RepairStaleDurableSubscription();
+        }
+
+        if (_promoteStandbyAfterWake)
+        {
+            _promoteStandbyAfterWake = false;
+            await PromoteSupersededRegistrationOrUnsubscribe();
         }
 
         if (!_resumingFromDormancy)
@@ -281,7 +325,7 @@ public partial class Observer
 
         var subscription = new AppendedEventsQueueObserverSubscription(
             _observerKey,
-            [.. _subscription.EventTypes.Select(eventType => eventType.Id)],
+            _subscription.EventTypes,
             _subscription.Filters,
             State.SubscribesToAllEvents);
         return [.. AppendedEventsQueue.SelectForSubscription(events, subscription)];

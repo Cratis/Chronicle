@@ -31,7 +31,10 @@ public class FailedPartitions
     /// </summary>
     public IEnumerable<FailedPartition> Partitions
     {
-        get => _partitions.Values;
+        get
+        {
+            return _partitions.Values;
+        }
         set
         {
             // Keyed by the entry identity rather than the partition: a partition is only unique within

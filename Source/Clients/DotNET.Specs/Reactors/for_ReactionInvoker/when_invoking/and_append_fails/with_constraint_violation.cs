@@ -34,15 +34,14 @@ public class with_constraint_violation : Specification
         _eventStore.EventTypes.Returns(eventTypes);
 
         // Create a failed AppendResult with constraint violations
-        _failedAppendResult = AppendResult.Failed(
-            CorrelationId.New(),
-            [new ConstraintViolation(
-                new EventTypeId("MyOutboundEvent"),
-                EventSequenceNumber.Unavailable,
-                ConstraintType.Unique,
-                "TestConstraint",
-                "Constraint violated",
-                new ConstraintViolationDetails())]);
+        var violation = new ConstraintViolation(
+            new EventTypeId("MyOutboundEvent"),
+            EventSequenceNumber.Unavailable,
+            ConstraintType.Unique,
+            "TestConstraint",
+            "Constraint violated",
+            new ConstraintViolationDetails());
+        _failedAppendResult = AppendResult.Failed(CorrelationId.New(), [violation]);
 
         _eventLog.Append(default!, default!, default, default, default, default, default, default, default, default)
             .ReturnsForAnyArgs(_failedAppendResult);

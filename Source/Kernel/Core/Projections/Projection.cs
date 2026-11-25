@@ -204,7 +204,7 @@ public class Projection(
                 continue;
             }
 
-            if (string.Equals(resolved.Key.Value.ToString(), wanted, StringComparison.Ordinal))
+            if (string.Equals(FlatCompositeKeyState.Text(resolved.Key), wanted, StringComparison.Ordinal))
             {
                 result.Add(stored[index]);
             }
@@ -241,9 +241,12 @@ public class Projection(
     /// </summary>
     /// <param name="changes">The changes recorded for the event.</param>
     /// <returns>The changes without any that only record the marker.</returns>
-    static Change[] WithoutInitializationMarker(Change[] changes) =>
-        [.. changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
-            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized))];
+    static Change[] WithoutInitializationMarker(Change[] changes)
+    {
+        var remaining = changes.Where(change => change is not PropertiesChanged<ExpandoObject> properties ||
+            !properties.Differences.All(difference => difference.PropertyPath == WellKnownProperties.ReadModelInstanceInitialized));
+        return [.. remaining];
+    }
 
     static bool ShouldMaterializeReadModel(
         bool isMaterialized,
@@ -287,11 +290,11 @@ public class Projection(
         {
             var workingState = state.Model.Clone();
             ((IDictionary<string, object?>)workingState)[WellKnownProperties.ReadModelInstanceInitialized] = state.IsInitialized;
-            sink.Set(key.Value.ToString()!, workingState, @event.Context.SequenceNumber);
+            sink.Set(FlatCompositeKeyState.Text(key), workingState, @event.Context.SequenceNumber);
         }
         else
         {
-            sink.Remove(key.Value.ToString()!);
+            sink.Remove(FlatCompositeKeyState.Text(key));
         }
     }
 
@@ -303,9 +306,30 @@ public class Projection(
         }
     }
 
+    static void SeedFlatCompositeKey(ProjectionEventContext context, ExpandoObject state)
+    {
+        if (context.Key is FlatCompositeKey flatKey)
+        {
+            FlatCompositeKeyState.Seed(context.Changeset, state, flatKey);
+        }
+    }
+
+    static void VerifyFlatCompositeKey(ProjectionEventContext context)
+    {
+        if (context.Key is FlatCompositeKey flatKey && !context.IsDeferred && !context.IsUnresolvable)
+        {
+            FlatCompositeKeyState.Verify(context.Changeset, flatKey);
+        }
+    }
+
     static ExpandoObject WithIdentifier(PreviewReadModel readModel, string identifierPropertyName)
     {
-        ((IDictionary<string, object?>)readModel.State)[identifierPropertyName] = readModel.KeyValue;
+        // A read model identified by a flat composite key has its parts as properties and no single identifier.
+        if (!CompositeKeyEncoding.IsEncoded(readModel.KeyValue))
+        {
+            ((IDictionary<string, object?>)readModel.State)[identifierPropertyName] = readModel.KeyValue;
+        }
+
         return readModel.State;
     }
 
@@ -341,6 +365,8 @@ public class Projection(
                 operationType,
                 false);
 
+            SeedFlatCompositeKey(context, state);
+
             await HandleEventFor(projection!, context, NullSink.Instance, eventSequenceStorage);
 
             var shouldMaterialize = ShouldMaterializeReadModel(hasReadModel, key, [.. changeset.Changes], CreatesInstance(projection!, context));
@@ -351,6 +377,11 @@ public class Projection(
             }
             else if (shouldMaterialize)
             {
+                if (key is FlatCompositeKey flatKey)
+                {
+                    FlatCompositeKeyState.Verify(changeset, flatKey);
+                }
+
                 if (changeset.HasChanges)
                 {
                     state = InMemoryChanges.Apply(key, changeset.Changes, state);
@@ -364,7 +395,7 @@ public class Projection(
         }
 
         // Inject id property into the read model before returning
-        if (hasReadModel && lastKey is not null)
+        if (hasReadModel && lastKey is not null and not FlatCompositeKey)
         {
             var stateDict = (IDictionary<string, object?>)state;
             stateDict[_identifierPropertyName] = lastKey.Value.ToString();
@@ -399,6 +430,7 @@ public class Projection(
             context = await initialize.Perform(projection, context);
             await HandleEventFor(projection, context, NullSink.Instance, eventSequenceStorage);
             SeedAtCreation(projection, context);
+            VerifyFlatCompositeKey(context);
             result = ApplySingleReadModelChanges(projection, context, result);
         }
 
@@ -419,7 +451,11 @@ public class Projection(
         }
 
         var model = InMemoryChanges.Apply(context.Key, changeset.Changes, state.Model);
-        ((IDictionary<string, object?>)model)[_identifierPropertyName] = context.Key.Value.ToString();
+        if (context.Key is not FlatCompositeKey)
+        {
+            ((IDictionary<string, object?>)model)[_identifierPropertyName] = context.Key.Value.ToString();
+        }
+
         ReadModelSubjects.TrackChanges(model, changeset.Changes, context.Event);
         var isInitialized = state.IsInitialized || CreatesInstance(projection, context) ||
             ProjectionInitialization.CanInitializeFromChildren(projection, context);
@@ -476,14 +512,16 @@ public class Projection(
     async Task ProjectInMemory(EngineProjection projection, IEventSequenceStorage eventSequenceStorage, PreviewSink sink, SetInitialState initialize, ResolvedKey resolvedKey, AppendedEvent @event)
     {
         var key = resolvedKey.Key;
-        var keyValue = key.Value.ToString()!;
+        var keyValue = FlatCompositeKeyState.Text(key);
         var initialState = sink.GetInitialState(key);
+        if (key is FlatCompositeKey) initialState = initialState.Clone();
         var changeset = new Changeset<AppendedEvent, ExpandoObject>(objectComparer, @event, initialState);
         var context = new ProjectionEventContext(key, @event, changeset, projection.GetOperationTypeFor(@event.Context.EventType), false, resolvedKey.JoinKey);
 
         context = await initialize.Perform(projection, context);
         await HandleEventFor(projection, context, sink, eventSequenceStorage);
         SeedAtCreation(projection, context);
+        VerifyFlatCompositeKey(context);
 
         if (changeset.HasBeenRemoved())
         {
@@ -590,11 +628,9 @@ public class Projection(
             var readModelKey = new ReadModelGrainKey(State.ReadModel, key.EventStore);
             var readModel = GrainFactory.GetGrain<IReadModel>(readModelKey);
             var readModelDefinition = await readModel.GetDefinition();
-            var eventStoreStorage = storage.GetEventStore(key.EventStore);
-            var eventTypeSchemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
 
-            // Reads use the projection's own generation delivery, just like its observer.
-            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition, eventTypeSchemas);
+            // Reads use the projection's own generation delivery, just like its observer. The compiled plan is shared with every namespace.
+            projection = await projectionFactory.Create(key.EventStore, eventStoreNamespace, DefinitionForReads(), readModelDefinition);
             _projectionsByNamespace[eventStoreNamespace] = projection;
         }
 
@@ -709,7 +745,7 @@ public class Projection(
         // Compared by id: the observer is subscribed with the delivery-specific generations of the registered
         // definition, while this grain's projection always resolves compatibility generations.
         var expected = (await GetOrCreateProjectionForNamespace(@namespace)).EventTypes.Select(_ => _.Id).ToHashSet();
-        var subscribed = (await observer.GetDefinition()).EventTypes.Select(_ => _.Id).ToHashSet();
+        var subscribed = (await observer.GetEventTypes()).Select(_ => _.Id).ToHashSet();
         return expected.SetEquals(subscribed);
     }
 

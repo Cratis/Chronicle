@@ -25,5 +25,5 @@ public class and_persisting_disconnected_failed_once : given.an_observer_whose_q
     [Fact] void should_no_longer_owe_recovery_after_retry() => _observer.OwesRecoveryAfterQuarantine().ShouldBeFalse();
     [Fact] void should_persist_active_state() => _faultableStateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Active);
     [Fact] void should_retry_the_failed_partition() => _jobsManager.Received().Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Is<RetryFailedPartitionRequest>(request => request.Key == _retryablePartition));
-    [Fact] void should_subscribe_to_the_queue_once() => _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_subscribe_to_the_queue_once() => _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

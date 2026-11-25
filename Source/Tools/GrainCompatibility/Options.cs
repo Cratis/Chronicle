@@ -14,16 +14,6 @@ namespace Cratis.Chronicle.Tools.GrainCompatibility;
 public record Options(string? Baseline, string? Current, string BaselineName, bool GitHub, bool SelfTest)
 {
     /// <summary>
-    /// Gets the payload contracts of the previous release.
-    /// </summary>
-    public string? PayloadBaseline { get; init; }
-
-    /// <summary>
-    /// Gets the payload contracts being checked.
-    /// </summary>
-    public string? PayloadCurrent { get; init; }
-
-    /// <summary>
     /// How to invoke the tool.
     /// </summary>
     public static string Usage { get; } = string.Join(
@@ -41,6 +31,16 @@ public record Options(string? Baseline, string? Current, string BaselineName, bo
         "  --payload-current <path>  The payload contracts being checked.",
         string.Empty,
         "Exits 0 when the current contracts serve the baseline, 1 when they do not, 2 when it could not tell.");
+
+    /// <summary>
+    /// Gets the payload contracts of the previous release.
+    /// </summary>
+    public string? PayloadBaseline { get; init; }
+
+    /// <summary>
+    /// Gets the payload contracts being checked.
+    /// </summary>
+    public string? PayloadCurrent { get; init; }
 
     /// <summary>
     /// Parses command line arguments.

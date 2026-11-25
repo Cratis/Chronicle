@@ -20,26 +20,31 @@ namespace Cratis.Chronicle.Alerts;
 /// <param name="IsQuarantined">Whether operational quarantine is desired.</param>
 /// <param name="Disposition">The durable lifecycle disposition.</param>
 /// <param name="MaxRetryAttempts">Maximum retries, or zero for unlimited retries.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Alerts.ObserverAlertSnapshot")]
 public record ObserverAlertSnapshot(
-    ObserverKey Observer,
-    IReadOnlyCollection<FailedPartitionSnapshot> FailedPartitions,
-    bool IsQuarantined,
-    AlertDisposition Disposition,
-    int MaxRetryAttempts)
+    [Id(0)] ObserverKey Observer,
+    [Id(1)] IReadOnlyCollection<FailedPartitionSnapshot> FailedPartitions,
+    [Id(2)] bool IsQuarantined,
+    [Id(3)] AlertDisposition Disposition,
+    [Id(4)] int MaxRetryAttempts)
 {
     /// <summary>
     /// Gets the lifecycle token persisted by the observer.
     /// </summary>
+    [Id(5)]
     public Guid LifecycleId { get; init; }
 
     /// <summary>
     /// Gets the committed alert revision in that lifecycle.
     /// </summary>
+    [Id(6)]
     public long Revision { get; init; }
 
     /// <summary>
     /// Gets the source-owned current quarantine episode identity.
     /// </summary>
+    [Id(7)]
     public Guid? QuarantineEpisodeId { get; init; }
 
     /// <summary>
@@ -49,5 +54,6 @@ public record ObserverAlertSnapshot(
     /// Keys carry the incident's GUID value because the Orleans JSON codec cannot use concept converters for
     /// dictionary property names. The observer keeps strongly typed incident keys in its local bookkeeping.
     /// </remarks>
+    [Id(8)]
     public IReadOnlyDictionary<Guid, AlertClearedReason> Endings { get; init; } = ImmutableDictionary<Guid, AlertClearedReason>.Empty;
 }

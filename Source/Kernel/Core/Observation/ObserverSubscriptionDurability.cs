@@ -1,10 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Observation.Reactors.Clients;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.Observation.Webhooks;
+using Cratis.Chronicle.Patterns;
 using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Storage.Observation;
 
@@ -28,6 +30,7 @@ public static class ObserverSubscriptionDurability
         _ when subscriberType.IsAssignableTo(typeof(IProjectionObserverSubscriber)) => ObserverSubscriptionKind.Projection,
         _ when subscriberType.IsAssignableTo(typeof(IWebhookObserverSubscriber)) => ObserverSubscriptionKind.Webhook,
         _ when subscriberType.IsAssignableTo(typeof(IEventStoreSubscriptionObserverSubscriber)) => ObserverSubscriptionKind.EventStoreSubscription,
+        _ when subscriberType.IsAssignableTo(typeof(IPatternCaptureSubscriber)) => ObserverSubscriptionKind.PatternCapture,
         _ when IsKernelReactor(subscriberType) => ObserverSubscriptionKind.KernelReactor,
         _ => null
     };
@@ -36,12 +39,26 @@ public static class ObserverSubscriptionDurability
     /// Gets whether an observer of this kind can be released while it is dormant (decision 0034).
     /// </summary>
     /// <param name="kind">The <see cref="ObserverSubscriptionKind"/> of the observer.</param>
-    /// <returns>True for client reactors, client reducers and projections; false for every other kind, which stay resident.</returns>
+    /// <returns>True for client reactors, client reducers, projections and event store subscriptions; false for every other kind, which stay resident.</returns>
+    /// <remarks>
+    /// What the kind can do, not what is configured: see <see cref="IsReleasedWhenDormant"/>.
+    /// </remarks>
     public static bool CanBeReleasedWhenDormant(this ObserverSubscriptionKind kind) => kind is
         ObserverSubscriptionKind.ClientReactor or
         ObserverSubscriptionKind.ClientReducer or
         ObserverSubscriptionKind.Projection or
-        ObserverSubscriptionKind.CollapsingProjection;
+        ObserverSubscriptionKind.CollapsingProjection or
+        ObserverSubscriptionKind.EventStoreSubscription or
+        ObserverSubscriptionKind.PatternCapture;
+
+    /// <summary>
+    /// Gets whether an observer of this kind is released while dormant under the configuration.
+    /// </summary>
+    /// <param name="kind">The <see cref="ObserverSubscriptionKind"/> of the observer.</param>
+    /// <param name="kinds">The configured <see cref="Observers.EffectiveDormantKinds"/>.</param>
+    /// <returns>True when the kind can be released and is listed.</returns>
+    public static bool IsReleasedWhenDormant(this ObserverSubscriptionKind kind, IReadOnlyList<ObserverSubscriptionKind> kinds) =>
+        kind.CanBeReleasedWhenDormant() && kinds.Contains(kind);
 
     /// <summary>
     /// Gets whether an observer of this kind is served by connected clients.
@@ -68,15 +85,17 @@ public static class ObserverSubscriptionDurability
             return null;
         }
 
+        var targets = subscription.Targets
+            .Where(target => target.ConnectedClient is not null)
+            .Select(target => new ObserverDurableSubscriptionTarget(
+                target.ConnectedClient!.ConnectionId.Value,
+                target.SiloAddress.ToParsableString()));
+
         return new(
             kind,
             subscription.DeliversPartitionPages || subscription.SubscriberType.IsAssignableTo(typeof(IObserverPageSubscriber)),
             ObserverDurableSubscriptionFilters.From(subscription.Filters),
-            [.. subscription.Targets
-                .Where(target => target.ConnectedClient is not null)
-                .Select(target => new ObserverDurableSubscriptionTarget(
-                    target.ConnectedClient!.ConnectionId.Value,
-                    target.SiloAddress.ToParsableString()))]);
+            [.. targets]);
     }
 
     static bool IsKernelReactor(Type type) =>

@@ -33,7 +33,7 @@ public class and_existing_sql_server_strings_are_unbounded(SqlServerFixture fixt
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"bounded":{"type":"string","maxLength":80}}}""");
         var definition = new ReadModelDefinition("strings", "bounded_strings", "Strings", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "strings", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, [new IndexDefinition("name"), new IndexDefinition("bounded")]);
         _sink = (Sink)_harness.CreateSink(definition);
-        var options = new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).Options;
+        var options = new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).IgnoringManyServiceProviders().Options;
         await using var context = new DbContext(options);
         await context.Database.ExecuteSqlRawAsync("CREATE TABLE bounded_strings (id NVARCHAR(200) PRIMARY KEY, name NVARCHAR(MAX))");
     }
@@ -41,7 +41,7 @@ public class and_existing_sql_server_strings_are_unbounded(SqlServerFixture fixt
     async Task Because()
     {
         await _sink.EnsureIndexes();
-        var options = new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).Options;
+        var options = new DbContextOptionsBuilder<DbContext>().UseDatabaseFromConnectionString(_harness.ConnectionString).IgnoringManyServiceProviders().Options;
         await using var context = new DbContext(options);
         _existingLength = await Length(context, "bounded_strings", "name");
         _declaredLength = await Length(context, "bounded_strings", "bounded");

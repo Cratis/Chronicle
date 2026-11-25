@@ -16,7 +16,7 @@ public class when_using_sqlite : Specification
 
     void Establish()
     {
-        var options = new DbContextOptionsBuilder<ClusterDbContext>().UseSqlite("Data Source=:memory:").Options;
+        var options = new DbContextOptionsBuilder<ClusterDbContext>().UseSqlite("Data Source=:memory:").IgnoringManyServiceProviders().Options;
         var database = Substitute.For<IDatabase>();
         database.Cluster().Returns(_ => Task.FromResult(new DbContextScope<ClusterDbContext>(new ClusterDbContext(options), () => { })));
         _table = new SqlMembershipTable(database, Options.Create(new ClusterOptions { ClusterId = "sqlite-spec" }));

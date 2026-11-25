@@ -47,5 +47,5 @@ internal static class FingerprintEncoding
     /// </summary>
     /// <param name="value">The text.</param>
     /// <returns>Whether it is exactly one lowercase digest.</returns>
-    internal static bool IsDigest(string value) => value.Length == 64 && value.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f');
+    internal static bool IsDigest(string value) => value.Length == 64 && value.All(c => c is (>= '0' and <= '9') or (>= 'a' and <= 'f'));
 }

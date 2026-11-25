@@ -30,7 +30,7 @@ public class on_sqlserver(SqlServerFixture fixture) : given.a_sqlserver_provider
     async Task Because()
     {
         await Admit();
-        await using var context = new EventStores.EventStoreDbContext(new DbContextOptionsBuilder<EventStores.EventStoreDbContext>().UseSqlServer(_eventStoreConnection).AddConceptAsSupport().Options);
+        await using var context = new EventStores.EventStoreDbContext(new DbContextOptionsBuilder<EventStores.EventStoreDbContext>().UseSqlServer(_eventStoreConnection).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
         _after = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
     }
 

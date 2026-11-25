@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="NextEventSequenceNumber">The next event sequence number the observer will observe.</param>
 /// <param name="LastHandledEventSequenceNumber">The event sequence number the observer last handled.</param>
 /// <param name="TailEventSequenceNumber">The tail event sequence number of the event sequence.</param>
-/// <param name="HandledEventCount">The number of events the observer has handled.</param>
+/// <param name="HandledEventCount">An approximate diagnostic count of events the observer has handled. It can lag or drift, and can over-count after an ambiguous storage acknowledgment. It is not suitable for billing or as proof of exact completion or delivery.</param>
 /// <param name="RunningState">The running state of the observer.</param>
 /// <param name="IsSubscribed">Whether the observer is subscribed to its handler.</param>
 /// <param name="IsReplayable">Whether the observer supports replay scenarios.</param>

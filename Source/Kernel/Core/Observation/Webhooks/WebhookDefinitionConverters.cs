@@ -63,19 +63,26 @@ internal static class WebhookDefinitionConverters
     /// <returns>Converted <see cref="WebhookTarget"/>.</returns>
     internal static WebhookTarget ToChronicle(this Contracts.Observation.Webhooks.WebhookTarget target)
     {
-        var authorization = target.ManagedIdentity is not null
-            ? WebhookAuthorization.FromT4(new ManagedIdentityAuthorization(target.ManagedIdentity.ClientId, target.ManagedIdentity.Scope))
-            : target.Authorization switch
+        WebhookAuthorization authorization;
+        if (target.ManagedIdentity is not null)
         {
-            null => WebhookAuthorization.None,
-            var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
-            var auth when auth.Value1 is not null => new BearerTokenAuthorization(auth.Value1.Token),
-            var auth when auth.Value2 is not null => new OAuthAuthorization(
-                auth.Value2.Authority,
-                auth.Value2.ClientId,
-                auth.Value2.ClientSecret) { Scope = auth.Value2.Scope },
-            _ => WebhookAuthorization.None
-        };
+            authorization = WebhookAuthorization.FromT4(new ManagedIdentityAuthorization(target.ManagedIdentity.ClientId, target.ManagedIdentity.Scope));
+        }
+        else
+        {
+            authorization = target.Authorization switch
+            {
+                null => WebhookAuthorization.None,
+                var auth when auth.Value0 is not null => new BasicAuthorization(auth.Value0.Username, auth.Value0.Password),
+                var auth when auth.Value1 is not null => new BearerTokenAuthorization(auth.Value1.Token),
+                var auth when auth.Value2 is not null => new OAuthAuthorization(
+                    auth.Value2.Authority,
+                    auth.Value2.ClientId,
+                    auth.Value2.ClientSecret) { Scope = auth.Value2.Scope },
+                _ => WebhookAuthorization.None
+            };
+        }
+
         return new(
             target.Url,
             authorization,

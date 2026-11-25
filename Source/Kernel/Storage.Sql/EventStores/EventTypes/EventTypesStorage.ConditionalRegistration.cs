@@ -31,7 +31,6 @@ public partial class EventTypesStorage
 
             if (await TrySaveRegistration(context, existing, registration))
             {
-                Invalidate(registration.Id);
                 return result with { Changed = true };
             }
         }
@@ -53,7 +52,8 @@ public partial class EventTypesStorage
         var registration = definition.ToSql();
         registration.Source = incoming.Source;
         registration.Visibility = incoming.Visibility == EventTypeVisibility.Unspecified && existing is not null
-            ? existing.Visibility : incoming.Visibility;
+            ? existing.Visibility
+            : incoming.Visibility;
         registration.Origin = incoming.Origin;
         registration.MigrationsJson = PrepareMigrations(existing, incoming.Definition.Migrations);
         registration.MigrationVersionsJson = existing?.MigrationVersionsJson ?? "{}";

@@ -9,8 +9,10 @@ namespace Cratis.Chronicle.Projections.Engine.for_ResolvedCollectionPath;
 public class when_locating_a_child_at_multiple_recursive_levels : given.a_recursive_collection
 {
     void Establish() => _parentKey = new Key("root", new ArrayIndexers(
-        [new("features", "id", "feature"), new("features.subFeatures", "id", "sub-feature"),
-         new("features.subFeatures", "id", "nested-feature")]));
+        [
+            new("features", "id", "feature"), new("features.subFeatures", "id", "sub-feature"),
+            new("features.subFeatures", "id", "nested-feature")
+        ]));
 
     void Because() => _path = ResolvedCollectionPath.ForParent(_slices, _parentKey);
 

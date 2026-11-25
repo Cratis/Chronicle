@@ -12,17 +12,22 @@ namespace Cratis.Chronicle.Observation.Jobs;
 /// <param name="ObserverKey">The additional <see cref="ObserverKey"/> for the observer to replay.</param>
 /// <param name="ObserverType">The <see cref="ObserverType"/>.</param>
 /// <param name="EventTypes">The event types to replay.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.Jobs.ReplayObserverRequest")]
 public record ReplayObserverRequest(
-    ObserverKey ObserverKey,
-    ObserverType ObserverType,
-    IEnumerable<EventType> EventTypes) : IObserverJobRequest
+    [Id(0)] ObserverKey ObserverKey,
+    [Id(1)] ObserverType ObserverType,
+    [Id(2)] IEnumerable<EventType> EventTypes) : IObserverJobRequest
 {
     /// <inheritdoc/>
+    [Id(3)]
     public ObserverReaderScope? ReaderScope { get; init; }
 
     /// <inheritdoc/>
+    [Id(4)]
     public ulong? Revision { get; init; }
 
     /// <inheritdoc/>
+    [Id(5)]
     public ulong? OwnershipEpoch { get; init; }
 }

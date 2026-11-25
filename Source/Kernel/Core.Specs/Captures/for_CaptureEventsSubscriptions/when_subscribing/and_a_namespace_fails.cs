@@ -13,7 +13,7 @@ public class and_a_namespace_fails : given.a_capture_events_subscriptions
     {
         _namespaces = ["first", "second", "third"];
         var broken = Substitute.For<IObserver>();
-        AnySubscribe(broken).Returns<Task<IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>>>(_ => throw new TimeoutException());
+        AnySubscribe(broken).Returns<Task<Cratis.Chronicle.Concepts.Events.EventTypeSet>>(_ => throw new TimeoutException());
         _observersByNamespace["second"] = broken;
     }
 

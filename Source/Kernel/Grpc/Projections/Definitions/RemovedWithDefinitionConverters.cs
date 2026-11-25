@@ -34,7 +34,6 @@ internal static class RemovedWithDefinitionConverters
     {
         return new(
             contract.Key,
-            contract.ParentKey ?? PropertyExpression.NotSet
-        );
+            contract.ParentKey ?? PropertyExpression.NotSet);
     }
 }

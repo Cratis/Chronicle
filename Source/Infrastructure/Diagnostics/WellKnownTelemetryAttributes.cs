@@ -62,14 +62,23 @@ public static class WellKnownTelemetryAttributes
     /// <summary>The way a durable subscription and the live subscriptions of a queue disagreed.</summary>
     public const string DurableSubscriptionDisagreement = "cratis.chronicle.observer.durable_subscription_disagreement";
 
+    /// <summary>The way the silo-local routing table and the subscriptions of a queue disagreed on a dispatched batch.</summary>
+    public const string ShadowRoutingDisagreement = "cratis.chronicle.observer.shadow_routing_disagreement";
+
     /// <summary>The reason an observer was spilled to catch-up.</summary>
     public const string ObserverSpillReason = "cratis.chronicle.observer.spill_reason";
 
     /// <summary>What woke a dormant observer: an appended event, the safety net or a sweep.</summary>
     public const string ObserverWakeCause = "cratis.chronicle.observer.wake_cause";
 
+    /// <summary>What the safety net found when it looked at a dormant observer: up to date, behind, not comparable, or due for the unconditional wake.</summary>
+    public const string ObserverSafetyNetOutcome = "cratis.chronicle.observer.safety_net_outcome";
+
     /// <summary>How a woken observer found its way back to its cursor: resumed from it, fell back to catch-up or found its client gone.</summary>
     public const string ObserverResumeOutcome = "cratis.chronicle.observer.resume_outcome";
+
+    /// <summary>Why a catch-up was deferred: the observer has no connected client, or too many catch-up jobs are running.</summary>
+    public const string ObserverCatchUpDeferralReason = "cratis.chronicle.observer.catch_up_deferral_reason";
 
     /// <summary>The kind of claim divergence.</summary>
     public const string ObserverClaimDivergence = "cratis.chronicle.observer.claim_divergence";
@@ -106,4 +115,7 @@ public static class WellKnownTelemetryAttributes
 
     /// <summary>The type of a job, in lowercase.</summary>
     public const string JobType = "cratis.chronicle.job.type";
+
+    /// <summary>The name of the grain interface calls are made to.</summary>
+    public const string GrainType = "cratis.chronicle.grain.type";
 }

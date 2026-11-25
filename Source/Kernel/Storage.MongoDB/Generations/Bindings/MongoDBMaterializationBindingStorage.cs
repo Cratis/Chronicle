@@ -41,7 +41,8 @@ public sealed class MongoDBMaterializationBindingStorage(IDatabase database, IGe
         catch (MongoWriteException error) when (error.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
             return (await Get(store, key))!.Generations.FirstOrDefault(_ => _.Identity.Generation.IsFirst) == record
-                ? FirstGenerationAdoption.AlreadyAdopted : FirstGenerationAdoption.Conflicting;
+                ? FirstGenerationAdoption.AlreadyAdopted
+                : FirstGenerationAdoption.Conflicting;
         }
     }
 

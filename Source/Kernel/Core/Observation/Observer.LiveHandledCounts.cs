@@ -6,9 +6,9 @@ using Cratis.Chronicle.Concepts.Keys;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Coalesces the per-partition handled-event counts of live deliveries.
-/// </summary>
+/// </content>
 /// <remarks>
 /// A live delivery adds its counts to the observer's running totals straight away; those travel with the observer
 /// state write the delivery makes anyway. Only the per-partition breakdown, which is one more storage write for every

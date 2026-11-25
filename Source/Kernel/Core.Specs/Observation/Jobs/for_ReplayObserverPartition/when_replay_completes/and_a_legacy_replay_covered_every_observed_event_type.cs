@@ -11,7 +11,7 @@ public class and_a_legacy_replay_covered_every_observed_event_type : given.a_par
     void Establish()
     {
         _request = _request with { ReplaysAllEventTypes = false, HeldBackFrom = EventSequenceNumber.Unavailable };
-        _observer.GetEventTypes().Returns(Task.FromResult<IEnumerable<EventType>>(_request.EventTypes));
+        _observer.GetEventTypes().Returns(Task.FromResult(EventTypeSet.From(_request.EventTypes)));
         _stateStorage.State.LastHandledEventSequenceNumber = 50UL;
         _stateStorage.State.LastScannedEventSequenceNumber = 52UL;
         _stateStorage.State.HandledAllEvents = true;

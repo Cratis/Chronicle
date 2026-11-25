@@ -49,6 +49,12 @@ Use `isActive: false` when you want the observer registered but not running:
 
 This does **not** make the model passive. Previously persisted state remains in its configured sink and is no longer maintained. By-id reads do not switch to event reconstruction unless the read model carries `[Passive]`.
 
+## Watch local folds or kernel changes
+
+In .NET, `Watch<T>()` and [read model reactors](../read-models/reacting-to-changes) use the kernel change stream for active reducers with event types. The kernel supplies `Added`, `Modified`, or `Removed` and the causing event context, including after reconnection.
+
+Passive, inactive, and no-event-type reducers keep the local fold stream. Non-removals are always `Modified`, even the first fold; removals are `Removed`. They never infer `Added`, do not carry the causing event context, and do not observe changes materialized by another client. This does not change by-ID reads or `GetWatcherFor<T>()`.
+
 ## Bounded analysis, not arbitrary-date history
 
 Use `GetInstances(eventCount)` to examine the state produced by a limited prefix of history. Chronicle

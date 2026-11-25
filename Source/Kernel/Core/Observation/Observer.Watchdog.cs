@@ -34,22 +34,35 @@ public partial class Observer
     /// Runs all watchdog checks immediately. This method is for testing purposes only.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    internal Task RunWatchdogAsync() => Watchdog(CancellationToken.None);
+    internal Task RunWatchdogAsync() => Watchdog();
 
-    void RegisterWatchdog(int intervalInSeconds)
+    void RegisterWithSupervisor(int intervalInSeconds)
     {
-        this.RegisterGrainTimer(
-            Watchdog,
-            new GrainTimerCreationOptions
+        if (supervisor is null)
+        {
+            return;
+        }
+
+        // The supervisor runs on its own thread, so it calls the observer through its reference: that is what puts the
+        // duty in a turn of the activation, the way the grain timer it replaces did.
+        var self = GrainFactory.GetGrain<IObserver>(this.GetPrimaryKeyString());
+        supervisor.Register(
+            _observerKeyText,
+            TimeSpan.FromSeconds(intervalInSeconds),
+            async () =>
             {
-                DueTime = TimeSpan.FromSeconds(intervalInSeconds),
-                Period = TimeSpan.FromSeconds(intervalInSeconds)
-            });
+                await self.CheckHealth();
+                return null;
+            },
+            self.VerifyLiveSubscriptionAfterDeparture);
     }
 
-    async Task Watchdog(CancellationToken cancellationToken)
+    void UnregisterFromSupervisor() => supervisor?.Unregister(_observerKeyText);
+
+    async Task Watchdog()
     {
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
+        KeepWhileOwed();
         if (ReleaseWhenIdle()) return;
         if (!_observerExists || _removed || IsRetired)
         {
@@ -264,7 +277,7 @@ public partial class Observer
         // Routing defers an explicitly typed replay with no event types, so a deferred replay owns no job yet.
         // An observer already in Replay can still own one, so a missing job is recovered through Routing.
         if (State.IsReplaying &&
-            (_subscription.EventTypes.Any() || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
+            (_subscription.EventTypes.Count > 0 || State.SubscribesToAllEvents || State.RunningState == ObserverRunningState.Replaying))
         {
             // Removing jobs still drain and own their work (#5378).
             var replayJobs = await _jobsManager.GetOutstandingJobsOf<IReplayObserver>();

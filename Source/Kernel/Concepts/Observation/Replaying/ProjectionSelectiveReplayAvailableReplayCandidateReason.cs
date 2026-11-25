@@ -6,5 +6,7 @@ namespace Cratis.Chronicle.Concepts.Observation.Replaying;
 /// <summary>
 /// Represents a reason for a replay candidate when a projection can be selectively replayed.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.Replaying.ProjectionSelectiveReplayAvailableReplayCandidateReason")]
 public record ProjectionSelectiveReplayAvailableReplayCandidateReason()
     : ReplayCandidateReason(ReplayCandidateReasonType.ProjectionSelectiveReplayAvailable);

@@ -17,12 +17,6 @@ public record EventType(EventTypeId Id, EventTypeGeneration Generation)
     /// </summary>
     public static readonly EventType Unknown = new(EventTypeId.Unknown, EventTypeGeneration.First);
 
-    /// <inheritdoc/>
-    public override string ToString()
-    {
-        return $"{Id.Value}+{Generation.Value}";
-    }
-
     /// <summary>
     /// Parse from a string representation of event type to actual type.
     /// </summary>
@@ -41,5 +35,11 @@ public record EventType(EventTypeId Id, EventTypeGeneration Generation)
         }
 
         return new(segments[0], uint.Parse(segments[1]));
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"{Id.Value}+{Generation.Value}";
     }
 }

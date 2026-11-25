@@ -3,6 +3,7 @@
 
 using System.Security.Claims;
 using Cratis.Arc;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Server.Authentication.OpenIddict;
@@ -37,6 +38,15 @@ public class AuthorizationController(
     ILogger<AuthorizationController> logger) : ControllerBase
 {
     /// <summary>
+    /// How long an application's authentication waits for its audit event to be appended before the token is issued anyway.
+    /// </summary>
+    /// <remarks>
+    /// The audit event is appended through the event log grain, so a saturated kernel would otherwise hold every
+    /// client's authentication back - and with it the client's connect.
+    /// </remarks>
+    static readonly TimeSpan _auditGrace = TimeSpan.FromSeconds(2);
+
+    /// <summary>
     /// Handles token requests.
     /// </summary>
     /// <returns>The token response.</returns>
@@ -67,7 +77,7 @@ public class AuthorizationController(
 
                 // Append event for unknown application login attempt
                 var unknownAppEvent = new UnknownApplicationLoginAttempted(request.ClientId ?? string.Empty);
-                await eventLog.Append(Guid.Empty, unknownAppEvent);
+                await AppendAudit(eventLog, Guid.Empty, unknownAppEvent);
 
                 return Forbid(
                     properties: new AuthenticationProperties(new Dictionary<string, string?>
@@ -109,7 +119,7 @@ public class AuthorizationController(
 
             // Append event for successful application authentication
             var appAuthEvent = new ApplicationAuthenticated(clientId ?? string.Empty);
-            await eventLog.Append(appId, appAuthEvent);
+            await AppendAudit(eventLog, appId, appAuthEvent);
 
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
@@ -256,4 +266,29 @@ public class AuthorizationController(
             => [OpenIddictConstants.Destinations.AccessToken, OpenIddictConstants.Destinations.IdentityToken],
         _ => [OpenIddictConstants.Destinations.AccessToken]
     };
+
+    async Task AppendAudit(IEventSequence eventLog, EventSourceId eventSourceId, object @event)
+    {
+        var append = Audit(eventLog, eventSourceId, @event);
+        try
+        {
+            await append.WaitAsync(_auditGrace);
+        }
+        catch (TimeoutException)
+        {
+            logger.AuthenticationAuditContinuesInBackground();
+        }
+    }
+
+    async Task Audit(IEventSequence eventLog, EventSourceId eventSourceId, object @event)
+    {
+        try
+        {
+            await eventLog.Append(eventSourceId, @event);
+        }
+        catch (Exception ex)
+        {
+            logger.AuthenticationAuditFailed(ex);
+        }
+    }
 }

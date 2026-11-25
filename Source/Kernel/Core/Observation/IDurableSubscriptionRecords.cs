@@ -55,6 +55,6 @@ public interface IDurableSubscriptionRecords
     /// </summary>
     /// <param name="observer">The <see cref="ObserverKey"/> of the observer.</param>
     /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
-    /// <returns>True when the record names the connection as served from this silo.</returns>
+    /// <returns>True when the record names the connection, as a target or as a standby, as served from this silo.</returns>
     Task<bool> Names(ObserverKey observer, ConnectionId connectionId);
 }

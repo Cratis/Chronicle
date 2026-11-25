@@ -44,32 +44,79 @@ internal sealed class SinkPagePrefetch(IMongoDBConverter converter)
     public async Task Prefetch(IMongoCollection<BsonDocument> collection, IEnumerable<Key> keys, Action<Key, BsonDocument> seed)
     {
         Clear();
-        var keysById = keys.GroupBy(key => SinkCacheKey.Identity(converter.ToBsonValue(key)))
+        var pageKeys = keys.ToArray();
+        await PrefetchFlatKeys(collection, pageKeys.OfType<FlatCompositeKey>(), seed);
+        var keysById = pageKeys.Where(key => key is not FlatCompositeKey)
+            .GroupBy(key => SinkCacheKey.Identity(converter.ToBsonValue(key)))
             .ToDictionary(group => group.Key, group => group.First());
         foreach (var page in keysById.Chunk(1000))
         {
-            var missing = page.ToDictionary();
-            var allReturnedIdsMatched = true;
-            using var cursor = await collection.FindAsync(Builders<BsonDocument>.Filter.In("_id", missing.Values.Select(converter.ToBsonValue)));
-            while (await cursor.MoveNextAsync())
+            await PrefetchLegacyBatch(collection, page, seed);
+        }
+    }
+
+    async Task PrefetchLegacyBatch(IMongoCollection<BsonDocument> collection, KeyValuePair<BsonValue, Key>[] page, Action<Key, BsonDocument> seed)
+    {
+        var missing = page.ToDictionary();
+        var allReturnedIdsMatched = true;
+        using var cursor = await collection.FindAsync(Builders<BsonDocument>.Filter.In("_id", missing.Values.Select(converter.ToBsonValue)));
+        while (await cursor.MoveNextAsync())
+        {
+            foreach (var document in cursor.Current)
             {
-                foreach (var document in cursor.Current)
+                if (missing.Remove(SinkCacheKey.Identity(document["_id"]), out var key))
                 {
-                    if (missing.Remove(SinkCacheKey.Identity(document["_id"]), out var key))
-                    {
-                        seed(key, document);
-                    }
-                    else
-                    {
-                        allReturnedIdsMatched = false;
-                    }
+                    seed(key, document);
+                }
+                else
+                {
+                    allReturnedIdsMatched = false;
                 }
             }
+        }
 
-            if (allReturnedIdsMatched)
+        if (allReturnedIdsMatched)
+        {
+            foreach (var id in missing.Keys) _knownMisses.TryAdd(SinkCacheKey.ForIdentity(id), 0);
+        }
+    }
+
+    async Task PrefetchFlatKeys(IMongoCollection<BsonDocument> collection, IEnumerable<FlatCompositeKey> keys, Action<Key, BsonDocument> seed)
+    {
+        foreach (var shape in keys.GroupBy(key => string.Join('\0', key.Parts.Keys.Order(StringComparer.Ordinal))))
+        {
+            var distinct = shape.GroupBy(key => SinkCacheKey.For(converter.ToBsonValue(key))).Select(group => group.First());
+            foreach (var page in distinct.Chunk(1000))
             {
-                foreach (var id in missing.Keys) _knownMisses.TryAdd(SinkCacheKey.ForIdentity(id), 0);
+                await PrefetchFlatBatch(collection, page, seed);
             }
+        }
+    }
+
+    async Task PrefetchFlatBatch(IMongoCollection<BsonDocument> collection, FlatCompositeKey[] page, Action<Key, BsonDocument> seed)
+    {
+        var missing = page.ToDictionary(key => SinkCacheKey.For(converter.ToBsonValue(key)));
+        var allReturnedTuplesMatched = true;
+        var filter = Builders<BsonDocument>.Filter.In("_id", page.Select(converter.ToBsonValue));
+        using var cursor = await collection.FindAsync(filter);
+        while (await cursor.MoveNextAsync())
+        {
+            foreach (var document in cursor.Current)
+            {
+                if (missing.Remove(SinkCacheKey.For(document["_id"]), out var key))
+                {
+                    seed(key, document);
+                }
+                else
+                {
+                    allReturnedTuplesMatched = false;
+                }
+            }
+        }
+
+        if (allReturnedTuplesMatched)
+        {
+            foreach (var cacheKey in missing.Keys) _knownMisses.TryAdd(cacheKey, 0);
         }
     }
 }

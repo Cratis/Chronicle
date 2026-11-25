@@ -134,7 +134,8 @@ ChronicleOptions chronicleOptions;
 SchemaAction schemaAction;
 try
 {
-    schemaAction = schemaCommand.Action != SchemaAction.None ? schemaCommand.Action
+    schemaAction = schemaCommand.Action != SchemaAction.None
+        ? schemaCommand.Action
         : builder.Configuration.GetValue<SchemaAction>($"{ChronicleOptions.SectionPath}:Storage:SchemaAction");
     if (!Enum.IsDefined(schemaAction))
     {
@@ -331,7 +332,7 @@ builder.WebHost.UseKestrel(options =>
         });
     }
 
-    options.Limits.Http2.MaxStreamsPerConnection = 100;
+    Cratis.Chronicle.Services.Host.KestrelHttp2Limits.Apply(options.Limits.Http2);
 });
 
 var hostBuilder = builder.Host

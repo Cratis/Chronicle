@@ -125,7 +125,7 @@ public partial class UniqueConstraintsStorageV2 : IUniqueConstraintsStorageV2
 
     static void ValidateValue(UniqueConstraintValue value)
     {
-        if (value.Value.Length != 64 || !value.Value.All(_ => _ is >= '0' and <= '9' or >= 'a' and <= 'f'))
+        if (value.Value.Length != 64 || !value.Value.All(_ => _ is (>= '0' and <= '9') or (>= 'a' and <= 'f')))
         {
             throw new InvalidUniqueConstraintV2Input(nameof(UniqueConstraintValue));
         }

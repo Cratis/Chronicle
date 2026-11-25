@@ -5,11 +5,13 @@ using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using System.Text.Json;
 using Cratis.Chronicle.Clients;
+using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Json;
 using Cratis.Chronicle.Observation.Reducers.Clients;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Supervision;
 using Cratis.Traces;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -22,6 +24,7 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
     protected ConnectionOwnership _ownership;
     protected IReducerMediator _mediator;
     protected IGrainFactory _grainFactory;
+    protected IClientReducerSubscriptions _subscriptions;
     protected IReadModel _definitionGrain;
     protected Exception _error;
     protected IConnectionReservation _reservation;
@@ -49,8 +52,9 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
             Concepts.Sinks.SinkDefinition.None,
             new Dictionary<Concepts.ReadModels.ReadModelGeneration, Schemas.JsonSchema> { [Concepts.ReadModels.ReadModelGeneration.First] = schema },
             []));
-        var client = Substitute.For<IReducer>();
-        _grainFactory.GetGrain<IReducer>(Arg.Any<string>()).Returns(client);
+        var client = Substitute.For<IClientReducerSubscription>();
+        _subscriptions = Substitute.For<IClientReducerSubscriptions>();
+        _subscriptions.Create(Arg.Any<ConnectedObserverKey>()).Returns(client);
         client.SetDefinitionAndSubscribe(Arg.Any<Concepts.Observation.Reducers.ReducerDefinition>()).Returns(_ =>
         {
             _subscribed.TrySetResult();
@@ -66,7 +70,7 @@ public class a_registration_attempt : Observation.given.a_connection_held_on_ano
     {
         using var messages = new Subject<ReducerMessage>();
         var reducers = new Reducers(
-            _grainFactory, _mediator, Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), new ActivitySource<Reducers>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reducers>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloDepartures.Instance, Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
+            _grainFactory, _subscriptions, _mediator, Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), new ActivitySource<Reducers>(), Options.Create(new ChronicleOptions { Clustering = new() { ResponseTimeout = TimeSpan.FromMilliseconds(100) } }), _ownership, NullLogger<Reducers>.Instance, Substitute.For<IObserverRegistrationGate>(), NamespaceCasingContext.Create(), NoSiloSupervisor.Instance, Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
         using var cancellation = new CancellationTokenSource();
         var observed = reducers.Observe(messages, context).ToTask(cancellation.Token);
         messages.OnNext(new ReducerMessage(new Contracts.Primitives.OneOf<RegisterReducer, ReducerResult>(new RegisterReducer

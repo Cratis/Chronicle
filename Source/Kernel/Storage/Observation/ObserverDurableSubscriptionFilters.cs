@@ -12,7 +12,9 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Tags">The tags an event has to carry, or none to accept every event.</param>
 /// <param name="EventSourceType">The event source type to accept, or an empty string for any.</param>
 /// <param name="EventStreamType">The event stream type to accept, or an empty string for any.</param>
-public record ObserverDurableSubscriptionFilters(IReadOnlyList<string> Tags, string EventSourceType, string EventStreamType)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverDurableSubscriptionFilters")]
+public record ObserverDurableSubscriptionFilters([Id(0)] IReadOnlyList<string> Tags, [Id(1)] string EventSourceType, [Id(2)] string EventStreamType)
 {
     /// <summary>
     /// Creates the stored filters of an <see cref="ObserverFilters"/>.

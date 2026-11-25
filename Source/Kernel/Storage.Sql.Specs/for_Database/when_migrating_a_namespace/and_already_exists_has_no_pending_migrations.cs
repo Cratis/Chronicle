@@ -27,7 +27,8 @@ public class and_already_exists_has_no_pending_migrations(PostgreSqlFixture fixt
     async Task Because()
     {
         var builder = new DbContextOptionsBuilder<NamespaceDbContext>(SpecDbContextOptions.Kernel<NamespaceDbContext>(_connection))
-            .AddInterceptors(_failure);
+            .AddInterceptors(_failure)
+            .WithoutServiceProviderCaching();
         await using var context = new NamespaceDbContext(builder.Options);
 
         // Inject a duplicate-object error while migrating an already complete, real PostgreSQL schema.

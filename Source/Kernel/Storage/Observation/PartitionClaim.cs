@@ -16,4 +16,6 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="Epoch">The epoch allocated at grant.</param>
 /// <param name="ResumePosition">The position from which work resumes.</param>
 /// <param name="PendingWork">The pending partition work.</param>
-public record PartitionClaim(Key Partition, ClaimHolderKind Holder, JobId? Job, ClaimEpoch Epoch, EventSequenceNumber ResumePosition, IReadOnlyList<PendingPartitionWork> PendingWork);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.PartitionClaim")]
+public record PartitionClaim([Id(0)] Key Partition, [Id(1)] ClaimHolderKind Holder, [Id(2)] JobId? Job, [Id(3)] ClaimEpoch Epoch, [Id(4)] EventSequenceNumber ResumePosition, [Id(5)] IReadOnlyList<PendingPartitionWork> PendingWork);

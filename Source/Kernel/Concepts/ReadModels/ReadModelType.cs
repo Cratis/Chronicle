@@ -8,4 +8,6 @@ namespace Cratis.Chronicle.Concepts.ReadModels;
 /// </summary>
 /// <param name="Identifier">The identifier of the read model.</param>
 /// <param name="Generation">The generation of the read model.</param>
-public record ReadModelType(ReadModelIdentifier Identifier, ReadModelGeneration Generation);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.ReadModels.ReadModelType")]
+public record ReadModelType([Id(0)] ReadModelIdentifier Identifier, [Id(1)] ReadModelGeneration Generation);

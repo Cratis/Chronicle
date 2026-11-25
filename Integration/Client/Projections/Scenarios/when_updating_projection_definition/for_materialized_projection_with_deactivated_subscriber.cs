@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Jobs;
 using context = Cratis.Chronicle.Integration.Projections.Scenarios.when_updating_projection_definition.for_materialized_projection_with_deactivated_subscriber.context;
 
 namespace Cratis.Chronicle.Integration.Projections.Scenarios.when_updating_projection_definition;
@@ -43,8 +42,9 @@ public class for_materialized_projection_with_deactivated_subscriber(context con
             // to simulate the automatic replay that would happen if ReplayOnDefinitionChange was enabled.
             var replayJobId = await EventStore.Projections.Replay<MaterializedProjection>();
 
-            // Wait for the replay job to reach a terminal state, which guarantees the sink has been flushed.
-            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(replayJobId);
+            // Wait for the replay itself to finish, which guarantees the sink has been flushed. The returned job only gives the
+            // replay to the observer, so it completes before the replay does.
+            await EventStore.WaitTillReplayed(replayJobId);
 
             // Wait for the projection to reach the sequence number of the appended events,
             // which proves the replay completed with the new definition applied.

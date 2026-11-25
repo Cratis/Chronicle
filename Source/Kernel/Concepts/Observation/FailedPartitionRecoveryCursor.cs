@@ -8,6 +8,8 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <summary>
 /// The first undelivered event and the delivery mode retained through holds, failures, retries and quarantine.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.FailedPartitionRecoveryCursor")]
 public record FailedPartitionRecoveryCursor
 {
     /// <summary>
@@ -33,15 +35,18 @@ public record FailedPartitionRecoveryCursor
     /// <summary>
     /// Gets the exact position from which recovery resumes.
     /// </summary>
+    [Id(0)]
     public EventSequenceNumber Position { get; }
 
     /// <summary>
     /// Gets the recovery delivery mode.
     /// </summary>
+    [Id(1)]
     public FailedPartitionRecoveryMode Mode { get; }
 
     /// <summary>
     /// Gets the inclusive replay boundary, or null for live recovery. Past this boundary recovery is live.
     /// </summary>
+    [Id(2)]
     public EventSequenceNumber? ReplayBoundary { get; }
 }

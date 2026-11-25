@@ -36,7 +36,20 @@ For releases without a compatibility exception, use this table:
 | From 19.111 or later (19.115.1 or later for SQL Server) | Yes | Replace nodes one at a time. Releases are checked in CI against the release before them. |
 | From a 19.x release before 19.111 | Yes | Stop every node, then start the new version. Older releases lack the patch-manager handover or have incompatible grain calls. |
 | From a release before 19.123.1 to 19.123.1 or later | No | Stop every node, then start the new version. The serializers were renamed from `Cratis.Orleans` to `Cratis.Choreography` in 19.123.1, and a node of either side cannot read a concept value written by the other. Replacing nodes one at a time crash-loops the new node and fills the old nodes with grain errors. A new node that finds such a release in the cluster logs a critical message and stops. |
+| To a release whose notes say `requires a stop-start deploy` | No | Stop every node, then start the new version. The release changes a grain contract, so it cannot share a cluster with the one before it. See [Stop-start releases](#stop-start-releases). |
 | To a new major | No | Stop every node, then start the new version. A major release may change grain calls. |
+
+### Stop-start releases
+
+A minor or patch release can change a kernel-internal grain contract. When it does, its release notes carry exactly this sentence, so you can search for it:
+
+```text
+Requires a stop-start deploy: this release cannot share a cluster with <previous release>.
+```
+
+The client gRPC contract and the stored data stay compatible, so clients and storage need nothing special. Only the nodes cannot overlap. Make your deploy tooling treat such a release as stop-start: no overlap and no rolling replace. The repository records the same fact for tooling in `.github/grain-compatibility-waivers.txt`, which names the earlier release each such release cannot share a cluster with.
+
+The procedure is the one below: stop every node, then start the new version.
 
 To stop every node in Kubernetes, scale the deployment to zero and back, or use the `Recreate` strategy for that one upgrade. In Azure Container Apps, use single revision mode with no overlap. Stopping the old nodes first is safe; it is the overlap that fails.
 

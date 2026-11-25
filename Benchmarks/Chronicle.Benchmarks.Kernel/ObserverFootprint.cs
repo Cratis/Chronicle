@@ -130,6 +130,12 @@ public static class ObserverFootprint
         Console.WriteLine($"  warmup observers still subscribed: {await CountSubscribed(grainFactory, "warmup", warmup)} of {warmup}");
         await Hold(IntArgument(args, "--hold-unsubscribed", 0));
 
+        // Waking the released observers is an activation each, which is where an activation-time alert report shows up.
+        if (dormant && args.Contains("--wake-released"))
+        {
+            await phase.WakeReleased(grainFactory, "measured", count, await ActivationsOf<Observer>(grainFactory));
+        }
+
         await host.StopAsync();
         return 0;
     }
@@ -363,6 +369,7 @@ public static class ObserverFootprint
         var alerts = await ActivationsOf<Observation.Alerts.ObserverAlerts>(grainFactory);
         Console.WriteLine($"{phase}: live heap {measured / 1024.0 / 1024.0:F1} MiB, {delta / 1024.0 / 1024.0:+0.0;-0.0} MiB over baseline");
         Console.WriteLine($"  observer activations resident: {observers} (baseline {baselineActivations}), companion observer alert activations: {alerts}");
+        Console.WriteLine($"  queue activations resident: {await ActivationsOf<EventSequences.AppendedEventsQueue>(grainFactory)}, queue routers: {await ActivationsOf<EventSequences.AppendedEventsQueues>(grainFactory)}, observer supervisors: {await ActivationsOf<Observation.Supervisors.ObserverSupervisor>(grainFactory)}");
         Console.WriteLine($"  retained per measured observer: {delta / (double)count / 1024.0:F1} KiB");
     }
 

@@ -136,8 +136,12 @@ public static class SchemaEvolution
     {
         if (stored?.ContainsKey(property.Key) == true)
         {
-            return stored[property.Key] is JsonObject existing && property.Value is JsonObject candidate
-                ? PruneAdditions(existing, candidate, allowDefault) : 0;
+            if (stored[property.Key] is JsonObject existing && property.Value is JsonObject candidate)
+            {
+                return PruneAdditions(existing, candidate, allowDefault);
+            }
+
+            return 0;
         }
 
         if (IsRequired(incoming, property.Key) && !RemoveSafeRequiredAddition(incoming, property, allowDefault))

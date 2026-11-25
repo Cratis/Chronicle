@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Captures;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Captures;
+using Cratis.Chronicle.Supervision;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Captures;
@@ -19,12 +20,14 @@ namespace Cratis.Chronicle.Captures;
 /// <param name="captureValidator"><see cref="ICaptureValidator"/> for validating compiled captures.</param>
 /// <param name="eventsSubscriptions"><see cref="ICaptureEventsSubscriptions"/> for running captures that read from an inbox.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="supervisor">The optional <see cref="ISiloSupervisor"/> that reconciles the started captures on a schedule.</param>
 public partial class CapturesManager(
     IStorage storage,
     ILanguageService languageService,
     ICaptureValidator captureValidator,
     ICaptureEventsSubscriptions eventsSubscriptions,
-    ILogger<CapturesManager> logger) : Grain, ICapturesManager
+    ILogger<CapturesManager> logger,
+    ISiloSupervisor? supervisor = null) : Grain, ICapturesManager
 {
     /// <summary>
     /// How often a started events capture is checked for a missing subscription. A grain deactivation or a failed
@@ -35,6 +38,8 @@ public partial class CapturesManager(
     readonly Dictionary<EventStoreNamespaceName, Task> _namespaceSubscriptions = new();
     EventStoreName _eventStoreName = EventStoreName.NotSet;
 
+    string SupervisionKey => $"captures:{_eventStoreName}";
+
     ICapturesStorage Captures => storage.GetEventStore(_eventStoreName).Captures;
 
     /// <inheritdoc/>
@@ -43,13 +48,25 @@ public partial class CapturesManager(
         _eventStoreName = this.GetPrimaryKeyString();
 
         // Started events captures are observers whose subscription lives in memory only, so the manager keeps
-        // reconciling them for as long as it is active - it is what brings them back after a deactivation.
-        this.RegisterGrainTimer(Reconcile, new GrainTimerCreationOptions
-        {
-            DueTime = ReconcileInterval,
-            Period = ReconcileInterval,
-            Interleave = true
-        });
+        // reconciling them for as long as it is active - it is what brings them back after a deactivation. The
+        // silo's supervisor runs that on one loop for every manager rather than on a grain timer of its own.
+        var self = GrainFactory.GetGrain<ICapturesManager>(this.GetPrimaryKeyString());
+        supervisor?.Register(
+            SupervisionKey,
+            ReconcileInterval,
+            async () =>
+            {
+                await self.Reconcile();
+                return null;
+            },
+            null);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        supervisor?.Unregister(SupervisionKey);
         return Task.CompletedTask;
     }
 
@@ -160,6 +177,22 @@ public partial class CapturesManager(
         }
     }
 
+    /// <inheritdoc/>
+    public async Task Reconcile()
+    {
+        foreach (var (capture, _) in await GetStartedEventsCaptures())
+        {
+            try
+            {
+                await RunStartedCapture(capture.Id);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.FailedRecoveringCapture(exception, capture.Name, capture.Id);
+            }
+        }
+    }
+
     async Task<IEnumerable<CaptureValidationMessage>> StartWhileHeld(CaptureId captureId, CaptureLifecycle lifecycle, int closure)
     {
         if (!await Captures.Has(captureId))
@@ -213,21 +246,6 @@ public partial class CapturesManager(
         await Captures.Save(capture);
         await Run(capture);
         return [];
-    }
-
-    async Task Reconcile(CancellationToken cancellationToken)
-    {
-        foreach (var (capture, _) in await GetStartedEventsCaptures())
-        {
-            try
-            {
-                await RunStartedCapture(capture.Id);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                logger.FailedRecoveringCapture(exception, capture.Name, capture.Id);
-            }
-        }
     }
 
     async Task<IEnumerable<(Capture Capture, CaptureDefinition Definition)>> GetStartedEventsCaptures() =>

@@ -29,13 +29,13 @@ public record RecommendationKey(EventStoreName EventStore, EventStoreNamespaceNa
     /// <param name="key">Key to convert from.</param>
     public static implicit operator string(RecommendationKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
-
     /// <summary>
     /// Parse a key from a string.
     /// </summary>
     /// <param name="key">String representation of the key.</param>
     /// <returns>A <see cref="RecommendationKey"/> instance.</returns>
     public static RecommendationKey Parse(string key) => KeyHelper.Parse<RecommendationKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 }

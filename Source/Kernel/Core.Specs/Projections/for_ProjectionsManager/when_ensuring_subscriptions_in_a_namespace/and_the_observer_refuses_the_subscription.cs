@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 
 namespace Cratis.Chronicle.Projections.for_ProjectionsManager.when_ensuring_subscriptions_in_a_namespace;
@@ -25,5 +26,5 @@ public class and_the_observer_refuses_the_subscription : given.a_projections_man
     }
 
     [Fact] void should_not_fail_namespace_creation() => _exception.ShouldBeNull();
-    [Fact] async Task should_retry_on_the_next_trigger() => await _observerGrain.Received(2).ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<Concepts.Events.EventType>>(), Arg.Any<SiloAddress>(), true);
+    [Fact] async Task should_retry_on_the_next_trigger() => await _observerGrain.Received(2).ReconcileSubscription<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), true);
 }

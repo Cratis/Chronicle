@@ -13,8 +13,9 @@ public partial class Sink
     ISinkProvenanceStorage? _provenance;
     SinkProvenanceStorage? _rawProvenance;
 
-    SinkProvenanceTarget? ProvenanceTarget => _provenance is null ? null :
-        _rawProvenance?.Target ?? throw new InvalidOperationException("Read-model storage is not available.");
+    SinkProvenanceTarget? ProvenanceTarget => _provenance is null
+        ? null
+        : _rawProvenance?.Target ?? throw new InvalidOperationException("Read-model storage is not available.");
 
     /// <inheritdoc/>
     public Task EnsureProvenance()

@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -44,6 +45,7 @@ public partial class ProjectionsManager
         }
 
         await eventStoreStorage.Observers.Delete(identifier);
+        await (ServiceProvider.GetService<IObserverDefinitionsCacheClient>()?.Invalidate(_eventStoreName, identifier) ?? Task.CompletedTask);
         await Forget(identifier);
         await eventStoreStorage.Projections.Delete(identifier);
         return ObserverRemovalResult.Removed;

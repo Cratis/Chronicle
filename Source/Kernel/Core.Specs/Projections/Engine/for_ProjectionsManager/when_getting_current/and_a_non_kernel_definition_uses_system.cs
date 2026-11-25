@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -32,6 +31,6 @@ public class and_a_non_kernel_definition_uses_system : given.a_manager_with_shar
 
     [Fact] void should_skip_every_non_kernel_definition_and_variant() => _results.TrueForAll(_ => _ is null).ShouldBeTrue();
     [Fact] void should_remove_previously_cached_graphs() => _cached.TrueForAll(_ => !_).ShouldBeTrue();
-    [Fact] void should_not_compile_the_system_definitions() => _projectionFactory.DidNotReceive().Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<ProjectionDefinition>(_ => _.EventSequenceId.IsSystemSequence()), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>());
+    [Fact] void should_not_compile_the_system_definitions() => _projectionFactory.DidNotReceive().Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Is<ProjectionDefinition>(_ => _.EventSequenceId.IsSystemSequence()), Arg.Any<ReadModelDefinition>());
     [Fact] void should_leave_the_persisted_definitions_in_place() => _storage.GetEventStore(_eventStore).Projections.DidNotReceive().Delete(Arg.Any<ProjectionId>());
 }

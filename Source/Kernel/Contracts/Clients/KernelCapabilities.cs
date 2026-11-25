@@ -47,4 +47,9 @@ public static class KernelCapabilities
     /// The kernel supports structured composite-key reads of materialized read models.
     /// </summary>
     public const string CompositeKeyLookups = "composite-key-lookups";
+
+    /// <summary>
+    /// The kernel serves every reactor and reducer of a connection over one stream, with the registrations of many observers in one write.
+    /// </summary>
+    public const string MultiplexedObservation = "multiplexed-observation";
 }

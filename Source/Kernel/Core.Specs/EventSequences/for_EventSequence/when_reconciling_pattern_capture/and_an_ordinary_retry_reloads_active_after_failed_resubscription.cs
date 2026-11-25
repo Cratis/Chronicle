@@ -26,7 +26,7 @@ public class and_an_ordinary_retry_reloads_active_after_failed_resubscription : 
     async Task Establish()
     {
         _captureFailures.Partitions = [_quarantinedPartition];
-        _appendedEventsQueues.Configure().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+        _appendedEventsQueues.Configure().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>())
             .Returns(call =>
             {
                 _queueSubscribed = true;
@@ -73,7 +73,7 @@ public class and_an_ordinary_retry_reloads_active_after_failed_resubscription : 
     [Fact] void should_still_be_stalled_after_the_ordinary_retry() => _stateAfterOrdinaryRetry.ShouldEqual(typeof(CatchingUpInFlight));
     [Fact] void should_still_be_off_the_queue_after_the_ordinary_retry() => _queueSubscribedAfterOrdinaryRetry.ShouldBeFalse();
     [Fact] async Task should_resume_observing() => (await _captureObserver.GetCurrentState()).ShouldBeOfExactType<Observing>();
-    [Fact] async Task should_restore_queue_delivery_once() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_restore_queue_delivery_once() => await _appendedEventsQueues.Received(1).Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
     [Fact] void should_preserve_the_next_sequence_number() => _nextAfterRecovery.ShouldEqual((EventSequenceNumber)43UL);
     [Fact] async Task should_not_reload_state_during_recovery() => await _captureState.DidNotReceive().ReadStateAsync();
     [Fact] async Task should_deliver_the_next_healthy_event() => await _captureSubscriber.Received(1).OnNext(Arg.Any<Key>(), Arg.Is<IEnumerable<AppendedEvent>>(events => events.Single().Context.SequenceNumber == 43UL), Arg.Any<ObserverSubscriberContext>());

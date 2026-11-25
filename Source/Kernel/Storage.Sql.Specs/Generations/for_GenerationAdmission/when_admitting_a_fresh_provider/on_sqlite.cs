@@ -14,7 +14,7 @@ public class on_sqlite : given.a_sqlite_provider
     async Task Because()
     {
         await Admit();
-        await using var context = new Cluster.ClusterDbContext(new DbContextOptionsBuilder<Cluster.ClusterDbContext>().UseSqlite(OptionsForProvider.Value.Storage.ConnectionDetails).AddConceptAsSupport().Options);
+        await using var context = new Cluster.ClusterDbContext(new DbContextOptionsBuilder<Cluster.ClusterDbContext>().UseSqlite(OptionsForProvider.Value.Storage.ConnectionDetails).AddConceptAsSupport().IgnoringManyServiceProviders().Options);
         _migrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
     }
 

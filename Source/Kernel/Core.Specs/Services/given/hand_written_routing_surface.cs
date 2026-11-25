@@ -79,6 +79,7 @@ public static class hand_written_routing_surface
         ["Projections.Register"] = Refused,
         ["Projections.Save"] = Refused,
         ["Projections.GetAllDefinitions"] = Admin,
+        ["Projections.GetRegistrationStatus"] = Admin,
         ["Projections.GetAllDeclarations"] = Admin,
         ["Projections.Preview"] = Admin,
         ["ComplianceService.Release"] = Admin,

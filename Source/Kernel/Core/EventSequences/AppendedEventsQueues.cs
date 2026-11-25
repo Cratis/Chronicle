@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Configuration;
+using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Observation.ObserverRouting;
 using Microsoft.Extensions.Options;
 using Orleans.Placement;
 
@@ -12,22 +15,29 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents an implementation of <see cref="IAppendedEventsQueues"/>.
 /// </summary>
+/// <remarks>
+/// The grain holds no routing state: an observer's queue is a stable hash of its identifier, and the queues a batch goes to
+/// are read from the silo-local routing table. Nothing is seeded on activation, so the grain is collected like any other
+/// when no events are appended.
+/// </remarks>
 /// <param name="options"><see cref="ChronicleOptions"/> for configuration.</param>
-[KeepAlive]
+/// <param name="observers">The silo-local <see cref="IObservers"/> routing table.</param>
 [PreferLocalPlacement]
-public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, IAppendedEventsQueues
+public class AppendedEventsQueues(IOptions<ChronicleOptions> options, IObservers observers) : Grain, IAppendedEventsQueues
 {
     IAppendedEventsQueue[] _queues = [];
     AppendedEventsQueueRouter _router = null!;
+    EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
     bool _isResetting;
 
     /// <inheritdoc/>
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueCount = options.Value.Events.Queues;
+        _eventSequenceKey = EventSequenceKey.Parse(this.GetPrimaryKeyString());
         _queues = Enumerable.Range(0, queueCount).Select(_ => GrainFactory.GetGrain<IAppendedEventsQueue>(_, this.GetPrimaryKeyString())).ToArray();
         _router = new AppendedEventsQueueRouter(queueCount);
-        await SeedRouter();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
@@ -35,11 +45,6 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
     {
         _isResetting = true;
         await Task.WhenAll(_queues.Select(queue => queue.ResetForDevelopment()));
-        _router = new AppendedEventsQueueRouter(_queues.Length);
-        for (var queueIndex = 0; queueIndex < _queues.Length; queueIndex++)
-        {
-            _router.Seed(queueIndex, []);
-        }
     }
 
     /// <inheritdoc/>
@@ -56,44 +61,38 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
             return;
         }
 
-        await Parallel.ForEachAsync(GetTargetQueues(batch), async (queue, _) => await queue.Enqueue(batch));
+        await Parallel.ForEachAsync(await GetTargetQueues(batch), async (queue, _) => await queue.Enqueue(batch));
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
+    public async Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, EventTypeSet eventTypes, ObserverFilters? filters = null)
     {
-        if (_isResetting)
+        var queueIndex = _router.GetQueueIndexFor(observerKey);
+        var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
+        if (!_isResetting)
         {
-            return new AppendedEventsQueueSubscription(observerKey, _router.GetQueueIndexFor(observerKey));
+            await _queues[queueIndex].Subscribe(observerKey, eventTypes, filters);
         }
 
-        var eventTypesList = eventTypes as IReadOnlyCollection<EventType> ?? eventTypes.ToArray();
-        var queueIndex = _router.Subscribe(observerKey, eventTypesList.Select(eventType => eventType.Id));
-        var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
-        await _queues[queueIndex].Subscribe(observerKey, eventTypesList, filters);
         return subscription;
     }
 
     /// <inheritdoc/>
     public async Task<AppendedEventsQueueSubscription> SubscribeToAllEventTypes(ObserverKey observerKey, ObserverFilters? filters = null)
     {
-        if (_isResetting)
+        var queueIndex = _router.GetQueueIndexFor(observerKey);
+        var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
+        if (!_isResetting)
         {
-            return new AppendedEventsQueueSubscription(observerKey, _router.GetQueueIndexFor(observerKey));
+            await _queues[queueIndex].SubscribeToAllEventTypes(observerKey, filters);
         }
 
-        var queueIndex = _router.SubscribeToAllEventTypes(observerKey);
-        var subscription = new AppendedEventsQueueSubscription(observerKey, queueIndex);
-        await _queues[queueIndex].SubscribeToAllEventTypes(observerKey, filters);
         return subscription;
     }
 
     /// <inheritdoc/>
-    public async Task Unsubscribe(AppendedEventsQueueSubscription subscription)
-    {
-        _router.Unsubscribe(subscription.Queue, subscription.ObserverKey);
-        await _queues[subscription.Queue].Unsubscribe(subscription.ObserverKey);
-    }
+    public Task Unsubscribe(AppendedEventsQueueSubscription subscription) =>
+        _queues[subscription.Queue].Unsubscribe(subscription.ObserverKey);
 
     /// <inheritdoc/>
     public async Task SpillToCatchup() =>
@@ -105,7 +104,7 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
         if (_isResetting) return;
         var batch = appendedEvents as IReadOnlyList<AppendedEvent> ?? appendedEvents.ToArray();
         if (batch.Count == 0) return;
-        await Parallel.ForEachAsync(GetTargetQueues(batch), async (queue, _) => await queue.SpillMatchingToCatchup(batch));
+        await Parallel.ForEachAsync(await GetTargetQueues(batch), async (queue, _) => await queue.SpillMatchingToCatchup(batch));
     }
 
     /// <inheritdoc/>
@@ -117,12 +116,8 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
         _isResetting ? Task.FromResult(false) : _queues[_router.GetQueueIndexFor(observerKey)].IsDormant(observerKey);
 
     /// <inheritdoc/>
-    public async Task Forget(ObserverKey observerKey)
-    {
-        var queueIndex = _router.GetQueueIndexFor(observerKey);
-        _router.Unsubscribe(queueIndex, observerKey);
-        await _queues[queueIndex].Unsubscribe(observerKey);
-    }
+    public Task Forget(ObserverKey observerKey) =>
+        _queues[_router.GetQueueIndexFor(observerKey)].Unsubscribe(observerKey);
 
     /// <inheritdoc/>
     public async Task<bool> IsSubscribed(ObserverKey observerKey)
@@ -131,24 +126,7 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
         return subscriptions.Any(subscription => subscription.ObserverKey == observerKey);
     }
 
-    async Task SeedRouter()
-    {
-        for (var queueIndex = 0; queueIndex < _queues.Length; queueIndex++)
-        {
-            try
-            {
-                var subscriptions = await _queues[queueIndex].GetSubscriptions();
-                _router.Seed(queueIndex, subscriptions);
-            }
-            catch
-            {
-                // A queue left unseeded keeps receiving every batch until it is reconciled: a missed delivery
-                // would silently drop events, whereas an extra delivery is idempotent for observers.
-            }
-        }
-    }
-
-    IEnumerable<IAppendedEventsQueue> GetTargetQueues(IReadOnlyList<AppendedEvent> batch)
+    async Task<IEnumerable<IAppendedEventsQueue>> GetTargetQueues(IReadOnlyList<AppendedEvent> batch)
     {
         var batchEventTypeIds = new HashSet<EventTypeId>();
         foreach (var appendedEvent in batch)
@@ -165,6 +143,20 @@ public class AppendedEventsQueues(IOptions<ChronicleOptions> options) : Grain, I
             batchEventTypeIds.Add(eventTypeId);
         }
 
-        return _router.GetQueuesToDeliverTo(batchEventTypeIds).Select(queueIndex => _queues[queueIndex]);
+        var table = await GetRoutingTable();
+        return _router.GetQueuesToDeliverTo(table, _eventSequenceKey.EventSequenceId, batchEventTypeIds).Select(queueIndex => _queues[queueIndex]);
+    }
+
+    async Task<ObserverRoutingTable?> GetRoutingTable()
+    {
+        try
+        {
+            return await observers.GetTable(_eventSequenceKey.EventStore);
+        }
+        catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
+        {
+            // Without the table every queue receives the batch; each queue filters what is not for its observers.
+            return null;
+        }
     }
 }

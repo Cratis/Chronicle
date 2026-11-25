@@ -33,7 +33,7 @@ public class and_generating_it_back : given.an_organization_graph_declaration
     [Fact] void should_write_the_event_context_mapping() => _generated.ShouldContain("since = $eventContext.occurred");
     [Fact] void should_write_the_identity() => _generated.ShouldContain("identified by visitId");
 
-    static string Describe<T>(IDictionary<string, T> elements) =>
+    static string Describe<T>(IReadOnlyDictionary<string, T> elements) =>
         string.Join(';', elements.OrderBy(_ => _.Key, StringComparer.Ordinal).Select(_ => $"{_.Key}={System.Text.Json.JsonSerializer.Serialize(_.Value, _.Value!.GetType())}"));
 
     static string PrimitiveSchema(ReadModelDefinition readModel) => readModel.GetSchemaForLatestGeneration().ToJson();

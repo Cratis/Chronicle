@@ -122,11 +122,8 @@ public partial class ProjectionsManager
             }
         }));
 
-        if (!missing.IsEmpty || _failedNamespaceSetups.Contains(@namespace))
-        {
-            await EnsureEngineNamespace(@namespace);
-        }
-
+        // The projection engine needs no setup per namespace: it compiles a projection for a namespace the first time an
+        // observer of that namespace asks for it, once per silo, and shares the compiled plan between namespaces.
         if (!missing.IsEmpty)
         {
             await SubscribeMissingInNamespace(@namespace, missing, reconcile);
@@ -156,26 +153,10 @@ public partial class ProjectionsManager
         }
     }
 
-    async Task EnsureEngineNamespace(EventStoreNamespaceName @namespace)
-    {
-        try
-        {
-            // Engine setup must be retried even if subscriptions succeeded on the failed pass.
-            await projectionsService.NamespaceAdded(_eventStoreName, @namespace);
-            _failedNamespaceSetups.Remove(@namespace);
-        }
-        catch (Exception exception)
-        {
-            _failedNamespaceSetups.Add(@namespace);
-            logger.FailedEnsuringSubscriptionsInNamespace(exception, @namespace);
-        }
-    }
-
     async Task SubscribeMissingInNamespace(EventStoreNamespaceName @namespace, IEnumerable<ProjectionDefinition> definitions, bool reconcile)
     {
         var readModels = (await GrainFactory.GetGrain<IReadModelsManager>(_eventStoreName).GetDefinitions())
             .ToDictionary(readModel => readModel.Identifier);
-        var schemas = await storage.GetEventStore(_eventStoreName).EventTypes.GetLatestForAllEventTypes();
         await Task.WhenAll(definitions.Select(async definition =>
         {
             try
@@ -191,7 +172,7 @@ public partial class ProjectionsManager
 
                 // Reviving takes a fresh subscription: a reconciling one cannot end a retirement.
                 var revive = _pendingRevival.ContainsKey((definition.Identifier, @namespace));
-                await SubscribeIfNotSubscribed(definition, readModel, @namespace, schemas, reactivateRetired: revive, reconcile: reconcile && !revive);
+                await SubscribeIfNotSubscribed(definition, readModel, @namespace, reactivateRetired: revive, reconcile: reconcile && !revive);
                 var observer = GrainFactory.GetGrain<IObserver>(new ObserverKey(definition.Identifier, _eventStoreName, @namespace, definition.EventSequenceId));
                 if (!await observer.IsSubscriptionEstablished())
                 {
@@ -255,7 +236,7 @@ public partial class ProjectionsManager
         // After a silo departure the cache cannot be trusted: a pass that started before it can have re-added entries.
         var reconcileAll = _reconcileAllNamespaces;
         _reconcileAllNamespaces = false;
-        var missingNamespaces = namespaces.Where(namespaceName => reconcileAll || _failedNamespaceSetups.Contains(namespaceName) ||
+        var missingNamespaces = namespaces.Where(namespaceName => reconcileAll ||
             activeDefinitions.Any(definition => !_subscribed.ContainsKey((definition.Identifier, namespaceName))));
         await Task.WhenAll(missingNamespaces.Select(async namespaceName =>
         {

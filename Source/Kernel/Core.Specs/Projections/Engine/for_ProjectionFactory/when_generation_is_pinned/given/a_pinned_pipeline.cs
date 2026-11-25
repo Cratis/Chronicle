@@ -27,6 +27,7 @@ public class a_pinned_pipeline : a_projection_with_generations
     {
         _sink = Substitute.For<ISink>();
         _sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), Arg.Any<object>()).Returns(Option<Key>.None());
+        _sink.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), Arg.Any<object>(), Arg.Any<Key>()).Returns(Option<Key>.None());
         _sink.FindOrDefault(Arg.Any<Key>()).Returns(call => _saved.TryGetValue(call.Arg<Key>().ToString(), out var state) ? (ExpandoObject)state : null);
         _sink.ApplyChanges(Arg.Any<Key>(), Arg.Any<IChangeset<AppendedEvent, ExpandoObject>>(), Arg.Any<EventSequenceNumber>(), Arg.Any<SinkWriteMode>())
             .Returns(call =>

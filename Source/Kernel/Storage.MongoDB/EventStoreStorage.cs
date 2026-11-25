@@ -76,6 +76,9 @@ public class EventStoreStorage(
     public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; } = new Generations.GenerationInitializationStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.GenerationInitialization));
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Registrations.IRegistrationIntentStorage RegistrationIntents { get; } = new Registrations.RegistrationIntentStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.RegistrationIntents).Database);
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.TriggerDefinitions).Database);
 
     /// <inheritdoc/>
@@ -100,13 +103,13 @@ public class EventStoreStorage(
     public INamespaceStorage Namespaces { get; } = new NamespaceStorage(eventStoreDatabase, loggerFactory.CreateLogger<NamespaceStorage>());
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>());
+    public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>()));
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSourcesStorage(eventStoreDatabase);
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionsStorage(eventStoreDatabase);
+    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionRegistry(new ObserverDefinitionsStorage(eventStoreDatabase));
 
     /// <inheritdoc/>
     public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage(eventStoreDatabase);

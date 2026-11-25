@@ -11,7 +11,7 @@ public class and_a_legacy_selected_event_type_replay_cannot_read_the_observed_ev
     void Establish()
     {
         _request = _request with { ReplaysAllEventTypes = false, HeldBackFrom = EventSequenceNumber.Unavailable };
-        _observer.GetEventTypes().Returns(Task.FromException<IEnumerable<EventType>>(new InvalidOperationException("Observer unavailable")));
+        _observer.GetEventTypes().Returns(Task.FromException<EventTypeSet>(new InvalidOperationException("Observer unavailable")));
         _stateStorage.State.LastHandledEventSequenceNumber = 50UL;
         _stateStorage.State.LastScannedEventSequenceNumber = 50UL;
         _stateStorage.State.HandledAllEvents = true;

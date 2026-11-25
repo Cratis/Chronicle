@@ -23,6 +23,7 @@ public class a_capture_events_subscriptions : Specification
     protected static readonly EventStoreName _eventStore = "some-store";
 
     protected CaptureEventsSubscriptions _subscriptions;
+    protected IObserverDefinitionsCacheClient _definitionsCacheClient;
     protected IStorage _storage;
     protected IEventStoreStorage _eventStoreStorage;
     protected IEventTypesStorage _eventTypes;
@@ -78,19 +79,20 @@ public class a_capture_events_subscriptions : Specification
             return observer;
         });
 
-        _subscriptions = new(_storage, Substitute.For<ILocalSiloDetails>(), _grainFactory, NullLogger<CaptureEventsSubscriptions>.Instance);
+        _definitionsCacheClient = Substitute.For<IObserverDefinitionsCacheClient>();
+        _subscriptions = new(_storage, Substitute.For<ILocalSiloDetails>(), _grainFactory, NullLogger<CaptureEventsSubscriptions>.Instance, _definitionsCacheClient);
     }
 
     protected Dictionary<string, ObserverKey> _keys = [];
 
-    protected static Task<IEnumerable<EventType>> AnySubscribe(IObserver observer) =>
-        observer.SubscribeAdditively<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
+    protected static Task<EventTypeSet> AnySubscribe(IObserver observer) =>
+        observer.SubscribeAdditively<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
 
-    protected static Task<IEnumerable<EventType>> AnyRecover(IObserver observer) =>
-        observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
+    protected static Task<EventTypeSet> AnyRecover(IObserver observer) =>
+        observer.RecoverStalledSubscription<ICaptureEventsSubscriber>(Arg.Any<ObserverType>(), Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), Arg.Any<object?>(), Arg.Any<bool>(), Arg.Any<ObserverFilters?>());
 
     protected static Task<bool> AnyNeedsRecovery(IObserver observer) =>
-        observer.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>());
+        observer.NeedsSubscriptionRecovery(Arg.Any<EventTypeSet>());
 
     readonly Dictionary<string, EventTypeSchema> _schemas = [];
 

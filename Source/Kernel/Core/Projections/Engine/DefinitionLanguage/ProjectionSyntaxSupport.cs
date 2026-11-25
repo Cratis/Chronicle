@@ -21,8 +21,8 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
         [typeof(ExpressionKeySyntax)] = null,
         [typeof(CompositeKeySyntax)] = null,
         [typeof(SetMappingSyntax)] = null,
-        [typeof(SetOnceMappingSyntax)] = "Set-once mappings have no projection definition lowering",
-        [typeof(RemoveKeyMappingSyntax)] = "Dictionary-entry removal has no projection definition lowering",
+        [typeof(SetOnceMappingSyntax)] = null,
+        [typeof(RemoveKeyMappingSyntax)] = null,
         [typeof(ClearMappingSyntax)] = null,
         [typeof(AddMappingSyntax)] = null,
         [typeof(SubtractMappingSyntax)] = null,
@@ -83,10 +83,8 @@ internal sealed class ProjectionSyntaxSupport(CompilerErrors errors) : Screenpla
 
     static string? UnsupportedOption(SyntaxNode node) => node switch
     {
-        AddMappingSyntax { Factor: not null } or SubtractMappingSyntax { Factor: not null } => "Projection arithmetic factors are not supported",
-        CompositeKeySyntax { Type.Length: 0 } => "Untyped composite projection keys are not supported; name the key type",
-        RemoveWithSyntax { PartsKey: not null } => "Untyped composite removal keys are not supported; name the key type",
-        ChildrenSyntax { Ordering: not null } => "Projection children ordering has no declaration-language lowering",
+        RemoveKeyMappingSyntax removal => DynamicMappingTarget.GetError(removal.Property),
+        MappingSyntax mapping when mapping.Property.Contains(".$", StringComparison.Ordinal) => DynamicMappingTarget.GetError(mapping.Property),
         _ => null
     };
 }

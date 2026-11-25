@@ -12,9 +12,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Sink"/> that runs a multi-write cycle in one database transaction.
-/// </summary>
+/// </content>
 /// <remarks>
 /// A cycle with a single write keeps its single command and its own implicit transaction. A cycle with two or more
 /// writes (joins, child removals and the direct change) is rerun as a whole when it fails and nothing else is kep

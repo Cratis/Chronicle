@@ -8,10 +8,10 @@ using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Sql.Sinks;
 
-/// <summary>
+/// <content>
 /// Applies the changes of a multi-write cycle in changeset order, so a Join that follows a direct change on the same row
 /// leaves its value, as the projection computed it.
-/// </summary>
+/// </content>
 public partial class Sink
 {
     /// <summary>

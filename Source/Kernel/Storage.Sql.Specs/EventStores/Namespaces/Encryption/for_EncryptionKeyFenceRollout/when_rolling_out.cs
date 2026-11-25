@@ -30,8 +30,8 @@ public abstract class when_rolling_out(KeyStoreHarness harness) : a_key_store(ha
         {
             var legacy = EncryptionKeyIdentifierColumn.Value(context, "legacy");
             var erased = EncryptionKeyIdentifierColumn.Value(context, "erased");
-            await context.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"EncryptionKeys\" (\"Identifier\", \"Revision\", \"PublicKey\", \"PrivateKey\") VALUES ({legacy}, 7, {_key.Public}, {_key.Private})");
-            await context.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"EncryptionKeyErasures\" (\"Identifier\", \"ErasedThrough\", \"ErasedKeyFingerprints\", \"NewKeyAllowed\") VALUES ({erased}, 4, {_key.Fingerprint}, {false})");
+            await context.Database.ExecuteSqlAsync($"INSERT INTO \"EncryptionKeys\" (\"Identifier\", \"Revision\", \"PublicKey\", \"PrivateKey\") VALUES ({legacy}, 7, {_key.Public}, {_key.Private})");
+            await context.Database.ExecuteSqlAsync($"INSERT INTO \"EncryptionKeyErasures\" (\"Identifier\", \"ErasedThrough\", \"ErasedKeyFingerprints\", \"NewKeyAllowed\") VALUES ({erased}, 4, {_key.Fingerprint}, {false})");
         }
 
         await Apply(true);
@@ -73,7 +73,7 @@ public abstract class when_rolling_out(KeyStoreHarness harness) : a_key_store(ha
             oldShapeUpsert = $"INSERT INTO \"EncryptionKeyErasures\" (\"Identifier\", \"ErasedThrough\", \"ErasedKeyFingerprints\", \"NewKeyAllowed\") VALUES ({stored}, 0, '', {true}) ON CONFLICT (\"Identifier\") DO UPDATE SET \"ErasedThrough\" = 0, \"ErasedKeyFingerprints\" = '', \"NewKeyAllowed\" = {true}";
         }
 
-        await context.Database.ExecuteSqlInterpolatedAsync(oldShapeUpsert);
+        await context.Database.ExecuteSqlAsync(oldShapeUpsert);
         await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => _harness.Storage.GetFenceFor(_store, _namespace, _identifier));
         await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => _harness.Storage.GetOrAddFor(_store, _namespace, _identifier, _key));
         await Assert.ThrowsAsync<EncryptionKeyFenceUnavailable>(() => _harness.Storage.TryGetFor(_store, _namespace, _identifier));

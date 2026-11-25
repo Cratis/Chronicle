@@ -23,4 +23,10 @@ public interface IObserverJobGauges
     /// <param name="jobType">The <see cref="ObserverJobGaugeType"/> of the job.</param>
     /// <returns>The entry to publish progress to; releasing it removes the job from the gauges.</returns>
     ObserverJobGaugeEntry Register(JobId jobId, ObserverKey observerKey, ObserverJobGaugeType jobType);
+
+    /// <summary>
+    /// Gets how many observer jobs are running, per event store, namespace and job type.
+    /// </summary>
+    /// <returns>One entry per combination with a running job.</returns>
+    IReadOnlyList<RunningObserverJobs> Running();
 }

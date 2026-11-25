@@ -84,7 +84,6 @@ internal static class ChildrenDefinitionConverters
             AutoMap: (AutoMap)contract.AutoMap,
             Nested: contract.Nested.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
             NoAutoMapProperties: [.. contract.NoAutoMapProperties.Select(_ => new PropertyPath(_))],
-            Ordering: contract.Ordering?.ToChronicle()
-        );
+            Ordering: contract.Ordering?.ToChronicle());
     }
 }

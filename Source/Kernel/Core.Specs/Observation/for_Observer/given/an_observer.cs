@@ -23,6 +23,7 @@ using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -31,7 +32,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute.Extensions;
 using Orleans.Core;
-using Orleans.Streams;
 using Orleans.TestKit;
 using Orleans.TestKit.Storage;
 using AppendedEventsQueueSubscription = Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription;
@@ -52,12 +52,11 @@ public class an_observer : Specification
     /// Gets or sets the running-state change time held by the substituted observer state storage.
     /// </summary>
     protected DateTimeOffset? _persistedRunningStateChangedAt;
-    protected IStreamProvider _streamProvider;
-    protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
     protected IJobsManager _jobsManager;
     protected IObserverAlerts _observerAlerts;
     protected IObserverServiceClient _observerServiceClient;
+    protected ISiloSupervisor _supervisor;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
     protected virtual ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
@@ -103,6 +102,17 @@ public class an_observer : Specification
 
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
 
+    /// <summary>
+    /// Creates the admission of catch-up jobs. By default every observer is admitted, so the limit never gets in the way.
+    /// </summary>
+    /// <returns>The <see cref="ICatchUpAdmission"/> to register.</returns>
+    protected virtual ICatchUpAdmission CreateCatchUpAdmission()
+    {
+        var admission = Substitute.For<ICatchUpAdmission>();
+        admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>(), Arg.Any<ulong>()).Returns(_ => Task.FromResult<IDisposable?>(Substitute.For<IDisposable>()));
+        return admission;
+    }
+
     protected virtual IActivitySource<Observer> CreateActivitySource() => new ActivitySource<Observer>();
 
     void AddServices(TestKitSilo silo)
@@ -120,6 +130,8 @@ public class an_observer : Specification
         silo.AddService<ISubscriptionAdmission>(new SubscriptionAdmission(1000, Environment.ProcessorCount));
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
+        silo.AddService(_supervisor);
+        silo.AddService(CreateCatchUpAdmission());
         silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
@@ -192,7 +204,7 @@ public class an_observer : Specification
         // to catch-up under back-pressure, which the specs that care about set up explicitly.
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
         _appendedEventsQueues
-            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>())
             .Returns(callInfo => new AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
         _appendedEventsQueues.IsSubscribed(Arg.Any<ObserverKey>()).Returns(true);
 
@@ -244,6 +256,7 @@ public class an_observer : Specification
         _failedPartitionsState = Substitute.For<FailedPartitions>();
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _supervisor = Substitute.For<ISiloSupervisor>();
 
         _logger = CreateLogger();
         _loggerFactory = Substitute.For<ILoggerFactory>();

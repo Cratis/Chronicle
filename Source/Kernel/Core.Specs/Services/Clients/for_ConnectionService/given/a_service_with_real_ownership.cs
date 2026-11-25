@@ -110,6 +110,12 @@ public class a_service_with_real_ownership : Specification
             released();
         }
 
+        public void Revoke(ConnectionId connectionId, ConnectionOwner owner)
+        {
+            inner.Revoke(connectionId, owner);
+            released();
+        }
+
         public bool IsOwnedBy(string connectionId, ConnectionOwner owner) => inner.IsOwnedBy(connectionId, owner);
     }
 }

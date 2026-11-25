@@ -17,6 +17,8 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
         [typeof(ExpressionKeySyntax)] = "from DocEvent\n  key id",
         [typeof(CompositeKeySyntax)] = "from DocEvent\n  key DocKey\n    id = id",
         [typeof(SetMappingSyntax)] = "from DocEvent\n  name = name",
+        [typeof(SetOnceMappingSyntax)] = "from DocEvent\n  set once name = name",
+        [typeof(RemoveKeyMappingSyntax)] = "from DocEvent\n  remove names.$eventContent.id",
         [typeof(ClearMappingSyntax)] = "from DocEvent\n  clear name",
         [typeof(AddMappingSyntax)] = "from DocEvent\n  add total by amount",
         [typeof(SubtractMappingSyntax)] = "from DocEvent\n  subtract total by amount",
@@ -38,8 +40,6 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
     [
         new RefusalExpressionSyntax("reason", _location),
         new InvocationValueExpressionSyntax("result", "name", _location),
-        new SetOnceMappingSyntax("name", new PathExpressionSyntax("name", _location), _location),
-        new RemoveKeyMappingSyntax("names.$eventContent.id", _location),
         new ListExpressionSyntax([], _location),
         new ObjectExpressionSyntax([], _location),
         new CaseValueExpressionSyntax("value", _location),
@@ -106,32 +106,16 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
     }
 
     [Theory]
-    [InlineData("set once name = name", nameof(SetOnceMappingSyntax))]
-    [InlineData("remove names.$eventContent.id", nameof(RemoveKeyMappingSyntax))]
-    void should_report_unsupported_mappings_without_schemas(string mapping, string nodeType)
-    {
-        var result = _languageService.Compile($"projection Doc => DocReadModel\n  from DocEvent\n    {mapping}", ProjectionOwner.Client, [], []);
-        var errors = result.Match(_ => CompilerErrors.Empty, _ => _);
-        var error = Assert.Single(errors.Errors);
-        Assert.Contains(nodeType, error.Message);
-        error.Line.ShouldEqual(3);
-        error.Column.ShouldEqual(5);
-    }
-
-    [Theory]
-    [InlineData("from DocEvent\n  add total by amount * price", "arithmetic factors")]
-    [InlineData("from DocEvent\n  subtract total by amount * price", "arithmetic factors")]
-    [InlineData("from DocEvent\n  key\n    id = id", "Untyped composite projection keys")]
-    [InlineData("remove with DocEvent\n  key\n    id = id", "Untyped composite removal keys")]
-    [InlineData("children docs identified by id\n  sort by name ascending\n  from DocEvent", "children ordering")]
-    [InlineData("children docs identified by id\n  insert first\n  from DocEvent", "children ordering")]
-    [InlineData("children docs identified by id\n  insert last\n  from DocEvent", "children ordering")]
-    void should_report_options_without_definition_lowering(string snippet, string diagnostic)
+    [InlineData("from DocEvent\n  key\n    name = name\n    age = age")]
+    [InlineData("remove with DocEvent\n  key\n    name = name\n    age = age")]
+    void should_lower_untyped_composite_keys_without_schemas(string snippet)
     {
         var source = "projection Doc => DocReadModel\n" + string.Join('\n', snippet.Split('\n').Select(line => "  " + line));
         var result = _languageService.Compile(source, ProjectionOwner.Client, [], []);
-        var errors = result.Match(_ => CompilerErrors.Empty, _ => _);
-        Assert.Contains(errors.Errors, error => error.Message.Contains(diagnostic, StringComparison.Ordinal));
+        var key = result.Match(
+            definition => definition.From.Values.Select(from => from.Key).Concat(definition.RemovedWith.Values.Select(removed => removed.Key)).Single().ToString(),
+            errors => string.Join("; ", errors.Errors.Select(error => error.Message)));
+        key.ShouldEqual("$flatComposite(age=age, name=name)");
     }
 
     [Fact]

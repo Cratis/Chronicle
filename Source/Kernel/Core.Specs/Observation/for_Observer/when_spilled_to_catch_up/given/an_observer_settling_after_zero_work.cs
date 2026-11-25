@@ -19,7 +19,7 @@ public class an_observer_settling_after_zero_work : for_Observer.given.an_observ
     async Task Establish()
     {
         _appendedEventsQueues.IsSubscribed(_observerKey).Returns(_ => _queued);
-        _appendedEventsQueues.Subscribe(_observerKey, Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+        _appendedEventsQueues.Subscribe(_observerKey, Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>())
             .Returns(_ =>
             {
                 _queued = true;

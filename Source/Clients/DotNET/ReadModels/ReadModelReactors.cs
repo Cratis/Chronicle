@@ -31,27 +31,37 @@ public class ReadModelReactors(
 {
     readonly object _sync = new();
     readonly List<IDisposable> _subscriptions = [];
-    bool _started;
     bool _released;
+    int _generation;
+    Type[]? _reactorTypes;
 
     /// <inheritdoc/>
     public void Start()
     {
+        var reactorTypes = clientArtifactsProvider.ReadModelReactors.ToArray();
+        int generation;
+        List<IDisposable> previous;
         lock (_sync)
         {
-            if (_released || _started)
+            if (_released || _reactorTypes?.SequenceEqual(reactorTypes) == true)
             {
                 return;
             }
 
-            _started = true;
+            _reactorTypes = reactorTypes;
+            generation = ++_generation;
+            previous = _subscriptions.ToList();
+            _subscriptions.Clear();
         }
+
+        // Registration can discover a new reactor catalog after reconnecting.
+        DisposeAll(previous);
 
         // Subscribing reaches into the services, so it never runs under the lock.
         var started = new List<IDisposable>();
         try
         {
-            foreach (var reactorType in clientArtifactsProvider.ReadModelReactors)
+            foreach (var reactorType in reactorTypes)
             {
                 foreach (var readModelType in ReadModelReactorMethods.GetReadModelTypesFor(reactorType))
                 {
@@ -61,7 +71,7 @@ public class ReadModelReactors(
         }
         finally
         {
-            Publish(started);
+            Publish(started, generation);
         }
     }
 
@@ -89,40 +99,24 @@ public class ReadModelReactors(
         }
     }
 
-    static ReadModelChangeType DetermineChangeType<TReadModel>(ReadModelChangeset<TReadModel> changeset, HashSet<string>? seenKeys)
-    {
-        if (seenKeys is null)
-        {
-            return changeset.ChangeType;
-        }
-
-        var key = changeset.ModelKey.Value;
-        if (changeset.Removed)
-        {
-            seenKeys.Remove(key);
-            return ReadModelChangeType.Removed;
-        }
-
-        return seenKeys.Add(key) ? ReadModelChangeType.Added : ReadModelChangeType.Modified;
-    }
-
     List<IDisposable> TakeSubscriptions(bool release)
     {
         lock (_sync)
         {
             _released |= release;
-            _started = false;
+            _reactorTypes = null;
+            _generation++;
             var taken = _subscriptions.ToList();
             _subscriptions.Clear();
             return taken;
         }
     }
 
-    void Publish(List<IDisposable> started)
+    void Publish(List<IDisposable> started, int generation)
     {
         lock (_sync)
         {
-            if (!_released && _started)
+            if (!_released && generation == _generation)
             {
                 _subscriptions.AddRange(started);
                 return;
@@ -148,16 +142,14 @@ public class ReadModelReactors(
             return;
         }
 
-        // Projections report the change type from the server; reducers compute changesets locally without one,
-        // so first-seen keys are tracked client-side to distinguish an addition from a modification.
-        var seenKeys = eventStore.Reducers.HasFor<TReadModel>() ? new HashSet<string>(StringComparer.Ordinal) : null;
-
-        var subscription = eventStore.ReadModels.Watch<TReadModel>().Subscribe(changeset => DispatchAll(
-            reactorType,
-            typeof(TReadModel),
-            changeset.ReadModel,
-            DetermineChangeType(changeset, seenKeys),
-            changeset.ChangeContext ?? EventContext.EmptyWithEventSourceId(changeset.ModelKey)));
+        var subscription = eventStore.ReadModels.Watch<TReadModel>().Subscribe(
+            changeset => DispatchAll(
+                reactorType,
+                typeof(TReadModel),
+                changeset.ReadModel,
+                changeset.ChangeType,
+                changeset.ChangeContext ?? EventContext.EmptyWithEventSourceId(changeset.ModelKey)),
+            error => logger.FailedDispatchingReadModelChange(reactorType.Name, error));
         subscriptions.Add(subscription);
     }
 

@@ -9,8 +9,9 @@ public class and_a_regular_from_event_lacks_its_mapping_source : given.a_project
 {
     void Establish()
     {
-        _definition.FromEvery.Properties.Remove("lastValue");
-        _definition.From[_valueChanged].Properties["lastValue"] = "value";
+        _definition = _definition
+            .WithoutEveryProperty("lastValue")
+            .WithFromProperty(_valueChanged, "lastValue", "value");
     }
 
     Task Because() => Project(_valueChanged, new ExpandoObject());

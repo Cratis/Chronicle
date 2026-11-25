@@ -26,6 +26,6 @@ public class a_manager_with_failing_stop : a_captures_manager
     {
         await _manager.Ensure();
         await _manager.EnsureSubscribedIn("new-tenant");
-        await _silo.TimerRegistry.FireAllAsync();
+        await _manager.Reconcile();
     }
 }

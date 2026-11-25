@@ -50,6 +50,9 @@ public partial class Observer
             return;
         }
 
+        using var admission = await AdmitCatchUpOrDefer();
+        if (admission is null) return;
+
         // Set before anything is awaited, so a catch-up interleaving with this one finds it and adopts its outcome.
         var acquisition = new TaskCompletionSource<JobId>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingCatchUpAcquisition = acquisition.Task;
@@ -420,6 +423,28 @@ public partial class Observer
         await TransitionTo<Routing>();
     }
 
+    void ScheduleDeferredCatchUpRetry(TimeSpan delay)
+    {
+        var epoch = _catchUpOwnershipEpoch;
+        CancelShortCatchUpRetry();
+        _shortCatchUpRetryTimer = this.RegisterGrainTimer(
+            cancellationToken => RetryDeferredCatchUp(epoch, cancellationToken),
+            new GrainTimerCreationOptions { DueTime = delay, Period = Timeout.InfiniteTimeSpan });
+    }
+
+    async Task RetryDeferredCatchUp(int ownershipEpoch, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return;
+
+        CancelShortCatchUpRetry();
+
+        // The observer settles in observing after it was deferred; anywhere else the watchdog is the fallback.
+        if (!CanRetryCatchUp(ownershipEpoch) || await GetCurrentState() is not Observing) return;
+
+        _catchUpBackoffUntil = default;
+        await TransitionTo<Routing>();
+    }
+
     bool CanRetryCatchUp(int ownershipEpoch) =>
         IsObservingOwnedCatchUp(ownershipEpoch) && State.RunningState != ObserverRunningState.Replaying && _subscription.IsSubscribed;
 
@@ -598,6 +623,12 @@ public partial class Observer
     async Task StartCatchupJob(Key partition, EventSequenceNumber nextEventSequenceNumber)
     {
         if (IsRetired || _removed) return;
+        if (IsWithoutClient)
+        {
+            DeferringPartitionCatchUpWithoutClient(logger, partition);
+            return;
+        }
+
         logger.StartingCatchUpForPartition(partition, nextEventSequenceNumber);
         Skips.JobStarted(partition);
 

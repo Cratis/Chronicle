@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Sockets;
+using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.Yarp;
 using Yarp.ReverseProxy.Configuration;
 using Yarp.ReverseProxy.SessionAffinity;
@@ -14,6 +15,10 @@ Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
 Environment.SetEnvironmentVariable("ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS", "true");
 
 var builder = DistributedApplication.CreateBuilder(args);
+
+// Project paths are explicit: the AppHost uses the standard SDK, so there is no generated Projects.* class.
+var kernelProjectPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "Source", "Kernel", "Server", "Server.csproj"));
+var webAppProjectPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "AspNetCore", "AspNetCore.csproj"));
 
 // Chronicle needs MongoDB transactions (AppendMany, unit of work, Orleans membership), which
 // require a replica set. mongo:8.2 has no bundled replica set, so start mongod with replSet enabled,
@@ -104,8 +109,8 @@ builder.AddYarp("workbench")
 
 await builder.Build().RunAsync();
 
-IResourceBuilder<ProjectResource> AddKernel(string name, int port, int siloPort, int gatewayPort) =>
-    builder.AddProject<Projects.Server>(name)
+IResourceBuilder<DotnetProjectResource> AddKernel(string name, int port, int siloPort, int gatewayPort) =>
+    builder.AddDotnetProject(name, kernelProjectPath)
 
         // The kernel binds this port itself (a single custom Kestrel listener multiplexing
         // gRPC and HTTP/1.1) rather than through the usual ASPNETCORE_URLS convention, so DCP
@@ -128,8 +133,8 @@ IResourceBuilder<ProjectResource> AddKernel(string name, int port, int siloPort,
         .WithEnvironment("Cratis__Chronicle__Clustering__AdvertisedIP", "127.0.0.1")
         .WaitFor(mongodb);
 
-IResourceBuilder<ProjectResource> AddWebApp(string name, int port) =>
-    builder.AddProject<Projects.AspNetCore>(name)
+IResourceBuilder<DotnetProjectResource> AddWebApp(string name, int port) =>
+    builder.AddDotnetProject(name, webAppProjectPath)
         .WithHttpEndpoint(port: port)
         .WithEnvironment("INSTANCE_NAME", name)
         .WithEnvironment("Cratis__Chronicle__ConnectionString", SrvConnectionString)

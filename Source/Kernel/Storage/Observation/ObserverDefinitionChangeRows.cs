@@ -105,8 +105,16 @@ public static class ObserverDefinitionChangeRows
     public static bool IsReplacement<T>(ObserverDefinitionChangeRow<T> row, long expectedVersion) =>
         expectedVersion >= 0 && expectedVersion < long.MaxValue && row.Version == expectedVersion + 1 && IsValid(row);
 
-    static string? Partition(Key? key) => key is null ? null : Encode(new[] { Invariant(key.Value) }
-        .Concat(key.ArrayIndexers.All.SelectMany(indexer => new[] { indexer.ArrayProperty.ToString(), indexer.IdentifierProperty.ToString(), Invariant(indexer.Identifier) })));
+    static string? Partition(Key? key)
+    {
+        if (key is null)
+        {
+            return null;
+        }
+
+        var indexers = key.ArrayIndexers.All.SelectMany(indexer => new[] { indexer.ArrayProperty.ToString(), indexer.IdentifierProperty.ToString(), Invariant(indexer.Identifier) });
+        return Encode(new[] { Invariant(key.Value) }.Concat(indexers));
+    }
 
     static string Scope(ObserverReaderScope scope) => Encode(new[] { Invariant(scope.IsWildcard) }
         .Concat(scope.EventTypes.SelectMany(type => new[] { type.Id.Value, Invariant(type.Generation.Value), Invariant(type.Tombstone) })));

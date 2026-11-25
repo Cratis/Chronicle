@@ -36,7 +36,7 @@ public class and_child_only_reads_keep_the_marker_index : Specification
 
     async Task<string[]> MarkerIndexes()
     {
-        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).Options);
+        await using var context = new DbContext(new DbContextOptionsBuilder().UseSqlite(_harness.ConnectionString).IgnoringManyServiceProviders().Options);
         return await context.Database.SqlQuery<string>($"SELECT name AS Value FROM sqlite_master WHERE type='index' AND tbl_name='child_only' AND substr(name,1,14)={InitializedMarkerIndex.Prefix}").ToArrayAsync();
     }
 

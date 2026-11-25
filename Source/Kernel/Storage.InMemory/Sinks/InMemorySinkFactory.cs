@@ -27,6 +27,9 @@ public class InMemorySinkFactory(ITypeFormats typeFormats, ISinkProvenanceCache?
     public SinkTypeId TypeId => WellKnownSinkTypes.InMemory;
 
     /// <inheritdoc/>
+    public bool SupportsFlatCompositeKeys => true;
+
+    /// <inheritdoc/>
     public ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? containerName = null) =>
         sink.IsDefault ? _cache.Bind((typeof(InMemorySinkFactory), eventStore, @namespace), () => _provenance.GetOrAdd((eventStore, @namespace), _ => new())) : throw new SinkTypeDoesNotSupportNamedConfigurations(TypeId, sink);
 

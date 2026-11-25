@@ -64,6 +64,13 @@ public class Sinks(
     }
 
     /// <inheritdoc/>
+    public bool SupportsFlatCompositeKeys(ReadModelDefinition readModel)
+    {
+        var resolved = _configurations.ResolveFor(readModel, graph: false);
+        return _factories.TryGetValue(resolved.Type, out var factory) && factory.SupportsFlatCompositeKeys;
+    }
+
+    /// <inheritdoc/>
     public bool HasType(SinkTypeId typeId) => _factories.ContainsKey(typeId);
 
     /// <inheritdoc/>

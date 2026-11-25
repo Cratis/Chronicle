@@ -1,64 +1,64 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.InteropServices;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
-using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
+using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
-using Cratis.Chronicle.Releases;
+using Cratis.Chronicle.Observation.ObserverRouting;
 
 namespace Cratis.Chronicle.EventSequences;
 
 /// <content>
-/// The part of the queue that keeps the subscriptions of dormant observers and wakes them (decision 0034).
+/// The part of the queue that rings the doorbell of observers it holds no live subscription for.
 /// </content>
 /// <remarks>
-/// A dormant observer has no activation, so nothing in it can ask to be woken. The queue is the one thing that already
-/// sees every event for it, so it keeps the observer's subscription entry across the release, rings the observer (which
-/// activates it from its durable subscription) when a matching event arrives, and wakes it on a jittered interval to run
-/// one watchdog pass. A dormant observer holds an entry in a dictionary here and nothing else: no timer, no task, no lane.
+/// <para>
+/// The queue knows which observers take which events from the silo-local routing table, and which of them have an instance in
+/// its namespace from their stored cursors. An instance with no live subscription here has no activation, or has one that lost
+/// the subscription (the queue was collected, or spilled it). When an event it takes arrives, or the safety net finds an event
+/// waiting after its cursor, the queue rings it: the observer runs one watchdog pass, which resumes it from its cursor and
+/// takes its live subscription again. The event is the doorbell, not the data, so nothing is lost while it is not subscribed.
+/// </para>
+/// <para>
+/// Nothing is seeded and nothing is activated ahead of an event: the queue holds a cursor per instance and a backoff per
+/// observer it rang, nothing else. An observer that stays unsubscribed after a ring, such as one whose client is gone, is rung
+/// again only after a backoff that doubles each time, so it does not cost an activation per event.
+/// </para>
 /// </remarks>
 public partial class AppendedEventsQueue
 {
     /// <summary>
-    /// The fraction of the safety net interval after which the first wake of a dormant observer is due, at the earliest.
+    /// The fraction of the safety net interval after which the next pass is due, at the earliest.
     /// </summary>
     internal const double SafetyNetEarliest = 0.6;
 
     /// <summary>
-    /// The fraction of the safety net interval after which the first wake of a dormant observer is due, at the latest.
+    /// The fraction of the safety net interval after which the next pass is due, at the latest.
     /// </summary>
-    /// <remarks>
-    /// Below 1 so that the wake, the granularity of the tick that drives it and the time the wake itself takes all fit in the
-    /// interval: a lost wake-up delays delivery by at most the safety net interval.
-    /// </remarks>
     internal const double SafetyNetLatest = 0.9;
+
+    /// <summary>
+    /// The shortest time between two rings of the same observer that did not subscribe in between.
+    /// </summary>
+    internal static readonly TimeSpan MinimumRingBackoff = TimeSpan.FromMinutes(1);
 
     static readonly TimeSpan _maxSafetyNetTick = TimeSpan.FromSeconds(60);
     static readonly TimeSpan _minSafetyNetTick = TimeSpan.FromSeconds(1);
 
-    readonly Dictionary<ObserverKey, DateTimeOffset> _dormant = [];
-    readonly IClusterReleases? _clusterReleases;
+    readonly Dictionary<ObserverId, RingBackoff> _rings = [];
+    readonly HashSet<ObserverId> _releasedWhileDormant = [];
     readonly IWakeAdmission? _wakeAdmission;
     readonly IDormantObserverGauge? _dormantObserverGauge;
     IDisposable? _dormantGaugeRegistration;
-    bool _dormantSeedPending;
+    IReadOnlyDictionary<ObserverId, EventSequenceNumber> _instances = new Dictionary<ObserverId, EventSequenceNumber>();
+    DateTimeOffset _nextSafetyNetPass;
+    int _ringsInFlight;
 
     /// <summary>
-    /// Gets whether dormant observers are kept and woken by this queue right now.
-    /// </summary>
-    /// <remarks>
-    /// Evaluated at every decision rather than once, because a rolling upgrade can add an older silo to the cluster.
-    /// </remarks>
-    internal bool DormancyEnabled =>
-        _storage is not null &&
-        _observers.DurableSubscriptions == DurableSubscriptionMode.Release &&
-        _observers.DormantAfter > 0 &&
-        DormantObserverFloor.IsReached(_clusterReleases);
-
-    /// <summary>
-    /// Gets the number of subscriptions the queue holds as dormant.
+    /// Gets the number of instances served by this queue that hold no live subscription here.
     /// </summary>
     internal int DormantCount
     {
@@ -66,7 +66,7 @@ public partial class AppendedEventsQueue
         {
             lock (_subscriptionsLock)
             {
-                return _dormant.Count;
+                return _instances.Keys.Count(id => IsServedHere(id) && !_subscriptions.Exists(subscription => subscription.ObserverKey.ObserverId == id));
             }
         }
     }
@@ -77,14 +77,36 @@ public partial class AppendedEventsQueue
     internal TimeSpan SafetyNetInterval => TimeSpan.FromSeconds(_observers.DormantSafetyNet < 1 ? 900 : _observers.DormantSafetyNet);
 
     /// <summary>
-    /// Gets how often the safety net looks for dormant observers that are due.
+    /// Gets the longest time between two rings of the same observer that did not subscribe in between.
+    /// </summary>
+    internal TimeSpan MaximumRingBackoff
+    {
+        get
+        {
+            var configured = TimeSpan.FromSeconds(_observers.DormantSafetyNetFullWake < 1 ? 3600 : _observers.DormantSafetyNetFullWake);
+            return configured < MinimumRingBackoff ? MinimumRingBackoff : configured;
+        }
+    }
+
+    /// <summary>
+    /// Gets how long one keep of the activation lasts; renewed by every safety net tick and every admitted batch while work is owed.
+    /// </summary>
+    internal TimeSpan KeepAlivePeriod => TimeSpan.FromTicks(Math.Max(SafetyNetTick.Ticks * 3, TimeSpan.FromMinutes(2).Ticks));
+
+    /// <summary>
+    /// Gets how often the safety net looks whether a pass is due.
     /// </summary>
     internal TimeSpan SafetyNetTick => TimeSpan.FromTicks(Math.Clamp(SafetyNetInterval.Ticks / 10, _minSafetyNetTick.Ticks, _maxSafetyNetTick.Ticks));
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The queue keeps nothing for a dormant observer: its live subscription is dropped, and the routing table and the
+    /// observer's stored cursor are what the queue rings it by. Refused while events are queued for the observer or being
+    /// delivered to it, so a release never strands events in a lane.
+    /// </remarks>
     public Task<bool> TryMarkDormant(ObserverKey observerKey)
     {
-        if (_isDisposed || _isDraining || !DormancyEnabled)
+        if (_isDisposed || _isDraining)
         {
             return Task.FromResult(false);
         }
@@ -96,13 +118,15 @@ public partial class AppendedEventsQueue
                 return Task.FromResult(false);
             }
 
-            // Events still queued for the observer, or being delivered to it, would be stranded by a release.
             if (_lanes.TryGetValue(observerKey, out var lane) && !lane.IsClosed && (lane.PendingBatches > 0 || lane.PendingEvents > 0))
             {
                 return Task.FromResult(false);
             }
 
-            _dormant[observerKey] = NextSafetyNetDue();
+            _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
+            CloseLane(observerKey);
+            _pageObservers.TryRemove(observerKey, out _);
+            _releasedWhileDormant.Add(observerKey.ObserverId);
         }
 
         Observe(() => _metrics?.ObserverReleasedWhileDormant());
@@ -110,11 +134,18 @@ public partial class AppendedEventsQueue
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Only an observer this queue released while it was subscribed is dormant. One that unsubscribed, or that this
+    /// activation of the queue never released, is not: it is asked directly, which activates it if it has to.
+    /// </remarks>
     public Task<bool> IsDormant(ObserverKey observerKey)
     {
         lock (_subscriptionsLock)
         {
-            return Task.FromResult(!_isResetting && _dormant.ContainsKey(observerKey));
+            return Task.FromResult(
+                !_isResetting &&
+                _releasedWhileDormant.Contains(observerKey.ObserverId) &&
+                !_subscriptions.Exists(subscription => subscription.ObserverKey == observerKey));
         }
     }
 
@@ -136,109 +167,155 @@ public partial class AppendedEventsQueue
         SplitIntoPartitionRuns(events);
 
     /// <summary>
-    /// Reads the durable subscriptions of the queue's observers and keeps a subscription entry for each of them.
+    /// Reads which observers have an instance in the namespace of the queue, from their stored cursors.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// Runs when the queue activates, before it takes a single event: an append cannot be enqueued to a grain that is still
-    /// activating, so an event is never routed to a queue that has not seen the dormant observers. The entry holds what the
-    /// queue needs to route (the observer, its event types and filters); the event types come from the observer's definition,
-    /// never from the record, so a changed definition cannot leave a stale type list behind. An observer that is already
-    /// subscribed keeps its entry.
+    /// One read of the cursors of the event sequence. An observer that runs for the first time in the namespace subscribes,
+    /// which makes it an instance here without waiting for the next read.
     /// </remarks>
-    internal async Task SeedDormantSubscriptions()
+    internal async Task ReadInstances()
     {
-        _dormantSeedPending = false;
-        if (!DormancyEnabled || _queueCount < 1)
+        if (_nextSafetyNetPass == default)
+        {
+            _nextSafetyNetPass = NextSafetyNetPass(CatchupTimeProvider.GetUtcNow());
+        }
+
+        if (_storage is null || _queueCount < 1)
         {
             return;
         }
 
         try
         {
-            var eventStore = _storage!.GetEventStore(_eventSequenceKey.EventStore);
-            var stored = await eventStore
+            var cursors = await _storage
+                .GetEventStore(_eventSequenceKey.EventStore)
                 .GetNamespace(_eventSequenceKey.Namespace)
                 .Observers
-                .GetDurableSubscriptions(_eventSequenceKey.EventSequenceId);
-
-            var router = new AppendedEventsQueueRouter(_queueCount);
-            var seeded = 0;
-            foreach (var (observerId, record) in stored)
+                .GetNextEventSequenceNumbers(_eventSequenceKey.EventSequenceId);
+            lock (_subscriptionsLock)
             {
-                var key = new ObserverKey(observerId, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceKey.EventSequenceId);
-                if (!record.Kind.CanBeReleasedWhenDormant() || router.GetQueueIndexFor(key) != _queueId || !await eventStore.Observers.Has(observerId))
-                {
-                    continue;
-                }
-
-                var definition = await eventStore.Observers.Get(observerId);
-                var subscription = new AppendedEventsQueueObserverSubscription(
-                    key,
-                    [.. definition.EventTypes.Select(eventType => eventType.Id)],
-                    record.Filters?.ToObserverFilters(),
-                    !definition.EventTypes.Any());
-                lock (_subscriptionsLock)
-                {
-                    if (_isResetting || _subscriptions.Exists(existing => existing.ObserverKey == key))
-                    {
-                        continue;
-                    }
-
-                    _subscriptions.Add(subscription);
-                    _dormant[key] = NextSafetyNetDue();
-                    seeded++;
-                }
+                _instances = cursors;
             }
-
-            _logger.SeededDormantSubscriptions(_eventSequenceKey, seeded);
         }
         catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
         {
-            // The queue still serves the observers that subscribe themselves; the safety net seeds again.
-            _dormantSeedPending = true;
+            // The instances read earlier stay; the next pass of the safety net reads them again.
             _logger.SeedingDormantSubscriptionsFailed(_eventSequenceKey, exception);
         }
     }
 
     /// <summary>
-    /// Wakes every dormant observer whose safety net interval has elapsed.
+    /// Rings the observers that take events of a routed batch and hold no live subscription here.
+    /// </summary>
+    /// <param name="table">The <see cref="ObserverRoutingTable"/> of the event store.</param>
+    /// <param name="subscriptions">The subscriptions the batch was routed to.</param>
+    /// <param name="batchEventTypes">The distinct event types of the batch.</param>
+    internal void RingUnsubscribedObservers(ObserverRoutingTable table, AppendedEventsQueueObserverSubscription[] subscriptions, HashSet<EventTypeId> batchEventTypes)
+    {
+        if (RefusesNewWork || IsStopping)
+        {
+            return;
+        }
+
+        var subscribed = subscriptions.Select(_ => _.ObserverKey.ObserverId).ToHashSet();
+        var toRing = batchEventTypes
+            .Where(_ => _ != GlobalEventTypes.Redaction)
+            .SelectMany(eventTypeId => table.Match(_eventSequenceKey.EventSequenceId, eventTypeId))
+            .Select(route => route.ObserverId)
+            .Distinct()
+            .Where(id => !subscribed.Contains(id) && IsInstance(id) && IsServedHere(id))
+            .ToArray();
+
+        foreach (var observerId in toRing)
+        {
+            Ring(observerId, WakeCauses.Event);
+        }
+    }
+
+    /// <summary>
+    /// Rings the instances served by this queue that hold no live subscription here and have an event waiting after their cursor.
     /// </summary>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
-    /// The wake runs one watchdog pass in the observer (which checks that its client is still there and that nothing is owed)
-    /// and the observer releases itself again. The interval of each observer is jittered, so the wakes of the observers of a
-    /// namespace spread over the interval instead of lining up, and each takes a place in the silo's wake admission.
+    /// The cursors are read once per pass and the tails once per observed event type, before any ring, so the cost of a pass
+    /// does not grow with the number of instances that turn out to be up to date. A check that cannot tell rings, so it errs
+    /// toward delivery. Passes are spread over the interval so the queues of every namespace do not read together.
     /// </remarks>
     internal async Task RunDormantSafetyNet()
     {
-        if (_isDisposed || _isDraining)
+        KeepWhileOwed();
+        if (RefusesNewWork || _routing is null || _storage is null)
         {
             return;
         }
 
-        if (_dormantSeedPending)
-        {
-            await SeedDormantSubscriptions();
-        }
-
-        if (!DormancyEnabled)
+        var now = CatchupTimeProvider.GetUtcNow();
+        if (now < _nextSafetyNetPass)
         {
             return;
         }
 
-        var due = TakeDueDormantObservers();
-        if (due.Count == 0)
+        _nextSafetyNetPass = NextSafetyNetPass(now);
+        await ReadInstances();
+        var table = await GetShadowRoutingTable();
+        if (table is null)
         {
             return;
         }
 
-        await Task.WhenAll(due.Select(WakeForSafetyNet));
+        ObserverBehindCheckCandidate[] candidates;
+        lock (_subscriptionsLock)
+        {
+            candidates = [.. _instances.Keys
+                .Where(id => IsServedHere(id) && !_subscriptions.Exists(subscription => subscription.ObserverKey.ObserverId == id) && !IsBackingOff(id, now))
+                .Select(id => table.TryGetRoute(id, out var route) ? route : null)
+                .OfType<ObserverRoute>()
+                .Where(route => route.EventSequenceId == _eventSequenceKey.EventSequenceId)
+                .Select(route => new ObserverBehindCheckCandidate(KeyOf(route.ObserverId), route.EventTypes, route.AllEventTypes))];
+        }
+
+        if (candidates.Length == 0)
+        {
+            return;
+        }
+
+        var (behind, unverified, upToDate) = await FindObserversThatAreBehind(candidates);
+        Observe(() => _metrics?.DormantSafetyNetChecked(SafetyNetOutcomes.Behind, behind.Count));
+        Observe(() => _metrics?.DormantSafetyNetChecked(SafetyNetOutcomes.Unverified, unverified.Count));
+        Observe(() => _metrics?.DormantSafetyNetChecked(SafetyNetOutcomes.UpToDate, upToDate));
+        foreach (var observerKey in behind.Concat(unverified))
+        {
+            Ring(observerKey.ObserverId, WakeCauses.SafetyNet);
+        }
+    }
+
+    /// <summary>
+    /// Compares the cursor of each observer with the tail of the event types it observes.
+    /// </summary>
+    /// <param name="candidates">The observers to compare.</param>
+    /// <returns>The observers with an event waiting, the ones that could not be compared, and how many are up to date.</returns>
+    /// <remarks>
+    /// The comparison is the shared <see cref="IObserverBehindCheck"/>. A check that cannot read errs toward delivery and
+    /// reports every observer as unverified. An event appended after the tail was read rings the observer as it arrives.
+    /// </remarks>
+    async Task<(List<ObserverKey> Behind, List<ObserverKey> Unverified, int UpToDate)> FindObserversThatAreBehind(ObserverBehindCheckCandidate[] candidates)
+    {
+        try
+        {
+            var result = await new ObserverBehindCheck(_storage!, _grainFactory).Check(_eventSequenceKey, candidates);
+            return ([.. result.Behind], [.. result.Unverified], result.UpToDate);
+        }
+        catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
+        {
+            _logger.SafetyNetCheckFailed(_eventSequenceKey, exception);
+            return ([], [.. candidates.Select(candidate => candidate.ObserverKey)], 0);
+        }
     }
 
     void ConfigureDormantSafetyNet()
     {
-        if (_storage is null || _observers.DurableSubscriptions != DurableSubscriptionMode.Release || _observers.DormantAfter <= 0)
+        if (_storage is null || _routing is null)
         {
             return;
         }
@@ -247,47 +324,75 @@ public partial class AppendedEventsQueue
         this.RegisterGrainTimer(RunDormantSafetyNet, new GrainTimerCreationOptions { DueTime = tick, Period = tick });
     }
 
-    DateTimeOffset NextSafetyNetDue() =>
-        CatchupTimeProvider.GetUtcNow() + (SafetyNetInterval * (SafetyNetEarliest + ((SafetyNetLatest - SafetyNetEarliest) * Random.Shared.NextDouble())));
+    DateTimeOffset NextSafetyNetPass(DateTimeOffset now) =>
+        now + (SafetyNetInterval * (SafetyNetEarliest + ((SafetyNetLatest - SafetyNetEarliest) * Random.Shared.NextDouble())));
 
-    List<ObserverKey> TakeDueDormantObservers()
+    ObserverKey KeyOf(ObserverId observerId) =>
+        new(observerId, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceKey.EventSequenceId);
+
+    bool IsInstance(ObserverId observerId)
     {
-        var now = CatchupTimeProvider.GetUtcNow();
-        var due = new List<ObserverKey>();
         lock (_subscriptionsLock)
         {
-            foreach (var (key, dueAt) in _dormant.ToArray())
-            {
-                if (!_subscriptions.Exists(subscription => subscription.ObserverKey == key))
-                {
-                    _dormant.Remove(key);
-                    continue;
-                }
-
-                if (dueAt > now)
-                {
-                    continue;
-                }
-
-                // Rescheduled before the wake runs: a wake that fails is tried again one interval later, not on the next tick.
-                _dormant[key] = NextSafetyNetDue();
-                due.Add(key);
-            }
+            return _instances.ContainsKey(observerId);
         }
-
-        return due;
     }
 
-    async Task WakeForSafetyNet(ObserverKey observerKey)
+    bool IsServedHere(ObserverId observerId) =>
+        _queueCount < 1 || new AppendedEventsQueueRouter(_queueCount).GetQueueIndexFor(observerId) == _queueId;
+
+    bool IsBackingOff(ObserverId observerId, DateTimeOffset now) =>
+        _rings.TryGetValue(observerId, out var backoff) && backoff.NotBefore > now;
+
+    /// <summary>
+    /// Makes the observer known to the queue as an instance with a live subscription, which ends any backoff of its rings.
+    /// Must be called holding the subscriptions lock.
+    /// </summary>
+    /// <param name="observerKey">The <see cref="ObserverKey"/> of the observer that subscribed.</param>
+    void NoteSubscribed(ObserverKey observerKey)
     {
-        try
+        _rings.Remove(observerKey.ObserverId);
+        _releasedWhileDormant.Remove(observerKey.ObserverId);
+        if (!_instances.ContainsKey(observerKey.ObserverId))
         {
-            await WithWakeAdmission(() => _grainFactory.GetGrain<IObserver>(observerKey).RunWatchdogOnce(), WakeCauses.SafetyNet);
+            _instances = new Dictionary<ObserverId, EventSequenceNumber>(_instances) { [observerKey.ObserverId] = EventSequenceNumber.Unavailable };
         }
-        catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
+    }
+
+    void Ring(ObserverId observerId, string cause)
+    {
+        var now = CatchupTimeProvider.GetUtcNow();
+        lock (_subscriptionsLock)
         {
-            _logger.SafetyNetWakeFailed(observerKey, exception);
+            if (_isDisposed || _isResetting || IsBackingOff(observerId, now))
+            {
+                return;
+            }
+
+            var backoff = _rings.TryGetValue(observerId, out var previous)
+                ? TimeSpan.FromTicks(Math.Min(previous.Backoff.Ticks * 2, MaximumRingBackoff.Ticks))
+                : MinimumRingBackoff;
+            _rings[observerId] = new(now + backoff, backoff);
         }
+
+        Interlocked.Increment(ref _ringsInFlight);
+        KeepWhileOwed();
+        var observerKey = KeyOf(observerId);
+        _ = DetachedExecution.Start(() => _taskFactory.Run(async () =>
+        {
+            try
+            {
+                await WithWakeAdmission(() => _grainFactory.GetGrain<IObserver>(observerKey).RunWatchdogOnce(), cause);
+            }
+            catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
+            {
+                _logger.SafetyNetWakeFailed(observerKey, exception);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _ringsInFlight);
+            }
+        }));
     }
 
     async Task WithWakeAdmission(Func<Task> wake, string cause)
@@ -315,53 +420,30 @@ public partial class AppendedEventsQueue
         }
     }
 
-    bool TakeDormantMark(ObserverKey observerKey)
+    /// <summary>
+    /// Keeps the activation while the queue holds anything that is not in storage: live subscriptions, queued or in-flight
+    /// deliveries, catch-up triggers or rings. Orleans does not see the background work, so it is told.
+    /// </summary>
+    void KeepWhileOwed()
     {
+        bool owed;
         lock (_subscriptionsLock)
         {
-            return _dormant.Remove(observerKey);
+            owed = !_isDisposed && (_subscriptions.Count > 0 || _lanes.Count > 0 || _catchupTriggers.Count > 0);
+        }
+
+        // A queue constructed directly, outside an activation, has nothing to keep.
+        if (GrainContext is not null && (owed || Volatile.Read(ref _pendingItems) > 0 || Volatile.Read(ref _ringsInFlight) > 0))
+        {
+            DelayDeactivation(KeepAlivePeriod);
         }
     }
 
     /// <summary>
-    /// Activates a dormant observer, under the wake admission of the silo, before events are delivered to it.
+    /// The backoff of the rings of one observer.
     /// </summary>
-    /// <param name="lane">The <see cref="AppendedEventsQueueObserverLane"/> that is about to deliver.</param>
-    /// <param name="events">The events the lane is about to deliver.</param>
-    /// <returns>True when the lane may deliver; false when waking failed and the observer was handed to catch-up.</returns>
-    /// <remarks>
-    /// The events are the doorbell, not the data: the woken observer reads from its own cursor and delivers what it finds, and
-    /// the events delivered afterwards are filtered by that cursor, so an event is delivered exactly once.
-    /// </remarks>
-    async Task<bool> WakeDormantObserver(AppendedEventsQueueObserverLane lane, IReadOnlyList<AppendedEvent> events)
-    {
-        // A queue that is draining, or a silo that is stopping, must not activate a grain: the activation is refused or outlives
-        // the stop. The observer stays dormant, its events are durable, and the safety net of the queue that owns it next wakes
-        // it and it resumes from its cursor.
-        if (_isDraining || _stopBudget?.IsStopping == true)
-        {
-            return false;
-        }
-
-        if (!TakeDormantMark(lane.ObserverKey))
-        {
-            return true;
-        }
-
-        try
-        {
-            await WithWakeAdmission(lane.Observer.Ensure, WakeCauses.Event);
-            return true;
-        }
-        catch (OperationCanceledException) when (_catchupCancellationToken.IsCancellationRequested)
-        {
-            return false;
-        }
-        catch (Exception exception) when (ObservationOnlyFailures.CanBeContained(exception))
-        {
-            SpillFailedSubscriptionToCatchup(CurrentSubscriptionOf(lane), [.. events]);
-            LaneFailed(exception);
-            return false;
-        }
-    }
+    /// <param name="NotBefore">When the observer may be rung next.</param>
+    /// <param name="Backoff">The backoff the next ring is scheduled with.</param>
+    [StructLayout(LayoutKind.Auto)]
+    readonly record struct RingBackoff(DateTimeOffset NotBefore, TimeSpan Backoff);
 }

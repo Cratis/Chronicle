@@ -175,8 +175,12 @@ public class EventStoreForTesting : IEventStore, IDisposable
     {
         _scenarioEventLog = eventLog;
         ServiceProvider = serviceProvider ?? new DefaultServiceProvider();
-        var configuredOptions = options ?? (ServiceProvider is DefaultServiceProvider ? null :
-            ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value);
+        var configuredOptions = options;
+        if (configuredOptions is null && ServiceProvider is not DefaultServiceProvider)
+        {
+            configuredOptions = ServiceProvider.GetService<IOptions<ChronicleOptions>>()?.Value;
+        }
+
         ClientOptions = configuredOptions ?? new ChronicleOptions();
         _jsonSerializerOptions = Globals.JsonSerializerOptions ?? new JsonSerializerOptions();
         ExplicitSnapshot = ClientOptions.ExplicitArtifacts.CreateSnapshot();
@@ -196,8 +200,9 @@ public class EventStoreForTesting : IEventStore, IDisposable
 
         // Custom providers, explicit artifacts and an unshared generator all fall back to discovering per store.
         // A catalog that already carries explicit artifacts, from these options or from another store, is never shared.
-        Metadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider)
-            && clientArtifactsProvider is not (StoreClientArtifactsProvider or ExplicitArtifactCatalog)
+        var canShareMetadata = ShareApplicationMetadata && shareGenerator && ReferenceEquals(ClientArtifactsProvider, clientArtifactsProvider)
+            && clientArtifactsProvider is not (StoreClientArtifactsProvider or ExplicitArtifactCatalog);
+        Metadata = canShareMetadata
             ? ApplicationMetadataForTesting.GetOrCreate(generator, _namingPolicy, TestingStore.Name.Value, ClientArtifactsProvider)
             : null;
 

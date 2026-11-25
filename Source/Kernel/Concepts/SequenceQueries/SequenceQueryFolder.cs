@@ -16,14 +16,14 @@ namespace Cratis.Chronicle.Concepts.SequenceQueries;
 public record SequenceQueryFolder(string Value) : ConceptAs<string>(Value)
 {
     /// <summary>
-    /// Represents a query that sits directly under its scope rather than in a folder.
-    /// </summary>
-    public static readonly SequenceQueryFolder Root = new(string.Empty);
-
-    /// <summary>
     /// The character separating one folder from the next within the path.
     /// </summary>
     public const char Separator = '/';
+
+    /// <summary>
+    /// Represents a query that sits directly under its scope rather than in a folder.
+    /// </summary>
+    public static readonly SequenceQueryFolder Root = new(string.Empty);
 
     /// <summary>
     /// Gets the individual folder names the path is made of, outermost first.

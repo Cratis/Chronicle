@@ -94,10 +94,9 @@ public sealed class GraphRowHydrator(INamingPolicy namingPolicy)
         if (type.IsArray) return type.GetElementType();
         if (!type.IsGenericType || type.GetGenericArguments().Length != 1) return null;
         var definition = type.GetGenericTypeDefinition();
-        return definition == typeof(List<>) || definition == typeof(IList<>) || definition == typeof(IReadOnlyList<>) || definition == typeof(IEnumerable<>)
-            || definition == typeof(IReadOnlyCollection<>) || definition == typeof(ICollection<>)
-            ? type.GetGenericArguments()[0]
-            : null;
+        var isCollection = definition == typeof(List<>) || definition == typeof(IList<>) || definition == typeof(IReadOnlyList<>) || definition == typeof(IEnumerable<>)
+            || definition == typeof(IReadOnlyCollection<>) || definition == typeof(ICollection<>);
+        return isCollection ? type.GetGenericArguments()[0] : null;
     }
 
     bool TryConvertCollection(object value, Type target, out object? collection)

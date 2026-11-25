@@ -73,7 +73,7 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
     }
 
     /// <inheritdoc/>
-    protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
+    protected override nint LoadUnmanagedDll(string unmanagedDllName)
     {
         var libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
         if (libraryPath != null)
@@ -81,7 +81,7 @@ sealed class IsolatedAssemblyLoadContext(string assemblyPath) : AssemblyLoadCont
             return LoadUnmanagedDllFromPath(libraryPath);
         }
 
-        return IntPtr.Zero;
+        return nint.Zero;
     }
 
     static IEnumerable<string> CandidatePackageNames(string assemblyName)

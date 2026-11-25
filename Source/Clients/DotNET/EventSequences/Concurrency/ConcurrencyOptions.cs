@@ -38,7 +38,10 @@ public class ConcurrencyOptions
     /// </summary>
     public Type DefaultStrategy
     {
-        get => _defaultStrategy;
+        get
+        {
+            return _defaultStrategy;
+        }
         set
         {
             TypeIsNotAConcurrencyStrategy.ThrowIfNotAConcurrencyStrategy(value);

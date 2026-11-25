@@ -8,6 +8,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Dynamic;
+using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Monads;
 using Microsoft.Extensions.Logging;
@@ -73,6 +74,26 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
             }
 
             return Task.FromResult(KeyResolverResult.Resolved(new Key(key, ArrayIndexers.NoIndexers)));
+        }));
+
+    /// <inheritdoc/>
+    public KeyResolver FlatComposite(IReadOnlyList<(string Property, ValueProvider<AppendedEvent> Provider)> parts) =>
+        PageKeyResolver.Pure(CreateKeyResolver(nameof(FlatComposite), (_, _, @event) =>
+        {
+            var key = new ExpandoObject();
+            var values = (IDictionary<string, object?>)key;
+            foreach (var (property, provider) in parts)
+            {
+                var value = provider(@event) ?? throw new FlatCompositeKeyPartHasNoValue(property);
+                values[property] = value switch
+                {
+                    string or bool or char or byte or sbyte or short or ushort or int or uint or long or ulong or
+                    float or double or decimal or Guid or DateTime or DateTimeOffset or DateOnly or TimeOnly or TimeSpan => value,
+                    _ => throw new FlatCompositeKeyNotSupported($"Flat composite key part '{property}' must have a scalar value.")
+                };
+            }
+
+            return Task.FromResult(KeyResolverResult.Resolved(new FlatCompositeKey(key, ArrayIndexers.NoIndexers)));
         }));
 
     /// <summary>
@@ -200,7 +221,7 @@ public partial class KeyResolvers(ILogger<KeyResolvers> logger) : IKeyResolvers
         if (CanResolveExistingChildBySink(parentProjection, childKeyValue, @event))
         {
             var childLocationPath = BuildFullParentChildPropertyPath(projection, identifiedByProperty);
-            var existingChildRoot = await sink.TryFindRootKeyByChildValue(childLocationPath, childKeyValue);
+            var existingChildRoot = await sink.TryFindRootKeyByChildValueInRoot(childLocationPath, childKeyValue, parentKey);
             if (existingChildRoot.TryGetValue(out var existingChildRootKey) &&
                 Equals(existingChildRootKey.Value?.ToString(), parentKey.Value!.ToString()))
             {

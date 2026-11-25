@@ -35,8 +35,19 @@ public class and_the_newer_version_registered_first(context context) : Given<con
             await Register(projections, definition, "99.0.0", "newer");
             await Register(projections, definition, "98.0.0", "older");
 
+            await WaitUntilApplied(projections);
+
             TagsAfterTheOlderRegistration = (await projections.GetAllDefinitions(new() { EventStore = EventStore.Name }))
                 .Single(candidate => candidate.Identifier == typeof(TicketProjection).FullName).Tags;
+        }
+
+        async Task WaitUntilApplied(Contracts.Projections.IProjections projections)
+        {
+            // The kernel accepts a registration and applies it in the background, so both registrations are settled
+            // once the registrant has nothing pending.
+            await ReadinessWait.Until(
+                () => projections.GetRegistrationStatus(new() { EventStore = EventStore.Name, Registrant = "the-app" }),
+                status => status.State == RegistrationState.Applied);
         }
 
         Task Register(Contracts.Projections.IProjections projections, ProjectionDefinition definition, string version, string tag)

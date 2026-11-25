@@ -30,7 +30,7 @@ public class when_the_online_ddl_fails : for_ReadModelMigrator.given.a_read_mode
         });
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"object","properties":{"part":{"type":"string"}}}}}""");
         await using var plain = CreateContext("failed_ddl", ProjectedColumns.ForSchema(schema));
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).IgnoringManyServiceProviders().Options;
         var migrator = new ReadModelMigrator(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()), _logger);
         await using var context = new ReadModelDbContext(options, plain.TableName, plain.Columns, migrator);
         context.Database.SetCommandTimeout(19);

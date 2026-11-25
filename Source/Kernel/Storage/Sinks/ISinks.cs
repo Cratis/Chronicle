@@ -13,6 +13,13 @@ namespace Cratis.Chronicle.Storage.Sinks;
 public interface ISinks
 {
     /// <summary>
+    /// Checks flat composite key support without creating, initializing, or provisioning a sink.
+    /// </summary>
+    /// <param name="readModel">The read model whose resolved sink is checked.</param>
+    /// <returns>Whether the sink factory supports flat composite keys.</returns>
+    bool SupportsFlatCompositeKeys(ReadModelDefinition readModel) => false;
+
+    /// <summary>
     /// Check if there is a <see cref="ISink"/> of a specific <see cref="SinkTypeId"/> and <see cref="SinkConfigurationId"/>  registered in the system.
     /// </summary>
     /// <param name="typeId"><see cref="SinkTypeId"/> to check for.</param>
