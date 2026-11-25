@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
+using Cratis.DependencyInjection;
 using Cratis.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,7 @@ namespace Cratis.Chronicle.Diagnostics.Load;
 /// event store: never a grain key or an event source.
 /// </para>
 /// </remarks>
+[Singleton]
 public sealed class KernelLoad : IKernelLoad
 {
     static readonly TimeSpan _evaluationInterval = TimeSpan.FromSeconds(1);
