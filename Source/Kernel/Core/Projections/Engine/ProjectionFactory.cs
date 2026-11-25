@@ -919,7 +919,9 @@ public class ProjectionFactory(
         // projection has none.
         var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolveEveryEventPropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value)).ToList();
         var everyEventMappers = new EveryEventMappers(propertyMappersForEveryEventType);
-        foreach (var (eventType, fromDefinition) in projectionDefinition.From)
+
+        // Older clients also emitted an ordinary From for a value child. Only the value path should handle that event.
+        foreach (var (eventType, fromDefinition) in projectionDefinition.From.Where(_ => _.Key != projectionDefinition.FromEventProperty?.Event))
         {
             SetupFromWithJoins(level, context, new(fromDefinition, eventType), everyEventMappers.ClaimFor(eventType.Id));
         }
@@ -1134,7 +1136,9 @@ public class ProjectionFactory(
         logger.ResolveEventsForProjectionStart(projection.Path, projectionDefinition.From.Count, childProjections.Length);
 
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var fromEventTypes = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
+        var fromEventTypes = projectionDefinition.From
+            .Where(_ => _.Key != projectionDefinition.FromEventProperty?.Event)
+            .Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
         var joinEventTypes = projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, kvp.Value.On)).ToArray();
         var removedWithEventTypes = projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
         var removedWithJoinEventTypes = hasParent
