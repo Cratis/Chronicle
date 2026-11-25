@@ -35,10 +35,12 @@ public class and_all_definitions_are_unchanged : given.a_projections_manager_gra
         _definitionComparer
             .Compare(Arg.Any<ProjectionKey>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ProjectionDefinition>())
             .Returns(ProjectionDefinitionCompareResult.Same);
+        _readModelsManager.ClearReceivedCalls();
     }
 
     async Task Because() => await _grain.Register([_incoming, _otherIncoming]);
 
+    [Fact] async Task should_not_fetch_read_models_without_a_flat_definition() => await _readModelsManager.DidNotReceive().GetDefinitions();
     [Fact] void should_not_register_with_the_engine() => _projectionsServiceClient.DidNotReceiveWithAnyArgs().Register(default!, default!);
     [Fact] void should_leave_the_registered_definitions_untouched() => _state.Projections.ShouldContainOnly(_existing, _otherIncoming, _unsubmitted);
     [Fact] async Task should_only_query_the_submitted_identifiers() => await _observerStates.Received(1).GetRetired(Arg.Is<IEnumerable<ObserverId>>(ids => ids.SequenceEqual(new ObserverId[] { _incoming.Identifier, _otherIncoming.Identifier })));
