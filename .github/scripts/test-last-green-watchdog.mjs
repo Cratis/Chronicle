@@ -87,6 +87,19 @@ test('foreign, PR, wrong-path and wrong-branch runs cannot establish green', asy
     assert.equal((await f.check()).verdict, 'stale');
 });
 
+test('main() reports the real failure code instead of a generic one', async () => {
+    const fetchImpl = async url => {
+        let data;
+        if (url.includes('/runs?')) data = { total_count: 0, workflow_runs: [] };
+        else if (url.includes('/issues?')) data = [{ number: 1, title: trackerTitle, user: bot, state: 'open' }, { number: 2, title: trackerTitle, user: bot, state: 'open' }];
+        else assert.fail(`Unexpected URL ${url}`);
+        return { ok: true, json: async () => data, headers: new Headers() };
+    };
+    const output = [];
+    assert.equal(await main({ environment: { GITHUB_REPOSITORY: repo, GITHUB_TOKEN: 'fixture' }, argv: ['--dry-run'], fetchImpl, now, output: line => output.push(line) }), 1);
+    assert.equal(JSON.parse(output[0]).error, 'tracker-ambiguous');
+});
+
 test('--dry-run entry point issues zero non-GET calls through injectable fetch', async () => {
     const methods = [];
     const fetchImpl = async (url, init) => {
