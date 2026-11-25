@@ -26,15 +26,9 @@ public class and_the_resolver_never_completes_once : given.a_connection_with_sev
 
         var stuck = StartConnecting();
         await _firstResolutionStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
-        var giveUpAt = DateTimeOffset.UtcNow.AddSeconds(10);
-        while (!stuck.IsCompleted)
-        {
-            giveUpAt.ShouldBeGreaterThan(DateTimeOffset.UtcNow);
-            _time.Advance(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
-            await Task.Delay(5);
-        }
-
-        await stuck;
+        await _time.WhenNextTimer();
+        _time.Advance(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
+        await stuck.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         await StartConnecting().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
     }
 
