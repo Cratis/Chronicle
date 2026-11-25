@@ -83,13 +83,11 @@ public class CatchUpObserver(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
 
-        // Fire-and-forget to avoid a reentrancy deadlock when OnAllStepsCompleted is called from
-        // inside job.Start() (e.g. the 0-step case). The Observer grain may still be executing
-        // CatchUp(), so CaughtUp() would be queued and deadlock. Returning first lets the Observer
-        // grain become free to process CaughtUp().
+        // CaughtUp is an interleaving, durable acknowledgement only. Successor acquisition and routing run in a
+        // later observer turn, so even a zero-step job finalized inside Start can safely await acceptance here.
         // Only a catch-up whose every step completed may move the observer past events it read but did not
         // handle; a step that stopped early can leave events behind the furthest point another step reached.
-        _ = observer.CaughtUp(
+        await observer.CaughtUp(
             JobId,
             State.LastHandledEventSequenceNumber,
             AllStepsCompletedSuccessfully ? State.LastScannedEventSequenceNumber : EventSequenceNumber.Unavailable);
@@ -161,6 +159,10 @@ public class CatchUpObserver(
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         var failedPartitions = await observer.GetFailedPartitionKeys();
         var failedPartitionSet = failedPartitions.ToHashSet();
+        var current = await observer.GetState();
+        var exclusions = (current?.PendingCatchUpRepairs ?? []).Select(_ => _.Partition)
+            .Concat(current?.CatchingUpPartitions ?? Enumerable.Empty<Key>()).Distinct().ToArray();
+        failedPartitionSet.UnionWith(exclusions);
 
         var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
         var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
@@ -189,7 +191,7 @@ public class CatchUpObserver(
 
         // The keys are registered whichever shape the steps take: live delivery is held back per partition while
         // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
-        var steps = CreateStepsFor(request, keysToCatchUp, (await observer.GetSubscription()).DeliversPartitionPages);
+        var steps = CreateStepsFor(request, keysToCatchUp, (await observer.GetSubscription()).DeliversPartitionPages, exclusions);
         if (steps.Count == 0)
         {
             // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
@@ -211,7 +213,7 @@ public class CatchUpObserver(
         return steps;
     }
 
-    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys, bool deliversPartitionPages)
+    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys, bool deliversPartitionPages, IReadOnlyList<Key> exclusions)
     {
         // An observer that takes pages spanning partitions is caught up in one walk, like a projection, so its pages are filled.
         if (request.ObserverType == ObserverType.Projection || deliversPartitionPages)
@@ -228,6 +230,7 @@ public class CatchUpObserver(
                         request.EventTypes)
                     {
                         SkipFailedPartitions = true,
+                        ExcludedPartitions = exclusions,
                         ReaderScope = request.ReaderScope
                     })
             ];

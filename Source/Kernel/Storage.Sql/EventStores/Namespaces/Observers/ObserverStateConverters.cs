@@ -33,6 +33,7 @@ public static class ObserverStateConverters
             QuarantineEpisodeId = definition.QuarantineEpisodeId,
             WebhookProbe = definition.WebhookProbe is null ? null : JsonSerializer.Serialize(definition.WebhookProbe, ObserverStateJson.Options),
             DurableSubscription = definition.DurableSubscription is null ? null : JsonSerializer.Serialize(definition.DurableSubscription, ObserverStateJson.Options),
+            PendingCatchUpRepairs = SerializeRepairs(definition.PendingCatchUpRepairs),
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
@@ -123,9 +124,16 @@ public static class ObserverStateConverters
             QuarantineEpisodeId = state.QuarantineEpisodeId,
             WebhookProbe = state.WebhookProbe is null ? null : JsonSerializer.Deserialize<Observation.WebhookProbeState>(state.WebhookProbe, ObserverStateJson.Options),
             DurableSubscription = state.DurableSubscription is null ? null : JsonSerializer.Deserialize<Observation.ObserverDurableSubscription>(state.DurableSubscription, ObserverStateJson.Options),
+            PendingCatchUpRepairs = DeserializeRepairs(state.PendingCatchUpRepairs),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType?.ToDictionary(kvp => (Concepts.Events.EventTypeId)kvp.Key, kvp => (Concepts.Events.EventCount)kvp.Value) ?? new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>()
         };
+
+    static string? SerializeRepairs(IReadOnlyList<Observation.PendingCatchUpRepair>? repairs) =>
+        repairs is null ? null : JsonSerializer.Serialize(repairs, ObserverStateJson.Options);
+
+    static IReadOnlyList<Observation.PendingCatchUpRepair>? DeserializeRepairs(string? payload) =>
+        payload is null ? null : JsonSerializer.Deserialize<IReadOnlyList<Observation.PendingCatchUpRepair>>(payload, ObserverStateJson.Options);
 }

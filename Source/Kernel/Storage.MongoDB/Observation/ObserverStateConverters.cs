@@ -17,6 +17,7 @@ public static class ObserverStateConverters
         new()
         {
             Id = state.Identifier,
+            PendingCatchUpRepairs = state.PendingCatchUpRepairs,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,
@@ -63,6 +64,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            PendingCatchUpRepairs = state.PendingCatchUpRepairs,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,
@@ -102,6 +104,7 @@ public static class ObserverStateConverters
             state.IsReplaying,
             state.SubscribesToAllEvents)
         {
+            PendingCatchUpRepairs = state.PendingCatchUpRepairs,
             Owner = state.Owner,
             PartitionClaims = state.PartitionClaims,
             ObserverWideClaim = state.ObserverWideClaim,

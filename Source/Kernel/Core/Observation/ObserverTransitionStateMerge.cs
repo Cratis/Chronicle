@@ -29,10 +29,16 @@ internal static class ObserverTransitionStateMerge
             LastHandledEventSequenceNumber = MergePosition(handed.LastHandledEventSequenceNumber, recorded.LastHandledEventSequenceNumber, returned.LastHandledEventSequenceNumber, replayStarted),
             TailEventSequenceNumber = MergePosition(handed.TailEventSequenceNumber, recorded.TailEventSequenceNumber, returned.TailEventSequenceNumber, replayStarted),
             InFlightPartitions = MergeInFlightPartitions(handed, recorded, returned),
+            PendingCatchUpRepairs = replayStarted ? [] : MergeCatchUpRepairs(handed, recorded, returned),
             HandledEventCount = hookOwnsHandledCounts ? returned.HandledEventCount : recorded.HandledEventCount,
             HandledEventCountPerEventType = hookOwnsHandledCounts ? returned.HandledEventCountPerEventType : recorded.HandledEventCountPerEventType
         };
     }
+
+    static IReadOnlyList<PendingCatchUpRepair>? MergeCatchUpRepairs(ObserverState handed, ObserverState recorded, ObserverState returned) =>
+        (handed.PendingCatchUpRepairs ?? []).SequenceEqual(recorded.PendingCatchUpRepairs ?? [])
+            ? returned.PendingCatchUpRepairs
+            : recorded.PendingCatchUpRepairs;
 
     static EventSequenceNumber MergePosition(EventSequenceNumber handed, EventSequenceNumber recorded, EventSequenceNumber returned, bool replayStarted)
     {

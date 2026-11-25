@@ -647,7 +647,7 @@ public partial class Observer
             return false;
         }
 
-        if (State.CatchingUpPartitions.Contains(partition))
+        if (PartitionIsCatchingUp(partition))
         {
             logger.PartitionCatchingUpCannotHandleNewEvents(partition);
             return false;

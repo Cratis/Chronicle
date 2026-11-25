@@ -48,4 +48,11 @@ public record HandleEventsForObserverArguments(
     /// </remarks>
     [Id(9)]
     public bool SkipFailedPartitions { get; init; }
+
+    /// <summary>
+    /// Gets the partition suffixes owned by concurrent partition catch-up jobs. This snapshot also excludes their
+    /// events if those jobs finish before this step starts or resumes. Empty for legacy steps and replay.
+    /// </summary>
+    [Id(10)]
+    public IReadOnlyList<Concepts.Keys.Key> ExcludedPartitions { get; init; } = [];
 }

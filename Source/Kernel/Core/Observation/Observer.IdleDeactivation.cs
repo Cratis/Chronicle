@@ -52,6 +52,7 @@ public partial class Observer
         State.ReplayingPartitions.Count == 0 &&
         State.CatchingUpPartitions.Count == 0 &&
         _pendingCatchUpAcquisition is null &&
+        !HasAcceptedCatchUpActivity &&
         !Failures.HasFailedPartitions &&
         (!_observerExists || (IsAlertWorkSettled && !_runningStateChangedAtPending)) &&
         _webhookProbe is null &&

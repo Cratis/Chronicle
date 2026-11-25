@@ -27,7 +27,7 @@ public partial class Observer
     }
 
     bool PartitionHasPendingWork(Key partition) => Failures.IsFailed(partition) ||
-        State.CatchingUpPartitions.Contains(partition) || State.ReplayingPartitions.Contains(partition);
+        PartitionIsCatchingUp(partition) || State.ReplayingPartitions.Contains(partition);
 
     void RememberHeldBackDeliveries(Key partition, IEnumerable<AppendedEvent> events)
     {

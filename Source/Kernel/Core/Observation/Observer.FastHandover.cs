@@ -151,16 +151,15 @@ public partial class Observer
         !_stateWritingSuspended;
 
     bool HasNoPendingRecovery() =>
-        !_resumingQuarantine &&
-        !_recoverSubscriptionAfterQuarantine &&
-        !_retryRecoveryAfterQuarantine &&
-        _owedRecoveryAttempts == 0 &&
-        _recoveriesInProgress == 0 &&
-        _catchUpHandoversInFlight == 0 &&
-        !_isPreparingCatchup &&
-        !IsBackingOffCatchUp &&
-        !Failures.HasFailedPartitions &&
-        !_failureStateWritePending;
+        HasNoQuarantineRecovery() && HasNoCatchUpRecovery() &&
+        !Failures.HasFailedPartitions && !_failureStateWritePending;
+
+    bool HasNoQuarantineRecovery() =>
+        !_resumingQuarantine && !_recoverSubscriptionAfterQuarantine && !_retryRecoveryAfterQuarantine &&
+        _owedRecoveryAttempts == 0 && _recoveriesInProgress == 0;
+
+    bool HasNoCatchUpRecovery() =>
+        _catchUpHandoversInFlight == 0 && !HasAcceptedCatchUpActivity && !_isPreparingCatchup && !IsBackingOffCatchUp;
 
     /// <summary>
     /// Checks that the stored observer state is the one this activation is observing with.

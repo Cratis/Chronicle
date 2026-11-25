@@ -109,7 +109,8 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
 
         // The subscription is the observer's own to set and clear, so an absent one clears the stored one. It is a $set
         // of null rather than an $unset because the type-set guard below renders only $set operators into a pipeline.
-        update = update.Set(_ => _.DurableSubscription, document.DurableSubscription);
+        update = update.Set(_ => _.DurableSubscription, document.DurableSubscription)
+            .Set(_ => _.PendingCatchUpRepairs, document.PendingCatchUpRepairs);
 
         if (document.TypeSetControl is not null)
         {

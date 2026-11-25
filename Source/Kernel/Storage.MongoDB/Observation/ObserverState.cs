@@ -34,6 +34,12 @@ public class ObserverState
     public IEnumerable<PartitionClaim>? PartitionClaims { get; set; }
 
     /// <summary>
+    /// Gets or sets the durable partition repair obligations, absent on legacy state.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingCatchUpRepair>? PendingCatchUpRepairs { get; set; }
+
+    /// <summary>
     /// Gets or sets the shadow observer-wide claim, absent on legacy state.
     /// </summary>
     [BsonIgnoreIfNull]

@@ -28,18 +28,20 @@ public partial class Observer
     /// </summary>
     TaskCompletionSource? _catchUpConclusionsApplied;
 
+    bool CatchUpObserverRemoved => IsRetired || _removed;
+
     bool IsBackingOffCatchUp => _catchUpBackoffUntil != default && DateTimeOffset.UtcNow < _catchUpBackoffUntil;
 
     /// <inheritdoc/>
     public async Task CatchUp()
     {
-        if (IsRetired || _removed) return;
+        if (CatchUpObserverRemoved) return;
         _isPreparingCatchup = true;
         _walkingEveryPartition = false;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         if (await AdoptedPendingCatchUpJob()) return;
-        if (IsRetired || _removed) return;
+        if (CatchUpObserverRemoved) return;
 
         if (State.RunningState == ObserverRunningState.Replaying)
         {
@@ -50,6 +52,7 @@ public partial class Observer
             return;
         }
 
+        await ResumePendingCatchUpRepairs();
         using var admission = await AdmitCatchUpOrDefer();
         if (admission is null) return;
 
@@ -168,7 +171,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, ulong? ownershipEpoch)
     {
-        if (IsRetired || _removed || IgnoresStaleRelease(ClaimHolderKind.PartitionCatchUp, partition, ownershipEpoch)) return;
+        if (CatchUpObserverRemoved || IgnoresStaleRelease(ClaimHolderKind.PartitionCatchUp, partition, ownershipEpoch)) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
@@ -177,6 +180,14 @@ public partial class Observer
         _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         CompleteHeldBackDelivery(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        if (PendingCatchUpRepairs.Any(_ => _.Partition == partition))
+        {
+            CompletePendingCatchUpRepair(partition);
+            await ConfirmCatchUpAcceptance();
+            ScheduleCatchUpContinuation(madeProgress: true);
+            return;
+        }
+
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         EvaluateSuspectedSkips();
@@ -229,27 +240,26 @@ public partial class Observer
         // Until the job's position is applied, a catch-up that excludes it would start over what it already handled.
         RememberConcludedCatchUpJob(jobId);
         BeginCatchUpConclusion();
-        bool? concluded;
         try
         {
-            concluded = await ApplyCatchUpConclusion(jobId, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+            var concluded = await ApplyCatchUpConclusion(jobId, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+            if (concluded is not bool madeProgress) return;
+
+            Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+            Skips.PreparationEnded();
+            QueueUnownedHeldBackDeliveries();
+            AcceptPendingCatchUpRepairs();
+            Skips.ClearJobReported();
+            await ConfirmCatchUpAcceptance();
+
+            _isPreparingCatchup = false;
+            ScheduleCatchUpContinuation(madeProgress);
         }
         finally
         {
+            // Applying a cursor is not a handover until storage accepted its repair obligations as well.
             EndCatchUpConclusion();
         }
-
-        if (concluded is not bool madeProgress) return;
-
-        Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        Skips.PreparationEnded();
-        QueueUnownedHeldBackDeliveries();
-        await EvaluateAndRepairMissedDeliveries();
-        Skips.ClearJobReported();
-        await WriteStateAsync();
-
-        _isPreparingCatchup = false;
-        await ContinueAfterCatchUpLap(await NoteCatchUpLap(madeProgress));
     }
 
     /// <summary>

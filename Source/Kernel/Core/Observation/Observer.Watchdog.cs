@@ -78,6 +78,7 @@ public partial class Observer
 
         // A client found gone is recorded as seen now, which is at most a watchdog interval after it was; one still there only refreshes.
         if (wasHeldByClient) await RecordSeenByClient(force: !IsHeldByClient);
+        await ContinueAcceptedCatchUp();
         if (!await RecoverIfStuck()) await NudgeStalledJobs();
         await FlushDebouncedProgressState();
         await ReconcileAlertsIfNeeded();

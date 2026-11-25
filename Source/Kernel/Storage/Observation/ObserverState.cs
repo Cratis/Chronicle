@@ -194,6 +194,13 @@ public record ObserverState(
     public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; set; } = ImmutableDictionary<EventTypeId, EventCount>.Empty;
 
     /// <summary>
+    /// Gets the durably accepted partition repairs, or null for legacy state. Each repair owns its partition's suffix
+    /// until an unbounded partition job acknowledges completion; observer-wide successors exclude these partitions.
+    /// </summary>
+    [Id(27)]
+    public IReadOnlyList<PendingCatchUpRepair>? PendingCatchUpRepairs { get; init; }
+
+    /// <summary>
     /// Gets or sets the number of events successfully handled, broken down by event type identifier.
     /// Kept for backwards compatibility with integration tests and benchmarks using the previous property name.
     /// </summary>

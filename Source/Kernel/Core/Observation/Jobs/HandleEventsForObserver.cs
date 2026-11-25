@@ -176,6 +176,7 @@ public partial class HandleEventsForObserver(
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
         State.SkipFailedPartitions = request.SkipFailedPartitions;
+        State.ExcludedPartitions = request.ExcludedPartitions.ToArray();
         return ValueTask.CompletedTask;
     }
 
@@ -360,9 +361,7 @@ public partial class HandleEventsForObserver(
             // A failed partition belongs to the retry job working on it. Reading the set once, before the walk,
             // keeps this step from asking the observer per batch; a partition that starts failing while the walk
             // is running is caught by the failure path below instead.
-            HashSet<Key> failedPartitions = currentState.SkipFailedPartitions
-                ? [.. await _observer.GetFailedPartitionKeys()]
-                : [];
+            var failedPartitions = await GetSkippedPartitions(currentState);
 
             var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
             await DrainAbandonedDeliveriesBeforeHandling(currentState.ObserverKey, cancellationToken);
@@ -1107,6 +1106,13 @@ public partial class HandleEventsForObserver(
         }
 
         return true;
+    }
+
+    async Task<HashSet<Key>> GetSkippedPartitions(HandleEventsForObserverState currentState)
+    {
+        HashSet<Key> partitions = currentState.SkipFailedPartitions ? [.. await _observer.GetFailedPartitionKeys()] : [];
+        partitions.UnionWith(currentState.ExcludedPartitions);
+        return partitions;
     }
 
     void LogCancelled(EventSequenceNumber lastHandledSequenceNumber)

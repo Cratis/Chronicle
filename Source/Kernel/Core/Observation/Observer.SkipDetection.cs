@@ -77,7 +77,7 @@ public partial class Observer
             return SuspectedSkipReason.HeldBackWhileReplaying;
         }
 
-        return State.CatchingUpPartitions.Contains(partition) ? SuspectedSkipReason.HeldBackWhileCatchingUp : null;
+        return PartitionIsCatchingUp(partition) ? SuspectedSkipReason.HeldBackWhileCatchingUp : null;
     }
 
     bool CanHoldBackForCatchUpOrReplay(Key partition) =>

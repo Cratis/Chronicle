@@ -42,7 +42,7 @@ public class CatchUpObserverPartition(
         if (!State.LastHandledEventSequenceNumber.IsActualValue && !lastScanned.IsActualValue)
         {
             logger.NoEventsWereHandled(nameof(CatchUpObserverPartition));
-            return;
+            if (!Request.IsHandoverRepair) return;
         }
         await observer.PartitionCaughtUp(Request, Request.Key, State.LastHandledEventSequenceNumber, lastScanned);
     }
@@ -65,7 +65,7 @@ public class CatchUpObserverPartition(
                     request.ObserverType,
                     request.Key,
                     request.FromSequenceNumber,
-                    EventSequenceNumber.Max,
+                    request.ToSequenceNumber,
                     EventObservationState.None,
                     request.EventTypes)
                 {

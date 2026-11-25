@@ -21,4 +21,17 @@ public record CatchUpObserverPartitionRequest(
     [Id(1)] ObserverType ObserverType,
     [Id(2)] Key Key,
     [Id(3)] EventSequenceNumber FromSequenceNumber,
-    [Id(4)] IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key);
+    [Id(4)] IEnumerable<EventType> EventTypes) : ObserverPartitionedJobRequest(ObserverKey, ObserverType, Key)
+{
+    /// <summary>
+    /// Gets the inclusive reader bound. Legacy requests and handover repairs read the entire partition suffix.
+    /// </summary>
+    [Id(5)]
+    public EventSequenceNumber ToSequenceNumber { get; init; } = EventSequenceNumber.Max;
+
+    /// <summary>
+    /// Gets whether completion must acknowledge a durable handover repair, even when its reader found no events.
+    /// </summary>
+    [Id(6)]
+    public bool IsHandoverRepair { get; init; }
+}

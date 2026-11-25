@@ -52,4 +52,9 @@ public class HandleEventsForObserverState : JobStepState
     /// as failed are skipped rather than delivered.
     /// </summary>
     public bool SkipFailedPartitions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the partition exclusions accepted when the step was prepared, including across resume.
+    /// </summary>
+    public IReadOnlyList<Concepts.Keys.Key> ExcludedPartitions { get; set; } = [];
 }

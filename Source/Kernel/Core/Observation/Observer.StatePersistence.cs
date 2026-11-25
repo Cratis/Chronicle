@@ -10,28 +10,32 @@ public partial class Observer
     readonly ObserverContinuationLifetime _continuationLifetime = new();
 
     /// <inheritdoc/>
-    protected override async Task WriteStateAsync()
+    protected override async Task WriteStateAsync() => await WriteStateAndConfirm();
+
+    async Task<bool> WriteStateAndConfirm()
     {
         var checkpoint = _continuationLifetime.Capture();
-        if (!checkpoint.IsCurrent || CannotWriteState()) return;
+        if (!checkpoint.IsCurrent || CannotWriteState()) return false;
         await _stateWriteLock.WaitAsync();
         try
         {
             // Acquisition must establish release ownership before checking the captured lifetime.
             checkpoint.ThrowIfInvalidated();
-            if (!CanContinueStateWrite()) return;
+            if (!CanContinueStateWrite()) return false;
             PrepareStateWrite();
             var revision = _alertRevision;
-            if (!await PersistStateWithOwnershipRecovery(checkpoint)) return;
+            if (!await PersistStateWithOwnershipRecovery(checkpoint)) return false;
             if (_runningStateChangedAtPending) await PersistRunningStateChangedAt(checkpoint);
             checkpoint.ThrowIfInvalidated();
-            if (!CanContinueStateWrite()) return;
+            if (!CanContinueStateWrite()) return false;
             RecordPersistedState(revision);
             ShareBindingWithSupervisor();
+            return true;
         }
         catch (ObserverContinuationInvalidated)
         {
             // Disposal discards this direct continuation, not the operation we have already joined.
+            return false;
         }
         finally
         {

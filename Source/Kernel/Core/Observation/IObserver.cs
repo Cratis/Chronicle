@@ -790,8 +790,12 @@ public interface IObserver : IGrainWithStringKey
     Task CaughtUp(EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
 
     /// <summary>
-    /// Notify that a specific catch-up job concluded, including how far it read.
+    /// Durably accept a specific catch-up job's progress and remaining partition obligations.
     /// </summary>
+    /// <remarks>
+    /// Successful completion acknowledges storage acceptance, not successor execution. This interleaving callback
+    /// does not acquire or resume jobs or route the observer; that work runs in a later non-interleaved turn.
+    /// </remarks>
     /// <param name="jobId">The catch-up job that concluded.</param>
     /// <param name="lastHandledEventSequenceNumber">The last handled event.</param>
     /// <param name="lastScannedEventSequenceNumber">The last scanned event, or unavailable when not every step completed.</param>
