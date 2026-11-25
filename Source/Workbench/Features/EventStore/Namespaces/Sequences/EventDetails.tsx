@@ -17,6 +17,8 @@ import { useParams } from 'react-router-dom';
 import { type EventStoreParams } from 'Shared';
 import strings from 'Strings';
 import { applyCoordinateFormatting } from 'Components/CoordinateFormatter/CoordinateFormatter';
+import { RevisionComparison } from './RevisionComparison/RevisionComparison';
+import { ComparisonScope } from './RevisionComparison/ComparisonScope';
 import css from './EventDetails.module.css';
 
 interface RevisionOption {
@@ -29,7 +31,12 @@ interface GenerationOption {
     value: number;
 }
 
-export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) => {
+export interface EventDetailsProps extends IDetailsComponentProps<AppendedEvent> {
+    /** Where the event was read from. When given, an optional read-only revision comparison is offered. */
+    comparisonScope?: ComparisonScope;
+}
+
+export const EventDetails = ({ item, comparisonScope }: EventDetailsProps) => {
     const params = useParams<EventStoreParams>();
     const [eventTypes] = ObserveEventTypes.use({ eventStore: params.eventStore! });
     const [allGenerations] = AllEventTypeGenerations.use({ eventStore: params.eventStore!, eventTypeId: item.context.eventType.id });
@@ -268,6 +275,7 @@ export const EventDetails = ({ item }: IDetailsComponentProps<AppendedEvent>) =>
                     )}
                 </div>
             )}
+            {comparisonScope && <RevisionComparison scope={comparisonScope} event={item} />}
             <Tabs
                 className='flex flex-col flex-1 min-h-0'
                 panelContainerClassName='flex-1 min-h-0 overflow-y-auto'>
