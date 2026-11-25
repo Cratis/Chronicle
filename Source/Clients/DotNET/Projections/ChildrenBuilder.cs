@@ -34,12 +34,8 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
     PropertyPath _identifiedBy = PropertyPath.NotSet;
     ChildrenOrderingDefinition? _ordering;
 
-#pragma warning disable IDE0052 // Remove unread private members
-    // TODO: This is not used, but it should be - figure out what the purpose was. The FromEventProperty method is called from ReadModelPropertiesBuilder
     EventType? _fromEventPropertyEventType;
-    IEventValueExpression? _fromEventPropertyExpression;
-
-#pragma warning restore IDE0052 // Remove unread private members
+    EventContentPropertyExpression? _fromEventPropertyExpression;
 
     /// <inheritdoc/>
     public bool HasIdentifiedBy => _identifiedBy.IsSet;
@@ -103,6 +99,11 @@ public class ChildrenBuilder<TParentReadModel, TChildReadModel>(
         return new()
         {
             IdentifiedBy = _identifiedBy,
+            FromEventProperty = _fromEventPropertyEventType is null ? null : new()
+            {
+                Event = _fromEventPropertyEventType,
+                PropertyExpression = _fromEventPropertyExpression!.Build()
+            },
             From = _fromDefinitions,
             Join = _joinDefinitions,
             Children = _childrenDefinitions.ToDictionary(_ => (string)_.Key, _ => _.Value),
