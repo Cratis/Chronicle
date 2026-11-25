@@ -26,7 +26,7 @@ public class an_unchanged_state_without_a_subject : all_dependencies
         _expandoObjectConverter = new ExpandoObjectConverter(new TypeFormats());
         _complianceManager.ApplyToReadModel(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<JsonSchema>(), Arg.Any<string>(), Arg.Any<JsonObject>())
             .Returns(call => Task.FromResult(call.ArgAt<JsonObject>(4)));
-        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace, expandoObjectConverter: _expandoObjectConverter);
+        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace, () => Task.CompletedTask, expandoObjectConverter: _expandoObjectConverter);
     }
 
     protected async Task Reduce() => _result = await _pipeline.Reduce(CreateContext(EventSourceIdValue), CreateReducer(State()));

@@ -71,7 +71,7 @@ public class when_a_reducer_releases_a_child_collection_with_a_pii_list(MongoDBF
 
     async Task Because()
     {
-        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace);
+        var pipeline = new ReducerPipeline(ReadModel, Sink, ObjectComparer, Compliance, EventStore, EventStoreNamespace, () => Task.CompletedTask);
 
         // First reduce creates the candidate child with a coarse [PII] evaluation-scores list.
         await pipeline.Reduce(

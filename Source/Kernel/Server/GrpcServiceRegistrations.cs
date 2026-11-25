@@ -50,6 +50,7 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.Multiplexed.IMultiplexedObservation, Services.Observation.Multiplexed.MultiplexedObservation>();
         services.AddSingleton<Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions, Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
+        services.TryAddSingleton<Storage.Sinks.ISinkProvenanceCache, Storage.Sinks.SinkProvenanceCache>();
         services.TryAddSingleton<ReadModels.IReadModelReadBindings, ReadModels.ReadModelReadBindings>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.ReadModels.IMaterializedReadModels, Services.ReadModels.MaterializedReadModels>();

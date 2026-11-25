@@ -24,7 +24,7 @@ public class and_only_some_definitions_were_modified : Specification
         _definitionsStorage = Substitute.For<IReadModelDefinitionsStorage>();
         storage.GetEventStore("the-store").Returns(eventStoreStorage);
         eventStoreStorage.ReadModels.Returns(_definitionsStorage);
-        _provider = new(storage);
+        _provider = new(storage, Substitute.For<IReadModelSinkProvenance>());
 
         _unchanged = Create("unchanged");
         _modified = Create("modified");

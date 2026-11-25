@@ -49,6 +49,7 @@ internal sealed class MaterializedReadModels(
             instances);
 
         var instancesAsJson = releasedInstances.Select(instance => JsonSerializer.Serialize(instance.WithoutInitializationState(schema))).ToList();
+        binding.Lease.Check();
         return new()
         {
             Instances = instancesAsJson,
@@ -84,9 +85,9 @@ internal sealed class MaterializedReadModels(
         // sink emits faster than a slow client or release can drain, and every page queued would cost a release, a
         // count and a page read to deliver a snapshot that a newer one has already replaced.
         .SelectMany(state =>
-            state.binding.ObserveInstances(state.skip, request.PageSize)
+            state.binding.Guard(state.binding.ObserveInstances(state.skip, request.PageSize)
                 .SelectLatestSequentially(
-                    async instances =>
+                    instances => state.binding.ForObservation(async () =>
                     {
                         var releasedInstances = await complianceHelper.Release(
                             request.EventStore,
@@ -104,7 +105,7 @@ internal sealed class MaterializedReadModels(
                             Page = request.Page,
                             PageSize = request.PageSize
                         };
-                    },
-                    logger));
+                    }),
+                    logger)));
     }
 }

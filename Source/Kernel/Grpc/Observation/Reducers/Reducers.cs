@@ -52,6 +52,7 @@ namespace Cratis.Chronicle.Services.Observation.Reducers;
 /// <param name="registrationGate">The silo-wide gate for observer registrations.</param>
 /// <param name="namespaceCasing">The namespace casing resolver.</param>
 /// <param name="siloSupervisor">The <see cref="ISiloSupervisor"/> that runs the checks of client subscriptions.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that confirms a subscription without waking a dormant observer; none means every check calls the observer.</param>
 internal sealed class Reducers(
     IGrainFactory grainFactory,
@@ -66,6 +67,7 @@ internal sealed class Reducers(
     IObserverRegistrationGate registrationGate,
     INamespaceCasing namespaceCasing,
     ISiloSupervisor siloSupervisor,
+    IReadModelSinkProvenance provenance,
     IDormantObservers? dormantObservers = null) : IReducers
 {
     /// <summary>
@@ -164,6 +166,7 @@ internal sealed class Reducers(
                         {
                             model = await grainFactory.GetReadModel(registration.Reducer.ReadModel, registration.EventStore).GetDefinition();
                             ValidateReadModelDefinition(registration, model);
+                            await provenance.EnsureReadable(registration.EventStore, registration.Namespace, model);
                         }
                         catch (Exception exception)
                         {

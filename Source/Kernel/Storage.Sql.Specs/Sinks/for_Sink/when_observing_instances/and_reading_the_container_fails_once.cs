@@ -18,7 +18,7 @@ public class and_reading_the_container_fails_once : a_sql_read_model
     async Task Because()
     {
         await Write(_firstId, "first");
-        _database.When(_ => _.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>()))
+        _database.When(_ => _.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>(), Arg.Any<SinkProvenanceTarget?>()))
             .Do(_ =>
             {
                 if (Interlocked.Increment(ref _reads) == 1)

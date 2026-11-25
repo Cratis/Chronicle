@@ -217,6 +217,7 @@ public partial class Database
     /// <param name="create">Creates a context from options.</param>
     /// <param name="prepare">Creates or migrates what the context needs, given a context and where it connects.</param>
     /// <param name="purpose">The <see cref="ConnectionPurpose"/> of the context that is returned.</param>
+    /// <param name="admit">Checks actual read-model targets before preparation.</param>
     /// <returns>The context. The caller owns it.</returns>
     /// <remarks>
     /// With connection resolution configured, the preparation runs on its own short-lived context connected for
@@ -228,13 +229,16 @@ public partial class Database
         ConcurrentDictionary<string, CachedDbContextOptions<TDbContext>> cache,
         Func<DbContextOptions<TDbContext>, TDbContext> create,
         Func<TDbContext, SqlTarget, Task> prepare,
-        ConnectionPurpose purpose = ConnectionPurpose.Runtime)
+        ConnectionPurpose purpose = ConnectionPurpose.Runtime,
+        Action<TDbContext>? admit = null)
         where TDbContext : DbContext
     {
         var target = await Target(identity, purpose);
         var context = create(OptionsFor(cache, $"{key}:{purpose}", target));
         try
         {
+            admit?.Invoke(context);
+            await AdmitSchemaOnlyReadModel(identity, purpose, context, create, cache, key, admit);
             if (!_resolution.IsConfigured || purpose == ConnectionPurpose.Schema)
             {
                 await prepare(context, target);
@@ -243,6 +247,11 @@ public partial class Database
 
             var schemaTarget = await Target(identity, ConnectionPurpose.Schema);
             await using var schemaContext = create(OptionsFor(cache, $"{key}:{nameof(ConnectionPurpose.Schema)}", schemaTarget));
+            admit?.Invoke(schemaContext);
+            if (context is EventStores.Namespaces.ReadModels.ReadModelDbContext runtime && schemaContext is EventStores.Namespaces.ReadModels.ReadModelDbContext schema)
+            {
+                Sinks.SinkProvenanceTarget.For(runtime).Ensure(schema);
+            }
             await prepare(schemaContext, schemaTarget);
             return context;
         }

@@ -17,10 +17,13 @@ public class when_an_old_build_finishes_after_eviction : given.a_pipeline_manage
         _storage.GetEventStore(_store).GetNamespace(_namespace).Sinks.GetFor(_projection.ReadModel).Returns(held.Task, Task.FromResult(_sink));
         var oldBuild = _manager.GetFor(_store, _namespace, _projection);
         _manager.EvictFor(_store, _namespace, _projection.Identifier);
+        var identifier = _projection.Identifier;
+        var eventSequenceId = _projection.EventSequenceId;
+        var readModel = _projection.ReadModel;
         _fresh = Substitute.For<IProjection>();
-        _fresh.Identifier.Returns(_projection.Identifier);
-        _fresh.EventSequenceId.Returns(_projection.EventSequenceId);
-        _fresh.ReadModel.Returns(_projection.ReadModel);
+        _fresh.Identifier.Returns(identifier);
+        _fresh.EventSequenceId.Returns(eventSequenceId);
+        _fresh.ReadModel.Returns(readModel);
         _fresh.DefinitionFingerprint.Returns("fresh");
         _fresh.FencedGlobalIneligibilityReason.Returns((string?)null);
         await _manager.GetFor(_store, _namespace, _fresh);

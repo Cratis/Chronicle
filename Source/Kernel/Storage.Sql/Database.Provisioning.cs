@@ -449,7 +449,8 @@ public partial class Database
         EventStoreNamespaceName @namespace,
         string tableName,
         Func<DbContextOptions<ReadModelDbContext>, string, ReadModelDbContext> createDbContext,
-        ConnectionPurpose purpose)
+        ConnectionPurpose purpose,
+        Sinks.SinkProvenanceTarget? admittedTarget)
     {
 #pragma warning disable CA2000
         var dbContext = await CreateContext(
@@ -465,7 +466,8 @@ public partial class Database
                 await EnsureDatabaseExists(context, target);
                 await EnsureTableMigrated(context, target);
             },
-            purpose);
+            purpose,
+            context => admittedTarget?.Ensure(context));
 #pragma warning restore CA2000
 
         return new DbContextScope<ReadModelDbContext>(dbContext, static () => { });

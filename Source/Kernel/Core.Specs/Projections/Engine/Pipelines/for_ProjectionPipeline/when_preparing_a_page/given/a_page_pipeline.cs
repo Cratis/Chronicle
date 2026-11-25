@@ -68,7 +68,8 @@ public class a_page_pipeline : Specification
             [new ResolveAndCount(replayStorage, _sink)],
             new ProjectionHandleLock(),
             replayStorage,
-            NullLogger<ProjectionPipeline>.Instance);
+            NullLogger<ProjectionPipeline>.Instance,
+            () => Task.CompletedTask);
     }
 
     protected async Task<string> HandlePage(ProjectionPipeline pipeline)

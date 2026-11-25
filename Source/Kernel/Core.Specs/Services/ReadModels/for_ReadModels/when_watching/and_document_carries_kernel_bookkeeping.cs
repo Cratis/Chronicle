@@ -81,7 +81,8 @@ public class and_document_carries_kernel_bookkeeping : given.all_dependencies
                 _expandoObjectConverter),
             _materializedReadModels,
             new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
     }
 
     async Task Because()

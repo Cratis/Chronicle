@@ -34,7 +34,7 @@ public class and_the_sink_targets_an_event_sequence : Specification
         eventStoreStorage.GetNamespace("tenant").Returns(namespaceStorage);
         _sinks = Substitute.For<ISinks>();
         namespaceStorage.Sinks.Returns(_sinks);
-        _factory = new(grainFactory, storage, Substitute.For<IObjectComparer>(), Substitute.For<IReadModelsCompliance>(), Options.Create(new ChronicleOptions()));
+        _factory = new(grainFactory, storage, Substitute.For<IObjectComparer>(), Substitute.For<IReadModelsCompliance>(), Options.Create(new ChronicleOptions()), Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
         _definition = new("reducer", Concepts.EventSequences.EventSequenceId.Log, [], "target", true, []);
     }
 

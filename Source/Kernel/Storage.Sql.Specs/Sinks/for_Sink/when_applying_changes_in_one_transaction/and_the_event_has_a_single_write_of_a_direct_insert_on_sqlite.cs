@@ -5,9 +5,22 @@ namespace Cratis.Chronicle.Storage.Sql.Sinks.for_Sink.when_applying_changes_in_o
 
 public class and_the_event_has_a_single_write_of_a_direct_insert_on_sqlite : and_the_event_has_a_single_write_of_a_direct_insert<SqlSinkHarness>
 {
+    string _metadataPreparation;
+
     protected override SqlSinkHarness CreateHarness(SqlCommandCapture capture) => new() { Interceptors = [capture] };
+
+    protected override async Task Seed()
+    {
+        // A scalar child lookup validates provenance, then returns without opening or migrating the payload table.
+        await _sink.TryFindRootKeyByChildValue("group", "fingerprint-warmup");
+        _metadataPreparation = string.Join('\n', _capture.Commands);
+    }
 
     protected override int RecordedCommands => 5;
 
     protected override string RecordedFingerprint => "e3c50beaf1ac2cd5b313c516b20d4e144aadfe83ca66f0e31d124462c14eeb98";
+
+    [Fact]
+    void should_prepare_only_the_provenance_table_outside_the_measured_write() =>
+        _metadataPreparation.ShouldEqual("CREATE TABLE IF NOT EXISTS [main].[__cratis_sink_provenance] ([Id] TEXT NOT NULL PRIMARY KEY, [Version] INTEGER NOT NULL, [Restricted] INTEGER NOT NULL)");
 }

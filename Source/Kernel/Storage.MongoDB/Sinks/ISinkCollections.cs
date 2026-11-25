@@ -24,6 +24,12 @@ public interface ISinkCollections
     string PromotingCollectionName { get; }
 
     /// <summary>
+    /// Revalidates the database-local marker before admitting a retained pipeline operation.
+    /// </summary>
+    /// <returns>The admission task.</returns>
+    Task EnsureProvenance() => Task.CompletedTask;
+
+    /// <summary>
     /// Gets the <see cref="IMongoCollection{TDocument}"/> used by the <see cref="Sink"/>.
     /// </summary>
     /// <returns><see cref="IMongoCollection{T}"/> for the state.</returns>

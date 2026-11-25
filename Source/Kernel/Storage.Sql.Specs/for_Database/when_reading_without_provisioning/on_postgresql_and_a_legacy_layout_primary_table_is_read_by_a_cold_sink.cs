@@ -23,6 +23,7 @@ public class on_postgresql_and_a_legacy_layout_primary_table_is_read_by_a_cold_s
     async Task Establish()
     {
         await ProvisionPrimaryTable();
+        await new SinkProvenanceStorage(Database, Store, Namespace).CompleteInventory(false);
         var connection = await ReadModelConnection();
         await Execute(connection, $"CREATE TABLE \"indexed_model\" (\"Id\" text NOT NULL PRIMARY KEY, \"ID\" text NULL, \"value\" integer NULL, \"{WellKnownProperties.LastHandledEventSequenceNumber}\" bigint NULL, \"{WellKnownProperties.ReadModelInstanceInitialized}\" boolean NOT NULL DEFAULT true)");
         await Execute(connection, "INSERT INTO \"indexed_model\" (\"Id\", \"value\") VALUES ('one', 1), ('two', 2)");

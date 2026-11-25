@@ -54,7 +54,8 @@ public class when_reducing_the_same_key_twice : Specification
             new ObjectComparer(),
             new ReadModelsCompliance(Substitute.For<IJsonSchemaMetadataManager>(), new ExpandoObjectConverter(new TypeFormats())),
             "store",
-            "namespace");
+            "namespace",
+            () => Task.CompletedTask);
     }
 
     async Task Because()

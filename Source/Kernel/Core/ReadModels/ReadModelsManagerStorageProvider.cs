@@ -10,7 +10,8 @@ namespace Cratis.Chronicle.ReadModels;
 /// Represents an implementation of <see cref="IGrainStorage"/> for handling projections manager state storage.
 /// </summary>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
-public class ReadModelsManagerStorageProvider(IStorage storage) : IGrainStorage
+/// <param name="provenance">The database provenance coordinator.</param>
+public class ReadModelsManagerStorageProvider(IStorage storage, IReadModelSinkProvenance provenance) : IGrainStorage
 {
     /// <inheritdoc/>
     public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState) => Task.CompletedTask;
@@ -28,7 +29,9 @@ public class ReadModelsManagerStorageProvider(IStorage storage) : IGrainStorage
     {
         var actualGrainState = (grainState as IGrainState<ReadModelsManagerState>)!;
         var eventStore = storage.GetEventStore(grainId.Key.ToString()!);
-        foreach (var definition in actualGrainState.State!.Modified.ToArray())
+        var modified = actualGrainState.State!.Modified.ToArray();
+        await ReadModelDefinitionProvenance.Ensure(storage, provenance, grainId.Key.ToString()!, modified);
+        foreach (var definition in modified)
         {
             await eventStore.ReadModels.Save(definition);
         }

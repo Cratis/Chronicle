@@ -48,7 +48,11 @@ public class a_database_without_read_model_storage : a_sqlite_database
     {
         var resolution = new ConnectionResolutionOptions();
         resolution.Identity.UseCustom<RecordingConnectionResolver>();
-        _resolutionServices = new ServiceCollection().AddSingleton(_readModelMigrator).AddSingleton(Resolver).BuildServiceProvider();
+        _resolutionServices = new ServiceCollection()
+            .AddSingleton(_readModelMigrator)
+            .AddSingleton(Resolver)
+            .AddStorageConnectionResolution(WellKnownConnectionStorage.Sqlite, resolution)
+            .BuildServiceProvider();
         return new(
             _resolutionServices,
             Options.Create(new ChronicleOptions { Storage = new() { Type = StorageType.Sqlite, ConnectionDetails = _connectionString, ConnectionResolution = resolution } }),
@@ -71,6 +75,18 @@ public class a_database_without_read_model_storage : a_sqlite_database
         await using var command = new SqliteCommand(sql, connection);
 #pragma warning restore CA2100
         await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Invalidates cached read-model placements so the next operation observes the changed resolver answer.
+    /// </summary>
+    protected void InvalidateReadModelResolution()
+    {
+        var resolver = _resolutionServices!.GetRequiredService<IStorageConnectionResolution>().Resolver;
+        foreach (var request in Resolver.Requests.Where(request => request.Scope[StorageConnectionRequests.Kind] == "readModels").Distinct())
+        {
+            resolver.Invalidate(request);
+        }
     }
 
     /// <summary>

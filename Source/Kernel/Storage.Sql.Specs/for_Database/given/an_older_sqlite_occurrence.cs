@@ -29,6 +29,7 @@ public abstract class an_older_sqlite_occurrence : a_database_without_read_model
 
     async Task Establish()
     {
+        await new Sinks.SinkProvenanceStorage(_database, "store", "namespace").CompleteInventory(false);
         _readModelConnection = await ProvisionReadModelDatabase();
         await Execute(_readModelConnection, OlderTableSql);
         await Execute(_readModelConnection, $"INSERT INTO \"{ColdIndexedSink.Occurrence}\" (\"id\") VALUES ('1')");

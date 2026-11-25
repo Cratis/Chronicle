@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -15,6 +16,7 @@ public class when_the_producer_is_only_stored : Specification
 {
     const string Producer = "stored-producer";
     IGrainFactory _grains;
+    IReadModelSinkProvenance _provenance;
     IProjectionsManager _manager;
     ReadModelDefinition _definition;
     ProjectionDefinition _stored;
@@ -27,6 +29,7 @@ public class when_the_producer_is_only_stored : Specification
     void Establish()
     {
         _grains = Substitute.For<IGrainFactory>();
+        _provenance = Substitute.For<IReadModelSinkProvenance>();
         _manager = Substitute.For<IProjectionsManager>();
         _grains.GetGrain<IProjectionsManager>(Arg.Any<string>()).Returns(_manager);
         _grains.GetGrain<IReducersManager>(Arg.Any<string>()).Returns(Substitute.For<IReducersManager>());
@@ -46,9 +49,10 @@ public class when_the_producer_is_only_stored : Specification
     async Task<Exception?> ReadWith(ProjectionDefinition? stored)
     {
         _manager.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>(stored is null ? [] : [stored]));
-        return await Catch.Exception(() => ReadModelReadPolicy.EnsureReadable(_grains, "store", _definition));
+        return await Catch.Exception(() => ReadModelPublicReadGuard.Ensure(_provenance, _grains, "store", EventStoreNamespaceName.Default, _definition));
     }
 
+    [Fact] Task should_check_database_admission_before_each_stored_producer_fallback() => _provenance.Received(5).EnsureReadable("store", EventStoreNamespaceName.Default, _definition);
     [Fact] void should_allow_a_stored_ordinary_definition() => _ordinaryError.ShouldBeNull();
     [Fact] void should_allow_a_stored_kernel_definition() => _kernelError.ShouldBeNull();
     [Fact] void should_allow_a_stored_kernel_definition_over_system() => _kernelSystemError.ShouldBeNull();

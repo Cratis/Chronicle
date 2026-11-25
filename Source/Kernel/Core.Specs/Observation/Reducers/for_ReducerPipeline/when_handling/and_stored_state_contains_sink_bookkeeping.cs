@@ -35,7 +35,7 @@ public class and_stored_state_contains_sink_bookkeeping : given.all_dependencies
                     .OfType<PropertiesChanged<ExpandoObject>>().SelectMany(change => change.Differences).ToArray();
                 return Task.FromResult(Enumerable.Empty<FailedPartition>());
             });
-        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace);
+        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace, () => Task.CompletedTask);
     }
 
     async Task Because()

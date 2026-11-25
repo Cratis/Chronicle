@@ -51,6 +51,7 @@ public class a_projections_manager_grain : Specification
     protected IStorage<ProjectionsManagerState> _stateStorage;
     protected IObserverStateStorage _observerStates;
     protected IEnumerable<ReadModelDefinition> _readModelDefinitions = [];
+    protected IReadModelSinkProvenance _provenance;
     protected IClusterMembershipService _clusterMembership;
     protected ClusterMembershipSnapshot _membership;
     protected static readonly SiloAddress _otherSilo = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 11112), 1);
@@ -101,6 +102,8 @@ public class a_projections_manager_grain : Specification
         namespaceStorage.FailedPartitions.Returns(_failedPartitionsStorage);
         _observerStates = namespaceStorage.Observers;
         _silo.AddService(storage);
+        _provenance = CreateProvenance(storage);
+        _silo.AddService(_provenance);
 
         var siloDetails = Substitute.For<ILocalSiloDetails>();
         siloDetails.SiloAddress.Returns(SiloAddress.Zero);
@@ -199,6 +202,13 @@ public class a_projections_manager_grain : Specification
         SinkDefinition.None,
         new Dictionary<ReadModelGeneration, JsonSchema>(),
         []);
+
+    /// <summary>
+    /// Creates provenance for this independent fixture.
+    /// </summary>
+    /// <param name="storage">The fixture's backing storage.</param>
+    /// <returns>The fixture's sink provenance.</returns>
+    protected virtual IReadModelSinkProvenance CreateProvenance(Storage.IStorage storage) => Substitute.For<IReadModelSinkProvenance>();
 
     /// <summary>
     /// Creates admission for this independent fixture.

@@ -72,5 +72,6 @@ public class an_evicted_graph_with_a_live_pipeline : for_ProjectionsManager.give
         Substitute.For<ITypeFormats>(),
         Substitute.For<IReadModelsCompliance>(),
         Options.Create(new ChronicleOptions()),
-        NullLoggerFactory.Instance);
+        NullLoggerFactory.Instance,
+        Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
 }

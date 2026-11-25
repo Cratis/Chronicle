@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Engine;
+using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.Projections;
 using Orleans.Storage;
@@ -20,7 +21,8 @@ namespace Cratis.Chronicle.Projections;
 /// </remarks>
 /// <param name="storage"><see cref="IStorage"/> for accessing underlying storage.</param>
 /// <param name="timeProvider">The clock for first-registration metadata.</param>
-public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider timeProvider) : IGrainStorage
+/// <param name="provenance">The database provenance coordinator.</param>
+public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider timeProvider, IReadModelSinkProvenance provenance) : IGrainStorage
 {
     readonly ConcurrentDictionary<(EventStoreName EventStore, ProjectionId Projection), ProjectionDefinitionDigest> _lastRecordedDigests = new();
 
@@ -28,16 +30,17 @@ public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider 
     /// Initializes a provider using the system clock.
     /// </summary>
     /// <param name="storage">The storage.</param>
-    public ProjectionDefinitionStorageProvider(IStorage storage) : this(storage, TimeProvider.System)
+    public ProjectionDefinitionStorageProvider(IStorage storage) : this(storage, TimeProvider.System, new ReadModelSinkProvenance(storage))
     {
     }
 
     /// <inheritdoc/>
-    public Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
+    public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
         var projectionKey = ProjectionKey.Parse(grainId.Key.ToString());
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
-        return eventStore.Projections.Delete(projectionKey.ProjectionId);
+        await provenance.Preserve(projectionKey.EventStore);
+        await eventStore.Projections.Delete(projectionKey.ProjectionId);
     }
 
     /// <inheritdoc/>
@@ -62,6 +65,7 @@ public class ProjectionDefinitionStorageProvider(IStorage storage, TimeProvider 
         }
         var eventStore = storage.GetEventStore(projectionKey.EventStore);
         var definition = actualGrainState.State!;
+        await ReadModelProducerWriteGuard.Ensure(provenance, projectionKey.EventStore, definition.UsesUnsupportedEventSequence());
         var cacheKey = (projectionKey.EventStore, projectionKey.ProjectionId);
         var digest = ProjectionFactory.DefinitionDigestFor(definition);
 

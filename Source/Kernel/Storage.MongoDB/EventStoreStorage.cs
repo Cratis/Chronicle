@@ -167,6 +167,14 @@ public class EventStoreStorage(
         .UpdateOneAsync(new BsonDocument("_id", 2), new BsonDocument("$setOnInsert", new BsonDocument("_id", 2)), new UpdateOptions { IsUpsert = true }));
 
     /// <inheritdoc/>
+    public async Task<bool> IsSinkProvenanceInventoryComplete() => await eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Initialization)
+        .CountDocumentsAsync(new BsonDocument("_id", 3)) > 0;
+
+    /// <inheritdoc/>
+    public Task MarkSinkProvenanceInventoryComplete() => DuplicateKeyConvergence.UpsertWithRetry(() => eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Initialization)
+        .UpdateOneAsync(new BsonDocument("_id", 3), new BsonDocument("$setOnInsert", new BsonDocument("_id", 3)), new UpdateOptions { IsUpsert = true }));
+
+    /// <inheritdoc/>
     public IEventStoreNamespaceStorage GetNamespace(EventStoreNamespaceName @namespace)
     {
         if (_namespaces.TryGetValue(@namespace, out var instance))

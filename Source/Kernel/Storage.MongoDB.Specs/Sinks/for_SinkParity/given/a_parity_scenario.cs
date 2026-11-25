@@ -113,8 +113,8 @@ public abstract class a_parity_scenario(MongoDBFixture fixture) : Specification
         _mongoSink = new Sink(readModel, mongoDBConverter, collections, changesetConverter, expandoObjectConverter, Substitute.For<IReadModelChangeStreams>());
 
         _compliance = CreateCompliance();
-        _inMemoryPipeline = new ReducerPipeline(readModel, _inMemorySink, _objectComparer, _compliance, "test-store", "test-namespace");
-        _mongoPipeline = new ReducerPipeline(readModel, _mongoSink, _objectComparer, _compliance, "test-store", "test-namespace");
+        _inMemoryPipeline = new ReducerPipeline(readModel, _inMemorySink, _objectComparer, _compliance, "test-store", "test-namespace", () => Task.CompletedTask);
+        _mongoPipeline = new ReducerPipeline(readModel, _mongoSink, _objectComparer, _compliance, "test-store", "test-namespace", () => Task.CompletedTask);
 
         if (ApplyStatesDuringEstablish)
         {

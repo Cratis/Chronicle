@@ -20,6 +20,7 @@ public class on_sql_server_and_a_primary_table_is_read_by_a_cold_sink(SqlServerF
     async Task Establish()
     {
         await ProvisionPrimaryTable();
+        await new SinkProvenanceStorage(Database, Store, Namespace).CompleteInventory(false);
         var connection = ConnectionFor(await ReadModelDatabaseName());
         await Execute(connection, $"CREATE TABLE [indexed_model] ([Id] nvarchar(450) NOT NULL PRIMARY KEY, [value] int NULL, [{WellKnownProperties.LastHandledEventSequenceNumber}] bigint NULL, [{WellKnownProperties.ReadModelInstanceInitialized}] bit NOT NULL DEFAULT 1)");
         await Execute(connection, "INSERT INTO [indexed_model] ([Id], [value]) VALUES ('one', 1), ('two', 2)");

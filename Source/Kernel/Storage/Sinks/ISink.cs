@@ -39,6 +39,12 @@ public interface ISink
     bool IsInBulkMode => false;
 
     /// <summary>
+    /// Revalidates database provenance before a retained pipeline starts another operation.
+    /// </summary>
+    /// <returns>The admission task.</returns>
+    Task EnsureProvenance() => Task.CompletedTask;
+
+    /// <summary>
     /// Replaces an isolated instance unless its stored watermark is beyond the supplied watermark.
     /// </summary>
     /// <param name="key">The instance to replace.</param>

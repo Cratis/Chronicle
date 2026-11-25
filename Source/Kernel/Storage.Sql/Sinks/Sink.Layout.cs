@@ -25,6 +25,7 @@ public partial class Sink
     /// <returns>Awaitable task.</returns>
     async Task EnsureLayout()
     {
+        await EnsureDestinationAvailable(_tableName);
         if (!_needsLayout)
         {
             return;
@@ -66,6 +67,8 @@ public partial class Sink
     /// <returns>Awaitable task.</returns>
     async Task EnsureLayoutForRead()
     {
+        await EnsureDestinationAvailable(_tableName);
+
         // Once resolved, a read costs only these field checks.
         if (!_needsLayout || Volatile.Read(ref _layoutResolvedForRead))
         {
@@ -110,7 +113,7 @@ public partial class Sink
 
     async Task<bool> ResolveLayoutForRead()
     {
-        var scope = await _database.ExistingReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        var scope = await _database.ExistingReadModelTable(_eventStoreName, _namespace, _tableName, _columns, ProvenanceTarget);
         if (scope is null)
         {
             return false;
@@ -127,7 +130,7 @@ public partial class Sink
 
     async Task ResolveLayout()
     {
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns);
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, _tableName, _columns, admittedTarget: ProvenanceTarget);
         var database = scope.DbContext.Database;
         var layout = await ReadTableLayout(database, database.GetDatabaseType(), _tableName);
         AdoptLayout(layout);

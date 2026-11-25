@@ -76,7 +76,7 @@ public class all_dependencies : Specification
         _sinks.GetFor(Arg.Any<ReadModelDefinition>()).Returns(_sink);
         _readBindings = Substitute.For<IReadModelReadBindings>();
         _readBindings.Resolve(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelDefinition>(), Arg.Any<ReadModelContainerName?>())
-            .Returns(call => new ReadModelReadBinding(_sink, call.ArgAt<ReadModelContainerName?>(3)));
+            .Returns(call => new ReadModelReadBinding(_sink, call.ArgAt<ReadModelContainerName?>(3)) { Lease = SinkProvenanceLease.Exempt });
 
         _readModel.GetDefinition().Returns(_readModelDefinition);
         _grainFactory.GetGrain<IReadModel>(Arg.Any<string>()).Returns(_readModel);
@@ -117,19 +117,22 @@ public class all_dependencies : Specification
 
         ConfigureJsonCompliance();
 
-        _service = new ReadModels(
-            _grainFactory,
-            _storage,
-            _readBindings,
-            _expandoObjectConverter,
-            _reducerMediator,
-            _changesetMediator,
-            _localSiloDetails,
-            _complianceHelper,
-            _materializedReadModels,
-            new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+        _service = CreateService(Substitute.For<IReadModelSinkProvenance>());
     }
+
+    private protected ReadModels CreateService(IReadModelSinkProvenance provenance) => new(
+        _grainFactory,
+        _storage,
+        _readBindings,
+        _expandoObjectConverter,
+        _reducerMediator,
+        _changesetMediator,
+        _localSiloDetails,
+        _complianceHelper,
+        _materializedReadModels,
+        new JsonSerializerOptions(),
+        NamespaceCasingContext.Create(),
+        provenance);
 
     void ConfigureJsonCompliance()
     {

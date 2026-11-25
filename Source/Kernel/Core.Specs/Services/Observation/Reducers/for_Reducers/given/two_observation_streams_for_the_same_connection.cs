@@ -78,7 +78,8 @@ public class two_observation_streams_for_the_same_connection : Specification
             _logger,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloSupervisor.Instance);
+            NoSiloSupervisor.Instance,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
 
         _earlierSubscription = _reducers.Observe(_earlierMessages).Subscribe(_earlierDeliveries.Add);
         _earlierMessages.OnNext(Register());

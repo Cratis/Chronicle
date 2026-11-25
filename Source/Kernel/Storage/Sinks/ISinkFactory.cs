@@ -42,4 +42,15 @@ public interface ISinkFactory
     /// <exception cref="SinkTypeDoesNotSupportNamedConfigurations">Thrown when the factory cannot connect to a named configuration.</exception>
     ISink CreateFor(EventStoreName eventStore, EventStoreNamespaceName @namespace, ReadModelDefinition readModel, SinkName sink) =>
         sink.IsDefault ? CreateFor(eventStore, @namespace, readModel) : throw new SinkTypeDoesNotSupportNamedConfigurations(TypeId, sink);
+
+    /// <summary>
+    /// Gets provenance from the same physical database as the named or default sink.
+    /// </summary>
+    /// <param name="eventStore">The event store.</param>
+    /// <param name="namespace">The namespace.</param>
+    /// <param name="sink">The sink configuration.</param>
+    /// <param name="containerName">The destination to validate before acquiring an ordinary sink.</param>
+    /// <returns>The database-local marker storage.</returns>
+    ISinkProvenanceStorage GetProvenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? containerName = null) =>
+        SinkProvenanceExemptions.For(TypeId);
 }

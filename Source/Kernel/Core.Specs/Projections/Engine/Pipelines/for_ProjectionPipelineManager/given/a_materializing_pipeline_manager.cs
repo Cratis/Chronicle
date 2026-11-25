@@ -65,16 +65,19 @@ public class a_materializing_pipeline_manager : a_projection_with_generations
         _namespaceStorage.Sinks.GetFor(_readModel).Returns(_liveSink);
         _generation = MaterializationGenerationIdentity.For(_projection.Identifier, 2U, _readModel.ContainerName);
         _namespaceStorage.Sinks.GetFor(_readModel, _generation.Destination).Returns(_generationSink);
-        _manager = new(
-            _managerStorage,
-            _grainFactory,
-            new ObjectComparer(),
-            new TypeFormats(),
-            Substitute.For<IReadModelsCompliance>(),
-            Options.Create(new Configuration.ChronicleOptions()),
-            NullLoggerFactory.Instance);
+        _manager = CreateManager(Substitute.For<IReadModelSinkProvenance>());
         ClearSharedCalls();
     }
+
+    protected ProjectionPipelineManager CreateManager(IReadModelSinkProvenance provenance) => new(
+        _managerStorage,
+        _grainFactory,
+        new ObjectComparer(),
+        new TypeFormats(),
+        Substitute.For<IReadModelsCompliance>(),
+        Options.Create(new Configuration.ChronicleOptions()),
+        NullLoggerFactory.Instance,
+        provenance);
 
     protected void ClearSharedCalls()
     {

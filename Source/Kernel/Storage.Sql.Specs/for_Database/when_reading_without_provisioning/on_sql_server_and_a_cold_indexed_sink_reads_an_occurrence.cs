@@ -12,12 +12,15 @@ public class on_sql_server_and_a_cold_indexed_sink_reads_an_occurrence(SqlServer
     ISink _sink;
     string[] _databasesBefore;
     string[] _databasesAfter;
+    int _bindingsBefore;
     int _bindingsAfter;
 
     async Task Establish()
     {
         await using var cluster = await Database.Cluster();
+        await new SinkProvenanceStorage(Database, "store", "namespace").CompleteInventory(false);
         _databasesBefore = await PhysicalDatabases();
+        _bindingsBefore = await BindingCount();
     }
 
     async Task Because()
@@ -29,5 +32,5 @@ public class on_sql_server_and_a_cold_indexed_sink_reads_an_occurrence(SqlServer
 
     [Fact] void should_resolve_the_sink() => _sink.ShouldNotBeNull();
     [Fact] void should_not_create_a_database() => string.Join(',', _databasesAfter).ShouldEqual(string.Join(',', _databasesBefore));
-    [Fact] void should_not_bind_a_database_name() => _bindingsAfter.ShouldEqual(0);
+    [Fact] void should_not_bind_a_database_name() => _bindingsAfter.ShouldEqual(_bindingsBefore);
 }
