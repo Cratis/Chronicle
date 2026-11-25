@@ -12,7 +12,7 @@ import { ProgressSpinner } from '@cratis/components/Display';
 import { InstanceCell } from './InstanceCell';
 import { InstancePager } from './InstancePager';
 import { useNestedBrowsing } from './useNestedBrowsing';
-import type { NestedRow } from './nestedRows';
+import { resolveSelection } from './nestedRows';
 import './ReadModelInstances.css';
 
 interface Props {
@@ -29,14 +29,6 @@ interface Props {
 
 type Row = { [k: string]: Json };
 
-const sameDocument = (a: Json, b: Json) => {
-    try {
-        return JSON.stringify(a) === JSON.stringify(b);
-    } catch {
-        return false;
-    }
-};
-
 export function ReadModelInstances({ instances, page, pageSize, totalItems, isPerforming, setPage, setPageSize, selectedInstance, setSelectedInstance }: Props) {
     const browsing = useNestedBrowsing(instances, { page, pageSize, totalItems });
     const { isNested, paging } = browsing;
@@ -51,13 +43,11 @@ export function ReadModelInstances({ instances, page, pageSize, totalItems, isPe
         />
     )), [browsing.columnKeys, browsing.navigateInto]);
 
-    // The table reports the row that was activated; clicking the row that is already selected clears the
-    // selection. A root row is stored as it is, so the table can match it back to the row it came from;
-    // a nested row stands for the document it was found in, so that is what gets selected.
+    // The table reports the row that was activated. A root row is stored as it is, so the table can match it
+    // back to the row it came from, and clicking the row that is already selected clears the selection.
+    // A nested row stands for the document it was found in, so that is what gets selected, and it always selects.
     const select = (clickedRow: Row | null) => {
-        const clicked = isNested ? (clickedRow as NestedRow | null)?.__sourceInstance as Row | null | undefined ?? null : clickedRow;
-        const isAlreadySelected = !!clicked && !!selectedInstance && sameDocument(selectedInstance, clicked);
-        setSelectedInstance(isAlreadySelected ? null : clicked);
+        setSelectedInstance(resolveSelection(isNested, clickedRow, selectedInstance));
         browsing.returnToRoot();
     };
 

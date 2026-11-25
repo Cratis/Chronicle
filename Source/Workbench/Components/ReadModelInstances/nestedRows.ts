@@ -114,3 +114,23 @@ export const getNestedRows = (documents: readonly Json[], path: readonly string[
     documents.forEach(document => walk(document, path, 0, end => window.collect(end, document)));
     return { total: window.total, rows: window.rows, columns: window.columns ?? [] };
 };
+
+const sameDocument = (a: Json, b: Json): boolean => {
+    try {
+        return JSON.stringify(a) === JSON.stringify(b);
+    } catch {
+        return false;
+    }
+};
+
+/**
+ * Decides what the selection becomes when a row is activated.
+ * @param isNested Whether a nested collection is being browsed.
+ * @param clicked The row that was activated.
+ * @param selected The document that is selected now.
+ * @returns The document to select, or null to clear the selection. Only a root row clears it, by being activated again.
+ */
+export const resolveSelection = (isNested: boolean, clicked: Row | null, selected: Json | null): Json | null => {
+    if (isNested) return (clicked as NestedRow | null)?.__sourceInstance ?? null;
+    return clicked && selected && sameDocument(selected, clicked) ? null : clicked;
+};

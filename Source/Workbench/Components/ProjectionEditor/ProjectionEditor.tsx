@@ -168,7 +168,7 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         } else {
             generation.current?.clear();
         }
-    }, [eventStore, namespace, value, isGraph]);
+    }, [eventStore, namespace, value, isGraph, draftReadModel]);
 
     useEffect(() => () => generation.current?.cancel(), []);
 
