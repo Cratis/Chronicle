@@ -152,7 +152,17 @@
                     "owner": "Owner",
                     "source": "Source",
                     "generation": "Generation",
-                    "tombstone": "Tombstone"
+                    "tombstone": "Tombstone",
+                    "visibility": "Visibility",
+                    "origin": "Origin"
+                },
+                "visibilities": {
+                    "unspecified": "Unspecified (legacy)",
+                    "private": "Private",
+                    "public": "Public"
+                },
+                "origins": {
+                    "notSpecified": "Not specified"
                 },
                 "dialogs": {
                     "addEventType": {
