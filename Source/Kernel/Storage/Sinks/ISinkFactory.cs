@@ -18,6 +18,11 @@ public interface ISinkFactory
     SinkTypeId TypeId { get; }
 
     /// <summary>
+    /// Gets whether the sink supports root read models identified by flat composite key parts.
+    /// </summary>
+    bool SupportsFlatCompositeKeys => false;
+
+    /// <summary>
     /// Create a <see cref="ISink"/> for a specific <see cref="ReadModelDefinition"/>.
     /// </summary>
     /// <param name="eventStore"><see cref="EventStoreName"/> the sink is for.</param>
