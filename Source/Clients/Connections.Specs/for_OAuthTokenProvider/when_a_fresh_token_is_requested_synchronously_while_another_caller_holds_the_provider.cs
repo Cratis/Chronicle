@@ -78,9 +78,11 @@ public class when_a_fresh_token_is_requested_synchronously_while_another_caller_
             TaskCreationOptions.LongRunning,
             TaskScheduler.Default);
 
-        Thread.Sleep(300);
+        // A caller that does not need the other caller finishes straight away; one that queues behind it is released
+        // below and still never completes, because its continuation is posted to the thread that is blocked.
+        _completed = _synchronousCaller.Wait(TimeSpan.FromMilliseconds(500));
         _releaseHolder.Set();
-        _completed = _synchronousCaller.Wait(_timeout);
+        _completed = _completed || _synchronousCaller.Wait(_timeout);
         _token = _completed ? _synchronousCaller.Result : null;
     }
 
