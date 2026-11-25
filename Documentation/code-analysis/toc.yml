@@ -160,3 +160,5 @@
   href: CHR0082.mdx
 - name: "CHR0083 - Reactor handler must not be async void"
   href: CHR0083.mdx
+- name: "CHR0084 - Event type generation is missing a migrator"
+  href: CHR0084.mdx
