@@ -33,6 +33,12 @@ Record private facts in the event log, then produce public events from them, for
 
 Visibility checks apply to single appends and batches. If any event in a batch fails the check, Chronicle writes none of the batch. Inspect the append result's errors for the refusal code shown above; a visibility refusal returns a failed result instead of throwing an exception.
 
+## Browsing the outbox
+
+The Workbench event sequence browser, and the Chronicle query APIs behind it, show only public event types when you browse the outbox. Rows, the total count, the histogram and exports all apply the same restriction, so private and unspecified types never appear there and a filter that names only those types returns an empty result. An event type counts as public when its latest registration is public. Browsing the event log and other sequences is not restricted.
+
+The Event Types page in the Workbench lists each type's visibility and origin. Legacy registrations show `Unspecified (legacy)`, and an empty origin is shown as `Not specified`, because a missing origin does not prove the type is owned locally.
+
 ## Clients that predate visibility
 
 Older clients send no visibility, so a newly registered type has `Unspecified` visibility. Chronicle allows these types in both the outbox and the event log for compatibility. The kernel logs a warning on the first such append per event type after a sequence is activated. Upgrade the client and declare visibility to enforce the public/private boundary.
