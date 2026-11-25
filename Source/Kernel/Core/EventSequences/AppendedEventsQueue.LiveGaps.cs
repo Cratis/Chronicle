@@ -8,9 +8,9 @@ using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.EventSequences;
 
-/// <summary>
+/// <content>
 /// Verifies filtered continuity once when a subscription enters live delivery, before partition or page dispatch.
-/// </summary>
+/// </content>
 public partial class AppendedEventsQueue
 {
     /// <summary>
