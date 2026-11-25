@@ -117,6 +117,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
 
     protected async Task Reactivate()
     {
+        var constraintIndexTimeProvider = _eventSequence.ConstraintIndexTimeProvider;
         await _eventSequence.OnDeactivateAsync(new DeactivationReason(DeactivationReasonCode.None, string.Empty), CancellationToken.None);
         _silo = new();
         ConfigureSilo();
@@ -125,6 +126,7 @@ public class an_event_sequence_with_repairable_indexes : an_event_sequence
         _stateStorage = _silo.StorageManager.GetStorage<EventSequenceState>(typeof(EventSequence).FullName!);
         _stateStorage.State = await _log.GetState();
         _eventSequence = await _silo.CreateGrainAsync<EventSequence>(_eventSequenceKey.ToString());
+        _eventSequence.ConstraintIndexTimeProvider = constraintIndexTimeProvider;
     }
 
     protected async Task Seed(EventSequenceNumber number, EventSourceId? source = null, EventType? type = null, string email = "claimed@example.com") => await _log.Append(number, EventSourceType.Default, source ?? _eventSourceId, EventStreamType.All, EventStreamId.Default, type ?? _eventType, CorrelationId.NotSet, [], [], [], DateTimeOffset.UtcNow, new Dictionary<EventTypeGeneration, ExpandoObject> { [(type ?? _eventType).Generation] = Content(email) }, new Dictionary<EventTypeGeneration, EventHash>());
