@@ -7,7 +7,11 @@ public class and_the_observer_knows_the_client : given.a_client_reducer_subscrip
 {
     bool _intact;
 
-    void Establish() => _observer.IsClientTarget(_client.ConnectionId).Returns(true);
+    void Establish()
+    {
+        _observer.IsClientTarget(_client.ConnectionId).Returns(true);
+        _observer.IsSubscriptionEstablished().Returns(true);
+    }
 
     async Task Because() => _intact = await _subscription.IsSubscriptionIntact();
 
