@@ -93,6 +93,7 @@ Rule IDs are not a continuous sequence. The table includes the retired CHR0047 r
 | [CHR0081](CHR0081) | A graph view cannot be a node or an edge | Error | A type is both a view and a node or an edge |
 | [CHR0082](CHR0082) | Scenario terminal task is discarded | Warning | A known scenario setup or delivery task is discarded rather than observed |
 | [CHR0083](CHR0083) | Reactor handler must not be async void | Warning | An eligible instance reactor handler is async void, so Chronicle cannot await its work |
+| [CHR0084](CHR0084) | Event type generation is missing a migrator | Error | An event type at generation 2 or higher lacks an `EventTypeMigration<TUpgrade, TPrevious>` for one or more steps `1->2` .. `(N-1)->N`; the message lists the missing steps and what to add |
 
 ## Explicit registration evidence
 
