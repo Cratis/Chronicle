@@ -19,9 +19,13 @@ const update = (from = remote, to = local) => `refs/heads/x ${to} refs/heads/x $
 test('every .NET build input triggers analysis, including nested configuration', () => {
     const inputs = ['src/Foo.cs', 'src/Foo.csproj', 'Directory.Build.props', 'Directory.Build.targets',
         'Chronicle.slnx', 'Clients.sln', '.editorconfig', 'src/.editorconfig', '.globalconfig',
-        'src/.globalconfig', 'Directory.Packages.props', 'global.json', 'src/stylecop.json'];
+        'src/.globalconfig', 'Directory.Packages.props', 'global.json', 'src/stylecop.json',
+        'Source/Kernel/Core/OrleansContracts.txt', 'Source/Kernel/Core/GrainPayloadContracts.txt',
+        'NuGet.config', 'nuget.config', 'src/rules.ruleset', 'src/Analyzers.globalconfig',
+        '.config/dotnet-tools.json', 'src/packages.lock.json', 'Source/Kernel/Protobuf/chronicle.desc'];
     for (const file of inputs) assert.equal(affectsDotnet(file), true, file);
-    for (const file of ['Documentation/index.md', 'test.mjs', 'src/Foo.cs.md', 'Source/file.ts']) {
+    for (const file of ['Documentation/index.md', 'Documentation/images/x.png', 'test.mjs', 'src/Foo.cs.md',
+        'Source/file.ts', 'README.md', '.github/workflows/dotnet-build.yml', '.cratis/ai.json']) {
         assert.equal(affectsDotnet(file), false, file);
     }
 });

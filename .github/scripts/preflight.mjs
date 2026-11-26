@@ -11,9 +11,13 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const zeroOid = /^0+$/;
 const objectId = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 
+// The .NET build reads more than source and project files (for example OrleansContracts.txt, rulesets,
+// NuGet configuration and lock files), so only files known not to feed it are allowed to skip the build.
+const nonBuildPath = /^(?:Documentation|\.github|\.cratis|\.githooks)\//;
+const nonBuildExtension = /\.(?:md|mdx|ts|tsx|js|mjs|cjs|css|scss|png|svg|jpg|jpeg|gif|webp)$/i;
+
 export function affectsDotnet(file) {
-    return /\.(?:cs|csproj|props|targets|slnx|sln)$/.test(file)
-        || /(?:^|\/)(?:\.editorconfig|\.globalconfig|global\.json|stylecop\.json)$/.test(file);
+    return !nonBuildPath.test(file) && !nonBuildExtension.test(file);
 }
 
 function pushedUpdates(input) {
