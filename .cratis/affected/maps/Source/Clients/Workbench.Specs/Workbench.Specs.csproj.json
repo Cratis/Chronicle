@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "builtAt": "63c47800a1a8b5a5c1381c64de385f345bf6dcad",
+  "project": "Source/Clients/Workbench.Specs/Workbench.Specs.csproj",
+  "granularity": "class",
+  "files": [
+    "Source/Clients/Workbench.Specs/for_WorkbenchListener/when_an_empty_address_is_configured.cs",
+    "Source/Clients/Workbench.Specs/for_WorkbenchListener/when_an_ip_address_is_configured.cs",
+    "Source/Clients/Workbench.Specs/for_WorkbenchListener/when_localhost_is_configured.cs",
+    "Source/Clients/Workbench.Specs/for_WorkbenchListener/when_no_address_is_configured.cs",
+    "Source/Clients/Workbench.Specs/for_WorkbenchWebApplicationBuilderExtensions/when_a_valid_address_is_configured.cs",
+    "Source/Clients/Workbench.Specs/for_WorkbenchWebApplicationBuilderExtensions/when_an_invalid_address_is_configured.cs",
+    "Source/Clients/Workbench/ChronicleWorkbenchOptions.cs",
+    "Source/Clients/Workbench/WorkbenchListener.cs",
+    "Source/Clients/Workbench/WorkbenchWebApplicationBuilderExtensions.cs"
+  ],
+  "units": [
+    {"name":"Cratis.Chronicle.Workbench.for_WorkbenchListener.when_an_empty_address_is_configured","covers":[0,1,2,3,6,7],"declaredIn":[0]},
+    {"name":"Cratis.Chronicle.Workbench.for_WorkbenchListener.when_an_ip_address_is_configured","covers":[0,1,2,3,6,7],"declaredIn":[1]},
+    {"name":"Cratis.Chronicle.Workbench.for_WorkbenchListener.when_localhost_is_configured","covers":[0,1,2,3,6,7],"declaredIn":[2]},
+    {"name":"Cratis.Chronicle.Workbench.for_WorkbenchListener.when_no_address_is_configured","covers":[0,1,2,3,6,7],"declaredIn":[3]},
+    {"name":"Cratis.Chronicle.Workbench.for_WorkbenchWebApplicationBuilderExtensions.when_a_valid_address_is_configured","covers":[4,5,6,7,8],"declaredIn":[4]},
+    {"name":"Cratis.Chronicle.Workbench.for_WorkbenchWebApplicationBuilderExtensions.when_an_invalid_address_is_configured","covers":[4,5,6,7,8],"declaredIn":[5]}
+  ]
+}
