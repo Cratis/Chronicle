@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Diagnostics;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -241,7 +242,13 @@ public partial class Sink(
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         await SettleGuardedBulkReads();
-        if (_isBulkMode && TryAnswerFromBulk(key, out var bulkAnswer))
+        if (_isBulkMode && readModel.GetSchemaForLatestGeneration().HasSchemaMetadata())
+        {
+            // CurrentState is the plaintext projection fold, not the protected document written by the changeset.
+            // Parent notifications must read the stored protection and subject lineage, even inside a bulk window.
+            await DrainBulk();
+        }
+        else if (_isBulkMode && TryAnswerFromBulk(key, out var bulkAnswer))
         {
             return bulkAnswer;
         }

@@ -13,6 +13,7 @@ namespace Cratis.Chronicle.Events.Constraints.Operator;
 /// </summary>
 /// <param name="CanReindex">Whether the caller may rebuild constraint indexes.</param>
 [ReadModel]
+[DestructiveOperation]
 [Authorize(Policy = WellKnownAuthorizationPolicies.AdministratorOperations)]
 public record ConstraintReindexCapability(bool CanReindex)
 {
