@@ -255,6 +255,18 @@ public class EventTypeDetailsResponse
     /// </summary>
     [ProtoMember(4)]
     public string Schema { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Visibility.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Events.EventTypeVisibility Visibility { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Origin.
+    /// </summary>
+    [ProtoMember(7)]
+    public string Origin { get; set; } = string.Empty;
 }
 
 /// <summary>
