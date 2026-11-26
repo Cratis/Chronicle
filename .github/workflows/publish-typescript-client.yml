@@ -123,6 +123,42 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: npm version "$VERSION" --no-git-tag-version
 
+      - name: Check npm for the exact package version
+        id: npm-version
+        working-directory: ./Source/Clients/TypeScript
+        run: |
+          node --input-type=module <<'NODE'
+          import { spawnSync } from 'node:child_process';
+          import { appendFileSync, readFileSync } from 'node:fs';
+
+          const { name, version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          const spec = `${name}@${version}`;
+          const { error, status, stdout } = spawnSync(
+            'npm', ['view', spec, 'version', '--json', '--loglevel=silent', '--prefer-online'],
+            { encoding: 'utf8' });
+
+          function fail(reason) {
+            console.error(`::error::npm version lookup for ${spec} ${reason}`);
+            process.exit(1);
+          }
+
+          if (error || status === null) fail('could not complete');
+          let response;
+          try {
+            response = stdout.trim() ? JSON.parse(stdout) : [];
+          } catch {
+            fail(`returned invalid JSON (exit ${status})`);
+          }
+          if (status !== 0 && response?.error?.code !== 'E404') fail(`failed (exit ${status})`);
+
+          // npm can return multiple versions with the same SemVer precedence.
+          const versions = [response].flat();
+          if (status === 0 && versions.some(value => typeof value !== 'string')) fail('returned an unexpected response');
+          const exists = status === 0 && versions.includes(version);
+          if (exists) console.log(`::notice::${spec} already exists on npm; skipping publish.`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `exists=${exists}\n`);
+          NODE
+
       # --tag latest is explicit rather than implied. On 2026-08-25 a release accident published 17.0.0, and
       # deleting the tag and the GitHub release put the series back on 16.x without taking the npm version with
       # it - npm versions are immutable and the 72-hour unpublish window closed on 2026-08-28. npm refuses to
@@ -131,5 +167,6 @@ jobs:
       # documented way to say the move is intended, and it is what makes `npm install` resolve to the series
       # this repository actually releases instead of the ghost. See #3842.
       - name: Publish to npm
+        if: steps.npm-version.outputs.exists == 'false'
         working-directory: ./Source/Clients/TypeScript
         run: npm publish --provenance --access public --tag latest
