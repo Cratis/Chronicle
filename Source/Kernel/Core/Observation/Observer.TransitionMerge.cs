@@ -67,9 +67,12 @@ public partial class Observer
 
     Task RecoverSubscriptionAfterFailedLeave(CancellationToken cancellationToken)
     {
+        if (cancellationToken.IsCancellationRequested) return Task.CompletedTask;
+
+        // Disposing the one-shot timer cancels its callback token, so check cancellation before disposal.
         _subscriptionRecoveryAfterLeaveTimer?.Dispose();
         _subscriptionRecoveryAfterLeaveTimer = null;
-        return cancellationToken.IsCancellationRequested ? Task.CompletedTask : RecoverSubscriptionAfterLeaving();
+        return RecoverSubscriptionAfterLeaving();
     }
 
     Task RecoverSubscriptionAfterLeaving()

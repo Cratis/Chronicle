@@ -9,8 +9,11 @@ public class when_subscribing_while_leaving_a_state_fails : given.an_observer_wi
 {
     async Task Because()
     {
+        var recoveryTimerIndex = _silo.TimerRegistry.Mock.Invocations.Count;
         await FailLeave(subscribeWhileLeaving: true);
         await _jobsManager.DidNotReceive().GetUnfinishedJobs();
+        await _silo.TimerRegistry.FireAsync(recoveryTimerIndex);
+        await _jobsManager.Received(1).GetUnfinishedJobs();
         await _silo.TimerRegistry.FireAllAsync();
         await _silo.TimerRegistry.FireAllAsync();
     }
