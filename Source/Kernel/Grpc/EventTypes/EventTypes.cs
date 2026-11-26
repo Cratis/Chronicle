@@ -116,7 +116,9 @@ internal sealed class EventTypes(
             Type = source.Type,
             Owner = source.Owner,
             Source = source.Source,
-            Schema = source.Schema
+            Schema = source.Schema,
+            Visibility = source.Visibility,
+            Origin = source.Origin
         };
 
     static global::Cratis.Chronicle.Contracts.EventTypes.EventTypesWithAnnotationsResponse ToEventTypesWithAnnotationsResponse(global::Cratis.Chronicle.EventTypes.EventTypesWithAnnotations source) =>

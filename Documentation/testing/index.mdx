@@ -32,6 +32,8 @@ Choose the boundary from the question the spec needs to answer. A read model cal
 | Reactor side effects and event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch, automatic redelivery |
 | Actual storage writes, kernel connectivity, change streams | `ChronicleInProcessFixture` / `ChronicleOutOfProcessFixture` | Isolation from other tests that share the same fixture host |
 
+For .NET given/run/then specs, `Cratis.Chronicle.Testing.Slices` provides thin, single-run adapters: [ProjectionSlice and keyed partial/exact read-model assertions](read-models/scenario.mdx#net-keyed-assertions-and-projection-slices), and [ReactionSlice with ordered or any-order produced-event assertions](reactors/scenario.mdx#net-event-lists-and-reaction-slices). They reuse the scenario engines and do not add persistence, kernel delivery, or proof that a recorded side effect executed.
+
 `ReactorScenario<T>` delivers each supplied event once. To check idempotence, meaning that handling the same event again does not repeat an unwanted side effect, write a spec that supplies the event twice.
 
 The .NET integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:

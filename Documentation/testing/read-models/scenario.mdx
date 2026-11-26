@@ -383,6 +383,27 @@ Call `WithStrictFidelity()` when you want model-specific substitutions to fail t
 
 <ChronicleClientTabs snippet="testing/read-models/scenario/strict-fidelity" />
 
+## .NET keyed assertions and projection slices
+
+Use `scenario.ShouldPartiallyMatchReadModel(id, new { Count = 2 })` for the usual listed-property expectation. It checks only `Count`, recursively ignoring unlisted properties. Use `scenario.ShouldExactlyMatchReadModel(id, new { Id = Guid.Empty, Count = 2 })` when the complete public readable property set must match. Both forms accept anonymous shapes or typed instances; typed instances list every readable property, including default and null values.
+
+A listed null is a value, not an omitted expectation. Property names are case-sensitive, scalar and concept types remain strict, collections have equal length and order, and dictionary entries match by key rather than enumeration order. Failures raise `ReadModelAssertionFailed` with the model, key, and first differing member or element path. Processing failures keep their original exception.
+
+Use `scenario.ShouldHaveNoReadModel(id)` to assert absence at that key, even when other keys have instances. The identifier is the **materialized read-model key**, which can differ from an input event's source. These assertions do not use the ambiguous single `Instance` selector.
+
+An existing bare-event reducer fold over multiple sources can produce primary state without keyed instances. All three assertions fail closed in that case rather than claiming absence or assigning the primary to an arbitrary key. Use per-key read-model seeds or the scenario's existing appended-event folding when keyed reducer state is needed.
+
+For given/run/then vocabulary, import `Cratis.Chronicle.Testing.Slices` and use `ProjectionSlice<TReadModel>`. A reducer-backed tally spec can take these steps:
+
+1. Create an owned slice with `using var slice = new ProjectionSlice<Tally>(defaults)`; omit `defaults` to use the usual scenario defaults.
+2. Declare the input with `slice.GivenEvents(id, new Tallied(), new Tallied())`.
+3. Execute with `var outcome = await slice.Run()`.
+4. Assert with `outcome.ShouldPartiallyMatchReadModel(id, new { Count = 2 }).ShouldHaveNoReadModel(missingId)`.
+
+Configure services, seeds, fluent projections, and routing through `slice.Scenario` before running. `GivenEvents` copies the batch array, not the event objects, and does not process it yet. `Run` collects every batch and materializes all instances, so multi-key projections do not require selecting one instance. The outcome also offers `ShouldExactlyMatchReadModel` and `Should(assertion)` for existing scenario checks.
+
+A slice runs once, even after failure; a repeat run or late input raises `SliceAlreadyRun`. `Then` never runs the slice and raises `SliceNotRun` until execution succeeds. Disposing the slice disposes its scenario once; later wrapper operations raise `SliceDisposed`. Caller-owned defaults and services keep their existing ownership. The exposed scenario and outcome remain live state, not isolated snapshots. These adapters retain the same in-process boundaries as the scenario: no persistence or kernel-delivery proof is added.
+
 ## .NET notes
 
 `Instance` is `null` when no instance was seeded and the events produced no state. An explicitly seeded instance can be read without supplying events.

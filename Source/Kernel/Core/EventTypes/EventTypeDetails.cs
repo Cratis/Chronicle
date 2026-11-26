@@ -18,6 +18,8 @@ namespace Cratis.Chronicle.EventTypes;
 /// <param name="Owner">Who owns the event type.</param>
 /// <param name="Source">Where the event type came from.</param>
 /// <param name="Schema">The JSON schema of the event type at this generation.</param>
+/// <param name="Visibility">The visibility of the event type. Unspecified for event types registered by clients that predate visibility.</param>
+/// <param name="Origin">The name of the event store the event type originates from when it is not the registering one, otherwise empty.</param>
 [ReadModel]
 [BelongsTo(WellKnownServices.EventTypes)]
 public record EventTypeDetails(
@@ -25,7 +27,9 @@ public record EventTypeDetails(
     Contracts.Events.EventType Type,
     Contracts.Events.EventTypeOwner Owner,
     Contracts.Events.EventTypeSource Source,
-    string Schema)
+    string Schema,
+    Contracts.Events.EventTypeVisibility Visibility = Contracts.Events.EventTypeVisibility.Unspecified,
+    string Origin = "")
 {
     /// <summary>
     /// Gets the latest generation of every event type registered with an event store.

@@ -74,7 +74,9 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// The authoritative answer comes from the queue grain itself, not from the routing index, because the queue can
     /// drop subscriptions behind an observer's back - it does so when it spills to catch-up under back-pressure. An
     /// observer that believes it is subscribed uses this to tell "still being delivered to" from "silently dropped".
+    /// This read-only probe must not queue behind spill callbacks, which may await the observer asking it.
     /// </remarks>
+    [AlwaysInterleave]
     Task<bool> IsSubscribed(ObserverKey observerKey);
 
     /// <summary>
