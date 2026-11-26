@@ -6,7 +6,7 @@ import { Page } from 'Components/Common/Page';
 import { CaptureEditor, type CaptureDeclarationSyntaxError } from 'Components/CaptureEditor';
 import { ActionMenubar, Tooltip, type ActionMenuItem } from '@cratis/components/Common';
 import { Tag } from '@cratis/components/Display';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { type EventStoreAndNamespaceParams } from 'Shared';
 import strings from 'Strings';
@@ -20,6 +20,7 @@ import { CaptureStatus, type CaptureValidationMessage } from 'Features/Contracts
 import { GetExternalServices } from 'Features/ExternalServices';
 import { AllEventTypes } from 'Features/EventTypes';
 import { CapturedEventsView } from './CapturedEventsView';
+import { ValidationRequests, validateSnapshot } from './validationRequests';
 
 const defaultCaptureDeclaration = `capture CaptureDefinition
   source api
@@ -67,7 +68,13 @@ export const Captures = () => {
         () => (eventTypesResult.data ?? []).map(eventType => eventType.type.id),
         [eventTypesResult.data]);
 
+    const validation = useRef<ValidationRequests | null>(null);
+    validation.current ??= new ValidationRequests(
+        snapshot => validateSnapshot(validateCommand, snapshot),
+        messages => setServerMessages(toSyntaxErrors(messages)));
+
     useEffect(() => {
+        validation.current?.cancel();
         setSelectedCaptureId(null);
         setIsCreatingNew(false);
         setDeclarationValue('');
@@ -77,24 +84,12 @@ export const Captures = () => {
         setView('editor');
     }, [eventStore]);
 
+    // Every edit supersedes the validation before it, and leaving the screen supersedes the last one.
     useEffect(() => {
-        if (!declarationValue.trim()) {
-            setServerMessages([]);
-            return;
-        }
-
-        const timeout = setTimeout(async () => {
-            validateCommand.eventStore = eventStore;
-            validateCommand.declaration = declarationValue;
-            const result = await validateCommand.execute();
-            if (result.isSuccess) {
-                const messages = (result.response ?? []) as unknown as CaptureValidationMessage[];
-                setServerMessages(toSyntaxErrors(messages));
-            }
-        }, 500);
-
-        return () => clearTimeout(timeout);
+        validation.current?.schedule({ eventStore, declaration: declarationValue });
     }, [declarationValue, eventStore]);
+
+    useEffect(() => () => validation.current?.cancel(), []);
 
     const hasUnsavedChanges = useMemo(() => declarationValue !== originalDeclarationValue, [declarationValue, originalDeclarationValue]);
 
@@ -115,6 +110,7 @@ export const Captures = () => {
     }, [isStarted, declarationValue, hasUnsavedChanges, hasSyntaxErrors]);
 
     const selectCapture = (capture: CaptureDetails | null) => {
+        validation.current?.cancel();
         setSelectedCaptureId(capture?.id ?? null);
         setIsCreatingNew(false);
         setDeclarationValue(capture?.declaration ?? '');
@@ -124,6 +120,7 @@ export const Captures = () => {
     };
 
     const handleNew = () => {
+        validation.current?.cancel();
         setSelectedCaptureId(null);
         setIsCreatingNew(true);
         setDeclarationValue(defaultCaptureDeclaration);

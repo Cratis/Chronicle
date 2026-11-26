@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
@@ -80,7 +81,16 @@ public class an_event_with_observers(context context) : Given<context>(context)
             await this.ReviseEvent(EventSequenceNumber.First, RevisedEvent);
 
             // Wait for replay jobs to complete.
-            await EventStore.Jobs.WaitForThereToBeNoJobs();
+            await ReplayWaitDiagnostics.Run(
+                () => EventStore.Jobs.WaitForThereToBeNoJobs(),
+                new ReplayWaitSources(
+                    EventStore.Jobs.GetJobs,
+                    nameof(SomeReactor),
+                    reactorHandler.GetState,
+                    nameof(SomeReducer),
+                    reducerHandler.GetState,
+                    nameof(SomeProjection),
+                    projectionHandler.GetState));
 
             // Wait for observers to finish processing the replay.
             await Reactor.WaitTillHandledEventReaches(3, startupTimeout);

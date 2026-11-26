@@ -150,6 +150,25 @@ Bare returned events use the reactor's context values: the source identifier com
 
 The scenario records these events without appending them. If you supply explicit side-effect handlers, assert against those handlers instead; neither recording list is populated.
 
+## .NET event lists and reaction slices
+
+Use `scenario.ShouldHaveProducedEventsInOrder(first, second)` to compare the complete cumulative recorded event list. Failures identify the first zero-based event index and differing payload path. Use `scenario.ShouldHaveProducedEventsInAnyOrder(second, first)` when order does not matter: it compares a multiset, retaining duplicate counts and reporting missing and unexpected events. Both checks require exact event runtime types and recursively equal public readable content; nested collections retain their order and length.
+
+`scenario.ShouldNotHaveProducedEvents()` checks only recorded events. An empty expectation passed to either list assertion means the same thing. Commands are excluded, unlike the existing `ShouldHaveProduced<T>` helpers. Destination metadata is not compared; retain the [destination-aware assertions](#asserting-produced-destinations) for that purpose.
+
+For deferred input and fluent outcomes, import `Cratis.Chronicle.Testing.Slices` and use `ReactionSlice<TReactor>`:
+
+1. Create an owned slice with `using var slice = new ReactionSlice<BareEventRouteReactor>(defaults)`; omit `defaults` to use the usual scenario defaults.
+2. Declare a batch with `slice.GivenEvents(id, new ReactorRouteRecorded("first"))`. Another `GivenEvents` call declares a separate batch.
+3. Execute with `var outcome = await slice.Run()`.
+4. Assert with `outcome.ShouldHaveProducedEventsInOrder(new ProducedRouteRecorded("first"))`. The outcome also provides `ShouldHaveProducedEventsInAnyOrder` and `ShouldNotHaveProducedEvents`.
+
+Configure dependencies and read-model seeds through `slice.Scenario` before running. Slice `GivenEvents` copies the array of event references and **does not invoke the reactor**. By contrast, `slice.Scenario.Given.ForEventSource(id).Events(...)` still executes immediately. `Run` awaits each queued batch in declaration order, preserving the existing per-batch reactor activation behavior. No retries or new execution engine are introduced.
+
+Use `outcome.Should(scenario => scenario.ShouldHaveProduced<ProducedRouteRecorded>(id))` for a destination check, or `Should(_ => dependency.Received().Send(...))` to verify an injected side-effect substitute. Callback assertion failures propagate unchanged. Returning an event or command records a decision; it does not prove that an append, email, or other external action executed. Explicit side-effect handlers retain their existing unrecorded behavior, so an empty event assertion cannot prove that those handlers did nothing.
+
+A slice runs once, including after handler failure. Repeated or concurrent execution and input after execution starts raise `SliceAlreadyRun`. `Then` raises `SliceNotRun` before successful completion, including while a handler is running or after failure. Dispose the slice to release its owned scenario; later wrapper operations raise `SliceDisposed`. Caller-owned defaults and services retain their existing ownership. Outcomes expose live scenario state, not immutable snapshots. Keep kernel-backed tests for delivery, retries, and persistence.
+
 ## Example: email notification
 
 <ChronicleClientTabs snippet="testing/reactors/scenario/email-example" />

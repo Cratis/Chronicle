@@ -20,6 +20,7 @@ import { ProjectionHelpPanel } from './ProjectionHelpPanel';
 import { ProjectionCodePanel } from './ProjectionCodePanel';
 import { graphProjectionLanguageId, isGraphDeclaration, registerGraphProjectionLanguage } from './graphDeclaration';
 import type { ProjectionCodeLanguage } from './ProjectionCodeLanguages';
+import { CodeGenerationRequests, generateCode, type GenerationContext } from './codeGenerationRequests';
 import Strings from 'Strings';
 import type { ReadModelDefinition } from 'Features/ReadModelDefinitions';
 
@@ -97,32 +98,32 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         reportValidity(editorInstance, monacoInstance);
     };
 
-    const fetchCode = async (language: ProjectionCodeLanguage = codeLanguage) => {
-        if (eventStore && namespace && value) {
-            const declaration = normalizeDeclarationForRequests ? normalizeDeclarationForRequests(value) : value;
-            generateDeclarativeCode.eventStore = eventStore;
-            generateDeclarativeCode.namespace = namespace;
-            generateDeclarativeCode.declaration = declaration;
-            generateDeclarativeCode.language = language;
-            if (draftReadModel) {
-                generateDeclarativeCode.draftReadModel = draftReadModel;
-            }
-            const declarativeResult = await generateDeclarativeCode.execute();
+    const generation = useRef<CodeGenerationRequests | null>(null);
+    generation.current ??= new CodeGenerationRequests(
+        context => generateCode(generateDeclarativeCode, generateModelBoundCode, context),
+        code => {
+            setDeclarativeCode(code?.declarative ?? '');
+            setModelBoundCode(code?.modelBound ?? '');
+        });
 
-            generateModelBoundCode.eventStore = eventStore;
-            generateModelBoundCode.namespace = namespace;
-            generateModelBoundCode.declaration = declaration;
-            generateModelBoundCode.language = language;
-            if (draftReadModel) {
-                generateModelBoundCode.draftReadModel = draftReadModel;
-            }
-            const modelBoundResult = await generateModelBoundCode.execute();
+    // A snapshot of what code is generated for, or null when there is nothing to generate: graph declarations produce no read model code.
+    const currentGenerationContext = (language: ProjectionCodeLanguage = codeLanguage): GenerationContext | null => {
+        if (!eventStore || !namespace || !value || isGraph) return null;
+        return {
+            eventStore,
+            namespace,
+            declaration: normalizeDeclarationForRequests ? normalizeDeclarationForRequests(value) : value,
+            language,
+            draftReadModel,
+        };
+    };
 
-            const declCode = declarativeResult.response?.code || '// Unable to generate code';
-            const modelCode = modelBoundResult.response?.code || '// Unable to generate code';
-
-            setDeclarativeCode(declCode);
-            setModelBoundCode(modelCode);
+    const fetchCode = (language: ProjectionCodeLanguage = codeLanguage) => {
+        const context = currentGenerationContext(language);
+        if (context) {
+            generation.current?.run(context);
+        } else {
+            generation.current?.clear();
         }
     };
 
@@ -149,11 +150,27 @@ export const ProjectionEditor: React.FC<ProjectionEditorProps> = ({
         };
     };
 
+    // Opening generates immediately, and closing discards whatever was generated or is on its way.
     useEffect(() => {
         if (isCodePanelOpen) {
             fetchCode();
+        } else {
+            generation.current?.clear();
         }
-    }, [isCodePanelOpen, eventStore, namespace, value]);
+    }, [isCodePanelOpen]);
+
+    // Edits and context changes coalesce into one request once the declaration has rested.
+    useEffect(() => {
+        if (!isCodePanelOpen) return;
+        const context = currentGenerationContext();
+        if (context) {
+            generation.current?.schedule(context);
+        } else {
+            generation.current?.clear();
+        }
+    }, [eventStore, namespace, value, isGraph, draftReadModel]);
+
+    useEffect(() => () => generation.current?.cancel(), []);
 
     useEffect(() => {
         return () => {
