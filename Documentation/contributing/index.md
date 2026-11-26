@@ -15,3 +15,33 @@ client and documentation verification too, matching CI. The Workbench uses the Y
 | [Building a Client](../building-a-client/) | Starting a brand-new Chronicle client from scratch. |
 | [Clients](./clients/) | Contributing to the clients. |
 | [Kernel](./kernel/index.md) | Contributing to the Kernel. |
+
+## Local .NET preflight
+
+Before pushing or folding .NET changes, run this command from the repository root:
+
+```sh
+node .github/scripts/preflight.mjs
+```
+
+Use Node.js 24 and the .NET SDK selected by `global.json`, with NuGet access configured for the
+repository's dependencies. The command restores and builds `Chronicle.slnx` in Release, matching the
+standard `analyzers` job in `.github/workflows/dotnet-build.yml`: warnings are errors, analyzers and
+code-style checks are enabled, and proxy generation and Docker builds are disabled. It forces code
+generation and recompiles even after an incremental build that skipped analyzers. A local macOS run
+took about 16 minutes (947 seconds), excluding queue wait; hardware and caches affect the time, and
+first runs can take longer. The command prints elapsed time and returns the build's exit code.
+It compiles spec projects but does not run specs, including integration specs; run those separately
+as described in [Integration Tests](./integration-tests.md).
+
+To run the preflight automatically before pushes, opt in to the versioned hook:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+If you already use another hooks directory, integrate the preflight there instead of replacing
+existing hooks. The hook checks every pushed ref against the remote commit supplied by Git. It builds
+when pushed changes affect .NET build inputs. Documentation-only pushes and ref deletions skip the
+preflight; a new remote ref conservatively triggers the build. The manual command always builds.
+Use Git's `git push --no-verify` only when intentionally bypassing pre-push hooks.

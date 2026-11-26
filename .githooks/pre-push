@@ -1,0 +1,6 @@
+#!/bin/sh
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+root=$(git rev-parse --show-toplevel) || exit 2
+exec node "$root/.github/scripts/preflight.mjs" --hook
