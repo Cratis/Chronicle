@@ -17,6 +17,8 @@ import { DialogResult, useDialog } from '@cratis/arc.react/dialogs';
 import { AddEventTypeDialog } from './AddEventTypeDialog';
 import { ActionMenubar, type ActionMenuItem } from '@cratis/components/Common';
 import { Allotment } from 'allotment';
+import { getEventTypeOriginFilterOptions, toEventTypeRow } from './eventTypeRows';
+import { originColumn, visibilityColumn } from './eventTypeColumns';
 
 const renderTombstone = () => {
     return 'no';
@@ -64,6 +66,9 @@ export const EventTypes = () => {
         }
     }, [showAddEventTypeDialog]);
 
+    const rows = useMemo(() => result.data.map(toEventTypeRow), [result.data]);
+    const originFilterOptions = useMemo(() => getEventTypeOriginFilterOptions(rows), [rows]);
+
     const menuItems = useMemo<ActionMenuItem[]>(() => [
         {
             label: strings.eventStore.general.eventTypes.actions.create,
@@ -107,7 +112,7 @@ export const EventTypes = () => {
                          style={{ height: 'calc(100% - 76px)' }}>
                         <DataTableCore
                             key={refreshTrigger}
-                            data={result.data}
+                            data={rows}
                             scrollable
                             scrollHeight='flex'
                             selectionMode='single'
@@ -135,6 +140,8 @@ export const EventTypes = () => {
                                 filterField='source'
                                 body={renderSource}
                                 sortable />
+                            {visibilityColumn()}
+                            {originColumn(originFilterOptions)}
                             <Column
                                 field='type.generation'
                                 style={{ width: '100px' }}
