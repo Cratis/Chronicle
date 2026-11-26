@@ -42,8 +42,8 @@ export const Sequences = () => {
     const sequenceStrings = strings.eventStore.namespaces.sequences;
 
     const [eventTypes] = AllEventTypes.use({ eventStore });
-    const eventTypeIds = useMemo(
-        () => getDistinctEventTypeOptions(eventTypes.data).map(option => option.value),
+    const eventTypeIdsFor = useCallback(
+        (eventSequenceId: string) => getDistinctEventTypeOptions(eventTypes.data, eventSequenceId).map(option => option.value),
         [eventTypes.data]
     );
 
@@ -174,7 +174,7 @@ export const Sequences = () => {
                                             <QueryEditor
                                                 state={query.state}
                                                 eventStore={eventStore}
-                                                eventTypeIds={eventTypeIds}
+                                                eventTypeIds={eventTypeIdsFor(query.state.eventSequenceId)}
                                                 eventSequenceIds={eventSequences.data.map(eventSequence => eventSequence.name)}
                                                 hasUnsavedChanges={hasUnsavedChanges(query)}
                                                 onChange={state => update(index, state)}
