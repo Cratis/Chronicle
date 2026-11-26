@@ -52,3 +52,6 @@ jobs:
         dotnet nuget update source github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
         python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+    secrets:
+      # The default branch only takes pull requests; the merge-time run commits the maps with the identity that publish.yml uses.
+      map-token: ${{ secrets.PAT_WORKFLOWS }}
