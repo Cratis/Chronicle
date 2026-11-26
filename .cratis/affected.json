@@ -1,0 +1,32 @@
+{
+  "mappedPaths": [
+    "Documentation/**",
+    "**/*.md",
+    "decisions/**",
+    "Source/Workbench/**",
+    "Source/Clients/Python/**",
+    "Source/Clients/Kotlin/**",
+    "Source/Clients/Elixir/**",
+    "Source/Clients/TypeScript/**",
+    "LICENSE",
+    "*.png"
+  ],
+  "nonTestProjects": [
+    "Integration/**",
+    "Chaos/**",
+    "Source/Kernel/Storage.Sql.Specs/**",
+    "**/Fixtures/**",
+    "**/TestArtifacts/**"
+  ],
+  "buildArguments": [
+    "-p:DisableProxyGenerator=true",
+    "-p:DisableDockerBuild=true",
+    "-p:ForceCodeGeneration=true",
+    "-p:RunAnalyzers=false"
+  ],
+  "granularity": "class",
+  "attributionGroup": "namespace",
+  "addedFilePolicy": "directory",
+  "unmappedFilePolicy": "directory",
+  "sampleRate": 0
+}

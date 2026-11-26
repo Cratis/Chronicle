@@ -32,5 +32,7 @@ internal static class EventTypeDetailsConverters
             Concepts.Events.EventTypeConverters.ToContract(definition.Type),
             (Contracts.Events.EventTypeOwner)(int)definition.Owner,
             (Contracts.Events.EventTypeSource)(int)definition.Source,
-            definition.Schema.ToJson());
+            definition.Schema.ToJson(),
+            (Contracts.Events.EventTypeVisibility)(int)definition.Visibility,
+            definition.Origin);
 }

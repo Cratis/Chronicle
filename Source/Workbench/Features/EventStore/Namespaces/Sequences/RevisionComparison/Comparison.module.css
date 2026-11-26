@@ -1,0 +1,63 @@
+/* Copyright (c) Cratis. All rights reserved.
+   Licensed under the MIT license. See LICENSE file in the project root for full license information. */
+
+.panel {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+}
+
+.heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.heading h3 {
+    margin: 0;
+}
+
+.selectors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.side select {
+    max-width: 100%;
+}
+
+.results {
+    max-height: 40vh;
+    overflow: auto;
+}
+
+.results:focus-visible,
+.panel button:focus-visible,
+.side select:focus-visible {
+    outline: 2px solid var(--primary-color, currentColor);
+    outline-offset: 2px;
+}
+
+.results table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.results th,
+.results td {
+    text-align: left;
+    vertical-align: top;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--surface-border, #8884);
+    overflow-wrap: anywhere;
+}
