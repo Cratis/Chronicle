@@ -140,6 +140,7 @@ public partial class JsonSchema
         readonly MetadataReach _reach = new();
         readonly Queue<MetadataStep> _pending = [];
         readonly HashSet<(JsonObject OriginRoot, string Origin, string Scope, bool Contextual)> _visited = [];
+        int _states;
 
         internal MetadataReach Walk(JsonSchema origin)
         {
@@ -152,9 +153,17 @@ public partial class JsonSchema
 
         void Visit(MetadataStep step)
         {
+            if (++_states > MaxMetadataReferenceStates)
+            {
+                _reach.Indeterminate = true;
+                _pending.Clear();
+                return;
+            }
+
             var contextual = step.Contextual || step.Schema.HasContextualReference;
             var scope = step.Schema.ResolutionScope;
-            if (!_visited.Add((scope.OriginRoot, scope.Origin, string.Join('\n', scope.EnteredResources), contextual))) return;
+            var route = HasUnexploredContext(step) ? string.Join('\n', scope.EnteredResources) : string.Empty;
+            if (!_visited.Add((scope.OriginRoot, scope.Origin, route, contextual))) return;
             _reach.Contextual |= contextual;
             _reach.Schemas.Add(step.Schema);
             Expand(step with { Contextual = contextual });
@@ -166,16 +175,15 @@ public partial class JsonSchema
             _reach.Indeterminate |= edges.Indeterminate;
             var children = includeChildren ? step.Schema.MetadataChildren(step.Contextual) : [];
             var next = edges.Schemas.Concat(children).ToArray();
-            if (AtLimit(step))
+            if (step.Depth >= MaxResourceTraversalDepth)
             {
+                // Preserve the legacy ordinary-reference hop limit; only state-budget exhaustion
+                // is unconditional. Contextual depth truncation remains indeterminate as before.
                 _reach.Indeterminate |= HasUnexploredContext(step) && next.Length > 0;
                 return;
             }
             foreach (var child in next) _pending.Enqueue(new(child, step.Depth + 1, step.Contextual));
         }
-
-        bool AtLimit(MetadataStep step) => step.Depth >= MaxResourceTraversalDepth ||
-            (step.Contextual && _visited.Count >= MaxMetadataReferenceStates);
     }
 
     sealed record MetadataStep(JsonSchema Schema, int Depth, bool Contextual);

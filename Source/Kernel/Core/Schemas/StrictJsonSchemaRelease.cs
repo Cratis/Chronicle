@@ -38,28 +38,8 @@ internal static class StrictJsonSchemaRelease
     internal static JsonNode? TryRestore(JsonSchema schema, JsonNode released)
     {
         var type = ProtectedType(schema);
-        try
-        {
-            if (type != JsonObjectType.String && released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
-            {
-                released = JsonNode.Parse(text)!;
-            }
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-
-        var valid = type switch
-        {
-            JsonObjectType.String => released?.GetValueKind() == JsonValueKind.String,
-            JsonObjectType.Boolean => released?.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
-            JsonObjectType.Integer or JsonObjectType.Number => released?.GetValueKind() == JsonValueKind.Number,
-            JsonObjectType.Array => released is JsonArray,
-            JsonObjectType.Object => released is JsonObject,
-            _ => false
-        };
-        return valid ? released : null;
+        released = RestoreJsonKind(type, released)!;
+        return HasJsonKind(type, released) ? released : null;
     }
 
     /// <summary>
@@ -70,19 +50,61 @@ internal static class StrictJsonSchemaRelease
     internal static bool HasSupportedType(JsonSchema schema) =>
         ProtectedType(schema) is JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean or JsonObjectType.Array or JsonObjectType.Object;
 
-    static JsonObjectType ProtectedType(JsonSchema schema)
+    /// <summary>
+    /// Gets the possible non-null JSON kinds, including resolved contextual targets.
+    /// </summary>
+    /// <param name="schema">The protected boundary's schema.</param>
+    /// <returns>The combined kinds, or none when contextual resolution is indeterminate.</returns>
+    internal static JsonObjectType ProtectedType(JsonSchema schema)
+    {
+        var reach = schema.MetadataReferences;
+        if (!reach.Contextual) return DeclaredType(schema);
+        if (reach.Indeterminate) return JsonObjectType.None;
+
+        // Retain all possible contextual kinds; choosing one carrier would hide ambiguity.
+        return reach.Schemas.Aggregate(JsonObjectType.None, (type, target) => type | DeclaredType(target));
+    }
+
+    static JsonNode? RestoreJsonKind(JsonObjectType type, JsonNode released)
+    {
+        if (type == JsonObjectType.String || released is not JsonValue scalar || !scalar.TryGetValue<string>(out var text))
+        {
+            return released;
+        }
+
+        try
+        {
+            return JsonNode.Parse(text);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    static bool HasJsonKind(JsonObjectType type, JsonNode? released) => type switch
+    {
+        JsonObjectType.String => released?.GetValueKind() == JsonValueKind.String,
+        JsonObjectType.Boolean => released?.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
+        JsonObjectType.Integer or JsonObjectType.Number => released?.GetValueKind() == JsonValueKind.Number,
+        JsonObjectType.Array => released is JsonArray,
+        JsonObjectType.Object => released is JsonObject,
+        _ => false
+    };
+
+    static JsonObjectType DeclaredType(JsonSchema schema)
     {
         // Do not use ActualTypeSchema here: for a union it selects the first non-null branch,
         // which would hide exactly the ambiguity this operation must reject.
         var type = schema.Type;
         if (schema.HasReference)
         {
-            type |= ProtectedType(schema.Reference!);
+            type |= DeclaredType(schema.Reference!);
         }
 
         foreach (var alternative in schema.OneOf.Concat(schema.AnyOf).Concat(schema.AllOf))
         {
-            var alternativeType = ProtectedType(alternative);
+            var alternativeType = DeclaredType(alternative);
             if (alternativeType == JsonObjectType.None && alternative.Type != JsonObjectType.Null)
             {
                 return JsonObjectType.None;
