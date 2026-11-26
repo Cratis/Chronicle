@@ -21,7 +21,7 @@ where as-is facts, their sources and the proposed target decisions meet. It is a
 acceptance the history, where each feature lives and the open questions are promoted into the model
 as anchored notes (`re-entry-and-passes.md` section 4); this file stays the home of the rows and
 the line-level locators. Agents and reviewers
-cite row ids (`E12`) instead of pasting code or captures.
+cite row ids (`LX-E12`) instead of pasting code or captures.
 
 Treat the file as confidential when it holds production data. Locators should be route
 templates, table and column names, and path:line, not values.
@@ -37,30 +37,27 @@ templates, table and column names, and path:line, not values.
 
 ## 2. Evidence rows
 
-| Column | Content |
+Rows use the shared schema in
+[evidence-format.md](../../cratis-screenplay-event-modeling/references/evidence-format.md) (`sources`
+entries, locators, strength, merge rule, lane ids); this file adds only the extension columns below. Prefix ids
+`LX-` (`PR-` for rows from a Prologue capture) so merged files stay collision-free. Write
+the rows as `evidence.jsonl` with this table as its rendering.
+
+| Extension column | Content |
 |---|---|
-| `id` | `E<n>`, stable; never renumber |
-| `source` | static (generate) / dynamic (Prologue) / code / test / UI / runtime (Chronicle) / doc / expert |
-| `locator` | Repository-backed code, test and schema claims: the inspected repository-relative `path:start-end`, with the file name exactly as given (`CheckinService.cs`, never shortened; for a test, the test method's range), bound to the source identity. A locator that cannot be found is recorded as `not found` and the claim stays `unknown`; it is never rewritten as "to build". Runtime (Chronicle): target, event store, namespace, schema identity + generation or bounded event range, observation time. Other sources: capture file + record, redacted UI route + observation id, document section/version, generated declaration address + diagnostic, or person + date. Never substitute one source type's locator for another's |
-| `observed fact` | what was seen, in neutral words ("POST /checkins inserts Checkins and updates Hooks") |
 | `technical shape` | method + route, tables (op, columns), status-code mix, frequency, span names |
-| `strength` | Exact / Configured / Conventional / Heuristic (generator ladder), Observed (capture), Read (code), Stated (person) |
-| `classification` | intent / consequence / infrastructure / noise / unknown; for writes without a user command add maintenance / correction / integration / scheduled / unexplained |
 | `generator disposition` | Lowered / ProvenanceOnly / OmittedWithDiagnostic (code) / Conflicted / n/a |
-| `candidate element` | declaration address in the candidate (`Cloakroom/Intake/TakeInCoat`, event `CoatTakenIn`) or `none` |
-| `target decision` | keep / change / remove / undecided |
 | `decided by` | user, expert name, or `proposed` |
 | `expert verdict` | confirmed / corrected / rejected / not asked |
-| `notes` | links to other rows, open question ids |
 
-Example rows:
+Example rows (a `generate` source keeps the generator ladder, such as Exact, in its `detail`):
 
-| id | source | locator | observed fact | technical shape | strength | classification | gen. disposition | candidate | decision | decided by | verdict |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| E1 | dynamic | capture 0007, `POST /api/checkins` | taking in a coat writes two tables | insert `Checkins`; update `Hooks(occupied)`; 201 x41, 409 x3 | Observed | intent (take in) + consequence (hook) | n/a | `TakeInCoat` -> `CoatTakenIn`; occupancy via projection | change | proposed | not asked |
-| E2 | code | `CheckinService.cs` | 409 when the hook is already free, message "That coat is not on a hook" | throws `ConflictException` | Read | intent (rule) | n/a | legacy control: `reads CoatStatus` + `require` without protected opt-in; inspect v25 admission, record refused shape/Stage target gap in LOSS.md | keep | proposed | not asked |
-| E3 | static | `static.play`, SP0016 at `CheckinValidator` | validation rule held to a condition is emitted unconditionally; the condition is lost | `When(x => x.IsVip)` | Exact (loss) | unknown | Lowered without its condition (semantic mismatch, reported by SP0016) | none yet | undecided | - | question Q4: when does the rule really apply? read `CheckinValidator` and ask an expert |
-| E4 | dynamic | uncorrelated txn, `Hooks` nightly 02:00 | hook flags reset without a command | update `Hooks(*)` daily | Observed | unexplained | n/a | none | undecided | - | question Q5 |
+| id | sources | observed fact | technical shape | strength | classification | gen. disposition | candidate | decision | decided by | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| LX-E1 | prologue: capture 0007, `POST /api/checkins` | taking in a coat writes two tables | insert `Checkins`; update `Hooks(occupied)`; 201 x41, 409 x3 | Observed | intent (take in) + consequence (hook) | n/a | `TakeInCoat` -> `CoatTakenIn`; occupancy via projection | change | proposed | not asked |
+| LX-E2 | code: `CheckinService.cs` | 409 when the hook is already free, message "That coat is not on a hook" | throws `ConflictException` | Read | intent (rule) | n/a | legacy control: `reads CoatStatus` + `require` without protected opt-in; inspect v25 admission, record refused shape/Stage target gap in LOSS.md | keep | proposed | not asked |
+| LX-E3 | generate: `static.play`, SP0016 at `CheckinValidator` | validation rule held to a condition is emitted unconditionally; the condition is lost | `When(x => x.IsVip)` | Exact (loss) | unknown | Lowered without its condition (semantic mismatch, reported by SP0016) | none yet | undecided | - | question Q4: when does the rule really apply? read `CheckinValidator` and ask an expert |
+| LX-E4 | prologue: uncorrelated txn, `Hooks` nightly 02:00 | hook flags reset without a command | update `Hooks(*)` daily | Observed | unexplained | n/a | none | undecided | - | question Q5 |
 
 ## Traceability reconciliation
 

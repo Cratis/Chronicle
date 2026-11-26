@@ -35,10 +35,15 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// </para>
 /// </remarks>
 [method: JsonConstructor]
-public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerable<EventTypeId> EventTypeIds, IEnumerable<EventTypeId> RemovedWith = null!, ConstraintScope? Scope = default) : IConstraintDefinition
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.UniqueEventTypeConstraintDefinition")]
+public record UniqueEventTypeConstraintDefinition([Id(0)] ConstraintName Name, [Id(1)] IEnumerable<EventTypeId> EventTypeIds, [Id(2)] IEnumerable<EventTypeId> RemovedWith = null!, [Id(3)] ConstraintScope? Scope = default) : IConstraintDefinition
 {
+    [NonSerialized]
     readonly IEnumerable<EventTypeId>? _eventTypeIds = EventTypeIds;
+    [NonSerialized]
     readonly IEnumerable<EventTypeId>? _removedWith = RemovedWith;
+    [Id(4)]
     readonly IEnumerable<EventSequenceId>? _eventSequences;
 
     /// <summary>
@@ -139,9 +144,9 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
     public virtual bool Equals(UniqueEventTypeConstraintDefinition? other) =>
         other is not null &&
         Name == other.Name &&
-        Scope == other.Scope &&
-        EventTypeIds.SequenceEqual(other.EventTypeIds) &&
-        RemovedWith.SequenceEqual(other.RemovedWith) &&
+        Scope.Canonical() == other.Scope.Canonical() &&
+        EventTypeIds.SameSetAs(other.EventTypeIds) &&
+        RemovedWith.SameSetAs(other.RemovedWith) &&
         EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
@@ -149,13 +154,13 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
     {
         var hashCode = default(HashCode);
         hashCode.Add(Name);
-        hashCode.Add(Scope);
-        foreach (var eventTypeId in EventTypeIds)
+        hashCode.Add(Scope.Canonical());
+        foreach (var eventTypeId in EventTypeIds.Canonical())
         {
             hashCode.Add(eventTypeId);
         }
 
-        foreach (var removalEventTypeId in RemovedWith)
+        foreach (var removalEventTypeId in RemovedWith.Canonical())
         {
             hashCode.Add(removalEventTypeId);
         }
@@ -163,6 +168,18 @@ public record UniqueEventTypeConstraintDefinition(ConstraintName Name, IEnumerab
         hashCode.AddEventSequences(EventSequences);
         return hashCode.ToHashCode();
     }
+
+    /// <summary>
+    /// Get this definition in its canonical form, see <see cref="ConstraintNormalization"/>.
+    /// </summary>
+    /// <returns>An equal definition whose collections are distinct and ordered, and whose empty scope is absent.</returns>
+    public UniqueEventTypeConstraintDefinition Normalized() => this with
+    {
+        EventTypeIds = EventTypeIds.Canonical(),
+        RemovedWith = RemovedWith.Canonical(),
+        EventSequences = EventSequences.Canonical(),
+        Scope = Scope.Canonical()
+    };
 
     /// <inheritdoc/>
     /// <remarks>

@@ -19,13 +19,13 @@ public record ReadModelGrainKey(ReadModelIdentifier Identifier, EventStoreName E
     /// <param name="key"><see cref="ReadModelGrainKey"/> to convert from.</param>
     public static implicit operator string(ReadModelGrainKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(Identifier, EventStore);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ReadModelGrainKey"/> instance.</returns>
     public static ReadModelGrainKey Parse(string key) => KeyHelper.Parse<ReadModelGrainKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(Identifier, EventStore);
 }

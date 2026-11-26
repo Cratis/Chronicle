@@ -9,5 +9,5 @@ public class and_a_default_only_property_gained_a_type : given.a_registration
 
     Task Because() => Register(Typed);
 
-    [Fact] void should_upgrade_the_stored_schema() => _registered.Definition.Generations.Single().Schema.ActualProperties["amount"].Format.ShouldEqual("decimal");
+    [Fact] void should_upgrade_the_stored_schema() => RegisteredDefinition.Generations.Single().Schema.ActualProperties["amount"].Format.ShouldEqual("decimal");
 }

@@ -63,6 +63,7 @@ public class JsonReportFormatter : IReportFormatter { ... }
 - Prefer strategy interfaces over `switch`/`if-else` chains that grow over time.
 - Use `IInstancesOf<T>` to discover all implementations by convention — no manual registration needed.
 - Design public APIs as contracts (interfaces/records) rather than concrete implementations.
+- For a closed set of outcomes, prefer a sealed record hierarchy consumed by an exhaustive `switch`. Use `closed` only on NEW types in net11 code, never on an existing public type.
 
 ## Separation of Concerns
 

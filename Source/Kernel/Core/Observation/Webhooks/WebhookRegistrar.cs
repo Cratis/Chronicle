@@ -69,6 +69,7 @@ public sealed class WebhookRegistrar(
         webhooks = webhooks.ToArray();
 
         // Validate the entire request before appending any registration changes.
+        ValidateSigningModes(webhooks);
         ValidateManagedIdentities(eventStore, webhooks);
         await ValidatePins(eventStore, webhooks);
         await ValidateTransportOwnership(eventStore, webhooks);
@@ -78,12 +79,11 @@ public sealed class WebhookRegistrar(
 
         foreach (var webhook in webhooks)
         {
-            var chronicleWebhook = webhook.ToChronicle();
+            var existingWebhooks = await webhooksManager.GetWebhookDefinitions();
+            var existingWebhook = existingWebhooks.FirstOrDefault(w => w.Identifier.Value == webhook.Identifier);
+            var chronicleWebhook = ResolveSigning(webhook, existingWebhook);
             var encryptedWebhook = EncryptWebhookSecrets(chronicleWebhook);
             var webhookKey = new WebhookKey(chronicleWebhook.Identifier, eventStore);
-
-            var existingWebhooks = await webhooksManager.GetWebhookDefinitions();
-            var existingWebhook = existingWebhooks.FirstOrDefault(w => w.Identifier == chronicleWebhook.Identifier);
 
             var compareResult = await webhookDefinitionComparer.Compare(
                 webhookKey,
@@ -101,7 +101,8 @@ public sealed class WebhookRegistrar(
                     encryptedWebhook.IsReplayable,
                     encryptedWebhook.IsActive)
                 {
-                    GenerationDelivery = encryptedWebhook.GenerationDelivery
+                    GenerationDelivery = encryptedWebhook.GenerationDelivery,
+                    Signing = encryptedWebhook.Signing
                 };
 
                 await Append(eventSequence, webhook.Identifier, addedEvent);
@@ -109,24 +110,7 @@ public sealed class WebhookRegistrar(
             }
             else if (compareResult.Result == WebhookDefinitionCompareResult.Different && compareResult.ChangedProperties is not null)
             {
-                var changedProperties = compareResult.ChangedProperties;
-
-                await AppendGenerationChanges(eventSequence, encryptedWebhook, changedProperties);
-
-                if (changedProperties.TargetUrlChanged)
-                {
-                    await Append(eventSequence, webhook.Identifier, new TargetUrlSetForWebhook(encryptedWebhook.Target.Url));
-                }
-
-                if (changedProperties.TargetHeadersChanged)
-                {
-                    await Append(eventSequence, webhook.Identifier, new TargetHeadersSetForWebhook(encryptedWebhook.Target.Headers));
-                }
-
-                if (changedProperties.AuthorizationChanged)
-                {
-                    await AppendAuthorizationEvent(eventSequence, webhook.Identifier, encryptedWebhook.Target.Authorization);
-                }
+                await AppendDefinitionChanges(eventSequence, encryptedWebhook, compareResult.ChangedProperties);
             }
 
             // If compareResult is Same, no event is appended
@@ -255,6 +239,25 @@ public sealed class WebhookRegistrar(
         };
     }
 
+    static void ValidateSigningModes(IEnumerable<WebhookDefinition> webhooks)
+    {
+        foreach (var webhook in webhooks)
+        {
+            if (webhook.Signing is not (Contracts.Observation.Webhooks.WebhookSigningMode.Unspecified or Contracts.Observation.Webhooks.WebhookSigningMode.Disabled or Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519))
+            {
+                throw new WebhookSigningNotSupported(webhook.Signing);
+            }
+        }
+    }
+
+    static Concepts.Observation.Webhooks.WebhookDefinition ResolveSigning(WebhookDefinition webhook, Concepts.Observation.Webhooks.WebhookDefinition? existing)
+    {
+        var definition = webhook.ToChronicle();
+        return webhook.Signing == Contracts.Observation.Webhooks.WebhookSigningMode.Unspecified && existing is not null
+            ? definition with { Signing = existing.Signing }
+            : definition;
+    }
+
     void ValidateManagedIdentities(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)
     {
         foreach (var webhook in webhooks)
@@ -293,6 +296,30 @@ public sealed class WebhookRegistrar(
 
         var owningSubscription = await ObserverTransportSubscriptions.OnOtherSequence(storage, grainFactory, key);
         return owningSubscription?.IsServedByConnectedClient == true;
+    }
+
+    async Task AppendDefinitionChanges(
+        IEventSequence eventSequence,
+        Concepts.Observation.Webhooks.WebhookDefinition webhook,
+        WebhookDefinitionChangedProperties changedProperties)
+    {
+        await AppendGenerationChanges(eventSequence, webhook, changedProperties);
+        if (changedProperties.TargetUrlChanged)
+        {
+            await Append(eventSequence, webhook.Identifier, new TargetUrlSetForWebhook(webhook.Target.Url));
+        }
+        if (changedProperties.TargetHeadersChanged)
+        {
+            await Append(eventSequence, webhook.Identifier, new TargetHeadersSetForWebhook(webhook.Target.Headers));
+        }
+        if (changedProperties.AuthorizationChanged)
+        {
+            await AppendAuthorizationEvent(eventSequence, webhook.Identifier, webhook.Target.Authorization);
+        }
+        if (changedProperties.SigningChanged)
+        {
+            await Append(eventSequence, webhook.Identifier, new SigningSetForWebhook(webhook.Signing));
+        }
     }
 
     async Task ValidatePins(EventStoreName eventStore, IEnumerable<WebhookDefinition> webhooks)

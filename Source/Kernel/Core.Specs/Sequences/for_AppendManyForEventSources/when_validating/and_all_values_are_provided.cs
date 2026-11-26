@@ -25,13 +25,15 @@ public class and_all_values_are_provided : Specification
         "some-event-store",
         "some-namespace",
         "event-log",
-        [new EventForEventSourceId(
-            "some-event-source",
-            "Default",
-            "All",
-            "Default",
-            new EventType("SomeEvent", 1, false),
-            "{}")]));
+        [
+            new EventForEventSourceId(
+               "some-event-source",
+               "Default",
+               "All",
+               "Default",
+               new EventType("SomeEvent", 1, false),
+               "{}")
+        ]));
 
     [Fact] void should_be_valid() => _result.ShouldBeValid();
 }

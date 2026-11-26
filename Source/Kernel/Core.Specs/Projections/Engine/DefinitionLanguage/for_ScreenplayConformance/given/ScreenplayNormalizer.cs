@@ -19,6 +19,17 @@ namespace Cratis.Chronicle.Projections.Engine.DeclarationLanguage.for_Screenplay
 /// <param name="slice">The slice holding the case's declarations.</param>
 public class ScreenplayNormalizer(SemanticApplication application, SemanticSlice slice)
 {
+    static readonly Dictionary<SemanticProjectionOperation, NeutralOperation> _operations = new()
+    {
+        [SemanticProjectionOperation.Set] = NeutralOperation.Set,
+        [SemanticProjectionOperation.SetOnce] = NeutralOperation.SetOnce,
+        [SemanticProjectionOperation.Clear] = NeutralOperation.Clear,
+        [SemanticProjectionOperation.Add] = NeutralOperation.Add,
+        [SemanticProjectionOperation.Subtract] = NeutralOperation.Subtract,
+        [SemanticProjectionOperation.Increment] = NeutralOperation.Increment,
+        [SemanticProjectionOperation.Decrement] = NeutralOperation.Decrement
+    };
+
     readonly Dictionary<SemanticId, string> _names = Names(application, slice);
 
     /// <summary>
@@ -32,22 +43,16 @@ public class ScreenplayNormalizer(SemanticApplication application, SemanticSlice
     static Dictionary<SemanticId, string> Names(SemanticApplication application, SemanticSlice slice)
     {
         var names = new Dictionary<SemanticId, string>();
-        foreach (var type in application.Types)
+        foreach (var (id, name) in application.Types.SelectMany(type =>
+            new[] { (type.Id, type.Name) }.Concat(type.Properties.Select(property => (property.Id, property.Name)))))
         {
-            names[type.Id] = type.Name;
-            foreach (var property in type.Properties)
-            {
-                names[property.Id] = property.Name;
-            }
+            names[id] = name;
         }
 
-        foreach (var @event in slice.Events)
+        foreach (var (id, name) in slice.Events.SelectMany(@event =>
+            new[] { (@event.Id, @event.Name) }.Concat(@event.Properties.Select(property => (property.Id, property.Name)))))
         {
-            names[@event.Id] = @event.Name;
-            foreach (var property in @event.Properties)
-            {
-                names[property.Id] = property.Name;
-            }
+            names[id] = name;
         }
 
         foreach (var property in slice.ReadModels.SelectMany(_ => _.Properties))
@@ -77,15 +82,23 @@ public class ScreenplayNormalizer(SemanticApplication application, SemanticSlice
         return new(
             [.. scope.From.Select(_ => new NeutralFrom(Name(_.EventContract), Key(_.Key), _.ParentKey is null ? null : Key(_.ParentKey), [.. _.Mappings.Select(Mapping)]))],
             [.. scope.Joins.Select(_ => new NeutralJoin(Name(_.EventContract), Name(_.On), _.Key is null ? null : Key(_.Key), [.. _.Mappings.Select(Mapping)]))],
-            [.. scope.Children.Select(_ => new NeutralChildren(Name(_.Property), Name(_.IdentifiedBy), Scope(_.Scope)))],
+            [.. scope.Children.Select(_ => new NeutralChildren(Name(_.Property), Name(_.IdentifiedBy), Scope(_.Scope), Ordering(_.Ordering)))],
             [.. scope.Nested.Select(_ => new NeutralNested(Name(_.Property), Scope(_.Scope)))],
             every,
             [.. scope.Removals.Select(_ => new NeutralRemoval(Name(_.EventContract), Key(_.Key), _.ParentKey is null ? null : Key(_.ParentKey)))],
             [.. scope.JoinRemovals.Select(_ => new NeutralJoinRemoval(Name(_.EventContract), Key(_.Key)))]);
     }
 
+    string Ordering(SemanticProjectionChildrenOrdering? ordering) => ordering switch
+    {
+        null => string.Empty,
+        { Placement: SemanticChildrenPlacement.Append } => string.Empty,
+        { Placement: SemanticChildrenPlacement.Prepend } => "Prepend",
+        _ => $"Sorted {Path(ordering.SortBy)} {ordering.Direction}"
+    };
+
     NeutralMapping Mapping(SemanticProjectionMapping mapping) =>
-        new(Path(mapping.Target), Operation(mapping.Operation), mapping.Source is null ? null : Value(mapping.Source));
+        new(Path(mapping.Target), Operation(mapping.Operation), mapping.Source is null ? null : Value(mapping.Source), mapping.Factor is null ? null : Value(mapping.Factor));
 
     NeutralMapping Mapping(SemanticPropertyMapping mapping) =>
         mapping.Source is SemanticValueExpression { Value.Kind: SemanticValueKind.Null }
@@ -123,16 +136,8 @@ public class ScreenplayNormalizer(SemanticApplication application, SemanticSlice
         _ => throw new UnknownSemanticNode(value)
     };
 
-    static NeutralOperation Operation(SemanticProjectionOperation operation) => operation switch
-    {
-        SemanticProjectionOperation.Set => NeutralOperation.Set,
-        SemanticProjectionOperation.Clear => NeutralOperation.Clear,
-        SemanticProjectionOperation.Add => NeutralOperation.Add,
-        SemanticProjectionOperation.Subtract => NeutralOperation.Subtract,
-        SemanticProjectionOperation.Increment => NeutralOperation.Increment,
-        SemanticProjectionOperation.Decrement => NeutralOperation.Decrement,
-        _ => throw new UnknownSemanticNode(operation)
-    };
+    static NeutralOperation Operation(SemanticProjectionOperation operation) =>
+        _operations.TryGetValue(operation, out var neutral) ? neutral : throw new UnknownSemanticNode(operation);
 
     string Path(ImmutableArray<SemanticId> path) => string.Join('.', path.Select(Name));
 

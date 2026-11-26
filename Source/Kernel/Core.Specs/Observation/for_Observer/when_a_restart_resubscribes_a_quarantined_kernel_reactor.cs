@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Observation.Reactors.Kernel;
@@ -37,7 +38,7 @@ public class when_a_restart_resubscribes_a_quarantined_kernel_reactor : given.an
     }
 
     async Task Because() => await _restarted.Subscribe<IReactorObserverSubscriber<UsersReactor>>(
-        ObserverType.Reactor, typeof(UsersReactor).GetEventTypes(), SiloAddress.Zero, null, isReplayable: false, automatic: false);
+        ObserverType.Reactor, EventTypeSet.From(typeof(UsersReactor).GetEventTypes()), SiloAddress.Zero, null, isReplayable: false, automatic: false);
 
     [Fact] void should_use_a_fresh_activation() => ReferenceEquals(_original, _restarted).ShouldBeFalse();
     [Fact] void should_reactivate_the_same_system_observer() => ObserverKey.Parse(_restarted.GetPrimaryKeyString()).ShouldEqual(_observerKey);

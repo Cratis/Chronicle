@@ -19,4 +19,5 @@ About ten minutes, before the independent review.
     summaries in `description`, open questions as anchored `question` notes,
     with note IDs in session state, never only chat or description text.
 11. Every Automation has a pending-work view or a stated reason it needs none (F8-F13).
+12. No read model exposes a `secret` concept: PLAY1142 clean, and AutoMap does not leak one.
 Any "no" is fixed or explained before P5.

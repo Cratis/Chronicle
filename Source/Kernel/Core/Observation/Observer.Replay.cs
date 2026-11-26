@@ -74,7 +74,7 @@ public partial class Observer
     public Task ReplayPartition(Key partition) => ReplayPartitionTo(partition, EventSequenceNumber.Max, Definition.EventTypes, false);
 
     /// <inheritdoc/>
-    public Task ReplayPartition(Key partition, IEnumerable<EventType> eventTypes) =>
+    public Task ReplayPartition(Key partition, EventTypeSet eventTypes) =>
         ReplayPartitionTo(partition, EventSequenceNumber.Max, eventTypes, true);
 
     /// <inheritdoc/>

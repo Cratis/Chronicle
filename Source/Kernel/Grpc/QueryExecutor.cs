@@ -94,6 +94,18 @@ internal static class QueryExecutor
         return ExecuteForSystem(callContext, query, onError);
     }
 
+    /// <summary>
+    /// Defers an observable query until its namespace has been resolved inside the guarded query delegate.
+    /// </summary>
+    /// <typeparam name="TData">The observed data type.</typeparam>
+    /// <param name="query">The asynchronous preparation of the query stream.</param>
+    /// <param name="cancellationToken">The cancellation token for the call.</param>
+    /// <returns>The prepared query stream.</returns>
+    internal static IObservable<TData> Canonicalize<TData>(Func<Task<IObservable<TData>>> query, CancellationToken cancellationToken) =>
+        Observable.FromAsync(query).SelectMany(stream => stream)
+            .TakeUntil(Observable.Create<bool>(observer =>
+                cancellationToken.Register(() => observer.OnNext(true))));
+
     static IObservable<QueryResult<TData>> ExecuteObservableForStore<TData>(CallContext callContext, QueryRouting routing, Func<IObservable<TData>> query, Action<Exception>? onError) =>
         Observable.FromAsync(() => StoreCapabilityGuard.Permits(callContext, routing))
             .SelectMany(permitted => permitted ? StoreCapabilityGuard.EndWhenRevoked(Execute(query, onError), callContext, routing) : Observable.Return(SystemRefused<TData>()));

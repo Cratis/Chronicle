@@ -7,20 +7,50 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    bool CannotWriteState() => _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
+    readonly ObserverContinuationLifetime _continuationLifetime = new();
 
-    void PrepareObserverStateForWrite()
+    /// <inheritdoc/>
+    protected override async Task WriteStateAsync()
     {
-        // A quarantine owned by this activation outranks whatever running state a reloaded snapshot carried,
-        // so any write while quarantined persists the quarantine rather than a stale active snapshot.
+        var checkpoint = _continuationLifetime.Capture();
+        if (!checkpoint.IsCurrent || CannotWriteState()) return;
+        await _stateWriteLock.WaitAsync();
+        try
+        {
+            // Acquisition must establish release ownership before checking the captured lifetime.
+            checkpoint.ThrowIfInvalidated();
+            if (!CanContinueStateWrite()) return;
+            PrepareStateWrite();
+            var revision = _alertRevision;
+            if (!await PersistStateWithOwnershipRecovery(checkpoint)) return;
+            if (_runningStateChangedAtPending) await PersistRunningStateChangedAt(checkpoint);
+            checkpoint.ThrowIfInvalidated();
+            if (!CanContinueStateWrite()) return;
+            RecordPersistedState(revision);
+            ShareBindingWithSupervisor();
+        }
+        catch (ObserverContinuationInvalidated)
+        {
+            // Disposal discards this direct continuation, not the operation we have already joined.
+        }
+        finally
+        {
+            _stateWriteLock.Release();
+        }
+    }
+
+    bool CanContinueStateWrite() => !_removed && !CannotWriteState();
+
+    void PrepareStateWrite()
+    {
+        // The activation's quarantine outranks a reloaded snapshot's running state.
         if (IsQuarantined)
         {
             State = State with { RunningState = ObserverRunningState.Quarantined };
             _runningStateChangedAt = _quarantineRunningStateChangedAt;
         }
 
-        // A state-machine OnEnter can return an earlier record after awaiting a job callback. Preserve the
-        // source-owned metadata advanced by that callback, and serialize writes from AlwaysInterleave methods.
+        // OnEnter may return an earlier record after a job callback advanced source-owned metadata.
         var shadowClaims = ShadowClaimsSnapshot();
         State = State with
         {
@@ -30,64 +60,50 @@ public partial class Observer
             QuarantineEpisodeId = _quarantineEpisodeId,
             WebhookProbe = _webhookProbe,
             DeliveryFences = DeliveryFenceSnapshot(),
+            DurableSubscription = DurableSubscriptionToWrite(),
             PartitionClaims = shadowClaims.Claims,
             ObserverWideClaim = shadowClaims.Wide,
             OwnershipRevision = shadowClaims.Revision
         };
     }
 
-    async Task<bool> WriteWithOwnershipRetry()
+    async Task<bool> PersistStateWithOwnershipRecovery(ObserverContinuationCheckpoint checkpoint)
     {
         try
         {
-            await WriteObserverStateAndRunningTime();
+            await checkpoint.Await(base.WriteStateAsync);
         }
-        catch (ObserverKeyDoesNotMatchDefinition)
+        catch (ObserverKeyDoesNotMatchDefinition) when (checkpoint.IsCurrent)
         {
-            if (await RelinquishOwnershipIfMoved()) return false;
-            await storage.GetEventStore(_observerKey.EventStore).GetNamespace(_observerKey.Namespace)
-                .Observers.ClaimOwnership(_observerId, _observerKey.EventSequenceId);
-            try
-            {
-                await WriteObserverStateAndRunningTime();
-            }
-            catch (ObserverKeyDoesNotMatchDefinition)
-            {
-                if (await RelinquishOwnershipIfMoved()) return false;
-                throw;
-            }
+            if (await checkpoint.Await(RelinquishOwnershipIfMoved)) return false;
+            if (!CanContinueStateWrite()) return false;
+            await checkpoint.Await(() => ObserverStateStorage.ClaimOwnership(_observerId, _observerKey.EventSequenceId));
+            if (!CanContinueStateWrite()) return false;
+            return await RetryStateWrite(checkpoint);
         }
-        return true;
+        return CanContinueStateWrite();
     }
 
-    async Task WriteObserverStateAndRunningTime()
+    async Task<bool> RetryStateWrite(ObserverContinuationCheckpoint checkpoint)
     {
-        await base.WriteStateAsync();
-        if (_runningStateChangedAtPending) await PersistRunningStateChangedAt();
+        try
+        {
+            await checkpoint.Await(base.WriteStateAsync);
+        }
+        catch (ObserverKeyDoesNotMatchDefinition) when (checkpoint.IsCurrent)
+        {
+            if (await checkpoint.Await(RelinquishOwnershipIfMoved)) return false;
+            throw;
+        }
+        return CanContinueStateWrite();
     }
 
-    void CompleteObserverStateWrite(long revision)
+    void RecordPersistedState(long revision)
     {
         _persistedStateWrites++;
+        _forgottenDurableSubscriptionIsPending = false;
         PublishRunningStateGauge();
-        if (revision == _alertRevision)
-        {
-            _alertStateNeedsPersistence = false;
-        }
-
+        if (revision == _alertRevision) _alertStateNeedsPersistence = false;
         _debouncedProgressWrites = 0;
-    }
-
-    class WriteSuspension : IDisposable
-    {
-        readonly Observer _observer;
-
-        public WriteSuspension(Observer observer)
-        {
-            _observer = observer;
-            _observer._stateWritingSuspended = true;
-        }
-
-        public void Dispose() => _observer._stateWritingSuspended = false;
     }
 }

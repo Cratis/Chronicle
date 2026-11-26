@@ -28,7 +28,7 @@ public class and_the_cursor_had_already_passed_the_held_back_event : for_Observe
         await _observer.PartitionCaughtUp("Q", 10UL, 10UL);
     }
 
-    [Fact] void should_have_moved_the_position_past_the_held_back_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)13UL);
+    [Fact] void should_advance_only_through_the_completed_partition_position() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)11UL);
     [Fact] void should_not_measure_a_suspected_skip() => _metrics.For(EventsSuspectedSkipped).ShouldBeEmpty();
     [Fact] void should_not_warn() => _recordedLogs.SuspectedSkipWarnings.ShouldBeEmpty();
 }

@@ -5,6 +5,8 @@ description: Cratis Chronicle namespaces separate data within an event store. Us
 
 A namespace in Cratis Chronicle separates one set of data from another within the same event store. In a multi-tenant application, give each tenant its own namespace so its events, observer progress and read models stay separate from those of other tenants. A tenant is an organization or group using the shared application.
 
+For the cross-product vocabulary, see [Organization, workspace and namespace](https://cratis.io/concepts/organization-workspace-namespace/). A Chronicle namespace is data segregation within one event store; it does not establish user identity, membership or authorization. The terms do not imply a shared organization, tenant or namespace identifier across products.
+
 Chronicle uses the `Default` namespace when none is specified. Choose how your application resolves the namespace for each request before introducing tenant data. [Tenancy](../tenancy/index.md) explains that choice and where each tenant's database can live; [Manage namespaces](../namespaces/index.md) covers client usage and namespace removal.
 
 ## Subscription Readiness

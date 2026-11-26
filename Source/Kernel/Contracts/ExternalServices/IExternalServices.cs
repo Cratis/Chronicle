@@ -324,6 +324,12 @@ public class ExternalServiceResponse
     /// </summary>
     [ProtoMember(11)]
     public global::System.Collections.Generic.IDictionary<string, string> Options { get; set; } = new global::System.Collections.Generic.Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the HeaderValuesSet.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::System.Collections.Generic.IDictionary<string, bool> HeaderValuesSet { get; set; } = new global::System.Collections.Generic.Dictionary<string, bool>();
 }
 
 /// <summary>

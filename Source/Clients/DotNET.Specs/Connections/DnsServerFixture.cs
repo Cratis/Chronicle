@@ -29,8 +29,8 @@ public sealed class DnsServerFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _container = new ContainerBuilder(Image)
-            .WithResourceMapping(ReadDnsConfig("Corefile"), "/config/Corefile")
-            .WithResourceMapping(ReadDnsConfig("chronicle.local.zone"), "/config/chronicle.local.zone")
+            .WithResourceMapping(ReadDnsConfig("Corefile"), FilePath.Of("/config/Corefile"))
+            .WithResourceMapping(ReadDnsConfig("chronicle.local.zone"), FilePath.Of("/config/chronicle.local.zone"))
             .WithCommand("-conf", "/config/Corefile")
             .WithPortBinding($"{DnsPort}/udp", assignRandomHostPort: true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("CoreDNS-"))

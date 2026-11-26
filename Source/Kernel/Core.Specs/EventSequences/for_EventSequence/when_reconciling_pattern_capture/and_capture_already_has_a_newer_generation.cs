@@ -25,5 +25,5 @@ public class and_capture_already_has_a_newer_generation : given.an_event_sequenc
     [Fact] async Task should_preserve_the_newer_generation() => (await _captureObserver.GetSubscription()).EventTypes.ShouldContainOnly(_subscribedType);
     [Fact] async Task should_repair_the_narrower_stored_generation() => await _captureDefinitions.Received(1).Save(Arg.Is<ReactorDefinition>(definition => definition.EventTypes.Single().EventType == _subscribedType));
     [Fact] async Task should_not_write_observer_state() => await _captureState.DidNotReceive().WriteStateAsync();
-    [Fact] async Task should_not_resubscribe_to_the_queue() => await _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] async Task should_not_resubscribe_to_the_queue() => await _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

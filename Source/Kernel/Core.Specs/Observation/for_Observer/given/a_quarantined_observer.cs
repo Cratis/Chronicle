@@ -19,7 +19,7 @@ public class a_quarantined_observer : an_observer_with_subscription
     }
 
     protected void ShouldNotHaveResubscribed() => _appendedEventsQueues.DidNotReceive()
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 
     protected void ShouldNotHaveStartedCatchup() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>());

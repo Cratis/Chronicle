@@ -11,6 +11,16 @@ namespace Cratis.Chronicle.Storage.MongoDB;
 public static class WellKnownCollectionNames
 {
     /// <summary>
+    /// The temporary collection used for startup capability probes.
+    /// </summary>
+    public const string CapabilityProbe = "chronicle_capability_probe";
+
+    /// <summary>
+    /// The reserved prefix for independently owned startup capability probe collections.
+    /// </summary>
+    public const string CapabilityProbePrefix = CapabilityProbe + "_";
+
+    /// <summary>
     /// The collection holding inert projection definition history.
     /// </summary>
     public const string ProjectionDefinitionHistory = "projection-definition-history";
@@ -349,6 +359,11 @@ public static class WellKnownCollectionNames
     /// The collection that holds generation initialization receipts.
     /// </summary>
     public const string GenerationInitialization = "generation-initialization";
+
+    /// <summary>
+    /// The collection that holds the registrations the kernel has accepted and applies in the background.
+    /// </summary>
+    public const string RegistrationIntents = "registration-intents";
 
     /// <summary>
     /// The collection that holds trigger definitions.

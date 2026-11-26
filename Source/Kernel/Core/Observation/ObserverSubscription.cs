@@ -20,15 +20,18 @@ namespace Cratis.Chronicle.Observation;
 /// <param name="Arguments">Optional arguments for the subscriber.</param>
 /// <param name="IsReplayable">Whether the observer supports replay scenarios.</param>
 /// <param name="Filters">Optional <see cref="ObserverFilters"/> to apply when observing events.</param>
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Observation.ObserverSubscription")]
 public record ObserverSubscription(
-    ObserverId ObserverId,
-    ObserverKey ObserverKey,
-    IEnumerable<EventType> EventTypes,
-    Type SubscriberType,
-    SiloAddress SiloAddress,
-    object? Arguments = null,
-    bool IsReplayable = true,
-    ObserverFilters? Filters = null)
+    [Id(0)] ObserverId ObserverId,
+    [Id(1)] ObserverKey ObserverKey,
+    [Id(2)] EventTypeSet EventTypes,
+    [Id(3)] Type SubscriberType,
+    [Id(4)] SiloAddress SiloAddress,
+    [Id(5)] object? Arguments = null,
+    [Id(6)] bool IsReplayable = true,
+    [Id(7)] ObserverFilters? Filters = null)
 {
     /// <summary>
     /// Gets a subscription representing no subscription.
@@ -41,11 +44,13 @@ public record ObserverSubscription(
     /// <see cref="SiloAddress"/> and <see cref="Arguments"/> mirroring the first target.
     /// Kernel-owned subscriptions have no targets and deliver to <see cref="SiloAddress"/> directly.
     /// </summary>
+    [Id(8)]
     public IReadOnlyList<ObserverSubscriberTarget> Targets { get; init; } = [];
 
     /// <summary>
     /// Gets the event generation delivery policy.
     /// </summary>
+    [Id(9)]
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
 
     /// <summary>

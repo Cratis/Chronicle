@@ -39,8 +39,10 @@ public static class EventSourceDefinitionConverters
             definition.Description ?? string.Empty,
             definition.Owner,
             definition.Concurrency,
-            [.. (definition.Streams ?? []).Select(stream => new Concepts.EventSources.EventStreamDefinition(
-                stream.Name,
-                stream.Description ?? string.Empty,
-                stream.Concurrency))]);
+            [.. (definition.Streams ?? []).Select(ToStream)]);
+
+    static Concepts.EventSources.EventStreamDefinition ToStream(EventStreamDefinition stream) => new(
+        stream.Name,
+        stream.Description ?? string.Empty,
+        stream.Concurrency);
 }

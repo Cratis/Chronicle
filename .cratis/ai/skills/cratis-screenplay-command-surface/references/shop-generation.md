@@ -60,6 +60,8 @@ module Shop
         returns
           customerId = customerId
           inviteCode = inviteCode
+      screen Register
+        action RegisterCustomer for screen
       specification RegistersWithPinnedValues
         when RegisterCustomer
           for "cus_01ARZ3NDEKTSV4RRFFQ69G5FAV"
@@ -84,6 +86,8 @@ module Shop
           invoiceNumber InvoiceNumber = invoiceNumber
           pickupTicket TicketNumber = pickupTicket
         returns orderId
+      screen Place
+        action PlaceOrder for screen
       specification PlacesWithPinnedValue
         given clock "2026-10-02T09:00:00Z"
         when PlaceOrder

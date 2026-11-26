@@ -6,10 +6,10 @@ using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
-/// <summary>
+/// <content>
 /// Records the observations this step makes in the observer's metrics, so partition catch-up, replay and retries are
 /// not invisible.
-/// </summary>
+/// </content>
 public partial class HandleEventsForPartition
 {
     ObserverObservationMetrics? _metrics;

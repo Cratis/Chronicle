@@ -29,6 +29,10 @@ Prefer composing behavior from smaller, focused collaborators over building clas
 - Never extend a concrete class to add or change behavior — inject a collaborator instead.
 - Inheritance is acceptable only for framework integration points where a base class is part of a well-defined extension mechanism.
 
+## Comments carry no issue or spec references
+
+Code comments never cite issue numbers, PR numbers or spec sections; that context belongs in the commit message and pull request. A comment says why code is non-obvious.
+
 ## Single Responsibility Principle
 
 Every type and every method should have **one reason to change** — it should do one thing and do it well. A class that fetches data, transforms it, validates it, and sends an email has four reasons to change. When any of those concerns shifts, you have to touch — and risk breaking — all the others.

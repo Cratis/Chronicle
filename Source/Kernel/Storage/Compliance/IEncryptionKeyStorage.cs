@@ -19,6 +19,17 @@ public interface IEncryptionKeyStorage
     /// <summary>Gets the non-sensitive capability diagnostics for every member.</summary>
     IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => [new(GetType().Name, FenceGuarantees)];
 
+    /// <summary>
+    /// Gets a value indicating whether this store keeps internal secrets in a custody that someone who can read the event store
+    /// databases cannot read, so that the secret is not stored beside what it protects.
+    /// </summary>
+    /// <remarks>
+    /// False by default. A store that persists internal secrets in the same database as the data they protect (MongoDB, SQL) must keep
+    /// it false, and a consumer that needs a key that is genuinely out of reach of a database reader must then be given one by the
+    /// operator instead.
+    /// </remarks>
+    bool KeepsInternalSecretsOutsideTheEventStoreDatabases => false;
+
     /// <summary>Observe each authority freshly and open a successor only after every request is confirmed.</summary>
     /// <param name="eventStore">The event store.</param>
     /// <param name="eventStoreNamespace">The namespace.</param>

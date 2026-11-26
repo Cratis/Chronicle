@@ -78,6 +78,12 @@ This selects the same parent as leaving the parent key unspecified.
 
 A `From` mapping adds a child when its key is new and updates the child when the key already exists. This means an event named as an update can also create a missing child. Use `RemovedWith<>()` for removal rather than mapping a deletion event through `From`.
 
+## Primitive value collections
+
+In the .NET client, use `AddChild(collection, eventProperty)` inside a `From` mapping to append an event property directly to a collection of primitive values, such as strings. Each event adds one value, including repeated values. Unlike object children, these values do not need an `IdentifiedBy` property or a child key; the event source ID selects the parent read model.
+
+The resulting child definition uses `FromEventProperty`. For older definitions that also contain an ordinary child `From` for the same event, Chronicle uses the event property only, so the value is added once.
+
 ## Removing children
 
 Configure the removal event with the same child-key strategy used by the add and update mappings:

@@ -37,7 +37,7 @@ Do not do these, and do not reopen them because a tool or extractor meets framew
 - Diagrams or documentation as a substitute for executable semantics.
 - Claims of universal low-code, lossless recovery or target parity.
 - Adding language syntax because a framework API is popular.
-- Saga, aggregate, passive read-model, HTTP, or broker machinery copied into the core vocabulary. Commands, events, read models, reactions, typed identities, deadlines and specifications express these.
+- Saga, aggregate, passive-object, HTTP, or broker machinery copied into the core vocabulary. Commands, events, read models, reactions, typed identities, deadlines and specifications express these. The language's own `passive` read-model line is a declared realization choice for a read model only commands consume, never inferred; it is not this anti-pattern.
 - Silent query broadening, authorization weakening, guessed identities or an unprotected-read fallback.
 - Generated TODOs, defaults or stubs presented as a successful realization.
 - Editing managed output, or mixing generated and user-owned code without a separate contract.

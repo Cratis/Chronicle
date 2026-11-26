@@ -10,7 +10,11 @@ namespace Cratis.Chronicle.Events.Constraints.for_ConstraintIndexes.when_rebuild
 /// </summary>
 public class and_the_namespace_has_never_held_any_data : given.an_event_store_with_a_log_and_an_outbox
 {
-    void Establish() => _namespaceStorage.HasData().Returns(false);
+    void Establish()
+    {
+        _namespaceStorage.HasData().Returns(false);
+        _namespaceStorage.HasPersistedState().Returns(true);
+    }
 
     async Task Because() => await _constraintIndexes.RebuildStaleIndexes(
         _eventStore,

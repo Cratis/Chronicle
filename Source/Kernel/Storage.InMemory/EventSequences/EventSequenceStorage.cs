@@ -74,6 +74,20 @@ public partial class EventSequenceStorage(
     public bool SupportsRevisionTracking => true;
 
     /// <summary>
+    /// Gets whether this sequence contains persisted events, independently of its snapshot.
+    /// </summary>
+    internal bool HasEvents
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _events.Count > 0;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets the generation of the original append, independently of the generation currently read.
     /// </summary>
     /// <param name="sequenceNumber">The sequence number of the event.</param>
@@ -123,58 +137,6 @@ public partial class EventSequenceStorage(
         }
 
         return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task<EventCount> GetCount(
-        EventSequenceNumber? lastEventSequenceNumber = null,
-        IEnumerable<EventType>? eventTypes = null,
-        IEnumerable<Tag>? tags = null)
-    {
-        var snapshot = Events;
-        var filtered = Filter(snapshot, null, null, null, null, eventTypes, tags);
-        if (lastEventSequenceNumber is not null)
-        {
-            filtered = filtered.Where(_ => _.Context.SequenceNumber <= lastEventSequenceNumber);
-        }
-
-        return Task.FromResult((EventCount)filtered.Count());
-    }
-
-    /// <inheritdoc/>
-    public Task<EventCount> GetCountMatching(EventSequenceQueryCriteria criteria) =>
-        Task.FromResult((EventCount)Matching(Events, criteria).Count());
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetPage(
-        EventSequenceQueryCriteria criteria,
-        int skip,
-        int take,
-        EventSequenceQuerySort? sort = null,
-        CancellationToken cancellationToken = default)
-    {
-        var order = sort ?? EventSequenceQuerySort.Default;
-        var matching = Matching(Events, criteria);
-        var ordered = order.By switch
-        {
-            EventSequenceQuerySortBy.Occurred => OrderBy(matching, _ => _.Context.Occurred, order.Descending),
-            EventSequenceQuerySortBy.EventType => OrderBy(matching, _ => _.Context.EventType.Id.Value, order.Descending),
-            EventSequenceQuerySortBy.EventSourceId => OrderBy(matching, _ => _.Context.EventSourceId.Value, order.Descending),
-            _ => OrderBy(matching, _ => _.Context.SequenceNumber.Value, order.Descending)
-        };
-
-        return Task.FromResult<IEventCursor>(new EventCursor([.. ordered.Skip(skip).Take(take)]));
-    }
-
-    /// <inheritdoc/>
-    public Task<IEnumerable<HistogramBucket>> GetHistogram(HistogramResolution resolution, EventSequenceQueryCriteria criteria)
-    {
-        var buckets = Matching(Events, criteria)
-            .GroupBy(_ => HistogramResolutions.Truncate(_.Context.Occurred, resolution))
-            .OrderBy(_ => _.Key)
-            .Select(_ => new HistogramBucket(_.Key, _.LongCount()));
-
-        return Task.FromResult<IEnumerable<HistogramBucket>>([.. buckets]);
     }
 
     /// <inheritdoc/>
@@ -274,165 +236,6 @@ public partial class EventSequenceStorage(
     }
 
     /// <inheritdoc/>
-    public Task<AppendedEvent> Redact(
-        EventSequenceNumber sequenceNumber,
-        RedactionReason reason,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain,
-        DateTimeOffset occurred)
-    {
-        lock (_lock)
-        {
-            var index = _events.FindIndex(_ => _.Context.SequenceNumber == sequenceNumber);
-            if (index < 0)
-            {
-                throw new NoEventAtSequenceNumber(eventSequenceId, sequenceNumber);
-            }
-
-            var original = _events[index];
-            if (original.Context.EventType.Id == GlobalEventTypes.Redaction)
-            {
-                return Task.FromResult(original);
-            }
-
-            _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[sequenceNumber]);
-            _originalCausedByChains.Remove(sequenceNumber);
-            RedactMetadata(sequenceNumber, correlationId, causation, causedByChain, occurred);
-            _generationHashes.Remove(sequenceNumber);
-            _derivedGenerations.Remove(sequenceNumber);
-            return Task.FromResult(original);
-        }
-    }
-
-    /// <inheritdoc/>
-    public Task<IEnumerable<EventType>> Redact(
-        EventSourceId eventSourceId,
-        RedactionReason reason,
-        IEnumerable<EventType>? eventTypes,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        IEnumerable<IdentityId> causedByChain,
-        DateTimeOffset occurred)
-    {
-        var affectedEventTypes = new HashSet<EventType>();
-        var eventTypeIds = eventTypes?.Select(_ => _.Id).ToHashSet();
-
-        lock (_lock)
-        {
-            for (var index = 0; index < _events.Count; index++)
-            {
-                var original = _events[index];
-                if (original.Context.EventSourceId != eventSourceId ||
-                    original.Context.EventType.Id == GlobalEventTypes.Redaction ||
-                    (eventTypeIds?.Count > 0 && !eventTypeIds.Contains(original.Context.EventType.Id)))
-                {
-                    continue;
-                }
-
-                affectedEventTypes.Add(new EventType(original.Context.EventType.Id, EventTypeGeneration.First, false));
-                _events[index] = Redacted(original, reason, correlationId, causation, occurred, _originalCausedByChains[original.Context.SequenceNumber]);
-                _originalCausedByChains.Remove(original.Context.SequenceNumber);
-                RedactMetadata(original.Context.SequenceNumber, correlationId, causation, causedByChain, occurred);
-                _generationHashes.Remove(original.Context.SequenceNumber);
-                _derivedGenerations.Remove(original.Context.SequenceNumber);
-            }
-        }
-
-        return Task.FromResult<IEnumerable<EventType>>(affectedEventTypes);
-    }
-
-    /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetHeadSequenceNumber(
-        IEnumerable<EventType>? eventTypes = null,
-        EventSourceId? eventSourceId = null)
-    {
-        var filtered = Filter(Events, eventSourceId, null, null, null, eventTypes).ToList();
-        return filtered.Count == 0
-            ? Task.FromResult(EventSequenceNumber.Unavailable)
-            : Task.FromResult(filtered.Min(_ => _.Context.SequenceNumber)!);
-    }
-
-    /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetTailSequenceNumber(
-        IEnumerable<EventType>? eventTypes = null,
-        EventSourceId? eventSourceId = null,
-        EventSourceType? eventSourceType = null,
-        EventStreamId? eventStreamId = null,
-        EventStreamType? eventStreamType = null)
-    {
-        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes).ToList();
-        return filtered.Count == 0
-            ? Task.FromResult(EventSequenceNumber.Unavailable)
-            : Task.FromResult(filtered.Max(_ => _.Context.SequenceNumber)!);
-    }
-
-    /// <inheritdoc/>
-    public Task<TailEventSequenceNumbers> GetTailSequenceNumbers(IEnumerable<EventType> eventTypes)
-    {
-        var snapshot = Events;
-        var eventTypeList = eventTypes.ToImmutableList();
-        var tail = snapshot.Count == 0 ? EventSequenceNumber.Unavailable : snapshot.Max(_ => _.Context.SequenceNumber)!;
-        var filtered = Filter(snapshot, null, null, null, null, eventTypeList).ToList();
-        var tailForEventTypes = filtered.Count == 0 ? EventSequenceNumber.Unavailable : filtered.Max(_ => _.Context.SequenceNumber)!;
-        return Task.FromResult(new TailEventSequenceNumbers(eventSequenceId, eventTypeList, tail, tailForEventTypes));
-    }
-
-    /// <inheritdoc/>
-    public Task<IImmutableDictionary<EventType, EventSequenceNumber>> GetTailSequenceNumbersForEventTypes(
-        IEnumerable<EventType> eventTypes)
-    {
-        var snapshot = Events;
-        var result = eventTypes.ToImmutableDictionary(
-            et => et,
-            et =>
-            {
-                var matching = snapshot.Where(_ => _.Context.EventType.Id == et.Id).ToList();
-                return matching.Count == 0
-                    ? EventSequenceNumber.Unavailable
-                    : matching.Max(_ => _.Context.SequenceNumber)!;
-            });
-
-        return Task.FromResult<IImmutableDictionary<EventType, EventSequenceNumber>>(result);
-    }
-
-    /// <inheritdoc/>
-    public Task<EventSequenceNumber> GetNextSequenceNumberGreaterOrEqualThan(
-        EventSequenceNumber sequenceNumber,
-        IEnumerable<EventType>? eventTypes = null,
-        EventSourceId? eventSourceId = null)
-    {
-        var filtered = Filter(Events, eventSourceId, null, null, null, eventTypes)
-            .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
-            .MinBy(_ => _.Context.SequenceNumber);
-
-        return Task.FromResult(filtered?.Context.SequenceNumber ?? EventSequenceNumber.Unavailable);
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> HasEventsFor(EventSourceId eventSourceId) =>
-        Task.FromResult(Events.Any(_ => _.Context.EventSourceId == eventSourceId));
-
-    /// <inheritdoc/>
-    public Task<Catch<Option<AppendedEvent>>> TryGetLastEventBefore(
-        EventTypeId eventTypeId,
-        EventSourceId eventSourceId,
-        EventSequenceNumber currentSequenceNumber)
-    {
-        var found = Events
-            .Where(_ =>
-                _.Context.EventType.Id == eventTypeId &&
-                _.Context.EventSourceId == eventSourceId &&
-                _.Context.SequenceNumber < currentSequenceNumber)
-            .MaxBy(_ => _.Context.SequenceNumber);
-
-        return Task.FromResult<Catch<Option<AppendedEvent>>>(
-            found is not null
-                ? (Option<AppendedEvent>)found
-                : Option<AppendedEvent>.None());
-    }
-
-    /// <inheritdoc/>
     public Task<IReadOnlyList<StoredEventMetadata>> GetMetadataAt(IEnumerable<EventSequenceNumber> sequenceNumbers, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -449,108 +252,6 @@ public partial class EventSequenceStorage(
             }
             return Task.FromResult<IReadOnlyList<StoredEventMetadata>>(result);
         }
-    }
-
-    /// <inheritdoc/>
-    public Task<AppendedEvent> GetEventAt(EventSequenceNumber sequenceNumber) =>
-        Task.FromResult(Events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber)
-            ?? throw new InvalidOperationException($"No event at sequence number {sequenceNumber}"));
-
-    /// <inheritdoc/>
-    public Task<Option<AppendedEvent>> TryGetLastInstanceOfAny(
-        EventSourceId eventSourceId,
-        IEnumerable<EventTypeId> eventTypes)
-    {
-        var eventTypeSet = eventTypes.ToHashSet();
-        var found = Events
-            .Where(_ =>
-                _.Context.EventSourceId == eventSourceId &&
-                eventTypeSet.Contains(_.Context.EventType.Id))
-            .MaxBy(_ => _.Context.SequenceNumber);
-
-        return Task.FromResult(found is not null
-            ? (Option<AppendedEvent>)found
-            : Option<AppendedEvent>.None());
-    }
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetFromSequenceNumber(
-        EventSequenceNumber sequenceNumber,
-        EventSourceId? eventSourceId = default,
-        EventSourceType? eventSourceType = default,
-        EventStreamType? eventStreamType = default,
-        EventStreamId? eventStreamId = default,
-        IEnumerable<EventType>? eventTypes = default,
-        IEnumerable<Tag>? tags = default,
-        CancellationToken cancellationToken = default)
-    {
-        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags)
-            .Where(_ => _.Context.SequenceNumber >= sequenceNumber)
-            .OrderBy(_ => _.Context.SequenceNumber)
-            .ToList();
-
-        return Task.FromResult<IEventCursor>(new EventCursor(filtered));
-    }
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> ReadBackAppend(EventSequenceNumber first, EventSequenceNumber last, CancellationToken cancellationToken = default)
-    {
-        lock (_lock)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult<IEventCursor>(new EventCursor(_events.Where(e => e.Context.SequenceNumber >= first && e.Context.SequenceNumber <= last).ToList()));
-        }
-    }
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetRange(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
-        GetRange(start, end, eventSourceId, eventTypes, tags, null, null, cancellationToken);
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetRangeWithHistory(EventSequenceNumber start, EventSequenceNumber end, EventSourceId? eventSourceId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
-        GetRange(start, end, eventSourceId, eventTypes, tags, cancellationToken);
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetFromSequenceNumberWithHistory(EventSequenceNumber sequenceNumber, EventSourceId? eventSourceId = default, EventSourceType? eventSourceType = default, EventStreamType? eventStreamType = default, EventStreamId? eventStreamId = default, IEnumerable<EventType>? eventTypes = default, IEnumerable<Tag>? tags = default, CancellationToken cancellationToken = default) =>
-        GetFromSequenceNumber(sequenceNumber, eventSourceId, eventSourceType, eventStreamType, eventStreamId, eventTypes, tags, cancellationToken);
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetRange(
-        EventSequenceNumber start,
-        EventSequenceNumber end,
-        EventSourceId? eventSourceId,
-        IEnumerable<EventType>? eventTypes,
-        IEnumerable<Tag>? tags,
-        EventSourceType? eventSourceType,
-        EventStreamType? eventStreamType,
-        CancellationToken cancellationToken)
-    {
-        var filtered = Filter(Events, eventSourceId, eventSourceType, eventStreamType, null, eventTypes, tags)
-            .Where(_ => _.Context.SequenceNumber >= start && _.Context.SequenceNumber <= end)
-            .OrderBy(_ => _.Context.SequenceNumber)
-            .ToList();
-
-        return Task.FromResult<IEventCursor>(new EventCursor(filtered));
-    }
-
-    /// <inheritdoc/>
-    public Task<IEventCursor> GetEventsWithLimit(
-        EventSequenceNumber start,
-        int limit,
-        EventSourceId? eventSourceId = default,
-        EventStreamType? eventStreamType = default,
-        EventStreamId? eventStreamId = default,
-        IEnumerable<EventType>? eventTypes = default,
-        IEnumerable<Tag>? tags = default,
-        CancellationToken cancellationToken = default)
-    {
-        var filtered = Filter(Events, eventSourceId, null, eventStreamType, eventStreamId, eventTypes, tags)
-            .Where(_ => _.Context.SequenceNumber >= start)
-            .OrderBy(_ => _.Context.SequenceNumber)
-            .Take(limit)
-            .ToList();
-
-        return Task.FromResult<IEventCursor>(new EventCursor(filtered));
     }
 
     /// <inheritdoc/>
@@ -585,53 +286,6 @@ public partial class EventSequenceStorage(
     }
 
     /// <summary>
-    /// Produces the redacted replacement for an event, mirroring how the persistent providers redact in place:
-    /// the event type becomes <see cref="GlobalEventTypes.Redaction"/>, the payload is replaced with a
-    /// <see cref="RedactionEventContent"/> describing what was redacted, and the auditing fields become the
-    /// redaction's. The sequence number and event source are preserved.
-    /// </summary>
-    /// <param name="original">The event being redacted.</param>
-    /// <param name="reason">The <see cref="RedactionReason"/>.</param>
-    /// <param name="correlationId">The <see cref="CorrelationId"/> of the redaction.</param>
-    /// <param name="causation">The causation chain behind the redaction.</param>
-    /// <param name="occurred">When the redaction occurred.</param>
-    /// <param name="originalCausedBy">The original caused-by identity chain.</param>
-    /// <returns>The redacted <see cref="AppendedEvent"/>.</returns>
-    static AppendedEvent Redacted(
-        AppendedEvent original,
-        RedactionReason reason,
-        CorrelationId correlationId,
-        IEnumerable<Causation> causation,
-        DateTimeOffset occurred,
-        IEnumerable<IdentityId> originalCausedBy)
-    {
-        var content = RedactionEventContent.FromOriginal(
-            reason,
-            original.Context.EventType.Id,
-            original.Context.Occurred,
-            original.Context.CorrelationId,
-            original.Context.Causation,
-            originalCausedBy);
-
-        return original with
-        {
-            Context = original.Context with
-            {
-                EventType = new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First, false),
-                Occurred = occurred,
-                CorrelationId = correlationId,
-                Causation = causation,
-                CausedBy = Identity.System,
-                Hash = EventHash.NotSet
-            },
-            Content = content.ToPayload(),
-            OriginalContent = string.Empty,
-            Revisions = [],
-            GenerationalContent = new Dictionary<int, string>()
-        };
-    }
-
-    /// <summary>
     /// Renders event content as the JSON string form kept alongside an event for its original and
     /// generational content.
     /// </summary>
@@ -646,88 +300,6 @@ public partial class EventSequenceStorage(
 
     static string FirstGenerationContent(AppendedEvent appended) =>
         appended.GenerationalContent.TryGetValue((int)EventTypeGeneration.First.Value, out var first) ? first : string.Empty;
-
-    /// <summary>
-    /// Order events by a key in either direction.
-    /// </summary>
-    /// <typeparam name="TKey">The type of the key ordered on.</typeparam>
-    /// <param name="events">The events to order.</param>
-    /// <param name="key">The key to order by.</param>
-    /// <param name="descending">Whether to order from the highest value down rather than from the lowest up.</param>
-    /// <returns>The ordered events.</returns>
-    static IOrderedEnumerable<AppendedEvent> OrderBy<TKey>(IEnumerable<AppendedEvent> events, Func<AppendedEvent, TKey> key, bool descending) =>
-        descending ? events.OrderByDescending(key) : events.OrderBy(key);
-
-    /// <summary>
-    /// Narrow events to those matching a set of query criteria.
-    /// </summary>
-    /// <param name="events">The events to narrow.</param>
-    /// <param name="criteria">The <see cref="EventSequenceQueryCriteria"/> narrowing the events.</param>
-    /// <returns>Matching events - every event when the criteria narrows nothing.</returns>
-    static IEnumerable<AppendedEvent> Matching(IEnumerable<AppendedEvent> events, EventSequenceQueryCriteria criteria) =>
-        events.Where(_ => criteria.Matches(_.Context));
-
-    /// <summary>
-    /// Narrows the events by the supplied criteria, matching how the persistent storage providers build their queries.
-    /// </summary>
-    /// <remarks>
-    /// Each criterion carries a sentinel meaning "do not narrow on this dimension" — an unspecified
-    /// <see cref="EventSourceId"/>, a default/unspecified <see cref="EventSourceType"/>,
-    /// <see cref="EventStreamType.All"/>, the default <see cref="EventStreamId"/>, and an empty event type set.
-    /// Callers asking for "everything" pass those sentinels rather than <see langword="null"/>, so treating a
-    /// sentinel as a value to match on would narrow every event away.
-    /// </remarks>
-    /// <param name="events">The events to narrow.</param>
-    /// <param name="eventSourceId">The <see cref="EventSourceId"/> to narrow by, or its unspecified sentinel.</param>
-    /// <param name="eventSourceType">The <see cref="EventSourceType"/> to narrow by, or its default/unspecified sentinel.</param>
-    /// <param name="eventStreamType">The <see cref="EventStreamType"/> to narrow by, or <see cref="EventStreamType.All"/>.</param>
-    /// <param name="eventStreamId">The <see cref="EventStreamId"/> to narrow by, or its default sentinel.</param>
-    /// <param name="eventTypes">The event types to narrow by, or an empty set.</param>
-    /// <param name="tags">The tags to narrow by - an event matches when it carries any of them; null or an empty set means no narrowing.</param>
-    /// <returns>The narrowed events.</returns>
-    static IEnumerable<AppendedEvent> Filter(
-        IEnumerable<AppendedEvent> events,
-        EventSourceId? eventSourceId,
-        EventSourceType? eventSourceType,
-        EventStreamType? eventStreamType,
-        EventStreamId? eventStreamId,
-        IEnumerable<EventType>? eventTypes,
-        IEnumerable<Tag>? tags = null)
-    {
-        if (eventSourceId?.IsSpecified == true)
-        {
-            events = events.Where(_ => _.Context.EventSourceId == eventSourceId);
-        }
-
-        if (eventSourceType?.IsDefaultOrUnspecified == false)
-        {
-            events = events.Where(_ => _.Context.EventSourceType == eventSourceType);
-        }
-
-        if (eventStreamType?.IsAll == false)
-        {
-            events = events.Where(_ => _.Context.EventStreamType == eventStreamType);
-        }
-
-        if (eventStreamId?.IsDefault == false)
-        {
-            events = events.Where(_ => _.Context.EventStreamId == eventStreamId);
-        }
-
-        var typeSet = eventTypes?.Select(_ => _.Id).ToHashSet();
-        if (typeSet?.Count > 0)
-        {
-            events = events.Where(_ => typeSet.Contains(_.Context.EventType.Id));
-        }
-
-        var tagSet = tags?.ToHashSet();
-        if (tagSet?.Count > 0)
-        {
-            events = events.Where(_ => _.Context.Tags.Any(tagSet.Contains));
-        }
-
-        return events;
-    }
 
     static ImmutableArray<Causation> SnapshotCausation(IEnumerable<Causation> chain) =>
         chain.Select(cause => cause with { Properties = cause.Properties.ToImmutableDictionary() }).ToImmutableArray();
@@ -766,18 +338,6 @@ public partial class EventSequenceStorage(
     }
 
     void TrackMetadata(AppendedEvent appended, IEnumerable<IdentityId> chain) => _metadata[appended.Context.SequenceNumber] = BuildMetadata(appended, chain);
-
-    void RedactMetadata(EventSequenceNumber number, CorrelationId correlationId, IEnumerable<Causation> causation, IEnumerable<IdentityId> chain, DateTimeOffset occurred)
-    {
-        _metadata[number] = _metadata[number] with
-        {
-            EventTypeId = GlobalEventTypes.Redaction,
-            Occurred = occurred,
-            CorrelationId = correlationId,
-            Causation = SnapshotCausation(causation),
-            CausedByChain = chain.ToImmutableArray()
-        };
-    }
 
     AppendedEvent BuildAppendedEvent(
         EventSequenceNumber sequenceNumber,

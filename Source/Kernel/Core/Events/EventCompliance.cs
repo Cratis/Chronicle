@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.EventTypes;
@@ -46,67 +48,96 @@ public class EventCompliance(
     }
 
     /// <inheritdoc/>
-    public async Task<AppendedEvent[]> ReleaseReportingErasure(
+    public Task<AppendedEvent[]> ReleaseReportingErasure(
         IEnumerable<AppendedEvent> events,
-        IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
+        IDictionary<EventType, EventTypeSchema> eventTypeSchemas) => ReleaseBatch(events, eventTypeSchemas, reportErasure: true);
+
+    /// <inheritdoc/>
+    public Task<AppendedEvent[]> Release(
+        IEnumerable<AppendedEvent> events,
+        IDictionary<EventType, EventTypeSchema> eventTypeSchemas) => ReleaseBatch(events, eventTypeSchemas, reportErasure: false);
+
+    /// <inheritdoc/>
+    public async Task<AppendedEvent> ReleaseHistory(AppendedEvent @event, IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
+    {
+        using var releaseScope = ReleaseKeys.BeginScope();
+        if (@event.Context.EventType.Id == GlobalEventTypes.Redaction || @event.Context.Subject is null || (@event.GenerationalContent.Count == 0 && @event.OriginalContent.Length == 0 && !@event.Revisions.Any()))
+        {
+            return @event;
+        }
+
+        var generations = new Dictionary<int, JsonObject?>();
+        foreach (var (generation, content) in @event.GenerationalContent)
+        {
+            generations[generation] = await ReleaseHistoryContent(@event, new(@event.Context.EventType.Id, (uint)generation), content, eventTypeSchemas);
+        }
+
+        var original = await ReleaseHistoryContent(@event, new(@event.Context.EventType.Id, EventTypeGeneration.First), @event.OriginalContent, eventTypeSchemas);
+        var revisions = new List<(EventRevision Revision, JsonObject? Content)>();
+        foreach (var revision in @event.Revisions)
+        {
+            revisions.Add((revision, await ReleaseHistoryContent(@event, new(@event.Context.EventType.Id, revision.EventTypeGeneration), revision.Content, eventTypeSchemas)));
+        }
+
+        // Serialize only at the lease-validated hand-off, after protected values have settled.
+        return await ReleaseKeys.Complete(() => @event with
+        {
+            GenerationalContent = @event.GenerationalContent.ToDictionary(item => item.Key, item => generations[item.Key]?.ToJsonString() ?? item.Value),
+            OriginalContent = original?.ToJsonString() ?? @event.OriginalContent,
+            Revisions = revisions.Select(item => item.Revision with { Content = item.Content?.ToJsonString() ?? item.Revision.Content }).ToArray()
+        });
+    }
+
+    static bool TryReadObject(string content, out JsonObject? json)
+    {
+        try
+        {
+            json = JsonNode.Parse(content) as JsonObject;
+            return json is not null;
+        }
+        catch (JsonException)
+        {
+            json = null;
+            return false;
+        }
+    }
+
+    async Task<AppendedEvent[]> ReleaseBatch(IEnumerable<AppendedEvent> events, IDictionary<EventType, EventTypeSchema> eventTypeSchemas, bool reportErasure)
     {
         using var releaseScope = ReleaseKeys.BeginScope();
         var releasedEvents = new List<AppendedEvent>();
         foreach (var @event in events)
         {
-            if (!eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema))
+            var released = reportErasure ? @event with { ErasedProperties = [] } : @event;
+            if (eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) && @event.Context.Subject is not null)
             {
-                releasedEvents.Add(@event with { ErasedProperties = [] });
-                continue;
+                var effective = await schemaCache.GetProtectionSchemaFor(@event.Context.EventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema.Schema);
+                if (effective.HasSchemaMetadata())
+                {
+                    released = reportErasure ? await ReleaseReportingErasureResolved(@event, effective) : await ReleaseResolved(@event, effective);
+                }
             }
 
-            if (@event.Context.Subject is null)
-            {
-                releasedEvents.Add(@event with { ErasedProperties = [] });
-                continue;
-            }
-
-            var effective = await schemaCache.GetProtectionSchemaFor(@event.Context.EventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema.Schema);
-            if (!effective.HasSchemaMetadata())
-            {
-                releasedEvents.Add(@event with { ErasedProperties = [] });
-                continue;
-            }
-
-            releasedEvents.Add(await ReleaseReportingErasureResolved(@event, effective));
+            releasedEvents.Add(await ReleaseHistory(released, eventTypeSchemas));
         }
 
         return await ReleaseKeys.Complete(releasedEvents.ToArray);
     }
 
-    /// <inheritdoc/>
-    public async Task<AppendedEvent[]> Release(
-        IEnumerable<AppendedEvent> events,
-        IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
+    async Task<JsonObject?> ReleaseHistoryContent(AppendedEvent @event, EventType eventType, string content, IDictionary<EventType, EventTypeSchema> eventTypeSchemas)
     {
-        using var releaseScope = ReleaseKeys.BeginScope();
-        var releasedEvents = new List<AppendedEvent>();
-        foreach (var @event in events)
+        if (string.IsNullOrEmpty(content) || !eventTypeSchemas.TryGetValue(eventType, out var schema))
         {
-            if (!eventTypeSchemas.TryGetValue(@event.Context.EventType, out var schema) ||
-                @event.Context.Subject is null)
-            {
-                releasedEvents.Add(@event);
-                continue;
-            }
-
-            var effective = await schemaCache.GetProtectionSchemaFor(@event.Context.EventStore, @event.Context.EventType.Id, @event.Context.EventType.Generation, schema.Schema);
-            if (!effective.HasSchemaMetadata())
-            {
-                releasedEvents.Add(@event);
-                continue;
-            }
-
-            var released = await ReleaseResolved(@event, effective);
-            releasedEvents.Add(released);
+            return null;
         }
 
-        return await ReleaseKeys.Complete(releasedEvents.ToArray);
+        var effective = await schemaCache.GetProtectionSchemaFor(@event.Context.EventStore, eventType.Id, eventType.Generation, schema.Schema);
+        if (!effective.HasSchemaMetadata() || !TryReadObject(content, out var json))
+        {
+            return null;
+        }
+
+        return await complianceManager.Release(@event.Context.EventStore, @event.Context.Namespace, effective, @event.Context.Subject.Value, json!);
     }
 
     async Task<AppendedEvent> ReleaseReportingErasureAfterLookup(AppendedEvent @event, ValueTask<JsonSchema> lookup) =>

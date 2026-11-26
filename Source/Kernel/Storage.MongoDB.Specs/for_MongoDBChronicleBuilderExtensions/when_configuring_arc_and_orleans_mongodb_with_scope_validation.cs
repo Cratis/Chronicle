@@ -39,7 +39,7 @@ public class when_configuring_arc_and_orleans_mongodb_with_scope_validation : Sp
                     options.Server = ConnectionString;
                     options.Database = "arc";
                 },
-                _ => { })
+                SpecSerializationSetup.ConfigureLikeTheServer)
             .UseOrleans(siloBuilder =>
             {
                 siloBuilder.UseLocalhostClustering();

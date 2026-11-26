@@ -19,7 +19,7 @@ public class an_observer_automatically_reconciled_during_a_probe : an_observer_q
         automatic: true);
 
     protected void ShouldNotSubscribeToQueue() => _appendedEventsQueues.DidNotReceive()
-        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+        .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 
     protected void ShouldNotStartReplay() => _jobsManager.DidNotReceive()
         .Start<IReplayObserver, ReplayObserverRequest>(Arg.Any<ReplayObserverRequest>());

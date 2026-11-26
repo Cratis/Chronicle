@@ -28,9 +28,9 @@ public class and_concept_property_protection_metadata_was_added : given.a_regist
 
     Task Because() => Register(IncomingSchema);
 
-    [Fact] void should_register_the_same_generation_without_a_schema_change_error() => _registered.Definition.Generations.Single().Generation.Value.ShouldEqual(1u);
-    [Fact] void should_persist_the_added_pii_metadata() => _registered.Definition.Generations.Single().Schema.ActualProperties["note"].GetComplianceMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("PII", "Property details"));
-    [Fact] void should_persist_the_added_subject_encryption_metadata() => _registered.Definition.Generations.Single().Schema.ActualProperties["subject"].GetSecurityMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("EncryptedSubject", "Subject details"));
-    [Fact] void should_persist_the_added_namespace_encryption_metadata() => _registered.Definition.Generations.Single().Schema.ActualProperties["namespace"].GetSecurityMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("EncryptedNamespace", "Namespace details"));
-    [Fact] void should_persist_the_added_global_encryption_metadata() => _registered.Definition.Generations.Single().Schema.ActualProperties["global"].GetSecurityMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("EncryptedGlobal", "Global details"));
+    [Fact] void should_register_the_same_generation_without_a_schema_change_error() => RegisteredDefinition.Generations.Single().Generation.Value.ShouldEqual(1u);
+    [Fact] void should_persist_the_added_pii_metadata() => RegisteredDefinition.Generations.Single().Schema.ActualProperties["note"].GetComplianceMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("PII", "Property details"));
+    [Fact] void should_persist_the_added_subject_encryption_metadata() => RegisteredDefinition.Generations.Single().Schema.ActualProperties["subject"].GetSecurityMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("EncryptedSubject", "Subject details"));
+    [Fact] void should_persist_the_added_namespace_encryption_metadata() => RegisteredDefinition.Generations.Single().Schema.ActualProperties["namespace"].GetSecurityMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("EncryptedNamespace", "Namespace details"));
+    [Fact] void should_persist_the_added_global_encryption_metadata() => RegisteredDefinition.Generations.Single().Schema.ActualProperties["global"].GetSecurityMetadata().Single().ShouldEqual(new ComplianceSchemaMetadata("EncryptedGlobal", "Global details"));
 }

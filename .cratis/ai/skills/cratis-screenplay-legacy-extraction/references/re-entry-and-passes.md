@@ -91,7 +91,7 @@ concept VisitReason : String
 module Visits
   feature BookingAVisit
     example TypicalBooking : BookVisit
-      description "Shape from the booking test fixtures (E12); values invented"
+      description "Shape from the booking test fixtures (LX-E12); values invented"
       reason = "Annual vaccination"
     slice StateChange BookVisit
       command BookVisit
@@ -99,6 +99,8 @@ module Visits
         reason VisitReason
         produces event VisitBooked
           reason VisitReason = reason
+      screen BookVisit
+        action BookVisit for screen
       specification BookingATypicalVisit
         when TypicalBooking
           petId = "3f2a1b0c-9d8e-4f7a-b6c5-d4e3f2a1b001"
@@ -125,13 +127,15 @@ A Pass 0 skeleton compiles as a normal candidate:
 domain Clinic.Visits
 
 module Visits
-  description "Pass 0 skeleton. Evidence: E1, E2. Where the code lives is in EVIDENCE.md section 6"
+  description "Pass 0 skeleton. Evidence: LX-E1, LX-E2. Where the code lives is in EVIDENCE.md section 6"
   feature BookingAVisit
-    description "Story: PetRegistered, then VisitBooked, then VisitCompleted or VisitCancelled. Order source: UI walk E2, confirmed by the clinic expert; VisitCancelled after VisitBooked is assumed (Q3). Not yet extracted: properties, rules, specifications"
+    description "Story: PetRegistered, then VisitBooked, then VisitCompleted or VisitCancelled. Order source: UI walk RE-E2, confirmed by the clinic expert; VisitCancelled after VisitBooked is assumed (Q3). Not yet extracted: properties, rules, specifications"
     slice StateChange BookVisit
-      description "Pass 0. Evidence: E1"
+      description "Pass 0. Evidence: LX-E1"
       command BookVisit
         produces event VisitBooked
+      screen BookVisit
+        action BookVisit for screen
 ```
 
 ## 3. Asking during extraction
@@ -139,7 +143,7 @@ module Visits
 Build what the evidence shows; do not ask experts to confirm each derived declaration (that is the
 expert verification session, `expert-verification.md`). Ask only about order and unclear
 requirements, one question at a time, always as hypothesis, evidence and question: "From
-`CheckinsController.Post` the attendant issues the ticket before the hook is chosen (E1). Is that
+`CheckinsController.Post` the attendant issues the ticket before the hook is chosen (LX-E1). Is that
 the real order?" Never place a step at a guessed position: ask, or leave an anchored `question`
 note (section 4). An answer is a decision as well: record it as a decision row (evidence template
 section 8) in the same batch as the edit it causes. The person outranks the code; when the answer
@@ -172,7 +176,7 @@ A run note, as its text:
 Run 2, pass 1, source identity: <commit + digest>. Scope: src/Checkins/. Result: 4 slices, Q3 open.
 Lives in: API src/Checkins/ (CheckinsController, CheckinService); persistence db/checkins/ (Checkins,
 Hooks); tests tests/Checkins/. Decisions: journey starts at the attendant's check-in and ends at
-hand-back; the nightly hook reset is not modeled (no known owner). Evidence: E1-E9.
+hand-back; the nightly hook reset is not modeled (no known owner). Evidence: LX-E1 to LX-E9.
 ```
 
 Add it with the `screenplay` MCP server's `propose-model-notes` tool (`kind: "note"`, anchor the

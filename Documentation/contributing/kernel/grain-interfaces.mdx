@@ -19,14 +19,24 @@ The opposite direction breaks the same way. A node of the older release sends th
 
 ## The rule
 
-Within a major release, grain interfaces only grow:
+A grain interface can change in a minor release when the release is marked as a stop-start deploy. A change that needs no stop-start keeps the release rolling-compatible. Choose one on purpose:
 
-- Never change or remove a method's parameters, parameter types, return type or name.
-- Add a method instead. Keep the old one, and have its implementation forward to the new one.
-- Raise the interface's `[Version]` whenever it gains a method.
-- Never move or rename a grain interface or grain class.
+| You want | What it takes |
+| --- | --- |
+| A rolling-compatible release | Grain interfaces only grow: never change or remove a method's parameters, parameter types, return type or name; add a method instead and have the old one forward to it; raise the interface's `[Version]` whenever it gains a method; never move or rename a grain interface or grain class. |
+| A change that breaks cross-version grain calls | Make it, with no forwarding methods or duplicate overloads, and mark the release as a stop-start deploy (see [Ship a stop-start release](#ship-a-stop-start-release)). |
 
-A major release may break all of these, because a major upgrade is done with a full stop.
+A major release may break all of these, because a major upgrade is done with a full stop. The client gRPC contract and persisted storage formats stay compatible either way, as do the Cratis.Choreography job contracts until a Choreography major is taken with a Chronicle release that says so. The decision behind this is [decision 0037](https://github.com/Cratis/Chronicle/blob/main/decisions/0037-kernel-grain-contracts-may-change-in-a-minor-with-a-stop-start-deploy.md).
+
+## Ship a stop-start release
+
+When a change breaks cross-version grain calls, the pull request:
+
+1. Says `Requires a stop-start deploy: this release cannot share a cluster with <previous release>.` in the Changed or Removed bullet that describes the change. The release notes are what operators search.
+2. Adds a line to `.github/grain-compatibility-waivers.txt` naming the previous release tag and the reason. The Grain Compatibility workflow then skips its comparison, and the `RollingUpgrade` lane logs that it is skipped and does not run for that release. Both keep running for every other release. Delete the line when a later release is cut.
+3. Regenerates `OrleansContracts.txt` and `GrainPayloadContracts.txt`, as described below, and commits them.
+
+Group grain-contract changes into as few such releases as practical: each one costs operators a full stop. The operator side is in [Roll out Chronicle upgrades](../../hosting/rolling-deploy.md#stop-start-releases).
 
 ## Add a capability to a grain
 
@@ -102,7 +112,7 @@ For payload-only comparison, use `--payload-baseline <previous GrainPayloadContr
 
 It exits 0 when the current contracts serve the baseline, 1 when they do not, and 2 when it could not tell. `--self-test` plants grain and payload breaks, plus allowed additions, and fails unless every case produces its expected result.
 
-A pull request labeled `major` skips Grain Compatibility, because a major release is upgraded with a full stop. A deliberate break in a minor or patch release is not supported: change the label or keep the old method.
+A pull request labeled `major` skips Grain Compatibility, because a major release is upgraded with a full stop. A deliberate break in a minor or patch release is supported only as a stop-start release: add the waiver entry and the release-note sentence described in [Ship a stop-start release](#ship-a-stop-start-release). The RollingUpgrade shard reads the same waiver file and skips, with a log line, when the release it upgrades from is waived.
 
 ## When a node meets an incompatible release
 

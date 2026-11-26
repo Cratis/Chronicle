@@ -6,9 +6,9 @@ using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
-/// <summary>
+/// <content>
 /// Records the observations this step makes in the observer's metrics, so catch-up and replay are not invisible.
-/// </summary>
+/// </content>
 public partial class HandleEventsForObserver
 {
     /// <summary>

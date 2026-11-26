@@ -3,17 +3,19 @@
 # PreToolUse hook — hard block on writes that must never happen.
 #
 # Exits 2 (block the tool call, stderr goes back to the model) for:
-#   1. Generated files      — anything whose header marks it as Cratis-generated output
-#                             (.cratis/ai/rules/general.md rule 15 [contract])
-#   2. Dependency manifests — Directory.Packages.props, global.json, lockfiles, NuGet config
+#   1. Dependency manifests — Directory.Packages.props, global.json, lockfiles, NuGet config
 #                             (allowed by default for a github.com/Cratis origin)
-#   3. Environment files    — .env and friends (secrets)
-#   4. Agent controls       — permissions, hooks and installed managed corpus/adapters
+#   2. Environment files    — .env and friends (secrets)
+#   3. Agent controls       — permissions, hooks and installed managed corpus/adapters
 #
 # While jq is missing the guard cannot read the tool call, so it refuses every call.
 #
-# .cratis/ai.json allowDependencyManifestWrites overrides only the manifest policy:
-# true allows them in any repository; false blocks them even in a Cratis repository.
+# The manifest policy belongs to the session, never to the write target. The session repository is
+# CLAUDE_PROJECT_DIR (else the checkout holding this script); its .cratis/ai.json
+# allowDependencyManifestWrites (true allows, false blocks) decides, else its github.com/Cratis origin.
+# The target repository can only tighten that: an explicit false, a non-Cratis origin without a setting,
+# or no Git repository blocks; a target's true or Cratis origin never unlocks a blocking session.
+# A session that cannot be determined blocks. Only manifests are affected; .env stays blocked.
 #
 # Escape hatch for the "unless explicitly asked" case — the user asks, you set it for the call:
 #   CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1
@@ -45,8 +47,9 @@ parser_failed() {
 # as a command substitution would drop them); a missing, null or false path is empty.
 # The process substitution's exit status does not reach the reading group, and Bash 3.2 (macOS /bin/bash)
 # cannot wait on its PID, so a sentinel field is written only after jq succeeds.
-reference_mode=0
+reference_mode=0 destructive_mode=0 reference_root=""
 [ "${1:-}" != --references ] || reference_mode=1
+if [ "${1:-}" = --destructive-references ]; then reference_mode=1; destructive_mode=1; fi
 cwd="" file="" notebook="" new_content="" new_string="" references="" parser_status=""
 {
     IFS= read -r -d '' cwd
@@ -124,6 +127,62 @@ normalize_target_path() {
     REPLY="${normalized:-/}"
 }
 
+# Resolution changes directory in this shell (no per-path fork); a directory that cannot be restored is undeterminable.
+working_directory_lost() {
+    printf 'BLOCKED by cratis-guard-writes: the working directory could not be restored while resolving a path.\n' >&2
+    exit 2
+}
+
+# Whether $1 cannot be resolved for a reason other than being absent: the nearest existing ancestor is a
+# non-directory, a symlink that does not resolve (dangling or looping), or a directory that is not searchable.
+# A genuinely missing path is not an error. Builtins only.
+path_resolution_error() {
+    local candidate="$1"
+    while :; do
+        if [ -d "$candidate" ]; then
+            [ -x "$candidate" ] && return 1
+            return 0
+        fi
+        if [ -e "$candidate" ] || [ -L "$candidate" ]; then return 0; fi
+        candidate="${candidate%/*}"
+        [ -n "$candidate" ] || candidate=/
+    done
+}
+
+# The path the kernel opens: each directory before a parent reference is resolved physically
+# (symlinks followed) before the reference applies. A missing prefix keeps the lexical result; a prefix
+# that fails to resolve for another reason sets kernel_strict so the caller fails closed (it is also set by
+# physical_target_path). Returns through REPLY.
+kernel_strict=0
+kernel_target_path() {
+    local remaining="$1" resolved="" component start="$PWD"
+    kernel_strict=0
+    while [ -n "$remaining" ]; do
+        component="${remaining%%/*}"
+        if [ "$remaining" = "$component" ]; then
+            remaining=""
+        else
+            remaining="${remaining#*/}"
+        fi
+        case "$component" in
+            "" | .) ;;
+            ..)
+                if cd -P -- "${resolved:-/}" 2>/dev/null; then
+                    resolved="$PWD"
+                    cd "$start" 2>/dev/null || working_directory_lost
+                elif path_resolution_error "${resolved:-/}"; then
+                    kernel_strict=1
+                fi
+                resolved="${resolved%/*}"
+                ;;
+            *)
+                resolved="$resolved/$component"
+                ;;
+        esac
+    done
+    REPLY="${resolved:-/}"
+}
+
 block() {
     # Pi can run the bundled script in a consumer checkout; this root is only for diagnostics,
     # so it is looked up only when a write is actually refused.
@@ -142,8 +201,9 @@ physical_target_path() {
     physical_file=""
     while [ -L "$target" ]; do
         hops=$((hops + 1))
-        [ "$hops" -le 40 ] || return 1
-        link="$(readlink "$target")" || return 1
+        # A loop or an unreadable link is an error, not a missing destination.
+        [ "$hops" -le 40 ] || { kernel_strict=1; return 1; }
+        link="$(readlink "$target")" || { kernel_strict=1; return 1; }
         dir_of "$target"
         abspath "$link" "$REPLY"
         target="$REPLY"
@@ -152,6 +212,7 @@ physical_target_path() {
     directory="$REPLY"
     base_of "$target"
     suffix="/$REPLY"
+    if [ ! -d "$directory" ] && path_resolution_error "$directory"; then kernel_strict=1; return 1; fi
     while [ ! -d "$directory" ]; do
         [ "$directory" != "/" ] || return 1
         base_of "$directory"
@@ -159,9 +220,9 @@ physical_target_path() {
         dir_of "$directory"
         directory="$REPLY"
     done
-    cd -P "$directory" 2>/dev/null || return 1
+    cd -P "$directory" 2>/dev/null || { kernel_strict=1; return 1; }
     directory="$PWD"
-    cd "$start" 2>/dev/null || true
+    cd "$start" 2>/dev/null || working_directory_lost
     physical_file="${directory%/}$suffix"
 }
 
@@ -190,34 +251,71 @@ origin_matches() {
 # One policy vocabulary for normal Write/Edit and whole-command reference checks.
 manifest_patterns=(package.json Directory.Packages.props global.json NuGet.config yarn.lock package-lock.json pnpm-lock.yaml packages.lock.json)
 environment_patterns=('.env' '.env.*' '*.env')
-control_patterns=('.claude/settings.json' '.claude/settings.local.json' '.mcp.json' '.pi/settings.json' '.pi/extensions/*')
+control_patterns=('.claude/settings.json' '.claude/settings.local.json' '.mcp.json' '.pi/settings.json' '.pi/extensions/*' '.cratis/ai.manifest.json' '.cratis/ai.json')
 
 # Glob-language intersection, not expansion/eval. A star has an epsilon transition and
 # a character loop. The product automaton accepts iff the two patterns share a spelling.
-# Braces conservatively become a star; bracket classes retain their ordinary meaning.
+# In a reference, everything from the first '{' to the last '}' becomes one star: brace
+# expansion, however nested, quoted or escaped, only rewrites text inside that span. A
+# reference bracket is never parsed: it is either a literal '[' or one any-character step
+# to any later ']' in the same segment. Bash's reading is always one of those alternatives,
+# so the class contents can only widen the match. References that mix braces with brackets,
+# whose brace span holds '/', with anything but plain path characters outside the brace
+# span (quoting, substitution and expansion syntax), or with dense brackets are not modeled at all: they fail closed (exit 2) so the work stays
+# bounded.
 IFS= read -r -d '' glob_program <<'AWK' || true
-function tokens(s, side,    i, c, j, t, n) {
+function tokens(s, side,    i, c, j, k, t, copy, jumps, first, closing) {
     s = tolower(s)
+    if (side == 1) {
+        copy = s
+        if (s ~ /[@?*+!]\(/) exit 2
+        if (index(s, "{") && index(s, "[")) exit 2
+        if (gsub(/\[/, "[", copy) > 64) exit 2
+        first = index(s, "{")
+        for (k = length(s); k > first; k--) if (substr(s, k, 1) == "}") { closing = k; break }
+        if (first && closing && s != "{}") {
+            if (index(substr(s, first, closing - first + 1), "/")) exit 2
+            if (substr(s, first, closing - first + 1) ~ /[$`'"\\]/) exit 2
+            if (substr(s, 1, first - 1) substr(s, closing + 1) ~ /[^a-z0-9._\/*?,+=:@%-]/) exit 2
+            s = substr(s, 1, first - 1) "*" substr(s, closing + 1)
+        }
+    }
     for (i = 1; i <= length(s); i++) {
-        c = substr(s, i, 1); t = c
-        if (c == "{") { j = index(substr(s, i), "}"); if (j) i += j - 1; t = "*" }
-        else if (c == "[") {
-            j = index(substr(s, i + 1), "]")
-            if (j) { t = substr(s, i, j + 1); i += j; sub(/^\[!/, "[^", t) }
+        c = substr(s, i, 1); t = c; j = i
+        # Only a standalone empty brace argument is literal; path placeholders can expand.
+        if (c == "{" && s != "{}") {
+            j = index(substr(s, i), "}")
+            if (j) { j = i + j - 1; t = "*" } else j = i
+            if (side == 1 && index(substr(s, i, j - i + 1), "/")) exit 2
         }
         N[side]++; A[side, N[side]] = t
+        for (k = i; k <= j; k++) TOKEN[side, k] = N[side]
+        if (c == "[" && side == 1) START[N[side]] = i
+        i = j
+    }
+    TOKEN[side, length(s) + 1] = N[side] + 1
+    for (t = 1; t <= N[side]; t++) {
+        if (side != 1 || !(t in START)) continue
+        for (k = START[t] + 2; k <= length(s); k++) {
+            c = substr(s, k, 1)
+            if (c == "/") break
+            if (c != "]") continue
+            # A ']' inside a brace star re-enters that star, which covers the rest of it.
+            j = TOKEN[1, k] == TOKEN[1, k + 1] ? TOKEN[1, k] : TOKEN[1, k + 1]
+            if (++jumps > 4096) exit 2
+            JUMP[t, ++JUMPS[t]] = j
+        }
     }
 }
 function push(i, j,    key) { key = i SUBSEP j; if (!(key in seen)) { seen[key] = 1; L[++last] = i; R[last] = j } }
 function accepts(t, c, side) {
-    if (side == 1 && c == "/" && (t == "*" || t == "?" || length(t) > 1)) return 0
-    return t == "*" || t == "?" || (length(t) > 1 && substr(t, 1, 1) == "[" ? c ~ ("^" t "$") : t == c)
+    if (side == 1 && c == "/" && (t == "*" || t == "?")) return 0
+    return t == "*" || t == "?" || t == c
 }
-function compatible(a, b,    k, c) {
-    if (length(a) == 1 && a != "*" && a != "?") return accepts(b, a, 2)
-    if (length(b) == 1 && b != "*" && b != "?") return accepts(a, b, 1)
-    for (k = 1; k < 256; k++) { c = sprintf("%c", k); if (accepts(a, c, 1) && accepts(b, c, 2)) return 1 }
-    return 0
+function compatible(a, b) {
+    if (a != "*" && a != "?") return accepts(b, a, 2)
+    if (b != "*" && b != "?") return accepts(a, b, 1)
+    return 1
 }
 BEGIN {
     tokens(ENVIRON["REF_LEFT"], 1); tokens(ENVIRON["REF_RIGHT"], 2); push(1, 1)
@@ -229,6 +327,7 @@ BEGIN {
         if (a == "*") push(i + 1, j)
         if (b == "*") push(i, j + 1)
         if (i <= N[1] && j <= N[2] && compatible(a, b)) push(i + (a != "*"), j + (b != "*"))
+        if (i <= N[1] && j <= N[2] && compatible("?", b)) for (k = 1; k <= JUMPS[i]; k++) push(JUMP[i, k], j + (b != "*"))
     }
     exit 1
 }
@@ -258,7 +357,10 @@ control_match() {
     local value="$1" reference_pattern="$reference_pattern" pattern LC_ALL=C
     shift
     if names_match "$value" "$@"; then return 0; fi
+    # Do not turn a standalone placeholder into a path by appending descendants.
+    [ "$value" != '{}' ] || return 1
     [ "$reference_mode" = 1 ] || return 1
+    [ "$destructive_mode" != 1 ] || [ "$value" != '.' ] || return 0
     if [ "$reference_pattern" = 0 ]; then
         shopt -s nocasematch
         for pattern in "$@"; do
@@ -271,10 +373,34 @@ control_match() {
 }
 
 # ── 4. Agent controls and installed managed trees ─────────────────────────────
+# Authoring requires committed framework source, not a mutable remote URL or new files.
+authored_cache_root=""
+authored_cache_status=1
+authored_corpus_repository() {
+    if [ "$authored_cache_root" != "$1" ]; then
+        authored_cache_root="$1"
+        authored_cache_status=1
+        if git -C "$1" cat-file -e HEAD:Cratis.AI.slnx 2>/dev/null &&
+            git -C "$1" cat-file -e HEAD:.cratis/ai/hooks/scripts/cratis-guard-writes.sh 2>/dev/null &&
+            git -C "$1" show HEAD:Source/Pi.Plugin/package.json 2>/dev/null |
+                jq -e -s 'length == 1 and .[0].name == "@cratis/pi" and .[0].type == "module"' >/dev/null 2>&1; then
+            authored_cache_status=0
+        fi
+    fi
+    return "$authored_cache_status"
+}
+
 agent_control_target() {
     local target="$1" directory policy_root target_rel managed pattern
     dir_of "$target"
     directory="$REPLY"
+    if [ "$destructive_mode" = 1 ]; then
+        [ ! -d "$target" ] || directory="$target"
+        # A mutation of the repository or any containing directory reaches its controls too.
+        if [[ -n "$reference_root" && ( "$target" == / || "$reference_root" == "$target" || "$reference_root" == "$target"/* ) ]]; then
+            directory="$reference_root"
+        fi
+    fi
     # Keep the addressed spelling here, even when an adapter directory is a symlink.
     # .git is a directory in a checkout and a file in a linked worktree.
     while [ ! -e "$directory/.git" ]; do
@@ -283,11 +409,16 @@ agent_control_target() {
         directory="$REPLY"
     done
     policy_root="$directory"
-    relative_to "$target" "$policy_root"
-    target_rel="$REPLY"
-    if [ -f "$policy_root/.cratis/ai.manifest.json" ]; then
+    if [[ "$destructive_mode" == 1 && ( "$target" == / || "$policy_root" == "$target" || "$policy_root" == "$target"/* ) ]]; then target_rel='.'
+    else relative_to "$target" "$policy_root"; target_rel="$REPLY"; fi
+    # Policy files remain controls even in the authored corpus repository.
+    if control_match "$target_rel" '.cratis/ai.manifest.json' '.cratis/ai.json'; then return 0; fi
+    if [ ! -f "$policy_root/.cratis/ai.manifest.json" ] && authored_corpus_repository "$policy_root"; then
+        return 1
+    fi
+    if [ -f "$policy_root/.cratis/ai.manifest.json" ] || [ -d "$policy_root/.cratis/ai" ]; then
         if control_match "$target_rel" '.cratis/ai/*'; then return 0; fi
-        if control_match "$target_rel" '.claude/*' '.pi/*'; then
+        if [ -f "$policy_root/.cratis/ai.manifest.json" ] && control_match "$target_rel" '.claude/*' '.pi/*'; then
             # Integration paths, not corpus Files, establish adapter ownership.
             managed="$(jq -r '
                 (.Integrations // []) | if type != "array" then empty else
@@ -301,38 +432,53 @@ agent_control_target() {
                 if control_match "$target_rel" "$pattern"; then return 0; fi
             done <<<"$managed"
         fi
-    else
-        # The corpus is authored source in Cratis/AI, not a managed installation.
-        repository_origin "$policy_root"
-        if origin_matches '^(https://github\.com/|git@github\.com:|ssh://git@github\.com(:[0-9]+)?/)cratis/ai(\.git)?/?$'; then
-            return 1
-        fi
     fi
     control_match "$target_rel" "${control_patterns[@]}"
 }
 
-# ── 1. Generated files ────────────────────────────────────────────────────────
-# The marker must be a real header: a comment opener at the start of one of the first few lines.
-# Merely *mentioning* the string — documentation, a rule file, this corpus — is not a match.
-marker='^[[:space:]]*(//|/\*|#|<!--)[[:space:]]*@generated by Cratis'
-
-# True when one of the first five lines of stdin carries the marker (head -n 5 | grep -E, without forks).
-first_lines_carry_marker() {
-    local LC_ALL=C line count=0
-    while [ "$count" -lt 5 ] && { IFS= read -r line || [ -n "$line" ]; }; do
-        count=$((count + 1))
-        # shellcheck disable=SC2034
-        [[ "$line" =~ $marker ]] && return 0
-    done
-    return 1
+# ── Dependency manifests, lockfiles, SDK and NuGet configuration ──────────────
+# Policy of one repository root: a boolean allowDependencyManifestWrites wins, else a github.com/Cratis origin.
+repository_manifest_policy() {
+    local setting="" root="$1"
+    if [ -f "$root/.cratis/ai.json" ]; then
+        # Only actual booleans override the default; jq's `// empty` would discard false.
+        setting="$(jq -r '.allowDependencyManifestWrites | select(type == "boolean") | tostring' "$root/.cratis/ai.json" 2>/dev/null)" || parser_failed
+    fi
+    case "$setting" in
+        true) return 0 ;;
+        false) return 1 ;;
+    esac
+    repository_origin "$root"
+    # Anchor host, owner and the single repository segment; never infer ownership from profiles.
+    origin_matches '^(https://github\.com/|git@github\.com:|ssh://git@github\.com(:[0-9]+)?/)cratis/[a-z0-9_.-]+/?$'
 }
 
-# ── 2. Dependency manifests, lockfiles, SDK and NuGet configuration ───────────
+# The session's policy, computed once. The session is fixed by the harness (CLAUDE_PROJECT_DIR, else the checkout
+# holding this script), never by the write target, the payload cwd or the shell's working directory.
+# Anything that cannot be determined blocks.
+session_manifest_policy=""
+session_manifests_allowed() {
+    if [ -z "$session_manifest_policy" ]; then
+        local session_root
+        session_manifest_policy=1
+        # A session the harness named but that is not a directory is undeterminable, never the script's checkout.
+        if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ ! -d "$CLAUDE_PROJECT_DIR" ]; then return 1; fi
+        if session_root="$(hook_repo_root 2>/dev/null)" && session_root="$(git -C "$session_root" rev-parse --show-toplevel 2>/dev/null)"; then
+            if repository_manifest_policy "$session_root"; then session_manifest_policy=0; fi
+        fi
+    fi
+    return "$session_manifest_policy"
+}
+
+# Whether the repository owning $1 (an absolute path) permits manifest writes; the session decides first.
 manifest_writes_allowed() {
-    local setting="" directory policy_root start="$PWD"
-    # Authorization belongs to the write target, which may be outside the session's checkout.
+    local target="$1" directory policy_root start="$PWD"
+    # A prefix that cannot be resolved is never trusted.
+    [ "$kernel_strict" != 1 ] || return 1
+    # The session decides first; the target is only consulted to tighten it.
+    session_manifests_allowed || return 1
     # New files can have nonexistent parents; find their nearest existing directory first.
-    dir_of "$file"
+    dir_of "$target"
     directory="$REPLY"
     while [ ! -d "$directory" ]; do
         [ "$directory" != "/" ] || return 1
@@ -342,43 +488,57 @@ manifest_writes_allowed() {
     # Follow existing directory symlinks before asking Git which repository owns the target.
     cd -P "$directory" 2>/dev/null || return 1
     directory="$PWD"
-    cd "$start" 2>/dev/null || true
+    cd "$start" 2>/dev/null || working_directory_lost
     policy_root="$(git -C "$directory" rev-parse --show-toplevel 2>/dev/null)" || return 1
-    if [ -f "$policy_root/.cratis/ai.json" ]; then
-        # Only actual booleans override the default; jq's `// empty` would discard false.
-        setting="$(jq -r '.allowDependencyManifestWrites | select(type == "boolean") | tostring' "$policy_root/.cratis/ai.json" 2>/dev/null)" || parser_failed
-    fi
-    case "$setting" in
-        true) return 0 ;;
-        false) return 1 ;;
-    esac
-    repository_origin "$policy_root"
-    # Anchor host, owner and the single repository segment; never infer ownership from profiles.
-    origin_matches '^(https://github\.com/|git@github\.com:|ssh://git@github\.com(:[0-9]+)?/)cratis/[a-z0-9_.-]+/?$'
+    repository_manifest_policy "$policy_root"
 }
 
-# Return the category, leaving normal Write/Edit diagnostics unchanged below.
-classify_file() {
-    local reference_pattern="${2:-0}"
-    abspath "$1" "$cwd"; normalize_target_path "$REPLY"; file="$REPLY"
+# Judge $file (already absolute and normalized) and its physical destination.
+classify_resolved() {
+    local physical_base=""
     base_of "$file"; base="$REPLY"
     physical_target_path "$file" || physical_file=""
+    if [ -n "$physical_file" ]; then base_of "$physical_file"; physical_base="$REPLY"; fi
     if agent_control_target "$file" || { [ -n "$physical_file" ] && agent_control_target "$physical_file"; }; then
         classification=controls; return 0
     fi
-    if [ -f "$file" ] && first_lines_carry_marker 2>/dev/null <"$file" && LC_ALL=C grep -Iq . "$file" 2>/dev/null; then
-        classification=generated; return 0
+    if names_match "$base" "${manifest_patterns[@]}" || names_match "$physical_base" "${manifest_patterns[@]}"; then
+        # The addressed and the fully resolved destination are both authorized; either may refuse.
+        if manifest_writes_allowed "$file" && { [ -z "$physical_file" ] || manifest_writes_allowed "$physical_file"; }; then
+            # Preserve reference-pattern policy when resolution leaves the basename unchanged.
+            [ "$base" != "$physical_base" ] || return 1
+        else
+            classification=manifest; return 0
+        fi
     fi
-    if [ -n "$new_content" ] && first_lines_carry_marker <<<"$new_content"; then classification=content; return 0; fi
-    if names_match "$base" "${manifest_patterns[@]}"; then
-        if manifest_writes_allowed; then return 1; fi
-        classification=manifest; return 0
+    if names_match "$base" "${environment_patterns[@]}" || names_match "$physical_base" "${environment_patterns[@]}"; then
+        classification=environment; return 0
     fi
-    if names_match "$base" "${environment_patterns[@]}"; then classification=environment; return 0; fi
     return 1
 }
 
+# Return the category, leaving normal Write/Edit diagnostics unchanged below. A path with parent references is
+# judged on its lexical form and on the form the kernel opens; either may refuse it.
+classify_file() {
+    # reference_pattern is read by names_match and control_match through dynamic scope.
+    local raw reference_pattern="${2:-0}"
+    abspath "$1" "$cwd"; raw="$REPLY"
+    normalize_target_path "$raw"; file="$REPLY"
+    kernel_strict=0
+    if classify_resolved; then return 0; fi
+    case "$raw" in */.. | */../*) ;; *) return 1 ;; esac
+    kernel_target_path "$raw"
+    [ "$REPLY" != "$file" ] || [ "$kernel_strict" = 1 ] || return 1
+    file="$REPLY"
+    classify_resolved
+}
+
 if [ "$reference_mode" = 1 ]; then
+    reference_root="$cwd"
+    while [ ! -e "$reference_root/.git" ]; do
+        if [ "$reference_root" = / ]; then reference_root=''; break; fi
+        dir_of "$reference_root"; reference_root="$REPLY"
+    done
     candidates=() parser_status=""
     while IFS= read -r -d '' candidate; do candidates[${#candidates[@]}]="$candidate"; done < <(
         jq -j 'if type == "array" and length <= 256 and all(.[]; type == "string" and (explode | all(.[]; . != 0 and . != 9 and . != 10 and . != 13)))
@@ -391,10 +551,13 @@ if [ "$reference_mode" = 1 ]; then
     unset 'candidates[last]'
     new_content=""
     for candidate in "${candidates[@]}"; do
+        # Reflog selectors name revisions, unless the prefix or the literal path (or its symlink target) is protected.
+        if [[ "$candidate" =~ ^[A-Za-z0-9._/-]*@\{(-?[0-9]+|upstream|push|u)\}$ ]] \
+            && ! classify_file "${candidate%@*}" && ! classify_file "$candidate"; then continue; fi
         reference_pattern=0
-        case "$candidate" in *'*'* | *'?'* | *'['* | *'{'*) reference_pattern=1 ;; esac
+        case "$candidate" in *'*'* | *'?'* | *'['* | *'{'* | *'@('* | *'+('* | *'!('*) reference_pattern=1 ;; esac
         if classify_file "$candidate" "$reference_pattern"; then printf '%s\n' "$candidate"; continue; fi
-        # Existing generated files can have arbitrary names; inspect actual glob matches too.
+        # Inspect actual glob matches too, including symlinks to protected targets.
         if [ "$reference_pattern" = 1 ]; then
             count=0
             while IFS= read -r expanded; do
@@ -412,12 +575,6 @@ case "$classification" in
     controls) block \
         "This target controls the agent's permissions or extensions, or belongs to an installed managed corpus/adapter tree. Agent Write/Edit calls may not alter their own controls or managed instructions." \
         "Instead: report the intended change. Use 'cratis ai update' for managed files, or let a person change settings. An explicitly authorized protected write requires CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1 in the harness environment. Do not retry through a shell write." ;;
-    generated) block \
-        "This file is generated output (its header marks it as generated by Cratis). Rule 15 [contract] in .cratis/ai/rules/general.md: never edit a generated file — the next build overwrites it." \
-        "Instead: change the C# source it is generated from (the [Command] / [ReadModel] record) and rebuild with 'dotnet build -c Debug' to regenerate the proxy." ;;
-    content) block \
-        "The content being written opens with a Cratis generated-file header. Proxies are produced by the Cratis proxy generator, never hand-written." \
-        "Instead: write the C# source and run 'dotnet build -c Debug' to generate the proxy." ;;
     manifest) block \
         "'$base' is a dependency manifest / lockfile / SDK or NuGet configuration file. .cratis/ai/rules/general.md (Source-of-Truth Discipline): don't change these unless explicitly asked." \
         "To allow dependency updates for this repository, set allowDependencyManifestWrites to true in .cratis/ai.json. If the user explicitly asked for this change, re-run the tool call with CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1 exported. Otherwise take the dependency as given and solve the problem in source." ;;

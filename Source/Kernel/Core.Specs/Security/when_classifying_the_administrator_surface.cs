@@ -38,9 +38,10 @@ public class when_classifying_the_administrator_surface : Specification
         var required = given.administrator_surface_policy.Required.ContainsKey(command.FullName!);
         var guarded = system_store_command_policy.Guarded.Contains(command.FullName!);
         var exempt = given.administrator_surface_policy.ExemptCommands.TryGetValue(command.FullName!, out var reason);
-        ((required ? 1 : 0) + (guarded ? 1 : 0) + (exempt ? 1 : 0)).ShouldEqual(1);
+        (required || guarded).ShouldNotEqual(exempt);
         if (exempt) string.IsNullOrWhiteSpace(reason).ShouldBeFalse();
-        if (guarded) Policy(command).ShouldBeNull(); // P1 reserves System instead of granting administrators a public write bypass.
+        if (guarded && !required) Policy(command).ShouldBeNull(); // P1 reserves System instead of granting administrators a public write bypass.
+        if (guarded && required) given.administrator_surface_policy.Required[command.FullName!].ShouldEqual(WellKnownAuthorizationPolicies.Administrator);
     }
 
     [Theory]

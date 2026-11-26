@@ -24,12 +24,30 @@ These properties live at the root of `chronicle.json`.
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | port | number | 35000 | By default, gRPC (HTTP/2) and Workbench/API/OAuth/health (HTTP/1.1) over TLS; HTTP/2-only h2c when `tls.enabled=false` |
+| strictEventTypeSchemaEventStores | string array | `[]` | Event stores that reject in-place additive schema evolution. Matching is case-sensitive. Client-owned event types can evolve additively in every other store. |
+| additiveEventTypeSchemaEvolutionEventStores | string array | `[]` | Deprecated and ignored. Retained for configuration compatibility; use `strictEventTypeSchemaEventStores` to opt out instead. |
 | bindTimeout | time span | 00:00:30 | How long to retry a port bind that fails with EADDRINUSE |
 | healthCheckEndpoint | string | /health | Health check endpoint path |
 | maxReceiveMessageSize | number | 104857600 | The largest gRPC message in bytes the kernel accepts from a client, 100 MB by default. Remove the limit with `null` |
 | maxSendMessageSize | number | unlimited | The largest gRPC message in bytes the kernel sends to a client |
 | startup.busySiloWaitLimit | time span | 02:00:00 | How long a startup step waits for a silo that is up but not answering before the server stops |
 | shutdown.drainTimeout | time span | 00:00:08 | Shared budget for joining local observer work and draining appended-event queues at shutdown |
+
+## Additive event type schema evolution
+
+Client-owned event types accept compatible in-place additions in every event store by default. To keep strict generation validation for one event store, configure the following at the root of `chronicle.json` on every kernel silo:
+
+```json
+{
+  "strictEventTypeSchemaEventStores": ["Orders"]
+}
+```
+
+The environment-variable equivalent is `Cratis__Chronicle__StrictEventTypeSchemaEventStores__0=Orders`. Add further entries using `__1`, `__2`, and so on. Event store names match exactly, including case. An empty array (the default) opts no stores out. Clients cannot override this policy through registration payloads, and kernel-owned system event types are always excluded from in-place evolution. Changing the configuration requires the normal server configuration rollout; applying an allowed schema addition afterward does not require a restart.
+
+The former `additiveEventTypeSchemaEvolutionEventStores` option is deprecated and ignored. Existing configurations still bind, but that list no longer restricts evolution to the named stores and cannot override the strict list. A populated legacy list produces a startup warning. When upgrading, add any stores that must retain strict validation to `strictEventTypeSchemaEventStores`.
+
+See [Evolving event schemas](../../understanding-event-evolution.md#optional-in-place-additions) for the compatibility rules, audit trail, and historical-data limitations.
 
 ## Bind timeout
 
@@ -52,13 +70,13 @@ Timeouts against a silo the cluster does not report as active still count as att
 
 ## Graceful shutdown
 
-`shutdown.drainTimeout` gives all local observers and appended-event queues one shared shutdown deadline, rather than a separate timeout per observer. Chronicle caps the budget at the host shutdown timeout minus two seconds; the server's default ten-second host timeout therefore permits at most eight seconds of draining. The effective budget is logged at startup.
+`shutdown.drainTimeout` gives all local observers and appended-event queues one shared shutdown deadline, rather than a separate timeout per observer. It defaults to eight seconds. `shutdown.hostShutdownReserve` adds five seconds by default for Orleans silo stop, reminders, and hosted services after draining. The server derives its host shutdown timeout from their sum: thirteen seconds by default. Chronicle caps the effective drain budget at the host shutdown timeout minus the configured reserve, and logs it at startup.
 
-Set `Cratis__Chronicle__Shutdown__DrainTimeout=00:00:05` to use a five-second budget. A zero timeout skips waiting. Leave your orchestrator enough termination grace for the host shutdown timeout.
+Set `Cratis__Chronicle__Shutdown__DrainTimeout=00:00:05` to use a five-second drain budget, or `Cratis__Chronicle__Shutdown__HostShutdownReserve=00:00:07` to reserve seven seconds after draining. A zero drain timeout skips waiting. The host shutdown reserve must be greater than zero. Leave your orchestrator enough termination grace for the total host shutdown timeout.
 
 Shutdown refuses new observer service calls, joins admitted catch-up and replay work, and flushes local bulk windows without promoting an unfinished replay. If the deadline expires, Chronicle cancels MongoDB bulk writes and logs the affected observer, partitions, and event sequence numbers when available. Cancellation means the write outcome is unknown, not that MongoDB rolled it back. Unconfirmed writes do not advance handled positions; failed partitions are recorded best-effort only while time remains.
 
-The host shutdown timeout is ten seconds. A stop that takes all of it counts as timed out, even when no service reports a failure, because a timed-out service usually just returns late. The process exit code tells your orchestrator how the server stopped:
+The default host shutdown timeout is thirteen seconds. A stop that takes all of it counts as timed out, even when no service reports a failure, because a timed-out service usually just returns late. The process exit code tells your orchestrator how the server stopped:
 
 | Exit code | When | Log entry |
 | --- | --- | --- |
@@ -82,13 +100,15 @@ The kernel tracks which clients are connected. These settings live under `connec
 | connectedClients.staleThresholdSeconds | number | 5 | Seconds a client can go unseen before it is considered disconnected. Raise it only if healthy clients are dropped on a slow network |
 | connectedClients.observeIntervalSeconds | number | 1 | Seconds between observations of the connected clients for observers |
 | connectedClients.keepAliveIntervalSeconds | number | 1 | Seconds between keep-alive messages the kernel sends to a connected client |
+| connectedClients.graceSeconds | number | 2 | Seconds a connect or a keep-alive waits for the kernel's own bookkeeping, which is done by grains, before it answers anyway. The bookkeeping and the cluster-wide check that no other caller holds the connection carry on in the background; a refusal that arrives after the connection was served ends the stream. A client is never left waiting for a saturated grain |
+| connectedClients.keeperMode | string | `SiloLocal` | How the open stream of a client confirms that its reactor and reducer subscriptions are intact. `SiloLocal` confirms the subscription of a dormant observer whose record names this client on this silo without asking it, so the observer is not woken and the client's grains are not kept in memory for it; every other observer is asked.  `Legacy` calls the client's grains on every check. See [Keeping client subscriptions](#keeping-client-subscriptions) |
 | servers.observeIntervalSeconds | number | 5 | Seconds between observations of server instances for the live Workbench view |
 
 ### Keeping client subscriptions
 
 The subscription of a connected reactor or reducer exists only in the memory of the kernel's grain activations. A silo that leaves the cluster takes the activations it hosted with it, and the remaining silos deactivate the activations whose directory entries it owned. The client stays connected and never registers again, so the kernel restores the subscription from the open observation stream.
 
-Each stream checks its subscription with two grain calls. How often depends on what the kernel knows:
+Each stream checks its subscription with two grain calls, or, with the default `keeperMode`, for an observer that is [dormant](observers.md#releasing-dormant-observers) and recorded this client, without calling an observer or a client grain (the records of a namespace are read once and shared by every stream). Every other observer is checked with the grain calls. How often depends on what the kernel knows:
 
 - A new subscription, one that was just restored, and one whose check failed are checked every `reviseIntervalSeconds`, until a check finds the subscription intact. So is a client the observer only holds as a superseded registration during a client rollout, and an inactive reducer whose registration is still held back for a webhook.
 - When a silo starts shutting down, and again when it is declared dead, every stream on the remaining silos checks within one `reviseIntervalSeconds`, spread over that interval, and then every `reviseIntervalSeconds` for `subscriptionSettleSeconds`. During a rolling deployment the kernel is therefore back at one check per subscription every `reviseIntervalSeconds` for as long as silos keep leaving.
@@ -107,6 +127,10 @@ These bounds cover the observer's subscription only. Delivery to a subscribed ob
 The settle window relies on how the kernel runs Orleans: the classic grain directory, no activation repartitioning or rebalancing, and no memory-based activation shedding. With any of those enabled, a silo joining or activations moving would lose subscriptions that only the safety net restores.
 
 Environment variables use the `Cratis__Chronicle__ConnectedClients__` and `Cratis__Chronicle__Servers__` prefixes. See [Azure container hosting](../azure-container-hosting.md) for why keep-alive and stale threshold matter for scale-to-zero platforms.
+
+## Overload
+
+The `overload` section sets when a silo reports itself as [overloaded](health-endpoint.md#kernel-overload): `enabled` (true), `maxOldestPendingCallAgeSeconds` (15), `maxPendingCalls` (2000), `maxRunningCalls` (2000) and `recoverySeconds` (30). Environment variables use the `Cratis__Chronicle__Overload__` prefix.
 
 ## Message sizes
 

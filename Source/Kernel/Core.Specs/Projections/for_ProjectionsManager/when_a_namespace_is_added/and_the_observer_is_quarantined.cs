@@ -12,5 +12,5 @@ public class and_the_observer_is_quarantined : given.a_manager_with_a_quarantine
     Task Because() => _onNamespaceAdded(new NamespaceAdded(_observerKey.EventStore, _observerKey.Namespace));
 
     [Fact] async Task should_end_quarantine() => (await _observer.IsObserverQuarantined()).ShouldBeFalse();
-    [Fact] async Task should_use_fresh_subscription_without_reviving_retirement() => await _managedObserver.Received(1).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: false);
+    [Fact] async Task should_use_fresh_subscription_without_reviving_retirement() => await _managedObserver.Received(1).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), reactivateRetired: false);
 }

@@ -48,6 +48,8 @@ module Exams
         memberId  MemberId
         produces event ExamBooked
           memberId MemberId = memberId
+      screen BookExam
+        action BookExam for screen
       specification BookingAnExam
         given caller
           authenticated

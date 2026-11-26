@@ -139,6 +139,8 @@ module Billing
         invoiceId InvoiceId identifier
         authorize CanManage
         produces event InvoiceCancelled
+      screen CancelInvoice
+        action CancelInvoice for screen
       specification CancellingAnInvoice
         given caller
           authenticated
@@ -219,6 +221,8 @@ module Billing
         produces event PaymentRecorded
           invoiceId InvoiceId = invoiceId             // cross-stream reference is payload
           amount Decimal = amount
+      screen RecordPayment
+        action RecordPayment for screen
       specification RecordingAPayment
         given caller
           authenticated
@@ -253,6 +257,8 @@ module Housekeeping                                   // no gates: this reaction
       // No command spec here: under ESM v6 it must list the ReminderSent cascade. The file is
       // RecordingAPayment's cascade: an older bundled compiler reported a false PLAY0285 here.
       // The cascade form: automation-translate-example.md (SubscribingAMember).
+      screen MarkOverdue
+        action MarkOverdue for screen
 
     slice Automation RemindOverdue
       reaction Reminder

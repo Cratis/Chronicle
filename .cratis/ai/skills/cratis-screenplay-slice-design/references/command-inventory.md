@@ -115,6 +115,8 @@ module Rentals
           bikeId BikeId = bikeId
           startTime DateTime = startTime
           reservedAt DateTime = $context.occurred
+      screen ReserveBike
+        action ReserveBike for screen
 
       specification RejectingAStartTimeInThePast
         given clock "2026-06-01T09:00:00Z"

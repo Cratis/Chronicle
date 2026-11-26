@@ -19,7 +19,7 @@ public class and_a_new_definition_has_a_pending_subscription : given.a_projectio
         _incoming = CreateDefinition("the-projection", "the-read-model");
         _readModelDefinitions = [CreateReadModelDefinition("the-read-model")];
         _observerGrain
-            .Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: true)
+            .Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), reactivateRetired: true)
             .Returns(_ =>
             {
                 _subscriptionStarted.SetResult();
@@ -44,6 +44,6 @@ public class and_a_new_definition_has_a_pending_subscription : given.a_projectio
     }
 
     [Fact] void should_wait_for_the_default_namespace_subscription_before_returning() => _registrationCompletedBeforeSubscription.ShouldBeFalse();
-    [Fact] async Task should_subscribe_the_projection_observer() => await _observerGrain.Received(1).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), reactivateRetired: true);
+    [Fact] async Task should_subscribe_the_projection_observer() => await _observerGrain.Received(1).Subscribe<IProjectionObserverSubscriber>(ObserverType.Projection, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), reactivateRetired: true);
     [Fact] void should_register_the_definition_after_subscription_completes() => _state.Projections.ShouldContainOnly(_incoming);
 }

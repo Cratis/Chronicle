@@ -81,6 +81,21 @@ public class ChronicleOptions : IValidatableObject
     public Events Events { get; init; } = new Events();
 
     /// <summary>
+    /// Gets the event stores that retain strict event type schema validation instead of allowing additive evolution.
+    /// Empty by default, allowing client-owned event types to evolve additively in every event store.
+    /// Kernel and system event types always retain strict generation validation.
+    /// Configure array entries through Cratis__Chronicle__StrictEventTypeSchemaEventStores__0.
+    /// </summary>
+    public IEnumerable<string> StrictEventTypeSchemaEventStores { get; init; } = [];
+
+    /// <summary>
+    /// Gets the deprecated additive schema evolution opt-in list. This option is ignored.
+    /// Additive evolution is enabled by default; use <see cref="StrictEventTypeSchemaEventStores"/> to opt out.
+    /// </summary>
+    [Obsolete("Ignored. Additive schema evolution is enabled by default. Use StrictEventTypeSchemaEventStores to opt out.")]
+    public IEnumerable<string> AdditiveEventTypeSchemaEvolutionEventStores { get; init; } = [];
+
+    /// <summary>
     /// Gets the shared shutdown drain configuration.
     /// </summary>
     public Shutdown Shutdown { get; init; } = new();
@@ -164,6 +179,16 @@ public class ChronicleOptions : IValidatableObject
     /// Gets the connected clients configuration.
     /// </summary>
     public Clients ConnectedClients { get; init; } = new Clients();
+
+    /// <summary>
+    /// Gets the configuration for how the kernel takes in registrations from clients.
+    /// </summary>
+    public Registration Registration { get; init; } = new();
+
+    /// <summary>
+    /// Gets the limits that decide when a silo reports itself as overloaded.
+    /// </summary>
+    public Overload Overload { get; init; } = new Overload();
 
     /// <summary>
     /// Gets the server instance diagnostics configuration.
@@ -277,48 +302,93 @@ public class ChronicleOptions : IValidatableObject
     }
 
     /// <inheritdoc/>
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
+        new Func<IEnumerable<ValidationResult>>[]
+        {
+            ValidateTelemetry,
+            () => StorageValidation.Validate(Storage),
+            ValidateFederation,
+            ValidateReadModels,
+            ValidateSingleWriterLeaseAndAlerts,
+            () => ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key)),
+            ValidateConstraintIndexRepair,
+            ValidateShutdown,
+            ValidateSinksAsEnumerable,
+            ValidateStartup,
+            ValidateWebhooks
+        }.SelectMany(_ => _());
+
+    IEnumerable<ValidationResult> ValidateConstraintIndexRepair() => ConstraintIndexRepair.Validate();
+
+    IEnumerable<ValidationResult> ValidateTelemetry()
     {
-        if (Telemetry.RequiresHashKey &&
-            (string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) || Telemetry.EventSourceIdHashKey.Length < IdentifierHasher.MinimumKeyLength))
+        if (Telemetry.RequiresHashKey && !HasValidHashKey())
         {
             yield return new ValidationResult(
                 "Telemetry:EventSourceIdHashKey must be at least 32 characters when Hashed is used",
                 [$"{nameof(Telemetry)}.{nameof(Telemetry.EventSourceIdHashKey)}"]);
         }
+    }
 
-        foreach (var error in StorageValidation.Validate(Storage)) yield return error;
+    bool HasValidHashKey() =>
+        !string.IsNullOrEmpty(Telemetry.EventSourceIdHashKey) && Telemetry.EventSourceIdHashKey.Length >= IdentifierHasher.MinimumKeyLength;
 
+    IEnumerable<ValidationResult> ValidateFederation()
+    {
         if (Federation.Enabled && (Federation.Port == Port || Federation.Port == DedicatedHealthPort))
         {
             yield return new ValidationResult(
                 "Federation:Port must differ from the main port and the dedicated health port; federation is served on its own listener.",
                 [$"{nameof(Federation)}.{nameof(Federation.Port)}"]);
         }
+    }
 
+    IEnumerable<ValidationResult> ValidateReadModels()
+    {
         if (ReadModels.MaxBatchSize <= 0)
         {
             yield return new ValidationResult(
                 "ReadModels.MaxBatchSize must be greater than zero.",
                 [$"{nameof(ReadModels)}.{nameof(ReadModels.MaxBatchSize)}"]);
         }
+    }
 
+    IEnumerable<ValidationResult> ValidateSingleWriterLeaseAndAlerts()
+    {
         var alertErrors = Alerts.Conditions
             .Where(_ => _.Value.RaiseAfter < TimeSpan.Zero)
             .Select(_ => new ValidationResult(
                 $"Alerts.Conditions['{_.Key}'].RaiseAfter must be non-negative; zero raises immediately.",
                 [$"{nameof(Alerts)}.{nameof(Alerts.Conditions)}[{_.Key}].{nameof(AlertConditionOptions.RaiseAfter)}"]));
-        foreach (var error in ValidateSingleWriterLease().Concat(alertErrors)) yield return error;
-        foreach (var error in ObserverRetryOverrides.SelectMany(_ => _.Value.Validate(_.Key))) yield return error;
-        foreach (var error in ConstraintIndexRepair.Validate()) yield return error;
+        return ValidateSingleWriterLease().Concat(alertErrors);
+    }
+
+    IEnumerable<ValidationResult> ValidateSinksAsEnumerable()
+    {
         if (ValidateSinks() is { } sinksError) yield return sinksError;
+    }
+
+    IEnumerable<ValidationResult> ValidateStartup()
+    {
         if (Startup.BusySiloWaitLimit < TimeSpan.Zero)
         {
             yield return new ValidationResult("Startup.BusySiloWaitLimit must be non-negative.", [$"{nameof(Startup)}.{nameof(Configuration.Startup.BusySiloWaitLimit)}"]);
         }
+    }
+
+    IEnumerable<ValidationResult> ValidateWebhooks()
+    {
         if (!Webhooks.Probe.HasValidTiming)
         {
             yield return new ValidationResult("Invalid webhook probe timing settings.", [$"{nameof(Webhooks)}.{nameof(Configuration.Webhooks.Probe)}"]);
+        }
+    }
+
+    IEnumerable<ValidationResult> ValidateShutdown()
+    {
+        if (Shutdown.HostShutdownReserve <= TimeSpan.Zero)
+        {
+            yield return new ValidationResult("Shutdown.HostShutdownReserve must be greater than zero.", ["Shutdown.HostShutdownReserve"]);
         }
     }
 

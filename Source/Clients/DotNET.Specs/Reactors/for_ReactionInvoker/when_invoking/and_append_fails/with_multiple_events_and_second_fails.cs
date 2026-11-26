@@ -36,15 +36,14 @@ public class with_multiple_events_and_second_fails : Specification
         _eventStore.EventLog.Returns(_eventLog);
         _eventStore.EventTypes.Returns(eventTypes);
 
-        _failedAppendResult = AppendManyResult.Failed(
-            CorrelationId.New(),
-            [new ConstraintViolation(
-                new EventTypeId("MyOutboundEvent"),
-                EventSequenceNumber.Unavailable,
-                ConstraintType.Unique,
-                "TestConstraint",
-                "Constraint violated on second event",
-                new ConstraintViolationDetails())]);
+        var violation = new ConstraintViolation(
+            new EventTypeId("MyOutboundEvent"),
+            EventSequenceNumber.Unavailable,
+            ConstraintType.Unique,
+            "TestConstraint",
+            "Constraint violated on second event",
+            new ConstraintViolationDetails());
+        _failedAppendResult = AppendManyResult.Failed(CorrelationId.New(), [violation]);
 
         _eventLog.AppendMany(default!, default!, default, default, default, default, default, default, default, default)
             .ReturnsForAnyArgs(_failedAppendResult);

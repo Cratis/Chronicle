@@ -46,6 +46,8 @@ module Invoicing
         discount  DiscountPercentage
         produces event DiscountGranted
           discount DiscountPercentage = discount
+      screen GrantDiscount
+        action GrantDiscount for screen
       specification GrantingAValidDiscount
         when GrantDiscount
           invoiceId = "9c858901-8a57-4791-81fe-4c455b099bc9"

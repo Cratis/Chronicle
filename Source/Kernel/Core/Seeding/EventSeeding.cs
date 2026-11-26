@@ -23,12 +23,14 @@ namespace Cratis.Chronicle.Seeding;
 /// <param name="state">The <see cref="IPersistentState{T}"/> for the seeding data.</param>
 /// <param name="grainFactory">The <see cref="IGrainFactory"/> for resolving namespace grains.</param>
 /// <param name="logger">The <see cref="ILogger"/> for logging.</param>
+/// <param name="timeProvider">The clock for constraint index retry delays, or the system clock when omitted.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.EventSeeding)]
 public class EventSeeding(
     [PersistentState(nameof(EventSeeds), WellKnownGrainStorageProviders.EventSeeding)]
     IPersistentState<EventSeeds> state,
     IGrainFactory grainFactory,
-    ILogger<EventSeeding> logger) : Grain, IGlobalEventSeeding
+    ILogger<EventSeeding> logger,
+    TimeProvider? timeProvider = null) : Grain, IGlobalEventSeeding
 {
     /// <summary>
     /// The maximum number of events to append in a single batch during seeding.
@@ -38,8 +40,26 @@ public class EventSeeding(
     /// </remarks>
     const int SeedingBatchSize = 100;
 
+    /// <summary>
+    /// The maximum number of retry delays within a namespace, also capped by the run-wide time budget.
+    /// </summary>
+    const int MaxIndexWaitDelays = 4;
+
+    /// <summary>
+    /// Carries the remaining run-wide wait allowance to a namespace grain without changing its contract.
+    /// </summary>
+    const string IndexWaitBudgetKey = "Cratis.Chronicle.Seeding.IndexWaitBudgetTicks";
+
+    /// <summary>
+    /// Caps intentional index waits across a run, including namespace dispatches, at four seconds.
+    /// Append and dispatch execution time is not bounded by this retry budget.
+    /// </summary>
+    static readonly TimeSpan _maxIndexWait = TimeSpan.FromSeconds(4);
+
     EventSeedingKey _key = EventSeedingKey.NotSet;
     IEventSequence? _eventSequence;
+
+    TimeProvider Clock => timeProvider ?? TimeProvider.System;
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -97,13 +117,18 @@ public class EventSeeding(
                 new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
                 new Dictionary<EventSourceId, IEnumerable<SeededEventEntry>>());
 
+        var remaining = RequestContext.Get(IndexWaitBudgetKey) is long ticks
+            ? TimeSpan.FromTicks(Math.Clamp(ticks, 0, _maxIndexWait.Ticks))
+            : _maxIndexWait;
+        var waitBudget = new IndexWaitBudget(remaining);
+
         // For global grains, store the entries and apply to all existing namespaces
         return _key.IsGlobal
-            ? await SeedGlobally(entriesList, authoritative, owner)
-            : await SeedNamespace(entriesList);
+            ? await SeedGlobally(entriesList, authoritative, owner, waitBudget)
+            : await SeedNamespace(entriesList, waitBudget);
     }
 
-    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList, bool authoritative, string owner)
+    async Task<SeedingResult> SeedGlobally(List<SeedingEntry> entriesList, bool authoritative, string owner, IndexWaitBudget waitBudget)
     {
         var offered = entriesList.Select(entry => ToSeededEntry(entry) with
         {
@@ -128,7 +153,7 @@ public class EventSeeding(
         // that throws mid-loop would never be retried - on retry IsAlreadySeeded would report the
         // entries as seeded, the dispatch would be skipped, and the remaining namespaces would
         // never receive the events.
-        var everyNamespaceSeeded = await DispatchGlobally(growingEntries);
+        var everyNamespaceSeeded = await DispatchGlobally(growingEntries, waitBudget);
 
         // A namespace that declined part of what it was given is the same situation as one that threw:
         // the entries are still waiting. Committing the tracking here would mean they are never
@@ -149,7 +174,7 @@ public class EventSeeding(
         return SeedingResult.Complete;
     }
 
-    async Task<bool> DispatchGlobally(List<SeedingEntry> entries)
+    async Task<bool> DispatchGlobally(List<SeedingEntry> entries, IndexWaitBudget waitBudget)
     {
         if (entries.Count == 0)
         {
@@ -164,14 +189,39 @@ public class EventSeeding(
             logger.ApplyingSeedsToNamespace(ns.Value);
             var namespaceKey = EventSeedingKey.ForNamespace(_key.EventStore, ns);
             var nsGrain = grainFactory.GetGrain<IResultAwareEventSeeding>(namespaceKey.ToString());
-            var result = await nsGrain.SeedWithResult(entries);
+            var result = await DispatchNamespaceWithBudget(nsGrain, entries, waitBudget);
             everyNamespaceSeeded &= result.AllEntriesSeeded;
         }
 
         return everyNamespaceSeeded;
     }
 
-    async Task<SeedingResult> SeedNamespace(List<SeedingEntry> entriesList)
+    async Task<SeedingResult> DispatchNamespaceWithBudget(IResultAwareEventSeeding namespaceGrain, List<SeedingEntry> entries, IndexWaitBudget waitBudget)
+    {
+        var previous = RequestContext.Get(IndexWaitBudgetKey);
+        RequestContext.Set(IndexWaitBudgetKey, waitBudget.Remaining.Ticks);
+        var started = Clock.GetTimestamp();
+        try
+        {
+            return await namespaceGrain.SeedWithResult(entries);
+        }
+        finally
+        {
+            // Request context flows to the namespace grain, not back from it. Charging the whole call's
+            // elapsed time conservatively accounts for its waits without changing the grain contract.
+            waitBudget.ChargeElapsed(Clock.GetElapsedTime(started));
+            if (previous is null)
+            {
+                RequestContext.Remove(IndexWaitBudgetKey);
+            }
+            else
+            {
+                RequestContext.Set(IndexWaitBudgetKey, previous);
+            }
+        }
+    }
+
+    async Task<SeedingResult> SeedNamespace(List<SeedingEntry> entriesList, IndexWaitBudget waitBudget)
     {
         // For namespace-specific grains, append events to the sequence
         // _eventSequence is guaranteed to be non-null here since we're in the non-global branch
@@ -201,12 +251,7 @@ public class EventSeeding(
         var anythingAppended = false;
         foreach (var batch in seedableEvents.Chunk(SeedingBatchSize))
         {
-            var result = await _eventSequence.AppendMany(
-                batch.Select(_ => _.ToAppend),
-                CorrelationId.New(),
-                causation,
-                Identity.System,
-                new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+            var result = await AppendBatchWithIndexWait(_eventSequence, batch, causation, waitBudget);
 
             if (!result.IsSuccess)
             {
@@ -215,25 +260,13 @@ public class EventSeeding(
                 // strand the batches that did append, since their tracking is persisted below. The
                 // remaining batches are unrelated events that share nothing with the rejected one but a
                 // chunk index, so they are still worth appending.
-                // Counts and constraint names only. An event source id is the compliance subject by default, and
-                // a constraint violation message embeds it, so neither belongs in a log line that outlives the
-                // subject's erasure.
-                logger.SeededEventsRejected(
-                    batch.Length,
-                    _key.EventStore.Value,
-                    _key.Namespace.Value,
-                    string.Join(", ", result.ConstraintViolations.Select(_ => _.ConstraintName.Value).Distinct()),
-                    result.Errors.Count(),
-                    result.ConcurrencyViolations.Count());
+                ReportSeedBatchRefusal(batch.Length, result);
 
                 everyBatchAppended = false;
                 continue;
             }
 
-            foreach (var seedable in batch)
-            {
-                TrackSeededEvent(seedable.Seeded);
-            }
+            TrackSeededBatch(batch);
 
             anythingAppended = true;
         }
@@ -244,6 +277,55 @@ public class EventSeeding(
         }
 
         return everyBatchAppended ? SeedingResult.Complete : SeedingResult.Incomplete;
+    }
+
+    async Task<AppendManyResult> AppendBatchWithIndexWait(IEventSequence eventSequence, SeedableEvent[] batch, Causation[] causation, IndexWaitBudget waitBudget)
+    {
+        while (true)
+        {
+            var result = await eventSequence.AppendMany(
+                batch.Select(_ => _.ToAppend),
+                CorrelationId.New(),
+                causation,
+                Identity.System,
+                new ConcurrencyScopes(new Dictionary<EventSourceId, ConcurrencyScope>()));
+
+            var delay = result.RetryAfter ?? TimeSpan.FromSeconds(1);
+            if (!result.IsRetryable || !waitBudget.TryReserve(delay))
+            {
+                return result;
+            }
+
+            await Task.Delay(delay, Clock);
+        }
+    }
+
+    void ReportSeedBatchRefusal(int count, AppendManyResult result)
+    {
+        if (result.IsRetryable)
+        {
+            logger.SeededEventsDeferredByConstraintIndex(count, _key.EventStore.Value, _key.Namespace.Value);
+            return;
+        }
+
+        // Counts and constraint names only. An event source id is the compliance subject by default, and
+        // a constraint violation message embeds it, so neither belongs in a log line that outlives the
+        // subject's erasure.
+        logger.SeededEventsRejected(
+            count,
+            _key.EventStore.Value,
+            _key.Namespace.Value,
+            string.Join(", ", result.ConstraintViolations.Select(_ => _.ConstraintName.Value).Distinct()),
+            result.Errors.Count(),
+            result.ConcurrencyViolations.Count());
+    }
+
+    void TrackSeededBatch(SeedableEvent[] batch)
+    {
+        foreach (var seedable in batch)
+        {
+            TrackSeededEvent(seedable.Seeded);
+        }
     }
 
     List<SeedableEvent> GetEventsToSeed(List<SeedingEntry> entriesList) =>
@@ -335,6 +417,48 @@ public class EventSeeding(
 
         state.State.ByEventSource[entry.EventSourceId] = [.. state.State.ByEventSource[entry.EventSourceId], .. new SeededEventEntry[] { entry }];
 #pragma warning restore CA1854 // Prefer the 'IDictionary.TryGetValue(TKey, out TValue)' method
+    }
+
+    /// <summary>
+    /// Shares a finite retry allowance across chunks and accounts for time spent dispatching namespaces.
+    /// </summary>
+    /// <param name="remaining">The retry wait time available to this run.</param>
+    sealed class IndexWaitBudget(TimeSpan remaining)
+    {
+        int _remainingDelays = MaxIndexWaitDelays;
+
+        /// <summary>
+        /// Gets the retry wait time still available.
+        /// </summary>
+        public TimeSpan Remaining { get; private set; } = remaining;
+
+        /// <summary>
+        /// Reserves a delay only when it fits within the remaining run-wide allowance.
+        /// </summary>
+        /// <param name="delay">The suggested retry delay.</param>
+        /// <returns>Whether the delay was reserved.</returns>
+        public bool TryReserve(TimeSpan delay)
+        {
+            if (delay <= TimeSpan.Zero)
+            {
+                return false;
+            }
+
+            if (_remainingDelays == 0 || delay > Remaining)
+            {
+                return false;
+            }
+
+            _remainingDelays--;
+            Remaining -= delay;
+            return true;
+        }
+
+        /// <summary>
+        /// Conservatively charges a namespace call's elapsed time against the shared allowance.
+        /// </summary>
+        /// <param name="elapsed">The duration of the namespace dispatch.</param>
+        public void ChargeElapsed(TimeSpan elapsed) => Remaining = TimeSpan.FromTicks(Math.Max(0, Remaining.Ticks - elapsed.Ticks));
     }
 
     /// <summary>

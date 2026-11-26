@@ -11,7 +11,7 @@ public class when_the_subscription_is_not_intact : given.a_schedule
         _schedule.Checked(false);
     }
 
-    void Because() => _next = _schedule.NextCheckAfter(Now);
+    void Because() => _next = _schedule.NextCheckAfter();
 
     [Fact] void should_check_after_the_revise_interval() => _next.ShouldEqual(Revise);
 }

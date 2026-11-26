@@ -48,6 +48,8 @@ internal class ChronicleConnection(
     const bool KeepAliveExempt = true;
 
     readonly Lock _capabilitiesLock = new();
+    readonly CancellationTokenSource _connectionCancellation = new();
+    int _disposed;
     IServices? _services;
     ConnectionService? _connectionService;
     string[] _advertised = [];
@@ -91,7 +93,16 @@ internal class ChronicleConnection(
     /// <inheritdoc/>
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        // An in-process silo never ends the call, so the connection loop is ended here. Otherwise it keeps
+        // pinging the registry of a disposed silo until the process exits.
+        _connectionCancellation.Cancel();
         lifecycle.Disconnected().GetAwaiter().GetResult();
+        _connectionCancellation.Dispose();
     }
 
     /// <inheritdoc/>
@@ -211,12 +222,14 @@ internal class ChronicleConnection(
             loggerFactory.CreateLogger<ConnectionService>(),
             chronicleOptions);
         var firstResponse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _connectionService.Connect(new()
-        {
-            ConnectionId = lifecycle.ConnectionId,
-            IsRunningWithDebugger = KeepAliveExempt,
-            ClientType = ".NET",
-        }).Subscribe(
+        _connectionService.Connect(
+            new()
+            {
+                ConnectionId = lifecycle.ConnectionId,
+                IsRunningWithDebugger = KeepAliveExempt,
+                ClientType = ".NET",
+            },
+            new ProtoBuf.Grpc.CallContext(new global::Grpc.Core.CallOptions(cancellationToken: _connectionCancellation.Token))).Subscribe(
             _ =>
             {
                 firstResponse.TrySetResult();

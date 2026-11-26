@@ -20,7 +20,7 @@ public class with_legacy_failed_partition : given.an_observer_state_storage
             [{"Id":"11111111-1111-1111-1111-111111111111","Partition":"partition","ObserverId":"observer","Attempts":[{"Occurred":"2026-10-17T12:00:00+00:00","SequenceNumber":42,"Messages":[],"StackTrace":""}],"IsResolved":false}]
             """;
         await using var context = CreateContext();
-        await context.Database.ExecuteSqlInterpolatedAsync($"UPDATE Observers SET FailedPartitions = {partitions} WHERE Id = 'observer'");
+        await context.Database.ExecuteSqlAsync($"UPDATE Observers SET FailedPartitions = {partitions} WHERE Id = 'observer'");
     }
 
     async Task Because()

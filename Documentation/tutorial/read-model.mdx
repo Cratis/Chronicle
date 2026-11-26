@@ -30,7 +30,7 @@ Add two event types alongside `BookAdded`: `BookBorrowed` records the member's n
 
 Define a `Book` read model and map the three events onto its properties. The mapping is a [projection](/chronicle/concepts/projection/): instructions for deriving state from events, including how to rebuild it from history.
 
-Follow the catalog example below in C#, TypeScript, or Elixir. The Kotlin and Java tabs have no catalog implementation; use their borrowed-book view later in this chapter.
+Follow the catalog example below in C#, TypeScript, or Elixir. Use the Kotlin and Java borrowed-book view later in this chapter.
 
 <ChronicleClientTabs snippet="tutorial/read-model/book" />
 

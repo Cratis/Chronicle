@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Projections.Kernel;
@@ -16,7 +15,9 @@ public class when_the_signature_cannot_be_computed : given.kernel_projections
     void Establish()
     {
         var definition = KernelProjectionDeclarations.Lower(typeof(EventTypeStatisticsProjection)).Projections.Single();
-        _definitions = [definition with { InitialModelState = new JsonObject { ["invalidNumber"] = double.NaN } }];
+
+        // A snapshot of a JSON tree can not hold a value JSON can not write, so the unwritable state is text that is not JSON.
+        _definitions = [definition with { InitialModelState = new ImmutableJsonObject("{ not json") }];
     }
 
     Task Because() => _kernel.RegisterProjections(EventStore, _definitions);

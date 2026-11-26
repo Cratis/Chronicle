@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Projections;
 
@@ -18,6 +19,9 @@ public sealed class CachingProjectionDefinitionsStorage(IProjectionDefinitionsSt
 {
     /// <inheritdoc/>
     public Task<IEnumerable<ProjectionDefinition>> GetAll() => inner.GetAll();
+
+    /// <inheritdoc/>
+    public Task<IEnumerable<ProjectionDefinition>> GetProducersFor(ReadModelIdentifier readModel, ProjectionId? namedProjection) => inner.GetProducersFor(readModel, namedProjection);
 
     /// <inheritdoc/>
     public Task<bool> Has(ProjectionId id) => inner.Has(id);

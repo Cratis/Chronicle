@@ -58,12 +58,7 @@ public static class CaptureConverters
     /// <param name="errors">The compilation errors.</param>
     /// <returns>The errors as validation messages.</returns>
     internal static IList<Contracts.Captures.CaptureValidationMessage> ToContract(IEnumerable<Engine.DeclarationLanguage.CompilerError> errors) =>
-        [.. errors.Select(error => new Contracts.Captures.CaptureValidationMessage
-        {
-            Message = error.Message,
-            Line = error.Line,
-            Column = error.Column
-        })];
+        [.. errors.Select(ToMessage)];
 
     /// <summary>
     /// Resolves the identifier a capture is saved under, minting one when none was supplied.
@@ -72,4 +67,11 @@ public static class CaptureConverters
     /// <returns>The capture identifier.</returns>
     internal static Concepts.Captures.CaptureId ResolveCaptureId(Concepts.Captures.CaptureId id) =>
         id == Concepts.Captures.CaptureId.NotSet ? Concepts.Captures.CaptureId.New() : id;
+
+    static Contracts.Captures.CaptureValidationMessage ToMessage(Engine.DeclarationLanguage.CompilerError error) => new()
+    {
+        Message = error.Message,
+        Line = error.Line,
+        Column = error.Column
+    };
 }

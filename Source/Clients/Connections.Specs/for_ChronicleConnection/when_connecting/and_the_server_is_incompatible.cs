@@ -27,4 +27,5 @@ public class and_the_server_is_incompatible : given.a_connection_with_several_en
 
     [Fact] void should_surface_the_incompatibility() => _result.ShouldBeOfExactType<IncompatibleServerException>();
     [Fact] void should_not_be_connected() => _isConnected.ShouldBeFalse();
+    [Fact] void should_not_start_a_monitor() => _tasks.DidNotReceive().Run(Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>());
 }

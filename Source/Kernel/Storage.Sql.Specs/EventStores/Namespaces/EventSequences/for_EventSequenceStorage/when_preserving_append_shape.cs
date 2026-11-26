@@ -48,7 +48,7 @@ public class when_preserving_append_shape : Specification
     void Destroy() => _host.Dispose();
 
     [Fact] void should_keep_single_append_statement_count() => _single.Length.ShouldEqual(2);
-    [Fact] void should_keep_batch_append_statement_count() => _batch.Length.ShouldEqual(200);
+    [Fact] void should_keep_batch_append_statement_count() => _batch.Length.ShouldEqual(101);
     [Fact] void should_insert_once_for_single_append() => Inserts(_single).Count().ShouldEqual(1);
     [Fact] void should_insert_once_per_batch_event() => Inserts(_batch).Count().ShouldEqual(100);
     [Fact] void should_keep_single_insert_columns() => AssertInsertColumns(_single);

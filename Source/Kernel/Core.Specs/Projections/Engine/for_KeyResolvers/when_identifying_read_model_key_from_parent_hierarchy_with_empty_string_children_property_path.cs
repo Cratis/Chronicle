@@ -80,6 +80,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_empty_st
 
         _storage = Substitute.For<IEventSequenceStorage>();
         _sink = Substitute.For<ISink>();
+        _sink.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), Arg.Any<object>(), Arg.Any<Key>()).Returns(Option<Key>.None());
 
         // Parent event is NOT found by EventSourceId (returns empty)
         // This forces the code to use sink lookup
@@ -92,7 +93,7 @@ public class when_identifying_read_model_key_from_parent_hierarchy_with_empty_st
 
         // Sink lookup returns the root key
         // Capture the property path used in the query to verify it's correct
-        _sink.When(x => x.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ParentKey))
+        _sink.When(x => x.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), ParentKey, Arg.Any<Key>()))
             .Do(callInfo => _queriedChildPropertyPath = callInfo.ArgAt<PropertyPath>(0));
 
         _sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ParentKey)

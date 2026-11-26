@@ -12,8 +12,8 @@ public class and_the_source_key_has_a_parent_hierarchy : given.a_projection_with
     {
         // ParentKey participates in hierarchy resolution only on a structural child projection.
         var notes = Child();
-        notes.From[_second] = new(new Dictionary<PropertyPath, string>(), WellKnownExpressions.EventSourceId, WellKnownExpressions.EventSourceId);
-        _definition.Children["notes"] = notes;
+        notes = notes.WithFrom(_second, new(new Dictionary<PropertyPath, string>(), WellKnownExpressions.EventSourceId, WellKnownExpressions.EventSourceId));
+        _definition = _definition.WithChild("notes", notes);
     }
 
     async Task Because() => _projection = await _factory.Create(_eventStore, _namespace, _definition, _readModel, _schemas);

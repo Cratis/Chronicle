@@ -20,6 +20,14 @@ internal static class AppendedEventsQueueSpillReasons
     /// <summary>The observer's own backlog in the queue exceeded the queue capacity.</summary>
     internal const string LaggingBacklog = "LaggingBacklog";
 
+    /// <summary>
+    /// A matching stored event is missing before or within the first live batch of a subscription.
+    /// </summary>
+    internal const string LiveDeliveryGap = "LiveDeliveryGap";
+
     /// <summary>The events were committed without live delivery, as an import commits its chunks (decision 0023).</summary>
     internal const string CommittedOutsideLiveDelivery = "CommittedOutsideLiveDelivery";
+
+    /// <summary>The kernel stop had begun, so the batch was not delivered live.</summary>
+    internal const string StopBegun = "StopBegun";
 }

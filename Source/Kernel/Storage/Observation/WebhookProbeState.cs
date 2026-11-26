@@ -13,32 +13,43 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="QuarantineId">The quarantine episode that authorized probing.</param>
 /// <param name="Due">The sampled deadline, never resampled on activation.</param>
 /// <param name="Failures">The number of failed probes, independent of partition attempts.</param>
-public record WebhookProbeState(Guid Id, Guid QuarantineId, DateTimeOffset Due, int Failures)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.WebhookProbeState")]
+public record WebhookProbeState([Id(0)] Guid Id, [Id(1)] Guid QuarantineId, [Id(2)] DateTimeOffset Due, [Id(3)] int Failures)
 {
     /// <summary>Gets the authoritative definition fingerprint captured by a claim.</summary>
+    [Id(4)]
     public string? DefinitionFingerprint { get; init; }
 
     /// <summary>Gets the claimed failure episode, if delivery might be in flight.</summary>
+    [Id(5)]
     public FailedPartitionId? EpisodeId { get; init; }
 
     /// <summary>Gets the claimed subscriber partition, even if its failure episode is subsequently removed.</summary>
+    [Id(6)]
     public EventSourceId? Partition { get; init; }
 
     /// <summary>Gets whether this stable subscriber still owes a completion acknowledgement.</summary>
+    [Id(7)]
     public bool DrainPending { get; init; }
 
     /// <summary>Gets the inclusive cursor captured by the claim.</summary>
+    [Id(8)]
     public EventSequenceNumber? Position { get; init; }
 
     /// <summary>Gets whether an operator invalidated this control while local progress still needs preservation.</summary>
+    [Id(9)]
     public bool Cancelled { get; init; }
 
     /// <summary>Gets whether delivery succeeded and only local recovery remains.</summary>
+    [Id(10)]
     public bool ResumePending { get; init; }
 
     /// <summary>Gets the next undelivered event after successful delivery.</summary>
+    [Id(11)]
     public EventSequenceNumber? ResumePosition { get; init; }
 
     /// <summary>Gets the durable absolute partition counts after successful delivery.</summary>
+    [Id(12)]
     public IReadOnlyList<WebhookProbePartitionCount> PartitionCounts { get; init; } = [];
 }

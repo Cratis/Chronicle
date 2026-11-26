@@ -10,6 +10,6 @@ public class with_a_transition_to_compatibility : given.a_manager_with_pinned_ge
 {
     async Task Establish() => await _manager.Add(_definition with { GenerationDelivery = EventGenerationDelivery.Compatibility });
     async Task Because() => await _manager.SourceEventStoreAdded("Admin");
-    [Fact] void should_rebind_through_the_legacy_api() => _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<IEnumerable<EventType>>(), Arg.Any<SiloAddress>(), "Lobby", true, Arg.Any<ObserverFilters?>(), true, automatic: true);
+    [Fact] void should_rebind_through_the_legacy_api() => _observer.Received(1).Subscribe<IEventStoreSubscriptionObserverSubscriber>(ObserverType.External, Arg.Any<EventTypeSet>(), Arg.Any<SiloAddress>(), "Lobby", true, Arg.Any<ObserverFilters?>(), true, automatic: true);
     [Fact] void should_not_create_an_unsubscribe_gap() => _observer.DidNotReceive().Unsubscribe();
 }

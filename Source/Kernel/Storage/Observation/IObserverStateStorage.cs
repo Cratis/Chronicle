@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 
@@ -86,6 +87,56 @@ public interface IObserverStateStorage
     /// a record owned by another sequence is refused, an unowned legacy record is accepted.
     /// </remarks>
     Task<bool> SaveRunningStateChangedAt(ObserverId observerId, DateTimeOffset? runningStateChangedAt, EventSequenceId owner);
+
+    /// <summary>
+    /// Saves when a client last held a subscription to an existing observer.
+    /// </summary>
+    /// <param name="observerId">The observer a client subscribed to.</param>
+    /// <param name="lastSeenAt">The time a client was last seen holding the subscription.</param>
+    /// <param name="owner">The event sequence addressed by the writing activation.</param>
+    /// <returns>Whether an existing record was updated. False means no record exists or another sequence owns it.</returns>
+    /// <remarks>
+    /// Never creates a record and never changes any other field, and <see cref="Save"/> never clears it. The owner guard
+    /// is the same as for <see cref="SaveRunningStateChangedAt"/>.
+    /// </remarks>
+    Task<bool> SaveLastSeenAt(ObserverId observerId, DateTimeOffset lastSeenAt, EventSequenceId owner);
+
+    /// <summary>
+    /// Gets the time a client was last seen holding a subscription to each of the given observers, starting the
+    /// clock for the ones that have no recorded time.
+    /// </summary>
+    /// <param name="observerIds">The observers to look up.</param>
+    /// <param name="startedAt">The time to record for an existing observer that has no last-seen time yet.</param>
+    /// <returns>The last-seen time of every given observer that has a state record. An observer without a record is absent.</returns>
+    /// <remarks>
+    /// Recording the start is atomic and only ever fills an absent value, so two callers racing, or the same caller twice,
+    /// leave the earliest recorded time in place.
+    /// </remarks>
+    Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetLastSeenAt(IEnumerable<ObserverId> observerIds, DateTimeOffset startedAt);
+
+    /// <summary>
+    /// Gets the durable subscription of every observer owned by an event sequence that has recorded one.
+    /// </summary>
+    /// <param name="owner">The event sequence that owns the observers.</param>
+    /// <returns>The durable subscription by observer. An observer with none recorded is absent.</returns>
+    /// <remarks>
+    /// Reads only the recorded subscriptions, never the observers' failures or counts, so it is cheap enough to run
+    /// periodically for every namespace. An observer whose state has no owner is not returned.
+    /// </remarks>
+    Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner);
+
+    /// <summary>
+    /// Gets the persisted cursor - the next <see cref="EventSequenceNumber"/> the observer expects to handle - of every observer
+    /// owned by an event sequence that has recorded a durable subscription.
+    /// </summary>
+    /// <param name="owner">The <see cref="EventSequenceId"/> that owns the observers.</param>
+    /// <returns>The cursors by observer; an observer without a recorded subscription is not returned.</returns>
+    /// <remarks>
+    /// Reads nothing but the cursors, so the dormant safety net (decision 0034) can compare every observer of an event
+    /// sequence with the tail in one read instead of activating each of them. The persisted cursor can lag behind the
+    /// observer's own, never run ahead of it, so a comparison made with it errs toward waking.
+    /// </remarks>
+    Task<IReadOnlyDictionary<ObserverId, EventSequenceNumber>> GetNextEventSequenceNumbers(EventSequenceId owner);
 
     /// <summary>
     /// Delete the state of an observer.

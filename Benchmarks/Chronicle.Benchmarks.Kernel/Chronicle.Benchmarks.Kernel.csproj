@@ -6,7 +6,13 @@
     <RootNamespace>Cratis.Chronicle.Benchmarks.Kernel</RootNamespace>
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- The client stream benchmark declares a code-first gRPC probe; PBN3013 asks for a [ProtoModel] the pinned protobuf-net.Grpc runtime cannot use. -->
+    <NoWarn>$(NoWarn);PBN3013</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />

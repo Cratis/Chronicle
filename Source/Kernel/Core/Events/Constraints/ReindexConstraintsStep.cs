@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Dynamic;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
@@ -168,6 +169,10 @@ public partial class ReindexConstraintsStep(
             var names = changedDefinitions.Select(definition => definition.Name).Concat(closingDefinitions.Select(definition => definition.Name)).Distinct().ToArray();
             var sequence = grainFactory.GetEventSequence(currentState.EventSequenceId, jobStepKey.Scope, jobStepKey.Namespace);
             var progress = new RebuildProgress();
+            var constraintNames = string.Join(", ", names.Select(name => name.Value));
+            var started = Stopwatch.GetTimestamp();
+            var completed = false;
+            logger.ConstraintIndexRebuildStarted(jobStepKey.Scope, jobStepKey.Namespace, currentState.EventSequenceId, constraintNames, runId.Value);
             try
             {
                 await sequence.ConstraintIndexRebuildStarting(runId, names);
@@ -182,10 +187,12 @@ public partial class ReindexConstraintsStep(
                     return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
                 }
 
+                completed = true;
                 return JobStepResult.Succeeded(null);
             }
             finally
             {
+                logger.ConstraintIndexRebuildFinished(jobStepKey.Scope, jobStepKey.Namespace, currentState.EventSequenceId, constraintNames, runId.Value, completed, Stopwatch.GetElapsedTime(started));
                 var outcome = !progress.WroteAnything ? ConstraintIndexRebuildOutcome.NothingWritten : new(true, progress.ProcessedThrough);
                 await ReportRebuilt(sequence, runId, names, outcome);
             }
@@ -284,7 +291,7 @@ public partial class ReindexConstraintsStep(
             catch (DuplicateUniqueConstraintValue error)
             {
                 tracking.Progress.RecordCollision(definition.Name, claimedValue, @event.Context.SequenceNumber);
-                logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.EventSourceId, @event.Context.SequenceNumber, error);
+                logger.SkippingDuplicateUniqueConstraintClaim(definition.Name, @event.Context.SequenceNumber, error);
             }
         }
     }

@@ -93,6 +93,7 @@ public partial class EncryptChangeset(
             }
         }
 
+        context.ProtectedState = encrypted;
         var hasDifferences = !objectComparer.Compare(currentState, encrypted, out var differences);
 
         // Apply re-encrypts the whole snapshot, so the comparer reports a difference for every PII member —

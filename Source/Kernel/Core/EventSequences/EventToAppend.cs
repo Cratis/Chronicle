@@ -19,29 +19,34 @@ namespace Cratis.Chronicle.EventSequences;
 /// <param name="Content">The JSON payload of the event.</param>
 /// <param name="Occurred">Optional occurred time. If null, the server will set it to approximately the time of append.</param>
 /// <param name="Subject">Optional subject that identifies the compliance target for the event.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.EventToAppend")]
 public record EventToAppend(
-    EventSourceType EventSourceType,
-    EventSourceId EventSourceId,
-    EventStreamType eventStreamType,
-    EventStreamId eventStreamId,
-    EventType EventType,
-    IEnumerable<Tag> Tags,
-    JsonObject Content,
-    DateTimeOffset? Occurred = null,
-    Subject? Subject = null)
+    [Id(0)] EventSourceType EventSourceType,
+    [Id(1)] EventSourceId EventSourceId,
+    [Id(2)] EventStreamType eventStreamType,
+    [Id(3)] EventStreamId eventStreamId,
+    [Id(4)] EventType EventType,
+    [Id(5)] IEnumerable<Tag> Tags,
+    [Id(6)] JsonObject Content,
+    [Id(7)] DateTimeOffset? Occurred = null,
+    [Id(8)] Subject? Subject = null)
 {
     /// <summary>
     /// Gets the structured named tags for this event.
     /// </summary>
+    [Id(9)]
     public IReadOnlyCollection<NamedTag> NamedTags { get; init; } = [];
 
     /// <summary>
     /// Gets the name of the registered event source definition the event is appended through, if any.
     /// </summary>
+    [Id(10)]
     public EventSourceName? EventSource { get; init; }
 
     /// <summary>
     /// Gets or inits the optional event-specific causation chain. When absent, the batch chain is used.
     /// </summary>
+    [Id(11)]
     public IEnumerable<Causation>? Causation { get; init; }
 }

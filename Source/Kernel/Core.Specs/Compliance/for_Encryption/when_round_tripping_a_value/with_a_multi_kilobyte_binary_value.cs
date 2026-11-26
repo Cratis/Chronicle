@@ -12,7 +12,7 @@ public class with_a_multi_kilobyte_binary_value : given.a_key
     void Because()
     {
         // An image-sized binary PII payload is far beyond anything raw RSA can encrypt — it must still round-trip.
-        _encrypted = _encryption.Encrypt(_original, _key);
+        _encrypted = _encryption.Encrypt(_original, _key, EncryptionKeyRevision.Initial);
         _decrypted = _encryption.Decrypt(_encrypted, _key);
     }
 

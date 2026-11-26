@@ -42,7 +42,7 @@ internal static class SingleWriterLeaseSql
             ? $"UPDATE {table} WITH (UPDLOCK, HOLDLOCK) SET {assignments}, {times} WHERE {name} = {{0}} AND ({expires} <= {now} OR {owner} = {{1}}); IF @@ROWCOUNT = 0 INSERT INTO {table} ({columns}) SELECT {values} WHERE NOT EXISTS (SELECT 1 FROM {table} WITH (UPDLOCK, HOLDLOCK) WHERE {name} = {{0}});"
             : $"INSERT INTO {table} AS {C("lease")} ({columns}) VALUES ({values}) ON CONFLICT ({name}) DO UPDATE SET {assignments}, {times} WHERE {Current("ExpiresAt")} <= {now} OR {owner} = {{1}}";
         object[] parameters = ["kernel", claim.Owner.Value, claim.ClusterId, claim.ServiceId, claim.HostName, claim.Version, Ttl(context, claim.Ttl)];
-        return await context.Database.ExecuteSqlInterpolatedAsync(FormattableStringFactory.Create(sql, parameters), cancellationToken);
+        return await context.Database.ExecuteSqlAsync(FormattableStringFactory.Create(sql, parameters), cancellationToken);
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ internal static class SingleWriterLeaseSql
         var (now, expiry) = Clock(context);
         var sql = $"UPDATE {table} SET {C("RenewedAt")} = {now}, {C("ExpiresAt")} = {expiry} WHERE {C("Name")} = {{0}} AND {C("Owner")} = {{1}} AND {C("ExpiresAt")} > {now}";
         object[] parameters = ["kernel", owner, string.Empty, string.Empty, string.Empty, string.Empty, Ttl(context, ttl)];
-        return await context.Database.ExecuteSqlInterpolatedAsync(FormattableStringFactory.Create(sql, parameters), cancellationToken);
+        return await context.Database.ExecuteSqlAsync(FormattableStringFactory.Create(sql, parameters), cancellationToken);
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ internal static class SingleWriterLeaseSql
         string C(string name) => helper.DelimitIdentifier(name);
         var (now, _) = Clock(context);
         var sql = $"UPDATE {table} SET {C("ExpiresAt")} = {now} WHERE {C("Name")} = {{0}} AND {C("Owner")} = {{1}}";
-        await context.Database.ExecuteSqlInterpolatedAsync(FormattableStringFactory.Create(sql, "kernel", owner), cancellationToken);
+        await context.Database.ExecuteSqlAsync(FormattableStringFactory.Create(sql, "kernel", owner), cancellationToken);
     }
 
     static object Ttl(ClusterDbContext context, TimeSpan ttl) => context.Database.IsSqlite()

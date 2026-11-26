@@ -214,17 +214,10 @@ public partial class EventSequence
     /// </summary>
     /// <param name="appendedEvents">The imported events that are durable in the log.</param>
     /// <returns>Awaitable task.</returns>
-    async Task HandImportedEventsToCatchup(List<AppendedEvent> appendedEvents)
+    Task HandImportedEventsToCatchup(List<AppendedEvent> appendedEvents)
     {
-        try
-        {
-            await (_appendedEventsQueues?.SpillMatchingToCatchup(appendedEvents) ?? Task.CompletedTask);
-        }
-        catch (Exception ex)
-        {
-            logger.FailedEnqueueingAppendedEvents(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, appendedEvents.Count, ex);
-            await SpillAppendedEventsQueuesToCatchup();
-        }
+        HandOverToLiveDelivery(appendedEvents, true);
+        return Task.CompletedTask;
     }
 
     async Task<(ConstraintValidationContext? Context, ImportRejection? Rejection)> PrepareImportConstraintContext(

@@ -30,16 +30,41 @@ namespace. `ChronicleConnectionString` lives in `Cratis.Chronicle.Connections`
 
 ```
 chronicle://host[:port]/?opts
-chronicle://user:pass@host[:port]/?opts
 chronicle+srv://host/?opts
 ```
 
-Default port `35000`. `Default` is `chronicle://localhost:35000`;
+Credentials go in the authority part, before the host, as a user name and
+password separated by a colon and followed by an at sign. Default port `35000`. `Default` is `chronicle://localhost:35000`;
 `Development` adds the `chronicle-dev-client` / `chronicle-dev-secret`
-credentials. Query options: `apiKey`, `auth`, `skipTlsValidation`,
-`skipCompatibilityCheck`, `loadBalancer`, `srvNameServer`, `certificatePath`,
-`certificatePassword` (`ChronicleConnectionStringBuilder.cs`). There is an
-implicit conversion from `string` and a `Redacted` form for logging.
+credentials. Query options: `apiKey`, `auth`, `skipTlsValidation`, `disableTls`,
+`skipCompatibilityCheck`, `skipKeepAlive`, `serverless`, `loadBalancer`,
+`srvNameServer`, `certificatePath`, `certificatePassword`, `caCertificatePath`
+(`ChronicleConnectionStringBuilder.cs`). There is an implicit conversion from
+`string` and a `Redacted` form for logging.
+
+#### `disableTls`
+
+`disableTls=true` connects over cleartext HTTP/2 (h2c). Use it only when the
+kernel runs with `tls.enabled` false behind a private HTTPS-terminating proxy or
+reaches the client through a port-forward, for example
+`chronicle://localhost:35001/?disableTls=true&auth=none`. Rules:
+
+- With no credentials the client uses no authentication and does **not** fall
+  back to the development credentials.
+- Explicit client credentials (username and password) are refused with
+  `ClientCredentialsRequireTls`, because they would travel in the clear.
+- `apiKey=<token>` from an external identity authority works; the token is sent
+  unencrypted, so keep the hop private.
+- Certificate validation does not apply and its warning is suppressed.
+- Never use it across an untrusted network.
+
+#### `authPort`
+
+`authPort` is not a .NET connection string option; the .NET builder does not
+recognize it. The Elixir client uses it to name the port of the token endpoint
+(default: the first server port). Do not add it to a .NET connection string.
+See `cratis-chronicle-configuration` for the settings that pair with these
+switches.
 
 With ClientCredentials auth and **both** username and password absent, the .NET
 client also falls back to these development credentials, including through

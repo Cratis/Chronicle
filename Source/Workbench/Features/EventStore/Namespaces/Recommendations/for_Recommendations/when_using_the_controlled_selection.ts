@@ -12,7 +12,10 @@ import { a_view_model } from '../for_RecommendationsViewModel/when_managing_sele
 const mocks = vi.hoisted(() => ({ confirm: vi.fn(), success: vi.fn(), error: vi.fn(), effect: vi.fn() }));
 vi.mock('react', async importOriginal => ({ ...await importOriginal<typeof import('react')>(), useEffect: mocks.effect }));
 vi.mock('react-router-dom', () => ({ useParams: () => ({ eventStore: 'some-event-store', namespace: 'some-namespace' }) }));
-vi.mock('@cratis/arc.react.mvvm', () => ({ withViewModel: (_model: unknown, component: unknown) => component }));
+vi.mock('@cratis/arc.react.mvvm', () => ({
+    withViewModel: (_model: unknown, component: unknown) => component,
+    observer: (component: unknown) => component
+}));
 vi.mock('@cratis/arc.react/dialogs', () => ({ useConfirmationDialog: () => [mocks.confirm], DialogResult: { Yes: 0, No: 1 }, DialogButtons: { YesNo: 0 } }));
 vi.mock('@cratis/components/Notifications', () => ({ toast: { success: mocks.success, error: mocks.error } }));
 vi.mock('@cratis/components/DataPage', () => ({ DataPage: Object.assign(() => undefined, { MenuItems: () => undefined, Columns: () => undefined }), MenuItem: () => undefined, Column: () => undefined }));
@@ -32,6 +35,10 @@ describe('when using the controlled recommendation selection', () => {
         const groups = table().children as ReactElement<{ children: ReactNode }>[];
         return (groups[0].props.children as ReactElement<MenuItemProps>[]).map(item => item.props);
     };
+    const executeAction = (index: number) => actions()[index].command!({
+        selectionMode: 'multiple',
+        selectedItems: Object.freeze([...(table().selectedItems ?? [])])
+    });
     beforeEach(() => {
         vi.clearAllMocks();
         context = new a_view_model();
@@ -53,7 +60,7 @@ describe('when using the controlled recommendation selection', () => {
 
     it('should clear selection when toggling the ignored view', () => {
         context.viewModel.selectedRecommendations = data;
-        actions()[3].command!();
+        executeAction(3);
         context.viewModel.showIgnored.should.be.true;
         context.viewModel.selectedRecommendations.should.have.lengthOf(0);
     });
@@ -65,9 +72,9 @@ describe('when using the controlled recommendation selection', () => {
         actions()[1].disabled!.should.be.true;
         actions()[2].disabled!.should.be.false;
         const unignore = vi.spyOn(context.viewModel, 'unignoreRecommendations').mockResolvedValue({ total: 2, failed: 1, failures: ['Denied'] });
-        const pending = actions()[2].command!();
+        const pending = executeAction(2);
         actions().every(action => action.disabled).should.be.true;
-        await actions()[2].command!();
+        await executeAction(2);
         await pending;
         unignore.mock.calls.should.deep.equal([[data.map(item => item.id)]]);
         mocks.error.mock.lastCall![0].description.should.contain('1 failed of 2 attempted');
@@ -76,7 +83,7 @@ describe('when using the controlled recommendation selection', () => {
 
     it('should execute nothing when unselected', async () => {
         const perform = vi.spyOn(context.viewModel, 'performRecommendations');
-        await actions()[0].command!();
+        await executeAction(0);
         perform.mock.calls.should.have.lengthOf(0);
     });
 
@@ -84,7 +91,7 @@ describe('when using the controlled recommendation selection', () => {
         context.viewModel.selectedRecommendations = data;
         mocks.confirm.mockResolvedValue(DialogResult.No);
         const ignore = vi.spyOn(context.viewModel, 'ignoreRecommendations');
-        await actions()[1].command!();
+        await executeAction(1);
         ignore.mock.calls.should.have.lengthOf(0);
         context.viewModel.isBusy.should.be.false;
     });
@@ -95,11 +102,11 @@ describe('when using the controlled recommendation selection', () => {
         mocks.confirm.mockImplementation(() => new Promise<DialogResult>(resolve => { confirm = resolve; }));
         const ignore = vi.spyOn(context.viewModel, 'ignoreRecommendations').mockResolvedValue({ total: 1, failed: 0, failures: [] });
         const perform = vi.spyOn(context.viewModel, 'performRecommendations');
-        const pending = actions()[1].command!();
+        const pending = executeAction(1);
         context.viewModel.selectedRecommendations = [data[1]];
         actions().every(action => action.disabled).should.be.true;
-        await actions()[0].command!();
-        await actions()[1].command!();
+        await executeAction(0);
+        await executeAction(1);
         confirm(DialogResult.Yes);
         await pending;
         ignore.mock.calls.should.deep.equal([[[data[0].id]]]);
@@ -114,7 +121,7 @@ describe('when using the controlled recommendation selection', () => {
             const action = vi.spyOn(context.viewModel, ignore ? 'ignoreRecommendations' : 'performRecommendations');
             for (const failed of [1, 2]) {
                 action.mockResolvedValue({ total: 2, failed, failures: ['Denied'] });
-                await actions()[ignore ? 1 : 0].command!();
+                await executeAction(ignore ? 1 : 0);
                 const message = mocks.error.mock.lastCall![0].description as string;
                 message.should.contain(`${failed} failed of 2 attempted`);
                 message.should.contain('Denied');
@@ -126,7 +133,7 @@ describe('when using the controlled recommendation selection', () => {
     it('should report a rejected confirmation and release the in-flight guard', async () => {
         context.viewModel.selectedRecommendations = data;
         mocks.confirm.mockRejectedValue(new Error('dialog failed'));
-        await actions()[1].command!();
+        await executeAction(1);
         mocks.error.mock.lastCall![0].description.should.equal('dialog failed');
         context.viewModel.isBusy.should.be.false;
     });

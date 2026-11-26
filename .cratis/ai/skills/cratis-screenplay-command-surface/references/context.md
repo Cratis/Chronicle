@@ -4,6 +4,7 @@
 ## Contents
 
 - The four contexts
+- Discovering a handler's result contract
 - The values they carry
 - Reaching the context declaratively
 - Caller paths and identity details
@@ -60,6 +61,18 @@ not the eventual id; never authorize against it. The handler CommandContext reta
 the full command shape, including generated properties. Sidecars belong to the same
 compilation/revision as their requirements, not a shape borrowed from another model.
 Source: `Documentation/screenplay/context.md`.
+
+## Discovering a handler's result contract
+
+Use `read-workspace` or `read-proposal` with `view: "typed-contexts"`, alongside
+`implementation-requirements` from the same compilation/revision. Since Screenplay 4.257.0,
+handler descriptors add optional `resultVersion` and `result` (with its own `resultVersion` and
+`entries`). Inspect `result.entries`: each entry carries `eventContract`, `eventName`,
+`eventRevision`, `payload`, `destinationKind`, `destinationProperty` and `destinationType`.
+These identify the declared event/payload shape and scalar or one-of destination contract;
+do not infer types from names or invent wrapper signatures. Older/legacy descriptors omit both
+additions; absence is not a guessed result contract. Typed descriptors and attachment hashes
+are inspection evidence, not execution or proof that a renderer admits the wrapper.
 
 ## The values they carry
 

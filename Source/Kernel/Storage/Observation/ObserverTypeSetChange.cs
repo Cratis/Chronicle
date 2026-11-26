@@ -14,9 +14,11 @@ namespace Cratis.Chronicle.Storage.Observation;
 /// <param name="InitialTail">The committed tail when the intent was first written (J0).</param>
 /// <param name="Additions">Accumulated new member identifiers, without generation pins.</param>
 /// <param name="Retirements">Requests to recheck against current connected declarations at commit.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Observation.ObserverTypeSetChange")]
 public record ObserverTypeSetChange(
-    ObserverTypeSetRevision Revision,
-    DateTimeOffset Started,
-    EventSequenceNumber InitialTail,
-    IReadOnlyList<EventTypeId> Additions,
-    IReadOnlyList<ObserverEventTypeRetirement> Retirements);
+    [Id(0)] ObserverTypeSetRevision Revision,
+    [Id(1)] DateTimeOffset Started,
+    [Id(2)] EventSequenceNumber InitialTail,
+    [Id(3)] IReadOnlyList<EventTypeId> Additions,
+    [Id(4)] IReadOnlyList<ObserverEventTypeRetirement> Retirements);

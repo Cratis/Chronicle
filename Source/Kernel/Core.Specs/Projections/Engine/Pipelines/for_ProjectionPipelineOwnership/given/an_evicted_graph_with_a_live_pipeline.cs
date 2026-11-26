@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -34,7 +33,7 @@ public class an_evicted_graph_with_a_live_pipeline : for_ProjectionsManager.give
 
     async Task Establish()
     {
-        _projectionFactory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>(), Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(call =>
+        _projectionFactory.Create(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ProjectionDefinition>(), Arg.Any<ReadModelDefinition>()).Returns(call =>
         {
             var definition = call.Arg<ProjectionDefinition>();
             var graph = Substitute.For<IProjection>();

@@ -36,6 +36,7 @@ public class and_a_connected_handler_fails : given.a_connection_with_ambient_sta
         _flowSuppressed = ExecutionContext.IsFlowSuppressed();
     }
 
+    [Fact] void should_start_monitoring_despite_the_handler_failure() => _tasks.Received(1).Run(Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>());
     [Fact] void should_surface_the_handler_failure_to_the_connect_awaiter() => _exception.ShouldBeSame(_failure);
     [Fact] void should_preserve_the_callers_ambient_state() => _callerAmbient.ShouldEqual("request-tenant");
     [Fact] void should_preserve_the_callers_activity() => _callerActivity.ShouldBeSame(_activity);

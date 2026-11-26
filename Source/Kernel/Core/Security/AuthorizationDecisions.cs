@@ -3,7 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
-using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Configuration;
 using Cratis.DependencyInjection;
 using Microsoft.AspNetCore.Http;
@@ -27,6 +26,8 @@ public class AuthorizationDecisions(
     IStoreEntitlementsCache? cache = null,
     IHttpContextAccessor? httpContextAccessor = null) : IAuthorizationDecisions
 {
+    static readonly HashSet<string> _internalClientClaims = ["name"];
+    static readonly HashSet<string> _externalClientClaims = ["client_id", "azp"];
     static StoreDecisionInputs? _fallbackInputs;
 
     /// <summary>Gets immutable inputs for the current snapshot.</summary>
@@ -51,14 +52,19 @@ public class AuthorizationDecisions(
             if (IsUnenrolled(capability, scope)) return Allow(AuthorizationReason.NotEnrolled, capability, scope);
             if (!options.Value.Authentication.Enabled) return Allow(AuthorizationReason.AuthenticationDisabled, capability, scope);
             if (principal?.Identity?.IsAuthenticated is not true) return Deny(AuthorizationReason.NoPrincipal, capability, scope);
+            if (IsConfiguredApplicationCapability(principal, capability))
+            {
+                return Allow(AuthorizationReason.Granted, capability, scope);
+            }
+
             return IsOrdinaryStoreScope(capability, scope)
                 ? DecideStore(principal, capability, scope, services)
                 : DecideAdministrator(principal, capability, scope, services);
         }
         catch (Exception exception)
         {
-            logger.AuthorizationDecisionFailed(exception, capability?.Value ?? string.Empty);
-            return Deny(AuthorizationReason.Failed, capability!, scope);
+            LogFailure(exception, capability);
+            return Deny(AuthorizationReason.Failed, capability, scope);
         }
     }
 
@@ -74,7 +80,63 @@ public class AuthorizationDecisions(
     static bool IsUnenrolled(Capability capability, AuthorizationScope scope) =>
         capability == WellKnownCapabilities.OperateEventStore
         && scope.EventStore is not null
-        && !string.Equals(scope.EventStore.Value, EventStoreName.System.Value, StringComparison.OrdinalIgnoreCase);
+        && !SystemStoreAccess.IsSystem(scope.EventStore);
+
+    static bool IsTrustedProxyUser(ClaimsPrincipal principal, Authentication authentication) =>
+        authentication.Http.IsTrustedProxy && TrustedProxyUsers.Is(principal);
+
+    static bool IsConfiguredClientClaim(Claim claim, HashSet<string> claimTypes, IEnumerable<string> configured) =>
+        claimTypes.Contains(claim.Type) && !string.IsNullOrEmpty(claim.Value) &&
+        configured.Any(_ => string.Equals(_, claim.Value, StringComparison.Ordinal));
+
+    static bool CanAccessUnenrolledStore(ClaimsPrincipal principal, Authentication authentication) =>
+        PrincipalKey.IsLocalUser(principal, authentication) || IsTrustedProxyUser(principal, authentication);
+
+    /// <summary>
+    /// Gets whether the principal is an application the operator configured for exactly this capability: enrolling this kernel
+    /// (<c language="text">Federation:Enrollment:Applications</c>) or managing the hosted federation it is the authority for
+    /// (<c language="text">Federation:Hosted:Applications</c>). Each list grants its one capability and nothing else.
+    /// </summary>
+    /// <param name="principal">The authenticated caller.</param>
+    /// <param name="capability">The requested capability.</param>
+    /// <returns>True when the caller is configured for the capability.</returns>
+    bool IsConfiguredApplicationCapability(ClaimsPrincipal principal, Capability capability)
+    {
+        var federation = options.Value.Federation;
+        if (capability == WellKnownCapabilities.EnrollFederation) return IsConfiguredApplication(principal, federation.Enrollment.Applications);
+        if (capability == WellKnownCapabilities.ManageFederation) return IsConfiguredApplication(principal, federation.Hosted.Applications);
+        return false;
+    }
+
+    /// <summary>
+    /// Gets whether the principal is an application whose client id is in the configured list.
+    /// </summary>
+    /// <remarks>
+    /// Decided from the already-validated claims and the configuration alone: no I/O and no cached result. A principal that carries
+    /// a user marker is never an application. With the internal authority the client id is the name claim Chronicle itself minted
+    /// into the token; with an external authority it is the client id or authorized-party claim of that authority's token.
+    /// </remarks>
+    /// <param name="principal">The authenticated caller.</param>
+    /// <param name="configured">The client ids of the configured applications.</param>
+    /// <returns>True when the caller is a configured application.</returns>
+    bool IsConfiguredApplication(ClaimsPrincipal principal, IEnumerable<string>? configured)
+    {
+        if (configured?.Any() is not true)
+        {
+            return false;
+        }
+
+        if (principal.HasClaim(ChronicleClaimTypes.Principal, ChronicleClaimTypes.User)
+            || principal.Claims.Any(_ => _.Type == ChronicleClaims.PrincipalKind))
+        {
+            return false;
+        }
+
+        var claimTypes = options.Value.Authentication.UseInternalAuthority ? _internalClientClaims : _externalClientClaims;
+        return principal.Claims.Any(claim => IsConfiguredClientClaim(claim, claimTypes, configured));
+    }
+
+    void LogFailure(Exception exception, Capability? capability) => logger.AuthorizationDecisionFailed(exception, capability?.Value ?? string.Empty);
 
     Task<AuthorizationDecision> Allow(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, true);
     Task<AuthorizationDecision> Deny(AuthorizationReason reason, Capability capability, AuthorizationScope scope) => Inputs.Result(reason, capability, scope, false);
@@ -92,7 +154,7 @@ public class AuthorizationDecisions(
         if (authentication.EnforceStoreEntitlements && cache?.IsFresh is not true) return Deny(AuthorizationReason.Failed, capability, scope);
         if (HasGrant(holder, principal, capability, scope)) return Allow(AuthorizationReason.Granted, capability, scope);
         if (!IsOrdinaryCapability(capability)) return DecideAdministrator(principal, capability, scope, services);
-        return PrincipalKey.IsLocalUser(principal, authentication)
+        return CanAccessUnenrolledStore(principal, authentication)
             ? Allow(AuthorizationReason.NotEnrolled, capability, scope)
             : Deny(AuthorizationReason.NotGranted, capability, scope);
     }

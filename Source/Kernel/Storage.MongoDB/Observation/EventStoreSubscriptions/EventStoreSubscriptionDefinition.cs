@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Storage.MongoDB.Observation.EventStoreSubscriptions;
 /// <summary>
 /// Represents the MongoDB storage document for an event store subscription definition.
 /// </summary>
+/// <remarks>
+/// Documents written by releases that still had a source namespace restriction carry a <c language="csharp">SourceNamespaces</c> element,
+/// which is ignored when read.
+/// </remarks>
+[BsonIgnoreExtraElements]
 public class EventStoreSubscriptionDefinition
 {
     /// <summary>

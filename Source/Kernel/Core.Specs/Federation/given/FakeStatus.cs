@@ -22,6 +22,22 @@ public class FakeStatus : IFederationStatus
 
     public FederationLinkStatus GetLink(string linkId) => throw new NotSupportedException();
 
+    public void RecordInbound(string linkId, int events, long bytes)
+    {
+    }
+
+    public FederationInboundStatus GetInbound(string linkId) => throw new NotSupportedException();
+
+    public void RecordSessionOpened(string subject)
+    {
+    }
+
+    public void RecordSessionClosed(string subject)
+    {
+    }
+
+    public bool HasSession(string subject) => throw new NotSupportedException();
+
     public void SetBinding(string bindingId, FederationBindingStatus status)
     {
         _bindings[bindingId] = status;
@@ -30,4 +46,22 @@ public class FakeStatus : IFederationStatus
 
     public FederationBindingStatus GetBinding(string bindingId) =>
         _bindings.TryGetValue(bindingId, out var status) ? status : FederationBindingStatus.Unknown;
+
+    public void RecordDialExchange()
+    {
+    }
+
+    public void RecordDialRenewed()
+    {
+    }
+
+    public void RecordDialClosed()
+    {
+    }
+
+    public void RecordDialFailed(string error)
+    {
+    }
+
+    public FederationDialStatus GetDial() => FederationDialStatus.None;
 }

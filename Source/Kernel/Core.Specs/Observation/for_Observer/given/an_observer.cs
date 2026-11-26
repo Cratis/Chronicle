@@ -12,15 +12,18 @@ using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Observation.Webhooks;
+using Cratis.Chronicle.Concepts.System;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Observation.Alerts;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
+using Cratis.Chronicle.Releases;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
 using Cratis.Chronicle.Storage.Observation;
 using Cratis.Chronicle.Storage.Recommendations;
+using Cratis.Chronicle.Supervision;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Cratis.Traces;
@@ -29,7 +32,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute.Extensions;
 using Orleans.Core;
-using Orleans.Streams;
 using Orleans.TestKit;
 using Orleans.TestKit.Storage;
 using AppendedEventsQueueSubscription = Cratis.Chronicle.EventSequences.AppendedEventsQueueSubscription;
@@ -50,16 +52,16 @@ public class an_observer : Specification
     /// Gets or sets the running-state change time held by the substituted observer state storage.
     /// </summary>
     protected DateTimeOffset? _persistedRunningStateChangedAt;
-    protected IStreamProvider _streamProvider;
-    protected IStreamProvider _sequenceStreamProvider;
     protected IObserverSubscriber _subscriber;
     protected IJobsManager _jobsManager;
     protected IObserverAlerts _observerAlerts;
     protected IObserverServiceClient _observerServiceClient;
+    protected ISiloSupervisor _supervisor;
     protected FailedPartitions _failedPartitionsState;
     protected virtual ObserverId _observerId => "d2a138a2-6ca5-4bff-8a2f-ffd8534cc80e";
     protected virtual ObserverKey _observerKey => new(_observerId, EventStoreName.NotSet, EventStoreNamespaceName.NotSet, EventSequenceId.Log);
     protected TestKitSilo _silo = new();
+    protected Cratis.Chronicle.Namespaces.INamespaces _namespaces = CreateExistingNamespaces();
     protected IStorage<ObserverState> _stateStorage;
     protected TestStorageStats _storageStats => _silo.StorageStats<Observer, ObserverState>()!;
     protected IStorage<ObserverDefinition> _definitionStorage;
@@ -84,10 +86,32 @@ public class an_observer : Specification
     protected ILogger<Observer> _logger;
     protected ILoggerFactory _loggerFactory;
     protected IMeter<Observer>? _meter;
+    protected IClusterReleases _clusterReleases;
 
     protected virtual Observers CreateWebhookRetryConfig() => _observersConfig;
 
+    protected virtual void ConfigureProbes(TestKitSilo silo)
+    {
+    }
+
+    /// <summary>
+    /// Gets whether every silo of the cluster runs a release that supports dormant observers. Not by default, so an observer
+    /// is never released as dormant unless a specification says the cluster is ready for it.
+    /// </summary>
+    protected virtual bool DormantFloorIsReached => false;
+
     protected virtual Observers CreateObserversConfig() => new() { WriteCoalescingInterval = 0 };
+
+    /// <summary>
+    /// Creates the admission of catch-up jobs. By default every observer is admitted, so the limit never gets in the way.
+    /// </summary>
+    /// <returns>The <see cref="ICatchUpAdmission"/> to register.</returns>
+    protected virtual ICatchUpAdmission CreateCatchUpAdmission()
+    {
+        var admission = Substitute.For<ICatchUpAdmission>();
+        admission.TryAdmit(Arg.Any<ObserverKey>(), Arg.Any<int>(), Arg.Any<ulong>()).Returns(_ => Task.FromResult<IDisposable?>(Substitute.For<IDisposable>()));
+        return admission;
+    }
 
     protected virtual IActivitySource<Observer> CreateActivitySource() => new ActivitySource<Observer>();
 
@@ -98,6 +122,7 @@ public class an_observer : Specification
         silo.AddService(options);
         silo.AddService(_configurationProvider);
         silo.AddService(_storage);
+        silo.AddService(_clusterReleases);
         silo.AddService(_timeProvider);
         silo.AddService(_webhookTargetPolicy);
         silo.AddService(_eventCompliance);
@@ -105,6 +130,8 @@ public class an_observer : Specification
         silo.AddService<ISubscriptionAdmission>(new SubscriptionAdmission(1000, Environment.ProcessorCount));
         silo.AddService<IObserverSubscriberSelector>(new RoundRobinObserverSubscriberSelector());
         silo.AddService(_observerServiceClient);
+        silo.AddService(_supervisor);
+        silo.AddService(CreateCatchUpAdmission());
         silo.AddKeyedService(WellKnown.MeterName, CreateActivitySource());
         silo.AddService(_logger);
         silo.AddService(_loggerFactory);
@@ -127,6 +154,8 @@ public class an_observer : Specification
         silo.AddProbe(_ => _jobsManager);
         silo.AddProbe(_ => _appendedEventsQueues);
         silo.AddProbe(_ => _eventSequence);
+        silo.AddProbe(_ => _namespaces);
+        ConfigureProbes(silo);
     }
 
     /// <summary>
@@ -147,9 +176,20 @@ public class an_observer : Specification
     /// <returns>The <see cref="ILogger{TCategoryName}"/> to register.</returns>
     protected virtual ILogger<Observer> CreateLogger() => NullLogger<Observer>.Instance;
 
+    static IEventTypesStorage EventTypesWithCachedDefinitions()
+    {
+        var storage = Substitute.For<IEventTypesStorage>();
+        storage.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
+        return storage;
+    }
+
     async Task Establish()
     {
         _observersConfig = CreateObserversConfig();
+        _clusterReleases = Substitute.For<IClusterReleases>();
+        _clusterReleases.Summarize().Returns(DormantFloorIsReached
+            ? new ClusterReleaseSummary([(new SemanticVersion(19, 173, 0), 1)], 0, 0)
+            : new ClusterReleaseSummary([(new SemanticVersion(19, 172, 0), 1), (new SemanticVersion(19, 173, 0), 1)], 0, 0));
         _configurationProvider = Substitute.For<IConfigurationForObserverProvider>();
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();
@@ -164,7 +204,7 @@ public class an_observer : Specification
         // to catch-up under back-pressure, which the specs that care about set up explicitly.
         _appendedEventsQueues = Substitute.For<IAppendedEventsQueues>();
         _appendedEventsQueues
-            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>())
+            .Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>())
             .Returns(callInfo => new AppendedEventsQueueSubscription(callInfo.Arg<ObserverKey>(), 0));
         _appendedEventsQueues.IsSubscribed(Arg.Any<ObserverKey>()).Returns(true);
 
@@ -182,7 +222,7 @@ public class an_observer : Specification
         _eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         _inFlightEventsStorage = Substitute.For<IInFlightEventsStorage>();
         _observerHandledCountsStorage = Substitute.For<IObserverHandledCountsStorage>();
-        _eventTypesStorage = Substitute.For<IEventTypesStorage>();
+        _eventTypesStorage = EventTypesWithCachedDefinitions();
         _eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
         _eventCompliance = Substitute.For<IEventCompliance>();
         _eventGenerationRelease = Substitute.For<IEventGenerationRelease>();
@@ -216,6 +256,7 @@ public class an_observer : Specification
         _failedPartitionsState = Substitute.For<FailedPartitions>();
 
         _observerServiceClient = Substitute.For<IObserverServiceClient>();
+        _supervisor = Substitute.For<ISiloSupervisor>();
 
         _logger = CreateLogger();
         _loggerFactory = Substitute.For<ILoggerFactory>();
@@ -413,4 +454,12 @@ public class an_observer : Specification
     protected void EventSequenceDoesNotHaveNextEvent(EventSequenceNumber sequenceNumber) => _eventSequence
         .GetNextSequenceNumberGreaterOrEqualTo(sequenceNumber.Next(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<EventSourceId>())
         .Returns(EventSequenceNumber.Unavailable);
+
+    static Cratis.Chronicle.Namespaces.INamespaces CreateExistingNamespaces()
+    {
+        var namespaces = Substitute.For<Cratis.Chronicle.Namespaces.INamespaces>();
+        namespaces.GetCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => (EventStoreNamespaceName?)_.Arg<EventStoreNamespaceName>());
+        namespaces.EnsureCanonical(Arg.Any<EventStoreNamespaceName>()).Returns(_ => _.Arg<EventStoreNamespaceName>());
+        return namespaces;
+    }
 }

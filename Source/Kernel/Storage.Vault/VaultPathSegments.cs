@@ -47,6 +47,15 @@ internal static class VaultPathSegments
     /// </summary>
     public const string LayoutMarker = "~layout";
 
+    /// <summary>
+    /// The segment under <see cref="Root"/> that kernel-internal secrets are stored beneath.
+    /// </summary>
+    /// <remarks>
+    /// It starts with <c language="csharp">~</c> followed by a character that is not a hexadecimal digit, so no encoded event store
+    /// is ever this segment, and no subject key address can reach a secret beneath it.
+    /// </remarks>
+    public const string InternalSecrets = "~internal";
+
     const char Escape = '~';
     const string UpperHex = "0123456789ABCDEF";
 
@@ -98,6 +107,15 @@ internal static class VaultPathSegments
         IsEligibleForLegacyDirectory(eventStore, eventStoreNamespace, identifier)
             ? RawDirectory(eventStore, eventStoreNamespace, identifier)
             : null;
+
+    /// <summary>
+    /// Gets the path of a kernel-internal secret.
+    /// </summary>
+    /// <param name="eventStore">The event store the secret belongs to.</param>
+    /// <param name="purpose">What the secret is for.</param>
+    /// <returns>The secret path, beneath <see cref="InternalSecrets"/>.</returns>
+    public static string InternalSecretPath(string eventStore, string purpose) =>
+        $"{Root}/{InternalSecrets}/{Encode(eventStore, "event store")}/{Encode(purpose, "purpose")}";
 
     /// <summary>
     /// Gets the directory an earlier version addressed, exactly as it was built then.

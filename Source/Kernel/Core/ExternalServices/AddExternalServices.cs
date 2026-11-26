@@ -29,7 +29,7 @@ public record AddExternalServices(
         var externalServices = storage.GetEventStore(EventStore).ExternalServices;
         foreach (var externalService in ExternalServices)
         {
-            await externalServices.Save(externalService.ToKernel());
+            await externalServices.SavePreservingOptions(externalService.ToKernel());
         }
     }
 }

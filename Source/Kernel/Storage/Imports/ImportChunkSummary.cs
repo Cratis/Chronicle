@@ -11,7 +11,9 @@ namespace Cratis.Chronicle.Storage.Imports;
 /// <param name="EventsReceived">How many events the chunk carried.</param>
 /// <param name="EventsStaged">How many of them were staged.</param>
 /// <param name="EventsRejected">How many of them were rejected while staging.</param>
-public record ImportChunkSummary(int ChunkIndex, long FirstEventIndex, int EventsReceived, int EventsStaged, int EventsRejected)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Storage.Imports.ImportChunkSummary")]
+public record ImportChunkSummary([Id(0)] int ChunkIndex, [Id(1)] long FirstEventIndex, [Id(2)] int EventsReceived, [Id(3)] int EventsStaged, [Id(4)] int EventsRejected)
 {
     /// <summary>
     /// Tells whether a chunk sent again under the same index is the one that was staged.

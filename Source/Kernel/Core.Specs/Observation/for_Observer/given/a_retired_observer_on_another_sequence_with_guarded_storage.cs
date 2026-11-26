@@ -31,7 +31,7 @@ public class a_retired_observer_on_another_sequence_with_guarded_storage : an_ob
         });
 
         var grainId = GrainId.Create("observer", _observerKey.ToString());
-        var definitions = new provider_backed_storage<ObserverDefinition>(new ObserverDefinitionGrainStorageProvider(_storage), grainId);
+        var definitions = new provider_backed_storage<ObserverDefinition>(new ObserverDefinitionGrainStorageProvider(_storage, Substitute.For<IObserverDefinitionsCacheClient>()), grainId);
         var failures = new provider_backed_storage<FailedPartitions>(new FailedPartitionGrainStorageProvider(_storage), grainId);
         silo.Options.StorageFactory = type =>
         {

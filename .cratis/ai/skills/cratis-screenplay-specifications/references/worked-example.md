@@ -26,6 +26,8 @@ module Invoicing
           invoiceNumber InvoiceNumber = invoiceNumber
       constraint UniqueInvoiceNumber
         unique invoiceNumber on InvoiceRegistered
+      screen RegisterInvoice
+        action RegisterInvoice for screen
       specification RegisteringAnInvoice
         given caller
           authenticated
@@ -104,7 +106,8 @@ module Invoicing
   command. A `when append` specification may sit in a `StateView` slice, even for an
   event another slice declares, as long as the event's producer gives it one
   unambiguous destination type (binding resolves it from commands in other slices);
-  otherwise `for` fails with `PLAY0273`. Only `when <Command>` needs the command's
+  otherwise `for` fails with `PLAY0273` unless a root projection supplies the identity
+  ([producerless events](producerless-events.md)). Only `when <Command>` needs the command's
   own slice.
 - `LookingUpAnExistingInvoice` performs the query as its action. It binds to
   exactly what `then query` with `arguments` and `result` would, so on a version

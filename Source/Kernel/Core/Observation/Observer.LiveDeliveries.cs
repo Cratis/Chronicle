@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Partial for keeping a catch-up from starting below an event a live delivery is still handing to the subscriber.
-/// </summary>
+/// </content>
 /// <remarks>
 /// A live delivery decides to deliver, then awaits the subscriber before it moves the cursor past what it delivered. A
 /// catch-up job reporting back interleaves with it and can start the next catch-up in the same turn; that catch-up would read its

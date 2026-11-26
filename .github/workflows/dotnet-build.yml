@@ -99,7 +99,7 @@ jobs:
   # The wire and grain compatibility gates run beside the build instead of in front of it: nothing the build
   # produces depends on their result, so waiting for them only added their six minutes to every pull request.
   # They stay required: the `specs` aggregate and `legacy-contracts` both fail when either is not green, and the
-  # integration jobs wait for `specs`.
+  # requested PR integration jobs wait for the cheap checks through `integration-preflight`, not ordinary specs.
   dotnet-build:
     needs: [already-ran]
     if: needs.already-ran.outputs.skip != 'true'
@@ -116,7 +116,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Needs nothing but the checkout, so it runs first and costs a second. A hole in the `paths:` filter
       # above is invisible by construction - the run that would have caught the change never starts - so
@@ -136,6 +136,9 @@ jobs:
         run: |
           node --test .github/scripts/test-mixed-spec-runners.mjs .github/scripts/test-spec-shards.mjs .github/scripts/spec-shard-workflow.test.mjs .github/scripts/test-spec-wall-timings.mjs
           node .github/scripts/spec-shards.mjs --dry-run
+
+      - name: Spec legacy contracts artifact inputs without network
+        run: node --test .github/scripts/legacy-contract-artifacts.test.mjs
 
       - name: Spec coverage statistics honesty (missing input never advances the measurement date)
         run: node --test .github/scripts/test-coverage-statistics.mjs
@@ -174,6 +177,12 @@ jobs:
           python3 -m pip install PyYAML==6.0.3
           python3 .github/scripts/test-pr-artifact-handoff.py
           python3 .github/scripts/test-sparse-integration-workflows.py
+          python3 .github/scripts/test-detect-hot-core-changes.py
+          python3 .github/scripts/test-evaluate-hot-core-gate.py
+          python3 .github/scripts/test-select-integration.py
+          python3 .github/scripts/test-requested-reuse.py
+          python3 .github/scripts/test-requested-integration-provenance.py
+          python3 .github/scripts/test-evaluate-hot-core-gate-jobs.py
           python3 .github/scripts/test-integration-wall-workflows.py
 
 
@@ -181,7 +190,7 @@ jobs:
         run: python3 .github/scripts/test-analyzer-ownership.py
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -201,7 +210,7 @@ jobs:
 
       - name: Restore obj cache
         id: restore-obj
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           # Key on the package manifests so a dependency version change never restores a stale obj
@@ -214,7 +223,7 @@ jobs:
 
       - name: Login to GitHub Docker Registry
         if: github.event_name != 'pull_request' || inputs.integration_requested
-        uses: docker/login-action@v3
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -268,7 +277,7 @@ jobs:
           find . -type d -name bin -not -path '*/node_modules/*' -prune -print0 | tar --null -I 'zstd -T0 --long=30' -cf build-output-release.tar.zst -T -
 
       - name: Upload Release build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-output-release
           path: build-output-release.tar.zst
@@ -302,7 +311,7 @@ jobs:
 
       - name: Save obj cache
         if: github.event_name != 'pull_request' && steps.restore-obj.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ./**/obj
           key: ${{ steps.restore-obj.outputs.cache-primary-key }}
@@ -319,10 +328,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -342,11 +351,16 @@ jobs:
       - name: Build with analyzers
         run: dotnet build --configuration Release -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:ForceCodeGeneration=true
 
-  # Independent verification runs beside the specs, never in front of them. The specs
-  # aggregate requires this job, preserving the integration and coverage gates as well.
+  # Independent verification runs beside the specs, never in front of them. PRs reuse
+  # the publish-equivalent pack's multi-target outputs; the server still comes from dotnet-build.
+  # The explicit result guard permits the PR-only pack job to be skipped on other events.
   package-verification:
-    needs: [already-ran, dotnet-build]
-    if: needs.already-ran.outputs.skip != 'true'
+    needs: [already-ran, dotnet-build, package-pack-check]
+    if: >-
+      !cancelled() && needs.already-ran.outputs.skip != 'true' &&
+      needs.dotnet-build.result == 'success' &&
+      (needs.package-pack-check.result == 'success' ||
+       (github.event_name != 'pull_request' && needs.package-pack-check.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -354,20 +368,21 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
         uses: Cratis/Workflows/.github/actions/dotnet-cache@main
 
-      # Reuse the build's evaluated inputs when available; package builds still restore
-      # normally on a miss. Only dotnet-build saves this cache, avoiding competing writers.
+      # Non-PR runs still build the multi-target clients here. PRs get their evaluated
+      # inputs from the pack artifact instead of an optional, potentially stale cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@v4
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -388,16 +403,38 @@ jobs:
           echo "CRATIS_CHRONICLE_BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
       - name: Extract Release build output
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
-      # The analyzers job analyzes net11.0 with warnings as errors. Build every shipped
-      # framework here, keeping generators on both and analyzers on net10.0 as before.
+      # Extract after the server artifact so its single-framework client copies cannot
+      # overwrite the exact bin/obj inputs that passed stable Pack, including both TFMs.
+      - name: Download client package build output
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: client-package-build-output
+
+      - name: Extract client package build output
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          zstd -d --long=30 -c client-package-build-output.tar.zst | tar -xf -
+
+      # obj references the producer's package cache, which may contain packages absent
+      # from this runner's restored cache. Reevaluate local paths and fetch dependencies
+      # without compiling; use the same stable version as the artifact producer.
+      - name: Restore client package dependencies
+        if: github.event_name == 'pull_request'
+        run: dotnet restore ./Source/Clients/Packages.slnf -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0
+
+      # PRs already built and analyzed both frameworks in package-pack-check. Other
+      # events retain the existing build and its net10.0 analysis; analyzers owns net11.0.
       - name: Build client packages for every shipped framework
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           solution_dir=$(mktemp -d "$RUNNER_TEMP/client-packages.XXXXXX")
@@ -416,6 +453,8 @@ jobs:
       # Fail closed before packing or checking an image in this workspace. The separate
       # spec artifact is not published, and cannot pass the aggregate without these guards.
       - name: Validate rolling diagnostic guards and shipped-client absence
+        env:
+          ROLLING_GUARD_PACK_ALL_FRAMEWORKS: "true"
         run: |
           set -euo pipefail
           node .github/scripts/verify-rolling-delivery-build.mjs
@@ -434,7 +473,7 @@ jobs:
         run: |
           set -euo pipefail
           feed="$RUNNER_TEMP/packed"
-          dotnet pack ./Source/Clients/Packages.slnf --no-build --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
+          dotnet pack ./Source/Clients/Packages.slnf --no-build --no-restore --configuration Release -p:IsPackaging=true -p:DisableProxyGenerator=true -p:DisableDockerBuild=true -p:PackageVersion="$PACKED_VERSION" -o "$feed"
           bash .github/scripts/verify-packed-consumer-restore.sh "$PACKED_VERSION" "$feed"
 
       # Ordinary PRs check the Dockerfile against the downloaded Release server binaries.
@@ -458,10 +497,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -470,7 +509,7 @@ jobs:
 
       # Restore only: dotnet-build remains the sole writer of this optional cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -487,6 +526,27 @@ jobs:
         if: github.event_name == 'pull_request'
         run: dotnet pack ./Source/Clients/Packages.slnf --configuration Release -o "$RUNNER_TEMP/nuget-pack-check" -p:IsPackaging=true -p:Version=99.0.0 -p:PackageVersion=99.0.0 -p:SourceRevisionId=${{ github.sha }}
 
+      # Preserve both bin and evaluated pack inputs (assets, generated props and refs).
+      # Server outputs stay in the independent Release artifact; only clients and Contracts
+      # are overlaid by verification, which never recompiles them on pull requests.
+      - name: Archive client package build output
+        run: |
+          set -euo pipefail
+          for framework in net10.0 net11.0; do
+            test -f "Source/Clients/DotNET/bin/Release/$framework/Cratis.Chronicle.dll"
+            test -f "Source/Kernel/Contracts/bin/Release/$framework/Cratis.Chronicle.Contracts.dll"
+          done
+          find Source/Clients Source/Kernel/Contracts -type d \( -name bin -o -name obj \) -prune -print0 | tar --null -cf - -T - | zstd -T0 --long=30 -o client-package-build-output.tar.zst
+
+      - name: Upload client package build output
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: client-package-build-output
+          path: client-package-build-output.tar.zst
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
   # Only integration shards consume the DEVELOPMENT-symbol build. Ordinary PR pushes
   # keep the Release build and specs, without this extra build or artifact.
   dotnet-build-development:
@@ -499,10 +559,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -514,7 +574,7 @@ jobs:
           prune-on-miss: 'true'
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
@@ -554,10 +614,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -569,7 +629,7 @@ jobs:
           prune-on-miss: 'true'
 
       - name: Restore obj cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./**/obj
           # Package-aware key (see the dotnet-build job) so a dependency bump busts the stale obj cache.
@@ -609,10 +669,10 @@ jobs:
       packages: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -646,15 +706,15 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -673,6 +733,9 @@ jobs:
       - name: Run SQL collection filter specs
         run: python3 .github/scripts/test-sql-spec-filter.py
 
+      - name: Verify the integration matrix generator
+        run: python3 .github/scripts/test-generate-integration-matrix.py
+
   specs-other:
     name: specs-other (${{ matrix.shard }})
     if: needs.already-ran.outputs.skip != 'true'
@@ -686,15 +749,15 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -705,7 +768,7 @@ jobs:
       # on every hit or miss, refreshing stale inputs and fetching any missing packages.
       # Read only: dotnet-build remains the sole writer of the Release obj cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -736,7 +799,7 @@ jobs:
           fi
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -754,11 +817,31 @@ jobs:
           name: The container startup unit specs
 
       - name: Run tests with coverage
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
         # Integration and SQL retain their shard/retry selection. Ordinary dispatch excludes
         # &FullyQualifiedName!~Cratis.Chronicle.Storage.Sql. and applies specs.runsettings.
         # Each project gets fresh, unique TRX/Cobertura; empty/spec-only coverage fails.
         # Actual production hits come only from these real library specs.
-        run: node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 4
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
+          (
+            while true; do
+              echo "[specs resources] $(date -u +%FT%TZ)"
+              free -m
+              df -h / "$GITHUB_WORKSPACE"
+              ps -eo pid,rss,etime,args --sort=-rss | sed -n '1,6p'
+              sleep 30
+            done
+          ) &
+          sampler_pid=$!
+          trap 'status=$?; kill "$sampler_pid" 2>/dev/null || true; wait "$sampler_pid" || true; exit "$status"' EXIT
+          node .github/scripts/run-mixed-specs.mjs --shard ${{ matrix.shard }} --shards 4
 
       - name: Assert specs ran
         uses: ./.github/actions/assert-tests-ran
@@ -766,9 +849,18 @@ jobs:
           path: ./coverage-results
           name: The specs job
 
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crash-dumps-specs-other-${{ matrix.shard }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-specs-other-${{ matrix.shard }}
           # A retried worker replaces its prior upload; retained successful workers do not run.
@@ -789,15 +881,15 @@ jobs:
         shard: [postgresql, sqlserver-1, sqlserver-2, sqlserver-3, sqlserver-4, remaining]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -807,7 +899,7 @@ jobs:
       # Reuse evaluated inputs without adding the full NuGet cache's extraction cost.
       # Read only: dotnet-build remains the sole writer of the Release obj cache.
       - name: Restore obj cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ./**/obj
           key: dotnet-obj-cache-${{ hashFiles('**/*.csproj', '**/Directory.*.props', '**/Directory.*.targets') }}-${{ github.sha }}
@@ -818,7 +910,7 @@ jobs:
         run: dotnet restore Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj
 
       - name: Cache pinned coverage tool
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages/dotnet-coverage
           key: dotnet-coverage-${{ runner.os }}-${{ hashFiles('.config/dotnet-tools.json', 'global.json') }}
@@ -827,8 +919,15 @@ jobs:
         run: dotnet tool restore
 
       - name: Run SQL specs with coverage
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
           filter=$(python3 .github/scripts/sql-spec-filter.py '${{ matrix.shard }}')
           node .github/scripts/run-spec-project.mjs --project Source/Kernel/Storage.Sql.Specs/Storage.Sql.Specs.csproj --settings specs.runsettings --filter "$filter" --coverage --results-directory ./coverage-results
 
@@ -838,9 +937,18 @@ jobs:
           path: ./coverage-results
           name: The SQL specs ${{ matrix.shard }} shard
 
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crash-dumps-specs-sql-${{ matrix.shard }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-specs-sql-${{ matrix.shard }}
           path: ./coverage-results/
@@ -858,10 +966,10 @@ jobs:
       ChronicleTfm: net10.0
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -933,7 +1041,7 @@ jobs:
         run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$RUNNER_RESULT" = success && test "$OTHER_RESULT" = success && test "$SQL_RESULT" = success && test "$NET10_RESULT" = success && test "$PACKAGE_RESULT" = success && test "$ANALYZER_RESULT" = success && { test "$DEV_ANALYZER_RESULT" = success || { test "$EVENT_NAME" = pull_request && test "$INTEGRATION_REQUESTED" != true && test "$DEV_ANALYZER_RESULT" = skipped; }; } && { test "$PACK_RESULT" = success || { test "$EVENT_NAME" != pull_request && test "$PACK_RESULT" = skipped; }; }
 
       - name: Checkout shard contract
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -944,7 +1052,7 @@ jobs:
         run: node .github/scripts/spec-shards.mjs --select-producers .ai-work/5501/producers.json
 
       - name: Download ordinary shard receipts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           artifact-ids: ${{ steps.producers.outputs.artifact_ids }}
           path: .ai-work/5501/spec-shard-receipts
@@ -953,15 +1061,91 @@ jobs:
       - name: Verify exact-once completed ordinary specs
         run: node .github/scripts/spec-shards.mjs --verify-results .ai-work/5501/spec-shard-receipts --producers .ai-work/5501/producers.json
 
+  preflight-client-snippets:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true' && github.event_name == 'pull_request' && inputs.integration_requested
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .Net
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@main
+
+      - name: Add GitHub Package Registry to NuGet
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget update source github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text || \
+          dotnet nuget add source --name github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
+
+      - name: Compile client snippets
+        run: python3 Documentation/validate-client-snippets.py
+
+  preflight-timing-ratchet:
+    needs: [already-ran]
+    if: needs.already-ran.outputs.skip != 'true' && github.event_name == 'pull_request' && inputs.integration_requested
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Assert sleep counts and Integration delay explanations
+        run: |
+          node .github/scripts/assert-timing-coupling-ratchet.mjs --self-test
+          node .github/scripts/assert-timing-coupling-ratchet.mjs
+
+  # No requested PR matrix starts on red cheap deterministic checks (C6/C8, #6026).
+  # Deliberately does not wait for ordinary specs: lanes still run beside them (#5865).
+  # Dry graph: all green -> lanes -> requested verdict -> hot-core-gate.
+  # Cheap failure -> preflight red -> all four lane entry jobs skipped -> requested verdict red.
+  # One shard fails -> other shards continue (fail-fast: false) -> completed verdict red.
+  # Queued failed-job rerun (#6027) -> needs holds the gate; job-ID guard never passes pending work.
+  # Label absent -> preflight/lanes skipped; ordinary build/specs and standalone checks unchanged.
+  # Label added after push -> standalone requested graph; waiting notice/non-green gate until refresh.
+  integration-preflight:
+    needs: [already-ran, wire-compatibility, grain-compatibility, spec-runner-checks, analyzers, preflight-client-snippets, preflight-timing-ratchet]
+    if: needs.already-ran.outputs.skip != 'true' && always() && github.event_name == 'pull_request' && inputs.integration_requested
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require every cheap integration check to pass
+        env:
+          WIRE_RESULT: ${{ needs.wire-compatibility.result }}
+          GRAIN_RESULT: ${{ needs.grain-compatibility.result }}
+          RUNNER_RESULT: ${{ needs.spec-runner-checks.result }}
+          ANALYZER_RESULT: ${{ needs.analyzers.result }}
+          SNIPPET_RESULT: ${{ needs.preflight-client-snippets.result }}
+          TIMING_RESULT: ${{ needs.preflight-timing-ratchet.result }}
+        run: test "$WIRE_RESULT" = success && test "$GRAIN_RESULT" = success && test "$RUNNER_RESULT" = success && test "$ANALYZER_RESULT" = success && test "$SNIPPET_RESULT" = success && test "$TIMING_RESULT" = success
+
   # Dependabot's read-only token cannot push the image these shards pull. A bump needing
   # the full matrix must be reopened as an ordinary PR, where the token can push.
   integration:
-    # Requested lanes start after their builds, in parallel with ordinary specs (#5865, supersedes #5050).
+    # Requested PR lanes start after builds and cheap preflight, beside ordinary specs (#5865).
     # A red spec still fails the run through the specs aggregate and the requested verdict; coverage-merge-and-cache
     # requires specs and all lanes to succeed. The trade-off is wasted lane minutes when specs are red.
     # !cancelled() overrides implicit success(): the unused DEVELOPMENT sibling is skipped.
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || inputs.integration_requested) && github.actor != 'dependabot[bot]') }}
-    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested]
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && ((github.event_name != 'pull_request' && needs.dotnet-build-development.result == 'success') || (github.event_name == 'pull_request' && needs.dotnet-build-development-requested.result == 'success')) && (github.event_name != 'pull_request' || inputs.integration_requested) && (github.event_name != 'pull_request' || needs.integration-preflight.result == 'success') && github.actor != 'dependabot[bot]') }}
+    needs: [already-ran, dotnet-build, dotnet-build-development, dotnet-build-development-requested, integration-preflight]
     permissions:
       contents: read
       packages: read
@@ -978,22 +1162,22 @@ jobs:
       selection: ${{ github.event_name == 'pull_request' && inputs.integration_selection || '' }}
 
   integration-api:
-    # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested)) }}
+    # Starts after build and PR preflight, beside ordinary specs; coverage still requires specs (#5865).
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested) && (github.event_name != 'pull_request' || needs.integration-preflight.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, dotnet-build]
+    needs: [already-ran, dotnet-build, integration-preflight]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1001,7 +1185,7 @@ jobs:
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1021,7 +1205,15 @@ jobs:
         run: dotnet tool restore
 
       - name: Run API integration tests with coverage
-        run: node .github/scripts/run-spec-project.mjs --project Integration/Api/Api.csproj --coverage --results-directory ./Integration/Api/coverage-results
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
+        run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
+          node .github/scripts/run-spec-project.mjs --project Integration/Api/Api.csproj --coverage --results-directory ./Integration/Api/coverage-results
 
       - name: Assert API integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -1029,31 +1221,40 @@ jobs:
           path: ./Integration/Api/coverage-results
           name: The API integration job
 
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crash-dumps-integration-api
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-integration-api
           path: ./Integration/Api/coverage-results/
           retention-days: 1
 
   mongodb:
-    # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested)) }}
+    # Starts after build and PR preflight, beside ordinary specs; coverage still requires specs (#5865).
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested) && (github.event_name != 'pull_request' || needs.integration-preflight.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    needs: [already-ran, dotnet-build]
+    needs: [already-ran, dotnet-build, integration-preflight]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1061,7 +1262,7 @@ jobs:
         run: tar -I 'zstd -d --long=30' -xf build-output-release.tar.zst
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1136,7 +1337,15 @@ jobs:
           NODE
 
       - name: Run MongoDB integration tests with coverage
-        run: node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
+        env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
+        run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
+          node .github/scripts/run-spec-project.mjs --project Integration/MongoDB/MongoDB.csproj --coverage --results-directory ./Integration/MongoDB/coverage-results
 
       - name: Assert MongoDB integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -1173,9 +1382,18 @@ jobs:
           }
           NODE
 
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crash-dumps-mongodb
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-mongodb
           path: |
@@ -1187,10 +1405,10 @@ jobs:
     # Starts after its build, beside ordinary specs; the run and coverage still require specs (#5865).
     # Exercises the Neo4j storage directly against a Neo4j container, with no kernel. It starts the image and nothing else, so it needs no Docker image of the kernel.
     name: neo4j (${{ matrix.lane }})
-    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested)) }}
+    if: ${{ needs.already-ran.outputs.skip != 'true' && (!cancelled() && needs.dotnet-build.result == 'success' && (github.event_name != 'pull_request' || inputs.integration_requested) && (github.event_name != 'pull_request' || needs.integration-preflight.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [already-ran, dotnet-build]
+    needs: [already-ran, dotnet-build, integration-preflight]
     strategy:
       fail-fast: false
       # One of the integration slot caps pinned by test-sparse-integration-workflows.py (see integration.yml, #5875).
@@ -1208,15 +1426,15 @@ jobs:
             database-mode: PerNamespace
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 
@@ -1225,7 +1443,7 @@ jobs:
 
       # Pre-pull once per job so the Testcontainers image check does not race anonymous Docker Hub rate limits.
       - name: Pre-pull Neo4j image
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -1240,11 +1458,18 @@ jobs:
 
       - name: Run Neo4j integration tests with coverage (${{ matrix.lane }})
         env:
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
           CHRONICLE_NEO4J_IMAGE: ${{ matrix.image }}
           CHRONICLE_NEO4J_DATABASE_MODE: ${{ matrix.database-mode }}
           # The runner is destroyed after the job, so the Testcontainers reaper has nothing to clean up.
           TESTCONTAINERS_RYUK_DISABLED: true
-        run: node .github/scripts/run-spec-project.mjs --project Integration/Neo4j/Neo4j.csproj --coverage --results-directory ./Integration/Neo4j/coverage-results
+        run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
+          node .github/scripts/run-spec-project.mjs --project Integration/Neo4j/Neo4j.csproj --coverage --results-directory ./Integration/Neo4j/coverage-results
 
       - name: Assert Neo4j integration tests ran
         uses: ./.github/actions/assert-tests-ran
@@ -1253,9 +1478,18 @@ jobs:
           name: The Neo4j integration job (${{ matrix.lane }})
           prefixes: Cratis.Chronicle.Neo4j.Integration
 
+      - name: Upload crash dumps
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crash-dumps-neo4j-${{ matrix.lane }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-neo4j-${{ matrix.lane }}
           path: ./Integration/Neo4j/coverage-results/
@@ -1296,7 +1530,7 @@ jobs:
 
     steps:
       - name: Download coverage artifacts of the group
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./coverage-input
           pattern: ${{ matrix.pattern }}
@@ -1310,7 +1544,7 @@ jobs:
 
       - name: Setup .Net
         if: steps.inputs.outputs.count != '0'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -1330,7 +1564,7 @@ jobs:
 
       - name: Upload the merged coverage of the group
         if: steps.inputs.outputs.count != '0'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-partial-${{ matrix.group }}
           path: ./coverage-partial/Cobertura.xml
@@ -1352,19 +1586,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       # The per-lane artifacts are merged by the coverage-partial groups; only their merged output is needed here.
       - name: Download the merged coverage of every group
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./coverage-partials
           pattern: coverage-partial-*
@@ -1403,7 +1637,7 @@ jobs:
 
       - name: Upload nightly coverage feed
         if: github.repository == 'Cratis/Chronicle' && github.event_name == 'schedule' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-nightly-v1-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -1415,7 +1649,7 @@ jobs:
           overwrite: false
 
       - name: Cache merged coverage
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./coverage-reports
           key: coverage-cache-${{ github.sha }}
@@ -1453,15 +1687,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download Release build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-output-release
 

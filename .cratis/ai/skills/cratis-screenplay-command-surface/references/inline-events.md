@@ -30,6 +30,8 @@ module Projects
             ```
           tag audit
           name ProjectName = name
+      screen RenameProject
+        action RenameProject for screen
 ````
 
 The omitted `for` means the command's required scalar identifier **only for

@@ -16,6 +16,7 @@ import {
 import type { ReadModelInfo } from '@cratis/screenplay-language/projection';
 
 export * from './ProjectionEditor';
+export * from './graphDeclaration';
 
 let disposer: { dispose(): void } | undefined;
 

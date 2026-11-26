@@ -4,6 +4,7 @@
 """Lock the analyzer ownership map: every configuration has one analyzer-owning build, the rest skip analyzers."""
 
 from pathlib import Path
+import json
 import re
 import unittest
 
@@ -128,6 +129,18 @@ class AnalyzerOwnership(unittest.TestCase):
         run = without_comments(step_run(self.build, "package-verification", "Build client packages for every shipped framework"))
         self.assertEqual(1, run.count("dotnet build"))
         self.assertEqual(1, run.count("-p:SkipAnalyzersForTargetFramework=net11.0"))
+
+    def test_pr_pack_analyzes_every_client_and_shipped_framework(self):
+        run = without_comments(step_run(self.build, "package-pack-check", "Verify NuGet packages can be created"))
+        self.assertIn("dotnet pack ./Source/Clients/Packages.slnf --configuration Release", run)
+        self.assertIn("-p:IsPackaging=true", run)
+        for skip in (SKIP, "SkipAnalyzersForTargetFramework", "--no-build", "--no-restore"):
+            self.assertNotIn(skip, run)
+        projects = json.loads((ROOT / "Source/Clients/Packages.slnf").read_text(encoding="utf-8"))["solution"]["projects"]
+        clients = {str(path.relative_to(ROOT)) for path in (ROOT / "Source/Clients").rglob("*.csproj") if not path.name.endswith(".Specs.csproj")}
+        self.assertEqual(clients | {"Source/Kernel/Contracts/Contracts.csproj"}, set(projects))
+        fallback = next(step for step in self.build["jobs"]["package-verification"]["steps"] if step.get("name") == "Build client packages for every shipped framework")
+        self.assertEqual("github.event_name != 'pull_request'", fallback["if"])
 
     def test_framework_skip_is_scoped_to_that_framework(self):
         targets = (ROOT / "Directory.Build.targets").read_text(encoding="utf-8")

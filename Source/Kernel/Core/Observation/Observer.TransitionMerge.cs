@@ -6,9 +6,9 @@ using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Keeps the positions, in-flight partitions and handled-event totals recorded while a state transition is awaiting.
-/// </summary>
+/// </content>
 /// <remarks>
 /// The state machine replaces <see cref="ObserverState"/> with whatever a state's <c language="csharp">OnEnter</c> or <c language="csharp">OnLeave</c>
 /// returns, and those derive their result from the snapshot they were handed before awaiting. Handling, handled-count
@@ -83,6 +83,10 @@ public partial class Observer
         var recorded = _stateRecordedDuringTransitionHook;
         _stateHandedToTransitionHook = null;
         _stateRecordedDuringTransitionHook = null;
+
+        // Failures are authoritative: recovery can record progress before removing the failed partition, and
+        // count-only changes need not record handling progress at all. Never retain a hook's snapshot count.
+        State = State with { FailedPartitionCount = Failures.Partitions.Count() };
         if (handed is null || recorded is null)
         {
             return;

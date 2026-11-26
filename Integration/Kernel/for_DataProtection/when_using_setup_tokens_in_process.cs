@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Xml.Linq;
 using Cratis.Chronicle.Concepts.Security;
 using Cratis.Chronicle.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -21,9 +22,14 @@ public class when_using_setup_tokens_in_process(ChronicleFixture fixture) : Spec
         var tokens = Services.GetRequiredService<IInitialAdminSetupTokens>();
         var user = new UserId(Guid.NewGuid());
         _valid = tokens.IsValid(user, tokens.Issue(user));
+        var repository = Services.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlRepository;
+        _grainBacked = repository is GrainBasedXmlRepository;
+
+        // The key ring is cached for the process while storage is reset between facts, so store through the configured repository.
+        var marker = Guid.NewGuid().ToString();
+        repository!.StoreElement(new XElement("key", new XAttribute("id", marker)), marker);
         var keys = await Services.GetRequiredService<IGrainFactory>().GetGrain<IDataProtectionKeys>("chronicle-data-protection").GetAllKeys();
-        _persisted = keys.Any();
-        _grainBacked = Services.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlRepository is GrainBasedXmlRepository;
+        _persisted = keys.Any(_ => _.Contains(marker));
     }
 
     [Fact] void should_resolve_the_product_provider() => Services.GetRequiredService<IDataProtectionProvider>().ShouldNotBeNull();

@@ -19,9 +19,9 @@ using Npgsql;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// Reads generation metadata without provisioning, migration, or SQLite write pragmas.
-/// </summary>
+/// </content>
 public partial class Database
 {
     /// <inheritdoc/>
@@ -160,7 +160,7 @@ public partial class Database
     {
         var resolved = await _resolution.Resolve(identity, ConnectionPurpose.Runtime);
         var connectionString = SqlConnectionStrings.OwnsPlacement(resolved)
-            ? SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved)
+            ? options.Value.Storage.ConnectionDetails
             : new SqlDatabaseCatalog(options.Value.Storage.ConnectionDetails).ConnectionString(physicalName);
         return TargetFor(identity, ConnectionPurpose.Runtime, connectionString, resolved);
     }

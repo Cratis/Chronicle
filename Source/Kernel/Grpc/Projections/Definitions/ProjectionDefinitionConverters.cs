@@ -78,8 +78,7 @@ internal static class ProjectionDefinitionConverters
             AutoMap: (AutoMap)contract.AutoMap,
             Nested: contract.Nested.ToDictionary(_ => new PropertyPath(_.Key), _ => _.Value.ToChronicle()),
             SubscribesToAllEvents: contract.SubscribesToAllEvents,
-            NoAutoMapProperties: contract.NoAutoMapProperties.Select(_ => new PropertyPath(_)).ToList()
-        )
+            NoAutoMapProperties: contract.NoAutoMapProperties.Select(_ => new PropertyPath(_)).ToList())
         {
             GenerationDelivery = (Concepts.Observation.EventGenerationDelivery)contract.GenerationDelivery,
             Graph = contract.Graph?.ToChronicle()

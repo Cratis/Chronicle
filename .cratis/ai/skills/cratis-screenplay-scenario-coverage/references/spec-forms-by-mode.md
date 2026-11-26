@@ -19,7 +19,7 @@ Typed example/override forms: `cratis-screenplay-specifications`
 | Form | design | executable | renderable |
 |---|---|---|---|
 | `when <Cmd>` -> `then <Event>` / `then error` / `then denied` | yes | yes | yes |
-| `given <Event>` with `for` | yes | yes (needed for keyed views) | yes |
+| `given <Event>` with `for` | yes | yes (needed for keyed views); no producing command needed when a root projection supplies the identity type, see `cratis-screenplay-specifications` `references/producerless-events.md` | yes |
 | `given readmodel` | yes | yes (complete instance with key) | only as the query-only lookup below |
 | `when append <Event>` | yes | yes | supported single-hop reaction effects/invocation only; fan-out, deeper cascades and other refused assertions retain STAGE-ESM-011 |
 | `then readmodel` / `then query` (keyed `ById`, `arguments`, `result`) | yes | yes | yes |
@@ -46,7 +46,7 @@ Typed example/override forms: `cratis-screenplay-specifications`
 | Date rules using `today`, `$context`, mixed `Date`/`DateTime`, concept or reaction-`where` positions; nested paths | spec them in design | rule does not bind: `recorded` | `recorded` |
 | Bodied rules, code policies | spec them | spec reported **unsupported**, never passed | no |
 | Pending described command handlers (v23) | specify intent | binds; denial/validation execute, body-reaching specs Unsupported ImplementationBody; all-Unsupported is not green | STAGE-IMPL-002 even Stub mode |
-| Attached command handlers | spec them in design | beside unconditional `produces` with a resolved body: binds v23, a spec reaching the body is Unsupported (`ImplementationBody`); otherwise PLAY0800, no spec runs | Stage renders a C# body; generated specifications execute verified synchronous C# handlers |
+| Attached command handlers | spec them in design | beside unconditional `produces` (v23) or a `may produce` block (v35) with a resolved body: binds, a spec reaching the body is Unsupported (`ImplementationBody`); otherwise PLAY0800, no spec runs | Stage renders a C# body; generated specifications execute verified synchronous C# handlers |
 | `file` constraints | spec them in design | blocked: PLAY0268 at binding, no spec runs (V3 blocked) | no |
 | Query `performer`s | spec them in design | opaque read: PLAY0270 information, left out of the executable model; a spec that reads it is left out, every other spec still runs ([version gate](../../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does); older compilers report PLAY0268) | no |
 | Atomic reaction mode (v22) | declare for new models | failed batch adds no facts or view changes; earlier batches/commands remain; `then error` alone is insufficient | v22 STAGE-ESM-016; mode in admitted v23–v27 STAGE-ESM-043 |

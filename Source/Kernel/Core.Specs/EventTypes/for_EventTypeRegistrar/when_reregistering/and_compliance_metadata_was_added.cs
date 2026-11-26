@@ -20,6 +20,6 @@ public class and_compliance_metadata_was_added : given.a_registration
 
     Task Because() => Register(Protected);
 
-    [Fact] void should_keep_the_added_compliance() => _registered.Definition.Generations.Single().Schema.ActualProperties["amount"].GetComplianceMetadata().ShouldNotBeEmpty();
+    [Fact] void should_keep_the_added_compliance() => RegisteredDefinition.Generations.Single().Schema.ActualProperties["amount"].GetComplianceMetadata().ShouldNotBeEmpty();
     [Fact] void should_warn_about_historical_plaintext() => _logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log" && (LogLevel)call.GetArguments()[0]! == LogLevel.Warning).ShouldBeTrue();
 }

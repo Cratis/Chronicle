@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Arc.Commands;
+using Cratis.Chronicle.Helpers;
 using Cratis.Chronicle.Observation.Webhooks.Validation;
 using Cratis.Chronicle.Sequences;
 using FluentValidation;
@@ -27,6 +28,10 @@ internal class AddWebhooksValidator : CommandValidator<AddWebhooks>
         RuleFor(_ => _.Webhooks).NotEmpty().WithMessage("At least one webhook is required.");
         RuleForEach(_ => _.Webhooks).ChildRules(webhook =>
         {
+            webhook.RuleFor(_ => _.Signing)
+                .Must(signing => signing is Contracts.Observation.Webhooks.WebhookSigningMode.Unspecified or Contracts.Observation.Webhooks.WebhookSigningMode.Disabled or Contracts.Observation.Webhooks.WebhookSigningMode.Ed25519)
+                .WithMessage("Webhook signing must be Unspecified, Disabled or Ed25519; HmacSha256 is not supported yet.");
+            webhook.RuleFor(_ => _.Target.Headers).SetValidator(new CustomHttpHeadersValidator());
             webhook.RuleFor(_ => _.Identifier).NotEmpty().WithMessage("Webhook identifier is required.");
             webhook.RuleFor(_ => _.EventSequenceId).NotEmpty().WithMessage("Event sequence identifier is required.");
         });

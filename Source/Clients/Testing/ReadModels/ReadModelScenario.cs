@@ -523,9 +523,15 @@ public partial class ReadModelScenario<TReadModel>(TReadModel? initialState, Def
         return fold.Process(events);
     }
 
-    Type? FindReducerType(Type readModelType) =>
-        EventStore().ExplicitSnapshot.Projections.Any(_ => _.ReadModelType == readModelType) ? null :
-        EventStore().Reducers.GetAllHandlers().FirstOrDefault(_ => _.ReadModelType == readModelType)?.ReducerType;
+    Type? FindReducerType(Type readModelType)
+    {
+        if (EventStore().ExplicitSnapshot.Projections.Any(_ => _.ReadModelType == readModelType))
+        {
+            return null;
+        }
+
+        return EventStore().Reducers.GetAllHandlers().FirstOrDefault(_ => _.ReadModelType == readModelType)?.ReducerType;
+    }
 
     Contracts.Projections.ProjectionDefinition? FindProjectionDefinition(Type readModelType)
     {

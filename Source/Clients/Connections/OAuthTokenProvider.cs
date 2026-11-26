@@ -18,7 +18,7 @@ namespace Cratis.Chronicle.Connections;
 /// transient token-endpoint outage does not interrupt an otherwise healthy session. Failed fetch
 /// attempts are throttled so an outage does not turn every RPC into a token request.
 /// </remarks>
-public class OAuthTokenProvider : ITokenProvider, IDisposable
+public class OAuthTokenProvider : ITokenProvider, IDisposable, ITokenCacheBindingProvider
 {
     /// <summary>
     /// Assumed token lifetime in seconds when the token response carries no expires_in.
@@ -38,9 +38,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     readonly HttpClient _httpClient;
     readonly HttpMessageHandler _httpMessageHandler;
     readonly TimeProvider _timeProvider;
-    string? _accessToken;
-    DateTimeOffset _refreshAt = DateTimeOffset.MinValue;
-    DateTimeOffset _expiresAt = DateTimeOffset.MinValue;
+    volatile CachedToken _cached = CachedToken.None;
     DateTimeOffset _lastFailedFetch = DateTimeOffset.MinValue;
 
     /// <summary>
@@ -201,59 +199,12 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
-    {
-        if (HasFreshToken())
-        {
-            _logger.UsingCachedToken(_expiresAt);
-            return _accessToken;
-        }
-
-        await _refreshLock.WaitAsync(cancellationToken);
-        try
-        {
-            if (HasFreshToken())
-            {
-                _logger.UsingCachedToken(_expiresAt);
-                return _accessToken;
-            }
-
-            if (IsThrottled())
-            {
-                _logger.ThrottlingTokenFetch();
-                return CachedTokenIfStillValid();
-            }
-
-            return await FetchToken(cancellationToken);
-        }
-        finally
-        {
-            _refreshLock.Release();
-        }
-    }
+    public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default) =>
+        (await ((ITokenCacheBindingProvider)this).GetTokenWithBinding(cancellationToken))?.AccessToken;
 
     /// <inheritdoc/>
-    public async Task<string?> Refresh(CancellationToken cancellationToken = default)
-    {
-        await _refreshLock.WaitAsync(cancellationToken);
-        try
-        {
-            _logger.RefreshingAccessToken();
-            _accessToken = null;
-            _refreshAt = DateTimeOffset.MinValue;
-            _expiresAt = DateTimeOffset.MinValue;
-
-            // A forced refresh is an explicit, evidence-driven request - the server rejected the
-            // current token - so it bypasses the failed-fetch throttle.
-            _lastFailedFetch = DateTimeOffset.MinValue;
-        }
-        finally
-        {
-            _refreshLock.Release();
-        }
-
-        return await GetAccessToken(cancellationToken);
-    }
+    public async Task<string?> Refresh(CancellationToken cancellationToken = default) =>
+        (await ((ITokenCacheBindingProvider)this).RefreshTokenWithBinding(cancellationToken))?.AccessToken;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -262,6 +213,68 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         _refreshLock.Dispose();
         _httpMessageHandler.Dispose();
     }
+
+    /// <inheritdoc/>
+    async Task<TokenWithBinding?> ITokenCacheBindingProvider.GetTokenWithBinding(CancellationToken cancellationToken)
+    {
+        // The authentication interceptor reads the token synchronously on every call, including the keep-alive answers
+        // that hold the session open. With a fresh token this must complete without touching the refresh lock: an await
+        // that does not complete synchronously posts its continuation back to a caller that is blocked waiting for it.
+        var binding = CurrentBinding();
+        if (TryGetFreshToken(binding) is { } freshToken)
+        {
+            return freshToken;
+        }
+
+        await _refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (TryGetFreshToken(binding) is { } tokenFromOtherCaller)
+            {
+                return tokenFromOtherCaller;
+            }
+
+            if (_cached.Token is not null && _cached.Token.Binding != binding)
+            {
+                InvalidateToken();
+            }
+
+            if (IsThrottled())
+            {
+                _logger.ThrottlingTokenFetch();
+                return CachedTokenIfStillValid(binding);
+            }
+
+            return await FetchToken(binding, cancellationToken);
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    async Task<TokenWithBinding?> ITokenCacheBindingProvider.RefreshTokenWithBinding(CancellationToken cancellationToken)
+    {
+        await _refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            _logger.RefreshingAccessToken();
+
+            // A forced refresh bypasses the failed-fetch throttle as well as the cached token.
+            InvalidateToken();
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+
+        return await ((ITokenCacheBindingProvider)this).GetTokenWithBinding(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    ValueTask<TokenCacheBinding?> ITokenCacheBindingProvider.GetCurrentCacheBinding(CancellationToken cancellationToken) =>
+        ValueTask.FromResult<TokenCacheBinding?>(CurrentBinding());
 
     /// <summary>
     /// Creates a <see cref="HttpMessageHandler"/> for external authorities that always validates the server certificate.
@@ -292,6 +305,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
 
     static SocketsHttpHandler CreateHttpMessageHandler(bool skipTlsValidation, X509Certificate2Collection? certificateAuthorities) => new()
     {
+        AllowAutoRedirect = false,
         SslOptions = new SslClientAuthenticationOptions
         {
             RemoteCertificateValidationCallback =
@@ -304,9 +318,8 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
     static bool IsTransientStatus(HttpStatusCode statusCode) =>
         (int)statusCode >= 500 || statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests;
 
-    async Task<string?> FetchToken(CancellationToken cancellationToken)
+    async Task<TokenWithBinding?> FetchToken(TokenCacheBinding binding, CancellationToken cancellationToken)
     {
-        var tokenEndpoint = _tokenEndpoint();
         var loggedEndpoint = TokenDiagnostics.Label(_source);
         try
         {
@@ -314,7 +327,7 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
 
             using var content = new FormUrlEncodedContent(CreateTokenRequestParameters());
 
-            var response = await _httpClient.PostAsync(new Uri(tokenEndpoint), content, cancellationToken);
+            var response = await _httpClient.PostAsync(new Uri(binding.TokenEndpoint), content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -326,16 +339,17 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
             using var document = JsonDocument.Parse(responseContent);
             var root = document.RootElement;
 
-            _accessToken = root.GetProperty("access_token").GetString();
+            var accessToken = root.GetProperty("access_token").GetString();
             var expiresIn = root.TryGetProperty("expires_in", out var expiresInProp) ? expiresInProp.GetInt32() : DefaultExpiresInSeconds;
 
-            _expiresAt = _timeProvider.GetUtcNow().AddSeconds(expiresIn);
-            _refreshAt = _expiresAt - _refreshMargin;
+            var expiresAt = _timeProvider.GetUtcNow().AddSeconds(expiresIn);
+            var token = accessToken is null ? null : new TokenWithBinding(accessToken, binding);
+            _cached = new(token, expiresAt - _refreshMargin, expiresAt);
             _lastFailedFetch = DateTimeOffset.MinValue;
 
             _logger.ObtainedAccessToken(expiresIn);
 
-            return _accessToken;
+            return token;
         }
         catch (OperationCanceledException)
         {
@@ -345,11 +359,11 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         {
             _lastFailedFetch = _timeProvider.GetUtcNow();
 
-            if (CachedTokenIfStillValid() is { } cachedToken)
+            if (CachedTokenIfStillValid(CurrentBinding()) is { } cachedToken)
             {
                 // Only the refresh margin has been crossed, not the actual expiry - a transient
                 // token-endpoint failure must not take down an otherwise healthy session.
-                _logger.ServingCachedTokenAfterFailedFetch(loggedEndpoint, _expiresAt, TokenDiagnostics.Label(TokenDiagnostics.Categorize(ex)));
+                _logger.ServingCachedTokenAfterFailedFetch(loggedEndpoint, _cached.ExpiresAt, TokenDiagnostics.Label(TokenDiagnostics.Categorize(ex)));
                 return cachedToken;
             }
 
@@ -395,12 +409,40 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
     }
 
-    bool HasFreshToken() => !string.IsNullOrEmpty(_accessToken) && _timeProvider.GetUtcNow() < _refreshAt;
+    TokenCacheBinding CurrentBinding() => new(_tokenEndpoint(), _clientId);
+
+    void InvalidateToken()
+    {
+        _cached = CachedToken.None;
+        _lastFailedFetch = DateTimeOffset.MinValue;
+    }
+
+    TokenWithBinding? TryGetFreshToken(TokenCacheBinding binding)
+    {
+        var cached = _cached;
+        if (cached.Token is null || string.IsNullOrEmpty(cached.Token.AccessToken) || cached.Token.Binding != binding)
+        {
+            return null;
+        }
+
+        if (_timeProvider.GetUtcNow() >= cached.RefreshAt)
+        {
+            return null;
+        }
+
+        _logger.UsingCachedToken(cached.ExpiresAt);
+        return cached.Token;
+    }
 
     bool IsThrottled() => _timeProvider.GetUtcNow() - _lastFailedFetch < _failedFetchRetryDelay;
 
-    string? CachedTokenIfStillValid() =>
-        !string.IsNullOrEmpty(_accessToken) && _timeProvider.GetUtcNow() < _expiresAt ? _accessToken : null;
+    TokenWithBinding? CachedTokenIfStillValid(TokenCacheBinding binding)
+    {
+        var cached = _cached;
+        return !string.IsNullOrEmpty(cached.Token?.AccessToken) && cached.Token.Binding == binding && _timeProvider.GetUtcNow() < cached.ExpiresAt
+            ? cached.Token
+            : null;
+    }
 
     Dictionary<string, string> CreateTokenRequestParameters()
     {
@@ -417,5 +459,17 @@ public class OAuthTokenProvider : ITokenProvider, IDisposable
         }
 
         return parameters;
+    }
+
+    /// <summary>
+    /// The token and its refresh/expiry times, published as one immutable snapshot so the hot path reads them
+    /// without the refresh lock and never observes a half-updated token.
+    /// </summary>
+    /// <param name="Token">The token, if any.</param>
+    /// <param name="RefreshAt">When the token should be replaced.</param>
+    /// <param name="ExpiresAt">When the token stops being usable.</param>
+    sealed record CachedToken(TokenWithBinding? Token, DateTimeOffset RefreshAt, DateTimeOffset ExpiresAt)
+    {
+        public static readonly CachedToken None = new(null, DateTimeOffset.MinValue, DateTimeOffset.MinValue);
     }
 }

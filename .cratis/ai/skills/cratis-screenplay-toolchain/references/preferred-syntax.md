@@ -6,8 +6,8 @@
 
 Use these forms when writing or reviewing `.play`. Acceptance of an older
 spelling is not a recommendation to teach it. Information diagnostics do not
-fail `--warnaserror`; the corpus verification gate rejects the thirteen style codes
-below even when a fence declares `expect`, unless an exact, reasoned migration
+fail `--warnaserror`; the corpus verification gate rejects the style codes selected
+from the pinned contract and documented below, even when a fence declares `expect`, unless an exact, reasoned migration
 exception exists in the verifier's preferred-syntax allowlist. That allowlist also
 covers deliberate legacy explanations in prose; stale entries fail.
 
@@ -28,6 +28,8 @@ covers deliberate legacy explanations in prose; stale entries fail.
 | Combined policies | `authorize A and B` | `authorize A B` (adjacent policies mean `and`) | PLAY0825 (information; repair writes `and`) |
 | Composite key | Indented key parts under `key` | `key {` ... `}` around parts the indentation already groups | PLAY0824 (information; repair removes the braces) |
 | Profile shell | `root template <Name>` in a `ui profile` | `layout <Name>` in a `ui profile` | PLAY0791 (warning; quick fix) |
+| Profile appearance | `color scheme` in `appearance`; the accent, corner style and font as a palette entry and token values in the selected `theme` of the `design system` | `accent`, `corners` or `font` in a `ui profile`'s `appearance` | PLAY0929 (warning; quick fix moves the values into the theme) |
+| Slice placement | Show each element once; omit a placement for an element the slice already declares | Showing an element the slice declares, or showing the same element twice | PLAY0955 (warning) |
 | Literal text rules | `starts with`, `ends with`, `contains`, `not contains` or equality, preserving message and severity | Exact deprecated Studio `matches` shapes | PLAY0787 (warning; not arbitrary regex rewriting) |
 | Objects and lists | An indented block under the name: `member = value` lines, one `item` line per element, `<name> none` for an empty list | Inline JSON (`= {...}`, `= [...]`) - not accepted; Screenplay has no JSON | PLAY0833 (error; quick fix, and printing converts) |
 

@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Defines the system that manages the queues for appended events.
 /// </summary>
-[Version(1)]
+[Version(2)]
 public interface IAppendedEventsQueues : IGrainWithStringKey
 {
     /// <summary>
@@ -36,7 +36,7 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// <param name="eventTypes">Collection of <see cref="EventType"/> to subscribe to.</param>
     /// <param name="filters">Optional <see cref="ObserverFilters"/> to apply when dispatching events.</param>
     /// <returns><see cref="AppendedEventsQueueSubscription"/>.</returns>
-    Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null);
+    Task<AppendedEventsQueueSubscription> Subscribe(ObserverKey observerKey, EventTypeSet eventTypes, ObserverFilters? filters = null);
 
     /// <summary>
     /// Subscribe an observer to every event appended, whatever its type - including event types that do not exist yet.
@@ -74,7 +74,9 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// The authoritative answer comes from the queue grain itself, not from the routing index, because the queue can
     /// drop subscriptions behind an observer's back - it does so when it spills to catch-up under back-pressure. An
     /// observer that believes it is subscribed uses this to tell "still being delivered to" from "silently dropped".
+    /// This read-only probe must not queue behind spill callbacks, which may await the observer asking it.
     /// </remarks>
+    [AlwaysInterleave]
     Task<bool> IsSubscribed(ObserverKey observerKey);
 
     /// <summary>
@@ -91,4 +93,33 @@ public interface IAppendedEventsQueues : IGrainWithStringKey
     /// cursor, so it delivers the imported events and any ordinary appends that interleave with them, in order.
     /// </remarks>
     Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents);
+
+    /// <summary>
+    /// Marks the subscription of an observer that is leaving its activation as dormant, keeping it so an event wakes the observer.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer that is being released.</param>
+    /// <returns>True when the subscription is kept as dormant; false when the observer must stay subscribed the ordinary way.</returns>
+    /// <remarks>
+    /// Refused when events are still queued for the observer or being delivered to it, so a release never strands events
+    /// in a lane (decision 0034).
+    /// </remarks>
+    Task<bool> TryMarkDormant(ObserverKey observerKey);
+
+    /// <summary>
+    /// Gets whether the subscription of an observer is kept as dormant, so it has no activation (decision 0034).
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>True when the observer is dormant.</returns>
+    /// <remarks>
+    /// Answered by the queue that holds the observer's subscription, so asking never activates the observer.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task<bool> IsDormant(ObserverKey observerKey);
+
+    /// <summary>
+    /// Removes the subscription of an observer without it having an activation to ask, such as a dormant one that turned out to have no subscriber left.
+    /// </summary>
+    /// <param name="observerKey"><see cref="ObserverKey"/> of the observer.</param>
+    /// <returns>Awaitable task.</returns>
+    Task Forget(ObserverKey observerKey);
 }

@@ -8,17 +8,16 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 /// </summary>
 public class and_a_restore_is_confirmed : given.a_client_subscription_keeper
 {
-    TimeSpan _waitToConfirm;
-    TimeSpan _waitAfterConfirming;
+    TimeSpan? _waitToConfirm;
+    TimeSpan? _waitAfterConfirming;
 
     protected override Task<bool> Check(int check) => Task.FromResult(check > 1);
 
     async Task Because()
     {
-        StartKeeping();
-        await _clock.Elapse();
-        _waitToConfirm = await _clock.Elapse();
-        _waitAfterConfirming = await _clock.NextWait();
+        await StartKeeping();
+        _waitToConfirm = await _periodicCheck();
+        _waitAfterConfirming = await _periodicCheck();
     }
 
     [Fact] void should_confirm_after_one_revise_interval() => _waitToConfirm.ShouldEqual(Revise);

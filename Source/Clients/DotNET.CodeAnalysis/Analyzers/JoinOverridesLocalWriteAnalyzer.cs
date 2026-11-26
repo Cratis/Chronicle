@@ -34,6 +34,7 @@ public class JoinOverridesLocalWriteAnalyzer : DiagnosticAnalyzer
         "SetFromAttribute",
         "SetValueAttribute",
         "SetFromContextAttribute",
+        "SetFromEventSourceIdAttribute",
         "AddFromAttribute",
         "SubtractFromAttribute",
         "CountAttribute",

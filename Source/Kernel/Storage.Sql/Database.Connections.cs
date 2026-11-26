@@ -23,9 +23,9 @@ using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="Database"/> that decides where and how each database context connects.
-/// </summary>
+/// </content>
 public partial class Database
 {
     /// <summary>
@@ -38,6 +38,8 @@ public partial class Database
     /// The longest delay between retries.
     /// </summary>
     static readonly TimeSpan _maxRetryDelay = TimeSpan.FromSeconds(30);
+
+    readonly SqlConnectionStringCache _connectionStrings = new();
 
     /// <summary>
     /// Builds the options every database context of the kernel is created with.
@@ -161,7 +163,7 @@ public partial class Database
 
         var resolved = await _resolution.Resolve(identity, purpose);
         var connectionString = SqlConnectionStrings.OwnsPlacement(resolved)
-            ? SqlConnectionStrings.WithPlacement(options.Value.Storage.ConnectionDetails, resolved)
+            ? options.Value.Storage.ConnectionDetails
             : await ResolveConnectionString(identity, readOnly);
 
         return TargetFor(identity, purpose, connectionString, resolved);
@@ -177,8 +179,9 @@ public partial class Database
     SqlTarget TargetFor(DatabaseIdentity identity, ConnectionPurpose purpose, string connectionString, ResolvedConnection resolved)
     {
         var schema = _resolution.SchemaFor(resolved);
+        var input = SqlConnectionStringInput.From(connectionString, schema, options.Value.Storage.PostgreSqlPooling, identity.Kind == DatabaseKind.Cluster ? null : resolved);
         return new(
-            SqlConnectionStrings.WithPooling(SqlConnectionStrings.WithSchema(connectionString, schema), options.Value.Storage.PostgreSqlPooling),
+            _connectionStrings.Get(identity, purpose, input),
             schema,
             _resolution.IsConfigured ? _resolution.RequestFor(identity, purpose) : null);
     }
@@ -257,14 +260,17 @@ public partial class Database
             return Task.FromResult(KnownConnectionString(identity));
         }
 
-        return UsesBindings
-        ? _databaseNames.Resolve(
+        if (!UsesBindings)
+        {
+            return Task.FromResult(ConnectionStringFor(identity.LogicalName(string.Empty)));
+        }
+
+        return _databaseNames.Resolve(
             identity,
             Cluster,
             connection => new EventStoreDbContext(BuildOptions<EventStoreDbContext>(MetadataTarget(connection))),
             connection => new NamespaceDbContext(BuildOptions<NamespaceDbContext>(MetadataTarget(connection))),
-            serviceProvider.GetService<ILogger<DatabaseNameResolver>>() ?? NullLogger<DatabaseNameResolver>.Instance)
-        : Task.FromResult(ConnectionStringFor(identity.LogicalName(string.Empty)));
+            serviceProvider.GetService<ILogger<DatabaseNameResolver>>() ?? NullLogger<DatabaseNameResolver>.Instance);
     }
 
     string KnownConnectionString(DatabaseIdentity identity)

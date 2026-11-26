@@ -9,7 +9,7 @@ Three meanings, one word:
 
 - **Backend implementation attachment.** On an attached command `handler`
   (binds as the v23 result contract beside unconditional `produces` with a resolved
-  body from Screenplay 4.250.0, otherwise PLAY0800; pending described handlers bind
+  body from Screenplay 4.250.0, or v35 beside a `may produce` block with a resolved body, otherwise PLAY0800; pending described handlers bind
   v23 without a file), a validation
   rule predicate, a query `performer`, a reducer rule, a reaction trigger, a
   `constraint` and a `policy`, `file` stands in for the inline body: the

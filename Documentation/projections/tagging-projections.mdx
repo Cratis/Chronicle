@@ -7,7 +7,7 @@ Projection tags in Cratis Chronicle label a projection definition with its purpo
 To control projection input, declare the event types and select the event sequence. If you need a reducer or reactor to process only events with particular metadata, use [appended event metadata filters](../events/filtering/index.md) instead of projection tags.
 
 :::note[Client coverage]
-C# supports `[Tag]` and `[Tags]`; TypeScript supports `@tag` and `@tags`. Apply them to the projection class, or to the read model for a model-bound projection. Kotlin and Elixir do not support projection tags. The kernel stores and returns tags with the projection definition. Changing only tags does not trigger a replay or replay recommendation.
+C# supports `[Tag]` and `[Tags]`; TypeScript supports `@tag` and `@tags`. Apply them to the projection class, or to the read model for a model-bound projection. The kernel stores and returns tags with the projection definition. Changing only tags does not trigger a replay or replay recommendation.
 :::
 
 ## Adding Tags

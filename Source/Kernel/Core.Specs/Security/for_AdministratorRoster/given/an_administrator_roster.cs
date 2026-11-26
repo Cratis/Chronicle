@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Auditing;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Events.Constraints;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventSequences.Concurrency;
 using Cratis.Chronicle.Concepts.Identities;
@@ -43,6 +44,7 @@ public class an_administrator_roster : Specification
     protected List<ConcurrencyScopes> _scopes = [];
     protected int _conflicts;
     protected bool _failAppend;
+    protected bool _rejectWithViolations;
     protected bool _synchronizeNextAppends;
     readonly object _appendLock = new();
     readonly TaskCompletionSource<bool> _appendGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -202,6 +204,14 @@ public class an_administrator_roster : Specification
             _appendCalls++;
             _scopes.Add(scopes);
             if (_failAppend) return new AppendManyResult { CorrelationId = CorrelationId.New(), Errors = ["storage failure"] };
+            if (_rejectWithViolations)
+            {
+                return new AppendManyResult
+                {
+                    CorrelationId = CorrelationId.New(),
+                    ConstraintViolations = [new(events[0].EventType.Id, EventSequenceNumber.BeforeFirst, ConstraintType.Schema, "SchemaValidation", "The migration content violates its schema", new() { ["path"] = "#/userId", ["kind"] = "Type" })]
+                };
+            }
             var violations = scopes.Scopes.Where(entry => Violates(entry.Key, entry.Value))
                 .Select(entry => new ConcurrencyViolation(entry.Key, entry.Value.SequenceNumber, Matching(entry.Value.EventTypes, entry.Key).Last().Context.SequenceNumber)).ToArray();
             if (violations.Length != 0)

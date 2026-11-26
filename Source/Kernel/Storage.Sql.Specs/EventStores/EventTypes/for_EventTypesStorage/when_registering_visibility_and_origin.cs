@@ -31,11 +31,9 @@ public class when_registering_visibility_and_origin : given.an_event_types_stora
         _public = await _storage.GetFor(_publicEvent, _firstGeneration);
 
         await _storage.Register(type, schema, EventTypeOwner.Client, EventTypeSource.Code, EventTypeVisibility.Unspecified, "owning-store");
-        _storage.Invalidate(_publicEvent);
         _afterUnspecified = await _storage.GetFor(_publicEvent, _firstGeneration);
 
         _visibilityChangeChanged = await _storage.Register(type, schema, EventTypeOwner.Client, EventTypeSource.Code, EventTypeVisibility.Private, "owning-store");
-        _storage.Invalidate(_publicEvent);
         _afterBecomingPrivate = await _storage.GetFor(_publicEvent, _firstGeneration);
     }
 

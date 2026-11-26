@@ -45,8 +45,8 @@ public class and_a_failed_partition_recovered_past_a_queued_event : given.an_obs
         await _observer.Handle("Q", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 102UL)]);
     }
 
-    [Fact] void should_currently_skip_the_queued_event() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
-    [Fact] void should_currently_advance_past_the_queued_event() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)104UL);
+    [Fact] void should_hold_the_queued_event_for_repair() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
+    [Fact] void should_retain_the_queued_event_as_pending_work() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)102UL);
     [Fact] void should_report_one_suspected_skip() => _suspectedSkips.ShouldEqual(1);
     [Fact] void should_clear_the_recovered_failure() => _failedPartitionsStorage.State.IsFailed((Key)"P").ShouldBeFalse();
 }

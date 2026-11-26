@@ -221,3 +221,6 @@ nothing.
 - Field errors are not announced twice.
 - No claim of keyboard support, automated coverage, or WCAG conformance is made
   that the source does not back.
+
+For a screenshot-grounded critique of a rendered screen, which reports
+accessibility risks without claiming conformance, use `cratis-ux-review`.

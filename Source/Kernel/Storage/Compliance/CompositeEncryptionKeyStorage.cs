@@ -81,6 +81,10 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
     public IReadOnlyList<EncryptionKeyStorageCapability> Capabilities => _inner.SelectMany(_ => _.Capabilities).ToArray();
 
     /// <inheritdoc/>
+    /// <remarks>Internal secrets live only in the primary, so this is what the primary says.</remarks>
+    public bool KeepsInternalSecretsOutsideTheEventStoreDatabases => _inner[0].KeepsInternalSecretsOutsideTheEventStoreDatabases;
+
+    /// <inheritdoc/>
     public EncryptionKeyFenceGuarantees FenceGuarantees => _inner.Aggregate(
         EncryptionKeyFenceGuarantees.MonotonicFence | EncryptionKeyFenceGuarantees.FencedSave,
         (guarantees, store) => guarantees & store.FenceGuarantees);
@@ -450,7 +454,12 @@ public class CompositeEncryptionKeyStorage : IEncryptionKeyStorage, IEvictEncryp
         }
 
         if (failures.Count > 0) throw new EncryptionKeyFenceUnavailable(new AggregateException(failures));
-        return fences.Count == 0 ? null : Strictest(fences) with
+        if (fences.Count == 0)
+        {
+            return null;
+        }
+
+        return Strictest(fences) with
         {
             Version = fences.Max(_ => _.Version),
             ErasedLifecycle = fences.Max(_ => _.ErasedLifecycle)

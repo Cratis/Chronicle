@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Buffers;
 using System.Dynamic;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,10 +18,20 @@ public class EventHashCalculator : IEventHashCalculator
     /// <inheritdoc/>
     public EventHash Calculate(EventTypeId eventTypeId, EventSourceId eventSourceId, ExpandoObject content)
     {
-        var buffer = new ArrayBufferWriter<byte>();
-        buffer.Write(Encoding.UTF8.GetBytes($"{eventTypeId.Value}|{eventSourceId.Value}|"));
+        using var buffer = new CanonicalJsonBuffer();
+        WritePrefixPart(eventTypeId.Value, buffer);
+        WritePrefixPart(eventSourceId.Value, buffer);
         CanonicalJson.Write(content, buffer);
-        var hashBytes = SHA256.HashData(buffer.WrittenSpan);
+        Span<byte> hashBytes = stackalloc byte[32];
+        SHA256.HashData(buffer.WrittenSpan, hashBytes);
         return Convert.ToBase64String(hashBytes);
+    }
+
+    static void WritePrefixPart(string? value, CanonicalJsonBuffer buffer)
+    {
+        var destination = buffer.GetSpan(Encoding.UTF8.GetMaxByteCount(value?.Length ?? 0) + 1);
+        var written = Encoding.UTF8.GetBytes(value.AsSpan(), destination);
+        destination[written] = (byte)'|';
+        buffer.Advance(written + 1);
     }
 }

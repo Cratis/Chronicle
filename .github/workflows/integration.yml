@@ -43,7 +43,11 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          # The RollingUpgrade lane is skipped when the release it upgrades from is waived as a stop-start release,
+          # which needs the release tags that are ancestors of this build.
+          fetch-depth: 0
 
       # The generator decides what every run actually verifies, so a silent
       # change in its selection is a silent change in coverage. Its specs cost a
@@ -129,19 +133,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The integration test projects target net11.0 only (Directory.Build.props),
       # and these jobs only run already-built net11.0 assemblies, so installing the
       # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-client
 
@@ -152,7 +156,7 @@ jobs:
 
       - name: Login to GitHub Docker Registry
         if: matrix.needs-docker == true
-        uses: docker/login-action@v3
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -176,7 +180,7 @@ jobs:
       # images (mssql) and locally built images (cratis/chronicle) do not
       # need pre-pulling.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -247,7 +251,7 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
           path: ./coverage-results/
@@ -256,12 +260,28 @@ jobs:
       # always(): the retry script can turn a crashed first attempt into a green job, and the dump is still wanted.
       - name: Upload crash dumps
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: crash-dumps-client-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}
           path: ${{ runner.temp }}/crash-dumps/
           if-no-files-found: ignore
           retention-days: 3
+
+      # Collect on failure/timeout; the fixture already writes kernel ILogger output to timestamped .log files.
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure() || cancelled()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-${{ matrix.shard }}-${{ matrix.mode }}-${{ matrix.database }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
 
   kernel-integration-specs:
     needs: [discover]
@@ -275,19 +295,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The integration test projects target net11.0 only (Directory.Build.props),
       # and these jobs only run already-built net11.0 assemblies, so installing the
       # 10.0 SDK on every matrix shard is pure setup overhead. Multi-targeting
       # only happens during `dotnet pack` in the publish workflows.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-kernel
 
@@ -310,7 +330,7 @@ jobs:
 
       # See the equivalent step in client-integration-specs for the rationale.
       - name: Pre-pull Docker Hub images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -324,9 +344,15 @@ jobs:
           # The retry script owns --results-directory; point it at ./coverage-results so the
           # collected coverage and TRX files land where the upload step reads them.
           TEST_RESULTS_DIR: ./coverage-results
+          # Keep a mini crash dump when the test host dies with SIGSEGV (Cratis/Chronicle#5630);
+          # createdump does not create the directory, so the run script does.
+          DOTNET_DbgEnableMiniDump: 1
+          DOTNET_DbgMiniDumpType: 1
+          DOTNET_DbgMiniDumpName: ${{ runner.temp }}/crash-dumps/%e.%p.dmp
         # See client-integration-specs for the retry rationale. The kernel project
         # does not have Client's Docker build target.
         run: |
+          mkdir -p "$RUNNER_TEMP/crash-dumps"
           .github/scripts/run-tests-with-retry.sh \
             Integration/Kernel/Kernel.csproj \
             "${{ matrix.filter }}" \
@@ -342,11 +368,36 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-kernel-${{ matrix.namespace }}
           path: ./coverage-results/
           retention-days: 1
+
+      # always(): the retry script can turn a crashed first attempt into a green job, and the dump is still wanted.
+      - name: Upload crash dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: crash-dumps-kernel-${{ matrix.namespace }}
+          path: ${{ runner.temp }}/crash-dumps/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure() || cancelled()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
 
   clustering-integration-specs:
     needs: [discover]
@@ -360,16 +411,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-clustering
 
@@ -414,11 +465,26 @@ jobs:
 
       - name: Upload coverage results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-results-clustering-${{ matrix.namespace }}
           path: ./coverage-results/
           retention-days: 1
+
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure() || cancelled()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.namespace }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
 
   sql-clustering-integration-specs:
     needs: [discover]
@@ -434,7 +500,7 @@ jobs:
     # Shared verbatim with the separately gated RollingUpgrade lane below.
     steps: &sql-clustering-steps
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: ${{ matrix.provider == 'RollingUpgrade' && '0' || '1' }}
 
@@ -454,26 +520,18 @@ jobs:
             echo "Skipping releases listed in .github/rolling-upgrade-unusable-releases.txt: $(tr '\n' ' ' <<< "$unusable")"
           fi
           image_tag="${release_tag#v}-development-slim"
-          metadata=$(curl --fail --silent --show-error --location --max-time 60 \
-            "https://hub.docker.com/v2/repositories/cratis/chronicle/tags/${image_tag}") || {
-            echo "::error::Previous release image cratis/chronicle:${image_tag} could not be resolved on Docker Hub."
-            exit 1
-          }
-          if ! jq -e --arg tag "$image_tag" '.name == $tag and (.images | length > 0)' <<< "$metadata"; then
-            echo "::error::Docker Hub returned no image for cratis/chronicle:${image_tag}."
-            exit 1
-          fi
+          node .github/scripts/resolve-previous-release-image.mjs "$image_tag"
           echo "Previous release: ${release_tag}; image: cratis/chronicle:${image_tag}"
           echo "CRATIS_CHRONICLE_PREVIOUS_IMAGE=cratis/chronicle:${image_tag}" >> "$GITHUB_ENV"
 
       # See client-integration-specs for the single-SDK rationale.
       - name: Setup .Net
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 11.0.x
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.build-output-artifact }}-sqlclustering
 
@@ -498,7 +556,7 @@ jobs:
           echo "CRATIS_CHRONICLE_BUILD_VERSION=${stamped[0]}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -541,14 +599,14 @@ jobs:
       - name: Upload rolling delivery overhead evidence immediately
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rolling-delivery-overhead
           path: ${{ runner.temp }}/rolling-delivery-overhead/
           retention-days: 7
 
       - name: Pre-pull images
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -591,7 +649,7 @@ jobs:
 
       - name: Upload rolling delivery diagnostics evidence
         if: always() && matrix.provider == 'RollingUpgrade'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rolling-delivery-diagnostics
           path: ${{ runner.temp }}/rolling-delivery-overhead/
@@ -599,11 +657,26 @@ jobs:
 
       - name: Upload SQL clustering results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sql-clustering-${{ matrix.provider }}-results
           path: coverage-results/
           retention-days: 7
+
+      - name: Collect and screen failed integration logs
+        id: integration-logs
+        if: failure() || cancelled()
+        timeout-minutes: 5
+        run: node .github/scripts/collect-integration-logs.mjs
+
+      - name: Upload failed integration logs
+        if: (failure() || cancelled()) && steps.integration-logs.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: failed-integration-logs-${{ github.job }}-${{ matrix.provider }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/integration-logs/
+          retention-days: 3
+          if-no-files-found: ignore
 
   # A job-level condition (not a successful zero-spec run) makes the excluded lane visibly skipped.
   # Its reason and issue links are in discovery's summary; remove only the declaration to re-enable.

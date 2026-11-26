@@ -7,6 +7,7 @@
 - Attributes
 - Composition and precedence
 - Named policies
+- Policies that decide from recorded state
 - Guests and anonymous policies
 - Evaluation order
 - Baselines: two separate mechanisms
@@ -38,6 +39,8 @@ Requires Arc 22.39.0 for protected decisions.
 Requires Arc 22.51.0 for `IdentityDiscovery`, which controls the users/tenants/details schema separately.
 
 On an Arc older than 22.21.0 only Arc's own attributes count, and only `Roles` is evaluated: `Policy` and `AuthenticationSchemes` are read by nothing, so `[Authorize(Policy = "…")]` enforces nothing, and Microsoft's `[Authorize]`/`[AllowAnonymous]` are **not** enforced on model-bound commands and read models (a command protected only with Microsoft's attribute is open to every caller). Either upgrade, or use only Arc's attributes with roles and treat everything else as unenforced. Do not write a policy-protected endpoint on an Arc older than 22.23.0.
+
+Requires Arc 22.181.0 for `StateAwareAuthorizationPolicy<TState>` and `StateDenialReason` (first release tag that contains them).
 
 Requires Arc 22.31.2 for identity and declaration continuity to be rechecked around policy evaluation.
 
@@ -133,6 +136,76 @@ public record <Name>(...)
   that succeed, and denies when none does; a request that selects schemes runs
   in a fresh execution scope. `ICurrentPrincipalAccessor` then exposes the
   selected identity.
+
+## Policies that decide from recorded state
+
+Use `StateAwareAuthorizationPolicy<TState>` (`Cratis.Arc.Authorization`, `TState : class`) when
+access depends on something the application recorded, such as the plan of the asset a command
+acts on or the author of an article. It implements `IAuthorizationPolicy`, so it is registered,
+referenced and evaluated exactly like any other named policy. It is the hand-written counterpart of a
+Screenplay policy with `reads` (see `cratis-screenplay-command-surface`); a rendered model
+generates the equivalent.
+
+```csharp
+public class DataQualityEnabled(IAssetPlans plans) : StateAwareAuthorizationPolicy<AssetPlan>
+{
+    protected override object? GetKey(AuthorizationPolicyContext context) =>
+        (context.Resource as CommandContext)?.Command is RequestScopedToken command ? command.AssetId : null;
+
+    protected override async ValueTask<AssetPlan?> Read(object key, CancellationToken cancellationToken) =>
+        await plans.Find((AssetId)key, cancellationToken);
+
+    protected override bool Decide(ClaimsPrincipal principal, AssetPlan state) => state.DataQuality;
+}
+
+builder.Services.AddArcAuthorizationPolicy<DataQualityEnabled>("DataQualityEnabled"); // before Build()
+```
+
+```csharp
+[Authorize(Policy = "DataQualityEnabled")]
+[Command]
+public record RequestScopedToken(AssetId AssetId) { /* ... */ }
+```
+
+| Member | Contract |
+| --- | --- |
+| `GetKey(AuthorizationPolicyContext)` | `object?`. Take the key from `context.Resource` (the `CommandContext` or `QueryContext`). Return `null` to deny |
+| `Read(object key, CancellationToken)` | `ValueTask<TState?>`. Fetch the state, typically a read model through your own lookup. Return `null` when none is recorded |
+| `Decide(ClaimsPrincipal, TState)` | `bool`. Compare the state with the caller |
+| `OnDenied(context, StateDenialReason, Exception?)` | virtual, default does nothing. Log or count the cause |
+
+**Fail-closed behavior** (from `IsAuthorized` in source), in evaluation order:
+
+| Situation | Result | `StateDenialReason` |
+| --- | --- | --- |
+| `GetKey` returns `null` or throws | denied | `NoKey` |
+| `Read` returns `null` (no read model instance) | denied | `NotFound` |
+| `Read` throws (store unavailable, any exception) | denied | `ReadFailed` |
+| `Decide` returns `false` | denied | `Rejected` |
+| `Decide` throws | denied | `Rejected` |
+| Cancellation (`OperationCanceledException` while the token is cancelled) | **propagates**, not a denial | none |
+
+Absence never allows, and none of the denials throws, so a denial stays distinguishable from a
+server error only through `OnDenied`. A `Read` that returns a default or empty `TState` instead of
+`null` is your decision and `Decide` then sees it; return `null` for "nothing recorded".
+
+Limits:
+
+- It is an admission check. The read does not enrol in decision reads and access granted when
+  the state later changes is not revoked. A read model can lag the events that produced it, so a
+  rule that must hold under concurrent writers belongs in the handler as a protected decision
+  read (`cratis-chronicle-decision-reads`), not only in a policy.
+- The default registration is authenticated callers only; an unauthenticated caller is never
+  evaluated unless the policy opts in with `evaluatesAnonymous: true`, which a state-aware policy
+  rarely should.
+- To end a live observable subscription when the state changes, Arc main also has
+  `StateAwareEmissionGuard<TState>` (Requires Arc 22.184.0 or later).
+- To specify a policy, call `IsAuthorized` with a hand-built `AuthorizationPolicyContext` and seed the
+  state your `Read` override returns. Cover absent state, a failing read, a missing key and a rejecting decision.
+
+Sources: `StateAwareAuthorizationPolicy.cs`, `StateDenialReason.cs` and
+`AuthorizationPolicyServiceCollectionExtensions.cs` in `Cratis/Arc` `Source/DotNET/Arc.Core/Authorization`;
+Arc documentation `backend/csharp/core/authorization.md`.
 
 ## Guests and anonymous policies
 
@@ -303,7 +376,8 @@ being in-process does not prove permission.
 of transport. During HTTP it is the request principal; outside HTTP it can be the
 principal established by a server-side scope. Read claims from it, not from the
 identity cookie, and not through `IHttpContextAccessor` in code that must also run
-on hub emissions.
+on hub emissions. For application actor injection, caller-keyed reads and
+Chronicle attribution, read [command identity](command-identity.md).
 
 Command authorization reads the principal from the current request. A reactor,
 hosted service, or one command orchestrating another has no request, so any
@@ -332,12 +406,12 @@ privileged.
 Under read protection `On`, the read models in a convention-registered
 `CommandValidator<T>` constructor are read fresh and guard the command's append, so
 a state-dependent permission or ownership rule written there is decision-safe. Under
-`Off` (the default) and `Measure` the same validator reads a plain model: a hint. In
+`Off` (set explicitly, or the Arc 22 behavior) and `Measure` the same validator reads a plain model: a hint. In
 an `[Unprotected]` command (or a model or method marked `[Unprotected("why")]`) the
 read is advisory, so the rule is **not decision-safe**. A `[ProtectedDecision]`
 command without `On` runs only certified, parameterless validators and refuses a
 validator whose constructor takes dependencies; put such a rule in `Provide()` or
-`Handle()` using `DecisionRead<T>` or `IDecisionReads`. Hand-registered scoped,
+`Handle()` (older opt-in exception) using `DecisionRead<T>` or `IDecisionReads`. Hand-registered scoped,
 singleton, factory or instance validators are refused under `On`. Keep
 static/service-locator state out of validators: a guard covers reads Arc can see.
 Source: [protected validator boundary](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/chronicle/read-models/injecting-into-commands.md).

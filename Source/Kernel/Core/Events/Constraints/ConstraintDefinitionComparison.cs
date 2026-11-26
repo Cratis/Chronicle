@@ -29,12 +29,18 @@ public static class ConstraintDefinitionComparison
     /// The version is a hash over the definitions serialized to a canonical, name-ordered form. It therefore depends only
     /// on the content of the definitions — two equal sets produce the same version even when they are distinct instances
     /// read from persisted state on different silos or after grain reactivation, and any add or change produces a
-    /// different version.
+    /// different version. The collections of a definition are put in their canonical form first, so two definitions that
+    /// differ only in the order they list the same things share a version, as they are equal.
+    /// <para>
+    /// The version is never persisted: each grain derives it from the definitions it holds, and a sequence compares it
+    /// only to refresh its validators. Reindexing is decided by <see cref="GetReindexChanges"/>, so changing how the
+    /// version is derived cannot cause a reindex.
+    /// </para>
     /// </remarks>
     public static ConstraintsVersion ComputeVersion(IEnumerable<IConstraintDefinition> definitions)
     {
         var builder = new StringBuilder();
-        foreach (var definition in definitions.OrderBy(_ => _.Name.Value, StringComparer.Ordinal))
+        foreach (var definition in definitions.Select(Normalized).OrderBy(_ => _.Name.Value, StringComparer.Ordinal))
         {
             builder
                 .Append(definition.GetType().Name)
@@ -93,4 +99,12 @@ public static class ConstraintDefinitionComparison
 
         return changes;
     }
+
+    static IConstraintDefinition Normalized(IConstraintDefinition definition) => definition switch
+    {
+        UniqueConstraintDefinition unique => unique.Normalized(),
+        UniqueEventTypeConstraintDefinition uniqueEventType => uniqueEventType.Normalized(),
+        ClosesStreamConstraintDefinition closesStream => closesStream.Normalized(),
+        _ => definition
+    };
 }

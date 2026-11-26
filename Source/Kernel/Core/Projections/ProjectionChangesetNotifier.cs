@@ -5,6 +5,8 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
+using Orleans.Serialization.Invocation;
 
 namespace Cratis.Chronicle.Projections;
 
@@ -12,6 +14,8 @@ namespace Cratis.Chronicle.Projections;
 /// Represents an implementation of <see cref="IProjectionChangesetNotifier"/>.
 /// </summary>
 /// <param name="logger">The <see cref="ILogger{T}"/> for logging.</param>
+/// <param name="projectionsServiceClient">The <see cref="IProjectionsServiceClient"/> used to tell every silo whether the projection is watched.</param>
+/// <param name="timeProvider">The <see cref="TimeProvider"/> used to throttle republishing; defaults to <see cref="TimeProvider.System"/>.</param>
 /// <remarks>
 /// One activation exists per observer, event store and namespace (see <see cref="ProjectionChangesetNotifierKey"/>).
 /// Marked <c language="csharp">[KeepAlive]</c> because the subscriber registrations live only in memory — there is no
@@ -25,9 +29,29 @@ namespace Cratis.Chronicle.Projections;
 /// hosting each watch connection.
 /// </remarks>
 [KeepAlive]
-public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> logger) : Grain, IProjectionChangesetNotifier
+[MayInterleave(nameof(IsSubscription))]
+public class ProjectionChangesetNotifier(
+    ILogger<ProjectionChangesetNotifier> logger,
+    IProjectionsServiceClient projectionsServiceClient,
+    TimeProvider? timeProvider = null) : Grain, IProjectionChangesetNotifier
 {
+    static readonly TimeSpan _republishWindow = TimeSpan.FromSeconds(20);
+
     readonly HashSet<IReadModelChangesetSubscriber> _subscribers = [];
+    readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    IGrainTimer? _publishTimer;
+    TaskCompletionSource _watchedPublication = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    bool _isPublishing;
+    long _lastPublished;
+    bool _hasPublished;
+
+    /// <summary>
+    /// Determines whether a subscription may interleave, including calls from older silos without the caller-side flag.
+    /// </summary>
+    /// <param name="request">The incoming or running request.</param>
+    /// <returns>Whether the request is a notifier subscription.</returns>
+    public static bool IsSubscription(IInvokable request) =>
+        request?.GetInterfaceType() == typeof(IProjectionChangesetNotifier) && request.GetMethodName() == nameof(Subscribe);
 
     /// <inheritdoc/>
     public override Task OnActivateAsync(CancellationToken cancellationToken)
@@ -48,12 +72,29 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
     /// <inheritdoc/>
     public Task Subscribe(IReadModelChangesetSubscriber subscriber)
     {
+        var wasUnwatched = _subscribers.Count == 0;
         if (_subscribers.Add(subscriber))
         {
             logger.Subscribed(this.GetPrimaryKeyString(), _subscribers.Count);
         }
 
-        return Task.CompletedTask;
+        // Becoming watched is always published, never throttled, including a reopen during an outstanding close.
+        // Server-side MayInterleave also covers older callers: awaiting publication must not hold up Notify or NotifyMany.
+        if (wasUnwatched || _watchedPublication.Task.IsFaulted)
+        {
+            if (_watchedPublication.Task.IsCompleted)
+            {
+                _watchedPublication = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            SchedulePublish();
+        }
+        else if (WatchNeedsRefresh())
+        {
+            SchedulePublish();
+        }
+
+        return _watchedPublication.Task;
     }
 
     /// <inheritdoc/>
@@ -62,7 +103,8 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
         _subscribers.Remove(subscriber);
         if (_subscribers.Count == 0)
         {
-            DeactivateOnIdle();
+            _watchedPublication.TrySetCanceled();
+            SchedulePublish();
         }
 
         return Task.CompletedTask;
@@ -95,6 +137,80 @@ public class ProjectionChangesetNotifier(ILogger<ProjectionChangesetNotifier> lo
         foreach (var notification in notifications)
         {
             await Task.WhenAll(_subscribers.Select(subscriber => subscriber.OnChangeset(namespaceName, notification.ReadModelKey, notification.ReadModel, notification.Change)));
+        }
+    }
+
+    bool WatchNeedsRefresh() => !_hasPublished || _timeProvider.GetElapsedTime(_lastPublished) > _republishWindow;
+
+    void SchedulePublish()
+    {
+        // A publication in flight reconciles with the current state when it completes, so it needs no second one.
+        if (_publishTimer is not null || _isPublishing)
+        {
+            return;
+        }
+
+        // Interleaved one-shot timer: the watch state goes to every silo, which must neither delay notifications or Unsubscribe
+        // nor hold the turn of this non-reentrant activation while Subscribe waits for its acknowledgement.
+        _publishTimer = this.RegisterGrainTimer(
+            async _ =>
+            {
+                _publishTimer?.Dispose();
+                _publishTimer = null;
+                await PublishWatchState();
+            },
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan, Interleave = true });
+    }
+
+    async Task PublishWatchState()
+    {
+        _isPublishing = true;
+        try
+        {
+            bool isWatched;
+            do
+            {
+                isWatched = _subscribers.Count > 0;
+                await TryPublish(isWatched);
+
+                // A subscribe or unsubscribe during the await may have changed the state that was attempted; publish again, whether
+                // the attempt succeeded or failed, so a stale state is never the last one attempted. An unchanged state is not retried
+                // after a failure: the TTL or the next subscribe renews it.
+            }
+            while (isWatched != _subscribers.Count > 0);
+        }
+        finally
+        {
+            _isPublishing = false;
+        }
+
+        if (_subscribers.Count == 0)
+        {
+            DeactivateOnIdle();
+        }
+    }
+
+    async Task TryPublish(bool isWatched)
+    {
+        try
+        {
+            var key = ProjectionChangesetNotifierKey.Parse(this.GetPrimaryKeyString());
+            await projectionsServiceClient.SetWatchState(key.EventStore, key.Namespace, key.ObserverId, isWatched);
+            _hasPublished = true;
+            _lastPublished = _timeProvider.GetTimestamp();
+            if (isWatched)
+            {
+                _watchedPublication.TrySetResult();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.PublishingWatchStateFailed(ex, this.GetPrimaryKeyString(), isWatched);
+            if (isWatched && _watchedPublication.TrySetException(ex))
+            {
+                // Only an unacknowledged opening is rolled back; a failed refresh must retain established watches.
+                _subscribers.Clear();
+            }
         }
     }
 }

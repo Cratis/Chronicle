@@ -40,17 +40,17 @@ jobs:
           fi
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET
         if: inputs.protos-artifact == ''
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download proto files
         if: inputs.protos-artifact != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.protos-artifact }}
           path: Source/Kernel/Protobuf/
@@ -75,15 +75,16 @@ jobs:
           cp -r Source/Kernel/Protobuf/* Source/Clients/Kotlin/src/main/proto/
 
       - name: Setup JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '17'
+          problem-matcher: true
           distribution: 'temurin'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.13'
+          gradle-version: '9.9.2'
 
       - name: Publish to Maven Central
         working-directory: ./Source/Clients/Kotlin

@@ -13,6 +13,6 @@ internal static partial class JsonSchemaMetadataManagerLogMessages
     [LoggerMessage(LogLevel.Warning, "Referenced schema metadata has no supported unambiguous type; preserving existing handling")]
     internal static partial void UnsupportedReferencedMetadata(this ILogger<JsonSchemaMetadataManager> logger);
 
-    [LoggerMessage(LogLevel.Error, "Unable to release schema metadata for property '{PropertyPath}' of '{Identifier}'. The property is surfaced as empty; every other property is unaffected")]
-    internal static partial void FailedToReleaseProperty(this ILogger<JsonSchemaMetadataManager> logger, string propertyPath, string identifier, Exception exception);
+    [LoggerMessage(LogLevel.Error, "Unable to release schema metadata: {ExceptionType}. The property is surfaced as empty; every other property is unaffected")]
+    internal static partial void FailedToReleaseProperty(this ILogger<JsonSchemaMetadataManager> logger, string exceptionType);
 }

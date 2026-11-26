@@ -6,10 +6,12 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Events;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.ProtectedValues;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Reflection;
@@ -88,6 +90,7 @@ public static class ProjectionEventContextExtensions
     /// <param name="eventCompliance">Optional handler for releasing a stored join event's compliance and security fields before projecting it.</param>
     /// <param name="joinEventSchema">Optional schema for the stored join event.</param>
     /// <param name="releasePinnedEvent">Optional pinned-generation release boundary, replacing compatibility release.</param>
+    /// <param name="forProjection">Optional preparation of the released join event for the projection.</param>
     /// <returns>A new observable for the ResolveJoin operation.</returns>
     public static IObservable<ProjectionEventContext> ResolveJoin(
         this IObservable<ProjectionEventContext> observable,
@@ -97,7 +100,8 @@ public static class ProjectionEventContextExtensions
         ILogger logger,
         IEventCompliance? eventCompliance = null,
         JsonSchema? joinEventSchema = null,
-        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null)
+        Func<AppendedEvent, Task<AppendedEvent>>? releasePinnedEvent = null,
+        Func<AppendedEvent, AppendedEvent>? forProjection = null)
     {
         // Note: TryGetLastEventBefore is awaited synchronously here because this runs inside the
         // synchronous Rx Subject pipeline. HandleEvent.Perform commits the changeset immediately
@@ -129,7 +133,8 @@ public static class ProjectionEventContextExtensions
                         maybeLastEvent =>
                         {
                             if (!maybeLastEvent.HasValue) return;
-                            var lastEvent = ReleaseJoinEvent((AppendedEvent)maybeLastEvent, eventCompliance, joinEventSchema, releasePinnedEvent);
+                            var releasedEvent = ReleaseJoinEvent((AppendedEvent)maybeLastEvent, eventCompliance, joinEventSchema, releasePinnedEvent);
+                            var lastEvent = forProjection?.Invoke(releasedEvent) ?? releasedEvent;
 
                             var changeset = context.Changeset.ResolvedJoin(
                                 onModelProperty,
@@ -236,13 +241,14 @@ public static class ProjectionEventContextExtensions
     {
         return observable.Do(_ =>
         {
-            var items = _.Changeset.InitialState.EnsureCollection<object>(childrenProperty, _.Key.ArrayIndexers);
-            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(childrenProperty);
+            var resolvedChildrenProperty = ResolvedCollectionPath.ForChild(childrenProperty, _.Key.ArrayIndexers);
+            var items = _.Changeset.InitialState.EnsureCollection<object>(resolvedChildrenProperty, _.Key.ArrayIndexers);
+            var childrenPropertyIndexer = _.Key.ArrayIndexers.GetFor(resolvedChildrenProperty);
             if (identifiedByProperty.IsSet &&
                 items.Contains(identifiedByProperty, childrenPropertyIndexer.Identifier))
             {
                 _.Changeset.RemoveChild(
-                    childrenProperty,
+                    resolvedChildrenProperty,
                     identifiedByProperty,
                     childrenPropertyIndexer.Identifier,
                     _.Key.ArrayIndexers);
@@ -312,8 +318,26 @@ public static class ProjectionEventContextExtensions
         // A retained own schema can predate classification. EventCompliance resolves
         // current effective protection for the stored generation; never gate on this hint.
 #pragma warning disable CA2007
-        return Task.Run(() => eventCompliance.Release(lastEvent, joinEventSchema)).GetAwaiter().GetResult();
+        return Task.Run(() => ReleaseJoinEventWithHistory(lastEvent, eventCompliance, joinEventSchema)).GetAwaiter().GetResult();
 #pragma warning restore CA2007
+    }
+
+    static async Task<AppendedEvent> ReleaseJoinEventWithHistory(AppendedEvent @event, IEventCompliance eventCompliance, JsonSchema schema)
+    {
+        using var releaseScope = ReleaseKeys.BeginScope();
+        var released = await eventCompliance.Release(@event, schema);
+        if (@event.GenerationalContent.Count == 0 && @event.OriginalContent.Length == 0 && !@event.Revisions.Any())
+        {
+            return released;
+        }
+
+        // A join without a pinned release callback only knows the stored generation's schema.
+        var schemas = new Dictionary<EventType, EventTypeSchema>
+        {
+            [@event.Context.EventType] = new(@event.Context.EventType, EventTypeOwner.Client, EventTypeSource.Code, schema)
+        };
+        released = await eventCompliance.ReleaseHistory(released, schemas);
+        return await ReleaseKeys.Complete(() => released);
     }
 
     static bool HasChild(ICollection<object> items, PropertyPath identifiedByProperty, object identifier) =>
@@ -327,6 +351,7 @@ public static class ProjectionEventContextExtensions
         ExpandoObject? childInitialState,
         ChildrenOrdering? ordering)
     {
+        childrenProperty = ResolvedCollectionPath.ForChild(childrenProperty, context.Key.ArrayIndexers);
         if (!context.Key.ArrayIndexers.HasFor(childrenProperty))
         {
             return;

@@ -18,6 +18,8 @@ using Cratis.DependencyInjection;
 using Cratis.Metrics;
 using Cratis.Monads;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Cratis.Chronicle.Projections.Engine;
@@ -30,13 +32,15 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="grainFactory">The grain factory for authoritative read model definitions.</param>
 /// <param name="meter">The engine cache meter.</param>
 /// <param name="options">The kernel configuration.</param>
+/// <param name="logger">The logger.</param>
 [Singleton]
-public class ProjectionsManager(
+public partial class ProjectionsManager(
     IProjectionFactory projectionFactory,
     IStorage storage,
     IGrainFactory grainFactory,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ProjectionsManager>? meter,
-    IOptions<ChronicleOptions> options) : IProjectionsManager
+    IOptions<ChronicleOptions> options,
+    ILogger<ProjectionsManager> logger) : IProjectionsManager
 {
     /// <summary>The silo-wide limit on cached compiled root graphs.</summary>
     internal const int CacheCapacity = 256;
@@ -53,6 +57,17 @@ public class ProjectionsManager(
     /// <param name="grainFactory">The grain factory.</param>
     public ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage, IGrainFactory grainFactory)
         : this(projectionFactory, storage, grainFactory, null, Options.Create(new ChronicleOptions()))
+    {
+    }
+
+    /// <summary>Initializes a manager with telemetry for existing direct callers.</summary>
+    /// <param name="projectionFactory">The projection factory.</param>
+    /// <param name="storage">The storage.</param>
+    /// <param name="grainFactory">The grain factory.</param>
+    /// <param name="meter">The engine cache meter.</param>
+    /// <param name="options">The kernel configuration.</param>
+    internal ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage, IGrainFactory grainFactory, IMeter<ProjectionsManager>? meter, IOptions<ChronicleOptions> options)
+        : this(projectionFactory, storage, grainFactory, meter, options, NullLogger<ProjectionsManager>.Instance)
     {
     }
 
@@ -152,8 +167,12 @@ public class ProjectionsManager(
             _evictionRevision++;
             _registrations.TryRemove((eventStore, id), out _);
             _cache.Remove(eventStore, id);
+            projectionFactory.Evict(eventStore, id);
         }
     }
+
+    [LoggerMessage(LogLevel.Warning, "Projection {ProjectionId} does not accept the system event sequence")]
+    private static partial void UnsupportedEventSequence(ILogger logger, ProjectionId projectionId);
 
     static Channel<bool> CreateCompilationBoundary()
     {
@@ -173,6 +192,7 @@ public class ProjectionsManager(
 
     async Task RegisterDefinition(EventStoreName eventStore, ProjectionDefinition definition, IDictionary<ReadModelIdentifier, ReadModelDefinition> readModels, EventStoreNamespaceName? validationNamespace)
     {
+        if (SkipDefinition(eventStore, definition)) throw new InvalidOperationException("Projection does not accept the system event sequence.");
         ProjectionGenerationDeliveryValidation.Validate(definition);
         if (!readModels.TryGetValue(definition.ReadModel, out var readModel))
         {
@@ -193,8 +213,8 @@ public class ProjectionsManager(
         IProjection? validated = null;
         if (validationNamespace is not null)
         {
-            var schemas = await storage.GetEventStore(eventStore).EventTypes.GetLatestForAllEventTypes();
-            validated = await projectionFactory.Create(eventStore, validationNamespace, definition, readModel, schemas);
+            // Compiling reports invalid expressions and schemas, and leaves the plan behind for every namespace to share.
+            validated = await projectionFactory.Create(eventStore, validationNamespace, definition, readModel);
         }
 
         lock (_publication)
@@ -217,12 +237,12 @@ public class ProjectionsManager(
         }
 
         var definition = await eventStoreStorage.Projections.Get(id);
+        if (SkipDefinition(eventStore, definition)) return null;
         var fingerprint = ProjectionFactory.DefinitionFingerprintFor(definition);
         if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
 
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
-        var schemas = await eventStoreStorage.EventTypes.GetLatestForAllEventTypes();
-        var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel, schemas);
+        var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
         lock (_publication)
         {
             if (revision != _evictionRevision) return projection;
@@ -232,6 +252,14 @@ public class ProjectionsManager(
         }
 
         return projection;
+    }
+
+    bool SkipDefinition(EventStoreName eventStore, ProjectionDefinition definition)
+    {
+        if (!definition.UsesUnsupportedEventSequence()) return false;
+        UnsupportedEventSequence(logger, definition.Identifier);
+        Evict(eventStore, definition.Identifier);
+        return true;
     }
 
     sealed record RegisteredProjection(ProjectionDefinition Definition, string Fingerprint, string ReadModelFingerprint);

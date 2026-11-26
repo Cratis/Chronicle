@@ -49,6 +49,12 @@ public record AppendManyResult : IAppendResult, IAppendResultForObserverCompleti
     public bool HasErrors => Errors.Any();
 
     /// <inheritdoc />
+    public bool IsRetryable { get; init; }
+
+    /// <inheritdoc />
+    public TimeSpan? RetryAfter { get; init; }
+
+    /// <inheritdoc />
     public bool ConcurrencyCheckPerformed { get; init; }
 
     /// <inheritdoc />

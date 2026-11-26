@@ -245,9 +245,16 @@ class for_batched_namespaces(unittest.TestCase):
                 self.assertEqual(sorted(prefix + name for name in _directories(root)), sorted(covered))
 
     def test_the_kernel_and_clustering_suites_have_the_expected_job_counts(self):
-        # The new for_Observer namespace stays solo, alongside Occurrences and Statistics.
-        self.assertEqual(6, len(_run("--suite", "kernel")))
-        self.assertEqual(2, len(_run("--suite", "clustering")))
+        # The new for_Observer namespace stays solo, alongside Occurrences and Statistics. So does for_DormantObserver:
+        # it waits minutes for observers to be released, which is longer than any batch may take. And so does
+        # for_UnseenObserverRemoval: its three kernels start one after the other, and it waits out periods of its own.
+        # for_PatternCapture and EventTypeResolution are new and unmeasured, so each runs alone until hosted
+        # timings justify a batch (a new namespace never joins a batch silently).
+        self.assertEqual(10, len(_run("--suite", "kernel")))
+        # The shared batch, for_Occurrences and seven namespaces added with the all-in-on-Orleans program
+        # (client observer serving, client registration, event type registry, many client observers,
+        # multiplexed observation, observer definition registry, silo supervisor), each alone until timed.
+        self.assertEqual(9, len(_run("--suite", "clustering")))
 
     def test_kernel_and_clustering_filters_end_with_a_dot_so_a_namespace_is_not_a_prefix(self):
         for suite in ("kernel", "clustering"):

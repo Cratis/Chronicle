@@ -20,8 +20,8 @@ public class a_projection_replay_recommendation_evaluator : Specification
     protected readonly ObjectComparer ObjectComparer = new();
 
     protected static ProjectionDefinition CreateDefinition(
-        IDictionary<EventType, FromDefinition>? from = null,
-        IDictionary<EventType, JoinDefinition>? join = null,
+        IReadOnlyDictionary<EventType, FromDefinition>? from = null,
+        IReadOnlyDictionary<EventType, JoinDefinition>? join = null,
         IEnumerable<FromDerivatives>? fromDerivatives = null) =>
         new(
             ProjectionOwner.Client,

@@ -40,6 +40,7 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
         "SetFromAttribute",
         "JoinAttribute",
         "SetFromContextAttribute",
+        "SetFromEventSourceIdAttribute",
         "AddFromAttribute",
         "SubtractFromAttribute",
         "RemovedWithAttribute",
@@ -58,6 +59,7 @@ public class AutoMapSameNamePropertyCollisionAnalyzer : DiagnosticAnalyzer
     {
         "SetFromAttribute",
         "SetFromContextAttribute",
+        "SetFromEventSourceIdAttribute",
         "SetValueAttribute",
         "AddFromAttribute",
         "SubtractFromAttribute",

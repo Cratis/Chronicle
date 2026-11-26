@@ -32,6 +32,8 @@ Choose the boundary from the question the spec needs to answer. A read model cal
 | Reactor side effects and event ordering | `ReactorScenario<T>` | Network observer registration, kernel event dispatch, automatic redelivery |
 | Actual storage writes, kernel connectivity, change streams | `ChronicleInProcessFixture` / `ChronicleOutOfProcessFixture` | Isolation from other tests that share the same fixture host |
 
+For .NET given/run/then specs, `Cratis.Chronicle.Testing.Slices` provides thin, single-run adapters: [ProjectionSlice and keyed partial/exact read-model assertions](read-models/scenario.mdx#net-keyed-assertions-and-projection-slices), and [ReactionSlice with ordered or any-order produced-event assertions](reactors/scenario.mdx#net-event-lists-and-reaction-slices). They reuse the scenario engines and do not add persistence, kernel delivery, or proof that a recorded side effect executed.
+
 `ReactorScenario<T>` delivers each supplied event once. To check idempotence, meaning that handling the same event again does not repeat an unwanted side effect, write a spec that supplies the event twice.
 
 The .NET integration fixtures available in `Cratis.Chronicle.XUnit.Integration` are:
@@ -42,6 +44,12 @@ The .NET integration fixtures available in `Cratis.Chronicle.XUnit.Integration` 
 - `ChronicleOrleansFixture`: hosts an Orleans-based kernel for testing Chronicle's own internals.
 
 Only the in-process and out-of-process fixtures are documented here; the others are for framework or advanced scenarios.
+
+### Switching off an integration tier
+
+Skipping every fact does not necessarily stop xUnit from initializing the context fixture. Override `ShouldBootstrap` on your `ChronicleClientFixture<TChronicleFixture>` or either `Specification` variant with your tier predicate, for example `protected override bool ShouldBootstrap => TierIsEnabled;`. Keep the predicate stable for the context's lifetime. It defaults to `true`; returning `false` skips context-owned bootstrap, storage/grain/client reset, scenario initialization and matching cleanup. A no-op `OnInitializeAsync` alone does not stop the earlier bootstrap and reset.
+
+This gate does not stop construction of a backing fixture supplied by xUnit. `ChronicleFixture` starts its container eagerly: `ChronicleInProcessFixture` starts MongoDB, and `ChronicleOutOfProcessFixture` starts the Chronicle development container. A disabled tier must not register or construct that backing fixture if it needs to avoid containers. Exclude the backing fixture registration or keep the tier out of the run; overriding the context gate alone cannot make an eagerly constructed collection fixture container-free. See [Switching off an xUnit integration tier](../contributing/integration-tests.md#switching-off-an-xunit-integration-tier) for the lifecycle boundary.
 
 ## .NET packages
 

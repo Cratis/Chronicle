@@ -47,12 +47,14 @@ public static class GrpcServiceRegistrations
         services.AddSingleton<Contracts.Observation.IFailedPartitions, Services.Observation.FailedPartitions>();
         services.AddSingleton<Contracts.Observation.Reactors.IReactors, Services.Observation.Reactors.Reactors>();
         services.AddSingleton<Contracts.Observation.Reducers.IReducers, Services.Observation.Reducers.Reducers>();
+        services.AddSingleton<Contracts.Observation.Multiplexed.IMultiplexedObservation, Services.Observation.Multiplexed.MultiplexedObservation>();
         services.AddSingleton<Contracts.Observation.EventStoreSubscriptions.IEventStoreSubscriptions, Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
         services.AddSingleton<Contracts.Projections.IProjections, Services.Projections.Projections>();
         services.TryAddSingleton<ReadModels.IReadModelReadBindings, ReadModels.ReadModelReadBindings>();
         services.AddSingleton<Contracts.ReadModels.IReadModels, Services.ReadModels.ReadModels>();
         services.AddSingleton<Contracts.ReadModels.IMaterializedReadModels, Services.ReadModels.MaterializedReadModels>();
         services.AddSingleton<Contracts.Host.IServer, Services.Host.Server>();
+        services.AddSingleton<Contracts.Federation.IFederationServe, Services.Federation.FederationServe>();
 
         return services;
     }
@@ -75,11 +77,13 @@ public static class GrpcServiceRegistrations
             _.MapGrpcService<Services.Observation.FailedPartitions>();
             _.MapGrpcService<Services.Observation.Reactors.Reactors>();
             _.MapGrpcService<Services.Observation.Reducers.Reducers>();
+            _.MapGrpcService<Services.Observation.Multiplexed.MultiplexedObservation>();
             _.MapGrpcService<Services.Observation.EventStoreSubscriptions.EventStoreSubscriptions>();
             _.MapGrpcService<Services.Projections.Projections>();
             _.MapGrpcService<Services.ReadModels.ReadModels>();
             _.MapGrpcService<Services.ReadModels.MaterializedReadModels>();
             _.MapGrpcService<Services.Host.Server>();
+            _.MapGrpcService<Services.Federation.FederationServe>();
         });
 
         return app;

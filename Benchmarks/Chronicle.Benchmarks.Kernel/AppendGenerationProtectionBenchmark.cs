@@ -180,7 +180,7 @@ public class AppendGenerationProtectionBenchmark
     /// </summary>
     sealed class BenchmarkConfiguration : ManualConfig
     {
-        public BenchmarkConfiguration() => AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Instance));
+        public BenchmarkConfiguration() => AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Default));
     }
 
     sealed class Fixture

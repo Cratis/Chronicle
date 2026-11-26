@@ -81,6 +81,15 @@ public interface IChronicleSetupFixture : IClientArtifactsProvider
     internal string DatabaseNamePrefix => string.Empty;
 
     /// <summary>
+    /// Gets the artifacts provider that the silo shared by every context of this fixture type serves its artifacts from.
+    /// </summary>
+    /// <remarks>
+    /// There is one per fixture type, because each fixture type has its own shared silo and silos of different types
+    /// run side by side: a provider shared between them would let one silo's contexts replace the other's artifacts.
+    /// </remarks>
+    internal DelegatingClientArtifactsProvider SharedArtifactsProvider => new(this);
+
+    /// <summary>
     /// Gets the <see cref="IGrainFactory"/> for the Orleans silo.
     /// </summary>
     internal IGrainFactory GrainFactory => Services.GetRequiredService<IGrainFactory>();

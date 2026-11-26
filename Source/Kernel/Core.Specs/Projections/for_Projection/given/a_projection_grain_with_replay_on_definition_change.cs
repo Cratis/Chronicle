@@ -12,7 +12,6 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Projections.Engine;
 using Cratis.Chronicle.Properties;
-using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
@@ -58,7 +57,7 @@ public class a_projection_grain_with_replay_on_definition_change : Specification
 
         // By default the observer is already subscribed with the event types the projection takes part in.
         _observer = Substitute.For<Observation.IObserver>();
-        _observer.GetDefinition().Returns(ObserverDefinition.Empty);
+        _observer.GetEventTypes().Returns(EventTypeSet.Empty);
         _silo.AddProbe(_ => _observer);
 
         _definition = CreateDefinition("the-read-model");

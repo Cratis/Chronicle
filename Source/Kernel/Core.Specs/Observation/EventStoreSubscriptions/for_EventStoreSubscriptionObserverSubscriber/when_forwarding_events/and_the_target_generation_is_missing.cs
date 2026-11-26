@@ -19,6 +19,7 @@ public class and_the_target_generation_is_missing : given.a_subscriber_with_even
 
     async Task Because() => _result = await Forward();
 
+    [Fact] void should_park_the_partition() => _result.FailurePolicy.ShouldEqual(WebhookDeliveryFailurePolicy.ParkPartition);
     [Fact] void should_fail_explicitly() => _result.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_not_append() => AppendCalls().ShouldEqual(0);
     [Fact] void should_not_acknowledge_the_source_event() => _result.LastSuccessfulObservation.ShouldEqual(EventSequenceNumber.Unavailable);

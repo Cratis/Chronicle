@@ -10,45 +10,29 @@ static class EventSequenceRedactionViaSequenceWaitHelpers
 {
     public static async Task<AppendedEvent> WaitForRedactedEvent(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpanFactory.FromSeconds(30);
-        using var cts = new CancellationTokenSource(timeout.Value);
-
-        while (true)
-        {
-            var events = await fixture.EventStore.EventLog.GetFromSequenceNumber(sequenceNumber);
-            var storedEvent = events.FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber);
-
-            if (storedEvent?.Context.EventType.Id.Value == "EventRedacted")
-            {
-                return storedEvent;
-            }
-
-            await Task.Delay(50, cts.Token);
-        }
+        return (await ReadinessWait.Until(
+            async () => (await fixture.EventStore.EventLog.GetFromSequenceNumber(sequenceNumber))
+                .FirstOrDefault(_ => _.Context.SequenceNumber == sequenceNumber),
+            storedEvent => storedEvent?.Context.EventType.Id.Value == "EventRedacted",
+            timeout ?? TimeSpanFactory.FromSeconds(30)))!;
     }
 
     public static async Task<AppendedEvent> WaitForSystemEvent(this IChronicleSetupFixture fixture, string eventTypeId, TimeSpan? timeout = default)
     {
-        timeout ??= TimeSpanFactory.FromSeconds(30);
-        using var cts = new CancellationTokenSource(timeout.Value);
-
         var systemLog = fixture.EventStore.GetEventSequence(EventSequenceId.System);
-
-        while (true)
-        {
-            var tail = await systemLog.GetTailSequenceNumber();
-            if (tail != EventSequenceNumber.Unavailable)
+        return (await ReadinessWait.Until(
+            async () =>
             {
-                var events = await systemLog.GetFromSequenceNumber(tail);
-                var storedEvent = events.Count > 0 ? events[0] : null;
-
-                if (storedEvent?.Context.EventType.Id.Value == eventTypeId)
+                var tail = await systemLog.GetTailSequenceNumber();
+                if (tail == EventSequenceNumber.Unavailable)
                 {
-                    return storedEvent;
+                    return null;
                 }
-            }
 
-            await Task.Delay(50, cts.Token);
-        }
+                var events = await systemLog.GetFromSequenceNumber(tail);
+                return events.Count > 0 ? events[0] : null;
+            },
+            storedEvent => storedEvent?.Context.EventType.Id.Value == eventTypeId,
+            timeout ?? TimeSpanFactory.FromSeconds(30)))!;
     }
 }

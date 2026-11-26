@@ -29,17 +29,8 @@ public class and_reactor_infers_external_inbox_subscription(context context) : G
             // Poll until the implicit subscription has been persisted. Checking the system
             // log tail first is unreliable because the tail may be Unavailable (no events yet),
             // which would cause WaitTillReachesEventSequenceNumber to return immediately.
-            using var cts = new CancellationTokenSource(TimeSpanFactory.DefaultTimeout());
-            while (true)
-            {
-                StoredSubscriptions = await lobbyEventStore.Subscriptions.GetAll();
-                if (StoredSubscriptions.Any())
-                {
-                    break;
-                }
-
-                await Task.Delay(100, cts.Token);
-            }
+            StoredSubscriptions = await ReadinessWait.Until(
+                () => lobbyEventStore.Subscriptions.GetAll(), stored => stored.Any());
         }
     }
 

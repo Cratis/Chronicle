@@ -44,6 +44,18 @@ public class Clustering
     public bool GatewayEnabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether silo to silo and gateway traffic is encrypted with the certificate from
+    /// <see cref="Tls.CertificatePath"/>. Applies only to MongoDB and SQL clustering and only when a
+    /// certificate file is configured; without one, or with Localhost clustering, the traffic is not
+    /// encrypted, as before. Silos authenticate each other with that certificate, so every node must
+    /// present the same certificate or one issued by the same authority. Every silo in the cluster
+    /// must use the same value; a silo that encrypts cannot talk to one that does not, so enabling or
+    /// disabling this means stopping every silo and starting them again, never a rolling upgrade.
+    /// Set it to false when the network already encrypts the traffic, for instance a service mesh.
+    /// </summary>
+    public bool TlsEnabled { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets whether to opt into Orleans' experimental distributed grain directory,
     /// which is strongly consistent and prevents duplicate activations. Every silo in the cluster
     /// must use the same value. Changing it requires stopping every silo and starting them again,

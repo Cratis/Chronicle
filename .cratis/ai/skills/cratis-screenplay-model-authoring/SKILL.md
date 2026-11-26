@@ -12,12 +12,19 @@ Read [preferred syntax](../cratis-screenplay-toolchain/references/preferred-synt
 Prefer the Screenplay MCP tools to text/regex edits: the compiler owns declaration,
 reference, hierarchy and source evidence for the declarative document set.
 
+In Pi the Screenplay tools are not registered at session start: call
+`cratis_enable_mcp` with `{"server": "screenplay"}` first. The `screenplay_*` tools are
+available from the next step, not in the same parallel tool batch, so enable alone, then
+use them. Other harnesses expose the tools natively; skip this there. A project
+that sets `mcpServers.screenplay.eager` to `true` already has them.
+
 **Valid source is not necessarily executable.** Stage owns rendering/runtime
 admission. Read the [language reference](references/language-reference.md) for
 construct syntax, source-versus-execution states and a complete compiled model.
 
 For screens, read `references/screen-authoring-workflow.md`; use the
 same model root or workspace export for all checks. Syntax: `cratis-screenplay-ui-composition`.
+Read [free screens](references/free-screens-proposals.md) when a proposal touches shapes, screens declared outside a slice, `uses screen` or provisions.
 
 Record open modeling questions as `question` notes in committed
 `.screenplay/notes.json`, not chat or `description` text. Never put secrets or
@@ -29,6 +36,8 @@ still need binding and otherwise substitute their own slice. Inspect
 `containerIdentities` in `open-workspace` / `workspace-state` for missing or
 ambiguous identities; fix parse/placement errors first. Read the notes reference
 for refusals, `ambiguous: true`, typed targets and every `substitutions` entry.
+
+Read [storylines](references/storylines.md) to name a journey across modules, features and slices.
 
 ## Choosing a strategy
 
@@ -90,8 +99,8 @@ editing. Existing standalone `screenplay mcp` users may retain that entry point.
    skipped completeness checks are not passes. Details: `references/mcp-tools.md`.
 5. Echo `sourceRevision` on subsequent pages. Restart the query after drift;
    never combine pages from different snapshots.
-6. For screens, also discover the template, form, toolbar, package/icon and
-   outlet declarations that provide context. A component binding with no traced
+6. For screens, also discover the template (its slots and outlets), form,
+   toolbar and package/icon declarations that provide context. A component binding with no traced
    data source is not a shortcut; fix the model source.
 
 Scope reads to the relevant container/document, not the whole merged AST.
@@ -165,7 +174,8 @@ Others send an edit request ([MCP loop](references/mcp-loop.md)).
    on disk while open, so after an apply do not re-request it; just say what changed.
 
 Handles are revision-bound, not durable IDs. Modules/features span fragments;
-after apply fetch fresh handles/revisions.
+after apply fetch fresh handles/revisions. Repeated identical advisories (such as
+PLAY0818/PLAY0819) are repaired occurrence by occurrence, never by message text or in bulk.
 
 On refusal, use `failureKind`, never message text ([failures/limits](references/mcp-loop.md#failures-use-failurekind-never-message-text)).
 After revision/disk/identity drift, reopen and re-propose. For `ApplyOutcomeUnknown`

@@ -85,7 +85,7 @@ public class ConnectionWatchdog(
                 await ReconnectWithRetry();
             }
         }
-        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
+        catch (Exception ex) when (ex is ObjectDisposedException || (ex is OperationCanceledException && cancellationToken.IsCancellationRequested))
         {
             // Expected on shutdown or disposal - let the monitor exit.
         }
@@ -101,7 +101,7 @@ public class ConnectionWatchdog(
         {
             await sessionDropped();
         }
-        catch (Exception ex) when (ex is not OperationCanceledException and not ObjectDisposedException)
+        catch (Exception ex) when (ex is not ObjectDisposedException && (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
         {
             // A failing drop notification must not prevent the reconnect that follows.
             logger.SessionDroppedNotificationFailed(ex);
@@ -118,7 +118,7 @@ public class ConnectionWatchdog(
                 await reconnect();
                 return;
             }
-            catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException)
+            catch (Exception ex) when (ex is ObjectDisposedException || (ex is OperationCanceledException && cancellationToken.IsCancellationRequested))
             {
                 throw;
             }

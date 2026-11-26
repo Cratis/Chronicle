@@ -16,9 +16,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cratis.Chronicle.Storage.Sql;
 
-/// <summary>
+/// <content>
 /// The schema-identity entry points used by the one-shot provisioner.
-/// </summary>
+/// </content>
 public partial class Database
 {
     /// <summary>

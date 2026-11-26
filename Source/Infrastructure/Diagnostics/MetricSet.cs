@@ -105,12 +105,7 @@ internal sealed class MetricSet
     internal MetricInstrument<T, HistogramMetricRecorder<T>> ConventionOnlyHistogram<T>(string name, string unit, string description, IReadOnlyList<T> bucketBoundaries, string firstKey = "")
         where T : struct
     {
-#if NET9_0_OR_GREATER
         var histogram = _meter?.CreateHistogram(name, unit, description, tags: null, advice: new InstrumentAdvice<T> { HistogramBucketBoundaries = bucketBoundaries });
-#else
-        _ = bucketBoundaries;
-        var histogram = _meter?.CreateHistogram<T>(name, unit, description);
-#endif
         return Created(new MetricInstrument<T, HistogramMetricRecorder<T>>(
             new SingleMetricInstrument<T, HistogramMetricRecorder<T>>(new HistogramMetricRecorder<T>(histogram), ConventionTags, firstKey, string.Empty)));
     }
@@ -119,8 +114,9 @@ internal sealed class MetricSet
     /// <returns>The legacy counter, or a no-op in convention mode.</returns>
     internal MetricInstrument<int, CounterMetricRecorder<int>> PartitionRetryAttempts()
     {
-        var counter = _names is MetricNames.Convention ? null : _meter?.CreateCounter<int>(
-            LegacyTelemetryNames.PartitionRetryAttempts, description: LegacyTelemetryNames.PartitionRetryAttemptsDescription);
+        var counter = _names is MetricNames.Convention
+            ? null
+            : _meter?.CreateCounter<int>(LegacyTelemetryNames.PartitionRetryAttempts, description: LegacyTelemetryNames.PartitionRetryAttemptsDescription);
         return Created(new MetricInstrument<int, CounterMetricRecorder<int>>(new SingleMetricInstrument<int, CounterMetricRecorder<int>>(
             new CounterMetricRecorder<int>(counter), LegacyTags, string.Empty, string.Empty)));
     }

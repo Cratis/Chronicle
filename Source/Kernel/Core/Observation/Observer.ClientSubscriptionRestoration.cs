@@ -18,7 +18,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task RestoreClientSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         ConnectedClient connectedClient,
         bool isReplayable = true,

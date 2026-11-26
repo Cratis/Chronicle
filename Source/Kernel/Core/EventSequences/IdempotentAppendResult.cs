@@ -8,11 +8,14 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 /// <param name="Result">The append validation and storage result.</param>
 /// <param name="Outcome">How the keyed append was settled.</param>
-public record IdempotentAppendResult(AppendResult Result, AppendOutcome Outcome = AppendOutcome.Committed)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.EventSequences.IdempotentAppendResult")]
+public record IdempotentAppendResult([Id(0)] AppendResult Result, [Id(1)] AppendOutcome Outcome = AppendOutcome.Committed)
 {
     /// <summary>
     /// Gets the durable keys that refused comparison.
     /// </summary>
+    [Id(2)]
     public IEnumerable<IdempotencyConflict> Conflicts { get; init; } = [];
 
     /// <summary>

@@ -66,7 +66,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
     readonly GlobalSeedRegistration _globalSeedRegistration = new();
 
     /// <summary>
-    /// The event stores handed out, keyed on the name and namespace that identify one.
+    /// The event stores handed out, keyed on their name, resolved namespace, and registration mode.
     /// </summary>
     /// <remarks>
     /// Lazy&lt;Task&lt;T&gt;&gt; with ExecutionAndPublication so that concurrent callers asking for the same event
@@ -78,6 +78,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
     CancellationTokenSource? _deploymentCheckCancellation;
     int _isDisposed;
     int _serverlessReported;
+    global::Cratis.Chronicle.Federation.IFederationEnrollments? _federation;
+    global::Cratis.Chronicle.Federation.IFederationPolicies? _federationPolicies;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ChronicleClient"/> class.
@@ -188,7 +190,10 @@ public class ChronicleClient : IChronicleClient, IDisposable
             serverAddressResolver: null,
             loadBalancerStrategy: options.LoadBalancerStrategy,
             timeProvider: null,
-            certificateAuthorities: certificateAuthorities);
+            certificateAuthorities: certificateAuthorities)
+        {
+            MultiplexObservation = options.MultiplexObservation
+        };
         _servicesAccessor = (_connection as IChronicleServicesAccessor)!;
         _connection.Lifecycle.OnDisconnected += _globalSeedRegistration.Reset;
     }
@@ -248,6 +253,12 @@ public class ChronicleClient : IChronicleClient, IDisposable
     /// <inheritdoc/>
     public ICausationManager CausationManager { get; }
 
+    /// <inheritdoc/>
+    public global::Cratis.Chronicle.Federation.IFederationEnrollments Federation => _federation ??= new global::Cratis.Chronicle.Federation.FederationEnrollments(_connection);
+
+    /// <inheritdoc/>
+    public global::Cratis.Chronicle.Federation.IFederationPolicies FederationPolicies => _federationPolicies ??= new global::Cratis.Chronicle.Federation.FederationPolicies(_connection);
+
     /// <summary>
     /// Gets the cancellation token used for the owned connection lifetime.
     /// </summary>
@@ -283,12 +294,18 @@ public class ChronicleClient : IChronicleClient, IDisposable
     }
 
     /// <inheritdoc/>
+    public Task<IEventStore> GetEventStore(
+        EventStoreName name,
+        EventStoreNamespaceName? @namespace = null) => GetEventStore(name, @namespace, Options.RegistrationMode);
+
+    /// <inheritdoc/>
     public async Task<IEventStore> GetEventStore(
         EventStoreName name,
-        EventStoreNamespaceName? @namespace = null)
+        EventStoreNamespaceName? @namespace,
+        RegistrationMode registrationMode)
     {
         @namespace ??= ObserverDeliveryContext.NamespaceFor(name) ?? _namespaceResolver.Resolve();
-        var key = new EventStoreKey(name, @namespace);
+        var key = new EventStoreKey(name, @namespace, registrationMode);
 
         var lazyEventStore = _eventStores.GetOrAdd(
             key,
@@ -305,7 +322,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                 // Its namespace was removed while this client was disconnected. Start over with a new one, which
                 // registers - and so creates the namespace - only because it is being used again.
                 _eventStores.TryRemove(new KeyValuePair<EventStoreKey, Lazy<Task<IEventStore>>>(key, lazyEventStore));
-                return await GetEventStore(name, @namespace);
+                return await GetEventStore(name, @namespace, registrationMode);
             }
 
             return eventStore;
@@ -455,6 +472,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
             _deploymentCheckCancellation ??= new();
             var token = _deploymentCheckCancellation.Token;
             var generation = Options.Serverless.DeploymentGeneration;
+            var loggerFactory = _loggerFactory;
             var check = _deploymentChecks.GetOrAdd(
                 eventStore.Name,
                 static (_, state) => new(
@@ -473,7 +491,7 @@ public class ChronicleClient : IChronicleClient, IDisposable
                         return task;
                     },
                     LazyThreadSafetyMode.ExecutionAndPublication),
-                (eventStore, generation, loggerFactory: _loggerFactory, token));
+                (eventStore, generation, loggerFactory, token));
             _ = check.Value;
         }
     }
@@ -511,7 +529,8 @@ public class ChronicleClient : IChronicleClient, IDisposable
             Options.JsonSerializerOptions,
             Options.EnableEventTypeGenerationValidation,
             Microsoft.Extensions.Options.Options.Create(Options),
-            _loggerFactory);
+            _loggerFactory,
+            key.RegistrationMode);
         eventStore.UseGlobalSeedRegistration(_globalSeedRegistration);
 
         try
@@ -555,5 +574,5 @@ public class ChronicleClient : IChronicleClient, IDisposable
             .Where(_ => _.IsValueCreated && _.Value.IsCompletedSuccessfully)
             .Select(_ => _.Value.Result);
 
-    record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace);
+    record EventStoreKey(EventStoreName Name, EventStoreNamespaceName Namespace, RegistrationMode RegistrationMode);
 }

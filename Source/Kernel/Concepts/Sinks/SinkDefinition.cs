@@ -9,13 +9,16 @@ namespace Cratis.Chronicle.Concepts.Sinks;
 /// <param name="Configuration">Unique <see cref="SinkConfigurationId"/> for the configuration.</param>
 /// <param name="Type">Type of store.</param>
 /// <param name="EventSequence">Event-sequence target metadata; required exactly when <paramref name="Type"/> is the event-sequence sink.</param>
-public record SinkDefinition(SinkConfigurationId Configuration, SinkTypeId Type, EventSequenceSinkConfiguration? EventSequence = null)
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Sinks.SinkDefinition")]
+public record SinkDefinition([Id(0)] SinkConfigurationId Configuration, [Id(1)] SinkTypeId Type, [Id(2)] EventSequenceSinkConfiguration? EventSequence = null)
 {
     /// <summary>
     /// Gets the none representation of <see cref="SinkDefinition"/>.
     /// </summary>
     public static readonly SinkDefinition None = new(SinkConfigurationId.None, SinkTypeId.None);
 
+    [Id(3)]
     readonly SinkName _name = SinkName.Default;
 
     /// <summary>

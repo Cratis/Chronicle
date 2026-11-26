@@ -13,4 +13,6 @@ namespace Cratis.Chronicle.Events.Constraints;
 /// <remarks>
 /// Hashes are comparable only within one run and change after a resume. The random key is kept in memory only.
 /// </remarks>
-public record ConstraintCollisionSample(string ValueHash, EventSequenceNumber SequenceNumber);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Events.Constraints.ConstraintCollisionSample")]
+public record ConstraintCollisionSample([Id(0)] string ValueHash, [Id(1)] EventSequenceNumber SequenceNumber);

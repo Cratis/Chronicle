@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Integration.GraphProjections.Organization;
-using Cratis.Chronicle.Jobs;
 using context = Cratis.Chronicle.Integration.GraphProjections.when_replaying.and_the_counters_are_rebuilt.context;
 
 namespace Cratis.Chronicle.Integration.GraphProjections.when_replaying;
@@ -26,7 +25,7 @@ public class and_the_counters_are_rebuilt(context context) : Given<context>(cont
         {
             Before = Graph.Describe();
             var job = await EventStore.Projections.Replay(new ProjectionId("OrgModelBound"));
-            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job);
+            await EventStore.WaitTillReplayed(job);
             await ReadGraph();
         }
     }

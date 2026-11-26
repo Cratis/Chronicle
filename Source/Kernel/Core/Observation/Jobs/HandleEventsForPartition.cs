@@ -20,7 +20,6 @@ using Cratis.Monads;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OneOf.Types;
 
 namespace Cratis.Chronicle.Observation.Jobs;
 
@@ -118,9 +117,7 @@ public partial class HandleEventsForPartition(
             // reaching PerformStep, which reports the disconnection the job knows how to handle.
             if (subscription.IsSubscribed)
             {
-                _subscriberKey = GetObserverSubscriberKey(subscription, State.Partition);
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, _subscriberKey) as IObserverSubscriber;
-                _isCollapsingProjection = subscription.IsCollapsingProjection;
+                BindSubscriber(subscription, State.Partition);
             }
         }
         await base.OnActivateAsync(cancellationToken);
@@ -176,9 +173,7 @@ public partial class HandleEventsForPartition(
 
             if (subscription.IsSubscribed)
             {
-                _subscriberKey = GetObserverSubscriberKey(subscription, request.Partition);
-                _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, _subscriberKey) as IObserverSubscriber;
-                _isCollapsingProjection = subscription.IsCollapsingProjection;
+                BindSubscriber(subscription, request.Partition);
                 logger.SuccessfullyPrepared(request.Partition);
                 return Result.Success<PrepareJobStepError>();
             }
@@ -206,445 +201,24 @@ public partial class HandleEventsForPartition(
         return PerformPreparedStep(currentState, cancellationToken);
     }
 
-    /// <summary>
-    /// Creates the result for a failure the observer could not be told about. It is handed to the job as transient, so
-    /// the job runs the step again and reports the partition as failed when the attempts run out - a failure is never
-    /// left without a failed partition to retry it.
-    /// </summary>
-    /// <param name="partition">The partition the step was handling.</param>
-    /// <param name="failedAt">The sequence number the partition failed at.</param>
-    /// <param name="lastSuccessfullyHandled">The last successfully handled event sequence number.</param>
-    /// <param name="error">The failure.</param>
-    /// <returns>The <see cref="JobStepResult"/>.</returns>
-    static JobStepResult UnreportedFailure(Key partition, EventSequenceNumber failedAt, EventSequenceNumber lastSuccessfullyHandled, Exception error)
-    {
-        var messages = TransientTimeouts.ShortenForStep(error.GetAllMessages());
-        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-            CreateResult(lastSuccessfullyHandled) with { TransientFailure = new(partition, failedAt, messages) },
-            messages,
-            string.Empty));
-    }
-
     static HandleEventsForPartitionResult CreateResult(EventSequenceNumber lastSuccessfullyHandled) => new(lastSuccessfullyHandled);
 
-    static EventSequenceNumber GetLastScanned(EventSequenceNumber lastScanned, BoundedEventCursor events)
+    void BindSubscriber(ObserverSubscription subscription, Key partition)
     {
-        foreach (var @event in events.Current)
-        {
-            if (!lastScanned.IsActualValue || @event.Context.SequenceNumber > lastScanned)
-            {
-                lastScanned = @event.Context.SequenceNumber;
-            }
-        }
-
-        return lastScanned;
-    }
-
-    async Task<Catch<JobStepResult>> PerformPreparedStep(HandleEventsForPartitionState currentState, CancellationToken cancellationToken)
-    {
-        var lastSuccessfullyHandledEventSequenceNumber = EventSequenceNumber.Unavailable;
-        var subscription = await _observer.GetSubscription();
-        _generationDelivery = subscription.GenerationDelivery;
-
-        // A step is prepared, and its grain activated, when its job starts, but a job keeps only a window of its steps
-        // running, so a step can start long after. The client that was subscribed when it was prepared may be gone by
-        // then, and delivering through its connection would find nobody. This runs on the step's background task, which
-        // has no access to the grain's own services, hence the factory kept from when the step was prepared or activated.
-        if (subscription.IsSubscribed)
-        {
-            var subscriberKey = GetObserverSubscriberKey(subscription, currentState.Partition);
-            if (_subscriberKey is not null && _subscriberKey != subscriberKey)
-            {
-                _subscriber = _grainFactory.GetGrain(subscription.SubscriberType, subscriberKey) as IObserverSubscriber;
-            }
-
-            _subscriberKey = subscriberKey;
-            _isCollapsingProjection = subscription.IsCollapsingProjection;
-        }
-
-        try
-        {
-            lastSuccessfullyHandledEventSequenceNumber = currentState.LastSuccessfullyHandledEventSequenceNumber;
-            if (_subscriber is null || !subscription.IsSubscribed)
-            {
-                logger.PerformingStoppedUnsubscribed(currentState.Partition);
-                return JobStepResult.Failed(SubscriberDisconnected, "This should have been ensured in the Prepare operation");
-            }
-            if (cancellationToken.IsCancellationRequested)
-            {
-                logger.CancelledBeforeHandlingAnyEvents(currentState.Partition);
-                return JobStepResult.Failed(PerformJobStepError.CancelledWithNoResult());
-            }
-            var scopedEventTypes = ObserverReaderScope
-                .ForRequest(currentState.ReaderScope, currentState.EventTypes)
-                .EventTypesToRead(currentState.EventTypes);
-            var eventTypesToRead = scopedEventTypes?.ToArray()
-                ?? await ResolveFallbackEventTypesToRead(subscription.EventTypes);
-            _generationPins = eventTypesToRead.ToArray();
-            _generationEventStore = currentState.ObserverKey.EventStore;
-            var nonRedactionEventTypeIds = eventTypesToRead
-                .Where(et => et.Id != GlobalEventTypes.Redaction)
-                .Select(et => et.Id)
-                .ToHashSet();
-            _eventTypes = storage.GetEventStore(currentState.ObserverKey.EventStore).EventTypes;
-            _eventTypeSchemas = (await _eventTypes.GetFor(eventTypesToRead))
-                .ToDictionary(_ => _.Type);
-
-            // A storage batch can hold thousands of events; a client or webhook subscriber gets them a bounded call
-            // at a time, so its timeout guards a known amount of work and every answered call is checkpointed.
-            var maxEventsPerCall = await configurationProvider.GetMaxEventsPerSubscriberCallForObserver(currentState.ObserverKey, subscription.SubscriberType);
-            var storageEvents = Storage.EventSequences.BoundedEventCursor.Over(
-                await OpenDurableRange(currentState, subscription, eventTypesToRead, cancellationToken),
-                maxEventsPerCall);
-            var maximumEventsPerCall = _subscriber is IUnpartitionedObserverSubscriber
-                ? Math.Min(MaxEventsPerBatch, ObserverSubscriberExtensions.MaximumEventsPerUnpartitionedCall)
-                : MaxEventsPerBatch;
-            using var events = new BoundedEventCursor(storageEvents, maximumEventsPerCall);
-
-            var subscriberContext = CreateSubscriberContext(subscription, currentState);
-            var subscriberTimeout = await configurationProvider.GetSubscriberTimeoutForObserver(currentState.ObserverKey);
-            await DrainAbandonedDeliveryBeforeHandling(subscription, currentState, cancellationToken);
-
-            var failed = false;
-            var exceptionMessages = Enumerable.Empty<string>().ToArray();
-            var exceptionStackTrace = string.Empty;
-            var failureKind = FailureKind.Unknown;
-            var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
-
-            var lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
-            var lastScannedEventSequenceNumber = EventSequenceNumber.Unavailable;
-            while (await events.MoveNext())
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    LogCancelled(lastEventSequenceNumberAttempted, currentState.Partition);
-                    return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
-                }
-                var handledCount = EventCount.Zero;
-
-                if ((currentState.EpisodeId is not null || _subscriber is IWebhookObserverSubscriber) && !await _observer.CanResumeFailedPartition(currentState.Partition, currentState.EpisodeId, currentState.DeferralId))
-                {
-                    return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
-                }
-
-                var handleEventsResult = _subscriber is IWebhookObserverSubscriber or IAmOwnedByClient
-                    ? await TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters, cancellationToken)
-                    : await TransientTimeouts.RetryOnceOnTimeout(
-                        () => TryHandleEvents(currentState, events, subscriberContext, subscriberTimeout, nonRedactionEventTypeIds, subscription.Filters, cancellationToken),
-                        TransientRetryDelay,
-                        timeout => logger.RetryingAfterTimeout(currentState.Partition, TransientTimeouts.ShortMessageFor(timeout)),
-                        cancellationToken);
-                if (_subscriber is IWebhookObserverSubscriber && cancellationToken.IsCancellationRequested)
-                {
-                    LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
-                    return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
-                }
-
-                if (handleEventsResult.TryGetException(out var handleEventsException))
-                {
-                    failed = true;
-                    exceptionMessages = handleEventsException.GetAllMessages().ToArray();
-                    exceptionStackTrace = handleEventsException.StackTrace ?? string.Empty;
-                    failureKind = handleEventsException.ToFailureKind();
-                    if (failureKind == FailureKind.Timeout)
-                    {
-                        exceptionMessages = [TransientTimeouts.ShortMessageFor(handleEventsException)];
-                        exceptionStackTrace = string.Empty;
-                    }
-
-                    lastEventSequenceNumberAttempted = events.Current.First().Context.SequenceNumber;
-                }
-                else if (handleEventsResult.TryGetResult(out var handledEventsResult))
-                {
-                    var (eventObserverResult, handledEvents) = handledEventsResult;
-                    if (eventObserverResult.LastSuccessfulObservation.IsActualValue)
-                    {
-                        handledCount = events.Current.Count(_ => _.Context.SequenceNumber <= eventObserverResult.LastSuccessfulObservation);
-                    }
-                    switch (eventObserverResult.State)
-                    {
-                        case ObserverSubscriberState.Ok:
-                            RecordSuccessfulObservation(currentState);
-                            lastEventSequenceNumberAttempted = EventSequenceNumber.Unavailable;
-                            if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation))
-                            {
-                                // Nothing was recorded for this batch, so it is neither checkpointed nor counted here: the next
-                                // run resumes from the last persisted checkpoint and counts it when it handles the batch again.
-                                return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
-                            }
-
-                            lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-                            await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
-                            break;
-                        case ObserverSubscriberState.Deferred:
-                            if (eventObserverResult.HandledAnyEvents)
-                            {
-                                if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation)) return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
-                                lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-                                await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
-                            }
-
-                            await ReportPartitionDeferred(currentState, eventObserverResult.Deferral!);
-                            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with { Deferral = eventObserverResult.Deferral }));
-                        case ObserverSubscriberState.Failed:
-                            failed = true;
-                            exceptionMessages = eventObserverResult.ExceptionMessages.ToArray();
-                            exceptionStackTrace = eventObserverResult.ExceptionStackTrace;
-                            failureKind = FailureKind.Handling;
-                            failurePolicy = eventObserverResult.FailurePolicy;
-                            if (eventObserverResult.HandledAnyEvents)
-                            {
-                                var failedEvent = handledEvents.FirstOrDefault(e => e.Context.SequenceNumber > eventObserverResult.LastSuccessfulObservation);
-                                lastEventSequenceNumberAttempted = failedEvent is not null
-                                    ? failedEvent.Context.SequenceNumber
-                                    : eventObserverResult.LastSuccessfulObservation.Next();
-
-                                if (!await ReportFromWork(eventObserverResult.LastSuccessfulObservation))
-                                {
-                                    return ClosedResult(lastSuccessfullyHandledEventSequenceNumber);
-                                }
-
-                                lastSuccessfullyHandledEventSequenceNumber = eventObserverResult.LastSuccessfulObservation;
-                                await ReportHandledEvents(currentState.Partition, handledEvents, eventObserverResult.LastSuccessfulObservation, cancellationToken);
-                            }
-                            else
-                            {
-                                lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
-                            }
-
-                            logger.FailedHandlingEvents(currentState.Partition, handledCount, lastEventSequenceNumberAttempted, lastSuccessfullyHandledEventSequenceNumber);
-                            break;
-                        case ObserverSubscriberState.Disconnected:
-                            failed = true;
-                            exceptionMessages = [SubscriberDisconnected];
-                            failureKind = FailureKind.Disconnected;
-                            lastEventSequenceNumberAttempted = handledEvents[0].Context.SequenceNumber;
-                            logger.EventHandlerDisconnected(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
-                            break;
-                    }
-                }
-
-                if (failed)
-                {
-                    var failedAt = lastEventSequenceNumberAttempted.IsActualValue ? lastEventSequenceNumberAttempted : currentState.StartEventSequenceNumber;
-                    if (failureKind == FailureKind.Timeout && _subscriber is not IWebhookObserverSubscriber)
-                    {
-                        // The observer is not told yet: it is the grain that was too busy to answer, and the job runs the
-                        // step again before it reports the partition. A webhook timeout is different: it is a delivery
-                        // failure, so it is reported below and retried only by the webhook retry policy.
-                        logger.StepTimedOut(exceptionMessages[0]);
-                        return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                            CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
-                            {
-                                TransientFailure = new(currentState.Partition, failedAt, exceptionMessages) { DeliveryFence = _deliveryFence }
-                            },
-                            exceptionMessages,
-                            string.Empty));
-                    }
-
-                    await ReportPartitionFailed(currentState, failedAt, exceptionMessages, exceptionStackTrace, failureKind, failurePolicy);
-                    return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                        CreateResult(lastSuccessfullyHandledEventSequenceNumber),
-                        TransientTimeouts.ShortenForStep(exceptionMessages),
-                        string.Empty));
-                }
-
-                lastScannedEventSequenceNumber = GetLastScanned(lastScannedEventSequenceNumber, events);
-            }
-
-            if (lastSuccessfullyHandledEventSequenceNumber == EventSequenceNumber.Unavailable)
-            {
-                using (logger.BeginObserverKeyScope(currentState.ObserverKey))
-                {
-                    logger.HandledNoEvents(currentState.Partition);
-                }
-            }
-            else
-            {
-                logger.HandledAllEvents(currentState.Partition, lastSuccessfullyHandledEventSequenceNumber);
-            }
-
-            return JobStepResult.Succeeded(CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
-            {
-                LastScannedEventSequenceNumber = lastScannedEventSequenceNumber
-            });
-        }
-        catch (TaskCanceledException)
-        {
-            LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
-            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            LogCancelled(lastSuccessfullyHandledEventSequenceNumber, currentState.Partition);
-            return JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber)));
-        }
-        catch (Exception e) when (TransientTimeouts.IsTimeout(e))
-        {
-            // A grain call timing out is recorded once, briefly, and never escalated to the observer: the observer
-            // is the grain that was too busy to answer.
-            var message = TransientTimeouts.ShortMessageFor(e);
-            logger.StepTimedOut(message);
-            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(
-                CreateResult(lastSuccessfullyHandledEventSequenceNumber) with
-                {
-                    TransientFailure = new(
-                        currentState.Partition,
-                        lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber,
-                        [message])
-                },
-                [message],
-                string.Empty));
-        }
-        catch (Exception e)
-        {
-            logger.FailedPerforming(e, nameof(HandleEventsForPartition));
-            var failedAt = lastSuccessfullyHandledEventSequenceNumber.IsActualValue ? lastSuccessfullyHandledEventSequenceNumber.Next() : currentState.StartEventSequenceNumber;
-            if (!await TryReportPartitionFailed(currentState, failedAt, e))
-            {
-                return UnreportedFailure(currentState.Partition, failedAt, lastSuccessfullyHandledEventSequenceNumber, e);
-            }
-
-            if (!lastSuccessfullyHandledEventSequenceNumber.IsActualValue)
-            {
-                return e;
-            }
-
-            logger.FailedWithPartialSuccess(e, lastSuccessfullyHandledEventSequenceNumber);
-            return JobStepResult.Failed(PerformJobStepError.FailedWithPartialResult(CreateResult(lastSuccessfullyHandledEventSequenceNumber), e));
-        }
-    }
-
-    Task ReportPartitionDeferred(HandleEventsForPartitionState state, PartitionDeferral deferral) =>
-        state.ReplayEpoch is { } replayEpoch
-            ? _observer.PartitionDeferred(state.Partition, deferral, state.EpisodeId, state.DeferralId, replayEpoch)
-            : _observer.PartitionDeferred(state.Partition, deferral, state.EpisodeId, state.DeferralId);
-
-    Task ReportPartitionFailed(HandleEventsForPartitionState state, EventSequenceNumber failedAt, IEnumerable<string> messages, string stackTrace, FailureKind kind, WebhookDeliveryFailurePolicy policy) =>
-        state.ReplayEpoch is { } replayEpoch
-            ? _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, new PartitionFailureContext(policy, null, replayEpoch))
-            : _observer.PartitionFailed(_eventSourceId, failedAt, messages, stackTrace, kind, state.EpisodeId, state.DeferralId, policy);
-
-    async Task<bool> TryReportPartitionFailed(HandleEventsForPartitionState state, EventSequenceNumber failedAt, Exception error)
-    {
-        try
-        {
-            await ReportPartitionFailed(state, failedAt, error.GetAllMessages(), error.StackTrace ?? string.Empty, error.ToFailureKind(), WebhookDeliveryFailurePolicy.Retry);
-            return true;
-        }
-        catch (Exception reportError)
-        {
-            logger.FailedReportingPartitionFailed(reportError, _eventSourceId, failedAt);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Reports progress from the step's background work. The state update and the debounced write run as one
-    /// callback on the activation, so a stopped or deactivating step either records the whole batch or none of it.
-    /// </summary>
-    /// <param name="lastHandled">The last handled event sequence number.</param>
-    /// <returns>True when the progress was recorded; false when the step refused the callback because its run is closed.</returns>
-    async Task<bool> ReportFromWork(EventSequenceNumber lastHandled)
-    {
-        await ConfirmBulkWindowDurability();
-        var reported = await TryInvokeOnActivation(() => ReportNewSuccessfullyHandledEvent(lastHandled));
-        if (reported.TryGetError(out var rejection))
-        {
-            logger.CheckpointCallbackRejected(_eventSourceId, rejection, lastHandled);
-            return false;
-        }
-
-        return true;
-    }
-
-    JobStepResult ClosedResult(EventSequenceNumber lastSuccessfullyHandled) =>
-        JobStepResult.Failed(PerformJobStepError.CancelledWithPartialResult(CreateResult(lastSuccessfullyHandled)));
-
-    ObserverSubscriberContext CreateSubscriberContext(ObserverSubscription subscription, HandleEventsForPartitionState state)
-    {
-        var deliveryTarget = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
-            ? _deliveryTarget
-            : subscriberSelector.Select(subscription, state.Partition);
-        return new(deliveryTarget.ConnectedClient ?? subscription.Arguments)
-        {
-            ReplayEpoch = state.ReplayEpoch,
-            Origin = state.EpisodeId is not null || state.DeferralId is not null
-                ? ObservationOrigin.Retry
-                : state.EventObservationState.ToObservationOrigin()
-        };
-    }
-
-    async Task DrainAbandonedDeliveryBeforeHandling(ObserverSubscription subscription, HandleEventsForPartitionState state, CancellationToken cancellationToken)
-    {
-        _abandonedDeliveryHold = subscription.SubscriberType.IsAssignableTo(typeof(IAmOwnedByClient))
-            ? await configurationProvider.GetAbandonedDeliveryHoldForObserver(state.ObserverKey)
-            : TimeSpan.Zero;
-        if (_abandonedDeliveryHold <= TimeSpan.Zero) return;
-        var drain = new AbandonedDeliveryDrain(_grainFactory, _clock, logger);
-        foreach (var fence in (await _observer.GetDeliveryFences()).Where(fence => fence.Partition == state.Partition))
-        {
-            await drain.Until(fence, cancellationToken);
-            await _observer.ReleaseDeliveryFence(fence.Partition, fence.ReleaseBy);
-        }
-    }
-
-    async Task<Catch<(ObserverSubscriberResult Result, AppendedEvent[] HandledEvents), None>> TryHandleEvents(
-        HandleEventsForPartitionState state,
-        BoundedEventCursor events,
-        ObserverSubscriberContext subscriberContext,
-        TimeSpan subscriberTimeout,
-        HashSet<EventTypeId> nonRedactionEventTypeIds,
-        ObserverFilters? filters,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var eventsToHandle = ObserverEventPreparation.Prepare(state.EventObservationState, events.Current, nonRedactionEventTypeIds, filters);
-            if (eventsToHandle.Length != 0)
-            {
-                var decryptedEvents = await DecryptEvents(eventsToHandle);
-                subscriberContext = subscriberContext.WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
-                _deliveryFence = AbandonedDeliveryDrain.Capture(_deliverySubscription, state.Partition, _deliveryTarget, subscriberContext);
-                var deliveryCancellation = _subscriber is IWebhookObserverSubscriber ? cancellationToken : CancellationToken.None;
-                var result = await _subscriber!.OnNextWithin(subscriberTimeout, state.Partition, decryptedEvents, subscriberContext, deliveryCancellation);
-                return (result, decryptedEvents);
-            }
-
-            logger.NoMoreEventsToHandle(state.Partition, state.StartEventSequenceNumber, state.EndEventSequenceNumber);
-            return default(None);
-        }
-        catch (Exception ex)
-        {
-            if (TransientTimeouts.IsTimeout(ex) && _deliveryFence?.ReleaseBy is { } releaseBy)
-            {
-                await new AbandonedDeliveryDrain(_grainFactory, _clock, logger).Until(new(state.Partition, releaseBy, _deliveryFence.Targets ?? []), CancellationToken.None);
-            }
-            logger.ErrorHandling(ex, state.Partition);
-            return ex;
-        }
-    }
-
-    void LogCancelled(EventSequenceNumber lastHandledSequenceNumber, Key partition)
-    {
-        if (!lastHandledSequenceNumber.IsActualValue)
-        {
-            logger.CancelledBeforeHandlingAnyEvents(partition);
-        }
-        else
-        {
-            logger.CancelledAfterHandlingEvents(partition, lastHandledSequenceNumber);
-        }
+        _subscriberKey = GetObserverSubscriberKey(subscription, partition);
+        _subscriber = GrainFactory.GetGrain(subscription.SubscriberType, _subscriberKey) as IObserverSubscriber;
+        _isCollapsingProjection = subscription.IsCollapsingProjection;
     }
 
     ObserverSubscriberKey GetObserverSubscriberKey(ObserverSubscription subscription, Key partition)
     {
         _grainFactory ??= GrainFactory;
         _deliverySubscription = subscription;
-        _deliveryTarget = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
+        var isWebhook = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType);
+        _deliveryTarget = isWebhook
             ? new ObserverSubscriberTarget(SiloAddress.Zero)
             : subscriberSelector.Select(subscription, partition);
-        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType)
+        var siloAddress = isWebhook
             ? SiloAddress.Zero
             : _deliveryTarget.SiloAddress;
         return subscription.GetSubscriberKeyFor(partition, siloAddress);
@@ -669,31 +243,5 @@ public partial class HandleEventsForPartition(
         }
 
         return await eventCompliance.Release(eventsToDecrypt, _eventTypeSchemas);
-    }
-
-    /// <summary>
-    /// Resolve the event types to read when the observer's subscription itself carries none - an observer
-    /// subscribed to all events has no fixed list, since new event types can be registered after it subscribed,
-    /// so its full, current set is resolved from the observer rather than trusted from the subscription snapshot.
-    /// </summary>
-    /// <param name="subscriptionEventTypes">The event types recorded on the current subscription.</param>
-    /// <returns>The event types to read.</returns>
-    async Task<EventType[]> ResolveFallbackEventTypesToRead(IEnumerable<EventType> subscriptionEventTypes)
-    {
-        var eventTypes = subscriptionEventTypes.ToArray();
-        return eventTypes.Length != 0 ? eventTypes : (await _observer.GetEventTypes()).ToArray();
-    }
-
-    Task ReportHandledEvents(Key partition, AppendedEvent[] handledEvents, EventSequenceNumber handledUpTo, CancellationToken cancellationToken)
-    {
-        var counts = handledEvents
-            .Where(e => e.Context.SequenceNumber <= handledUpTo)
-            .CountByEventType();
-        return TransientTimeouts.ReportHandledEventsWithoutFailing(
-            _observer,
-            new(partition, counts, JobStepId, handledUpTo),
-            TransientRetryDelay,
-            logger,
-            cancellationToken);
     }
 }

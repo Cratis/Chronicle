@@ -185,6 +185,7 @@ public class a_projection_with_initial_values : Specification
         ExpandoObject state = null;
         sink.FindOrDefault(Arg.Any<Key>()).Returns(_ => Task.FromResult(state?.Clone()));
         sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), Arg.Any<object>()).Returns(Option<Key>.None());
+        sink.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), Arg.Any<object>(), Arg.Any<Key>()).Returns(Option<Key>.None());
         var initialize = new SetInitialState(sink, NullLogger<SetInitialState>.Instance);
         var handle = new HandleEvent(_eventSequenceStorage, sink, NullLogger<HandleEvent>.Instance);
         foreach (var @event in events)

@@ -82,6 +82,13 @@ internal static class EventSequenceQuerying
         int take,
         EventSequenceQuerySort sort)
     {
+        var narrowed = await OutboxEventTypeQueryFilter.Narrow(storage, eventStore, eventSequenceId, criteria);
+        if (narrowed is null)
+        {
+            return ([], 0);
+        }
+
+        criteria = narrowed;
         var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
         var totalCount = await eventSequence.GetCountMatching(criteria);
 
@@ -116,8 +123,14 @@ internal static class EventSequenceQuerying
         HistogramResolution resolution,
         EventSequenceQueryCriteria criteria)
     {
+        var narrowed = await OutboxEventTypeQueryFilter.Narrow(storage, eventStore, eventSequenceId, criteria);
+        if (narrowed is null)
+        {
+            return [];
+        }
+
         var eventSequence = storage.GetEventStore(eventStore).GetNamespace(@namespace).GetEventSequence(eventSequenceId);
-        var buckets = await eventSequence.GetHistogram(resolution, criteria);
+        var buckets = await eventSequence.GetHistogram(resolution, narrowed);
 
         return buckets.Select(_ => new SequenceHistogramBucket(_.Occurred, SequenceHistogramBucket.EndOf(_.Occurred, resolution), _.Count)).ToArray();
     }
@@ -295,8 +308,8 @@ internal static class EventSequenceQuerying
         Func<IEnumerable<Concepts.Events.AppendedEvent>, IDictionary<Concepts.Events.EventType, EventTypeSchema>, Task<Concepts.Events.AppendedEvent[]>> release)
     {
         var materialized = events as ICollection<Concepts.Events.AppendedEvent> ?? events.ToList();
-        var eventTypeSchemas = await storage.GetEventStore(eventStore).EventTypes.GetFor(materialized.Select(e => e.Context.EventType).Distinct());
-        var schemasByEventType = eventTypeSchemas.ToDictionary(schema => schema.Type);
+        var schemasByEventType = new Dictionary<Concepts.Events.EventType, EventTypeSchema>();
+        await storage.GetEventStore(eventStore).EventTypes.EnsureSchemasFor(schemasByEventType, materialized);
         return await release(materialized, schemasByEventType);
     }
 }

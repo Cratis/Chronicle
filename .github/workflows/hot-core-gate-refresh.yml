@@ -13,10 +13,13 @@ concurrency:
 jobs:
   refresh:
     # Same-repo PR runs only. Requested Integration must have succeeded; other labels cannot supply green
-    # evidence. A .NET Build & Integration run refreshes whatever its conclusion, because the refresh itself
-    # requires its `specs` job to have passed, and another job failing must not leave the gate red.
+    # evidence. Completed .NET Build & Integration runs refresh either specs verdict, so a gate whose
+    # pending wait timed out or returned a waiting notice can report the final result. Failed/cancelled
+    # Requested Integration never triggers refresh. The evaluator also refuses refresh while any required
+    # Requested Integration/build job is in flight; running gates report for themselves.
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.status == 'completed' &&
       (github.event.workflow_run.conclusion == 'success' ||
       github.event.workflow_run.path == '.github/workflows/dotnet-build.yml') &&
       github.event.workflow_run.head_repository.full_name == github.repository
@@ -27,12 +30,60 @@ jobs:
       actions: write
       pull-requests: read
     steps:
-      # SECURITY: workflow_run has a write token. Check out only the default branch (no ref:),
-      # never the PR head; nothing from the PR is executed.
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: .github/scripts
-          persist-credentials: false
+      # Gate tools come from the resolved default-branch head;
+      # the completed run's head is used only to select evidence.
+      - name: Materialise gate tools
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/gate-tools"
+          rm -rf "$tools"
+          mkdir -p "$tools"
+          git -C "$tools" init
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          default_revision() {
+            local ref="refs/heads/$DEFAULT_BRANCH" listing sha
+            if ! listing="$(git ls-remote --refs "$remote" "$ref")"; then
+              echo "::error::Cannot resolve trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            sha="${listing%%$'\t'*}"
+            if [[ ! "$sha" =~ ^[0-9a-fA-F]{40}$ || "$listing" != "$sha"$'\t'"$ref" ]]; then
+              echo "::error::Invalid trusted gate tools default-branch head: $ref" >&2
+              return 1
+            fi
+            printf '%s\n' "$sha"
+          }
+          revision="$BASE_SHA"
+          if [ -z "$revision" ]; then
+            revision="$(default_revision)"
+          fi
+          git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
+          required=(.github/scripts/evaluate-hot-core-gate.py .github/scripts/integration_lane_exclusions.py)
+          missing_tool() {
+            for path in "${required[@]}"; do
+              if ! git -C "$tools" cat-file -e "$revision:$path" 2>/dev/null; then
+                echo "$path"
+                return
+              fi
+            done
+          }
+          missing="$(missing_tool)"
+          if [ -n "$missing" ]; then
+            echo "::notice::Base lacks $missing; checking the default branch."
+            revision="$(default_revision)"
+            git -C "$tools" fetch --no-tags --depth=1 "$remote" "$revision"
+            missing="$(missing_tool)"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Trusted gate tools missing: $missing"
+            exit 1
+          fi
+          git -C "$tools" archive "$revision" .github | tar -x -C "$tools"
+          echo "::notice::Gate tools revision: $revision"
+          echo "GATE_TOOLS=$tools" >> "$GITHUB_ENV"
       # Confirm on first post-merge use that GITHUB_TOKEN can re-run failed jobs. If it cannot,
       # D3's unimplemented fallback is POST /repos/{repo}/check-runs with checks: write, name
       # hot-core-gate, this head_sha and conclusion success. The GitHub Actions app would own
@@ -44,4 +95,5 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           SOURCE_WORKFLOW: ${{ github.event.workflow_run.path }}
           PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-        run: python3 .github/scripts/evaluate-hot-core-gate.py refresh
+        run: |
+          python3 -I -c 'import runpy, sys; sys.path.insert(0, sys.argv.pop(1)); runpy.run_path(sys.argv.pop(1), run_name="__main__")' "$GATE_TOOLS/.github/scripts" "$GATE_TOOLS"/.github/scripts/evaluate-hot-core-gate.py refresh

@@ -44,6 +44,8 @@ module Library
         produces DocumentCreated
           for id
           owner = owner
+      screen CreateDocument
+        action CreateDocument for screen
     slice StateChange RenameDocument
       command RenameDocument
         id DocumentId identifier
@@ -58,6 +60,8 @@ module Library
           title = title
       event DocumentRenamed
         title String
+      screen RenameDocument
+        action RenameDocument for screen
       specification OwnerRenames
         given DocumentCreated
           for "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -90,6 +94,8 @@ module Library
             for id
       event DocumentReviewed
       event ReviewIndependent
+      screen ReviewDocument
+        action ReviewDocument for screen
       specification IndependentReview
         when ReviewDocument
           id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"

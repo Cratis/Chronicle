@@ -8,6 +8,7 @@ namespace Cratis.Chronicle.Observation;
 public partial class Observer
 {
     TimeSpan _idleDeactivationAfter;
+    int _watchdogIntervalSeconds = 60;
     DateTimeOffset? _idleSince;
     bool _releasedWhenIdle;
 
@@ -20,9 +21,10 @@ public partial class Observer
     /// Gets whether the activation holds nothing that is not in storage, so it can be released without losing anything.
     /// </summary>
     /// <remarks>
-    /// The grain carries <see cref="KeepAliveAttribute"/> because a subscription exists only in memory: in this
-    /// activation and in the appended events queue it subscribed to. Releasing a subscribed observer would silently stop
-    /// its live delivery until something subscribed it again. An observer with no subscription has no such state.
+    /// A subscription exists only in memory: in this activation and in the appended events queue it subscribed to.
+    /// Releasing a subscribed observer would silently stop its live delivery until something subscribed it again, so the
+    /// activation keeps itself (see <see cref="KeepWhileOwed"/>) unless it is idle or released as dormant. An observer with
+    /// no subscription has no such state.
     /// Everything else it could be in the middle of - a catch-up starting, a failure being retried, an alert or a
     /// state write waiting, a request kept for a later turn or a later subscription - keeps it resident as well, so that
     /// only an observer at rest is released. Each of those is listed here rather than inferred from recent calls, because
@@ -35,6 +37,16 @@ public partial class Observer
         !_removed &&
         !_subscription.IsSubscribed &&
         (!_observerExists || State.RunningState == ObserverRunningState.Disconnected) &&
+        NothingIsOwed;
+
+    /// <summary>
+    /// Gets whether the observer owes nothing: no recovery, failure, replay, catch-up, pending write or alert work.
+    /// </summary>
+    /// <remarks>
+    /// The conditions an idle observer (<see cref="IsIdle"/>) and a dormant one (<see cref="IsDormant"/>) share. Neither is
+    /// released while any of them holds, because the activation is what carries the work out.
+    /// </remarks>
+    bool NothingIsOwed =>
         !IsQuarantined &&
         !State.IsReplaying &&
         State.ReplayingPartitions.Count == 0 &&
@@ -66,6 +78,24 @@ public partial class Observer
         !_alertReconciliationPending &&
         !_alertReportInProgress &&
         !_alertReminderRegistered;
+
+    /// <summary>
+    /// Keeps the activation from being collected while it holds anything that is not in storage.
+    /// </summary>
+    /// <remarks>
+    /// The observer carries no <see cref="KeepAliveAttribute"/>: Orleans may collect it like any other grain once it is idle
+    /// or released as dormant, because then everything it holds is in storage and an event or the safety net of its queue
+    /// activates it again. Until then each watchdog pass renews the keep, so collection never takes an observer that owes work.
+    /// </remarks>
+    void KeepWhileOwed()
+    {
+        if (GrainContext is null || IsIdle || IsReleasedAsDormant)
+        {
+            return;
+        }
+
+        DelayDeactivation(TimeSpan.FromSeconds(Math.Max(_watchdogIntervalSeconds, 1) * 3));
+    }
 
     void ConfigureIdleDeactivation(int idleDeactivationAfterSeconds) =>
         _idleDeactivationAfter = TimeSpan.FromSeconds(Math.Max(idleDeactivationAfterSeconds, 0));

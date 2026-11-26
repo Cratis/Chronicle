@@ -16,17 +16,26 @@ namespace Cratis.Chronicle.Concepts.Observation.Webhooks;
 /// <param name="Target">The <see cref="WebhookTarget"/> target to send the events to.</param>
 /// <param name="IsReplayable">Whether the webhook supports replay scenarios.</param>
 /// <param name="IsActive">Whether the wehbook is active.</param>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.Webhooks.WebhookDefinition")]
 public record WebhookDefinition(
-    WebhookId Identifier,
-    WebhookOwner Owner,
-    EventSequenceId EventSequenceId,
-    IEnumerable<EventType> EventTypes,
-    WebhookTarget Target,
-    bool IsReplayable = true,
-    bool IsActive = true)
+    [Id(0)] WebhookId Identifier,
+    [Id(1)] WebhookOwner Owner,
+    [Id(2)] EventSequenceId EventSequenceId,
+    [Id(3)] IEnumerable<EventType> EventTypes,
+    [Id(4)] WebhookTarget Target,
+    [Id(5)] bool IsReplayable = true,
+    [Id(6)] bool IsActive = true)
 {
     /// <summary>
     /// Gets the policy for delivering event generations.
     /// </summary>
+    [Id(7)]
     public EventGenerationDelivery GenerationDelivery { get; init; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets the signing policy. Existing webhooks remain unsigned until explicitly enabled.
+    /// </summary>
+    [Id(8)]
+    public WebhookSigningMode Signing { get; init; } = WebhookSigningMode.None;
 }

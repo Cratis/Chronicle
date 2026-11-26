@@ -58,3 +58,26 @@ refusals and reference unsupported outcomes remain separate checks.
 with `and`/`or`. Its source grammar includes `contains` and `starts with`, but the
 executable binder refuses those operators with PLAY0268. Use the literal property
 rules for validation, not as a way around condition admission.
+
+## Reaction bodies run through a host provider
+
+Requires Screenplay 4.258.0 or later (`screenplay --version`). Source: Screenplay
+`Documentation/screenplay/reactions.md`.
+
+A reference run executes an attached reaction body only when the host supplies an
+`ISemanticBodyExecutionProvider` and a resolved, content-verified attachment. The run calls
+`ReactAsync` for a standalone body on a reaction with exactly one event trigger and no `produces`,
+`invokes` or routing override, after `where` passes.
+
+- `ReactAsync` returns exactly one of nothing, an ordered event batch or an ordered command batch
+  (`SemanticReactionBodyResult`). A missing, default or mixed result is Unsupported with the
+  Reaction capability, never an empty result.
+- The run validates every target and payload of the whole batch before settling anything. Command
+  payloads cannot supply generated properties. Commands settled earlier are not rolled back when a
+  later one is refused, as with `invokes` without `on refused`.
+- Every other shape stays Unsupported (Reaction): clock and application triggers, unverified
+  bodies, provider failure and a run with no provider.
+- A body that also declares `reads` stays refused (`PLAY0268`); return or invoke a command and put
+  the protected decision there.
+- `PerformAsync` is a provider contract only. Performer queries are not admitted to the executable
+  model, so never present a performer as runnable.

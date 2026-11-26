@@ -12,7 +12,7 @@ paths:
 > **⚠️ APPLIES ONLY TO PROJECTS USING MICROSOFT ORLEANS**
 > If your project does not reference `Microsoft.Orleans` or any Orleans packages, **ignore this entire file**. These rules are irrelevant outside of Orleans contexts.
 
-In the Cratis organization, Orleans is the Chronicle kernel's actor runtime (`Source/Kernel/`). The kernel conventions below are verified against `Cratis/Chronicle` **v19.50.0**. Shared hosting and jobs come from `Cratis/Orleans` **v1.30.0**; use its setup for other services that co-host a silo.
+In the Cratis organization, Orleans is the Chronicle kernel's actor runtime (`Source/Kernel/`). The kernel conventions below are verified against `Cratis/Chronicle` **v19.50.0**. Shared hosting and jobs come from `Cratis/Choreography`; use `Cratis.Choreography` 2.0.0 or newer (renamed from `Cratis.Orleans`); use its setup for other services that co-host a silo.
 
 ## General
 
@@ -38,35 +38,35 @@ services.AddKeyedSingleton(WellKnownGrainStorageProviders.EventSequences, Create
 ```
 
 Jobs are the exception to the kernel's `IStorage` shape: `JobGrainStorageProvider`
-and `JobStepGrainStorageProvider` live in `Cratis.Orleans.Jobs` and take
-`Cratis.Orleans.Storage.IJobsStorage`. Chronicle registers them under
-`Cratis.Orleans.WellKnownGrainStorageProviders.Jobs` and `.JobSteps`, still wrapped
+and `JobStepGrainStorageProvider` live in `Cratis.Choreography.Jobs` and take
+`Cratis.Choreography.Storage.IJobsStorage`. Chronicle registers them under
+`Cratis.Choreography.WellKnownGrainStorageProviders.Jobs` and `.JobSteps`, still wrapped
 in its resilient storage pipeline.
 
-## Co-host a silo with Cratis.Orleans
+## Co-host a silo with Cratis.Choreography
 
 For job/step authoring, stage barriers, recovery, storage scopes and state-machine
 APIs, load **cratis-orleans-jobs** from `cratis/engineering/csharp`. These APIs are
 framework/service guidance; they do not impose application slice architecture.
 
-For service authors, `Cratis.Orleans` supplies hosting, grain serializers, and the
-shared job system without requiring Chronicle. With `Cratis.Orleans` and
-`Cratis.Orleans.Storage.MongoDB` 1.30.0, this host uses durable MongoDB membership
+For service authors, `Cratis.Choreography` supplies hosting, grain serializers, and the
+shared job system without requiring Chronicle. With `Cratis.Choreography` and
+`Cratis.Choreography.Storage.MongoDB` 2.0.0 or newer, this host uses durable MongoDB membership
 and jobs storage (a local MongoDB server is required):
 
 ```csharp
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Orleans.Hosting;
-using Cratis.Orleans.Setup;
+using Cratis.Choreography.Hosting;
+using Cratis.Choreography.Setup;
 using Microsoft.AspNetCore.Builder;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Mongo")
     ?? throw new InvalidOperationException("Configure the Mongo connection string.");
-builder.AddCratisOrleans(new CratisOrleansOptions
+builder.AddCratisChoreography(new CratisChoreographyOptions
 {
     ClusterId = "my-service",
     ServiceId = "my-service",
@@ -74,15 +74,15 @@ builder.AddCratisOrleans(new CratisOrleansOptions
     DatabaseName = "my-service-orleans",
     ConnectionString = connectionString
 });
-builder.Services.AddCratisOrleansMongoDBJobsStorage(new MongoClient(connectionString));
+builder.Services.AddCratisChoreographyMongoDBJobsStorage(new MongoClient(connectionString));
 
 var app = builder.Build();
 app.Run();
 ```
 
-- Register jobs storage separately: `AddCratisOrleansMongoDBJobsStorage`,
-  `AddCratisOrleansSqlJobsStorage` (`Cratis.Orleans.Setup`), or
-  `AddCratisOrleansInMemoryJobsStorage` (`Cratis.Orleans.Storage`).
+- Register jobs storage separately: `AddCratisChoreographyMongoDBJobsStorage`,
+  `AddCratisChoreographySqlJobsStorage` (`Cratis.Choreography.Setup`), or
+  `AddCratisChoreographyInMemoryJobsStorage` (`Cratis.Choreography.Storage`).
 - Use the local `IJobs` service to start/stop/delete typed jobs during rolling
   upgrades; generic manager calls can land on a release that does not know the
   type. Provide singleton `IJobsManagerKeys` on every silo for all host-owned
@@ -94,14 +94,18 @@ app.Run();
 - Give grain implementations a unique `[GrainType("unique-name")]`. Orleans'
   default type name derives from the class name alone; a collision across
   assemblies prevents silo startup.
-- Reminders deliberately use Orleans' in-memory service in both clustering
-  modes; they do not survive a full restart. Jobs rehydrate from durable jobs
-  storage and do not use reminders. Do not switch to the incompatible MongoDB
-  reminder table merely because clustering uses MongoDB.
-- `AddCratisOrleans` enables activity propagation itself. If a host keeps an
+- Silos configured by `AddCratisChoreography` deliberately use Orleans' in-memory
+  reminder service in both clustering modes; their reminders do not survive a
+  full restart. Jobs rehydrate from durable jobs storage and do not use
+  reminders. Do not point such a silo at the MongoDB reminder table merely
+  because clustering uses MongoDB: that provider is a 9.x binary, and on the
+  10.x runtime it made the reminder service stop responding in these hosts. Hosts that build their own silo choose separately; the
+  Chronicle kernel uses MongoDB reminders with MongoDB storage and in-memory
+  reminders with in-memory storage.
+- `AddCratisChoreography` enables activity propagation itself. If a host keeps an
   explicit `AddActivityPropagation()` call, it must be **before**, never after,
-  `AddCratisOrleans`, to avoid duplicate Orleans propagation filters/spans.
+  `AddCratisChoreography`, to avoid duplicate Orleans propagation filters/spans.
 - Keep Orleans package versions aligned: the Release-build guard rejects a
   `Microsoft.Orleans.Reminders`/`Microsoft.Orleans.Server` version mismatch.
-- `Enabled = false` makes `AddCratisOrleans` a no-op for specification hosts;
+- `Enabled = false` makes `AddCratisChoreography` a no-op for specification hosts;
   it does not register the silo or its collaborators.

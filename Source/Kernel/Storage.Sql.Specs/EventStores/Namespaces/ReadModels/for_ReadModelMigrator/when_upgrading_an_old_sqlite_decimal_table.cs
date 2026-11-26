@@ -38,7 +38,7 @@ public class when_upgrading_an_old_sqlite_decimal_table : Specification
     void Destroy() => File.Delete(_path);
 
     ReadModelDbContext CreateContext(string table, IReadOnlyList<ProjectedColumn> columns) =>
-        new(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_connectionString).Options, table, columns, _migrator);
+        new(new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(_connectionString).IgnoringManyServiceProviders().Options, table, columns, _migrator);
 
     static ReadModelMigrator Migrator() =>
         new(new TableMigrator<ReadModelDbContext>(Substitute.For<ILogger<TableMigrator<ReadModelDbContext>>>()), Substitute.For<ILogger<ReadModelMigrator>>());

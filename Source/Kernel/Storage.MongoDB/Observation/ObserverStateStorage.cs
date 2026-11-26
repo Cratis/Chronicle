@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
 using MongoDB.Driver;
+using EventSequenceNumber = Cratis.Chronicle.Concepts.Events.EventSequenceNumber;
 
 namespace Cratis.Chronicle.Storage.MongoDB.Observation;
 
@@ -106,6 +107,10 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             update = update.Set(_ => _.Initialization, document.Initialization);
         }
 
+        // The subscription is the observer's own to set and clear, so an absent one clears the stored one. It is a $set
+        // of null rather than an $unset because the type-set guard below renders only $set operators into a pipeline.
+        update = update.Set(_ => _.DurableSubscription, document.DurableSubscription);
+
         if (document.TypeSetControl is not null)
         {
             update = ObserverTypeSetControlUpdate.Guard(update, document.TypeSetControl);
@@ -156,6 +161,57 @@ public class ObserverStateStorage(IEventStoreNamespaceDatabase namespaceDatabase
             : Builders<ObserverState>.Update.Set(_ => _.RunningStateChangedAt, runningStateChangedAt);
         var result = await _collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
         return result.MatchedCount > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> SaveLastSeenAt(ObserverId observerId, DateTimeOffset lastSeenAt, EventSequenceId owner)
+    {
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Id, observerId) &
+            (Builders<ObserverState>.Filter.Eq(_ => _.Owner, owner) | Builders<ObserverState>.Filter.Eq(_ => _.Owner, null));
+        var result = await _collection.UpdateOneAsync(filter, Builders<ObserverState>.Update.Set(_ => _.LastSeenAt, lastSeenAt)).ConfigureAwait(false);
+        return result.MatchedCount > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, DateTimeOffset>> GetLastSeenAt(IEnumerable<ObserverId> observerIds, DateTimeOffset startedAt)
+    {
+        var ids = observerIds.Distinct().ToArray();
+        if (ids.Length == 0) return new Dictionary<ObserverId, DateTimeOffset>();
+
+        // A null filter also matches a missing field, and the update only fills it, so the earliest recorded time wins a race.
+        await _collection.UpdateManyAsync(
+            Builders<ObserverState>.Filter.In(_ => _.Id, ids) & Builders<ObserverState>.Filter.Eq(_ => _.LastSeenAt, null),
+            Builders<ObserverState>.Update.Set(_ => _.LastSeenAt, startedAt)).ConfigureAwait(false);
+
+        var known = await _collection
+            .Find(Builders<ObserverState>.Filter.In(_ => _.Id, ids) & Builders<ObserverState>.Filter.Ne(_ => _.LastSeenAt, null))
+            .Project(_ => new { _.Id, _.LastSeenAt })
+            .ToListAsync().ConfigureAwait(false);
+        return known.ToDictionary(_ => _.Id, _ => _.LastSeenAt!.Value);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, ObserverDurableSubscription>> GetDurableSubscriptions(EventSequenceId owner)
+    {
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Owner, owner) &
+            Builders<ObserverState>.Filter.Ne(_ => _.DurableSubscription, null);
+        var recorded = await _collection
+            .Find(filter)
+            .Project(_ => new { _.Id, _.DurableSubscription })
+            .ToListAsync().ConfigureAwait(false);
+        return recorded.ToDictionary(_ => _.Id, _ => _.DurableSubscription!);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<ObserverId, EventSequenceNumber>> GetNextEventSequenceNumbers(EventSequenceId owner)
+    {
+        var filter = Builders<ObserverState>.Filter.Eq(_ => _.Owner, owner) &
+            Builders<ObserverState>.Filter.Ne(_ => _.DurableSubscription, null);
+        var recorded = await _collection
+            .Find(filter)
+            .Project(_ => new { _.Id, _.NextEventSequenceNumber })
+            .ToListAsync().ConfigureAwait(false);
+        return recorded.ToDictionary(_ => _.Id, _ => _.NextEventSequenceNumber);
     }
 
     /// <inheritdoc/>

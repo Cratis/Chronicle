@@ -17,7 +17,7 @@ public class and_the_subscription_has_no_fixed_event_types : given.a_performing_
         // The subscription for an observer subscribed to all events carries no fixed event type list (see
         // Observer.SubscribeToAllEvents) - the whole point being that it also covers event types that did not
         // exist when it subscribed. Only IObserver.GetEventTypes() can resolve the current, full set.
-        _observer.GetEventTypes().Returns(Task.FromResult<IEnumerable<EventType>>([_firstEventType, _secondEventType]));
+        _observer.GetEventTypes().Returns(Task.FromResult(EventTypeSet.From([_firstEventType, _secondEventType])));
 
         _eventSequenceStorage.GetRange(
             Arg.Any<EventSequenceNumber>(),

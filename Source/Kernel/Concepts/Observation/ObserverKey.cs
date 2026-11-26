@@ -12,11 +12,14 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <param name="EventStore">The name of the event store.</param>
 /// <param name="Namespace">The namespace within the event store.</param>
 /// <param name="EventSequenceId">The event sequence.</param>
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.ObserverKey")]
 public record ObserverKey(
-    ObserverId ObserverId,
-    EventStoreName EventStore,
-    EventStoreNamespaceName Namespace,
-    EventSequenceId EventSequenceId)
+    [Id(0)] ObserverId ObserverId,
+    [Id(1)] EventStoreName EventStore,
+    [Id(2)] EventStoreNamespaceName Namespace,
+    [Id(3)] EventSequenceId EventSequenceId)
 {
     /// <summary>
     /// Gets the empty <see cref="ObserverKey"/>.
@@ -29,13 +32,13 @@ public record ObserverKey(
     /// <param name="key"><see cref="ObserverKey"/> to convert from.</param>
     public static implicit operator string(ObserverKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ObserverKey"/> instance.</returns>
     public static ObserverKey Parse(string key) => KeyHelper.Parse<ObserverKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId);
 }

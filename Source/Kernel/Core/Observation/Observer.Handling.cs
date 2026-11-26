@@ -50,6 +50,8 @@ public partial class Observer
     public async Task ReportHandledEvents(Key partition, IReadOnlyDictionary<EventTypeId, EventCount> countsPerEventType, JobStepId reportedBy, EventSequenceNumber handledUpTo)
     {
         Skips.JobReported(partition);
+        Skips.Delivered(partition, handledUpTo);
+        CompleteHeldBackDelivery(partition, handledUpTo);
         if (IsRetired || _removed || !_observerExists) return;
         if (!_handledEventsReports.TryTake(reportedBy, partition, handledUpTo)) return;
 
@@ -63,6 +65,8 @@ public partial class Observer
         foreach (var report in reports)
         {
             Skips.JobReported(report.Partition);
+            Skips.Delivered(report.Partition, report.HandledUpTo);
+            CompleteHeldBackDelivery(report.Partition, report.HandledUpTo);
         }
 
         if (IsRetired || _removed || !_observerExists) return;
@@ -88,10 +92,12 @@ public partial class Observer
 
         if (!ShouldHandleEvent(partition))
         {
+            RememberHeldBackDeliveries(partition, events);
             NoteHeldBackEvents(partition, events);
             return;
         }
 
+        NoteHandledAfterWake();
         using var span = activitySource.Handle();
         span?.Activity?.Tag(_observerKey);
         span?.Activity?.Tag(Definition.Type);
@@ -111,7 +117,7 @@ public partial class Observer
         }
         finally
         {
-            EvaluateSuspectedSkips();
+            await EvaluateAndRepairMissedDeliveries();
         }
     }
 
@@ -238,65 +244,6 @@ public partial class Observer
         EnsureCoalescedWriteTimer();
     }
 
-    /// <summary>
-    /// Makes the handled-event counts reported since the last flush durable, with one state write for all of them.
-    /// </summary>
-    /// <returns>Awaitable task.</returns>
-    async Task FlushPendingHandledCounts()
-    {
-        await FlushPendingLivePartitionCounts();
-        if (_pendingHandledCounts.Count == 0)
-        {
-            return;
-        }
-
-        // Serialize independent handled-count writes with namespace resource deletion as well as source writes.
-        await _alertMutationLock.WaitAsync();
-        try
-        {
-            if (IsRetired || _removed || !_observerExists)
-            {
-                _pendingHandledCounts.Clear();
-                return;
-            }
-
-            if (await RelinquishOwnershipIfMoved()) return;
-
-            _handledEventsReports.ForgetQuietSteps();
-            var pending = _pendingHandledCounts;
-            _pendingHandledCounts = [];
-            var written = new HashSet<Key>();
-            try
-            {
-                var countsStorage = GetObserverHandledCountsStorage();
-                foreach (var chunk in pending.Chunk(MaxPendingHandledCountPartitions))
-                {
-                    await countsStorage.Increment(_observerId, chunk
-                        .Select(_ => new KeyValuePair<Key, IReadOnlyDictionary<EventTypeId, EventCount>>(_.Key, _.Value))
-                        .ToArray());
-                    foreach (var (partition, counts) in chunk)
-                    {
-                        written.Add(partition);
-                        State = WithIncrementedRunningTotals(State, counts);
-                        RecordedHandlingState();
-                    }
-                }
-
-                await WriteStateAsync();
-            }
-            catch
-            {
-                // What was not made durable goes back to be flushed with the next batch, so no count is lost.
-                RestorePendingHandledCounts(pending.Where(_ => !written.Contains(_.Key)));
-                throw;
-            }
-        }
-        finally
-        {
-            _alertMutationLock.Release();
-        }
-    }
-
     void BringCoalescedWriteForward()
     {
         if (_coalescedWriteBroughtForward)
@@ -404,47 +351,49 @@ public partial class Observer
         }
     }
 
-    bool HasSubscribedEvent(IEnumerable<AppendedEvent> events)
+    FrozenSet<EventTypeId> SubscribedEventTypeIds()
     {
         if (!ReferenceEquals(_eventTypeSubscription, _subscription))
         {
             _subscribedEventTypeIds = _subscription.EventTypes.Select(static eventType => eventType.Id).ToFrozenSet();
             _eventTypeSubscription = _subscription;
         }
-        foreach (var @event in events)
+
+        return _subscribedEventTypeIds;
+    }
+
+    ObserverRunPreparationContext ContextForRunPreparation()
+    {
+        var subscribesToAllEvents = State.SubscribesToAllEvents;
+        return new(
+            _pageFloor ?? State.NextEventSequenceNumber,
+            subscribesToAllEvents,
+            subscribesToAllEvents ? _subscribedEventTypeIds : SubscribedEventTypeIds(),
+            _subscription.Filters);
+    }
+
+    void RecordInapplicableRun(Key partition, EventSequenceNumber observedTail)
+    {
+        State = State with
         {
-            if (_subscribedEventTypeIds.Contains(@event.Context.EventType.Id)) return true;
-        }
-        return false;
+            NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(observedTail.Next())),
+            TailEventSequenceNumber = TailAfter(observedTail)
+        };
+        RecordedHandlingState();
     }
 
     async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
     {
-        var observedTailEventSequenceNumber = events.Last().Context.SequenceNumber;
+        var preparationContext = ContextForRunPreparation();
+        var prepared = ObserverRunPreparation.Prepare(events, preparationContext);
+        var observedTailEventSequenceNumber = prepared.ObservedTail;
 
         // An observer subscribed to all events has no fixed event type list to match against - every event is
         // of interest to it by definition, so this "none of these events are ones we're subscribed to" fast
         // path never applies to it.
-        if (!State.SubscribesToAllEvents && !HasSubscribedEvent(events))
+        if (!prepared.IsApplicable)
         {
-            State = State with
-            {
-                NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-            };
-            RecordedHandlingState();
-            await WriteProgressStateDebounced();
-            return;
-        }
-
-        if (ExcludedByFilters([.. events]))
-        {
-            State = State with
-            {
-                NextEventSequenceNumber = CursorAfter(observedTailEventSequenceNumber.Next()),
-                TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-            };
-            RecordedHandlingState();
+            RecordInapplicableRun(partition, observedTailEventSequenceNumber);
             await WriteProgressStateDebounced();
             return;
         }
@@ -455,10 +404,10 @@ public partial class Observer
         var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
         var exceptionMessages = Enumerable.Empty<string>();
         var exceptionStackTrace = string.Empty;
-        var tailEventSequenceNumber = _pageFloor ?? State.NextEventSequenceNumber;
+        var tailEventSequenceNumber = preparationContext.NextEventSequenceNumber;
 
-        var eventsToHandle = events.Where(_ => _.Context.SequenceNumber >= tailEventSequenceNumber).ToArray();
-        NoteDiscardedEvents(partition, events, tailEventSequenceNumber);
+        var eventsToHandle = prepared.EventsToHandle;
+        if (await RepairDiscardedDeliveries(partition, events, tailEventSequenceNumber)) return;
         var configuration = await configurationProvider.GetFor(_observerKeyText);
         if (ExceedsLiveBudget(configuration, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
         {
@@ -572,7 +521,7 @@ public partial class Observer
                         stateChanged = true;
                         State = State with
                         {
-                            NextEventSequenceNumber = CursorAfter(result.LastSuccessfulObservation.Next()),
+                            NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(result.LastSuccessfulObservation.Next())),
                             TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
@@ -586,6 +535,7 @@ public partial class Observer
                                 : previousLastHandled,
                         };
 
+                        CompleteHeldBackDelivery(partition, result.LastSuccessfulObservation);
                         var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
                         handledCountsPerEventType = handledEvents.CountByEventType();
                         State = WithIncrementedRunningTotals(State, handledCountsPerEventType);
@@ -722,8 +672,9 @@ public partial class Observer
             return;
         }
 
-        var newLastHandledEvent = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
-                                  State.LastHandledEventSequenceNumber < lastHandledEvent ? lastHandledEvent : State.LastHandledEventSequenceNumber;
+        var advancesLastHandled = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
+                                  State.LastHandledEventSequenceNumber < lastHandledEvent;
+        var newLastHandledEvent = advancesLastHandled ? lastHandledEvent : State.LastHandledEventSequenceNumber;
         var nextEventSequenceNumber = State.NextEventSequenceNumber <= lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
         State = State with
         {

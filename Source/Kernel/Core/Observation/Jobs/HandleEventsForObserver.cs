@@ -78,6 +78,7 @@ public partial class HandleEventsForObserver(
     EventSequenceNumber _lastDurableCheckpoint = EventSequenceNumber.Unavailable;
     JobStepCheckpointDebounce _durableCheckpoints = new(1);
     IReadOnlyDictionary<SiloAddress, Guid[]>? _bulkWindowPin;
+    DateTimeOffset? _bulkWindowPinnedAt;
     Exception? _checkpointFailure;
     ReplayHandledEventsPage? _replayReports;
     ObserverObservationMetrics? _metrics;
@@ -627,6 +628,7 @@ public partial class HandleEventsForObserver(
         if (start)
         {
             _bulkWindowPin = null;
+            _bulkWindowPinnedAt = null;
             _checkpointFailure = null;
             _lastHandled = State.LastSuccessfullyHandledEventSequenceNumber;
             _durableCheckpoints.Persisted();
@@ -664,6 +666,16 @@ public partial class HandleEventsForObserver(
         }
     }
 
+    BulkWindowLost LostWindow(FlushCapture capture, IReadOnlyDictionary<SiloAddress, Guid[]> windows) =>
+        new(BulkWindowLostReason.Describe(
+            capture.Observer,
+            capture.IsReplay,
+            capture.Handled,
+            State.LastSuccessfullyHandledEventSequenceNumber,
+            _bulkWindowPin,
+            _bulkWindowPinnedAt is { } pinnedAt ? _clock.GetUtcNow() - pinnedAt : null,
+            windows));
+
     /// <summary>
     /// Advances the durable checkpoint once the windows are confirmed. Must run on the activation.
     /// </summary>
@@ -679,10 +691,11 @@ public partial class HandleEventsForObserver(
             {
                 // Only the range-start flush sets the pin, including silos with no open window.
                 _bulkWindowPin = windows.ToDictionary(_ => _.Key, _ => _.Value.ToArray());
+                _bulkWindowPinnedAt = _clock.GetUtcNow();
             }
             else if (!MatchesBulkWindowPin(windows))
             {
-                throw new BulkWindowLost();
+                throw LostWindow(capture, windows);
             }
             var handled = capture.Handled;
             if (handled.IsActualValue && handled != State.LastSuccessfullyHandledEventSequenceNumber)
@@ -1055,7 +1068,8 @@ public partial class HandleEventsForObserver(
             // violation" when accessed here, so an explicitly injected IGrainFactory (a plain thread-safe
             // service) is used instead of the ambient property.
             var subscriber = grainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(partition, target.SiloAddress)) as IObserverSubscriber;
-            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }.WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
+            var subscriberContext = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = _origin }
+                .WithDeadlines(subscriberTimeout, _abandonedDeliveryHold, _clock);
             _deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, subscriberContext);
             if (page) onPageDispatch?.Invoke();
             var result = page

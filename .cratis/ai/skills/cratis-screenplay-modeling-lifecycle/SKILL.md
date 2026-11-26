@@ -108,7 +108,11 @@ assume visibly unattended and never rerun completed phases.
 ## Run protocol: stop or assume
 1. **Start**: read STATE.md; check the source identity; load the phase skill before authoring
    or judging; read the slice, specs and skill fully before concluding something is missing.
-   Discover tool capabilities once per session (`cratis-screenplay-toolchain`). One brief per
+   Discover tool capabilities once per session (`cratis-screenplay-toolchain`). **A model older
+   than the compiler's major is migrated before any edit**: a Screenplay 5 model runs
+   `screenplay migrate <model-root> --from 5 --to 6` as its own change, then compiles clean.
+   Read `references/version-migration.md` when a model writes a retired form or the compiler
+   names `screenplay migrate`. One brief per
    turn, one closed outcome: `references/per-turn-protocol.md`. Read `references/per-turn-protocol.md` when running a long-lived or delegated session that receives one brief at a time.
 2. **Scope**: only the addresses and phase the brief names; other defects go in the packet.
    One authoring agent per model root; reviewers and explainers are read-only.
@@ -165,6 +169,7 @@ State lives in `.ai-work/screenplay/<model-slug>/STATE.md` (untracked, overwritt
 | Specifications and coverage | `cratis-screenplay-scenario-coverage` |
 | Critic review, business-question pass | `cratis-screenplay-model-review` |
 | Existing system into a model | `cratis-screenplay-legacy-extraction` |
+| Running system or executable into a model, without its source | `cratis-screenplay-reverse-engineering` |
 | Render, gap-fill, fallback, drift | `cratis-screenplay-render-and-gap-fill` |
 | Estimate, order or split delivery of an accepted model | `cratis-screenplay-delivery-planning` |
 

@@ -16,14 +16,15 @@ public partial class Observer
     /// Identifies the durable wakeup dedicated to alert reconciliation.
     /// </summary>
     internal const string AlertReminderName = "chronicle-observer:alerts";
-    readonly SemaphoreSlim _alertMutationLock = new(1, 1);
-    readonly SemaphoreSlim _stateWriteLock = new(1, 1);
+    readonly AsyncGate _alertMutationLock = new();
+    readonly AsyncGate _stateWriteLock = new();
     readonly Dictionary<IncidentId, AlertClearedReason> _alertEndings = [];
+    volatile bool _disposed;
     Guid _alertLifecycleId;
     long _alertRevision;
     AlertDisposition _alertDisposition;
     Guid? _quarantineEpisodeId;
-    bool _alertReconciliationPending = true;
+    bool _alertReconciliationPending;
     bool _alertReportRequested;
     bool _alertStateNeedsPersistence;
     bool _alertReportScheduled;
@@ -58,11 +59,10 @@ public partial class Observer
     /// Gets a value indicating whether something is waiting to be reported, which is the only time the reminder is needed.
     /// </summary>
     /// <remarks>
-    /// Every activation confirms its alert level once, but that confirmation alone does not need a durable wakeup: the
-    /// activation reports it straight away, the watchdog retries it while the activation lives and the next activation
-    /// confirms again. Registering a reminder for it made every activation write one and release it a period later, so a
-    /// cold start of thousands of healthy observers wrote thousands of reminders, and a silo that went down within that
-    /// period left them all overdue for the next start (#5677).
+    /// An activation that finds nothing alert-relevant reports nothing and registers nothing: waking thousands of
+    /// healthy observers neither writes thousands of reminders nor touches their alert companions (#5677, #6113). A
+    /// change registers the reminder when it is reported, and a report that does not land is retried by the watchdog
+    /// while the activation lives and by the reminder after it is gone.
     /// </remarks>
     bool HasAlertWorkPending =>
         (_alertReconciliationPending && _alertReportRequested) ||
@@ -72,13 +72,23 @@ public partial class Observer
         State.RunningState == ObserverRunningState.Quarantined;
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The runtime disposes the grain once deactivation ends - or once it stops waiting for a deactivation that outlived
+    /// its timeout - so a state write can still be in flight, or queued, at that point. The two locks are therefore
+    /// never disposed: they are <see cref="AsyncGate"/>s, which hold nothing to give back, whereas disposing a
+    /// semaphore under a holder makes its release throw and strands every waiter. Disposal instead seals
+    /// the activation: a write that has not started yet is skipped. A storage call already in flight may finish,
+    /// but its direct persistence continuation cannot start another persistence call or update write accounting.
+    /// This does not fence the internal continuations of unconverted collaborators or cancel the issued call.
+    /// </remarks>
     public void Dispose()
     {
+        _continuationLifetime.Invalidate();
+        _disposed = true;
         _webhookProbeCancellation?.Dispose();
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
-        _alertMutationLock.Dispose();
-        _stateWriteLock.Dispose();
+        _shortCatchUpRetryTimer?.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -214,9 +224,18 @@ public partial class Observer
     }
 
     /// <summary>
-    /// Confirms the alert level this activation loaded, without the durable wakeup a change needs.
+    /// Reports on activation only when the loaded state has something alert-relevant: an unreported lifecycle, a failed
+    /// partition or a quarantine. A healthy observer reports on change and on the reminder, never on activation.
     /// </summary>
-    void ScheduleActivationAlertReport() => ScheduleAlertReportTurn();
+    void ScheduleActivationAlertReportIfNeeded()
+    {
+        if (_alertReconciliationPending ||
+            Failures.HasFailedPartitions ||
+            State.RunningState == ObserverRunningState.Quarantined)
+        {
+            ScheduleAlertReportTurn();
+        }
+    }
 
     void ScheduleAlertReportTurn()
     {
@@ -333,6 +352,7 @@ public partial class Observer
         {
             _alertLifecycleId = Guid.NewGuid();
             _alertRevision++;
+            _alertReconciliationPending = true;
             await WriteStateAsync();
         }
     }

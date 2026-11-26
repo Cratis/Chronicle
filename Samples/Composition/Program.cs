@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Sockets;
+using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.Yarp;
 using Yarp.ReverseProxy.Configuration;
 using Yarp.ReverseProxy.SessionAffinity;
@@ -14,6 +15,10 @@ Environment.SetEnvironmentVariable("ASPIRE_ALLOW_UNSECURED_TRANSPORT", "true");
 Environment.SetEnvironmentVariable("ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS", "true");
 
 var builder = DistributedApplication.CreateBuilder(args);
+
+// Project paths are explicit: the AppHost uses the standard SDK, so there is no generated Projects.* class.
+var kernelProjectPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "Source", "Kernel", "Server", "Server.csproj"));
+var webAppProjectPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "AspNetCore", "AspNetCore.csproj"));
 
 // Chronicle needs MongoDB transactions (AppendMany, unit of work, Orleans membership), which
 // require a replica set. mongo:8.2 has no bundled replica set, so start mongod with replSet enabled,
@@ -55,9 +60,10 @@ var kernel2 = AddKernel("kernel-2", port: 35002, siloPort: 11112, gatewayPort: 3
 // The web apps resolve the kernels through DNS SRV - the srvNameServer option points the lookup
 // at the CoreDNS container above. loadBalancer is spelled out explicitly even though
 // least-connections is the default, so the composition demonstrates the option by example.
-// skipTlsValidation is needed because the kernels serve self-signed development certificates.
+// No credentials and no TLS setting: the client falls back to its development credentials and, by default,
+// accepts the self-signed development certificates the kernels serve.
 const string SrvConnectionString =
-    "chronicle+srv://chronicle-dev-client:chronicle-dev-secret@chronicle.local/?srvNameServer=127.0.0.1:8053&loadBalancer=least-connections&skipTlsValidation=true";
+    "chronicle+srv://chronicle.local/?srvNameServer=127.0.0.1:8053&loadBalancer=least-connections";
 
 AddWebApp("app-1", port: 5101);
 AddWebApp("app-2", port: 5102);
@@ -103,8 +109,8 @@ builder.AddYarp("workbench")
 
 await builder.Build().RunAsync();
 
-IResourceBuilder<ProjectResource> AddKernel(string name, int port, int siloPort, int gatewayPort) =>
-    builder.AddProject<Projects.Server>(name)
+IResourceBuilder<DotnetProjectResource> AddKernel(string name, int port, int siloPort, int gatewayPort) =>
+    builder.AddDotnetProject(name, kernelProjectPath)
 
         // The kernel binds this port itself (a single custom Kestrel listener multiplexing
         // gRPC and HTTP/1.1) rather than through the usual ASPNETCORE_URLS convention, so DCP
@@ -127,8 +133,8 @@ IResourceBuilder<ProjectResource> AddKernel(string name, int port, int siloPort,
         .WithEnvironment("Cratis__Chronicle__Clustering__AdvertisedIP", "127.0.0.1")
         .WaitFor(mongodb);
 
-IResourceBuilder<ProjectResource> AddWebApp(string name, int port) =>
-    builder.AddProject<Projects.AspNetCore>(name)
+IResourceBuilder<DotnetProjectResource> AddWebApp(string name, int port) =>
+    builder.AddDotnetProject(name, webAppProjectPath)
         .WithHttpEndpoint(port: port)
         .WithEnvironment("INSTANCE_NAME", name)
         .WithEnvironment("Cratis__Chronicle__ConnectionString", SrvConnectionString)

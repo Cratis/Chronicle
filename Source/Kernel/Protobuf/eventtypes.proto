@@ -58,6 +58,7 @@ message EventTypeCheckResult {
    string Reason = 4;
    string Keyword = 5;
    string Path = 6;
+   string Classification = 7;
 }
 message EventTypeDetailsResponse {
    EventType Type = 1;
@@ -65,6 +66,8 @@ message EventTypeDetailsResponse {
    EventTypeSource Source = 3;
    string Schema = 4;
    string Id = 5;
+   EventTypeVisibility Visibility = 6;
+   string Origin = 7;
 }
 message EventTypeGenerationDefinition {
    uint32 Generation = 1;

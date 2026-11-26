@@ -10,16 +10,16 @@ using Cratis.Chronicle.Diagnostics;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
-/// The suspected-skip reporting of the observer. Everything here is observation only: it is synchronous, adds no
-/// await, never touches the observer state and never lets a failure of its own escape into the observer.
-/// </summary>
+/// <content>
+/// The suspected-skip reporting of the observer. Telemetry remains exception-safe; missed deliveries are
+/// repaired separately from reporting, through the observer's normal catch-up work.
+/// </content>
 public partial class Observer
 {
     readonly SuspectedSkipWarningLimiter _skipWarningLimiter = new();
     EventSkipDetector? _skipDetector;
 
-    EventSkipDetector Skips => _skipDetector ??= new(IsOwnedByObserver, ReportSuspectedSkip);
+    EventSkipDetector Skips => _skipDetector ??= new(IsOwnedByObserver, QueueSuspectedSkip);
 
     static bool IsOfInterest(ObserverSubscription subscription, bool subscribesToAllEvents, AppendedEvent @event)
     {
@@ -132,6 +132,12 @@ public partial class Observer
 
     void EvaluateSuspectedSkips() => Skips.Evaluate(State.NextEventSequenceNumber);
 
+    async Task EvaluateAndRepairMissedDeliveries()
+    {
+        EvaluateSuspectedSkips();
+        await RepairMissedDeliveries();
+    }
+
     /// <summary>
     /// Releases the ownership that catch-up preparation held over live events, then evaluates what the position has passed.
     /// </summary>
@@ -153,7 +159,9 @@ public partial class Observer
     void HandleNewLastHandledEventForPartition(Key partition, EventSequenceNumber lastHandledEvent)
     {
         var before = State.NextEventSequenceNumber;
+        CompleteHeldBackDelivery(partition, lastHandledEvent);
         HandleNewLastHandledEvent(lastHandledEvent);
+        State = State with { NextEventSequenceNumber = CursorBeforePending(partition, State.NextEventSequenceNumber, before) };
         Skips.Advanced(partition, before, State.NextEventSequenceNumber);
     }
 

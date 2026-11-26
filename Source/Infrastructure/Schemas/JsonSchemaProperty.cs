@@ -30,6 +30,18 @@ public class JsonSchemaProperty : JsonSchema
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="JsonSchemaProperty"/> class in a resolved resource scope.
+    /// </summary>
+    /// <param name="name">The property name.</param>
+    /// <param name="node">The schema node.</param>
+    /// <param name="root">The document root.</param>
+    /// <param name="resourceBase">The effective resource base.</param>
+    internal JsonSchemaProperty(string name, JsonObject node, JsonSchema root, Uri resourceBase) : base(node, root, resourceBase)
+    {
+        Name = name;
+    }
+
+    /// <summary>
     /// Gets the property name.
     /// </summary>
     public string Name { get; }

@@ -24,7 +24,7 @@ public class and_the_first_reconciliation_fails : given.an_event_sequence_with_p
         _initialError = await Catch.Exception(_silo.TimerRegistry.FireAllAsync);
     }
 
-    Task Because() => _silo.TimerRegistry.FireAllAsync();
+    Task Because() => _eventSequence.ReconcileSubscriptions();
 
     [Fact] void should_not_propagate_the_analytics_failure() => _initialError.ShouldBeNull();
     [Fact] void should_recover_on_the_next_tick() => _captureIsSubscribed.ShouldBeTrue();

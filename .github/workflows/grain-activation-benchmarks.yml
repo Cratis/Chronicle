@@ -1,0 +1,156 @@
+# Copyright (c) Cratis. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
+name: Grain activation benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Correctness-only Dry smoke or measured six-case baseline
+        required: true
+        type: choice
+        default: smoke
+        options:
+          - smoke
+          - baseline
+
+permissions:
+  contents: read
+
+concurrency:
+  group: grain-activation-benchmarks-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  activation:
+    name: MongoDB grain activation (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      RUN_MODE: ${{ inputs.mode }}
+      PROJECT: Benchmarks/Chronicle.Benchmarks.Clustering/Chronicle.Benchmarks.Clustering.csproj
+      ACTIVATION_ARTIFACTS: ${{ github.workspace }}/.ai-work/6045/activation-artifacts
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Record environment
+        run: |
+          mkdir -p "$ACTIVATION_ARTIFACTS"
+          dotnet --info > "$ACTIVATION_ARTIFACTS/environment.txt"
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const packages = readFileSync('Directory.Packages.props', 'utf8');
+          const versions = packages.split('\n').filter(line => /Include="(Microsoft.Orleans.Server|MongoDB.Driver|Testcontainers)"/.test(line));
+          appendFileSync(join(process.env.ACTIVATION_ARTIFACTS, 'environment.txt'),
+            `\nSHA: ${process.env.GITHUB_SHA}\nMode: ${process.env.RUN_MODE}\nMongoDB image: mongo:8.2\n${versions.join('\n')}\n`);
+          NODE
+      - name: Build
+        run: >
+          dotnet build "$PROJECT" -c Release -warnaserror
+          -p:DisableDockerBuild=true -p:CratisProxiesSkip=true -p:CratisProxiesOutputPath=
+      - name: Run activation workload
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$RUN_MODE" in
+            smoke) counts=(--job Dry) ;;
+            baseline) counts=(--launchCount 1 --warmupCount 3 --iterationCount 20) ;;
+            *) echo "Unknown activation mode" >&2; exit 2 ;;
+          esac
+          command=(dotnet run --project "$PROJECT" -c Release --no-build --
+            --filter '*GrainActivationBenchmark*' "${counts[@]}"
+            --invocationCount 1 --unrollFactor 1 --exporters json markdown --artifacts "$ACTIVATION_ARTIFACTS")
+          printf '%q ' "${command[@]}" > "$ACTIVATION_ARTIFACTS/command.txt"
+          printf '\n' >> "$ACTIVATION_ARTIFACTS/command.txt"
+          "${command[@]}" 2>&1 | tee "$ACTIVATION_ARTIFACTS/run.log"
+      # The existing BDN switcher does not promise a nonzero exit for a failed case.
+      # Validate actual measurements AND lifecycle evidence; artifacts alone never mean success.
+      - name: Require six successful cells and summarize
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readdirSync, readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const root = process.env.ACTIVATION_ARTIFACTS;
+          const methods = ['FirstEventSequenceRead', 'FirstObserverStateRead'];
+          const modes = ['Warm', 'Cold', 'PostRestart'];
+          const expected = methods.flatMap(method => modes.map(mode => `${method}/${mode}`));
+          const requiredSamples = process.env.RUN_MODE === 'baseline' ? 20 : 1;
+          const require = (condition, message) => { if (!condition) throw new Error(message); };
+          try {
+            const results = join(root, 'results');
+            const reports = readdirSync(results).filter(file => file.endsWith('.json'));
+            require(reports.length > 0, 'No BenchmarkDotNet JSON reports');
+            const cells = new Map();
+            for (const file of reports) {
+              const report = JSON.parse(readFileSync(join(results, file), 'utf8'));
+              require(Array.isArray(report.Benchmarks) && report.Benchmarks.length === 6, 'Expected exactly six benchmark rows');
+              const seen = new Set();
+              for (const row of report.Benchmarks) {
+                const text = [row.Parameters, row.DisplayInfo, row.FullName].join(' ');
+                const mode = text.match(/\bMode\s*[:=]\s*(Warm|Cold|PostRestart)\b/)?.[1];
+                const key = `${row.Method}/${mode}`;
+                require(expected.includes(key) && !seen.has(key), `Unexpected or duplicate cell: ${key}`);
+                seen.add(key);
+                const actual = (row.Measurements ?? []).filter(item => item.IterationMode === 'Workload' && item.IterationStage === 'Actual');
+                require(actual.length >= requiredSamples, `Missing actual measurements: ${key}`);
+                require(row.Statistics?.N > 0 && Number.isFinite(row.Statistics.Mean) && row.Statistics.Mean > 0, `Failed/empty statistics: ${key}`);
+                cells.set(key, { mean: row.Statistics.Mean, samples: actual.length });
+              }
+            }
+            require(cells.size === 6, 'Incomplete measurement matrix');
+            const evidence = new Map(expected.map(key => [key, 0]));
+            const targets = new Map();
+            const lifecycle = join(root, 'lifecycle');
+            const files = readdirSync(lifecycle).filter(file => file.endsWith('.jsonl'));
+            require(files.length > 0, 'No lifecycle evidence');
+            for (const file of files) {
+              for (const line of readFileSync(join(lifecycle, file), 'utf8').split('\n').filter(Boolean)) {
+                const entry = JSON.parse(line);
+                require(entry.Kind === 'success', `Lifecycle failure: ${entry.Phase ?? file}`);
+                const key = `${entry.Operation}/${entry.Mode}`;
+                require(evidence.has(key) && entry.DurableValidation === 'passed', `Invalid evidence: ${key}`);
+                require(entry.Target && entry.CaseId && entry.Host && entry.PreviousHost && entry.Activation && entry.PreviousActivation, `Missing lifecycle identities: ${key}`);
+                const warm = entry.Mode === 'Warm';
+                require((entry.Activation === entry.PreviousActivation) === warm, `Wrong activation transition: ${key}`);
+                require((entry.BeforeActivation === entry.Activation) === warm && (warm || entry.BeforeActivation === null), `Target was touched before timing: ${key}`);
+                require(Number.isInteger(entry.BeforeCount) && entry.AfterCount === entry.BeforeCount + (warm ? 0 : 1), `Wrong activation count: ${key}`);
+                const restart = entry.Mode === 'PostRestart';
+                require((entry.Host !== entry.PreviousHost) === restart && (!restart || entry.BeforeCount === 0), `Wrong host lifecycle: ${key}`);
+                require(!targets.has(entry.CaseId) || targets.get(entry.CaseId) === entry.Target, `Target changed within a case: ${key}`);
+                targets.set(entry.CaseId, entry.Target);
+                require(entry.State?.SeededEvents === 10 && entry.State.NextSequenceNumber === 10, `Wrong retained sequence: ${key}`);
+                if (entry.Operation === 'FirstObserverStateRead') {
+                  require(entry.State.Observer && entry.State.HandledEvents === 10 && entry.State.Checkpoint === 9, `Wrong retained observer: ${key}`);
+                }
+                evidence.set(key, evidence.get(key) + 1);
+              }
+            }
+            for (const key of expected) require(evidence.get(key) >= cells.get(key).samples, `Incomplete lifecycle evidence: ${key}`);
+            const rows = expected.map(key => `| ${key.replace('/', ' | ')} | ${cells.get(key).mean.toFixed(2)} | ${cells.get(key).samples} | ${evidence.get(key)} |`);
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              `## Grain activation — ${process.env.RUN_MODE}\n\nSHA: \`${process.env.GITHUB_SHA}\`\n\n` +
+              'MongoDB only; post-crash proxy (graceful silo restart), not total startup or crash consistency. Dry smoke is correctness-only.\n\n' +
+              '| Operation | Mode | Mean (ns) | Actual samples | Validated lifecycle calls |\n|---|---|---:|---:|---:|\n' + rows.join('\n') + '\n');
+            console.log('Validated all six result cells and their lifecycle evidence.');
+          } catch (error) {
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Grain activation failed\n\n${error.message}\n`);
+            throw error;
+          }
+          NODE
+      - name: Upload lifecycle diagnostics and benchmark reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: grain-activation-${{ inputs.mode }}-${{ github.run_id }}
+          path: .ai-work/6045/activation-artifacts/
+          include-hidden-files: true
+          retention-days: 30
+          if-no-files-found: error

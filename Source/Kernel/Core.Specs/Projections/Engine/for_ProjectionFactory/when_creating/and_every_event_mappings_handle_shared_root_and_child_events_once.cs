@@ -7,7 +7,7 @@ namespace Cratis.Chronicle.Projections.Engine.for_ProjectionFactory.when_creatin
 
 public class and_every_event_mappings_handle_shared_root_and_child_events_once : given.a_projection_with_every_event_mappings_and_children
 {
-    void Establish() => _definition.From[_noteUpdated] = new(new Dictionary<PropertyPath, string>(), "parentId", null);
+    void Establish() => _definition = _definition.WithFrom(_noteUpdated, new(new Dictionary<PropertyPath, string>(), "parentId", null));
 
     Task Because() => ProjectChildEvent();
 

@@ -17,6 +17,8 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
         [typeof(ExpressionKeySyntax)] = "from DocEvent\n  key id",
         [typeof(CompositeKeySyntax)] = "from DocEvent\n  key DocKey\n    id = id",
         [typeof(SetMappingSyntax)] = "from DocEvent\n  name = name",
+        [typeof(SetOnceMappingSyntax)] = "from DocEvent\n  set once name = name",
+        [typeof(RemoveKeyMappingSyntax)] = "from DocEvent\n  remove names.$eventContent.id",
         [typeof(ClearMappingSyntax)] = "from DocEvent\n  clear name",
         [typeof(AddMappingSyntax)] = "from DocEvent\n  add total by amount",
         [typeof(SubtractMappingSyntax)] = "from DocEvent\n  subtract total by amount",
@@ -34,9 +36,10 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
         [typeof(TemplateInterpolationSyntax)] = "from DocEvent\n  name = `Hello ${name}`"
     };
 
-    static readonly ExpressionSyntax[] _rejected =
+    static readonly SyntaxNode[] _rejected =
     [
         new RefusalExpressionSyntax("reason", _location),
+        new InvocationValueExpressionSyntax("result", "name", _location),
         new ListExpressionSyntax([], _location),
         new ObjectExpressionSyntax([], _location),
         new CaseValueExpressionSyntax("value", _location),
@@ -89,17 +92,30 @@ public class with_exhaustive_syntax_support : for_LanguageService.given.a_langua
     }
 
     [Fact]
-    void should_reject_every_unsupported_expression_at_its_location()
+    void should_reject_every_unsupported_node_at_its_location()
     {
-        foreach (var expression in _rejected)
+        foreach (var node in _rejected)
         {
             var errors = new CompilerErrors([]);
-            new ProjectionSyntaxSupport(errors).VisitExpression(expression);
+            new ProjectionSyntaxSupport(errors).VisitNode(node);
             errors.HasErrors.ShouldBeTrue();
             errors.Errors.Single().Line.ShouldEqual(_location.Line);
             errors.Errors.Single().Column.ShouldEqual(_location.Column);
-            ProjectionSyntaxSupport.NodeSupport[expression.GetType()].ShouldNotBeNull();
+            ProjectionSyntaxSupport.NodeSupport[node.GetType()].ShouldNotBeNull();
         }
+    }
+
+    [Theory]
+    [InlineData("from DocEvent\n  key\n    name = name\n    age = age")]
+    [InlineData("remove with DocEvent\n  key\n    name = name\n    age = age")]
+    void should_lower_untyped_composite_keys_without_schemas(string snippet)
+    {
+        var source = "projection Doc => DocReadModel\n" + string.Join('\n', snippet.Split('\n').Select(line => "  " + line));
+        var result = _languageService.Compile(source, ProjectionOwner.Client, [], []);
+        var key = result.Match(
+            definition => definition.From.Values.Select(from => from.Key).Concat(definition.RemovedWith.Values.Select(removed => removed.Key)).Single().ToString(),
+            errors => string.Join("; ", errors.Errors.Select(error => error.Message)));
+        key.ShouldEqual("$flatComposite(age=age, name=name)");
     }
 
     [Fact]

@@ -34,6 +34,7 @@ public class a_page_query : Specification
         eventStore.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(@namespace);
         @namespace.GetEventSequence(Arg.Any<Concepts.EventSequences.EventSequenceId>()).Returns(_sequence);
         eventStore.EventTypes.GetFor(Arg.Any<IEnumerable<Concepts.Events.EventType>>()).Returns([]);
+        eventStore.EventTypes.GetDefinition(Arg.Any<EventTypeId>()).Returns(call => new EventTypeDefinition(call.Arg<EventTypeId>(), EventTypeOwner.None, false, [], []));
         _sequence.GetWindow(default!, default!, 0, false).ReturnsForAnyArgs(_cursor);
         _cursor.MoveNext().Returns(true, false);
         _cursor.Current.Returns(_ => _window);

@@ -22,6 +22,17 @@ public static class LoadBalancerStrategies
         Create(name, skipTlsValidation, disableTls, certificateAuthorities: null);
 
     /// <summary>
+    /// Creates an <see cref="ILoadBalancerStrategy"/> from its well-known name, reaching the servers over TLS.
+    /// </summary>
+    /// <param name="name">The name of the strategy. When <see langword="null"/> or empty, defaults to least-connections.</param>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation - used by strategies (e.g. least-connections) that probe the candidate servers themselves.</param>
+    /// <returns>The <see cref="ILoadBalancerStrategy"/> for the name.</returns>
+    /// <exception cref="UnknownLoadBalancerStrategy">Thrown when the name does not match a known strategy.</exception>
+    /// <remarks>Kept so callers compiled against earlier versions still bind.</remarks>
+    public static ILoadBalancerStrategy Create(string? name, bool skipTlsValidation) =>
+        Create(name, skipTlsValidation, disableTls: false, certificateAuthorities: null);
+
+    /// <summary>
     /// Creates an <see cref="ILoadBalancerStrategy"/> from its well-known name, validating server certificates against a set of certificate authorities.
     /// </summary>
     /// <param name="name">The name of the strategy. When <see langword="null"/> or empty, defaults to least-connections.</param>

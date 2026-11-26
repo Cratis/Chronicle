@@ -41,8 +41,9 @@ public static class EventSourceDefinitionConverters
             definition.Description ?? string.Empty,
             (EventSourceOwner)definition.Owner,
             (ConcurrencyDimensions)definition.Concurrency,
-            [.. (JsonSerializer.Deserialize<IEnumerable<StoredStream>>(definition.Streams ?? "[]", _jsonOptions) ?? [])
-                .Select(stream => new Concepts.EventSources.EventStreamDefinition(stream.Name, stream.Description, (ConcurrencyDimensions)stream.Concurrency))]);
+            [.. (JsonSerializer.Deserialize<IEnumerable<StoredStream>>(definition.Streams ?? "[]", _jsonOptions) ?? []).Select(ToStream)]);
+
+    static Concepts.EventSources.EventStreamDefinition ToStream(StoredStream stream) => new(stream.Name, stream.Description, (ConcurrencyDimensions)stream.Concurrency);
 
     sealed record StoredStream(string Name, string Description, int Concurrency);
 }

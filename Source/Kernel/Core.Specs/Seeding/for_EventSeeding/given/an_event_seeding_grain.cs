@@ -19,6 +19,10 @@ public class an_event_seeding_grain : Specification
     protected IGrainFactory _grainFactory;
     protected EventSeedingKey _key;
     protected ILogger<EventSeeding> _logger;
+    protected List<TimeSpan> _retryDelays;
+    protected TimeProvider _timeProvider;
+
+    long _elapsedTicks;
 
     void Establish()
     {
@@ -28,9 +32,26 @@ public class an_event_seeding_grain : Specification
         _grainFactory = Substitute.For<IGrainFactory>();
         _logger = Substitute.For<ILogger<EventSeeding>>();
 
-        // Only the error level is enabled, so a spec counting Log calls counts the one message that
-        // reports a rejected batch and not the debug chatter the grain emits on every run.
+        // Only refusal levels are enabled, so Log calls exclude the debug chatter emitted on every run.
         _logger.IsEnabled(LogLevel.Error).Returns(true);
+        _logger.IsEnabled(LogLevel.Warning).Returns(true);
+
+        _retryDelays = [];
+        _timeProvider = Substitute.For<TimeProvider>();
+        _timeProvider.TimestampFrequency.Returns(TimeSpan.TicksPerSecond);
+        _timeProvider.GetTimestamp().Returns(_ => _elapsedTicks);
+        _timeProvider.CreateTimer(Arg.Any<TimerCallback>(), Arg.Any<object>(), Arg.Any<TimeSpan>(), Arg.Any<TimeSpan>())
+            .Returns(call =>
+            {
+                var delay = call.ArgAt<TimeSpan>(2);
+                _retryDelays.Add(delay);
+                _elapsedTicks += delay.Ticks;
+
+                // Task.Delay's DelayPromise handles completion before CreateTimer returns: its
+                // constructor checks IsCompleted after assigning _timer and disposes the timer.
+                call.ArgAt<TimerCallback>(0)(call[1]);
+                return Substitute.For<ITimer>();
+            });
 
         _state.State.Returns(new EventSeeds(
             new Dictionary<EventTypeId, IEnumerable<SeededEventEntry>>(),
@@ -38,7 +59,7 @@ public class an_event_seeding_grain : Specification
 
         AppendManySucceeds();
 
-        _grain = new EventSeeding(_state, _grainFactory, _logger);
+        _grain = new EventSeeding(_state, _grainFactory, _logger, _timeProvider);
 
         // Simulate OnActivateAsync by setting internal fields via reflection
         var keyField = typeof(EventSeeding).GetField("_key", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -80,6 +101,16 @@ public class an_event_seeding_grain : Specification
     };
 
     /// <summary>
+    /// A transient refusal while the constraint index is unavailable. Nothing has been appended.
+    /// </summary>
+    /// <returns>A retryable <see cref="AppendManyResult"/>.</returns>
+    protected static AppendManyResult AnIndexUnavailableResult() => new()
+    {
+        CorrelationId = CorrelationId.New(),
+        Errors = [AppendError.ConstraintIndexUnavailable]
+    };
+
+    /// <summary>
     /// A result reporting that the whole batch was appended.
     /// </summary>
     /// <returns>A successful <see cref="AppendManyResult"/>.</returns>
@@ -101,6 +132,19 @@ public class an_event_seeding_grain : Specification
     protected LogLevel LoggedLevel => (LogLevel)_logger.ReceivedCalls()
         .First(call => call.GetMethodInfo().Name == nameof(ILogger.Log))
         .GetArguments()[0]!;
+
+    /// <summary>
+    /// Gets every refusal level logged during seeding.
+    /// </summary>
+    protected IEnumerable<LogLevel> LoggedLevels => _logger.ReceivedCalls()
+        .Where(call => call.GetMethodInfo().Name == nameof(ILogger.Log))
+        .Select(call => (LogLevel)call.GetArguments()[0]!);
+
+    /// <summary>
+    /// Gets how many append attempts were made across all chunks.
+    /// </summary>
+    protected int AppendAttempts => _eventSequence.ReceivedCalls()
+        .Count(call => call.GetMethodInfo().Name == nameof(IEventSequence.AppendMany));
 
     /// <summary>
     /// Makes every append report success.

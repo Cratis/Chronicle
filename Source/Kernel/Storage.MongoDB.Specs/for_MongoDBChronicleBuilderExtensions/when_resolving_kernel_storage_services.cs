@@ -20,11 +20,13 @@ public class when_resolving_kernel_storage_services : Specification
     {
         _host = Host.CreateDefaultBuilder()
             .AddCratisArc()
-            .AddCratisMongoDB(options =>
-            {
-                options.Server = "mongodb://localhost:27017";
-                options.Database = "chronicle";
-            })
+            .AddCratisMongoDB(
+                options =>
+                {
+                    options.Server = "mongodb://localhost:27017";
+                    options.Database = "chronicle";
+                },
+                SpecSerializationSetup.ConfigureLikeTheServer)
             .UseDefaultServiceProvider(options => options.ValidateOnBuild = false)
             .UseOrleans(silo =>
             {

@@ -64,4 +64,10 @@ public class WebhookDefinition
     /// </summary>
     [ProtoMember(9)]
     public EventGenerationDelivery GenerationDelivery { get; set; } = EventGenerationDelivery.Compatibility;
+
+    /// <summary>
+    /// Gets or sets the signing policy. Unspecified preserves an existing policy.
+    /// </summary>
+    [ProtoMember(10)]
+    public WebhookSigningMode Signing { get; set; }
 }

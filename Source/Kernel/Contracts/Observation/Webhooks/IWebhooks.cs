@@ -52,6 +52,22 @@ public interface IWebhooks
     [Operation]
     Task<CommandResult> RemoveWebhooks(RemoveWebhooksRequest request, CallContext callContext = default);
     /// <summary>
+    /// Executes the RotateWebhookSigningKey command.
+    /// </summary>
+    /// <param name = "request">The RotateWebhookSigningKey request.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The command result.</returns>
+    [Operation]
+    Task<CommandResult> RotateWebhookSigningKey(RotateWebhookSigningKeyRequest request, CallContext callContext = default);
+    /// <summary>
+    /// Executes the GetWebhookSigningKeys query.
+    /// </summary>
+    /// <param name = "request">The query request parameters.</param>
+    /// <param name = "callContext">The gRPC call context.</param>
+    /// <returns>The query result.</returns>
+    [Operation]
+    Task<QueryResult<IEnumerable<WebhookSigningPublicKeyResponse>>> GetWebhookSigningKeys(GetWebhookSigningKeysRequest request, CallContext callContext = default);
+    /// <summary>
     /// Executes the GetWebhooks query.
     /// </summary>
     /// <param name = "request">The query request parameters.</param>
@@ -248,6 +264,87 @@ public class RemoveWebhooksRequest
 }
 
 /// <summary>
+/// Represents the RotateWebhookSigningKeyRequest message.
+/// </summary>
+[ProtoContract]
+public class RotateWebhookSigningKeyRequest
+{
+    /// <summary>
+    /// Gets or sets the EventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the UseSpecifiedOverlap.
+    /// </summary>
+    [ProtoMember(3)]
+    public bool UseSpecifiedOverlap { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OverlapSeconds.
+    /// </summary>
+    [ProtoMember(2)]
+    public double OverlapSeconds { get; set; }
+}
+
+/// <summary>
+/// Represents the WebhookSigningPublicKeyResponse message.
+/// </summary>
+[ProtoContract]
+public class WebhookSigningPublicKeyResponse
+{
+    /// <summary>
+    /// Gets or sets the KeyId.
+    /// </summary>
+    [ProtoMember(1)]
+    public string KeyId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Algorithm.
+    /// </summary>
+    [ProtoMember(2)]
+    public global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningAlgorithm Algorithm { get; set; }
+
+    /// <summary>
+    /// Gets or sets the PublicKey.
+    /// </summary>
+    [ProtoMember(3)]
+    public string PublicKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Status.
+    /// </summary>
+    [ProtoMember(4)]
+    public global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningKeyStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CreatedAt.
+    /// </summary>
+    [ProtoMember(5)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset CreatedAt { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the OverlapEndsAt.
+    /// </summary>
+    [ProtoMember(6)]
+    public global::Cratis.Chronicle.Contracts.Primitives.SerializableDateTimeOffset OverlapEndsAt { get; set; }
+}
+
+/// <summary>
+/// Represents the GetWebhookSigningKeysRequest message.
+/// </summary>
+[ProtoContract]
+public class GetWebhookSigningKeysRequest
+{
+    /// <summary>
+    /// Gets or sets the eventStore.
+    /// </summary>
+    [ProtoMember(1)]
+    public string EventStore { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Represents the WebhookDetailsResponse message.
 /// </summary>
 [ProtoContract]
@@ -312,6 +409,18 @@ public class WebhookDetailsResponse
     /// </summary>
     [ProtoMember(10)]
     public global::Cratis.Chronicle.Contracts.Observation.EventGenerationDelivery GenerationDelivery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Signing.
+    /// </summary>
+    [ProtoMember(11)]
+    public global::Cratis.Chronicle.Contracts.Observation.Webhooks.WebhookSigningMode Signing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HeaderValuesSet.
+    /// </summary>
+    [ProtoMember(12)]
+    public global::System.Collections.Generic.IDictionary<string, bool> HeaderValuesSet { get; set; } = new global::System.Collections.Generic.Dictionary<string, bool>();
 }
 
 /// <summary>

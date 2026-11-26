@@ -50,11 +50,11 @@ public class a_projection_definition : Specification
         new(new Dictionary<PropertyPath, string>(), key, parentKey is null ? null : new PropertyExpression(parentKey));
 
     protected static ChildrenDefinition Child(
-        IDictionary<EventType, FromDefinition>? from = null,
-        IDictionary<EventType, JoinDefinition>? join = null,
-        IDictionary<EventType, RemovedWithDefinition>? removedWith = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? children = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? nested = null) => new(
+        IReadOnlyDictionary<EventType, FromDefinition>? from = null,
+        IReadOnlyDictionary<EventType, JoinDefinition>? join = null,
+        IReadOnlyDictionary<EventType, RemovedWithDefinition>? removedWith = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? children = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? nested = null) => new(
             "id",
             from ?? new Dictionary<EventType, FromDefinition>(),
             join ?? new Dictionary<EventType, JoinDefinition>(),
@@ -65,12 +65,12 @@ public class a_projection_definition : Specification
             Nested: nested);
 
     protected static ProjectionDefinition Definition(
-        IDictionary<EventType, FromDefinition>? from = null,
-        IDictionary<EventType, JoinDefinition>? join = null,
-        IDictionary<EventType, RemovedWithDefinition>? removedWith = null,
-        IDictionary<EventType, RemovedWithJoinDefinition>? removedWithJoin = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? children = null,
-        IDictionary<PropertyPath, ChildrenDefinition>? nested = null,
+        IReadOnlyDictionary<EventType, FromDefinition>? from = null,
+        IReadOnlyDictionary<EventType, JoinDefinition>? join = null,
+        IReadOnlyDictionary<EventType, RemovedWithDefinition>? removedWith = null,
+        IReadOnlyDictionary<EventType, RemovedWithJoinDefinition>? removedWithJoin = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? children = null,
+        IReadOnlyDictionary<PropertyPath, ChildrenDefinition>? nested = null,
         IEnumerable<FromDerivatives>? fromDerivatives = null,
         string fromEveryKey = "$eventSourceId") => new(
             ProjectionOwner.Client,

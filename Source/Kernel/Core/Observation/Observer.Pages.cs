@@ -8,9 +8,9 @@ using Cratis.Chronicle.Configuration;
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Partial for delivering a page of events spanning partitions to a subscriber in one call and settling each partition on its own.
-/// </summary>
+/// </content>
 public partial class Observer
 {
     readonly Dictionary<Key, PrefetchedDelivery> _prefetchedPartitions = [];
@@ -154,7 +154,8 @@ public partial class Observer
                 var hold = await GetClientDeliveryHold();
                 var target = subscriberSelector.Select(_subscription, candidates[0].Partition);
                 var subscriber = (IObserverPartitionPageSubscriber)GrainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(ObserverSubscriberKey.AllPartitions, target.SiloAddress));
-                var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }.WithDeadlines(subscriberTimeout, hold, _clock);
+                var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }
+                    .WithDeadlines(subscriberTimeout, hold, _clock);
                 fence = AbandonedDeliveryDrain.Capture(_subscription, ObserverSubscriberKey.AllPartitions, target, context);
                 var pageResult = await subscriber.OnNextPartitionsWithin(subscriberTimeout, decrypted, context);
                 foreach (var candidate in candidates)

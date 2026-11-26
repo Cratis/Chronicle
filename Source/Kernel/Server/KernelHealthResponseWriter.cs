@@ -12,6 +12,11 @@ namespace Cratis.Chronicle.Server;
 internal static class KernelHealthResponseWriter
 {
     /// <summary>
+    /// The name the overload check is registered under.
+    /// </summary>
+    internal const string OverloadCheckName = "kernel-overload";
+
+    /// <summary>
     /// Writes the health report status.
     /// </summary>
     /// <param name="context">The HTTP context.</param>
@@ -20,8 +25,18 @@ internal static class KernelHealthResponseWriter
     internal static Task Write(HttpContext context, HealthReport report)
     {
         context.Response.ContentType = "text/plain";
-        return context.Response.WriteAsync(StatusOf(report));
+        return context.Response.WriteAsync(BodyOf(report));
     }
+
+    /// <summary>
+    /// Gets the body for a health report: the status, followed by the reason when the kernel reports itself as overloaded.
+    /// </summary>
+    /// <param name="report">The health report.</param>
+    /// <returns>The status, and on a second line why the kernel is degraded when it is overloaded.</returns>
+    internal static string BodyOf(HealthReport report) =>
+        report.Entries.TryGetValue(OverloadCheckName, out var overload) && overload.Status != HealthStatus.Healthy && !string.IsNullOrEmpty(overload.Description)
+            ? $"{StatusOf(report)}\n{overload.Description}"
+            : StatusOf(report);
 
     /// <summary>
     /// Gets the status text for a health report.

@@ -37,6 +37,8 @@ module Membership
       event MembershipRenewed generation 1
       event MembershipRenewed generation 2
         months Int
+      screen RenewMembership
+        action RenewMembership for screen
       specification RenewingForSixMonths
         when RenewMembership
           membershipId = "5b0f4c3e-2d1a-4e6b-8f7c-9a1b2c3d4e05"
@@ -52,6 +54,8 @@ module Membership
           for membershipId
       event MembershipPaused
         id "MembershipSuspended"
+      screen PauseMembership
+        action PauseMembership for screen
 
     slice StateChange EndMembership
       description "Ending by the member and termination for breach are different facts"
@@ -66,6 +70,8 @@ module Membership
             for membershipId
       event MembershipEnded
       event MembershipTerminatedForBreach
+      screen EndMembership
+        action EndMembership for screen
       specification EndingByChoice
         when EndMembership
           membershipId = "5b0f4c3e-2d1a-4e6b-8f7c-9a1b2c3d4e05"

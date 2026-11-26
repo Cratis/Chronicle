@@ -44,6 +44,8 @@ public sealed class an_immediate_time_provider : TimeProvider
     /// <inheritdoc/>
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
     {
+        if (dueTime == Timeout.InfiniteTimeSpan) return Substitute.For<ITimer>();
+
         lock (_delays)
         {
             _delays.Add(dueTime);

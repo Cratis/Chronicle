@@ -49,7 +49,9 @@ public static class MongoDBChronicleBuilderExtensions
             services.AddStorageConnectionResolution(WellKnownConnectionStorage.MongoDB, options.Storage.ConnectionResolution);
             services.AddSingleton<MongoDBIndexProvisioner>();
             services.AddSingleton<IMongoDBIndexProvisioner>(provider => provider.GetRequiredService<MongoDBIndexProvisioner>());
+            services.AddSingleton<IMongoDBCapabilityProbe, MongoDBCapabilityProbe>();
         });
+        builder.SiloBuilder.AddStartupTask<VerifyMongoDBCapabilities>(ServiceLifecycleStage.First);
         builder.SiloBuilder.AddStartupTask<VerifyMongoDBIndexes>(ServiceLifecycleStage.First);
         return builder;
     }
@@ -111,6 +113,7 @@ public static class MongoDBChronicleBuilderExtensions
                 new(),
                 sp.GetRequiredService<IConnectionResolverFactory>()));
             services.AddSingleton<IMongoDBStorageConnections, MongoDBStorageConnections>();
+            services.AddSingleton<ICanPerformKernelStateReset, MongoDBKernelStateResetHandler>();
             services.AddSingleton<IDatabase, Database>();
 
             // One process-wide registry of the change streams read models are observed through, so every observer

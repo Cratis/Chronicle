@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -38,7 +39,7 @@ public class and_an_observer_was_lost_with_a_departed_silo : given.a_projections
     async Task should_reconcile_the_subscription() =>
         await _observerGrain.Received().ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<Concepts.Events.EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<bool>(),
             Arg.Any<EventGenerationDelivery>());

@@ -44,9 +44,22 @@ Omit the callback to select all event types known to the C# client:
 
 <ChronicleClientTabs snippet="subscriptions/explicit-subscriptions/no-filter" />
 
+## Which Namespaces a Subscription Observes
+
+Nothing needs configuring. A subscription observes the namespaces of the source event store that have the same name as a namespace of the target event store, compared case-insensitively. A subscription never creates a namespace in the source event store:
+
+- A target namespace with no counterpart in the source is not observed. Nothing is created in the source for it.
+- When the source event store later gets a namespace of that name, the subscription attaches to it without a restart.
+- A namespace added to the target event store is observed at once when the source already has it.
+- A name containing a comma is refused. A name like `a,a` usually means the tenant header was sent twice. Such a namespace is never observed.
+
 ## Pin the Generation Your Application Understands
 
-An event type's generation identifies a version of its schema. To keep forwarding on the generation your C# application understands, opt in per subscription with `WithGenerationDelivery(EventGenerationDelivery.Pinned)`.
+An event type's generation identifies a version of its schema. In the default `Compatibility` mode, forwarding uses the source event's generation when the target registers it. If the target registers the event type but not that generation, forwarding selects the highest registered target generation no newer than the source event and uses the source's migration chain to deliver it. Forwarding does not upgrade an event to a newer target generation. If the target has no registration for the event type at all, compatibility forwarding continues to send the event unchanged.
+
+When the target registers the type but no compatible generation exists, or the source cannot migrate to it, forwarding parks the affected partition instead of retrying indefinitely. The failure message names the event type, the source generation, and the target's registered generations. Missing pinned generations are also parked. Register the required generation in the target or add the missing downward migration in the source, then recover the parked partition as described in [Subscription recovery and replay](recovery).
+
+To keep forwarding on the generation your C# application understands, opt in per subscription with `WithGenerationDelivery(EventGenerationDelivery.Pinned)`.
 
 A generic `WithEventType<T>()` pins the generation declared by that event type. An identifier-only declaration resolves to the single generation your client knows. Use the identifier-and-generation overload when the identifier is ambiguous or you have no .NET type for that contract.
 

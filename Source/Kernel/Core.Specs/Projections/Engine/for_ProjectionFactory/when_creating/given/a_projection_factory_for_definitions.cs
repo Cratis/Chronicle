@@ -82,7 +82,7 @@ public class a_projection_factory_for_definitions : a_projection_factory_and_an_
         CreateReadModelDefinition(),
         []);
 
-    static ProjectionDefinition CreateProjectionDefinition(IDictionary<EventType, FromDefinition> from, IDictionary<PropertyPath, ChildrenDefinition> children) => new(
+    static ProjectionDefinition CreateProjectionDefinition(IReadOnlyDictionary<EventType, FromDefinition> from, IReadOnlyDictionary<PropertyPath, ChildrenDefinition> children) => new(
         ProjectionOwner.Client,
         EventSequenceId.Log,
         "Core.Slots",

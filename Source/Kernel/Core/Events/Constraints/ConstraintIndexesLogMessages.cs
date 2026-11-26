@@ -15,6 +15,12 @@ internal static partial class ConstraintIndexesLogMessages
     [LoggerMessage(LogLevel.Debug, "Starting constraint reindex for event store {EventStore}, namespace {Namespace}, event sequence {EventSequenceId}")]
     internal static partial void StartingReindex(this ILogger<ConstraintIndexes> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId);
 
+    [LoggerMessage(LogLevel.Debug, "Skipping constraint reindex for empty event sequence in event store {EventStore}, namespace {Namespace}, event sequence {EventSequenceId}")]
+    internal static partial void SkippingReindexForEmptySequence(this ILogger<ConstraintIndexes> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed checking for events in event store {EventStore}, namespace {Namespace}, event sequence {EventSequenceId}; starting constraint reindex conservatively")]
+    internal static partial void FailedCheckingForEvents(this ILogger<ConstraintIndexes> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, Exception exception);
+
     [LoggerMessage(LogLevel.Warning, "Failed to start constraint reindex for event store {EventStore}, namespace {Namespace}, event sequence {EventSequenceId}: {Error}")]
     internal static partial void FailedStartingReindex(this ILogger<ConstraintIndexes> logger, EventStoreName eventStore, EventStoreNamespaceName @namespace, EventSequenceId eventSequenceId, string error);
 

@@ -19,90 +19,69 @@
 #   readiness   - an infrastructure backoff between retries of a connect/start that can fail
 #   deadline    - the timeout arm of a `Task.WhenAny`, which is a bound and not a settle
 #   interleave  - a `Task.Delay(1)` / `Task.Yield()` widening a window in a concurrency spec
+# Zero-count entries preserve reason comments without allowing a delay.
 #
 # Regenerate after a rename with `python3 .github/scripts/assert-timing-coupling-ratchet.py
 # --report`, then carry the annotations back over - `--report` prints counts only.
 
-2 Integration/Client/ChronicleConfigurableFixture.cs  # readiness
-1 Integration/Client/Projections/Scenarios/ModelBound/when_projecting_with_nested_in_children/clearing_the_nested_object.cs
-1 Integration/Client/Projections/Scenarios/given/a_projection_and_events_appended_to_it.cs
-1 Integration/Client/Projections/Scenarios/when_projecting_with_deferred_parent_resolution/and_resolves_through_second_event_type.cs
-1 Integration/Client/Projections/Scenarios/when_projecting_with_functions/counting_events_per_key.cs
-1 Integration/Client/Projections/Scenarios/when_projecting_with_functions/decrementing_per_key.cs
-1 Integration/Client/Projections/Scenarios/when_projecting_with_functions/incrementing_per_key.cs
-1 Integration/Client/Projections/Scenarios/when_updating_projection_definition/for_materialized_projection_with_deactivated_subscriber.cs
-1 Integration/Client/RetryWaits.cs
+1 Integration/Client/ChronicleConfigurableFixture.cs  # readiness
 # Mutation repair polls persisted read-model predicates, not elapsed settling time. Each retry
 # rereads actual documents; a 30-second cancellation bounds visibility polling after jobs finish.
-1 Integration/Client/for_EventSequence/given/content_mutation_projections.cs  # readiness: persisted materialization visibility
-1 Integration/Client/for_EventSequence/given/joined_and_parent_state.cs  # readiness: persisted join visibility
-1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/UserRegisteredReactor.cs
-1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/UserRegisteredReducer.cs
-1 Integration/Client/for_EventSequence/when_appending_events_with_multiple_generation_migrations/and_observers_consume_second_generation.cs
-2 Integration/Client/for_EventSequence/when_redacting/EventSequenceRedactionViaSequenceWaitHelpers.cs
-1 Integration/Client/for_EventSequence/when_redacting/NonReplayableReactor.cs
-1 Integration/Client/for_EventSequence/when_redacting/ReactorSubscribedToEventRedacted.cs
-1 Integration/Client/for_EventSequence/when_redacting/SomeReactor.cs
-1 Integration/Client/for_EventSequence/when_redacting/SomeReducer.cs
-1 Integration/Client/for_EventSequence/when_revising/NonReplayableReactor.cs
-1 Integration/Client/for_EventSequence/when_revising/SomeReactor.cs
-1 Integration/Client/for_EventSequence/when_revising/SomeReducer.cs
-1 Integration/Client/for_EventSequence/when_server_restarts/and_events_are_appended_before_restart.cs  # readiness
-1 Integration/Client/for_EventStoreSubscriptions/given/a_subscription_with_retained_outbox_history.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
-1 Integration/Client/for_EventStoreSubscriptions/given/an_operator_addressing_two_lobbies.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
-1 Integration/Client/for_EventStoreSubscriptions/given/multi_event_store_subscription_setup.cs
-1 Integration/Client/for_EventStoreSubscriptions/given/subscription_states_after_subscribing.cs
-1 Integration/Client/for_EventStoreSubscriptions/when_registering_implicit_subscriptions/and_reactor_infers_external_inbox_subscription.cs
-1 Integration/Client/for_EventStoreSubscriptions/when_replaying/with_previously_forwarded_history.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
-1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_filtering_event_types.cs
+0 Integration/Client/for_EventSequence/given/content_mutation_projections.cs  # readiness: persisted materialization visibility
+0 Integration/Client/for_EventSequence/given/joined_and_parent_state.cs  # readiness: persisted join visibility
+0 Integration/Client/for_EventSequence/when_server_restarts/and_events_are_appended_before_restart.cs  # readiness
+0 Integration/Client/for_EventStoreSubscriptions/given/a_subscription_with_retained_outbox_history.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
+0 Integration/Client/for_EventStoreSubscriptions/given/an_operator_addressing_two_lobbies.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
+0 Integration/Client/for_EventStoreSubscriptions/when_replaying/with_previously_forwarded_history.cs  # readiness: persisted forwarder state visibility, bounded by cancellation
 1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_forwarding_to_default_namespace.cs
 1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_multiple_source_namespaces_send_to_different_targets.cs
-1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_reactors_coordinate_tenant_outbox_forwarding.cs
 1 Integration/Client/for_EventStoreSubscriptions/when_subscribing/and_same_namespace_subscribes_from_multiple_sources.cs
-1 Integration/Client/for_PIIManager/when_erasing_a_subject_whose_key_was_forwarded_to_another_event_store.cs
 1 Integration/Client/for_Reactors/ReactorFilteredByEventSourceType.cs  # knob
 1 Integration/Client/for_Reactors/ReactorFilteredByEventStreamType.cs  # knob
 1 Integration/Client/for_Reactors/ReactorFilteredByTag.cs  # knob
-2 Integration/Client/for_Reactors/ReactorThatCanFail.cs
-2 Integration/Client/for_Reactors/ReactorWithReplayHandler.cs
-1 Integration/Client/for_Reactors/ReactorWithoutDelay.cs
-1 Integration/Client/for_Reactors/ReactorWithoutDelayHandlingPii.cs
+1 Integration/Client/for_Reactors/ReactorThatCanFail.cs
 1 Integration/Client/for_Reactors/SomeReactor.cs  # knob
-1 Integration/Client/for_ReadModels/given/a_projection_with_events.cs
-1 Integration/Client/for_ReadModels/given/a_projection_with_many_instances.cs
-1 Integration/Client/for_ReadModels/when_a_composed_read_model_lifts_pii/given/two_stored_subjects.cs
-1 Integration/Client/for_ReadModels/when_a_projection_redirects_its_key/and_the_source_subject_is_erased.cs
-1 Integration/Client/for_ReadModels/when_a_read_model_has_a_collection_of_pii_concepts/and_reading_the_instance.cs
-1 Integration/Client/for_ReadModels/when_a_read_model_has_a_collection_of_pii_concepts/and_the_elements_are_objects.cs
-1 Integration/Client/for_ReadModels/when_a_read_model_has_a_nested_pii_concept/and_reading_the_instance.cs
-1 Integration/Client/for_ReadModels/when_a_read_model_has_a_pii_value_object/and_reading_the_instance.cs
-1 Integration/Client/for_ReadModels/when_a_read_model_has_pii_beside_a_geospatial_value/and_reading_the_instance.cs
-1 Integration/Client/for_ReadModels/when_a_subject_owns_a_pii_child_collection/and_reading_the_child_collection.cs
-1 Integration/Client/for_ReadModels/when_getting_instance_with_an_unset_optional/and_the_optional_is_an_enum.cs
-1 Integration/Client/for_ReadModels/when_getting_instances/and_read_model_has_pii_property.cs
-1 Integration/Client/for_Reducers/ConceptCollectionReducer.cs
-1 Integration/Client/for_Reducers/PointLocationReducer.cs
 1 Integration/Client/for_Reducers/ReducerFilteredByEventSourceType.cs  # knob
 1 Integration/Client/for_Reducers/ReducerFilteredByEventStreamType.cs  # knob
 1 Integration/Client/for_Reducers/ReducerFilteredByTag.cs  # knob
-2 Integration/Client/for_Reducers/ReducerThatCanFail.cs
-1 Integration/Client/for_Reducers/ReducerWithoutDelay.cs
-1 Integration/Client/for_Reducers/ReducerWithoutDelayHandlingPii.cs
+1 Integration/Client/for_Reducers/ReducerThatCanFail.cs
 1 Integration/Client/for_Reducers/SlowReducerThatSignalsCompletion.cs  # knob
 1 Integration/Client/for_Reducers/SomeReducer.cs  # knob
-1 Integration/Client/for_Reducers/when_handling_concept_collection/and_reducer_persists_the_concept_collection.cs
-1 Integration/Client/for_Webhooks/InvokedWebhooks.cs
-1 Integration/Client/for_Webhooks/given/webhook_states_after_registering.cs
-2 Integration/Clustering/ClusteringFixture.cs
-1 Integration/Clustering/for_Clustering/when_replaying_a_collapsing_projection.cs
-1 Integration/Clustering/for_ScaledOutClients/ReactorInvocationSignal.cs
-1 Integration/Clustering/for_ScaledOutClients/when_the_kernel_drops_a_client_instance.cs
+1 Integration/Clustering/BusyProjectionsManagerCalls.cs  # knob: a projections manager that is busy on purpose, so a registration can be observed against it
+1 Integration/Clustering/for_ClientObserverServing/ServedSignal.cs  # polling interval while waiting for deliveries, bounded by cancellation
+1 Integration/Clustering/for_ClientRegistration/when_a_projection_is_registered_while_the_kernel_is_busy.cs  # polling interval while waiting for the projected count, bounded by a deadline
+1 Integration/Clustering/for_ClientRegistration/when_a_registration_cannot_be_applied.cs  # polling interval while waiting for the registration outcome, bounded by a deadline
+1 Integration/Clustering/for_ClientRegistration/when_many_namespaces_register_at_once.cs  # polling interval while waiting for every namespace to be projected, bounded by a deadline
+1 Integration/Clustering/for_ClientRegistration/when_the_kernel_restarts_before_a_registration_is_applied.cs  # polling interval while waiting for the restarted kernel to apply the registration, bounded by a deadline
+1 Integration/Clustering/for_ClientRegistration/when_the_projections_manager_is_busy.cs  # polling interval while waiting for the registration to be applied, bounded by a deadline
+1 Integration/Clustering/for_ManyClientObservers/ManyObserversScenario.cs  # polling interval while waiting for every reactor to receive its events, bounded by cancellation
+2 Integration/Clustering/for_MultiplexedObservation/when_a_reactor_is_slow_on_a_shared_stream.cs  # polling intervals while waiting for the quick and the released slow reactor, bounded by a deadline
+1 Integration/Clustering/for_SiloSupervisor/when_a_silo_leaves_the_cluster.cs  # polling interval while waiting for the departure window to open, bounded by a deadline
+1 Integration/Clustering/for_SiloSupervisor/when_observers_are_resident.cs  # the supervisor loop is time-driven and exposes no signal for a completed tick
 1 Integration/Kernel/EventStores/for_RegistrationLoad/when_registering/and_replicas_register_the_same_artifacts_concurrently_with_a_small_connection_pool.cs  # Task.Yield widens an interleaving window so replicas register concurrently
+1 Integration/Kernel/Projections/for_ProjectionPlanSharing/given/a_projection_in_many_namespaces.cs  # polling interval while waiting for the projection to catch up, bounded by a deadline
+1 Integration/Kernel/Projections/for_ProjectionPlanSharing/when_the_projection_is_removed.cs  # waits that a removed projection stays unprojected; there is no event to await for an absence
+1 Integration/Kernel/for_DormantObserver/given/a_dormant_reactor.cs  # polling intervals while waiting for observers to be released (the released state has no completion signal) and for handled events
+1 Integration/Kernel/for_DormantObserver/when_a_dormant_observer_is_woken/and_it_is_healthy.cs  # waits that a healthy woken observer raises no alert; there is no event to await for an absence
+2 Integration/Kernel/for_DormantObserver/when_a_service_has_two_replicas/and_the_observers_are_quiet.cs  # polling interval while the replica takes over, and a wait that the standby handles nothing
+3 Integration/Kernel/for_DormantObserver/when_an_event_is_appended_while_dormant/and_the_observer_has_been_released.cs  # waits that a dormant observer stays dormant and a woken one handles nothing more; there is no event that says nothing happened
+2 Integration/Kernel/for_DormantObserver/when_an_event_store_subscription_is_dormant/and_an_event_is_appended_to_the_source.cs  # polling intervals while waiting for the subscription observer to be released and the event to be forwarded, bounded by a deadline
+2 Integration/Kernel/for_DormantObserver/when_the_safety_net_runs/and_one_observer_is_behind.cs  # polling interval while waiting for the safety net to wake the observer, and a wait over a periodic pass that has no completion signal
 1 Integration/Kernel/for_JobsManager/given/TheJobStep.cs  # knob
-1 Integration/Kernel/for_JobsManager/when_starting/job_with_single_step/and_job_step_fails.cs
-2 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/ReleasedFloorKernel.cs  # readiness: bounded poll of a released kernel container (populated store, container exit); a released binary exposes no completion signal
-1 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/given/a_populated_store.cs  # readiness: bounded poll for the first event-store write by a released kernel container; no completion signal available
+1 Integration/Kernel/for_Observer/given/a_namespace_with_observers_behind_a_cap.cs  # polling interval while waiting for the observers to reach a condition, bounded by a deadline
+2 Integration/Kernel/for_Observer/given/a_quarantined_reactor.cs  # polling intervals while waiting for jobs and observer state, bounded by a deadline
+2 Integration/Kernel/for_Observer/given/a_reactor_given_operator_commands.cs  # polling intervals while waiting for jobs and a condition, bounded by a deadline
+1 Integration/Kernel/for_Observer/given/a_reactor_whose_client_is_gone.cs  # polling interval while waiting for the observer to become disconnected, bounded by a deadline
+1 Integration/Kernel/for_Observer/when_catching_up/and_many_observers_are_behind.cs  # sampling interval over a fixed window to find the most catch-up jobs alive at once
+2 Integration/Kernel/for_Observer/when_catching_up/and_the_observer_has_no_connected_client.cs  # a wait that no catch-up job starts for an observer without a client, and a polling interval bounded by a deadline
+1 Integration/Kernel/for_PatternCapture/given/a_pattern_capturing_namespace.cs  # polling interval while waiting for a capture to be observed, bounded by a deadline
+1 Integration/Kernel/for_PatternCapture/when_a_namespace_captures_patterns/and_capture_is_off.cs  # a wait that nothing is captured when capture is off; there is no event to await for an absence
+0 Integration/Kernel/for_UnseenObserverRemoval/given/an_unseen_observer_kernel.cs  # bounded poll in one wait helper: the kernel noticing that a client is gone and an observer staying unseen for the period have no completion signal, and the period is the thing being waited out
+0 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/ReleasedFloorKernel.cs  # readiness: bounded poll of a released kernel container (populated store, container exit); a released binary exposes no completion signal
+0 Integration/MongoDB/Generations/for_ReleasedKernelGenerationFloor/given/a_populated_store.cs  # readiness: bounded poll for the first event-store write by a released kernel container; no completion signal available
+1 Integration/Shared/ReadinessWait.cs  # readiness: bounded backoff between observable-state checks; remove when polling is replaced by a completion signal
 2 Integration/SqlClustering/for_ClusterLoadDeliveryDiagnostics/when_capturing_the_enabled_transport.cs  # knob: 20 events/s pacing cadence for the diagnostics overhead measurement, not a wait
+1 Source/Clients/Connections.Specs/Multiplexed/for_MultiplexedObservationChannel/given/a_channel_over_a_scripted_kernel.cs  # readiness: bounded poll of a scripted kernel's received requests
 1 Source/Clients/Connections.Specs/for_ChronicleConnection/given/a_connection_with_ambient_state.cs  # knob: monitor double parked until cancellation (infinite delay)
 1 Source/Clients/Connections.Specs/for_ConnectionLifecycle/given/a_lifecycle_with_ambient_state.cs  # interleave: Task.Yield forces a continuation to observe flowed ambient state
 1 Source/Clients/Connections.Specs/for_ConnectionWatchdog/given/a_connection_watchdog.cs  # interleave
@@ -118,15 +97,33 @@
 # MongoDB pending-drop readiness has no awaitable driver event; retry the server command,
 # not a fixed settle duration. Helper specs inject a virtual clock and immediate delay (#5521).
 1 Source/Clients/XUnit.Integration/MongoDBDatabaseDropper.cs  # readiness: server-command drop-settle backoff
+1 Source/Kernel/Core.Specs/Observation/Jobs/for_ObserverOperatorCommandJobs/when_accepting_the_same_command_at_the_same_time.cs  # interleave: widens the window so the second accept arrives while the first is in flight
+2 Source/Kernel/Core.Specs/Observation/Reactors/Clients/for_ClientReactorSubscription/when_subscribing/and_the_registration_is_retried_while_the_first_attempt_is_running.cs  # lets the first attempt reach its blocked state before the retry arrives; there is no signal for it
+2 Source/Kernel/Core.Specs/Observation/Reducers/Clients/for_ClientReducerSubscription/when_subscribing/and_the_registration_is_retried_while_the_first_attempt_is_running.cs  # lets the first attempt reach its blocked state before the retry arrives; there is no signal for it
+1 Source/Kernel/Core.Specs/Observation/for_ObserverSubscriberExtensions/when_calling_an_unpartitioned_subscriber/and_two_partitions_deliver_at_once.cs  # knob: a subscriber that is slow on purpose, so overlapping deliveries would be observed
+1 Source/Kernel/Core.Specs/Observation/for_UnpartitionedGates/when_two_callers_share_a_gate.cs  # interleave: lets the second caller queue behind the first before the lease is released
+1 Source/Kernel/Core.Specs/Projections/for_ProjectionsManager/when_registering_shared/and_every_caller_leaves_before_the_registration_gets_its_turn.cs  # deadline: the timeout arm of a Task.WhenAny
+1 Source/Kernel/Core.Specs/Registrations/for_RegistrationInbox/given/an_inbox.cs  # readiness: bounded poll for a condition in one wait helper
+1 Source/Kernel/Core.Specs/Registrations/for_RegistrationInbox/when_the_projections_manager_is_saturated.cs  # deadline: the timeout arm of a Task.WhenAny
+2 Source/Kernel/Core.Specs/Registrations/for_RegistrationQueue/when_every_caller_of_a_running_registration_leaves.cs  # knob: work parked until cancellation (infinite delay), and a bounded poll for the queue to drain
+1 Source/Kernel/Core.Specs/Services/Clients/for_ConnectionService/given/RegistrationClock.cs  # readiness: bounded poll for a timer to become due
+1 Source/Kernel/Core.Specs/Services/Clients/for_ConnectionService/with_cluster_reservation/the_reservation_throws.cs  # readiness: bounded poll for the claim count
+1 Source/Kernel/Core.Specs/Services/Observation/for_ClientSubscriptionKeeper/given/a_client_subscription_keeper.cs  # readiness: bounded poll for the first periodic check
+2 Source/Kernel/Core.Specs/Services/Observation/for_ObserverRegistrationGate/when_a_burst_of_registrations_meets_a_busy_observer/and_the_gate_is_bounded.cs  # interleave: Task.Yield starts the burst concurrently; knob: a busy observer is slow on purpose
+1 Source/Kernel/Core.Specs/Supervision/for_SiloSupervisor/given/a_silo_supervisor.cs  # readiness: bounded poll for a condition in one wait helper
+1 Source/Kernel/Core.Specs/Supervision/for_SiloSupervisor/when_a_silo_leaves/and_the_departure_source_does_not_renew.cs  # lets the supervisor loop run without a renewed departure source; there is no event to await for an absence
+1 Source/Kernel/Core.Specs/Supervision/for_SiloSupervisor/when_a_silo_leaves/and_there_are_many_grains.cs  # interleave: Task.Yield lets the checks overlap so the most in flight can be measured
 1 Source/Kernel/Core.Specs/Clients/for_ClientDepartureNotifier/when_notifying_observers.cs  # interleave
 1 Source/Kernel/Core.Specs/EventSequences/for_AppendedEventsQueue/when_enqueuing/with_backpressure/and_channel_capacity_is_exceeded.cs
 1 Source/Kernel/Core.Specs/Observation/Reactors/Kernel/for_Reactors/when_registering/and_many_tenants_start_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionHandleLock/when_the_same_event_source_id_is_acquired_concurrently.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/Engine/Pipelines/for_ProjectionPipeline/given/a_striped_pipeline_over_a_shared_read_model.cs  # interleave
 1 Source/Kernel/Core.Specs/Projections/for_ProjectionsManager/when_registering/and_more_definitions_than_the_concurrency_limit_are_new.cs  # knob
-1 Source/Kernel/Server.Specs/for_KernelRun/given/StopOverrunningService.cs  # knob: stop double that is slow on purpose, overrunning the shutdown timeout
+0 Source/Kernel/Server.Specs/for_KernelRun/given/StopOverrunningService.cs  # knob: stop double that is slow on purpose, overrunning the shutdown timeout
 1 Source/Kernel/Server.Specs/for_KernelRun/given/StopRequestingStartService.cs  # knob: start double parked until cancellation (infinite delay)
+1 Source/Kernel/Server.Specs/for_MultiplexedObservation/given/a_multiplexed_host.cs  # readiness: bounded poll of a multiplexed host
 1 Source/Kernel/Storage.MongoDB.Specs/EventSequences/ReplicaSetMongoDBFixture.cs  # readiness
+1 Source/Kernel/Storage.Specs/EventTypes/for_EventTypeRegistry/when_reading/the_same_unloaded_event_store_from_many_readers.cs  # interleave: lets every reader start before the load completes
 1 Source/Kernel/Storage.Sql.Specs/EventStores/Namespaces/EventSequences/for_EventCursor/given/a_cursor_over_a_context_whose_async_disposal_suspends.cs  # interleave
 1 Source/Kernel/Storage.Sql.Specs/Sinks/SqlServerFixture.cs  # readiness: backoff before retrying a drop while killed sessions roll back
 1 Source/Kernel/Storage.Sql.Specs/for_DatabaseSchemaLock/given/two_concurrent_changes.cs  # interleave

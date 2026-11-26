@@ -39,9 +39,9 @@ public class and_child_already_exists_in_sink : given.a_flat_child_projection_wi
                 Arg.Any<CancellationToken>())
             .Returns(cursor);
 
-        Sink.When(x => x.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey))
+        Sink.When(x => x.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), ChildKey, Arg.Any<Key>()))
             .Do(callInfo => _queriedChildPropertyPath = callInfo.ArgAt<PropertyPath>(0));
-        Sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), ChildKey)
+        Sink.TryFindRootKeyByChildValueInRoot(Arg.Any<PropertyPath>(), ChildKey, Arg.Any<Key>())
             .Returns(new Option<Key>(new Key(BoardKey, ArrayIndexers.NoIndexers)));
         Sink.TryFindRootKeyByChildValue(Arg.Any<PropertyPath>(), BoardKey)
             .Returns(Option<Key>.None());

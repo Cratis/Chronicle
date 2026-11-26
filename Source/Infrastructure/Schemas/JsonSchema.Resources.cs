@@ -12,11 +12,33 @@ public partial class JsonSchema
     static readonly string[] _resourceSchemaMaps = ["$defs", "definitions", "properties"];
     static readonly string[] _resourceSchemaArrays = ["allOf", "anyOf", "oneOf"];
     static readonly string[] _resourceSingleSchemas = ["items", "additionalProperties", "not"];
-    volatile Cached<(Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors)>? _resourceIndex;
+    readonly Uri? _resourceBase;
+    volatile Cached<(Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors, Dictionary<JsonObject, Uri> Scopes)>? _resourceIndex;
+    volatile Cached<IReadOnlyList<JsonSchema>>? _referenceChain;
 
-    Uri ResourceBase => ResourceId(Root.Node, _anonymousResourceBase);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JsonSchema"/> class in a resolved resource scope.
+    /// </summary>
+    /// <param name="node">The schema node.</param>
+    /// <param name="root">The document root.</param>
+    /// <param name="resourceBase">The effective base, with the node's identifier already applied.</param>
+    internal JsonSchema(JsonObject node, JsonSchema root, Uri resourceBase)
+    {
+        Node = node;
+        _root = root;
+        _resourceBase = resourceBase;
+    }
 
-    (Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors) ResourceIndex
+    /// <summary>
+    /// Gets this schema and up to 64 resolved reference hops, stopping at a cycle or unresolved reference.
+    /// </summary>
+    internal IReadOnlyList<JsonSchema> ReferenceChain => (_referenceChain ??= new(BuildReferenceChain())).Value;
+
+    JsonSchema ResolvedReference => ReferenceChain[^1];
+
+    Uri ResourceBase => _resourceBase ?? ResourceId(Root.Node, _anonymousResourceBase);
+
+    (Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors, Dictionary<JsonObject, Uri> Scopes) ResourceIndex
     {
         get
         {
@@ -24,8 +46,9 @@ public partial class JsonSchema
             if (cached is not null) return cached.Value;
             var roots = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
             var anchors = new Dictionary<(string Resource, string Anchor), JsonObject>();
-            IndexResources(Node, _anonymousResourceBase, new(roots, anchors, new HashSet<JsonObject>()), 0);
-            return (_resourceIndex = new((roots, anchors))).Value;
+            var scopes = new Dictionary<JsonObject, Uri>();
+            IndexResources(Node, _anonymousResourceBase, new(roots, anchors, scopes), 0);
+            return (_resourceIndex = new((roots, anchors, scopes))).Value;
         }
     }
 
@@ -57,8 +80,9 @@ public partial class JsonSchema
 
     static void IndexResources(JsonObject node, Uri inherited, ResourceIndexContext context, int depth)
     {
-        if (depth > MaxResourceTraversalDepth || !context.Visited.Add(node)) return;
+        if (depth > MaxResourceTraversalDepth || context.Scopes.ContainsKey(node)) return;
         var scope = ResourceId(node, inherited);
+        context.Scopes.Add(node, scope);
         if (depth == 0 || scope != inherited) context.Roots.TryAdd(scope.AbsoluteUri, node);
         if (node["$anchor"] is JsonValue value && value.TryGetValue<string>(out var anchor))
         {
@@ -81,6 +105,8 @@ public partial class JsonSchema
         return maps.Concat(arrays).Concat(singles);
     }
 
+    JsonSchema ResolveTypeReference(JsonSchema fallback) => HasReference && Reference is null ? fallback : ResolvedReference;
+
     JsonSchema? ResolveResourceRef(string reference)
     {
         var separator = reference.IndexOf('#');
@@ -96,11 +122,40 @@ public partial class JsonSchema
         if (fragment.Length == 0) target = resourceRoot;
         else if (fragment.StartsWith('/')) target = ResolveResourcePointer(resourceRoot, fragment);
         else target = index.Anchors.GetValueOrDefault((targetUri.AbsoluteUri, fragment));
-        return target is null ? null : new JsonSchema((JsonObject)target.DeepClone(), Root);
+        return target is null ? null : CreateResolvedSchema(target);
+    }
+
+    JsonSchema CreateChildSchema(JsonObject node) => new(node, Root, ResourceId(node, ResourceBase));
+
+    JsonSchemaProperty CreateChildProperty(string name, JsonObject node) => new(name, node, Root, ResourceId(node, ResourceBase));
+
+    JsonSchema CreateResolvedSchema(JsonObject target) =>
+        new((JsonObject)target.DeepClone(), Root, Root.ResourceIndex.Scopes.GetValueOrDefault(target, Root.ResourceBase));
+
+    JsonSchema? ResolveScopedRef(string reference)
+    {
+        // Preserve the root's legacy fragment precedence; embedded resources get first refusal in their own scope.
+        if (ResourceBase != Root.ResourceBase && ResolveResourceRef(reference) is { } scoped) return scoped;
+        return Root.ResolveRootRef(reference) ?? Root.ResolveResourceRef(reference);
+    }
+
+    List<JsonSchema> BuildReferenceChain()
+    {
+        var chain = new List<JsonSchema> { this };
+        var visited = new HashSet<(Uri Resource, string Reference)>();
+        var current = this;
+        for (var hop = 0; hop < MaxResourceTraversalDepth; hop++)
+        {
+            if (current.Node["$ref"]?.GetValue<string>() is not { } reference || !visited.Add((current.ResourceBase, reference))) break;
+            if (current.Reference is not { } target) break;
+            chain.Add(target);
+            current = target;
+        }
+        return chain;
     }
 
     sealed record ResourceIndexContext(
         Dictionary<string, JsonObject> Roots,
         Dictionary<(string Resource, string Anchor), JsonObject> Anchors,
-        HashSet<JsonObject> Visited);
+        Dictionary<JsonObject, Uri> Scopes);
 }

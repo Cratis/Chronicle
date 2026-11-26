@@ -200,7 +200,7 @@ public class Routing(
         // An observer subscribed to all events has no fixed event type list on its subscription by design -
         // the whole point is that it also covers event types that do not exist yet - so an empty list there is
         // not a reason to disconnect it the way it would be for an ordinary, explicitly-typed subscription.
-        if (!_subscription.EventTypes.Any() && !state.SubscribesToAllEvents)
+        if (_subscription.EventTypes.Count == 0 && !state.SubscribesToAllEvents)
         {
             logger.NoEventTypes();
             await StateMachine.TransitionTo<Disconnected>();
@@ -211,6 +211,16 @@ public class Routing(
         if (state.IsReplaying)
         {
             await StateMachine.TransitionTo<Replay>();
+            return state;
+        }
+
+        // An observer waking from a durable subscription stands at its persisted cursor. It must not skip to the tail, which would
+        // pass the events appended while it was dormant, and it must not start a catch-up job for them: it takes the queue
+        // subscription by entering Observing and then reads from its cursor to the tail itself, falling back to this routing
+        // (without the flag) when that is not clean.
+        if (StateMachine is Observer { IsResumingFromDormancy: true })
+        {
+            await StateMachine.TransitionTo<Observing>();
             return state;
         }
 

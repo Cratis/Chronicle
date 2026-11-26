@@ -7,6 +7,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.Observation;
+using Cratis.Chronicle.Supervision;
 using Orleans.CodeGeneration;
 using Orleans.Concurrency;
 
@@ -20,7 +21,7 @@ namespace Cratis.Chronicle.Observation;
 /// deliberately not part of this grain contract - state transitions are driven from within the observer
 /// implementation, never across a grain reference.
 /// </remarks>
-[Version(9)]
+[Version(12)]
 public interface IObserver : IGrainWithStringKey
 {
     /// <summary>
@@ -38,11 +39,25 @@ public interface IObserver : IGrainWithStringKey
     Task Ensure();
 
     /// <summary>
-    /// Get the definition from the observer.
+    /// Runs the watchdog of the observer: the periodic checks that recover it when it is stuck, release it when idle or
+    /// dormant, and drop clients that are gone.
     /// </summary>
-    /// <returns>The <see cref="ObserverDefinition"/>.</returns>
-    [AlwaysInterleave]
-    Task<ObserverDefinition> GetDefinition();
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called by the <see cref="ISiloSupervisor"/> of the silo hosting the observer when the watchdog is due. It is
+    /// not interleaved, the same as the grain timer it replaces, so it never runs in the middle of another turn.
+    /// </remarks>
+    Task CheckHealth();
+
+    /// <summary>
+    /// Verifies that the appended-events queue still holds the live subscription of the observer, and re-routes the
+    /// observer when it does not.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// Called by the <see cref="ISiloSupervisor"/> in the window after a silo has left the cluster.
+    /// </remarks>
+    Task VerifyLiveSubscriptionAfterDeparture();
 
     /// <summary>
     /// Get the state from the observer.
@@ -50,6 +65,17 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>The <see cref="ObserverState"/>.</returns>
     [AlwaysInterleave]
     Task<ObserverState> GetState();
+
+    /// <summary>
+    /// Get the definition, state, subscription flag and running state change time as one snapshot.
+    /// </summary>
+    /// <returns>The <see cref="ObserverInformationSnapshot"/>.</returns>
+    /// <remarks>
+    /// All values are read in a single grain turn, so they are mutually consistent, unlike separate calls to
+    /// <see cref="GetState"/> and <see cref="IsSubscribed"/>.
+    /// </remarks>
+    [AlwaysInterleave]
+    Task<ObserverInformationSnapshot> GetInformation();
 
     /// <summary>
     /// Set the handled stats for the observer.
@@ -135,7 +161,7 @@ public interface IObserver : IGrainWithStringKey
     /// </summary>
     /// <returns>Collection of <see cref="EventType"/>.</returns>
     [AlwaysInterleave]
-    Task<IEnumerable<EventType>> GetEventTypes();
+    Task<EventTypeSet> GetEventTypes();
 
     /// <summary>
     /// Subscribe to observer.
@@ -152,7 +178,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task Subscribe<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
@@ -177,7 +203,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task SubscribeWithGenerationDelivery<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         EventGenerationDelivery generationDelivery,
         object? subscriberArgs = default,
@@ -201,9 +227,9 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="isReplayable">Whether the observer supports replay.</param>
     /// <param name="filters">Optional event filters.</param>
     /// <returns>The effective merged event types from this non-interleaved grain request. Retired or sealed observers are left unchanged.</returns>
-    Task<IEnumerable<EventType>> SubscribeAdditively<TObserverSubscriber>(
+    Task<EventTypeSet> SubscribeAdditively<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
@@ -220,7 +246,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="eventTypes">The expected event types.</param>
     /// <returns>Whether subscription recovery may be needed.</returns>
     [AlwaysInterleave]
-    Task<bool> NeedsSubscriptionRecovery(IEnumerable<EventType> eventTypes);
+    Task<bool> NeedsSubscriptionRecovery(EventTypeSet eventTypes);
 
     /// <summary>
     /// Recover a missing, failed, or outdated explicitly typed kernel subscription without releasing quarantine or resetting progress.
@@ -239,9 +265,9 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="isReplayable">Whether the observer supports replay.</param>
     /// <param name="filters">Optional event filters.</param>
     /// <returns>The effective event types, including registrations merged in this grain request.</returns>
-    Task<IEnumerable<EventType>> RecoverStalledSubscription<TObserverSubscriber>(
+    Task<EventTypeSet> RecoverStalledSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         object? subscriberArgs = default,
         bool isReplayable = true,
@@ -295,7 +321,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task RestoreClientSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         ConnectedClient connectedClient,
         bool isReplayable = true,
@@ -324,7 +350,7 @@ public interface IObserver : IGrainWithStringKey
     /// <returns>Awaitable task.</returns>
     Task ReconcileSubscription<TObserverSubscriber>(
         ObserverType type,
-        IEnumerable<EventType> eventTypes,
+        EventTypeSet eventTypes,
         SiloAddress siloAddress,
         bool subscribesToAllEvents,
         EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility,
@@ -392,7 +418,7 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="partition">The partition to replay.</param>
     /// <param name="eventTypes">The affected event types to apply.</param>
     /// <returns>Awaitable task.</returns>
-    Task ReplayPartition(Key partition, IEnumerable<EventType> eventTypes);
+    Task ReplayPartition(Key partition, EventTypeSet eventTypes);
 
     /// <summary>
     /// Rewind the observer for a specific partition to a specific sequence number.
@@ -862,4 +888,16 @@ public interface IObserver : IGrainWithStringKey
     /// <param name="batches">The <see cref="ObserverPartitionBatch"/> of each partition in the page, each in sequence order.</param>
     /// <returns>Awaitable task.</returns>
     Task HandlePage(IReadOnlyList<ObserverPartitionBatch> batches);
+
+    /// <summary>
+    /// Runs one watchdog pass and, when the activation was only woken to run it, releases the observer again.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    /// <remarks>
+    /// The safety net of a dormant observer (decision 0034): the appended events queue calls this on a jittered interval, which
+    /// activates the observer from its durable subscription, lets it check that its client is still there and that nothing
+    /// is owed, and releases it again when it is dormant. An activation that has handled events since it was woken keeps its
+    /// ordinary dormancy period instead.
+    /// </remarks>
+    Task RunWatchdogOnce();
 }

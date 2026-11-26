@@ -122,6 +122,78 @@ projection and replay results.
 Both observer benchmarks refuse to run unless their observer is actually subscribed — an unsubscribed
 observer would let the window close on the append alone and quietly report a meaningless number.
 
+### Grain activation (MongoDB; opt-in)
+
+`GrainActivationBenchmark` uses the existing clustering runner and a single in-process silo. It measures
+one real kernel `IEventSequence.GetNextSequenceNumber()` or `IObserver.GetState()` call, not an append,
+catch-up workload, HTTP/gRPC request, or complete startup. Only this suite requires Docker (`mongo:8.2`,
+a single-node replica set); other clustering scenarios retain their existing EphemeralMongo defaults.
+Do not run the local Docker smoke below 27 GiB free disk space.
+
+| Mode | Untimed preparation | Timed operation |
+|---|---|---|
+| `Warm` | Prime and validate the exact target | One read on the same activation |
+| `Cold` | Prime, then await `IManagementGrain.DeactivateGrain` for that exact identity | First read on a new activation, same silo |
+| `PostRestart` | Stop/dispose the silo; deploy a replacement against the same MongoDB; refresh all service/grain references | First read on the replacement silo |
+
+All six method × mode cells use the same fixed dataset shape: ten real `AppendOnlyEvent` events in a
+non-reserved, case-local sequence, plus a separate observer identity with a real persisted definition
+and state (handled count 10, checkpoint 9, next position 10). The observer is disconnected, has no event
+types/subscription, replay or failures, and is not a discoverable client artifact. This exercises the
+actual definition/state storage providers, not the missing-observer fast path or a substitute grain.
+No data is re-seeded after restart. Identities remain fixed within each case.
+
+Provisioning, registration, seeding, priming, readiness, deactivation, host replacement, durability
+checks, evidence and teardown are outside timing. Each invocation performs exactly one read and retains
+its result; the timed task wrapper also enforces a 30-second call deadline. Cleanup checks the returned
+position/checkpoint and durable records. Benchmark-local Orleans context diagnostics reject eager target
+activation before cold/restart timing, require a stable warm activation, exactly one new cold/restart
+activation and a changed host generation after restart. Preparation and teardown failures are recorded
+and propagated, never dropped as outliers.
+
+**PostRestart is a post-crash proxy (silo restart), not a real process crash.** Stop is graceful and may
+flush state. These are idle, already-persisted records; interrupted writes, SIGKILL/crash consistency and
+total restart time are not measured. Same-process JIT/static caches and MongoDB/page caches survive.
+Shared-runner contention also affects results: compare the six cells within a controlled hosted run,
+not against arbitrary workstation timings. No regression threshold is imposed.
+
+From the repository root, build separately, then run the correctness-only six-case BDN Dry smoke:
+
+```bash
+project=Benchmarks/Chronicle.Benchmarks.Clustering/Chronicle.Benchmarks.Clustering.csproj
+dotnet build "$project" -c Release -warnaserror -p:DisableDockerBuild=true -p:CratisProxiesSkip=true -p:CratisProxiesOutputPath=
+export ACTIVATION_ARTIFACTS="$PWD/.ai-work/6045/smoke"
+dotnet run --project "$project" -c Release --no-build -- --filter '*GrainActivationBenchmark*' \
+  --job Dry --invocationCount 1 --unrollFactor 1 --exporters json markdown --artifacts "$ACTIVATION_ARTIFACTS"
+```
+
+For a hosted baseline, use the same built project with these CLI-only counts (no fixed attribute job
+is added, so Dry selects only Dry rather than adding a second job):
+
+```bash
+export ACTIVATION_ARTIFACTS="$PWD/.ai-work/6045/baseline"
+dotnet run --project "$project" -c Release --no-build -- --filter '*GrainActivationBenchmark*' \
+  --launchCount 1 --warmupCount 3 --iterationCount 20 --invocationCount 1 --unrollFactor 1 \
+  --exporters json markdown --artifacts "$ACTIVATION_ARTIFACTS"
+```
+
+The dedicated **Grain activation benchmarks** workflow is `workflow_dispatch` only, with `smoke` and
+`baseline` modes on GitHub-hosted Ubuntu. It builds Release with warnings as errors, requires all six
+successful JSON result cells and matching lifecycle evidence, and writes a Markdown step summary.
+A switcher exit code or artifact directory alone does not prove success. Local runs must likewise be
+checked for six successful cells and lifecycle validation; local numbers are functional evidence only.
+The workflow retains full BenchmarkDotNet JSON/Markdown/logs, `lifecycle/*.jsonl`, command, SHA and
+runtime/Orleans/MongoDB versions for 30 days, including diagnostics on failure. Each successful lifecycle
+record contains the exact grain identity, before/after activation counts and IDs, host generations and
+validated seed/result markers. Failures, including stop/disposal errors, are retained as failure records.
+Existing `benchmarks.yml`/`run.sh` do not execute this clustering suite; Storage has its own workflow.
+
+**SQL extension is deferred.** [#6031](https://github.com/Cratis/Chronicle/issues/6031) already isolates
+activation-related storage reads across providers. Wiring SQL into the full clustering kernel would add
+provider/bootstrap/lifecycle work without isolating Orleans activation overhead more clearly. Revisit
+only if MongoDB results show storage-dominated activation or a SQL-specific activation regression needs
+end-to-end reproduction; these results make no cross-provider equivalence claim.
+
 ### LargeBatchAppendBenchmark
 
 `LargeBatchAppendBenchmark` measures one large `AppendMany` against a single in-process silo — the
@@ -403,6 +475,115 @@ The opt-in `--container-profile` mode compares constrained kernel containers wit
 changing production defaults. Its `plan` subcommand starts no processes. See the
 [container-profile harness guide](Chronicle.Benchmarks/ContainerProfile/README.md) for
 safe builds, the core/full matrices, measurement commands and metric definitions.
+
+## Storage-provider benchmarks
+
+`Chronicle.Benchmarks.Storage` compares the event-sequence storage providers (SQLite, PostgreSQL,
+SQL Server, MongoDB) directly at the storage level, with the Orleans grain layer bypassed. It covers
+single and batched appends, concurrent appends, catch-up reads, unique-constraint reads and the storage
+half of grain activation. Each run records the command count per operation (see the counting rule below), a settings ledger (durability, versions, hardware, machine load) and BenchmarkDotNet JSON
+under `output/<stamp>/<provider>/`.
+
+```bash
+Benchmarks/storage-run.sh --profile smoke --providers sqlite,pg,mongo --repetitions 3
+```
+
+- Profiles: `smoke`, `short` (10k events, 1/8/32 writers, two warmups and ten measured iterations, 256-byte payloads) and `medium` (1M events; needs `--yes-i-know-this-is-long`, exit 2 without it). Both `smoke` and `short` run without confirmation; batch sizes remain 10/100/1,000 and constraint batches 1/50/500.
+- The run refuses to measure when the machine load exceeds `--max-load` (default 0.7 x CPU count) and exits 3.
+  Never compare numbers taken under load; results are comparable only when the ledgers match.
+- Containers need Docker. MongoDB runs as a single-node replica set; other topologies are not implemented.
+- **Baselines come from the `Storage benchmarks` workflow** (`.github/workflows/storage-benchmarks.yml`) on a GitHub-hosted runner, not from a developer machine: a workstation is never quiet enough. It runs the smoke profile on pull requests that touch the harness and offers `smoke` or `short` on demand (`workflow_dispatch`; `medium` needs confirmation and hours). Dispatch defaults to SQLite, PostgreSQL, SQL Server and MongoDB; pull requests omit SQL Server to avoid its image pull and startup cost. The job budget is 45 minutes for smoke and 150 minutes for short, including build and quiet-runner wait time. Short is estimated at 60–90 minutes across all four providers, not a measured runtime; if it exceeds about 75 minutes, split providers across dispatches rather than reducing iterations. The harness enforces the whole-run profile budget (20 minutes for smoke, 120 for short), checking before setup, seed chunks and operations, with a 60-second grace backstop for in-flight work. Exit 4 means the budget expired: completed counted results are kept, the summary explains the cut, and remaining providers are marked not run. The workflow budget leaves time to upload those partial artifacts. BenchmarkDotNet exports JSON only after a benchmark type finishes, so an interrupted type may be absent from `bdn/`; `counts.json`, written in `finally`, is the reliable partial counted record. The workflow waits for the runner to go quiet, uploads the results as the `storage-benchmark-results` artifact and writes the summary table to the job summary. `storage-run.sh` is for checking the harness itself, not for taking baselines.
+- Dispatch accepts a `filter` glob (default `*`), passed unchanged to both BenchmarkDotNet and the counted pass. For example, `*ConcurrentAppendBenchmark.Concurrent*` selects just the concurrent append methods; pull-request runs retain the full smoke suite.
+- Concurrent append cases also export `samples.json` beside `counts.json`, including completed waves in partial runs. Each row carries `caseKey` (provider/scenario/writer count), zero-based `waveIndex` and `writerIndex`, `sequenceIndex`, `launchOffsetMs`, `durationMs` and `succeeded`. Rows are ordered by case, then counted invocation, then writer launch order, never sorted by latency. Sequence indices identify setup-local storage instances, not physical database names: 0 is the shared sequence; writer index + 1 is that writer's dedicated sequence/table. Instances persist across waves of that case, so wave 0 is the first counted append to each target (the counted pass has no warmup). Launch offset is measured from the shared start signal's release to the writer's stopwatch start immediately before its append; duration ends at append completion or failure. Only counted-pass samples are retained, not BenchmarkDotNet warmups or timing invocations. Failed writers have `succeeded: false` and remain errors, excluded from successful-operation counts and latency percentiles. An interrupted, unfinished wave may be absent. For sampled cases, `counts.json` adds `coldLatencyMs` (wave 0) and `warmLatencyMs` (waves ≥1), each with `samples`/`p50`/`p99`/`max`, plus `launchSpreadMs` entries with `waveIndex`/`maxOffsetMs`; the summary shows these alongside overall latency, without changing the existing counts or overall percentiles. Concurrent writers now await one shared start signal after all writer tasks are created, so numbers from before this change are not directly comparable; there is no added warmup, and local smoke results are not performance evidence.
+- Catch-up reads scale independently of activation: smoke uses 500/1,000/2,000 events, short 2,500/5,000/10,000/20,000, medium 10,000/100,000/1,000,000. Provider `scaling.md` reports counted-pass p50, ms per 1,000 seeded events and growth relative to the smallest size; ratios above 1.3 are flagged as super-linear. One completed size cannot establish scaling.
+- Registered fixture schemas now make MongoDB use schema conversion, like SQL. Empty schemas preserve the string payload in both converters. MongoDB read numbers from earlier runs that used raw conversion are not comparable.
+- After measurement, untimed fresh sequences at the selected profile's smallest and largest catch-up sizes capture SQL query plans in `plans.md`; a single-size profile captures it once. SQLite uses `EXPLAIN QUERY PLAN`; PostgreSQL uses `EXPLAIN (ANALYZE, BUFFERS)`; SQL Server replays captured parameterized SELECTs with actual showplan XML and `STATISTICS IO, TIME`. Plans include reported indexes, full scans and table index definitions. SQL Server adds physical operators (seeks, scans and key lookups), estimated/actual rows, per-table logical reads and server CPU/elapsed time. Its index catalog includes type, uniqueness, key ordinals/direction, included columns and filters. Unabridged XML is saved as `plans-sqlserver-<size>-<query>.xml`; replay preserves provider-specific parameter types, precision and scale. MongoDB plans are not captured. Explain errors are reported without failing measurement. Scaling tables are included in provider and combined summaries; query plans are linked from the combined summary.
+- `drain-pages.md` attributes a separate fresh-sequence full drain at those same sizes, outside measured-operation and `counts.json` summaries. Each row records zero-based page index, starting sequence, events returned and `MoveNext` milliseconds. The terminal empty probe is retained but excluded from data-page statistics. Summaries include actual page sizes, median/p90/max page time, first-quarter versus last-quarter median, total wall time and total `MoveNext` time. `MoveNext` includes storage reads, materialization and conversion; DB-read-only time is explicitly not isolated because command interceptors exclude reader consumption. Diagnostics, including seeding, consume the existing run budget and may be incomplete when it expires.
+- Specs: `Chronicle.Benchmarks.Storage.Specs`.
+- A run exits non-zero when any benchmark fails, produces no report, or any measured operation fails.
+
+### Counting rule
+
+Both families count what reaches the database driver, so the numbers are comparable:
+
+- **SQL** is counted by EF Core command and transaction interceptors. They observe commands and never replace
+  the connection, so the kernel sees the provider's own connection type (`SqlConnection`, `NpgsqlConnection`,
+  `SqliteConnection`), which production code such as the schema lock recognizes. Every EF command counts;
+  transaction `Commit` and `Rollback` count as one command each; `BEGIN` is not counted; savepoint operations
+  count under `savepoint`. Known gap: commands the kernel issues directly on the connection (table and index
+  migrations, setup) bypass EF and are not counted; none of them sit on a measured path, and table setup is
+  warmed outside measurement.
+- **MongoDB** is counted from driver command events: every succeeded or failed command counts, including
+  `commitTransaction` and `abortTransaction`. Housekeeping (`hello`, `ping`, authentication, `endSessions`)
+  is ignored.
+- Counting happens in a separate deterministic pass after BenchmarkDotNet's timing run: every case runs
+  its setup and then each benchmark method exactly the profile's iteration count of times. BenchmarkDotNet's
+  jitting, pilot and warmup invocations are never counted, because counting is only on inside that pass.
+- Failed operations never count as operations or events; they are counted as errors and fail the run.
+- The ledger reports the effective connection pool size of each client, not a requested default.
+
+### Separating harness allocations from storage allocations
+
+The executable uses fixed, non-recording schema and identity fixtures. Its SQL host caches immutable
+provider/interceptor options, but creates and disposes a fresh context and scope for each operation.
+It does not reuse a context across overlapping reads. The two registered first-generation schemas
+remain empty, `HasFor` remains true for those schemas, and both converters preserve the string payload.
+The old recording substitutes and linked SQL correctness-test host exist only in the specs as controls.
+This changes the allocation baseline; do not compare new runs directly with pre-cleanup results.
+
+`for_AllocationAttribution` in the storage specs provides cheap allocation diagnostics without
+BenchmarkDotNet or a database container. It compares the control from `500d19c180` with the cleaned
+harness using identical 256-event, 256-byte, 50%-selected datasets. Both SQL arms enable EF service
+provider caching and the same command interceptors with query capture disabled. SQLite uses its real
+storage implementation; MongoDB uses the real `EventConverter` over prebuilt stored events, not a mock
+converter or a server read. Both SQLite drains consume every event in three default-size pages and
+issue six driver commands (one event query and one named-tag query per page).
+
+Each diagnostic performs setup, warmup, measurement and cleanup on one dedicated thread. It samples
+`GC.GetAllocatedBytesForCurrentThread`, checks that every Task (including every cursor `MoveNext`)
+has already completed successfully, and rejects incomplete work instead of blocking and undercounting
+it. Delegates, filters, stored Mongo events and output formatting are outside the sampled window.
+Each ordinary boundary has 64 warmup and 64 measured calls; each event-vector boundary has 16 of each.
+No process-wide GC counter, elapsed-time comparison or timing benchmark is involved. The specs emit
+`ALLOC | ...` rows to their test output; use the scoped storage-spec build and runner rather than
+`storage-run.sh` to reproduce these diagnostics.
+
+One local Release diagnostic on Darwin arm64, .NET SDK 11.0.100, produced the following bytes per call.
+These are allocation observations, **not throughput or latency baselines**. Deltas are legacy minus
+clean and identify removable harness overhead at that boundary. Clean values still include necessary
+context/scope, interception and fixed-fixture interaction costs; they are not exclusive production
+allocation stacks. Inclusive rows overlap and must not be added to the component rows.
+
+| Boundary | Legacy B/call | Clean B/call | Removed harness B/call |
+| --- | ---: | ---: | ---: |
+| Identity lookup | 992.00 | 0.00 | 992.00 |
+| Schema `HasFor` | 296.00 | 0.00 | 296.00 |
+| Schema `GetFor` | 1,112.00 | 0.00 | 1,112.00 |
+| Namespace options construction/reuse only | 40,984.00 | 0.00 | 40,984.00 |
+| `IDatabase` dispatch + context/scope, cached options in both arms | 9,016.12 | 8,512.00 | 504.12 |
+| SQLite `GetState`, inclusive | 107,245.25 | 65,600.00 | 41,645.25 |
+| SQLite `GetTail`, inclusive | 107,298.62 | 69,176.00 | 38,122.62 |
+| SQLite per-type tails, inclusive | 120,452.75 | 82,392.00 | 38,060.75 |
+| SQLite full drain, inclusive | 3,845,294.50 | 3,590,855.00 | 254,439.50 |
+| Mongo `EventConverter`, 256-event vector | 2,736,806.50 | 2,033,664.00 | 703,142.50 |
+| Residual snapshot/`InvocationRecord` construction only, unchanged | 872.00 | 872.00 | 0.00 |
+
+The last row isolates two `CommandCounter.Snapshot` calls, `Since`, a one-element latency array and
+`InvocationRecord` construction. It excludes clocks, statistics accumulation, output and export;
+it is neither total accounting cost nor a storage cost. The no-op allocation probe reports zero bytes.
+
+| Event boundary | Legacy B/event | Clean B/event | Removed harness B/event |
+| --- | ---: | ---: | ---: |
+| SQLite full drain | 15,020.68 | 14,026.78 | 993.90 |
+| Mongo converter only | 10,690.65 | 7,944.00 | 2,746.65 |
+
+The large per-call SQL options allocation was harness-owned. SQLite's remaining 65–82 KB metadata-read
+boundaries and 14 KB/event full drain justify investigating EF query/materialization and
+`EventEntryConverter`/schema-content conversion before changing production code. Mongo's remaining
+7,944 B/event is converter work, including context, generation, schema-content and Task/result
+construction; it does not include a Mongo driver read. These are production follow-up candidates,
+not fixes or exclusive call-stack attribution. Remote runner verification of Mongo full drains and
+both clean/control command counts is still pending; these local rows cannot establish it.
 
 ## Results
 

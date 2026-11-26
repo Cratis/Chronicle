@@ -9,7 +9,7 @@ public class with_a_transition_to_an_unavailable_pin : given.a_compatibility_sub
 {
     void Establish() => _definition = _definition with { Generations = _definition.Generations.Where(_ => _.Generation != _pin.Generation).ToArray() };
 
-    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, new(null));
+    async Task Because() => _deliveryResult = await _subscriber.OnNext(_partition, _events, _context);
 
     [Fact] void should_fail_the_batch() => _deliveryResult.State.ShouldEqual(ObserverSubscriberState.Failed);
     [Fact] void should_not_call_the_http_endpoint() => _receiver.Payloads.ShouldBeEmpty();

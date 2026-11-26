@@ -3,7 +3,6 @@
 
 using Cratis.Chronicle.Integration.GraphProjections.ModelBound;
 using Cratis.Chronicle.Integration.GraphProjections.Organization;
-using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Registrations;
 using context = Cratis.Chronicle.Integration.GraphProjections.when_updating_the_projection_definition.and_an_element_is_removed.context;
 
@@ -39,7 +38,7 @@ public class and_an_element_is_removed(context context) : Given<context>(context
             await EventStore.Projections.Discover();
             await EventStore.Projections.Register();
             var job = await EventStore.Projections.Replay(new ProjectionId("OrgModelBound"));
-            await EventStore.Jobs.WaitTillJobCompletesOrIsDeleted(job);
+            await EventStore.WaitTillReplayed(job);
             await ReadGraph();
         }
     }

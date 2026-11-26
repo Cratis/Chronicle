@@ -64,6 +64,19 @@ public interface ISink
     Task<ExpandoObject?> FindOrDefault(Key key);
 
     /// <summary>
+    /// Find a read model by key for a write made with the given <see cref="SinkWriteMode"/>.
+    /// </summary>
+    /// <param name="key">Key of the read model to find.</param>
+    /// <param name="mode">The <see cref="SinkWriteMode"/> the instance is read for.</param>
+    /// <returns>A read model instance with the data from the source, or null.</returns>
+    /// <remarks>
+    /// For <see cref="SinkWriteMode.FencedGlobal"/> the instance carries the bookkeeping the fenced write is checked against
+    /// (<see cref="WellKnownProperties.Revision"/>, <see cref="WellKnownProperties.Incarnation"/> and <see cref="WellKnownProperties.LastHandledByNamespace"/>).
+    /// The default implementation ignores the mode, as sinks without the concept do.
+    /// </remarks>
+    Task<ExpandoObject?> FindOrDefault(Key key, SinkWriteMode mode) => FindOrDefault(key);
+
+    /// <summary>
     /// Finds a read model by key in the primary container, even while a replay rebuilds another container.
     /// </summary>
     /// <param name="key">Key of the read model to find.</param>
@@ -82,6 +95,26 @@ public interface ISink
     /// For optimal performance, ensure the child property path has an index defined using <c language="csharp">[Index]</c> attribute.
     /// </remarks>
     Task<Option<Key>> TryFindRootKeyByChildValue(PropertyPath childPropertyPath, object childValue);
+
+    /// <summary>
+    /// Find a root containing the child only within the specified read model instance.
+    /// </summary>
+    /// <param name="childPropertyPath">The property path to the child's identifier.</param>
+    /// <param name="childValue">The child identifier to match.</param>
+    /// <param name="rootKey">The root instance to search.</param>
+    /// <returns>The matching root key, or None when the root does not hold the child or scoped lookup is unsupported.</returns>
+    Task<Option<Key>> TryFindRootKeyByChildValueInRoot(PropertyPath childPropertyPath, object childValue, Key rootKey) =>
+        Task.FromResult(Option<Key>.None());
+
+    /// <summary>
+    /// Find the keys of the read models that hold the child a <see cref="ChildRemovedFromAll"/> change would remove.
+    /// </summary>
+    /// <param name="childRemoved">The <see cref="ChildRemovedFromAll"/> change.</param>
+    /// <returns>The keys of every read model holding the child; empty when none does or the sink cannot tell.</returns>
+    /// <remarks>
+    /// Read-only and using the same predicate as the removal. Only used while the projection is watched.
+    /// </remarks>
+    Task<IReadOnlyCollection<Key>> FindKeysHoldingChild(ChildRemovedFromAll childRemoved) => Task.FromResult<IReadOnlyCollection<Key>>([]);
 
     /// <summary>
     /// Update or insert read model based on key.

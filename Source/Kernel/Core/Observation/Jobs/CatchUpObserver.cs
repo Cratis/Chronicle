@@ -7,6 +7,7 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -62,8 +63,16 @@ public class CatchUpObserver(
     }
 
     /// <inheritdoc/>
+    protected override Task OnFailedToPrepare()
+    {
+        JobFailures.FailedToPrepare(ServiceProvider, "catch_up");
+        return base.OnFailedToPrepare();
+    }
+
+    /// <inheritdoc/>
     protected override async Task OnAllStepsCompleted()
     {
+        JobFailures.Completed(ServiceProvider, "catch_up", State.Progress);
         _gauge.Release();
         using var scope = logger.BeginJobScope(JobId, JobKey);
 
@@ -164,10 +173,14 @@ public class CatchUpObserver(
         var keys = index.GetKeys(request.FromEventSequenceNumber);
 
         var keysToCatchUp = new List<Key>();
+        var keysEnumerated = 0;
+        var failedKeysSkipped = 0;
         await foreach (var key in keys)
         {
+            keysEnumerated++;
             if (failedPartitionSet.Contains(key))
             {
+                failedKeysSkipped++;
                 continue;
             }
 
@@ -181,7 +194,17 @@ public class CatchUpObserver(
         {
             // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
             using var observerScope = logger.BeginObserverKeyScope(request.ObserverKey);
-            logger.NoJobStepsPrepared(nameof(CatchUpObserver));
+            logger.CatchUpPreparedNoSteps(
+                keysEnumerated,
+                failedKeysSkipped,
+                readerScope.EventTypes.Count,
+                JobKey.Scope,
+                JobKey.Namespace,
+                request.ObserverKey.EventSequenceId,
+                request.FromEventSequenceNumber,
+                request.ReaderScope is null,
+                readerScope.IsWildcard,
+                string.Join(", ", readerScope.EventTypes));
         }
 
         await observer.RegisterCatchingUpPartitions(keysToCatchUp);

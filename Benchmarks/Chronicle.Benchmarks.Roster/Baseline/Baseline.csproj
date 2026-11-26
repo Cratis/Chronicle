@@ -4,6 +4,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS0436</NoWarn>
+    <BaselineRevision Condition="'$(BaselineRevision)' == ''">a5e06dbf0e</BaselineRevision>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../../Source/Kernel/Core/Core.csproj" />
@@ -13,8 +14,6 @@
     <Compile Include="$(IntermediateOutputPath)AdministratorRosterLogging.cs" />
   </ItemGroup>
   <Target Name="ExtractCachedBaseline" BeforeTargets="CoreCompile">
-    <MakeDir Directories="$(IntermediateOutputPath)" />
-    <Exec Command="git show a5e06dbf0e:Source/Kernel/Core/Security/AdministratorRoster.cs &gt; &quot;$(IntermediateOutputPath)AdministratorRoster.cs&quot;" />
-    <Exec Command="git show a5e06dbf0e:Source/Kernel/Core/Security/AdministratorRosterLogging.cs &gt; &quot;$(IntermediateOutputPath)AdministratorRosterLogging.cs&quot;" />
+    <Exec WorkingDirectory="$(MSBuildThisFileDirectory)" Command="node &quot;$(MSBuildThisFileDirectory)extract-baseline.mjs&quot; &quot;$(BaselineRevision)&quot; &quot;$(IntermediateOutputPath)&quot;" />
   </Target>
 </Project>

@@ -17,6 +17,37 @@ public record EncryptionKeyFenceState(EncryptionKeyErasure Erasure, IReadOnlyLis
     /// <summary>Gets an empty, open guard.</summary>
     public static EncryptionKeyFenceState Empty => new(new(0u, [], true), [], []);
 
+    /// <summary>Seal the persisted bytes, including publication and import metadata.</summary>
+    /// <param name="state">The serialized state.</param>
+    /// <returns>The integrity digest.</returns>
+    public static string Seal(string state) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(state)));
+
+    /// <summary>Validate and decode a stored state; malformed or downgraded rows fail closed.</summary>
+    /// <param name="identifier">The subject.</param>
+    /// <param name="version">The stored CAS version.</param>
+    /// <param name="state">The stored JSON.</param>
+    /// <param name="seal">The stored seal.</param>
+    /// <returns>The validated state.</returns>
+    /// <exception cref="EncryptionKeyFenceUnavailable">The stored metadata is malformed or unsealed.</exception>
+    public static EncryptionKeyFenceState Read(EncryptionKeyIdentifier identifier, ulong version, string state, string seal)
+    {
+        try
+        {
+            var decoded = JsonSerializer.Deserialize<EncryptionKeyFenceState>(state);
+            if (decoded?.Erasure is null || decoded.Publications is null || decoded.LegacyImports is null ||
+                decoded.Erasure.Version != version || !Seal(state).Equals(seal, StringComparison.Ordinal))
+            {
+                throw new EncryptionKeyFenceUnavailable(identifier);
+            }
+
+            return decoded;
+        }
+        catch (JsonException)
+        {
+            throw new EncryptionKeyFenceUnavailable(identifier);
+        }
+    }
+
     /// <summary>Whether a version is covered by the current boundary.</summary>
     /// <param name="revision">The version.</param>
     /// <returns>Whether it is covered.</returns>
@@ -53,37 +84,6 @@ public record EncryptionKeyFenceState(EncryptionKeyErasure Erasure, IReadOnlyLis
     /// <summary>Serialize the complete state for the database CAS.</summary>
     /// <returns>The JSON state.</returns>
     public string Serialize() => JsonSerializer.Serialize(this);
-
-    /// <summary>Seal the persisted bytes, including publication and import metadata.</summary>
-    /// <param name="state">The serialized state.</param>
-    /// <returns>The integrity digest.</returns>
-    public static string Seal(string state) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(state)));
-
-    /// <summary>Validate and decode a stored state; malformed or downgraded rows fail closed.</summary>
-    /// <param name="identifier">The subject.</param>
-    /// <param name="version">The stored CAS version.</param>
-    /// <param name="state">The stored JSON.</param>
-    /// <param name="seal">The stored seal.</param>
-    /// <returns>The validated state.</returns>
-    /// <exception cref="EncryptionKeyFenceUnavailable">The stored metadata is malformed or unsealed.</exception>
-    public static EncryptionKeyFenceState Read(EncryptionKeyIdentifier identifier, ulong version, string state, string seal)
-    {
-        try
-        {
-            var decoded = JsonSerializer.Deserialize<EncryptionKeyFenceState>(state);
-            if (decoded?.Erasure is null || decoded.Publications is null || decoded.LegacyImports is null ||
-                decoded.Erasure.Version != version || !Seal(state).Equals(seal, StringComparison.Ordinal))
-            {
-                throw new EncryptionKeyFenceUnavailable(identifier);
-            }
-
-            return decoded;
-        }
-        catch (JsonException)
-        {
-            throw new EncryptionKeyFenceUnavailable(identifier);
-        }
-    }
 
     static bool SameBoundary(EncryptionKeyErasureRequest old, EncryptionKeyErasureRequest current) =>
         current.RequestId == old.RequestId && current.Through == old.Through && current.Lifecycle == old.Lifecycle &&

@@ -13,4 +13,6 @@ namespace Cratis.Chronicle.Imports;
 /// <param name="Kind">The <see cref="ImportEventOutcomeKind"/>.</param>
 /// <param name="SequenceNumber">The sequence number the event has in the log, new or already stored.</param>
 /// <param name="Reasons">Why the event was rejected, when it was.</param>
-public record ImportEventOutcome(long Index, string EventType, ImportEventOutcomeKind Kind, EventSequenceNumber SequenceNumber, IEnumerable<string> Reasons);
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Imports.ImportEventOutcome")]
+public record ImportEventOutcome([Id(0)] long Index, [Id(1)] string EventType, [Id(2)] ImportEventOutcomeKind Kind, [Id(3)] EventSequenceNumber SequenceNumber, [Id(4)] IEnumerable<string> Reasons);

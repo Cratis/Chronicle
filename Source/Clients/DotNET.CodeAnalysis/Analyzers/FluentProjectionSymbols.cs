@@ -83,26 +83,29 @@ sealed class FluentProjectionSymbols
         var subtractBuilder = compilation.GetTypeByMetadataName($"{Namespace}.ISubtractBuilder`4");
         var addChildBuilder = compilation.GetTypeByMetadataName($"{Namespace}.IAddChildBuilder`2");
 
-        return projectionBuilder is null ||
-               childrenBuilder is null ||
-               readModelPropertiesBuilder is null ||
-               joinBuilder is null ||
-               setBuilder is null ||
-               typedSetBuilder is null ||
-               addBuilder is null ||
-               subtractBuilder is null ||
-               addChildBuilder is null
-            ? null
-            : new(
-                projectionBuilder,
-                childrenBuilder,
-                readModelPropertiesBuilder,
-                joinBuilder,
-                setBuilder,
-                typedSetBuilder,
-                addBuilder,
-                subtractBuilder,
-                addChildBuilder);
+        if (projectionBuilder is null ||
+            childrenBuilder is null ||
+            readModelPropertiesBuilder is null ||
+            joinBuilder is null ||
+            setBuilder is null ||
+            typedSetBuilder is null ||
+            addBuilder is null ||
+            subtractBuilder is null ||
+            addChildBuilder is null)
+        {
+            return null;
+        }
+
+        return new(
+            projectionBuilder,
+            childrenBuilder,
+            readModelPropertiesBuilder,
+            joinBuilder,
+            setBuilder,
+            typedSetBuilder,
+            addBuilder,
+            subtractBuilder,
+            addChildBuilder);
     }
 
     /// <summary>

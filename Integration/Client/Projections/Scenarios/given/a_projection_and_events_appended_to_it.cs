@@ -128,17 +128,7 @@ public class a_projection_and_events_appended_to_it<TProjection, TReadModel>(Chr
             return;
         }
 
-        var deadline = DateTime.UtcNow.Add(ReadModelVisibilityTimeout);
-        while (true)
-        {
-            Result = await GetReadModelResult();
-            if (Result is not null || DateTime.UtcNow >= deadline)
-            {
-                return;
-            }
-
-            await Task.Delay(50);
-        }
+        Result = await ReadinessWait.Until(GetReadModelResult, model => model is not null, ReadModelVisibilityTimeout);
     }
 
     /// <summary>

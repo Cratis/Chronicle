@@ -251,8 +251,7 @@ What Stage admits: `renderable-subset.md`.
 | Rendering | `cratis render` | Separate admission, publication, target build and target tests (V5) |
 
 Source validation does not bind or run attached code. Reference execution is in-memory and
-does not run opaque attachments or external services. CLI-derived specification IDs need not
-match persisted MCP identities after renames; use MCP for identity-stable selection. A folder
+does not run opaque attachments or external services. In a folder with `.screenplay/identities.json`, `test`, `export`, `diff` and `rename` use the persisted identities the MCP server uses; without it, or when the folder drifted, `test` uses address-derived ids (see [export, compare and rename](model-export-diff-rename.md#persisted-identities)). A folder
 compiles as one application: a standalone file includes its imports, not unimported siblings,
 so keep the application root as the input for scoped checks and never treat a clean fragment
 or scoped result as whole-application success.

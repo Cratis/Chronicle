@@ -67,7 +67,7 @@ public class and_an_unchanged_projection_is_skipped_by_a_pass_during_retirement 
     void should_subscribe_the_unchanged_projection() =>
         _observerGrain.Received().ReconcileSubscription<IProjectionObserverSubscriber>(
             ObserverType.Projection,
-            Arg.Any<IEnumerable<EventType>>(),
+            Arg.Any<EventTypeSet>(),
             Arg.Any<SiloAddress>(),
             Arg.Any<bool>(),
             Arg.Any<EventGenerationDelivery>(),

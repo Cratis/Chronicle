@@ -1,8 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
+using Cratis.Choreography.Storage.Jobs;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Metrics;
+using Cratis.Monads;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Observation.for_Observer.given;
@@ -29,6 +33,22 @@ public class an_observer_with_skip_detection : an_observer_with_subscription_for
     protected override IMeter<Observer> CreateMeter() => new Meter<Observer>(ObserverMetricsRecorder.SharedMeter);
 
     protected override ILogger<Observer> CreateLogger() => _recordedLogs;
+
+    /// <summary>
+    /// Makes partition jobs started by the jobs manager visible to subsequent persisted-job reconciliation.
+    /// </summary>
+    protected void PersistStartedPartitionCatchUps()
+    {
+        var jobs = new List<JobState>();
+        _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
+            .Returns(call =>
+            {
+                var job = new JobState { Id = JobId.New(), Status = JobStatus.Running, Request = call.Arg<CatchUpObserverPartitionRequest>() };
+                jobs.Add(job);
+                HasOutstandingJobs([.. jobs]);
+                return Task.FromResult(Result<JobId, StartJobError>.Success(job.Id));
+            });
+    }
 
     void Destroy() => _metrics.Dispose();
 }

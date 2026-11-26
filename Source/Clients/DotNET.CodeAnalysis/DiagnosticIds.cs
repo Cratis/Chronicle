@@ -89,6 +89,26 @@ public static class DiagnosticIds
     public const string BatchMethodMatchesUnobservedEventType = "CHR0077";
 
     /// <summary>
+    /// A graph view is anchored at a type that is not a node.
+    /// </summary>
+    public const string GraphViewRootMustBeNode = "CHR0078";
+
+    /// <summary>
+    /// A relation of a graph view follows a type that is not an edge.
+    /// </summary>
+    public const string GraphViewRelationMustFollowEdge = "CHR0079";
+
+    /// <summary>
+    /// A relation of a graph view leads to a type that is not a view.
+    /// </summary>
+    public const string GraphViewRelationTargetMustBeView = "CHR0080";
+
+    /// <summary>
+    /// A graph view is also a node or an edge.
+    /// </summary>
+    public const string GraphViewCannotBeNodeOrEdge = "CHR0081";
+
+    /// <summary>
     /// Event type must have EventType attribute when appended to event sequence.
     /// </summary>
     public const string EventTypeMustHaveAttributeWhenAppended = "CHR0001";
@@ -277,7 +297,7 @@ public static class DiagnosticIds
     public const string NonAwaitedAssertion = "CHR0039";
 
     /// <summary>
-    /// One member carries several [SetFromContext] for the same event type, so all but the last are discarded.
+    /// One member carries several [SetFromContext] or [SetFromEventSourceId] mappings for the same event type, so all but the last are discarded.
     /// </summary>
     public const string DuplicateSetFromContextForSameEventType = "CHR0040";
 
@@ -388,4 +408,19 @@ public static class DiagnosticIds
     /// A self-reducer read model has conflicting visible builder ownership.
     /// </summary>
     public const string ReadModelBuilderOwnershipMustBeUnambiguous = "CHR0061";
+
+    /// <summary>
+    /// A scenario terminal task is discarded.
+    /// </summary>
+    public const string NonAwaitedScenarioTerminal = "CHR0082";
+
+    /// <summary>
+    /// An otherwise eligible reactor handler returns async void.
+    /// </summary>
+    public const string ReactorMethodMustNotBeAsyncVoid = "CHR0083";
+
+    /// <summary>
+    /// An event type at generation 2 or higher is missing a migrator for one or more of its generation steps.
+    /// </summary>
+    public const string EventTypeGenerationMustHaveMigrator = "CHR0084";
 }

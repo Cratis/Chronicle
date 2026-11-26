@@ -42,7 +42,8 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
             @event.IsReplayable,
             @event.IsActive)
         {
-            GenerationDelivery = @event.GenerationDelivery
+            GenerationDelivery = @event.GenerationDelivery,
+            Signing = @event.Signing
         };
 
         var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
@@ -153,6 +154,20 @@ public class WebhookReactor(IGrainFactory grainFactory, ILogger<WebhookReactor> 
         var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
         var definition = (await webhooksManager.GetWebhookDefinitions()).Single(_ => _.Identifier == webhookId);
         await webhooksManager.Update(definition with { GenerationDelivery = @event.GenerationDelivery, EventTypes = @event.EventTypes });
+    }
+
+    /// <summary>
+    /// Handles a signing policy change without changing the event subscription.
+    /// </summary>
+    /// <param name="event">The event containing the signing policy.</param>
+    /// <param name="eventContext">The context of the event.</param>
+    /// <returns>Awaitable task.</returns>
+    public async Task SigningSet(SigningSetForWebhook @event, EventContext eventContext)
+    {
+        var webhookId = new WebhookId(eventContext.EventSourceId.Value);
+        var webhooksManager = grainFactory.GetGrain<IWebhooks>(eventContext.EventStore.Value);
+        var definition = (await webhooksManager.GetWebhookDefinitions()).Single(_ => _.Identifier == webhookId);
+        await webhooksManager.Update(definition with { Signing = @event.Signing });
     }
 
     /// <summary>

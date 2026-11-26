@@ -7,6 +7,7 @@ using System.Text;
 using Cratis.Arc.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.UniqueConstraints;
@@ -34,38 +35,21 @@ public class UniqueConstraintMigrator(
     static readonly ConcurrentDictionary<string, SemaphoreSlim> _migrationLocks = new();
 
     /// <inheritdoc/>
-    public async Task EnsureTableMigrated(string tableName, UniqueConstraintDbContext context)
+    public Task EnsureTableMigrated(string tableName, UniqueConstraintDbContext context) => EnsureMigrated(context, tableName, async () =>
     {
-        var cacheKey = $"{context.Database.GetConnectionString()}:{tableName}:value-unique";
-        if (_indexMigrations.ContainsKey(cacheKey))
-        {
-            return;
-        }
-
-        var migrationLock = _migrationLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
-        await migrationLock.WaitAsync();
-        try
-        {
-            if (_indexMigrations.ContainsKey(cacheKey))
-            {
-                return;
-            }
-
-            await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, (ctx, name) => AddSubjectColumn(tableMigrator, ctx, name));
-            await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(tableName, context, logger);
-
-            // A duplicate fallback stays cached until the next process start (or an explicit reset).
-            _indexMigrations.TryAdd(cacheKey, true);
-        }
-        finally
-        {
-            migrationLock.Release();
-        }
-    }
+        await tableMigrator.EnsureTableMigrated(tableName, context, CreateTable, (ctx, name) => AddSubjectColumn(tableMigrator, ctx, name));
+        await using var transaction = context.Database.IsSqlServer() && context.Database.CurrentTransaction is null ? await context.Database.BeginTransactionAsync() : null;
+        await UniqueConstraintOrdinalColumns.EnsureMigrated(context, tableName);
+        await UniqueConstraintValueIndexMigration.EnsureValueIndexIsUnique(tableName, context, logger);
+        if (transaction is not null) await transaction.CommitAsync();
+    });
 
     /// <inheritdoc/>
-    public Task EnsureValuesTableMigrated(string tableName, UniqueConstraintValuesDbContext context) =>
-        valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable, (ctx, name) => AddSubjectColumn(valuesTableMigrator, ctx, name));
+    public Task EnsureValuesTableMigrated(string tableName, UniqueConstraintValuesDbContext context) => EnsureMigrated(context, tableName, async () =>
+    {
+        await valuesTableMigrator.EnsureTableMigrated(tableName, context, CreateValuesTable, (ctx, name) => AddSubjectColumn(valuesTableMigrator, ctx, name));
+        await UniqueConstraintOrdinalColumns.EnsureMigrated(context, tableName);
+    });
 
     /// <inheritdoc/>
     public void ClearMigrationCache(string connectionStringPrefix)
@@ -106,6 +90,27 @@ public class UniqueConstraintMigrator(
         return name[..prefixLength] + suffix;
     }
 
+    static async Task EnsureMigrated(DbContext context, string tableName, Func<Task> migrate)
+    {
+        var cacheKey = $"{context.Database.GetConnectionString()}:{tableName}:value-unique:ordinal-v1";
+        if (_indexMigrations.ContainsKey(cacheKey)) return;
+
+        var migrationLock = _migrationLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await migrationLock.WaitAsync();
+        try
+        {
+            if (_indexMigrations.ContainsKey(cacheKey)) return;
+            await DatabaseSchemaLock.Run(context, migrate);
+
+            // A duplicate fallback stays cached until the next process start (or an explicit reset).
+            _indexMigrations.TryAdd(cacheKey, true);
+        }
+        finally
+        {
+            migrationLock.Release();
+        }
+    }
+
     /// <summary>
     /// Adds the nullable subject column and its index to a table created before claims recorded their subject.
     /// </summary>
@@ -137,42 +142,45 @@ public class UniqueConstraintMigrator(
         }
     }
 
-    async Task CreateValuesTable(UniqueConstraintValuesDbContext context, string tableName)
+    static Task CreateClaimTable<TContext>(ITableMigrator<TContext> migrator, TContext context, string tableName, bool perValue)
+        where TContext : DbContext
     {
         var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
         migrationBuilder.CreateTable(
             name: tableName,
-            columns: table => new
+            columns: columns => new
             {
-                Value = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false),
-                Subject = table.StringColumn(migrationBuilder, maxLength: SubjectMaxLength, nullable: true)
+                EventSourceId = columns.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
+                Value = perValue || context.Database.IsSqlServer()
+                    ? columns.StringColumn(migrationBuilder, maxLength: 200, nullable: false)
+                    : columns.StringColumn(migrationBuilder, nullable: false),
+                SequenceNumber = columns.NumberColumn<decimal>(migrationBuilder, nullable: false),
+                Subject = columns.StringColumn(migrationBuilder, maxLength: SubjectMaxLength, nullable: true)
             },
-            constraints: table => table.PrimaryKey("PK_" + tableName, _ => _.Value));
-        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_EventSourceId", table: tableName, column: "EventSourceId");
+            constraints: table =>
+            {
+                if (perValue) table.PrimaryKey("PK_" + tableName, row => row.Value);
+                else table.PrimaryKey("PK_" + tableName, row => row.EventSourceId);
+            });
+        var indexed = perValue ? "EventSourceId" : "Value";
+        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_" + indexed, table: tableName, column: indexed, unique: !perValue);
         migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
-        await valuesTableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        if (context.Database.IsSqlServer())
+        {
+            foreach (var column in migrationBuilder.Operations.OfType<CreateTableOperation>().Single().Columns.Where(column => column.Name == "EventSourceId" || column.Name == "Value"))
+            {
+                column.Collation = UniqueConstraintOrdinalColumns.SqlServerCollation;
+            }
+        }
+        return migrator.ExecuteMigrationOperations(context, migrationBuilder);
     }
 
-    async Task CreateTable(UniqueConstraintDbContext context, string tableName)
+    Task CreateValuesTable(UniqueConstraintValuesDbContext context, string tableName) =>
+        CreateClaimTable(valuesTableMigrator, context, tableName, true);
+
+    Task CreateTable(UniqueConstraintDbContext context, string tableName)
     {
         logger.CreatingUniqueConstraintTable(tableName);
-        var migrationBuilder = new MigrationBuilder(context.Database.ProviderName);
-        migrationBuilder.CreateTable(
-            name: tableName,
-            columns: table => new
-            {
-                EventSourceId = table.StringColumn(migrationBuilder, maxLength: 200, nullable: false),
-                Value = context.Database.IsSqlServer()
-                    ? table.StringColumn(migrationBuilder, maxLength: 200, nullable: false)
-                    : table.StringColumn(migrationBuilder, nullable: false),
-                SequenceNumber = table.NumberColumn<decimal>(migrationBuilder, nullable: false),
-                Subject = table.StringColumn(migrationBuilder, maxLength: SubjectMaxLength, nullable: true)
-            },
-            constraints: table => table.PrimaryKey("PK_" + tableName, x => x.EventSourceId));
-        migrationBuilder.CreateIndex(name: "IX_" + tableName + "_Value", table: tableName, column: "Value", unique: true);
-        migrationBuilder.CreateIndex(name: SubjectIndexName(tableName), table: tableName, column: SubjectColumn);
-        await tableMigrator.ExecuteMigrationOperations(context, migrationBuilder);
+        return CreateClaimTable(tableMigrator, context, tableName, false);
     }
 }

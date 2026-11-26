@@ -86,6 +86,16 @@ public partial class Observer
                 return;
             }
 
+            if (error?.Value is CannotResumeJobError.JobCannotBeResumed)
+            {
+                // The job reads as running but all that is left of it is stopped steps (a shutdown cancelled them before the job
+                // recorded it). Automatic resume only restarts scheduled or running steps, so this job can never run again, yet it
+                // still counts as live and keeps the observer from replaying: stop it, and the watchdog starts a fresh one.
+                logger.StoppingObserverJobThatCannotBeResumed(id);
+                await _jobsManager.Stop(id);
+                return;
+            }
+
             logger.StalledObserverJobNotResumed(id, error?.Value.ToString() ?? "unknown");
         }
         catch (Exception exception)

@@ -176,11 +176,15 @@ invoking it, and its failed partitions are discarded. Use it only when you inten
 
 It is the opposite of a replay: nothing the observer already built is reset, so whatever the skipped events would have
 done is missing from it. An observer that is replaying cannot be fast forwarded until the replay completes, and events
-appended after the tail was read are handled as normal.
+appended after the tail was read are handled as normal. The command is accepted as a job and returns at once with the outcome `Accepted`, even while the observer is busy; an observer that is replaying, retired or removed makes the job fail with that reason.
 
 - Workbench: select the observer and choose **Fast forward**.
 - CLI: `cratis chronicle observers fast-forward <observer-id>`.
 - Clients: `IReactors`, `IReducers` and `IProjections` in .NET expose `FastForward`. TypeScript, Kotlin, Elixir and Go provide fast-forwarding through their observer administration APIs; method signatures differ by client.
+
+## Handled event counts are approximate
+
+The handled event count an observer reports is a diagnostic statistic, not exact bookkeeping. It can lag behind or drift from the events actually handled, and after an ambiguous storage acknowledgment it can over-count. The kernel does not use it to decide what to deliver, catch up or replay; those decisions use event sequence positions. Do not use it for billing, as proof of exact completion, or as proof of delivery.
 
 ## Removing an observer
 

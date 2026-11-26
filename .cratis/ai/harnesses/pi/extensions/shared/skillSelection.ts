@@ -28,8 +28,34 @@ function catalog(): Profile[] | undefined {
 }
 
 function supportsLanguage(profile: Profile, languages: Set<string>): boolean {
-    if (!profile.languages?.length) return true;
+    if (!languages.size || !profile.languages?.length) return true;
     return profile.languages.some(language => language === 'language-agnostic' || languages.has(language));
+}
+
+function profileForId(profiles: Profile[], selection: { id: string; allowUnknown: boolean }): Profile {
+    const profile = profiles.find(candidate => candidate.id === selection.id);
+    if (profile) return profile;
+    if (!selection.allowUnknown) throw new Error(`Unknown Cratis AI profile '${selection.id}'.`);
+    return { id: selection.id };
+}
+
+function resolveProfiles(configuration: AiConfiguration, profiles: Profile[], allowUnknown: boolean): Set<string> {
+    const languages = new Set(configuration.languages ?? []);
+    const selected = new Set<string>();
+    const select = (id: string, explicitSelection: boolean): void => {
+        const profile = profileForId(profiles, { id, allowUnknown });
+        if (!explicitSelection && !supportsLanguage(profile, languages)) return;
+        if (selected.has(id)) return;
+        selected.add(id);
+        profile.composes?.forEach(child => select(child, false));
+    };
+    configuration.profiles?.forEach(profile => select(profile, true));
+    return selected;
+}
+
+/** Effective rule profiles, retaining explicit custom profile IDs when they are not in the catalog. */
+export function selectedProfileIds(configuration: AiConfiguration): Set<string> {
+    return resolveProfiles(configuration, catalog() ?? [], true);
 }
 
 /**
@@ -50,17 +76,7 @@ export function selectedSkillNames(cwd: string): string[] | undefined {
             return [...new Set(profiles.flatMap(profile => profile.availableTargets ?? []))].sort();
         }
         const configuration = JSON.parse(readFileSync(configurationPath, 'utf8')) as AiConfiguration;
-        const languages = new Set(configuration.languages ?? []);
-        const selected = new Set<string>();
-        const select = (id: string, explicitSelection: boolean): void => {
-            const profile = profiles.find(candidate => candidate.id === id);
-            if (!profile) throw new Error(`Unknown Cratis AI profile '${id}'.`);
-            if (!explicitSelection && !supportsLanguage(profile, languages)) return;
-            if (selected.has(id)) return;
-            selected.add(id);
-            profile.composes?.forEach(child => select(child, false));
-        };
-        configuration.profiles?.forEach(profile => select(profile, true));
+        const selected = resolveProfiles(configuration, profiles, false);
         return [...new Set(profiles.filter(profile => selected.has(profile.id)).flatMap(profile => profile.availableTargets ?? []))].sort();
     } catch {
         return undefined;

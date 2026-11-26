@@ -22,4 +22,14 @@ public class FederationLimits
     /// Gets or inits the maximum number of content bytes a link may be served per second. Defaults to 16 MiB.
     /// </summary>
     public long MaxBytesPerSecond { get; init; } = 16 * 1024 * 1024;
+
+    /// <summary>
+    /// Gets or inits the maximum number of content bytes in one batch a dialer delivers to this kernel. Defaults to 16 MiB.
+    /// </summary>
+    public long MaxBatchBytes { get; init; } = 16 * 1024 * 1024;
+
+    /// <summary>
+    /// Gets or inits the maximum number of content bytes in one event a dialer delivers to this kernel. Defaults to 1 MiB.
+    /// </summary>
+    public int MaxEventContentBytes { get; init; } = 1024 * 1024;
 }

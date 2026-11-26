@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Concepts.Observation.Reducers;
+using Cratis.Chronicle.Concepts.ReadModels;
 
 namespace Cratis.Chronicle.Storage.Observation.Reducers;
 
@@ -15,6 +16,13 @@ public interface IReducerDefinitionsStorage
     /// </summary>
     /// <returns>A collection of <see cref="ReducerDefinition"/>.</returns>
     Task<IEnumerable<ReducerDefinition>> GetAll();
+
+    /// <summary>
+    /// Check whether a reducer targets the read model.
+    /// </summary>
+    /// <param name="readModel">The target read model.</param>
+    /// <returns>Whether a reducer targets the read model.</returns>
+    Task<bool> HasForReadModel(ReadModelIdentifier readModel);
 
     /// <summary>
     /// Check if a <see cref="ReducerDefinition"/> exists by its <see cref="ReducerId"/>.

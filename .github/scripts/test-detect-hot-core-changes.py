@@ -3,8 +3,12 @@
 
 """Check the hot-core summary for ordinary and requested integration runs."""
 
+from contextlib import redirect_stdout
 import importlib.util
+import io
 from pathlib import Path
+import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -17,7 +21,7 @@ spec.loader.exec_module(detector)
 class HotCoreContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.root = detector.git(Path(__file__).parent, "rev-parse", "--show-toplevel").strip()
+        cls.root = SCRIPT.resolve().parents[2]
         cls.contract = detector.read_contract(cls.root)
 
     def test_5275_runtime_paths_are_hot_core(self):
@@ -65,6 +69,39 @@ class HotCoreContract(unittest.TestCase):
         paths = ["Source/Kernel/Core/Observation/Observer.cs", "Source/Kernel/Storage.Sql/Sinks/Sink.cs"]
         self.assertEqual({"Observer handling": [paths[0]], "SQL sink": [paths[1]]},
                          detector.matches(self.contract, paths + paths))
+
+
+class HotCorePolicy(unittest.TestCase):
+    def test_narrowed_contract_in_data_checkout_is_ignored(self):
+        trusted = SCRIPT.resolve().parents[2]
+        with tempfile.TemporaryDirectory() as directory:
+            policy = Path(directory, ".github")
+            policy.mkdir()
+            (policy / "hot-core-paths.txt").write_text("# area: SQL\nSource/Kernel/Storage.Sql/**\n")
+            for options in ([], ["--policy-root", str(trusted)]):
+                with self.subTest(options=options), patch.object(detector, "git", return_value=directory), \
+                        patch.object(sys, "argv", [str(SCRIPT), "--files-from", "-", *options]), \
+                        patch.object(sys, "stdin", io.StringIO("Source/Kernel/Storage/EventStore.cs\n")), \
+                        patch.object(detector, "emit"), patch.object(detector, "output") as output:
+                    detector.main()
+                    output.assert_called_once_with("touched", "true")
+
+    def test_verify_uses_trusted_contract_and_owners_but_data_tracked_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory, "data")
+            trusted = Path(directory, "gate-tools")
+            for checkout in (data, trusted):
+                (checkout / ".github").mkdir(parents=True)
+            (data / detector.CONTRACT).write_text("# area: SQL\nSource/Kernel/Storage.Sql/**\n")
+            (data / detector.CODEOWNERS).write_text("")
+            (trusted / detector.CONTRACT).write_text("# area: Storage\nSource/Kernel/Storage/**\n")
+            (trusted / detector.CODEOWNERS).write_text("/Source/Kernel/Storage/ @Cratis/maintainers\n")
+            with patch.object(detector, "git", return_value=str(data)), \
+                    patch.object(detector, "tracked_files", return_value=["Source/Kernel/Storage/EventStore.cs"]) as tracked, \
+                    patch.object(sys, "argv", [str(SCRIPT), "--verify", "--policy-root", str(trusted)]), \
+                    redirect_stdout(io.StringIO()):
+                detector.main()
+                tracked.assert_called_once_with(str(data))
 
 
 class HotCoreSummary(unittest.TestCase):

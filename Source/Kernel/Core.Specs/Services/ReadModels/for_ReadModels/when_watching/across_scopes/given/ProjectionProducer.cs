@@ -7,7 +7,6 @@ using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
@@ -103,7 +102,7 @@ public class ProjectionProducer
             ReadModelOwner.Client,
             ReadModelSource.Code,
             ReadModelObserverType.Projection,
-            ReadModelObserverIdentifier.Unspecified,
+            definition.Identifier.Value,
             SinkDefinition.None,
             new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = new() },
             []);
@@ -124,7 +123,7 @@ public class ProjectionProducer
         var projection = Substitute.For<EngineProjection>();
         projection.Accepts(Arg.Any<EventType>()).Returns(true);
         var factory = Substitute.For<IProjectionFactory>();
-        factory.Create(_key.EventStore, _key.Namespace, Arg.Any<ProjectionDefinition>(), readModel, Arg.Any<IEnumerable<EventTypeSchema>>()).Returns(projection);
+        factory.Create(_key.EventStore, _key.Namespace, Arg.Any<ProjectionDefinition>(), readModel).Returns(projection);
         silo.AddService(factory);
         silo.AddService(Substitute.For<EngineProjectionsManager>());
 

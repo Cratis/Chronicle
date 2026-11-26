@@ -7,7 +7,11 @@ public class with_the_default_budget : Specification
 {
     TimeSpan _effective;
 
-    void Because() => _effective = ShutdownDrainBudget.EffectiveTimeout(new ChronicleOptions().Shutdown.DrainTimeout, TimeSpan.FromSeconds(10));
+    void Because()
+    {
+        var shutdown = new Shutdown();
+        _effective = ShutdownDrainBudget.EffectiveTimeout(shutdown.DrainTimeout, shutdown.HostShutdownTimeout, shutdown.HostShutdownReserve);
+    }
 
-    [Fact] void should_reserve_two_seconds_for_host_shutdown() => _effective.ShouldEqual(TimeSpan.FromSeconds(8));
+    [Fact] void should_preserve_the_eight_second_drain() => _effective.ShouldEqual(TimeSpan.FromSeconds(8));
 }

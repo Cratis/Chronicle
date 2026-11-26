@@ -9,6 +9,8 @@ namespace Cratis.Chronicle.Concepts.Observation;
 /// <summary>
 /// Represents the state of an attempt of a failed partition. This includes representing the initial attempt that caused it.
 /// </summary>
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Observation.FailedPartitionAttempt")]
 public record FailedPartitionAttempt
 {
     /// <summary>
@@ -19,21 +21,25 @@ public record FailedPartitionAttempt
     /// <summary>
     /// Gets or sets when the attempt occurred.
     /// </summary>
+    [Id(0)]
     public DateTimeOffset Occurred { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
     /// Gets or sets the <see cref="EventSequenceNumber"/> for the event that caused the failure.
     /// </summary>
+    [Id(1)]
     public EventSequenceNumber SequenceNumber { get; set; } = EventSequenceNumber.Unavailable;
 
     /// <summary>
     /// Gets or sets the Error Messages for the last error on this failed partition.
     /// </summary>
+    [Id(2)]
     public IEnumerable<string> Messages { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the StackTrace for the last error on this failed partition.
     /// </summary>
+    [Id(3)]
     public string StackTrace { get; set; } = string.Empty;
 
     /// <summary>
@@ -43,11 +49,13 @@ public record FailedPartitionAttempt
     /// Defaults to <see cref="FailureKind.Unknown"/>, which is also what every attempt recorded before failures
     /// carried a kind reads back as.
     /// </remarks>
+    [Id(4)]
     public FailureKind Kind { get; set; } = FailureKind.Unknown;
 
     /// <summary>
     /// Gets or sets the optional original delivery identity and hold deadline.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [Id(5)]
     public DeliveryFenceContext? DeliveryFence { get; set; }
 }

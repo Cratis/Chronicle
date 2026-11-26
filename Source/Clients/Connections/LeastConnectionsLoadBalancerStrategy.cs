@@ -36,7 +36,6 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
     static readonly TimeSpan _defaultMaxSelectionJitter = TimeSpan.FromMilliseconds(250);
 
     readonly bool _ownsHttpClient;
-    readonly HttpMessageHandler? _httpMessageHandler;
     readonly HttpClient _httpClient;
     readonly int _maxSelectionJitterMilliseconds;
     readonly string _scheme;
@@ -50,6 +49,18 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
     /// <param name="disableTls">Whether the servers are reached without TLS, speaking HTTP/2 only (h2c).</param>
     public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient = null, TimeSpan? maxSelectionJitter = null, bool disableTls = false)
         : this(skipTlsValidation, httpClient, maxSelectionJitter, disableTls, certificateAuthorities: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LeastConnectionsLoadBalancerStrategy"/> class that reaches the servers over TLS.
+    /// </summary>
+    /// <param name="skipTlsValidation">Whether to skip TLS certificate validation when probing candidate servers.</param>
+    /// <param name="httpClient"><see cref="HttpClient"/> to probe candidate servers with, or <see langword="null"/> for one honoring <paramref name="skipTlsValidation"/>.</param>
+    /// <param name="maxSelectionJitter">Upper bound for the random delay before every probe, or <see langword="null"/> for 250ms; pass <see cref="TimeSpan.Zero"/> to disable it.</param>
+    /// <remarks>Kept so callers compiled against earlier versions still bind.</remarks>
+    public LeastConnectionsLoadBalancerStrategy(bool skipTlsValidation, HttpClient? httpClient, TimeSpan? maxSelectionJitter)
+        : this(skipTlsValidation, httpClient, maxSelectionJitter, disableTls: false, certificateAuthorities: null)
     {
     }
 
@@ -76,15 +87,17 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
         }
         else
         {
-            _httpMessageHandler = new SocketsHttpHandler
+            ProbeHandler = new SocketsHttpHandler
             {
+                // Retire idle probe connections so reconnects can resolve a replacement host address.
+                PooledConnectionLifetime = TimeSpan.FromSeconds(30),
                 SslOptions = new SslClientAuthenticationOptions
                 {
                     RemoteCertificateValidationCallback =
                         CertificateLoader.CreateServerCertificateValidationCallback(skipTlsValidation, pinnedCertificateHash: null, certificateAuthorities)
                 }
             };
-            _httpClient = new HttpClient(_httpMessageHandler);
+            _httpClient = new HttpClient(ProbeHandler);
         }
 
         if (disableTls)
@@ -94,6 +107,11 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
             _httpClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
         }
     }
+
+    /// <summary>
+    /// Gets the owned probe handler, or null when an HTTP client was supplied.
+    /// </summary>
+    internal HttpMessageHandler? ProbeHandler { get; }
 
     /// <inheritdoc/>
     public async Task<ChronicleServerAddress> Next(IReadOnlyList<ChronicleServerAddress> serverAddresses)
@@ -135,7 +153,7 @@ public class LeastConnectionsLoadBalancerStrategy : ILoadBalancerStrategy, IDisp
         if (_ownsHttpClient)
         {
             _httpClient.Dispose();
-            _httpMessageHandler?.Dispose();
+            ProbeHandler?.Dispose();
         }
     }
 

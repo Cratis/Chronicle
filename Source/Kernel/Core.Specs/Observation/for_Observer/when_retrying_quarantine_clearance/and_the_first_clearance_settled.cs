@@ -31,5 +31,5 @@ public class and_the_first_clearance_settled : given.an_observer_with_subscripti
     [Fact] void should_not_owe_recovery_after_the_first_clearance() => _owedRecoveryAfterFirstClearance.ShouldBeFalse();
     [Fact] async Task should_remain_observing() => (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
     [Fact] void should_not_recover_again() => _jobsManager.DidNotReceive().GetJobs(Arg.Any<JobQuery>());
-    [Fact] void should_not_subscribe_to_the_queue_again() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<IEnumerable<EventType>>(), Arg.Any<ObserverFilters?>());
+    [Fact] void should_not_subscribe_to_the_queue_again() => _appendedEventsQueues.DidNotReceive().Subscribe(Arg.Any<ObserverKey>(), Arg.Any<EventTypeSet>(), Arg.Any<ObserverFilters?>());
 }

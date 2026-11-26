@@ -30,6 +30,12 @@ public class LargeBatchAppendBenchmark : IAsyncDisposable
     EventSourceId _eventSourceId = EventSourceId.Unspecified;
 
     /// <summary>
+    /// Gets or sets the cancellation token supplied by the benchmark runner.
+    /// </summary>
+    [BenchmarkCancellation]
+    public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of events in the batch.
     /// </summary>
     [Params(100, 1000, 6000)]

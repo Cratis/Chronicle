@@ -41,20 +41,11 @@ public class and_reducer_persists_the_concept_collection(context context) : Give
 
         async Task<ConceptCollectionReadModel> WaitForPersistedInstance(TimeSpan timeout)
         {
-            using var cts = new CancellationTokenSource(timeout);
-            while (!cts.IsCancellationRequested)
-            {
-                var instances = await EventStore.ReadModels.Materialized.GetInstances<ConceptCollectionReadModel>();
-                var instance = instances.FirstOrDefault(_ => _.Latest is not null);
-                if (instance is { Items.Count: >= 2 })
-                {
-                    return instance;
-                }
-
-                await Task.Delay(100, CancellationToken.None);
-            }
-
-            return null!;
+            return (await ReadinessWait.Until(
+                async () => (await EventStore.ReadModels.Materialized.GetInstances<ConceptCollectionReadModel>())
+                    .FirstOrDefault(_ => _.Latest is not null),
+                instance => instance is { Items.Count: >= 2 },
+                timeout))!;
         }
     }
 

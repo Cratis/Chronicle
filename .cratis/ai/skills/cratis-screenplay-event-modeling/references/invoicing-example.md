@@ -31,6 +31,8 @@ module Invoicing
           invoiceNumber InvoiceNumber = invoiceNumber
           registeredAt DateTime = $context.occurred
       event InvoiceSent
+      screen RegisterInvoice
+        action RegisterInvoice for screen
 
     slice StateView InvoiceList
       readmodel InvoiceListReadModel

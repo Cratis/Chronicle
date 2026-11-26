@@ -18,7 +18,7 @@ public class and_the_subscription_is_healthy_but_the_definition_is_missing : giv
         EventTypesAre("CustomerNamed");
         _subscriptionTypes = [new EventType("CustomerNamed", 2), new EventType("CustomerMoved", EventTypeGeneration.First)];
         var key = new ObserverKey(PatternCapture.ObserverIdentifier, _eventStore, _namespace, EventSequenceId.Log);
-        _observer.NeedsSubscriptionRecovery(Arg.Any<IEnumerable<EventType>>()).Returns(false);
+        _observer.NeedsSubscriptionRecovery(Arg.Any<EventTypeSet>()).Returns(false);
         _observer.GetSubscription().Returns(new ObserverSubscription(key.ObserverId, key, _subscriptionTypes, typeof(IPatternCaptureSubscriber), SiloAddress.Zero, IsReplayable: false));
         _reactors.Has(key.ObserverId).Returns(false);
     }

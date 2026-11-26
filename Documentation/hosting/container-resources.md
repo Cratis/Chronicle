@@ -122,6 +122,48 @@ How the figures were taken:
 
 The workload is synthetic, so use these figures to compare settings with each other, and your own peak to size the container. CPU-bound figures depend on the host's processors.
 
+## Live memory against committed memory
+
+A production node held about 2.6 GB of gen 2 after dormancy had released most observers, while a forced full collection, which is what a heap dump does, showed about 823 MB live. The difference is memory the collector keeps committed rather than memory the kernel needs. Read both from the running kernel:
+
+- `cratis.chronicle.memory.generation_size` with `generation="gen2"` is what survived the last collection. `cratis.chronicle.memory.committed` is what the collector holds from the system. A large gap that stays after dormancy has released its observers is retained, mostly dead gen 2, not a leak.
+- `cratis.chronicle.memory.generation_fragmentation` shows how much of a generation is holes.
+- `cratis.chronicle.memory.pause_duration` and `cratis.chronicle.memory.allocated` give the pause time and the allocation rate once you take their rates.
+
+See [Configure memory management](configuration/memory.md) for the full list.
+
+### Experiment: which GC setting lowers committed memory
+
+The kernel benchmark project has a harness that runs one multi-namespace workload under each GC setting, one setting changed at a time from what the image ships (Server GC, `GCConserveMemory` 5, DATAS on):
+
+```bash
+dotnet build Benchmarks/Chronicle.Benchmarks.Kernel/Chronicle.Benchmarks.Kernel.csproj -c Release
+dotnet Benchmarks/Chronicle.Benchmarks.Kernel/bin/Release/net11.0/Chronicle.Benchmarks.Kernel.dll --gc-experiment --repeats 5 --namespaces 50 --count 2000 --window 60 --settle 60 --hard-limit-mb 6100
+```
+
+Each configuration is a separate process, because a GC setting cannot change in a running one. The workload starts the in-process silo with in-memory storage, spreads reactor observers over the namespaces, then subscribes and unsubscribes them again and again, the activation churn that dormancy causes. It then waits without forcing a collection and reports what the collector kept committed, before it forces full compacting collections to measure what was live. The table shows the median of the repeats. A configuration is only marked a candidate for a new default when its committed memory is at least 20 % lower and its throughput is not more than 5 % lower; both limits are options. `--hard-limit-mb` applies a heap hard limit to every configuration, which production has (about 6.1 GB in an 8 GiB container).
+
+A run on a shared developer laptop, 14 cores at a load average of 30 to 60, with 10 namespaces, 500 observers, an 8-second window, a 5-second settle, a 6,100 MB hard limit and 3 repeats:
+
+| Configuration | Committed after settling (MiB) | Live (MiB) | Allocation rate (MiB/s) | GC pause (ms) | Operations/s | Committed vs baseline | Throughput vs baseline |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline (Server GC, conserve 5, DATAS) | 183 | 48 | 1,295 | 842 | 10,215 | - | - |
+| `GCHeapCount=4` | 199 | 48 | 1,221 | 328 | 9,613 | +9 % | -6 % |
+| `GCConserveMemory=7` | 174 | 47 | 1,286 | 785 | 10,111 | -5 % | -1 % |
+| `GCConserveMemory=9` | 136 | 47 | 810 | 736 | 6,390 | -25 % | -37 % |
+| `GCRetainVM=0` | 174 | 48 | 1,442 | 896 | 11,332 | -5 % | +11 % |
+| `gcConcurrent=0` | 182 | 48 | 1,693 | 905 | 13,349 | 0 % | +31 % |
+| `GCDynamicAdaptationMode=0` (DATAS off) | 270 | 47 | 1,565 | 537 | 12,372 | +48 % | +21 % |
+| Workstation GC | 88 | 48 | 676 | 2,886 | 5,306 | -52 % | -48 % |
+
+Read this table for direction, not for size:
+
+- **The machine was loaded, so throughput is noise.** The same configuration ranged from 4,360 to 12,198 operations per second between repeats, a spread wider than every difference in the throughput column except Workstation GC's. A throughput change smaller than about 40 % in this table is not a finding.
+- **The committed figures are about 200 MiB, not gigabytes.** The workload keeps 48 MiB live, so it exercises the retention behavior but not the production scale. The ratios may change at 2.6 GB.
+- **Workstation GC** lowered committed memory by half and cut throughput by about half and tripled pause time, in line with the container profiles above. **Higher `GCConserveMemory`** moved committed memory the right way, with a throughput cost that this run cannot size. **DATAS off** raised committed memory by about half, so keep DATAS on. **Heap count, `GCRetainVM` and `gcConcurrent`** changed committed memory by less than the spread between repeats.
+
+Under the default-change rule, nothing earned a new default: the two configurations that lower committed memory by 20 % or more both cost throughput that is either measured (Workstation GC) or not distinguishable from noise (`GCConserveMemory=9`). The kernel keeps its settings. If your node holds far more committed than live memory after dormancy, try `GCConserveMemory=7` or `9` on one node, watch `cratis.chronicle.memory.committed` and the append and catch-up rates, and keep it only when committed memory falls without a throughput drop. Rerun the harness on a quiet machine with more repeats and a longer window before changing the image default.
+
 ### Measure a profile yourself
 
 The Chronicle repository has a [container profile harness](https://github.com/Cratis/Chronicle/blob/main/Benchmarks/Chronicle.Benchmarks/ContainerProfile/README.md) that runs the kernel image under Docker CPU and memory limits with each GC variant, and records time to `/health/ready`, resident and cgroup memory when idle and under an append workload, append throughput, observer catch-up time and out-of-memory outcomes. Run it from a clone of the repository on a host with no other heavy work, and keep the host from sleeping for the whole run, because a busy or sleeping host skews every figure. The harness waits for the host load to drop and skips runs it cannot take on a quiet host. These commands reproduce the table above:

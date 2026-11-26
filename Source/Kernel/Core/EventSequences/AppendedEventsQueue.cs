@@ -12,6 +12,7 @@ using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Diagnostics;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Storage;
 using Cratis.Metrics;
 using Cratis.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,9 +25,13 @@ namespace Cratis.Chronicle.EventSequences;
 /// <summary>
 /// Represents the state of <see cref="AppendedEventsQueues"/>.
 /// </summary>
-[KeepAlive]
+/// <remarks>
+/// The queue is collected like any other grain when it owes nothing: it keeps itself only while it holds live subscriptions,
+/// queued or in-flight deliveries, catch-up triggers or rings. What it holds is rebuilt lazily: the observers it serves come
+/// from the routing table and their stored cursors, and an observer whose live subscription was lost is rung by its next event.
+/// </remarks>
 [PreferLocalPlacement]
-public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
+public partial class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 {
     /// <summary>
     /// The most sequential per-partition deliveries one coalesced dispatch may cost a live observer before it is moved to its catch-up path.
@@ -54,6 +59,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     readonly MetricNames _metricNames;
     readonly ILogger<AppendedEventsQueue> _logger;
     readonly IShutdownDrainBudget? _stopBudget;
+    readonly IStorage? _storage;
+    readonly int _queueCount;
+    readonly Observers _observers;
     readonly Channel<IReadOnlyList<AppendedEvent>> _channel;
     readonly int _queueDepletionWaitTimeoutMs;
     readonly AsyncManualResetEvent _queueEmptyEvent = new();
@@ -77,6 +85,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     volatile bool _isResetting;
     AppendedEventsQueueMetrics? _metrics;
     EventSequenceKey _eventSequenceKey = EventSequenceKey.NotSet;
+    int _queueId;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendedEventsQueue"/> class.
@@ -87,20 +96,34 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <param name="options"><see cref="IOptions{T}"/> for <see cref="ChronicleOptions"/>.</param>
     /// <param name="logger"><see cref="ILogger"/> for logging.</param>
     /// <param name="stopBudget">The shared deadline; optional for standalone specification queues.</param>
+    /// <param name="storage">The <see cref="IStorage"/> the queue compares its subscriptions with; optional for standalone specification queues.</param>
+    /// <param name="wakeAdmission">The <see cref="IWakeAdmission"/> that bounds how many dormant observers wake at once; without it wakes are not bounded.</param>
+    /// <param name="dormantObserverGauge">The <see cref="IDormantObserverGauge"/> the queue reports its dormant observers to; optional for standalone specification queues.</param>
+    /// <param name="routing">The silo-local routing table the queue compares its own matching with; without it nothing is compared.</param>
     public AppendedEventsQueue(
         ITaskFactory taskFactory,
         IGrainFactory grainFactory,
         [FromKeyedServices(WellKnown.MeterName)] IMeter<AppendedEventsQueue> meter,
         IOptions<ChronicleOptions> options,
         ILogger<AppendedEventsQueue> logger,
-        IShutdownDrainBudget? stopBudget = null)
+        IShutdownDrainBudget? stopBudget = null,
+        IStorage? storage = null,
+        IWakeAdmission? wakeAdmission = null,
+        IDormantObserverGauge? dormantObserverGauge = null,
+        Observation.ObserverRouting.IObservers? routing = null)
     {
+        _routing = routing;
+        _dormantObserverGauge = dormantObserverGauge;
+        _wakeAdmission = wakeAdmission;
         _taskFactory = taskFactory;
         _grainFactory = grainFactory;
         _meter = meter;
         _metricNames = options.Value.Telemetry.MetricNames;
         _logger = logger;
         _stopBudget = stopBudget;
+        _storage = storage;
+        _queueCount = options.Value.Events.Queues;
+        _observers = options.Value.Observers;
         _catchupCancellationToken = _catchupCancellation.Token;
 
         var eventsConfig = options.Value.Events;
@@ -127,17 +150,39 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     }
 
     /// <summary>
+    /// Gets or sets the metrics the queue records to; set on activation, and by specifications that listen to them.
+    /// </summary>
+    internal AppendedEventsQueueMetrics? Metrics
+    {
+        get => _metrics;
+        set => _metrics = value;
+    }
+
+    /// <summary>
     /// Gets or sets the clock used for catch-up trigger deadlines and retry delays.
     /// </summary>
     internal TimeProvider CatchupTimeProvider { get; set; } = TimeProvider.System;
 
+    /// <summary>
+    /// Gets whether no new delivery work is admitted: the queue is disposed or draining.
+    /// </summary>
+    bool RefusesNewWork => _isDisposed || _isDraining;
+
+    /// <summary>
+    /// Gets whether the kernel stop has begun, after which this silo queues no more live delivery.
+    /// </summary>
+    bool IsStopping => _stopBudget?.IsStopping == true;
+
     /// <inheritdoc/>
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         var queueId = (int)this.GetPrimaryKeyLong(out var key);
-        _eventSequenceKey = EventSequenceKey.Parse(key!);
+        Identify(EventSequenceKey.Parse(key!), queueId);
         _metrics = _meter.BeginScope(key!, queueId, _metricNames);
-        return base.OnActivateAsync(cancellationToken);
+        _dormantGaugeRegistration = _dormantObserverGauge?.Register(_eventSequenceKey, () => DormantCount);
+        ConfigureDormantSafetyNet();
+        await ReadInstances();
+        await base.OnActivateAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -177,16 +222,18 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </remarks>
     public Task Enqueue(IEnumerable<AppendedEvent> appendedEvents)
     {
-        if (_isDisposed || _isDraining)
+        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
+        if (TrySpillWhileStopping(batch)) return Task.CompletedTask;
+
+        if (RefusesNewWork)
         {
             // Events are durable; a new owner catches up from the observers' persisted cursors.
             return Task.CompletedTask;
         }
 
-        var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
-
         Interlocked.Increment(ref _pendingItems);
         _queueEmptyEvent.Reset();
+        KeepWhileOwed();
 
         // The channel is bounded in batches, and a batch can hold any number of events, so it is bounded in events too.
         // A batch that arrives while nothing else waits is always taken: it can only be spilled by the lanes.
@@ -220,6 +267,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         lock (_subscriptionsLock)
         {
             _subscriptions.Clear();
+            _releasedWhileDormant.Clear();
             catchupTriggers = [.. _catchupTriggers];
         }
 
@@ -242,14 +290,14 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// <inheritdoc/>
     public Task SpillMatchingToCatchup(IEnumerable<AppendedEvent> appendedEvents)
     {
-        if (_isDisposed || _isDraining) return Task.CompletedTask;
+        if (RefusesNewWork) return Task.CompletedTask;
         var batch = appendedEvents as AppendedEvent[] ?? appendedEvents.ToArray();
         if (batch.Length > 0) SpillSubscribersMatchingToCatchup(batch, AppendedEventsQueueSpillReasons.CommittedOutsideLiveDelivery);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task Subscribe(ObserverKey observerKey, IEnumerable<EventType> eventTypes, ObserverFilters? filters = null)
+    public Task Subscribe(ObserverKey observerKey, EventTypeSet eventTypes, ObserverFilters? filters = null)
     {
         lock (_subscriptionsLock)
         {
@@ -264,7 +312,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             // catch-up); each entry would otherwise leave stale duplicates behind and cause
             // observer.Handle to be invoked multiple times for the same event.
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
-            _subscriptions.Add(new(observerKey, eventTypes.Select(eventType => eventType.Id).ToArray(), filters));
+            NoteSubscribed(observerKey);
+            RegisterLiveSubscription(new(observerKey, eventTypes, filters));
         }
 
         return Task.CompletedTask;
@@ -281,7 +330,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             }
 
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
-            _subscriptions.Add(new(observerKey, [], filters, AllEventTypes: true));
+            NoteSubscribed(observerKey);
+            RegisterLiveSubscription(new(observerKey, [], filters, AllEventTypes: true));
         }
 
         return Task.CompletedTask;
@@ -300,6 +350,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             _subscriptions.RemoveAll(subscription => subscription.ObserverKey == observerKey);
             CloseLane(observerKey);
             _pageObservers.TryRemove(observerKey, out _);
+            _releasedWhileDormant.Remove(observerKey.ObserverId);
         }
 
         return Task.CompletedTask;
@@ -331,6 +382,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         _channel.Writer.TryComplete();
         StopLanes(discard: true);
 
+        _dormantGaugeRegistration?.Dispose();
         _metrics?.Dispose();
     }
 
@@ -355,6 +407,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                     await Task.Delay(periodDelay);
                 }
 
+                if (Volatile.Read(ref _pendingItems) == 0) return;
+
                 await _queueEmptyEvent.WaitAsync();
             }
             else
@@ -368,6 +422,9 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                         break;
                     }
                 }
+
+                // Nothing was admitted (a batch spilled while stopping never enters the queue), so there is nothing to deplete.
+                if (Volatile.Read(ref _pendingItems) == 0) return;
 
                 await _queueEmptyEvent.WaitAsync().WaitAsync(TimeSpan.FromMilliseconds(_queueDepletionWaitTimeoutMs), TimeProvider.System);
             }
@@ -687,11 +744,13 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
                 Interlocked.Add(ref _channelEvents, -coalesced.Count);
 
+                var routingTable = await GetShadowRoutingTable();
+
                 try
                 {
                     if (!_isResetting)
                     {
-                        Route(coalesced, batchesDrained);
+                        Route(coalesced, batchesDrained, routingTable);
                         _metrics?.EventsHandled(coalesced.Count);
                     }
                 }
@@ -720,7 +779,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// </summary>
     /// <param name="events">The coalesced events.</param>
     /// <param name="batches">The number of queued batches the events came from.</param>
-    void Route(List<AppendedEvent> events, int batches)
+    /// <param name="routingTable">The silo-local routing table to compare the matching with, or null to compare nothing.</param>
+    void Route(List<AppendedEvent> events, int batches, Observation.ObserverRouting.ObserverRoutingTable? routingTable = null)
     {
         var sorted = SortBySequenceNumber(events);
 
@@ -728,7 +788,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         // before anything is routed to it, so its cursor can never pass an event it skipped.
         var spilled = SpillFragmentedSubscriptions(sorted);
         var batchEventTypes = DistinctEventTypes(sorted, out var hasRedaction);
-        foreach (var subscription in GetSubscriptionsSnapshot())
+        var subscriptions = GetSubscriptionsSnapshot();
+        foreach (var subscription in subscriptions)
         {
             if (spilled.Contains(subscription.ObserverKey) || !MayMatch(subscription, batchEventTypes, hasRedaction))
             {
@@ -740,6 +801,12 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
             {
                 RouteToLane(subscription, matching, batches);
             }
+        }
+
+        if (routingTable is not null)
+        {
+            CompareWithRoutingTable(routingTable, subscriptions, batchEventTypes);
+            RingUnsubscribedObservers(routingTable, subscriptions, batchEventTypes);
         }
     }
 
@@ -759,7 +826,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
                 // Resolved once, under the lock, rather than for every partition run.
                 var observer = _grainFactory.GetGrain<IObserver>(observerKey);
                 _retiredLanes.TryGetValue(observerKey, out var retired);
-                lane = new AppendedEventsQueueObserverLane(subscription, observer, DeliverToObserver, LaneSettled, LaneFailed, work => _taskFactory.Run(work), retired);
+                lane = new AppendedEventsQueueObserverLane(subscription, observer, DeliverVerifiedLiveEvents, LaneSettled, LaneFailed, work => _taskFactory.Run(work), retired);
                 _lanes[observerKey] = lane;
             }
 
@@ -986,7 +1053,8 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
     /// queue are not affected. Must be called holding the subscriptions lock.
     /// </summary>
     /// <param name="subscription">The lagging <see cref="AppendedEventsQueueObserverSubscription"/>.</param>
-    void SpillLaggingSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription)
+    /// <param name="reason">Why the observer needs catch-up.</param>
+    void SpillLaggingSubscriptionToCatchup(AppendedEventsQueueObserverSubscription subscription, string reason = AppendedEventsQueueSpillReasons.LaggingBacklog)
     {
         if (_subscriptions.RemoveAll(candidate => ReferenceEquals(candidate, subscription)) == 0)
         {
@@ -996,7 +1064,7 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
         CloseLane(subscription.ObserverKey);
         StartCatchupTrigger(subscription.ObserverKey);
         Observe(() => _logger.SpillingLaggingObserverToCatchup(subscription.ObserverKey));
-        ReportSpill(subscription.ObserverKey, AppendedEventsQueueSpillReasons.LaggingBacklog);
+        ReportSpill(subscription.ObserverKey, reason);
     }
 
     /// <summary>
@@ -1085,6 +1153,20 @@ public class AppendedEventsQueue : Grain, IAppendedEventsQueue, IDisposable
 
         Observe(() => _logger.SpillingFragmentedObserverToCatchup(subscription.ObserverKey, MaxPartitionRunsPerLiveDispatch));
         ReportSpill(subscription.ObserverKey, AppendedEventsQueueSpillReasons.FragmentedBacklog);
+        return true;
+    }
+
+    /// <summary>
+    /// Catches the matching observers up instead of delivering live once the kernel stop has begun. A batch that is not delivered
+    /// live must not let an observer on a surviving silo see a later live batch as the next one: live handling moves its cursor
+    /// past a gap.
+    /// </summary>
+    /// <param name="batch">The committed batch.</param>
+    /// <returns>True if the stop has begun and the batch was spilled; false if it is to be delivered as usual.</returns>
+    bool TrySpillWhileStopping(AppendedEvent[] batch)
+    {
+        if (!IsStopping || _isDisposed) return false;
+        if (batch.Length > 0) SpillSubscribersMatchingToCatchup(batch, AppendedEventsQueueSpillReasons.StopBegun);
         return true;
     }
 

@@ -34,7 +34,7 @@ public class with_distinct_recovery_policies : Specification
         var now = DateTimeOffset.UtcNow;
         _deferral = new(Guid.NewGuid(), PartitionDeferralReason.RetryAfter, now, now.AddMinutes(2), EventSequenceNumber.First);
         var mediator = Substitute.For<IWebhookMediator>();
-        mediator.Deliver((EventStoreName)"orders", Arg.Any<WebhookTarget>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+        mediator.Deliver((EventStoreName)"orders", Arg.Any<WebhookTarget>(), Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<string?>(), Arg.Any<TimeSpan?>(), cancellationToken: Arg.Any<CancellationToken>())
             .Returns(new WebhookDeliveryResult(EventSequenceNumber.Unavailable, new Exception("403")) { FailurePolicy = WebhookDeliveryFailurePolicy.PauseObserver },
                 new WebhookDeliveryResult(EventSequenceNumber.Unavailable, new Exception("410")) { FailurePolicy = WebhookDeliveryFailurePolicy.ParkPartition },
                 new WebhookDeliveryResult(EventSequenceNumber.Unavailable, new Exception("429"), _deferral));

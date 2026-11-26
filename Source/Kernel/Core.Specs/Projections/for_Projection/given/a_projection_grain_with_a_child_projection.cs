@@ -83,6 +83,11 @@ public class a_projection_grain_with_a_child_projection : Specification
             Arg.Any<EventStoreName>(),
             Arg.Any<EventStoreNamespaceName>(),
             Arg.Any<ProjectionDefinition>(),
+            Arg.Any<ReadModelDefinition>()).Returns(_rootProjection);
+        projectionFactory.Create(
+            Arg.Any<EventStoreName>(),
+            Arg.Any<EventStoreNamespaceName>(),
+            Arg.Any<ProjectionDefinition>(),
             Arg.Any<ReadModelDefinition>(),
             Arg.Any<IEnumerable<Concepts.EventTypes.EventTypeSchema>>()).Returns(_rootProjection);
         _silo.AddService(projectionFactory);

@@ -1,6 +1,6 @@
 ---
 name: orleans
-description: Use when an Orleans task requires choosing state ownership, communication, scheduling or hosting guarantees against failure. Not for other actor stacks, relational-only CRUD or Cratis.Orleans job implementation.
+description: Use when an Orleans task requires choosing state ownership, communication, scheduling or hosting guarantees against failure. Not for other actor stacks, relational-only CRUD or Cratis.Choreography job implementation.
 license: MIT
 ---
 <!-- cratis-ai-managed: skills/orleans/SKILL.md -->
@@ -9,7 +9,7 @@ license: MIT
 
 # Microsoft Orleans
 
-Use only within this skill's stated task; general workflow advice does not apply to unrelated tasks. Cratis rules in `.cratis/ai/rules/` (including `csharp.md`, `specs.csharp.md`, and `orleans.md`) and the `cratis-*` skills win where they differ. `.cratis/ai/rules/orleans.md` forbids `[Alias]` on grain interfaces and grain methods (it is used only on `[GenerateSerializer]` state and definition records that must survive a rename) and forbids `ConfigureAwait(false)` in grain code; **cratis-orleans-jobs** owns recoverable jobs. DurableJobs/Journaling are experimental and are not interchangeable with Cratis.Orleans jobs.
+Use only within this skill's stated task; general workflow advice does not apply to unrelated tasks. Cratis rules in `.cratis/ai/rules/` (including `csharp.md`, `specs.csharp.md`, and `orleans.md`) and the `cratis-*` skills win where they differ. `.cratis/ai/rules/orleans.md` forbids `[Alias]` on grain interfaces and grain methods (it is used only on `[GenerateSerializer]` state and definition records that must survive a rename) and forbids `ConfigureAwait(false)` in grain code; **cratis-orleans-jobs** owns recoverable jobs. DurableJobs/Journaling are experimental and are not interchangeable with Cratis.Choreography jobs.
 
 ## Diagnostic Output Budget
 

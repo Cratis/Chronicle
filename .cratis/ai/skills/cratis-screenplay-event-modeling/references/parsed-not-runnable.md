@@ -1,6 +1,15 @@
 <!-- cratis-ai-managed: skills/cratis-screenplay-event-modeling/references/parsed-not-runnable.md -->
 # Parsed is not runnable: ESM versions and dispositions
 
+## Contents
+
+- Which ESM version a model needs
+- Dispositions to keep apart
+- The Step 7 clock example
+- Trigger reads and event generations
+- What binds depends on which tool
+- A CLI and Stage that admit v15
+
 Checked: `SemanticModelBinder.cs`, `Versions.cs`,
 `Documentation/screenplay/{commands,operations,event-sources,reactions,tool,interoperability}.md`.
 The binder selects v8 for event routes, v10 for declared reaction identity, v11 for retained
@@ -24,8 +33,10 @@ Tool versions and consumer boundaries: toolchain `SKILL.md`.
   Reasons remain report-only PLAY0270; binding proves neither encryption nor erasure.
 - v17 for `when redelivered` and `then no events`; v19 for reaction
   refusal branches and `$refusal` values. Older compilers report PLAY0268.
-- Operations/systems and the exact numeric **source mode** (`numbers exact`) remain unadmitted
-  (PLAY0268). Version allocation is not inferred from an older planning decision.
+- Operations and the exact numeric **source mode** (`numbers exact`) remain unadmitted
+  (PLAY0268), as do systems when no system in the model declares an ability. Once any system
+  declares one, every system is admitted at ESM v50 and an ability invocation selects v51.
+  Version allocation is not inferred from an older planning decision.
 
 ## Dispositions to keep apart
 
@@ -42,7 +53,7 @@ Tool versions and consumer boundaries: toolchain `SKILL.md`.
 | Declared reaction invocation actor | v10 binding/reference execution; older CLI parser PLAY0137; Stage renders role/authenticated reaction identity; claim-reading/opaque gates retain STAGE-ESM-034, not a v10 version refusal |
 | Redelivery and `then no events` | v17 binding/reference execution; older compilers refuse PLAY0268 |
 | Reaction refusal branches and `$refusal` | v19 binding/reference execution; older compilers refuse PLAY0268 |
-| Operations/systems, `numbers exact` source mode | Source accepted; whole binding refuses PLAY0268 |
+| Operations, systems in a model with no ability, `numbers exact` source mode | Source accepted; whole binding refuses PLAY0268 |
 | UI | Authoring/deferred metadata; runtime support is a separate consumer contract |
 
 Run standalone `screenplay test` or MCP `run-specifications` for V4. Compile
@@ -84,8 +95,8 @@ accepted proposal or parsed node with a running application.
   and command/specification routes as v8; reaction `runs as` identity as v10;
   qualifying Double literals lower exactly as v11 and non-positional enum numbers
   as v12. Use `screenplay test` or MCP `run-specifications` for V4.
-  Operations/systems and the `numbers exact` **source mode** remain unadmitted
-  (PLAY0268); redelivery/no-event assertions execute as v17 and refusals as v19. The CLI and Stage render supported generation strategies and v15 freshness,
+  Operations and the `numbers exact` **source mode** remain unadmitted, as do systems when no
+  system declares an ability (PLAY0268; any ability admits all systems at v50); redelivery/no-event assertions execute as v17 and refusals as v19. The CLI and Stage render supported generation strategies and v15 freshness,
   scalar/named responses, enum numbers, compliance and supported event reactions.
   The pair reaches construct checks through the ESM version it bundles, not blanket rendering; supported v14 filters
   render. Current boundaries and source evidence:

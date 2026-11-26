@@ -144,7 +144,10 @@ public static class PayloadInventory
                 return DescribeOneOf(name, oneOf);
             }
 
-            if (hasCustomConverter(type) || Attribute.IsDefined(type, typeof(JsonConverterAttribute)))
+            // A type with a generated Orleans serializer is written as its members, whatever JSON converter it also carries
+            // for the other places it is serialized.
+            var hasGeneratedSerializer = PayloadAttributes.Find(type, "Orleans.GenerateSerializerAttribute") is not null;
+            if (hasCustomConverter(type) || (!hasGeneratedSerializer && Attribute.IsDefined(type, typeof(JsonConverterAttribute))))
             {
                 return new(name, name, PayloadKind.Custom, null, null, []);
             }

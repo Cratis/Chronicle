@@ -7,7 +7,12 @@
             "no": "No",
             "save": "Save"
         },
-        "loading": "Loading…"
+        "loading": "Loading…",
+        "headers": {
+            "valueSet": "Value set",
+            "notSet": "Not set",
+            "unavailable": "Value unavailable"
+        }
     },
     "layout": {
         "topBar": {
@@ -75,6 +80,7 @@
         "readModels": "Read Models",
         "identities": "Identities",
         "closedStreams": "Closed Streams",
+        "constraints": "Constraints",
         "general": {
             "groupLabel": "General",
             "eventTypes": "Event Types",
@@ -146,7 +152,17 @@
                     "owner": "Owner",
                     "source": "Source",
                     "generation": "Generation",
-                    "tombstone": "Tombstone"
+                    "tombstone": "Tombstone",
+                    "visibility": "Visibility",
+                    "origin": "Origin"
+                },
+                "visibilities": {
+                    "unspecified": "Unspecified (legacy)",
+                    "private": "Private",
+                    "public": "Public"
+                },
+                "origins": {
+                    "notSpecified": "Not specified"
                 },
                 "dialogs": {
                     "addEventType": {
@@ -351,6 +367,7 @@
                 "empty": "No projections",
                 "actions": {
                     "new": "New",
+                    "newGraph": "New graph",
                     "save": "Save",
                     "preview": "Preview",
                     "timeMachine": "Time Machine",
@@ -366,6 +383,36 @@
                 "previewDisabledReasons": {
                     "emptyContent": "Editor is empty",
                     "validationErrors": "Fix validation errors first"
+                },
+                "graphPreview": {
+                    "notPreviewed": "Press Preview to run the events through the graph projection in memory. Nothing is saved and no graph database is needed",
+                    "summary": "{graph}: {nodes} nodes and {edges} edges from {events} events",
+                    "eventErrors": "Events the projection could not apply",
+                    "emptyNodes": "No nodes. Check that the events the projection reacts to are in the event store",
+                    "emptyEdges": "No edges",
+                    "tabs": {
+                        "nodes": "Nodes",
+                        "edges": "Edges",
+                        "view": "View"
+                    },
+                    "columns": {
+                        "label": "Label",
+                        "key": "Key",
+                        "type": "Type",
+                        "source": "Source",
+                        "target": "Target",
+                        "identity": "Identity",
+                        "properties": "Properties"
+                    },
+                    "view": {
+                        "root": "Start at",
+                        "depth": "Levels",
+                        "filterProperty": "Where",
+                        "anyProperty": "(no filter)",
+                        "filterValue": "equals",
+                        "read": "Read view",
+                        "errors": "The view could not be read"
+                    }
                 },
                 "dialogs": {
                     "unsavedChanges": {
@@ -622,7 +669,47 @@
                     "originalRevision": "Original",
                     "revisionLabel": "Revision {n}",
                     "generationLabel": "Generation {n}",
-                    "revisionBy": "Revised by {name} at {occurred}"
+                    "revisionBy": "Revised by {name} at {occurred}",
+                    "compare": {
+                        "open": "Compare revisions",
+                        "close": "Close comparison",
+                        "title": "Compare retained revisions",
+                        "left": "Left revision",
+                        "right": "Right revision",
+                        "original": "Original",
+                        "revision": "Revision {n}",
+                        "generation": "Generation {n}",
+                        "occurred": "Occurred {value}",
+                        "correlation": "Correlation {id}",
+                        "columns": { "path": "Path", "change": "Change", "before": "Left", "after": "Right" },
+                        "kinds": { "changed": "Changed", "added": "Added", "removed": "Removed" },
+                        "root": "(root)",
+                        "absent": "(absent)",
+                        "unavailableChoice": "(unavailable)",
+                        "different": "{count} differences found. Arrays are compared by index.",
+                        "identical": "No differences: the two payloads are equal.",
+                        "table": "Differences between the selected revisions",
+                        "scroll": "Comparison results",
+                        "sides": { "left": "left", "right": "right" },
+                        "status": {
+                            "noHistory": "No retained revision history is available for this event, so there is nothing to compare.",
+                            "redacted": "This event was redacted. Comparison is not available.",
+                            "erased": "Parts of this event were erased. Comparison is not available.",
+                            "limited": "This event has too many retained revisions to compare.",
+                            "ambiguous": "{count} retained revision(s) cannot be told apart or identified and are not offered.",
+                            "unavailable": "The {side} revision is no longer available or has no content. Choose another revision.",
+                            "invalid": "The {side} revision content is not valid JSON and cannot be compared.",
+                            "unsupportedNumber": "The {side} revision contains a number that cannot be compared exactly. No comparison was made."
+                        },
+                        "limits": {
+                            "size": "The {side} revision is too large to compare. No comparison was made.",
+                            "depth": "The {side} revision is nested too deeply to compare. No comparison was made.",
+                            "nodes": "The comparison stopped at its work limit. The rows shown are incomplete; do not read this as no differences.",
+                            "rows": "The comparison stopped at its row limit. The rows shown are incomplete.",
+                            "path": "Some paths were shortened. The comparison is incomplete.",
+                            "preview": "Some values were shortened for display. The comparison is incomplete."
+                        }
+                    }
                 },
                 "newQuery": "New query",
                 "queryName": "Query name",
@@ -664,6 +751,7 @@
                         "alreadyAtTail": "'{observerId}' is already at the end of the event sequence.",
                         "replaying": "'{observerId}' is replaying and cannot be fast forwarded until the replay has completed.",
                         "notAvailable": "'{observerId}' is retired or removed and cannot be fast forwarded.",
+                        "accepted": "Fast forward of '{observerId}' was accepted. It runs as a job; see Jobs for what became of it.",
                         "failed": "Fast forward of '{observerId}' failed: {error}"
                     },
                     "removeObserver": {
@@ -839,6 +927,20 @@
                     "viewFailedPartitions": "View failed partitions"
                 }
             },
+            "constraints": {
+                "title": "Constraints",
+                "description": "Rebuild all applicable unique and closing constraint indexes from the event log for this event store and namespace.",
+                "action": "Reindex constraints",
+                "dialog": {
+                    "title": "Reindex constraints",
+                    "message": "Rebuild all applicable constraint indexes? While the reindex runs, governed appends may wait."
+                },
+                "started": "Constraint reindex started.",
+                "viewJob": "Follow job {id} in Jobs",
+                "unauthorized": "You are not authorized to reindex constraints.",
+                "failed": "Constraint reindex could not be started.",
+                "invalid": "The constraint reindex request is invalid."
+            },
             "closedStreams": {
                 "title": "Closed Streams",
                 "empty": "No closed streams",
@@ -1008,6 +1110,7 @@
             "title": "Dashboard",
             "loading": "Loading…",
             "unavailable": "Unavailable right now",
+            "stale": "Stale — latest update failed",
             "serverHealth": "Server health",
             "connected": "Connected",
             "disconnected": "Disconnected",

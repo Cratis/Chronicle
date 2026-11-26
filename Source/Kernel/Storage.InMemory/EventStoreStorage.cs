@@ -79,6 +79,9 @@ public sealed class EventStoreStorage(
     public Chronicle.Storage.Generations.IGenerationInitializationStorage GenerationInitialization { get; internal set; } = new Generations.GenerationInitializationStorage();
 
     /// <inheritdoc/>
+    public Chronicle.Storage.Registrations.IRegistrationIntentStorage RegistrationIntents { get; } = new Registrations.RegistrationIntentStorage();
+
+    /// <inheritdoc/>
     public Chronicle.Storage.Occurrences.ITriggerDefinitionsStorage TriggerDefinitions { get; } = new Occurrences.TriggerDefinitionsStorage();
 
     /// <inheritdoc/>
@@ -100,7 +103,7 @@ public sealed class EventStoreStorage(
     public INamespaceStorage Namespaces { get; } = new NamespaceStorage();
 
     /// <inheritdoc/>
-    public IEventTypesStorage EventTypes { get; } = new EventTypesStorage();
+    public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypesStorage());
 
     /// <inheritdoc/>
     public IEventSourcesStorage EventSources { get; } = new EventSourcesStorage();
@@ -112,7 +115,7 @@ public sealed class EventStoreStorage(
     public IUniqueConstraintEncodingStorage UniqueConstraintEncoding { get; } = new UniqueConstraintEncodingStorage();
 
     /// <inheritdoc/>
-    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionsStorage();
+    public IObserverDefinitionsStorage Observers { get; } = new ObserverDefinitionRegistry(new ObserverDefinitionsStorage());
 
     /// <inheritdoc/>
     public IReactorDefinitionsStorage Reactors { get; } = new ReactorDefinitionsStorage();

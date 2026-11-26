@@ -7,4 +7,7 @@ namespace Cratis.Chronicle.Concepts.Projections.Definitions;
 /// Represents the definition of what removes an element in a child relationship through joining of an event.
 /// </summary>
 /// <param name="Key">Key expression, represents the key to use for identifying the model instance.</param>
-public record RemovedWithJoinDefinition(PropertyExpression Key);
+[Immutable]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Projections.Definitions.RemovedWithJoinDefinition")]
+public record RemovedWithJoinDefinition([Id(0)] PropertyExpression Key);

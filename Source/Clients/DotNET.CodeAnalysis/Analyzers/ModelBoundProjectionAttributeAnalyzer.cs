@@ -32,6 +32,7 @@ public class ModelBoundProjectionAttributeAnalyzer : DiagnosticAnalyzer
         "Cratis.Chronicle.Projections.ModelBound.FromEveryAttribute`1",
         "Cratis.Chronicle.Projections.ModelBound.SetFromAttribute`1",
         "Cratis.Chronicle.Projections.ModelBound.SetFromContextAttribute`1",
+        "Cratis.Chronicle.Projections.ModelBound.SetFromEventSourceIdAttribute`1",
         "Cratis.Chronicle.Projections.ModelBound.SetValueAttribute`1",
         "Cratis.Chronicle.Projections.ModelBound.AddFromAttribute`1",
         "Cratis.Chronicle.Projections.ModelBound.SubtractFromAttribute`1",

@@ -48,7 +48,7 @@ public sealed class ClusterReadiness(IGrainFactory grainFactory, IEventStore eve
         while (!cancellationTokenSource.IsCancellationRequested)
         {
             var subscription = await observer.GetSubscription();
-            if (subscription.IsSubscribed && subscription.EventTypes.Any())
+            if (subscription.IsSubscribed && subscription.EventTypes.Count > 0)
             {
                 return;
             }

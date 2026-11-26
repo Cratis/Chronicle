@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
-using Cratis.Chronicle.Concepts.EventTypes;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -77,8 +76,7 @@ public class a_projections_manager_grain : Specification
                 Arg.Any<EventStoreName>(),
                 Arg.Any<EventStoreNamespaceName>(),
                 Arg.Any<ProjectionDefinition>(),
-                Arg.Any<ReadModelDefinition>(),
-                Arg.Any<IEnumerable<EventTypeSchema>>())
+                Arg.Any<ReadModelDefinition>())
             .Returns(engineProjection);
         _silo.AddService(projectionFactory);
 
@@ -139,8 +137,30 @@ public class a_projections_manager_grain : Specification
         _stateStorage.State = _state;
         _silo.Options.StorageFactory = _ => _stateStorage;
 
+        if (CreateDormantObservers() is { } dormant)
+        {
+            _silo.AddService(dormant);
+        }
+
+        if (CreateOptions() is { } options)
+        {
+            _silo.AddService(Microsoft.Extensions.Options.Options.Create(options));
+        }
+
         _grain = await _silo.CreateGrainAsync<ProjectionsManager>(EventStore);
     }
+
+    /// <summary>
+    /// Creates the options the manager runs with, or none when it should run with the defaults.
+    /// </summary>
+    /// <returns>The <see cref="Configuration.ChronicleOptions"/>, or null.</returns>
+    protected virtual Configuration.ChronicleOptions? CreateOptions() => null;
+
+    /// <summary>
+    /// Creates the dormant observers the manager asks, or none when it should ask its observers as before.
+    /// </summary>
+    /// <returns>The <see cref="Observation.IDormantObservers"/>, or null.</returns>
+    protected virtual Observation.IDormantObservers? CreateDormantObservers() => null;
 
     /// <summary>
     /// Changes the status of a silo in the membership the manager sees.

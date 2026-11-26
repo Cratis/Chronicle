@@ -34,7 +34,7 @@ The property must have a non-empty value on every closing or reopening event. Th
 
 ## Reopening events and the constraint name
 
-Call `ReopenedBy<T>()` when a domain event should allow writes again. It removes only this constraint's closure for the exact scope the event resolves to, not a manual closure or another constraint's closure. The optional `name` argument identifies the closure's owner and defaults to the closing event type identifier:
+Call `ReopenedBy<T>()` when a domain event should allow writes again. It removes only this constraint's closure for the exact scope the event resolves to, not a manual closure or another constraint's closure. `ReopenedBy<T>()` takes no arguments. The owner name of the closure is the optional second argument of `ClosesStreamOn<TEvent>(configure, name)`. It defaults to the closing event type identifier:
 
 <ChronicleClientTabs snippet="constraints/declarative/closing-stream/reopened-by" />
 

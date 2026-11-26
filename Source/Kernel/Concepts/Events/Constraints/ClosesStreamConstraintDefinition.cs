@@ -22,16 +22,19 @@ namespace Cratis.Chronicle.Concepts.Events.Constraints;
 /// closure snapshot, it leaves this owner's rows untouched, logs a warning and rebuilds other constraints.
 /// </remarks>
 [method: JsonConstructor]
+[GenerateSerializer]
+[Alias("Cratis.Chronicle.Concepts.Events.Constraints.ClosesStreamConstraintDefinition")]
 public record ClosesStreamConstraintDefinition(
-    ConstraintName Name,
-    IEnumerable<EventTypeId> EventTypeIds,
-    ClosedStreamDimensions Dimensions,
-    IEnumerable<EventTypeId> ReopenedBy,
-    string? EventStreamIdFrom = default) : IConstraintDefinition
+    [Id(0)] ConstraintName Name,
+    [Id(1)] IEnumerable<EventTypeId> EventTypeIds,
+    [Id(2)] ClosedStreamDimensions Dimensions,
+    [Id(3)] IEnumerable<EventTypeId> ReopenedBy,
+    [Id(4)] string? EventStreamIdFrom = default) : IConstraintDefinition
 {
     /// <summary>
     /// Gets the event sequences this declaration applies to; empty means all sequences.
     /// </summary>
+    [Id(5)]
     public IEnumerable<EventSequenceId> EventSequences { get; init; } = [];
 
     /// <inheritdoc/>
@@ -47,8 +50,8 @@ public record ClosesStreamConstraintDefinition(
     /// <returns>True if the declarations have equal content.</returns>
     public virtual bool Equals(ClosesStreamConstraintDefinition? other) =>
         other is not null && Name == other.Name && Dimensions == other.Dimensions &&
-        EventStreamIdFrom == other.EventStreamIdFrom && EventTypeIds.SequenceEqual(other.EventTypeIds) &&
-        ReopenedBy.SequenceEqual(other.ReopenedBy) && EventSequences.CoversSameAs(other.EventSequences);
+        EventStreamIdFrom == other.EventStreamIdFrom && EventTypeIds.SameSetAs(other.EventTypeIds) &&
+        ReopenedBy.SameSetAs(other.ReopenedBy) && EventSequences.CoversSameAs(other.EventSequences);
 
     /// <inheritdoc/>
     public override int GetHashCode()
@@ -57,12 +60,12 @@ public record ClosesStreamConstraintDefinition(
         hash.Add(Name);
         hash.Add(Dimensions);
         hash.Add(EventStreamIdFrom);
-        foreach (var eventType in EventTypeIds)
+        foreach (var eventType in EventTypeIds.Canonical())
         {
             hash.Add(eventType);
         }
 
-        foreach (var eventType in ReopenedBy)
+        foreach (var eventType in ReopenedBy.Canonical())
         {
             hash.Add(eventType);
         }
@@ -71,6 +74,17 @@ public record ClosesStreamConstraintDefinition(
 
         return hash.ToHashCode();
     }
+
+    /// <summary>
+    /// Get this declaration in its canonical form, see <see cref="ConstraintNormalization"/>.
+    /// </summary>
+    /// <returns>An equal declaration whose collections are distinct and ordered.</returns>
+    public ClosesStreamConstraintDefinition Normalized() => this with
+    {
+        EventTypeIds = EventTypeIds.Canonical(),
+        ReopenedBy = ReopenedBy.Canonical(),
+        EventSequences = EventSequences.Canonical()
+    };
 
     /// <inheritdoc/>
     /// <remarks>

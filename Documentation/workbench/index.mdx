@@ -67,6 +67,38 @@ Studio to use Workbench or build with Chronicle.
 
 </Steps>
 
+## Host the standalone Workbench
+
+The standalone Workbench host registered by `UseCratisChronicleWorkbench()`
+uses port `9876` and listens on all interfaces by default. Unlike the Workbench
+bundled with the kernel, this host has no authentication of its own. Use
+`localhost` for local development. When exposing it beyond your machine, put
+it behind a reverse proxy or authenticating gateway that restricts access.
+
+Configure the listener in code:
+
+<ChronicleClientTabs snippet="workbench/listener" />
+
+Or configure the same options in `appsettings.json`:
+
+```json
+{
+  "Cratis": {
+    "Chronicle": {
+      "Workbench": {
+        "Address": "localhost",
+        "Port": 9876
+      }
+    }
+  }
+}
+```
+
+A null or empty `Address` keeps the all-interface default. `localhost` binds
+both IPv4 and IPv6 loopback. Any other value must be an IP address, such as
+`127.0.0.1` or `::1`; hostnames and invalid values fail options validation on
+startup. `Port` changes the standalone listener port, not the kernel's port.
+
 ## What to inspect
 
 Confirm the selected event store and namespace before interpreting read-model
@@ -82,7 +114,8 @@ view organizes current failures by observer and failure kind so you can
 see which failures belong together. To understand a particular attempt, open
 its event as described below. For a projection change, use the preview behavior
 supported by your running image rather than assuming every projection can be
-previewed.
+previewed. A [graph projection](../projections/graph-projections.mdx#preview-in-the-workbench)
+previews in memory, without a graph database, as nodes, edges and the rows of a view.
 
 :::danger[Inspection does not authorize mutation]
 Being able to inspect state does not grant permission to append, revise,
@@ -112,6 +145,33 @@ only whole sequence numbers from 0 through 2147483647.
 
 If you need to retry processing after investigating the event, follow
 [Operating Chronicle](/chronicle/operations/) for recovery guidance.
+
+### Compare retained revisions
+
+The event details for a sequence event offer **Compare revisions**. When the event
+has no retained revision history, the comparison says so instead of showing
+differences. The comparison is read-only: it uses only the event data already on screen, makes
+no extra requests, and changes nothing.
+
+1. Select an event in a sequence, then select **Compare revisions**.
+2. Pick the **Left revision** and **Right revision**. By default the original is
+   compared with the latest retained revision, and each choice stays on the
+   revision you picked even if later revisions arrive.
+3. Read the table of differences. Paths are JSON Pointers, and arrays are
+   compared by index: removing the first array item shows every later index as
+   changed.
+
+For example, comparing an original of `{ "quantity": 1, "status": "new" }`
+with a revision of `{ "quantity": 3 }` lists `/quantity` as **Changed** from `1`
+to `3`, and `/status` as **Removed**.
+
+Each revision shows its own raw generation. Payloads are compared as stored, with
+no schema transformation. A comparison reports when it cannot be trusted rather
+than implying that nothing changed: no retained history, redacted or erased
+events, content that is missing or not valid JSON, numbers that cannot be
+compared exactly, and content that exceeds the safety limits (262,144 characters per side,
+32 levels of nesting, 5,000 values, 250 rows) are each reported explicitly. Only
+the history returned with the event is used; nothing is reconstructed.
 
 ## Continue
 

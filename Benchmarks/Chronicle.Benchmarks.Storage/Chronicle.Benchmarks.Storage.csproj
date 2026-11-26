@@ -1,0 +1,31 @@
+<!-- Copyright (c) Cratis. All rights reserved.
+     Licensed under the MIT license. See LICENSE file in the project root for full license information. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <DisableProxyGenerator>true</DisableProxyGenerator>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Cratis.Chronicle.Benchmarks.Storage</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="Cratis.Arc" />
+    <PackageReference Include="Cratis.Arc.MongoDB" />
+    <InternalsVisibleTo Include="Chronicle.Benchmarks.Storage.Specs" />
+    <ProjectReference Include="../../Source/Kernel/Storage.Sql/Storage.Sql.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Storage.MongoDB/Storage.MongoDB.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Storage/Storage.csproj" />
+    <ProjectReference Include="../../Source/Kernel/Concepts/Concepts.csproj" />
+    <Compile Include="../../Integration/Client/SqlServerContainerImage.cs" Link="Hosts/SqlServerContainerImage.cs" />
+  </ItemGroup>
+</Project>

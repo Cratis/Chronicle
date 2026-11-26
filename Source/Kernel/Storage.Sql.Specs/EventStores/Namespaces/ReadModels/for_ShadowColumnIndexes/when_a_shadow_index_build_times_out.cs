@@ -20,7 +20,7 @@ public class when_a_shadow_index_build_times_out : for_ReadModelMigrator.given.a
     {
         var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"object","properties":{"part":{"type":"string"}}}}}""");
         await using var plain = CreateContext("index_timeout", ProjectedColumns.ForSchema(schema));
-        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).Options;
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>().UseSqlite(plain.Database.GetConnectionString()).AddInterceptors(_commands).IgnoringManyServiceProviders().Options;
         await using var context = new ReadModelDbContext(options, plain.TableName, plain.Columns, _migrator);
         _failure = await Catch.Exception(context.EnsureTableExists);
         _retryFailure = await Catch.Exception(context.EnsureTableExists);

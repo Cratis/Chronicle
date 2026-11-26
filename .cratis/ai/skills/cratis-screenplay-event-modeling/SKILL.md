@@ -23,8 +23,7 @@ frameworks during modeling.
 **Do not cut corners to save tokens or effort.** A rule that needs more slices, events, views,
 translation steps or specifications gets them written; budget is never a reason to delete a
 modeled behavior, label a gap "accepted debt" or merge translating outside data into our facts
-into the work that acts on them. Flag a real trade-off to the user instead of resolving it by cutting the model
-(`cratis-screenplay-modeling-lifecycle`, `references/completeness-self-check.md`). Read `cratis-screenplay-modeling-lifecycle`'s `references/completeness-self-check.md` before every gate and whenever effort or token cost tempts a reduction in modeled behavior.
+into the work that acts on them. Flag a real trade-off to the user instead of resolving it by cutting the model. Read `cratis-screenplay-modeling-lifecycle`'s `references/completeness-self-check.md` before every gate and whenever effort or token cost tempts a reduction in modeled behavior.
 
 ## Start here
 
@@ -58,7 +57,7 @@ at the phase where they belong and run the downstream gates for the changed scop
 | P2 reactions, work queues, clocks, captures | `cratis-screenplay-automations-and-translations` |
 | P3 specifications and coverage | `cratis-screenplay-scenario-coverage` |
 | P4-P5 self-check and independent review | `cratis-screenplay-model-review` |
-| Existing system into a model (replaces P1-P2) | `cratis-screenplay-legacy-extraction` |
+| Existing system, any mix of source, running app, captures, docs, Prologue (replaces P1-P2) | `understanding-pipeline`: source to `cratis-screenplay-legacy-extraction`, running app, HAR, docs or binary to `cratis-screenplay-reverse-engineering` |
 | P7-P9 execute, render, fall back, verify | `cratis-screenplay-render-and-gap-fill` |
 | Tools, versions, verdict commands, diagnostics | `cratis-screenplay-toolchain` |
 | Estimate, order or split delivery of an accepted model | `cratis-screenplay-delivery-planning` |
@@ -74,7 +73,7 @@ keeps the activities, Screenplay output and facilitation questions of each step:
 | 9 | Decompose into vertical slices | `cratis-screenplay-slice-design` |
 | after 9 | Specifications, then review | `cratis-screenplay-scenario-coverage`, `cratis-screenplay-model-review` |
 
-Read [references/nine-steps.md](references/nine-steps.md) when facilitating a workflow and needing a step's activities, required output, or questions. Read [references/invoicing-example.md](references/invoicing-example.md) when you need a complete worked `.play` document (RegisterInvoice command and InvoiceList view) to copy the shape from.
+Read [references/nine-steps.md](references/nine-steps.md) when you need a step's activities, output or questions. Read [references/invoicing-example.md](references/invoicing-example.md) when you need a complete worked `.play` document to copy the shape from. Read [references/understanding-pipeline.md](references/understanding-pipeline.md) for mixed existing-system inputs; its one evidence schema is [references/evidence-format.md](references/evidence-format.md).
 
 ## Verify
 

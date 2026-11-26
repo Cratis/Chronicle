@@ -9,6 +9,7 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Properties;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -66,8 +67,8 @@ internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
     /// <returns>The existing state or a new state carrying its identifier.</returns>
     public ExpandoObject GetInitialState(Key key)
     {
-        TryGet(key.Value.ToString()!, out var state);
-        if (identifierProperty.IsSet)
+        TryGet(FlatCompositeKeyState.Text(key), out var state);
+        if (identifierProperty.IsSet && key is not FlatCompositeKey)
         {
             ((IDictionary<string, object?>)state)[identifierProperty.Path] = key.Value;
         }
@@ -145,7 +146,7 @@ internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
 
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindOrDefault(Key key) =>
-        Task.FromResult(_readModels.TryGetValue(key.Value.ToString()!, out var readModel) ? readModel.State : null);
+        Task.FromResult(_readModels.TryGetValue(FlatCompositeKeyState.Text(key), out var readModel) ? readModel.State : null);
 
     /// <inheritdoc/>
     public Task<ExpandoObject?> FindInPrimaryOrDefault(Key key) => FindOrDefault(key);
@@ -157,6 +158,18 @@ internal sealed class PreviewSink(PropertyPath identifierProperty) : ISink
         return Task.FromResult(holding is null
             ? Option<Key>.None()
             : new Option<Key>(new Key(holding.KeyValue, ArrayIndexers.NoIndexers)));
+    }
+
+    /// <inheritdoc/>
+    public Task<Option<Key>> TryFindRootKeyByChildValueInRoot(PropertyPath childPropertyPath, object childValue, Key rootKey)
+    {
+        var found = _readModels.TryGetValue(FlatCompositeKeyState.Text(rootKey), out var root) &&
+            (childPropertyPath == identifierProperty
+                ? HasSameValue(root.KeyValue, childValue)
+                : FindValues(root.State, childPropertyPath.Segments.Select(_ => _.Value).ToArray(), 0, childValue).Any());
+        return Task.FromResult(found
+            ? new Option<Key>(new Key(root!.KeyValue, ArrayIndexers.NoIndexers))
+            : Option<Key>.None());
     }
 
     /// <inheritdoc/>

@@ -1,8 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Dynamic;
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts.Events;
+using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Projections.Generations;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Projections.Engine.Pipelines.Steps;
@@ -31,6 +33,9 @@ namespace Cratis.Chronicle.Projections.Engine.Pipelines;
 /// <param name="generation">The <see cref="MaterializationGenerationIdentity"/> the pipeline builds, if it builds a materialization generation.
 /// A generation writes only to its own destination and never puts its sink or changesets into replay mode: the destination is its own,
 /// so there is nothing to shadow and nothing to rename.</param>
+/// <param name="usesBulkWindow">Whether the pipeline opens bulk windows on its sink. A globally scoped projection's sink is shared by every
+/// namespace's pipeline, so one namespace ending its catch-up would end or replace another's window; such a pipeline
+/// never opens a window and its writes go to the sink per event.</param>
 public partial class ProjectionPipeline(
     EngineProjection projection,
     ISink sink,
@@ -40,8 +45,11 @@ public partial class ProjectionPipeline(
     ProjectionHandleLock handleLock,
     IReplayScopedCache replayScopedCache,
     ILogger<ProjectionPipeline> logger,
-    MaterializationGenerationIdentity? generation = null) : IProjectionPipeline
+    MaterializationGenerationIdentity? generation = null,
+    bool usesBulkWindow = true) : IProjectionPipeline
 {
+    const int MaxFencedAttempts = 8;
+
     /// <summary>
     /// Serializes the read-modify-write cycle in <see cref="Handle"/>.
     /// </summary>
@@ -62,13 +70,28 @@ public partial class ProjectionPipeline(
     /// </remarks>
     readonly ProjectionHandleLock _handleLock = handleLock;
 
+    long _activity;
+    bool _bulkOpen;
+    Action? _sessionOpened;
+
     ReadModelContainerName ChangesetContainer => generation?.Destination ?? projection.ReadModel.ContainerName;
+
+    /// <inheritdoc/>
+    public long GetActivity() => Interlocked.Read(ref _activity);
+
+    /// <inheritdoc/>
+    public bool IsPinned() => Volatile.Read(ref _isReplaying) || Volatile.Read(ref _bulkOpen);
+
+    /// <inheritdoc/>
+    public void ObserveSessions(Action onSessionOpened) => _sessionOpened = onSessionOpened;
 
     /// <inheritdoc/>
     public async Task BeginReplay(ReplayContext context)
     {
+        Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
+        _sessionOpened?.Invoke();
         replayScopedCache.BeginReplaySession();
         if (generation is not null)
         {
@@ -82,8 +105,10 @@ public partial class ProjectionPipeline(
     /// <inheritdoc/>
     public Task ResumeReplay(ReplayContext context)
     {
+        Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         _isReplaying = true;
+        _sessionOpened?.Invoke();
         replayScopedCache.BeginReplaySession();
         return generation is null ? sink.ResumeReplay(context) : Task.CompletedTask;
     }
@@ -133,31 +158,48 @@ public partial class ProjectionPipeline(
     }
 
     /// <inheritdoc/>
-    public Task BeginBulk() => sink.BeginBulk();
+    public Task BeginBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _bulkOpen, true);
+        _sessionOpened?.Invoke();
+        return usesBulkWindow ? sink.BeginBulk() : Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
-    public Task ResumeBulk() => sink.ResumeBulk();
+    public Task ResumeBulk()
+    {
+        Interlocked.Increment(ref _activity);
+        Volatile.Write(ref _bulkOpen, true);
+        _sessionOpened?.Invoke();
+        return usesBulkWindow ? sink.ResumeBulk() : Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
-    public Task<BulkFlushResult> FlushBulk() => sink.FlushBulk();
+    public Task<BulkFlushResult> FlushBulk() =>
+        usesBulkWindow ? sink.FlushBulk() : Task.FromResult(new BulkFlushResult(null, []));
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> EndBulk()
     {
         ClearPreparedPage();
-        return sink.EndBulk();
+        Volatile.Write(ref _bulkOpen, false);
+        return usesBulkWindow ? sink.EndBulk() : Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
     public Task<IEnumerable<FailedPartition>> EndBulk(CancellationToken cancellationToken)
     {
         ClearPreparedPage();
-        return sink.EndBulk(cancellationToken);
+        Volatile.Write(ref _bulkOpen, false);
+        return usesBulkWindow ? sink.EndBulk(cancellationToken) : Task.FromResult<IEnumerable<FailedPartition>>([]);
     }
 
     /// <inheritdoc/>
     public async Task<ProjectionEventContext> Handle(AppendedEvent @event)
     {
+        Interlocked.Increment(ref _activity);
+
         // A purely event-source-keyed projection resolves every event's key to its own event source id, so striping
         // on the event source id is striping on the resolved key: same-key handling serializes, different-key
         // handling runs in parallel. Any projection that can collapse partitions keeps the coarse lock.
@@ -166,7 +208,44 @@ public partial class ProjectionPipeline(
             : await _handleLock.AcquireCoarse();
 
         logger.StartingPipeline(@event.Context.SequenceNumber);
-        var context = ProjectionEventContext.Empty(objectComparer, @event) with
+
+        // A write made with a revision check that finds the instance changed has written nothing: read it again and recompute.
+        var attempts = projection.SupportsFencedGlobalWrites ? MaxFencedAttempts : 1;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                var context = await PerformSteps(@event);
+                logger.CompletedAllSteps(@event.Context.SequenceNumber);
+                return context;
+            }
+            catch (SinkWriteConflictException) when (attempt < attempts)
+            {
+                await Task.Delay(Random.Shared.Next(1, 10 * attempt));
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<(Key Key, ExpandoObject State)>> ReadCurrent(IReadOnlyCollection<Key> keys)
+    {
+        // Whatever is being handled right now has to land before the state is read, so the read never precedes a write it follows.
+        using var handleScope = await _handleLock.AcquireCoarse();
+        var states = new List<(Key Key, ExpandoObject State)>(keys.Count);
+        foreach (var key in keys)
+        {
+            if (await sink.FindOrDefault(key) is { } state)
+            {
+                states.Add((key, state));
+            }
+        }
+
+        return states;
+    }
+
+    async Task<ProjectionEventContext> PerformSteps(AppendedEvent @event)
+    {
+        var context = ProjectionEventContext.Empty(objectComparer, projection.ForProjection(@event)) with
         {
             OperationType = projection.GetOperationTypeFor(@event.Context.EventType),
             GenerationDelivery = projection.GenerationDelivery,
@@ -184,7 +263,6 @@ public partial class ProjectionPipeline(
                 throw;
             }
         }
-        logger.CompletedAllSteps(@event.Context.SequenceNumber);
 
         return context;
     }
