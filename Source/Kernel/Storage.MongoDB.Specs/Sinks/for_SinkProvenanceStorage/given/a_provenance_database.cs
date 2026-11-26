@@ -19,7 +19,9 @@ public class a_provenance_database(ReplicaSetMongoDBFixture fixture) : Specifica
     void Establish()
     {
         _client = new MongoClient(fixture.ConnectionString);
-        _databaseName = MongoDBSpecDatabaseNames.New();
+
+        // Leave room for the independent-database suffix while retaining the run prefix and a unique spec token.
+        _databaseName = $"{MongoDBSpecDatabaseNames.Prefix}{Guid.NewGuid().ToString("N")[..12]}";
         _database = _client.GetDatabase(_databaseName);
         _storage = new(_database);
         _metadata = _database.GetCollection<BsonDocument>(SinkProvenanceNames.Metadata);

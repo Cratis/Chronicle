@@ -23,15 +23,16 @@ public abstract class a_schema_upgrade : Specification
 
     protected async Task Exercise(bool sqlServer)
     {
+        var options = new DbContextOptionsBuilder<ReadModelDbContext>(SpecDbContextOptions.Kernel<ReadModelDbContext>(sqlServer
+            ? "Server=localhost;Database=unit;User Id=unit;Password=unit;Encrypt=False"
+            : "Host=localhost;Database=unit;Username=unit;Password=unit"))
+            .AddInterceptors(_commands)
+            .Options;
         var database = Substitute.For<IDatabase>();
         database.ReadModelTable(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<string>(), Arg.Any<IReadOnlyList<ProjectedColumn>>(), Arg.Any<ConnectionPurpose>(), Arg.Any<SinkProvenanceTarget?>())
             .Returns(call =>
             {
-                var options = new DbContextOptionsBuilder<ReadModelDbContext>();
-                if (sqlServer) options.UseSqlServer("Server=localhost;Database=unit;User Id=unit;Password=unit;Encrypt=False");
-                else options.UseNpgsql("Host=localhost;Database=unit;Username=unit;Password=unit");
-                options.AddInterceptors(_commands);
-                var context = Substitute.ForPartsOf<ReadModelDbContext>(options.Options, call.ArgAt<string>(2), call.ArgAt<IReadOnlyList<ProjectedColumn>>(3), Substitute.For<IReadModelMigrator>(), "custom");
+                var context = Substitute.ForPartsOf<ReadModelDbContext>(options, call.ArgAt<string>(2), call.ArgAt<IReadOnlyList<ProjectedColumn>>(3), Substitute.For<IReadModelMigrator>(), "custom");
                 context.Configure().SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ =>
                 {
                     _commands.Imported = true;

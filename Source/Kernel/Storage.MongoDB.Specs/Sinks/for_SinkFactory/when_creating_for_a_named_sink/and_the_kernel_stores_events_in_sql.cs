@@ -45,7 +45,11 @@ public class and_the_kernel_stores_events_in_sql(MongoDBFixture fixture) : Speci
             .AddSingleton<IStorageAuthorizationDiagnostics, StorageAuthorizationDiagnostics>()
             .BuildServiceProvider();
         var factory = new SinkFactory(_services, new TypeFormats());
-        _sinks = new StorageSinks($"named-sink-{Guid.NewGuid():N}", "namespace", new KnownInstancesOf<ISinkFactory>([factory]), new SinkConfigurations(Options.Create(options)));
+        var eventStore = $"named-sink-{Guid.NewGuid():N}";
+        _sinks = new StorageSinks(eventStore, "namespace", new KnownInstancesOf<ISinkFactory>([factory]), new SinkConfigurations(Options.Create(options)));
+
+        // Ordinary sink acquisition follows startup inventory, including when event storage uses another backend.
+        await factory.GetProvenance(eventStore, "namespace", "documents").CompleteInventory(false);
         _readModel = new(
             "orders",
             "orders",
