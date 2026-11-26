@@ -106,7 +106,30 @@ jobs:
           test "$(mix run --no-compile --no-start -e 'IO.puts(Mix.Project.config()[:version])')" = "$CHRONICLE_VERSION"
           mix hex.build
 
+      - name: Check Hex for the exact package version
+        id: hex-version
+        working-directory: ./Source/Clients/Elixir
+        env:
+          CHRONICLE_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          package=$(mix run --no-compile --no-start -e 'IO.puts(Keyword.fetch!(Mix.Project.config()[:package], :name))')
+          status=$(curl --disable --silent --show-error --globoff --output /dev/null --write-out '%{http_code}' \
+            --max-time 30 "https://hex.pm/api/packages/$package/releases/$CHRONICLE_VERSION")
+          case "$status" in
+            200)
+              echo "::notice::$package@$CHRONICLE_VERSION already exists on Hex; skipping publish."
+              echo 'exists=true' >> "$GITHUB_OUTPUT"
+              ;;
+            404) echo 'exists=false' >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::Hex version lookup for $package@$CHRONICLE_VERSION returned HTTP $status."
+              exit 1
+              ;;
+          esac
+
       - name: Publish to Hex
+        if: steps.hex-version.outputs.exists == 'false'
         working-directory: ./Source/Clients/Elixir
         run: mix hex.publish --yes
         env:
