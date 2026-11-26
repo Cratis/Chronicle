@@ -25,7 +25,7 @@ internal static class ErasedValueClassifier
     /// </summary>
     /// <param name="encrypted">The decoded stored value.</param>
     /// <returns>True for a v3 envelope.</returns>
-    internal static bool Handles(byte[] encrypted) => EncryptionEnvelope.HasMagic(encrypted) && encrypted.Length > 4 && encrypted[4] == 3;
+    internal static bool Handles(byte[] encrypted) => EncryptionEnvelope.HasMagic(encrypted) && encrypted.Length > 4 && encrypted[4] is 3 or 4;
 
     /// <summary>
     /// Classifies and, when the key is live, releases a v3 value.

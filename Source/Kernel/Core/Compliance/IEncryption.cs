@@ -10,6 +10,9 @@ namespace Cratis.Chronicle.Compliance;
 /// </summary>
 public interface IEncryption
 {
+    /// <summary>Gets whether this writer can authenticate JSON kinds at the current release floor.</summary>
+    bool SupportsTypedValues => false;
+
     /// <summary>
     /// Generate an <see cref="EncryptionKey"/>.
     /// </summary>
@@ -37,6 +40,16 @@ public interface IEncryption
     /// An implementation that cannot sign the address writes without it, which strict release treats as legacy.
     /// </remarks>
     byte[] Encrypt(byte[] bytes, EncryptionKey key, EncryptionKeyRevision revision, ProtectedValueAddress address) => Encrypt(bytes, key, revision);
+
+    /// <summary>Encrypts bytes while authenticating their JSON kind and key-storage address.</summary>
+    /// <param name="bytes">The plaintext bytes.</param>
+    /// <param name="key">The managed key and its concrete revision.</param>
+    /// <param name="address">The key-storage address.</param>
+    /// <param name="kind">The JSON kind, which must not be silently discarded.</param>
+    /// <returns>The typed encrypted envelope.</returns>
+    /// <exception cref="NotSupportedException">The writer does not support authenticated JSON kinds.</exception>
+    byte[] Encrypt(byte[] bytes, EncryptionKeyAtRevision key, ProtectedValueAddress address, ProtectedValueKind kind) =>
+        throw new NotSupportedException("Authenticated JSON kinds are not supported by this encryption writer.");
 
     /// <summary>Reads the key revision from a v2 envelope without decrypting it.</summary>
     /// <param name="bytes">The encrypted bytes.</param>
