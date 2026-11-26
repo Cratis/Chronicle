@@ -31,6 +31,10 @@ on:
         type: choice
         default: auto
         options: [auto, pr, merge, nightly]
+      base_ref:
+        description: With mode pr, the branch the change is measured against, to trial the selection from a branch without a pull request.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -41,11 +45,18 @@ jobs:
       contents: write
     uses: Cratis/Workflows/.github/workflows/affected-tests.yml@main
     with:
-      cli-version: 3.150.2
+      cli-version: 3.154.0
+      split-merge: true
+      parallelism: 2
+      merge-timeout-minutes: 360
       mode: ${{ inputs.mode || 'auto' }}
+      base-ref: ${{ inputs.base_ref }}
       level: test
       framework: net11.0
       prepare-command: |
         dotnet nuget update source github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text || \
           dotnet nuget add source --name github --username cratis --password "$GITHUB_TOKEN" --store-password-in-clear-text https://nuget.pkg.github.com/cratis/index.json
         python3 .github/scripts/derive-build-version.py >> "$GITHUB_ENV"
+    secrets:
+      # The default branch only takes pull requests; the merge-time run commits the maps with the identity that publish.yml uses.
+      map-token: ${{ secrets.PAT_WORKFLOWS }}
